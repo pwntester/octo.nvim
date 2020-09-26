@@ -42,7 +42,7 @@ local function asyncCmd(cmd, args, cb)
       end
       local body = string.sub(response, pos+1)
       body = body:gsub('\r\n', '\n')
-      cb(body, headers_map, status)
+      cb(body, status, headers_map)
     end)
   )
   loop.read_start(stdout, on_read)

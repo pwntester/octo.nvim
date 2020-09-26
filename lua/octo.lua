@@ -19,6 +19,17 @@ local function is_blank(s)
 	return not(s ~= nil and s:match("%S") ~= nil)
 end
 
+local function check_error(status, resp)
+	if status ~= 200 then
+		if resp.message then
+			api.nvim_err_writeln('Error: '..resp.message)
+		end
+		return true
+	else
+		return false
+	end
+end
+
 local function sign_place(name, bufnr, line)
 	-- 0-index based wrapper
     pcall(vim.fn.sign_place, 0, 'octo_ns', name, bufnr, {lnum=line+1})
@@ -262,7 +273,6 @@ local function update_issue_metadata(bufnr)
     metadata = api.nvim_buf_get_var(bufnr, 'description')
     mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
     start_line, end_line, text = get_extmark_region(bufnr, mark)
-	print(start_line, end_line, text)
     if text == '' then
 		-- description has been removed
 		-- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
@@ -461,10 +471,11 @@ local function create_issue_buffer(issue, repo)
         table.insert(extmarks, {start_line-1, end_line-1})
     end
 
-    local function write_comments(response)
-        local comments = json.parse(response)
+    local function write_comments(response, status)
+        local resp = json.parse(response)
+		if check_error(status, resp) then return end
         local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
-        for _, c in ipairs(comments) do
+        for _, c in ipairs(resp) do
 
             -- heading
             local heading = format('On %s %s commented:', c.created_at, c.user.login)
@@ -585,8 +596,9 @@ local function list_issues(repo)
 		repo = get_repo_name()
     end
 
-    local function choose_issue(response, headers)
+    local function choose_issue(response, status, headers)
         local issues = json.parse(response)
+		if check_error(status, issues) then return end
 
         local count, total = process_link_header(headers)
         if count == nil and total == nil then
@@ -640,9 +652,10 @@ local function get_issue(number, repo)
 
     local url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
 
-    local function load_issue(response)
-        local issue = json.parse(response)
-        create_issue_buffer(issue, repo)
+    local function load_issue(response, status)
+        local resp = json.parse(response)
+		if check_error(status, resp) then return end
+        create_issue_buffer(resp, repo)
     end
     local url_opts = vim.deepcopy(opts)
     curl.request(url, url_opts, load_issue)
@@ -673,8 +686,9 @@ local function save_issue(bufnr)
 		else
 			local number = api.nvim_buf_get_var(bufnr, 'number')
 			local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-			local function update_title(response)
+			local function update_title(response, status)
 				local resp = json.parse(response)
+				if check_error(status, resp) then return end
 				if title_metadata['body'] == resp['title'] then
 					title_metadata['saved_body'] = resp['title']
 					title_metadata['dirty'] = false
@@ -697,8 +711,9 @@ local function save_issue(bufnr)
     if desc_metadata['dirty'] then
 		local number = api.nvim_buf_get_var(bufnr, 'number')
 		local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-		local function update_desc(response)
+		local function update_desc(response, status)
 			local resp = json.parse(response)
+			if check_error(status, resp) then return end
 			if desc_metadata['body'] == resp['body'] then
 				desc_metadata['saved_body'] = resp['body']
 				desc_metadata['dirty'] = false
@@ -735,8 +750,9 @@ local function save_issue(bufnr)
             local cid = metadata['id']
             local update_url = format('https://api.github.com/repos/%s/issues/comments/%s', repo, cid)
 
-            local function update_comment(response)
+            local function update_comment(response, status)
                 local resp = json.parse(response)
+				if check_error(status, resp) then return end
                 if metadata['body'] == resp['body'] then
                     for i, c in ipairs(comments) do
                         if c['id'] == resp['id'] then
@@ -778,9 +794,9 @@ local function new_comment()
 
     local url = format('https://api.github.com/repos/%s/issues/%s/comments', repo, number)
 
-    local function new_comment_cb(response)
-		print(response)
+    local function new_comment_cb(response, status)
         local resp = json.parse(response)
+		if check_error(status, resp) then return end
         if nil ~= resp['issue_url'] then
             get_issue(number, repo)
         end
@@ -802,9 +818,10 @@ local function new_issue(repo)
 
     local url = format('https://api.github.com/repos/%s/issues', repo)
 
-    local function new_issue_cb(response)
-        local issue = json.parse(response)
-        create_issue_buffer(issue, repo)
+    local function new_issue_cb(response, status)
+        local resp = json.parse(response)
+		if check_error(status, resp) then return end
+        create_issue_buffer(resp, repo)
     end
     local url_opts = vim.deepcopy(opts)
     url_opts['body'] = json.stringify({
@@ -832,8 +849,9 @@ local function change_issue_state(state)
 	end
 
     local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-    local function update_state(response)
+    local function update_state(response, status)
         local resp = json.parse(response)
+		if check_error(status, resp) then return end
         if state == resp['state'] then
             api.nvim_buf_set_var(bufnr, 'state', resp['state'])
             print('Issue state changed to: '..resp['state'])
