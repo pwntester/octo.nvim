@@ -1,3 +1,8 @@
+-- this is a slightly modified version of Norcalli's UI.NVIM plugin 
+-- https://github.com/norcalli/ui.nvim
+-- used here as a lighweight fuzzy menu for picking an Issue in :ListIssues
+-- may be replaced with FZF or telescope but didnt want to require any dependencies for now
+
 local vim = vim
 local api = vim.api
 local min, max = math.min, math.max
