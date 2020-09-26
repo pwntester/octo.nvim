@@ -1,6 +1,7 @@
 # OCTO.NVIM
 
 ![](https://i.imgur.com/JWkHXSa.png)
+![](https://i.imgur.com/UuYyncG.png)
 
 ## Disclaimer
 
