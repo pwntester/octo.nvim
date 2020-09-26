@@ -34,3 +34,4 @@ Use `w(rite)` to save issue (title/description/comments).
 - navigate links to other issues
 - autocompletion on #issues, @<person>
 - support pagination
+- command to hide details float
