@@ -29,6 +29,21 @@ e.g. `pwntester:3123123ab4324bf12371231321feb`
 
 Use `w(rite)` to save issue (title/description/comments).
 
+## Highlight groups
+
+- OctoNvimDirty: ErrorMsg 
+- OctoNvimCommentHeading: PreProc
+- OctoNvimCommentUser: Underlined
+
+- OctoNvimIssueTitle: PreProc
+- OctoNvimIssueId: Question
+- OctoNvimIssueOpen: MoreMsg
+- OctoNvimIssueClosed: ErrorMsg
+
+- OctoNvimEmpty: Comment
+
+- OctoNvimFloat: NormalNC
+
 ## TODO
 
 - navigate links to other issues

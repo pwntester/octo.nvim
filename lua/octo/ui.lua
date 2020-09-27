@@ -174,6 +174,7 @@ local function fuzzy_popup(opts)
   opts.row = math.floor((ui_min_height - opts.height) / 2)
   win = api.nvim_open_win(buf, 0, opts)
 
+  api.nvim_buf_set_option(buf, 'ft', 'ui.nvim')
   api.nvim_win_set_option(win, 'wrap', false)
   api.nvim_buf_set_option(buf, 'ul', -1)
   api.nvim_win_set_option(win, 'concealcursor', 'nc')

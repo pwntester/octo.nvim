@@ -192,7 +192,7 @@ local function details_win(current_bufnr)
 	}
 
     local winnr = api.nvim_open_win(bufnr, false, opts)
-	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:NormalNC,EndOfBuffer:NormalNC")
+	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:OctoNvimFloat,EndOfBuffer:OctoNvimFloat")
 
 	vim.cmd(format("autocmd BufLeave <buffer=%d> lua pcall(vim.api.nvim_win_close,%d,1);pcall(vim.cmd,'%dbw!')", current_bufnr, winnr, bufnr))
 
