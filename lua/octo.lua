@@ -20,13 +20,13 @@ local function is_blank(s)
 end
 
 local function check_error(status, resp)
-	if status ~= 200 then
+	if status == 200 or status == 201 then
+		return false
+	else
 		if resp.message then
 			api.nvim_err_writeln('Error: '..resp.message)
 		end
 		return true
-	else
-		return false
 	end
 end
 
@@ -498,14 +498,12 @@ local function create_issue_buffer(issue, repo)
 				['end'] = -1;
 			})
 
-            --vim.list_extend(content, {'', heading, '⠀⠀⠀'}) -- U+2800
             vim.list_extend(content, {heading, ''})
 
             -- body
             local cbody = string.gsub(c['body'], '\r\n', '\n')
 			if cbody == NO_BODY_MSG then cbody = '' end
             write(cbody)
-            --vim.list_extend(content, {'⠀⠀⠀', ''}) -- U+2800
             vim.list_extend(content, {'', '', ''})
             local comment = {
                 id = c['id'];
@@ -542,7 +540,6 @@ local function create_issue_buffer(issue, repo)
 
     -- write title
     write(title)
-    --vim.list_extend(content, {'⠀⠀⠀'}) -- U+2800
     vim.list_extend(content, {'', ''})
     local title_metadata = {
         saved_body = title;
@@ -553,7 +550,6 @@ local function create_issue_buffer(issue, repo)
 
     -- write description
     write(body)
-    --vim.list_extend(content, {'⠀⠀⠀',''}) -- U+2800
     vim.list_extend(content, {'','',''})
     local desc_metadata = {
         saved_body = body,
@@ -590,54 +586,97 @@ local function process_link_header(headers)
     end
 end
 
-local function list_issues(repo)
+local function get_url(url, params)
+	url = url .. '?foo=bar'
+	for k, v in pairs(params) do
+		url = format('%s\\&%s=%s', url, k, v)
+	end
+	return url
+end
+
+local function get_repo_issues(repo, query_params)
+
+	-- this function should be used by fuzzy pickers as a source
+	-- and then use get_issue as the sink
+
+	query_params = query_params or {}
 
     if nil == repo or repo == '' then
 		repo = get_repo_name()
     end
 
-    local function choose_issue(response, status, headers)
-        local issues = json.parse(response)
-		if check_error(status, issues) then return end
+	query_params = {
+		state = query_params.state or 'open';
+		per_page = query_params.per_page or 50;
+		filter = query_params.filter;
+		labels = query_params.labels;
+		since = query_params.since
+	}
 
-        local count, total = process_link_header(headers)
-        if count == nil and total == nil then
-            count = #issues
-            total = #issues
-        end
-
-        local source = {}
-        for _,i in ipairs(issues) do
-            table.insert(source, {
-                id = i['id'];
-                issue = i;
-                number = i['number'];
-                display = string.format('#%d - %s', i['number'], i['title']);
-            })
-        end
-        local winnr = api.nvim_get_current_win()
-        require'octo.ui'.floating_fuzzy_menu{
-            inputs = source;
-            prompt_position = 'top';
-            leave_empty_space = true;
-			height = 30;
-            prompt = 'Search:';
-            virtual_text = format('%d out of %d', count, total);
-            callback = function(e, _, _)
-                api.nvim_set_current_win(winnr)
-                local bufnr = create_issue_buffer(e.issue, repo)
-                api.nvim_win_set_buf(winnr, bufnr)
-            end
-        }
-
-    end
-
-    local issues_url = format('https://api.github.com/repos/%s/issues?state=open\\&per_page=50', repo)
-    curl.request(issues_url, opts, choose_issue)
+    local issues_url = get_url(format('https://api.github.com/repos/%s/issues', repo), query_params)
+	local req_opts = vim.deepcopy(opts)
+	req_opts.sync = true
+    local body, _, headers = curl.request(issues_url, req_opts)
+	local count, total = process_link_header(headers)
+    local issues = json.parse(body)
+	if count == nil and total == nil then
+		count = #issues
+		total = #issues
+	end
+	return {
+		issues = issues;
+		count = count;
+		total = total;
+	}
 end
 
-local function get_issue(number, repo)
+-- local function list_issues(repo)
+--
+--     if nil == repo or repo == '' then
+-- 		repo = get_repo_name()
+--     end
+--
+--     local function choose_issue(response, status, headers)
+--         local issues = json.parse(response)
+-- 		if check_error(status, issues) then return end
+--
+--         local count, total = process_link_header(headers)
+--         if count == nil and total == nil then
+--             count = #issues
+--             total = #issues
+--         end
+--
+--         local source = {}
+--         for _,i in ipairs(issues) do
+--             table.insert(source, {
+--                 id = i['id'];
+--                 issue = i;
+--                 number = i['number'];
+--                 display = string.format('#%d - %s', i['number'], i['title']);
+--             })
+--         end
+--         local winnr = api.nvim_get_current_win()
+--         require'octo.ui'.floating_fuzzy_menu{
+--             inputs = source;
+--             prompt_position = 'top';
+--             leave_empty_space = true;
+-- 			height = 30;
+--             prompt = 'Search:';
+--             virtual_text = format('%d out of %d', count, total);
+--             callback = function(e, _, _)
+--                 api.nvim_set_current_win(winnr)
+--                 local bufnr = create_issue_buffer(e.issue, repo)
+--                 api.nvim_win_set_buf(winnr, bufnr)
+--             end
+--         }
+--
+--     end
+--
+--     local issues_url = format('https://api.github.com/repos/%s/issues?state=open\\&per_page=50', repo)
+--     curl.request(issues_url, opts, choose_issue)
+-- end
 
+local function get_issue(number, repo)
     if nil == repo or repo == '' then
 		repo = get_repo_name()
     end
@@ -870,9 +909,10 @@ return {
     change_issue_state = change_issue_state;
     get_issue = get_issue;
     new_issue = new_issue;
-    list_issues = list_issues;
+    --list_issues = list_issues;
     save_issue = save_issue;
     render_signcolumn = render_signcolumn;
     new_comment = new_comment;
 	details_win = details_win;
+    get_repo_issues = get_repo_issues;
 }

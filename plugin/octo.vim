@@ -6,9 +6,9 @@ command! NewComment :lua require('octo').new_comment()
 command! CloseIssue :lua require('octo').change_issue_state('closed')
 command! ReopenIssue :lua require('octo').change_issue_state('open')
 command! SaveIssue  :lua require('octo').save_issue()
-command! -nargs=? ListIssues :lua require('octo').list_issues(<f-args>)
 command! -nargs=? NewIssue   :lua require('octo').new_issue(<f-args>)
 command! -nargs=+ Issue :lua require('octo').get_issue(<f-args>)
+"command! -nargs=? ListIssues :lua require('octo').list_issues(<f-args>)
 
 function! octo#fzf_menu(candidates, callback) abort
     call fzf#run(fzf#wrap({

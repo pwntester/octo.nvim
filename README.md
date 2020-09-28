@@ -22,7 +22,6 @@ e.g. `pwntester:3123123ab4324bf12371231321feb`
 - `NewIssue <repo>`: Create new issue in specific repo. If repo is not provided, it will be derived from CWD.
 - `CloseIssue`: Close issue.
 - `ReopenIssue`: Reopen issue.
-- `ListIssues <repo>`: Fuzzy pick from latest 100 issues.
 - `NewComment`: Add new comment to open issue.
 
 ## Usage
