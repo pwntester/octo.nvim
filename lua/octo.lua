@@ -24,7 +24,7 @@ local function check_error(status, resp)
 	if vim.tbl_contains({100,200,201}, status) then
 		return false
 	elseif resp.message then
-		api.nvim_err_writeln('Error: ',status, resp.message)
+		api.nvim_err_writeln('Error ('..status..'): '..resp.message)
 		return true
 	else
 		print('Unexpected status:', status, resp)
@@ -229,8 +229,15 @@ end
 
 
 local function get_repo_name()
-	local cmd = "git config --get remote.origin.url | sed -r 's/.*(\\@|\\/\\/)(.*)(\\:|\\/)([^:\\/]*)\\/([^\\/\\.]*)\\.git/\\4\\/\\5/'"
-	return vim.fn.system(cmd):gsub('\n', '')
+	local cmd = 'git config --get remote.origin.url'
+	local url = vim.fn.system(cmd):gsub('\n', '')
+	local repo
+	if string.find(url, 'git@github.com:(.*).git') then
+		_, _, repo = string.find(url, 'git@github.com:(.*).git')
+	elseif string.find(url, 'https://github.com/(.*).git') then
+		_, _, repo = string.find(url, 'https://github.com/(.*).git')[3]
+	end
+	return repo
 end
 
 local function get_gh_token()
@@ -603,7 +610,7 @@ end
 local function get_repo_issues(repo, query_params)
 
 	-- this function should be used by fuzzy pickers as a source
-	-- and then use get_issue as the sink
+	-- and then use `get_issue()` as the sink
 
 	query_params = query_params or {}
 
@@ -611,7 +618,10 @@ local function get_repo_issues(repo, query_params)
 		repo = get_repo_name()
 	end
 
+	log.info('getting issues for repo', repo)
+
 	query_params = {
+		pulls = false;
 		state = query_params.state or 'open';
 		per_page = query_params.per_page or 50;
 		filter = query_params.filter;
@@ -683,7 +693,7 @@ end
 -- end
 
 local function get_issue(number, repo)
-	if nil == repo or repo == '' then
+	if nil == repo or repo == 'nil' or repo == '' then
 		repo = get_repo_name()
 	end
 
