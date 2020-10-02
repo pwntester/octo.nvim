@@ -3,9 +3,10 @@ local vim = vim
 local api = vim.api
 local max = math.max
 local format = string.format
+local log = require('octo.log')
 local json = {
-    parse = vim.fn.json_decode;
-    stringify = vim.fn.json_encode;
+	parse = vim.fn.json_decode;
+	stringify = vim.fn.json_encode;
 }
 local NO_BODY_MSG = 'No description provided.'
 local HIGHLIGHT_NAME_PREFIX = "octo"
@@ -20,39 +21,41 @@ local function is_blank(s)
 end
 
 local function check_error(status, resp)
-	if status == 200 or status == 201 then
+	if vim.tbl_contains({100,200,201}, status) then
 		return false
+	elseif resp.message then
+		api.nvim_err_writeln('Error: ',status, resp.message)
+		return true
 	else
-		if resp.message then
-			api.nvim_err_writeln('Error: '..resp.message)
-		end
+		print('Unexpected status:', status, resp)
 		return true
 	end
 end
 
 local function sign_place(name, bufnr, line)
 	-- 0-index based wrapper
-    pcall(vim.fn.sign_place, 0, 'octo_ns', name, bufnr, {lnum=line+1})
+	pcall(vim.fn.sign_place, 0, 'octo_ns', name, bufnr, {lnum=line+1})
 end
 
 local function sign_unplace(bufnr)
-    pcall(vim.fn.sign_unplace, 'octo_ns', {buffer=bufnr})
+	pcall(vim.fn.sign_unplace, 'octo_ns', {buffer=bufnr})
 end
 
 local function place_signs(bufnr, start_line, end_line, is_dirty)
-	local dirty_mod = 'clean'
-	if is_dirty then dirty_mod = 'dirty' end
-    if start_line == end_line or end_line < start_line then
-        sign_place(format('%s_line', dirty_mod), bufnr, start_line)
-    else
-        sign_place(format('%s_block_start', dirty_mod), bufnr, start_line)
-        sign_place(format('%s_block_end', dirty_mod), bufnr, end_line)
-    end
-    if start_line+1 < end_line then
-        for j=start_line+1,end_line-1,1 do
-            sign_place(format('%s_block_middle', dirty_mod), bufnr, j)
-        end
-    end
+	local dirty_mod = is_dirty and 'dirty' or 'clean'
+	log.info('place_sign', start_line, end_line, dirty_mod)
+
+	if start_line == end_line or end_line < start_line then
+		sign_place(format('%s_line', dirty_mod), bufnr, start_line)
+	else
+		sign_place(format('%s_block_start', dirty_mod), bufnr, start_line)
+		sign_place(format('%s_block_end', dirty_mod), bufnr, end_line)
+	end
+	if start_line+1 < end_line then
+		for j=start_line+1,end_line-1,1 do
+			sign_place(format('%s_block_middle', dirty_mod), bufnr, j)
+		end
+	end
 end
 
 local function highlight(bufnr, hls)
@@ -113,11 +116,11 @@ end
 
 local function details_win(current_bufnr)
 
-    local labels = api.nvim_buf_get_var(current_bufnr, 'labels')
+	local labels = api.nvim_buf_get_var(current_bufnr, 'labels')
 	local assignees = api.nvim_buf_get_var(current_bufnr, 'assignees')
-    local milestone = api.nvim_buf_get_var(current_bufnr, 'milestone')
+	local milestone = api.nvim_buf_get_var(current_bufnr, 'milestone')
 
-    local lines = {''}
+	local lines = {''}
 	local hls = {}
 	local line
 	local longest_line = 10
@@ -129,11 +132,11 @@ local function details_win(current_bufnr)
 			local highlight_name = create_highlight(label.color, {})
 			table.insert(lines, line)
 			table.insert(hls, {
-				['name'] = highlight_name;
-				['line'] = #lines-1;
-				['start'] = 4;
-				['end'] = #line;
-			})
+					['name'] = highlight_name;
+					['line'] = #lines-1;
+					['start'] = 4;
+					['end'] = #line;
+				})
 			longest_line = max(longest_line, #line)
 		end
 	else
@@ -169,59 +172,59 @@ local function details_win(current_bufnr)
 	end
 	table.insert(lines, '')
 
-    local bufnr = api.nvim_create_buf(false, true)
-    api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+	local bufnr = api.nvim_create_buf(false, true)
+	api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
 	highlight(bufnr, hls)
 
-    local current_win = api.nvim_get_current_win()
-    local win_width = vim.fn.winwidth(current_win)
+	local current_win = api.nvim_get_current_win()
+	local win_width = vim.fn.winwidth(current_win)
 	local vertical_padding = 1
-    local horizontal_padding = 1
-    local popup_width = longest_line + 1
-    local popup_height = #lines
+	local horizontal_padding = 1
+	local popup_width = longest_line + 1
+	local popup_height = #lines
 
-    local opts = {
+	local opts = {
 		relative = 'win';
 		win = current_win;
 		width = popup_width;
 		height = popup_height;
 		style = 'minimal';
 		focusable = false;
-        row = vertical_padding;
+		row = vertical_padding;
 		col = win_width - horizontal_padding - popup_width;
 	}
 
-    local winnr = api.nvim_open_win(bufnr, false, opts)
+	local winnr = api.nvim_open_win(bufnr, false, opts)
 	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:OctoNvimFloat,EndOfBuffer:OctoNvimFloat")
 
 	vim.cmd(format("autocmd BufLeave <buffer=%d> lua pcall(vim.api.nvim_win_close,%d,1);pcall(vim.cmd,'%dbw!')", current_bufnr, winnr, bufnr))
 
-    return bufnr, winnr
+	return bufnr, winnr
 end
 
 local function get_extmark_region(bufnr, mark)
 	-- extmarks are placed on
 	-- start line - 1 (except for line 0)
 	-- end line + 2
-    local start_line = mark[1] + 1
+	local start_line = mark[1] + 1
 	if start_line == 1 then start_line= 0 end
-    local end_line = mark[3]['end_row'] - 2
+	local end_line = mark[3]['end_row'] - 2
 	if start_line > end_line then end_line = start_line end
 	-- Indexing is zero-based, end-exclusive, so adding 1 to end line
-    local lines = api.nvim_buf_get_lines(bufnr, start_line, end_line + 1, true)
-    local text = vim.fn.join(lines, '\n')
-    return start_line, end_line, text
+	local lines = api.nvim_buf_get_lines(bufnr, start_line, end_line + 1, true)
+	local text = vim.fn.join(lines, '\n')
+	return start_line, end_line, text
 end
 
 local function update_metadata(metadata, start_line, end_line, text)
 	metadata['start_line'] = start_line
-    metadata['end_line'] = end_line
-    if text ~= metadata['saved_body'] then
-        metadata['dirty'] = true
-    else
-        metadata['dirty'] = false
-    end
-    metadata['body'] = text
+	metadata['end_line'] = end_line
+	if text ~= metadata['saved_body'] then
+		metadata['dirty'] = true
+	else
+		metadata['dirty'] = false
+	end
+	metadata['body'] = text
 end
 
 
@@ -231,14 +234,14 @@ local function get_repo_name()
 end
 
 local function get_gh_token()
-    return vim.fn.getenv('GITHUB_PAT')
+	return vim.fn.getenv('GITHUB_PAT')
 end
 
 local opts = {
-    headers = {
-        Accept = 'application/vnd.github.v3+json',
-        ["Content-Type"] = 'application/json'
-    }
+	headers = {
+		Accept = 'application/vnd.github.v3+json',
+		["Content-Type"] = 'application/json'
+	}
 }
 
 -- get credentials from env var
@@ -260,31 +263,31 @@ api.nvim_command('sign define dirty_line text=[ texthl=OctoNvimDirty')
 
 local function update_issue_metadata(bufnr)
 
-    local mark, text, start_line, end_line, metadata
+	local mark, text, start_line, end_line, metadata
 
-    -- title
-    metadata = api.nvim_buf_get_var(bufnr, 'title')
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
-    start_line, end_line, text = get_extmark_region(bufnr, mark)
-    update_metadata(metadata, start_line, end_line, text)
-    api.nvim_buf_set_var(bufnr, 'title', metadata)
+	-- title
+	metadata = api.nvim_buf_get_var(bufnr, 'title')
+	mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
+	start_line, end_line, text = get_extmark_region(bufnr, mark)
+	update_metadata(metadata, start_line, end_line, text)
+	api.nvim_buf_set_var(bufnr, 'title', metadata)
 
-    -- description
-    metadata = api.nvim_buf_get_var(bufnr, 'description')
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
-    start_line, end_line, text = get_extmark_region(bufnr, mark)
-    if text == '' then
+	-- description
+	metadata = api.nvim_buf_get_var(bufnr, 'description')
+	mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
+	start_line, end_line, text = get_extmark_region(bufnr, mark)
+	if text == '' then
 		-- description has been removed
 		-- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
 		api.nvim_buf_set_lines(bufnr, start_line, start_line+1, false, {' ',''})
 		local winnr = api.nvim_get_current_win()
 		api.nvim_win_set_cursor(winnr, {start_line+1, 0})
 	end
-    update_metadata(metadata, start_line, end_line, text)
-    api.nvim_buf_set_var(bufnr, 'description', metadata)
+	update_metadata(metadata, start_line, end_line, text)
+	api.nvim_buf_set_var(bufnr, 'description', metadata)
 
-    -- comments
-    local comments = api.nvim_buf_get_var(bufnr, 'comments')
+	-- comments
+	local comments = api.nvim_buf_get_var(bufnr, 'comments')
 	for i, m in ipairs(comments) do
 		metadata = m
 		mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
@@ -306,42 +309,45 @@ local function update_issue_metadata(bufnr)
 end
 
 local function render_signcolumn(bufnr)
-    if nil == bufnr or bufnr == 0 then
-        bufnr = api.nvim_get_current_buf()
-    end
+	if nil == bufnr or bufnr == 0 then
+		bufnr = api.nvim_get_current_buf()
+	end
 
-    local issue_dirty = false
+	local issue_dirty = false
 
-    -- update comment metadata (lines, etc.)
-    update_issue_metadata(bufnr)
+	log.info('refreshing sign column')
 
-    -- clear all signs
+	-- update comment metadata (lines, etc.)
+	update_issue_metadata(bufnr)
+
+	-- clear all signs
 	sign_unplace(bufnr)
 
 	-- clear virtual texts
 	api.nvim_buf_clear_namespace(bufnr, octo_vt_ns, 0, -1)
 
-    -- title
-    local title = api.nvim_buf_get_var(bufnr, 'title')
-    if title['dirty'] then issue_dirty = true end
-    local start_line = title['start_line']
-    local end_line = title['end_line']
+	-- title
+	local title = api.nvim_buf_get_var(bufnr, 'title')
+	if title['dirty'] then issue_dirty = true end
+	local start_line = title['start_line']
+	local end_line = title['end_line']
 	place_signs(bufnr, start_line, end_line, title['dirty'])
 
 	-- title virtual text
-    local state = api.nvim_buf_get_var(bufnr, 'state'):upper()
-    local title_vt = {
-        {tostring(api.nvim_buf_get_var(bufnr, 'number')), 'OctoNvimIssueId'},
-        {format(' [%s]', state), 'OctoNvimIssue'..state}
-    }
-    api.nvim_buf_set_virtual_text(bufnr, octo_vt_ns, 0, title_vt, {})
+	local state = api.nvim_buf_get_var(bufnr, 'state'):upper()
+	local title_vt = {
+		{tostring(api.nvim_buf_get_var(bufnr, 'number')), 'OctoNvimIssueId'},
+		{format(' [%s]', state), 'OctoNvimIssue'..state}
+	}
+	api.nvim_buf_set_virtual_text(bufnr, octo_vt_ns, 0, title_vt, {})
 
-    -- description
-    local desc = api.nvim_buf_get_var(bufnr, 'description')
-    if desc['dirty'] then issue_dirty = true end
-    start_line = desc['start_line']
-    end_line = desc['end_line']
-	place_signs(bufnr, start_line, end_line, desc['dirty'])
+	-- description
+	local desc = api.nvim_buf_get_var(bufnr, 'description')
+	if desc.dirty then issue_dirty = true end
+	start_line = desc['start_line']
+	end_line = desc['end_line']
+	log.info('description', desc.dirty)
+	place_signs(bufnr, start_line, end_line, desc.dirty)
 
 	-- description virtual text
 	if is_blank(desc['body']) then
@@ -349,43 +355,43 @@ local function render_signcolumn(bufnr)
 		api.nvim_buf_set_virtual_text(bufnr, octo_vt_ns, start_line, desc_vt, {})
 	end
 
-    -- comments
-    local comments = api.nvim_buf_get_var(bufnr, 'comments')
-    for _, c in ipairs(comments) do
-		if c['dirty'] then issue_dirty = true end
-        start_line = c['start_line']
-        end_line = c['end_line']
-		place_signs(bufnr, start_line, end_line, c['dirty'])
+	-- comments
+	local comments = api.nvim_buf_get_var(bufnr, 'comments')
+	for _, c in ipairs(comments) do
+		if c.dirty then issue_dirty = true end
+		start_line = c['start_line']
+		end_line = c['end_line']
+		place_signs(bufnr, start_line, end_line, c.dirty)
 
 		-- comment virtual text
 		if is_blank(c['body']) then
 			local comment_vt = {{NO_BODY_MSG, 'OctoNvimEmpty'}}
 			api.nvim_buf_set_virtual_text(bufnr, octo_vt_ns, start_line, comment_vt, {})
 		end
-    end
+	end
 
-    -- reset modified option
-    if not issue_dirty then
-        api.nvim_buf_set_option(bufnr, 'modified', false)
-    end
+	-- reset modified option
+	if not issue_dirty then
+		api.nvim_buf_set_option(bufnr, 'modified', false)
+	end
 end
 
 local function create_issue_buffer(issue, repo)
 
-    if not issue['id'] then
-        api.nvim_err_writeln(format('Cannot find issue in %s', repo))
-        return
-    end
+	if not issue['id'] then
+		api.nvim_err_writeln(format('Cannot find issue in %s', repo))
+		return
+	end
 
-    local iid = issue['id']
-    local title = issue['title']
-    local body = string.gsub(issue['body'], '\r\n', '\n')
-    local number = issue['number']
-    local state = issue['state']
-    local comments_url = issue['comments_url']..'?per_page=100'
-    local content = {}
-    local hls = {}
-    local extmarks = {}
+	local iid = issue['id']
+	local title = issue['title']
+	local body = string.gsub(issue['body'], '\r\n', '\n')
+	local number = issue['number']
+	local state = issue['state']
+	local comments_url = issue['comments_url']..'?per_page=100'
+	local content = {}
+	local hls = {}
+	local extmarks = {}
 
 	-- create buffer
 	api.nvim_command(format('e octo://%s/%s', repo, number))
@@ -396,18 +402,18 @@ local function create_issue_buffer(issue, repo)
 		api.nvim_buf_del_extmark(bufnr, octo_em_ns, m[1])
 	end
 
-    local function render_buffer(bufnr)
-        -- render buffer
-        api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
-        api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
+	local function render_buffer(bufnr)
+		-- render buffer
+		api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
+		api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
 
-        -- add highlights
+		-- add highlights
 		table.insert(hls, {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 })
 		highlight(bufnr, hls)
 
-        -- set extmarks
+		-- set extmarks
 		local extmarks_ids = {}
-        for _, m in ipairs(extmarks) do
+		for _, m in ipairs(extmarks) do
 			-- (empty line) start ext mark at 0
 			-- start line
 			-- ...
@@ -419,12 +425,12 @@ local function create_issue_buffer(issue, repo)
 
 			local start_line = m[1]
 			local end_line = m[2]
-            local m_id = api.nvim_buf_set_extmark(bufnr, octo_em_ns, max(0,start_line-1), 0, {
-                end_line=end_line+2;
-                end_col=0;
-            })
+			local m_id = api.nvim_buf_set_extmark(bufnr, octo_em_ns, max(0,start_line-1), 0, {
+					end_line=end_line+2;
+					end_col=0;
+				})
 			table.insert(extmarks_ids, m_id)
-        end
+		end
 		local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
 		title_metadata['extmark'] = extmarks_ids[1]
 		api.nvim_buf_set_var(bufnr, 'title', title_metadata)
@@ -439,151 +445,151 @@ local function create_issue_buffer(issue, repo)
 		end
 		api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
 
-        -- drop undo history
-        vim.fn['octo#clear_history']()
+		-- drop undo history
+		vim.fn['octo#clear_history']()
 
-        -- show signs
-        render_signcolumn(bufnr)
+		-- show signs
+		render_signcolumn(bufnr)
 
-        -- autocommands
+		-- autocommands
 		vim.cmd(format('augroup octocmds_%s', bufnr))
 		vim.cmd [[autocmd!]]
-        vim.cmd(format('autocmd TextChanged  <buffer=%d> lua require("octo").render_signcolumn(%d)',bufnr,bufnr))
-        vim.cmd(format('autocmd TextChangedI <buffer=%d> lua require("octo").render_signcolumn(%d)',bufnr,bufnr))
-        vim.cmd(format('autocmd BufWriteCmd <buffer=%d> lua require("octo").save_issue(%d)',bufnr,bufnr))
-        vim.cmd(format('autocmd BufEnter,BufNew <buffer=%d> lua require("octo").details_win(%d)',bufnr,bufnr))
+		vim.cmd(format('autocmd TextChanged  <buffer=%d> lua require("octo").render_signcolumn(%d)',bufnr,bufnr))
+		vim.cmd(format('autocmd TextChangedI <buffer=%d> lua require("octo").render_signcolumn(%d)',bufnr,bufnr))
+		vim.cmd(format('autocmd BufWriteCmd <buffer=%d> lua require("octo").save_issue(%d)',bufnr,bufnr))
+		vim.cmd(format('autocmd BufEnter,BufNew <buffer=%d> lua require("octo").details_win(%d)',bufnr,bufnr))
 		vim.cmd [[augroup END]]
 
-        -- reset modified option
-        api.nvim_buf_set_option(bufnr, 'modified', false)
+		-- reset modified option
+		api.nvim_buf_set_option(bufnr, 'modified', false)
 
 		-- show details window
 		details_win(bufnr)
 
-    end
+	end
 
-    local function write(text)
-        local lines = vim.split(text, '\n', true)
-        local start_line = #content + 1
-        vim.list_extend(content, lines)
-        local end_line = #content
+	local function write(text)
+		local lines = vim.split(text, '\n', true)
+		local start_line = #content + 1
+		vim.list_extend(content, lines)
+		local end_line = #content
 		-- make them 0-index based
-        table.insert(extmarks, {start_line-1, end_line-1})
-    end
+		table.insert(extmarks, {start_line-1, end_line-1})
+	end
 
-    local function write_comments(response, status)
-        local resp = json.parse(response)
+	local function write_comments(response, status)
+		local resp = json.parse(response)
 		if check_error(status, resp) then return end
-        local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
-        for _, c in ipairs(resp) do
+		local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
+		for _, c in ipairs(resp) do
 
-            -- heading
-            local heading = format('On %s %s commented:', c.created_at, c.user.login)
-            table.insert(hls, {
-				['name'] = 'OctoNvimCommentHeading';
-				['line'] = #content;
-				['start'] = 0;
-				['end'] = #format('On %s ', c.created_at);
-			})
-            table.insert(hls, {
-				['name'] = 'OctoNvimCommentUser';
-				['line'] = #content;
-				['start'] = #format('On %s ', c.created_at);
-				['end'] = #format('On %s %s', c.created_at, c.user.login);
-			})
-            table.insert(hls, {
-				['name'] = 'OctoNvimCommentHeading';
-				['line'] = #content;
-				['start'] = #format('On %s %s ', c.created_at, c.user.login);
-				['end'] = -1;
-			})
+			-- heading
+			local heading = format('On %s %s commented:', c.created_at, c.user.login)
+			table.insert(hls, {
+					['name'] = 'OctoNvimCommentHeading';
+					['line'] = #content;
+					['start'] = 0;
+					['end'] = #format('On %s ', c.created_at);
+				})
+			table.insert(hls, {
+					['name'] = 'OctoNvimCommentUser';
+					['line'] = #content;
+					['start'] = #format('On %s ', c.created_at);
+					['end'] = #format('On %s %s', c.created_at, c.user.login);
+				})
+			table.insert(hls, {
+					['name'] = 'OctoNvimCommentHeading';
+					['line'] = #content;
+					['start'] = #format('On %s %s ', c.created_at, c.user.login);
+					['end'] = -1;
+				})
 
-            vim.list_extend(content, {heading, ''})
+			vim.list_extend(content, {heading, ''})
 
-            -- body
-            local cbody = string.gsub(c['body'], '\r\n', '\n')
+			-- body
+			local cbody = string.gsub(c['body'], '\r\n', '\n')
 			if cbody == NO_BODY_MSG then cbody = '' end
-            write(cbody)
-            vim.list_extend(content, {'', '', ''})
-            local comment = {
-                id = c['id'];
-                dirty = false;
-                saved_body = cbody;
-                body = cbody;
-            }
-            table.insert(comments_metadata, comment)
-        end
-        api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
+			write(cbody)
+			vim.list_extend(content, {'', '', ''})
+			local comment = {
+				id = c['id'];
+				dirty = false;
+				saved_body = cbody;
+				body = cbody;
+			}
+			table.insert(comments_metadata, comment)
+		end
+		api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
 
-        render_buffer(bufnr)
-    end
+		render_buffer(bufnr)
+	end
 
-    -- configure buffer
-    api.nvim_buf_set_option(bufnr, 'filetype', 'octo_issue')
-    api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
-    api.nvim_buf_set_option(bufnr, 'bufhidden', 'hide')
-    api.nvim_buf_set_option(bufnr, 'swapfile', false)
-    --api.nvim_command('execute "setlocal colorcolumn=" . join(range(81,335), ",")')
+	-- configure buffer
+	api.nvim_buf_set_option(bufnr, 'filetype', 'octo_issue')
+	api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
+	api.nvim_buf_set_option(bufnr, 'bufhidden', 'hide')
+	api.nvim_buf_set_option(bufnr, 'swapfile', false)
+	--api.nvim_command('execute "setlocal colorcolumn=" . join(range(81,335), ",")')
 
-    local winnr = api.nvim_get_current_win()
-    api.nvim_win_set_option(winnr, 'cursorline', false)
-    api.nvim_win_set_option(winnr, 'number', false)
+	local winnr = api.nvim_get_current_win()
+	api.nvim_win_set_option(winnr, 'cursorline', false)
+	api.nvim_win_set_option(winnr, 'number', false)
 
-    -- register issue
-    api.nvim_buf_set_var(bufnr, 'iid', iid)
-    api.nvim_buf_set_var(bufnr, 'number', number)
-    api.nvim_buf_set_var(bufnr, 'repo', repo)
-    api.nvim_buf_set_var(bufnr, 'state', state)
-    api.nvim_buf_set_var(bufnr, 'labels', issue.labels)
-    api.nvim_buf_set_var(bufnr, 'assignees', issue.assignees)
-    api.nvim_buf_set_var(bufnr, 'milestone', issue.milestone)
+	-- register issue
+	api.nvim_buf_set_var(bufnr, 'iid', iid)
+	api.nvim_buf_set_var(bufnr, 'number', number)
+	api.nvim_buf_set_var(bufnr, 'repo', repo)
+	api.nvim_buf_set_var(bufnr, 'state', state)
+	api.nvim_buf_set_var(bufnr, 'labels', issue.labels)
+	api.nvim_buf_set_var(bufnr, 'assignees', issue.assignees)
+	api.nvim_buf_set_var(bufnr, 'milestone', issue.milestone)
 
-    -- write title
-    write(title)
-    vim.list_extend(content, {'', ''})
-    local title_metadata = {
-        saved_body = title;
-        body = title;
-        dirty = false
-    }
-    api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+	-- write title
+	write(title)
+	vim.list_extend(content, {'', ''})
+	local title_metadata = {
+		saved_body = title;
+		body = title;
+		dirty = false
+	}
+	api.nvim_buf_set_var(bufnr, 'title', title_metadata)
 
-    -- write description
-    write(body)
-    vim.list_extend(content, {'','',''})
-    local desc_metadata = {
-        saved_body = body,
-        body = body,
-        dirty = false
-    }
-    api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
+	-- write description
+	write(body)
+	vim.list_extend(content, {'','',''})
+	local desc_metadata = {
+		saved_body = body,
+		body = body,
+		dirty = false
+	}
+	api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
 
-    -- request issue comments
-    api.nvim_buf_set_var(bufnr, 'comments', {})
-    if tonumber(issue['comments']) > 0 then
-        curl.request(comments_url, opts, write_comments)
-    else
-        render_buffer(bufnr)
-    end
+	-- request issue comments
+	api.nvim_buf_set_var(bufnr, 'comments', {})
+	if tonumber(issue['comments']) > 0 then
+		curl.request(comments_url, opts, write_comments)
+	else
+		render_buffer(bufnr)
+	end
 
-    return bufnr
+	return bufnr
 end
 
 local function process_link_header(headers)
-    local h = headers['Link']
-    local page_count = 0
-    local per_page = 0
-    if nil ~= h then
-        for n in string.gmatch(h, '&page=(%d+)') do
-            page_count = max(page_count, n)
-        end
-        for p in string.gmatch(h, '&per_page=(%d+)') do
-            per_page = max(per_page, p)
-        end
-        return per_page, page_count*per_page
-    else
-        return nil, nil
-    end
+	local h = headers['Link']
+	local page_count = 0
+	local per_page = 0
+	if nil ~= h then
+		for n in string.gmatch(h, '&page=(%d+)') do
+			page_count = max(page_count, n)
+		end
+		for p in string.gmatch(h, '&per_page=(%d+)') do
+			per_page = max(per_page, p)
+		end
+		return per_page, page_count*per_page
+	else
+		return nil, nil
+	end
 end
 
 local function get_url(url, params)
@@ -601,9 +607,9 @@ local function get_repo_issues(repo, query_params)
 
 	query_params = query_params or {}
 
-    if nil == repo or repo == '' then
+	if nil == repo or repo == '' then
 		repo = get_repo_name()
-    end
+	end
 
 	query_params = {
 		state = query_params.state or 'open';
@@ -613,12 +619,12 @@ local function get_repo_issues(repo, query_params)
 		since = query_params.since
 	}
 
-    local issues_url = get_url(format('https://api.github.com/repos/%s/issues', repo), query_params)
+	local issues_url = get_url(format('https://api.github.com/repos/%s/issues', repo), query_params)
 	local req_opts = vim.deepcopy(opts)
 	req_opts.sync = true
-    local body, _, headers = curl.request(issues_url, req_opts)
+	local body, _, headers = curl.request(issues_url, req_opts)
 	local count, total = process_link_header(headers)
-    local issues = json.parse(body)
+	local issues = json.parse(body)
 	if count == nil and total == nil then
 		count = #issues
 		total = #issues
@@ -677,102 +683,91 @@ end
 -- end
 
 local function get_issue(number, repo)
-    if nil == repo or repo == '' then
+	if nil == repo or repo == '' then
 		repo = get_repo_name()
-    end
+	end
 
 	if not number then
-        api.nvim_err_writeln('Missing argument: issue number')
+		api.nvim_err_writeln('Missing argument: issue number')
 		return
 	elseif not repo then
-        api.nvim_err_writeln('Missing argument: issue repo')
+		api.nvim_err_writeln('Missing argument: issue repo')
 		return
 	end
 
-    local url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
+	local url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
 
-    local function load_issue(response, status)
-        local resp = json.parse(response)
+	local function load_issue(response, status)
+		local resp = json.parse(response)
 		if check_error(status, resp) then return end
-        create_issue_buffer(resp, repo)
-    end
-    local url_opts = vim.deepcopy(opts)
-    curl.request(url, url_opts, load_issue)
+		create_issue_buffer(resp, repo)
+	end
+	local url_opts = vim.deepcopy(opts)
+	curl.request(url, url_opts, load_issue)
 end
 
 local function save_issue(bufnr)
-
+	local number = api.nvim_buf_get_var(bufnr, 'number')
 	-- repo
-    local repo = api.nvim_buf_get_var(bufnr, 'repo')
+	local repo = api.nvim_buf_get_var(bufnr, 'repo')
 
 	if not repo then
-        api.nvim_err_writeln('Buffer is not linked to a GitHub issue')
+		api.nvim_err_writeln('Buffer is not linked to a GitHub issue')
 		return
 	end
 
-    -- collect comment metadata
-    update_issue_metadata(bufnr)
+	log.info('Saving issue:', number, 'repo:', repo, 'bufnr:', bufnr)
 
-    -- title
-    local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
-    if title_metadata['dirty'] then
+	-- collect comment metadata
+	update_issue_metadata(bufnr)
+
+	-- title & description
+	local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
+	local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
+	if title_metadata.dirty or desc_metadata.dirty then
+
+		-- trust but validate
 		if string.find(title_metadata['body'], '\n') then
 			api.nvim_err_writeln("Title can't contains new lines")
 			return
 		elseif title_metadata['body'] == '' then
 			api.nvim_err_writeln("Title can't be blank")
 			return
-		else
-			local number = api.nvim_buf_get_var(bufnr, 'number')
-			local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-			local function update_title(response, status)
-				local resp = json.parse(response)
-				if check_error(status, resp) then return end
-				if title_metadata['body'] == resp['title'] then
-					title_metadata['saved_body'] = resp['title']
-					title_metadata['dirty'] = false
-					api.nvim_buf_set_var(bufnr, 'title', title_metadata)
-					render_signcolumn(bufnr)
-					print('Saved!')
-				end
-			end
-			local update_opts = vim.deepcopy(opts)
-			update_opts['body'] = json.stringify({
-				title = title_metadata['body']
-			})
-			update_opts['method'] = 'PATCH'
-			curl.request(update_url, update_opts, update_title)
 		end
-    end
 
-    -- description
-    local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
-    if desc_metadata['dirty'] then
-		local number = api.nvim_buf_get_var(bufnr, 'number')
 		local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-		local function update_desc(response, status)
+		local function update_cb(response, status)
 			local resp = json.parse(response)
 			if check_error(status, resp) then return end
+
+			if title_metadata['body'] == resp['title'] then
+				title_metadata['saved_body'] = resp['title']
+				title_metadata['dirty'] = false
+				api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+			end
+
 			if desc_metadata['body'] == resp['body'] then
 				desc_metadata['saved_body'] = resp['body']
 				desc_metadata['dirty'] = false
 				api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
-				render_signcolumn(bufnr)
-				print('Saved!')
 			end
+
+			render_signcolumn(bufnr)
+			print('Saved!')
 		end
 		local update_opts = vim.deepcopy(opts)
 		update_opts['body'] = json.stringify({
-			body = desc_metadata['body']
-		})
+				title = title_metadata['body'];
+				body = desc_metadata['body'];
+			})
 		update_opts['method'] = 'PATCH'
-		curl.request(update_url, update_opts, update_desc)
-    end
+		curl.request(update_url, update_opts, update_cb)
+	end
 
-    -- comments
-    local comments = api.nvim_buf_get_var(bufnr, 'comments')
-    for _, metadata in ipairs(comments) do
-        if is_blank(metadata['body']) then
+	-- comments
+	local comments = api.nvim_buf_get_var(bufnr, 'comments')
+	for _, metadata in ipairs(comments) do
+		if is_blank(metadata['body']) then
 			-- remove issue?
 			local choice = vim.fn.confirm("Comment body can't be blank, remove comment?", "&Yes\n&No\n&Cancel", 2)
 			if choice == 1 then
@@ -786,133 +781,180 @@ local function save_issue(bufnr)
 				curl.request(remove_url, remove_opts, remove_comment)
 			end
 		elseif metadata['body'] ~= metadata['saved_body'] then
-            local cid = metadata['id']
-            local update_url = format('https://api.github.com/repos/%s/issues/comments/%s', repo, cid)
+			local cid = metadata['id']
+			local update_url = format('https://api.github.com/repos/%s/issues/comments/%s', repo, cid)
 
-            local function update_comment(response, status)
-                local resp = json.parse(response)
+			local function update_comment(response, status)
+				local resp = json.parse(response)
 				if check_error(status, resp) then return end
-                if metadata['body'] == resp['body'] then
-                    for i, c in ipairs(comments) do
-                        if c['id'] == resp['id'] then
-                            comments[i]['saved_body'] = resp['body']
-                            comments[i]['dirty'] = false
-                            break
-                        end
-                    end
-                    api.nvim_buf_set_var(bufnr, 'comments', comments)
-                    render_signcolumn(bufnr)
-                    print('Saved!')
-                end
-            end
-            local update_opts = vim.deepcopy(opts)
-            update_opts['body'] = json.stringify({
-                body = metadata['body']
-            })
-            update_opts['method'] = 'PATCH'
-            curl.request(update_url, update_opts, update_comment)
-        end
-    end
+				if metadata['body'] == resp['body'] then
+					for i, c in ipairs(comments) do
+						if c['id'] == resp['id'] then
+							comments[i]['saved_body'] = resp['body']
+							comments[i]['dirty'] = false
+							break
+						end
+					end
+					api.nvim_buf_set_var(bufnr, 'comments', comments)
+					render_signcolumn(bufnr)
+					print('Saved!')
+				end
+			end
+			local update_opts = vim.deepcopy(opts)
+			update_opts['body'] = json.stringify({
+					body = metadata['body']
+				})
+			update_opts['method'] = 'PATCH'
+			curl.request(update_url, update_opts, update_comment)
+		end
+	end
 
-    -- reset modified option
-    api.nvim_buf_set_option(bufnr, 'modified', false)
+	-- reset modified option
+	api.nvim_buf_set_option(bufnr, 'modified', false)
 end
 
 local function new_comment()
 
-    local bufnr = api.nvim_get_current_buf()
+	local bufnr = api.nvim_get_current_buf()
 
-    local iid = api.nvim_buf_get_var(bufnr, 'iid')
-    local number = api.nvim_buf_get_var(bufnr, 'number')
-    local repo = api.nvim_buf_get_var(bufnr, 'repo')
+	local iid = api.nvim_buf_get_var(bufnr, 'iid')
+	local number = api.nvim_buf_get_var(bufnr, 'number')
+	local repo = api.nvim_buf_get_var(bufnr, 'repo')
 
 	if not iid or not number or not repo then
-        api.nvim_err_writeln('Buffer is not linked to a GitHub issue')
+		api.nvim_err_writeln('Buffer is not linked to a GitHub issue')
 		return
 	end
 
-    local url = format('https://api.github.com/repos/%s/issues/%s/comments', repo, number)
+	local url = format('https://api.github.com/repos/%s/issues/%s/comments', repo, number)
 
-    local function new_comment_cb(response, status)
-        local resp = json.parse(response)
+	local function new_comment_cb(response, status)
+		local resp = json.parse(response)
 		if check_error(status, resp) then return end
-        if nil ~= resp['issue_url'] then
-            get_issue(number, repo)
-        end
-    end
+		if nil ~= resp['issue_url'] then
+			get_issue(number, repo)
+		end
+	end
 
-    local url_opts = vim.deepcopy(opts)
-    url_opts['body'] = json.stringify({
-        body = NO_BODY_MSG
-    })
-    url_opts['method'] = 'POST'
-    curl.request(url, url_opts, new_comment_cb)
+	local url_opts = vim.deepcopy(opts)
+	url_opts['body'] = json.stringify({
+			body = NO_BODY_MSG
+		})
+	url_opts['method'] = 'POST'
+	curl.request(url, url_opts, new_comment_cb)
 end
 
 local function new_issue(repo)
 
-    if nil == repo or repo == '' then
+	if nil == repo or repo == '' then
 		repo = get_repo_name()
-    end
+	end
 
-    local url = format('https://api.github.com/repos/%s/issues', repo)
+	local url = format('https://api.github.com/repos/%s/issues', repo)
 
-    local function new_issue_cb(response, status)
-        local resp = json.parse(response)
+	local function new_issue_cb(response, status)
+		local resp = json.parse(response)
 		if check_error(status, resp) then return end
-        create_issue_buffer(resp, repo)
-    end
-    local url_opts = vim.deepcopy(opts)
-    url_opts['body'] = json.stringify({
-        title = 'new issue';
-        body = NO_BODY_MSG
-    })
-    url_opts['method'] = 'POST'
-    curl.request(url, url_opts, new_issue_cb)
+		create_issue_buffer(resp, repo)
+	end
+	local url_opts = vim.deepcopy(opts)
+	url_opts['body'] = json.stringify({
+			title = 'new issue';
+			body = NO_BODY_MSG
+		})
+	url_opts['method'] = 'POST'
+	curl.request(url, url_opts, new_issue_cb)
 end
 
 local function change_issue_state(state)
-    local bufnr = api.nvim_get_current_buf()
+	local bufnr = api.nvim_get_current_buf()
 
-    local number = api.nvim_buf_get_var(bufnr, 'number')
-    local repo = api.nvim_buf_get_var(bufnr, 'repo')
+	local number = api.nvim_buf_get_var(bufnr, 'number')
+	local repo = api.nvim_buf_get_var(bufnr, 'repo')
 
 	if not state then
-        api.nvim_err_writeln('Missing argument: state')
+		api.nvim_err_writeln('Missing argument: state')
 		return
 	end
 
 	if not number or not repo then
-        api.nvim_err_writeln('Buffer is not linked to a GitHub issues')
+		api.nvim_err_writeln('Buffer is not linked to a GitHub issues')
 		return
 	end
 
-    local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-    local function update_state(response, status)
-        local resp = json.parse(response)
+	local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
+	local function update_state(response, status)
+		local resp = json.parse(response)
 		if check_error(status, resp) then return end
-        if state == resp['state'] then
-            api.nvim_buf_set_var(bufnr, 'state', resp['state'])
-            print('Issue state changed to: '..resp['state'])
-            get_issue(resp['number'], repo)
-        end
-    end
-    local update_opts = vim.deepcopy(opts)
-    update_opts['body'] = json.stringify({
-        state = state;
-    })
-    update_opts['method'] = 'PATCH'
-    curl.request(update_url, update_opts, update_state)
+		if state == resp['state'] then
+			api.nvim_buf_set_var(bufnr, 'state', resp['state'])
+			print('Issue state changed to: '..resp['state'])
+			get_issue(resp['number'], repo)
+		end
+	end
+	local update_opts = vim.deepcopy(opts)
+	update_opts['body'] = json.stringify({
+			state = state;
+		})
+	update_opts['method'] = 'PATCH'
+	curl.request(update_url, update_opts, update_state)
+end
+
+local function issue_complete(findstart, base)
+	-- :he complete-functions
+	if findstart == 1 then
+		-- findstart
+		local line = api.nvim_get_current_line()
+		local pos = vim.fn.col('.')
+		local i, j = 0
+		while true do
+			i, j = string.find(line, '#(%d*)', i+1)
+			if i == nil then break end
+			if pos > i and pos <= j+1 then
+				return i
+			end
+		end
+		return -2
+	elseif findstart == 0 then
+		local repo = api.nvim_buf_get_var(0, 'repo')
+		local resp = get_repo_issues(repo)
+		local entries = {}
+		for _,i in ipairs(resp.issues) do
+			if vim.startswith(tostring(i.number), base) then
+				table.insert(entries, {
+						word = tostring(i.number);
+						abbr = format("#%d", i.number);
+						menu = i.title;
+					})
+			end
+		end
+		return entries
+	end
+end
+
+local function go_to_issue()
+	local line = api.nvim_get_current_line()
+	local pos = vim.fn.col('.')
+	local i, j = 0
+	while true do
+		i, j = string.find(line, '#(%d*)', i+1)
+		if i == nil then break end
+		if pos > i and pos <= j+1 then
+			local number = string.sub(line, i+1, j)
+			get_issue(number, api.nvim_buf_get_var(0, 'repo'))
+		end
+	end
 end
 
 return {
-    change_issue_state = change_issue_state;
-    get_issue = get_issue;
-    new_issue = new_issue;
-    --list_issues = list_issues;
-    save_issue = save_issue;
-    render_signcolumn = render_signcolumn;
-    new_comment = new_comment;
+	change_issue_state = change_issue_state;
+	get_issue = get_issue;
+	new_issue = new_issue;
+	save_issue = save_issue;
+	render_signcolumn = render_signcolumn;
+	new_comment = new_comment;
 	details_win = details_win;
-    get_repo_issues = get_repo_issues;
+	get_repo_issues = get_repo_issues;
+	issue_complete = issue_complete;
+	go_to_issue = go_to_issue;
 }
