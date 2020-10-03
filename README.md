@@ -9,7 +9,7 @@ This is a WIP plugin, I take no responsibility of the use of this plugin.
 
 ## Installation
 
-Use your favourite Plugin manager
+Use your favourite Plugin manager to install it.
 
 ## Requirements
 

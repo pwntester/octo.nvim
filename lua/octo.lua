@@ -8,6 +8,8 @@ local json = {
 	parse = vim.fn.json_decode;
 	stringify = vim.fn.json_encode;
 }
+
+-- constants
 local NO_BODY_MSG = 'No description provided.'
 local HIGHLIGHT_NAME_PREFIX = "octo"
 local HIGHLIGHT_CACHE = {}
@@ -15,6 +17,17 @@ local HIGHLIGHT_MODE_NAMES = {
 	background = "mb";
 	foreground = "mf";
 }
+
+-- autocommands
+vim.cmd [[ augroup octo_autocmds ]]
+vim.cmd [[ autocmd!]]
+vim.cmd [[ au BufEnter octo://* nested lua require'octo'.show_details_win() ]]
+vim.cmd [[ au BufLeave octo://* nested lua require'octo'.close_details_win() ]]
+vim.cmd [[ au WinLeave * nested lua require'octo'.close_details_win() ]]
+vim.cmd [[ au TextChanged octo://* lua require"octo".render_signcolumn() ]]
+vim.cmd [[ au TextChangedI octo://* lua require"octo".render_signcolumn() ]]
+vim.cmd [[ au BufWriteCmd octo://* lua require"octo".save_issue() ]]
+vim.cmd [[ augroup END ]]
 
 local function is_blank(s)
 	return not(s ~= nil and s:match("%S") ~= nil)
@@ -43,7 +56,6 @@ end
 
 local function place_signs(bufnr, start_line, end_line, is_dirty)
 	local dirty_mod = is_dirty and 'dirty' or 'clean'
-	log.info('place_sign', start_line, end_line, dirty_mod)
 
 	if start_line == end_line or end_line < start_line then
 		sign_place(format('%s_line', dirty_mod), bufnr, start_line)
@@ -114,11 +126,16 @@ local function create_highlight(rgb_hex, options)
 	return highlight_name
 end
 
-local function details_win(current_bufnr)
+local function show_details_win()
+  local issue_bufnr = api.nvim_get_current_buf()
+	local bufname = api.nvim_buf_get_name(issue_bufnr)
+  if not vim.startswith(bufname, 'octo://') then return end
 
-	local labels = api.nvim_buf_get_var(current_bufnr, 'labels')
-	local assignees = api.nvim_buf_get_var(current_bufnr, 'assignees')
-	local milestone = api.nvim_buf_get_var(current_bufnr, 'milestone')
+  --log.info('show details', issue_bufnr, bufname, vim.fn.bufname())
+
+	local labels = api.nvim_buf_get_var(issue_bufnr, 'labels')
+	local assignees = api.nvim_buf_get_var(issue_bufnr, 'assignees')
+	local milestone = api.nvim_buf_get_var(issue_bufnr, 'milestone')
 
 	local lines = {''}
 	local hls = {}
@@ -172,7 +189,7 @@ local function details_win(current_bufnr)
 	end
 	table.insert(lines, '')
 
-	local bufnr = api.nvim_create_buf(false, true)
+	local bufnr = api.nvim_create_buf(true, true)
 	api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
 	highlight(bufnr, hls)
 
@@ -197,9 +214,18 @@ local function details_win(current_bufnr)
 	local winnr = api.nvim_open_win(bufnr, false, opts)
 	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:OctoNvimFloat,EndOfBuffer:OctoNvimFloat")
 
-	vim.cmd(format("autocmd BufLeave <buffer=%d> lua pcall(vim.api.nvim_win_close,%d,1);pcall(vim.cmd,'%dbw!')", current_bufnr, winnr, bufnr))
+  -- save the details win handle
+  api.nvim_buf_set_var(issue_bufnr, 'details_win', winnr)
+end
 
-	return bufnr, winnr
+local function close_details_win()
+  local bufnr = api.nvim_get_current_buf()
+  local bufname = api.nvim_buf_get_name(bufnr)
+  --log.info('close_win', bufnr, bufname, vim.fn.expand('<afile>'))
+  if vim.startswith(bufname, 'octo://') then
+    local winnr = api.nvim_buf_get_var(bufnr, 'details_win')
+    pcall(api.nvim_win_close, winnr, 1)
+  end
 end
 
 local function get_extmark_region(bufnr, mark)
@@ -316,13 +342,11 @@ local function update_issue_metadata(bufnr)
 end
 
 local function render_signcolumn(bufnr)
-	if nil == bufnr or bufnr == 0 then
-		bufnr = api.nvim_get_current_buf()
-	end
+  bufnr = bufnr or api.nvim_get_current_buf()
+	local bufname = api.nvim_buf_get_name(bufnr)
+  if not vim.startswith(bufname, 'octo://') then return end
 
 	local issue_dirty = false
-
-	log.info('refreshing sign column')
 
 	-- update comment metadata (lines, etc.)
 	update_issue_metadata(bufnr)
@@ -353,7 +377,6 @@ local function render_signcolumn(bufnr)
 	if desc.dirty then issue_dirty = true end
 	start_line = desc['start_line']
 	end_line = desc['end_line']
-	log.info('description', desc.dirty)
 	place_signs(bufnr, start_line, end_line, desc.dirty)
 
 	-- description virtual text
@@ -458,21 +481,11 @@ local function create_issue_buffer(issue, repo)
 		-- show signs
 		render_signcolumn(bufnr)
 
-		-- autocommands
-		vim.cmd(format('augroup octocmds_%s', bufnr))
-		vim.cmd [[autocmd!]]
-		vim.cmd(format('autocmd TextChanged  <buffer=%d> lua require("octo").render_signcolumn(%d)',bufnr,bufnr))
-		vim.cmd(format('autocmd TextChangedI <buffer=%d> lua require("octo").render_signcolumn(%d)',bufnr,bufnr))
-		vim.cmd(format('autocmd BufWriteCmd <buffer=%d> lua require("octo").save_issue(%d)',bufnr,bufnr))
-		vim.cmd(format('autocmd BufEnter,BufNew <buffer=%d> lua require("octo").details_win(%d)',bufnr,bufnr))
-		vim.cmd [[augroup END]]
-
 		-- reset modified option
 		api.nvim_buf_set_option(bufnr, 'modified', false)
 
 		-- show details window
-		details_win(bufnr)
-
+		show_details_win()
 	end
 
 	local function write(text)
@@ -621,7 +634,6 @@ local function get_repo_issues(repo, query_params)
 	log.info('getting issues for repo', repo)
 
 	query_params = {
-		pulls = false;
 		state = query_params.state or 'open';
 		per_page = query_params.per_page or 50;
 		filter = query_params.filter;
@@ -635,6 +647,9 @@ local function get_repo_issues(repo, query_params)
 	local body, _, headers = curl.request(issues_url, req_opts)
 	local count, total = process_link_header(headers)
 	local issues = json.parse(body)
+  vim.tbl_filter(function(e)
+    return e.pull_request == nil
+  end, issues)
 	if count == nil and total == nil then
 		count = #issues
 		total = #issues
@@ -717,10 +732,15 @@ local function get_issue(number, repo)
 end
 
 local function save_issue(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+	local bufname = api.nvim_buf_get_name(bufnr)
+  if not vim.startswith(bufname, 'octo://') then return end
+
+  -- number
 	local number = api.nvim_buf_get_var(bufnr, 'number')
+
 	-- repo
 	local repo = api.nvim_buf_get_var(bufnr, 'repo')
-
 	if not repo then
 		api.nvim_err_writeln('Buffer is not linked to a GitHub issue')
 		return
@@ -957,14 +977,16 @@ local function go_to_issue()
 end
 
 return {
+  setup = setup;
 	change_issue_state = change_issue_state;
 	get_issue = get_issue;
 	new_issue = new_issue;
 	save_issue = save_issue;
 	render_signcolumn = render_signcolumn;
 	new_comment = new_comment;
-	details_win = details_win;
 	get_repo_issues = get_repo_issues;
 	issue_complete = issue_complete;
 	go_to_issue = go_to_issue;
+	show_details_win = show_details_win;
+  close_details_win = close_details_win;
 }
