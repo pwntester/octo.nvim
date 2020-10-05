@@ -428,7 +428,7 @@ local function create_issue_buffer(issue, repo)
 	local extmarks = {}
 
 	-- create buffer
-	api.nvim_command(format('e octo://%s/%s', repo, number))
+	api.nvim_command(format('noautocmd e octo://%s/%s', repo, number))
 	local bufnr = api.nvim_get_current_buf()
 
 	-- delete extmarks
