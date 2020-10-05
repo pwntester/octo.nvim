@@ -215,7 +215,10 @@ local function show_details_win()
 	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:OctoNvimFloat,EndOfBuffer:OctoNvimFloat")
 
   -- save the details win handle
-  api.nvim_buf_set_var(issue_bufnr, 'details_win', winnr)
+  api.nvim_buf_set_var(issue_bufnr, 'details_win', {
+    winnr = winnr;
+    bufnr = bufnr;
+  })
 end
 
 local function close_details_win()
@@ -223,8 +226,9 @@ local function close_details_win()
   local bufname = api.nvim_buf_get_name(bufnr)
   --log.info('close_win', bufnr, bufname, vim.fn.expand('<afile>'))
   if vim.startswith(bufname, 'octo://') then
-    local winnr = api.nvim_buf_get_var(bufnr, 'details_win')
-    pcall(api.nvim_win_close, winnr, 1)
+    local details = api.nvim_buf_get_var(bufnr, 'details_win')
+    vim.cmd(string.format('%dbw!', details.bufnr))
+    --pcall(api.nvim_win_close, details.winnr, 1)
   end
 end
 
