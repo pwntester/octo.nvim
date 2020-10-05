@@ -12,16 +12,16 @@ command! -nargs=+ Issue :lua require('octo').get_issue(<f-args>)
 
 " FZF dispatchers
 function! octo#fzf_menu(candidates, callback) abort
-    call fzf#run(fzf#wrap({
-        \ 'source': a:candidates,
-        \ 'sink': function('octo#result_dispatcher', [a:callback]),
-        \ 'options': '+m --with-nth 2.. -d "::"',
-        \ }))
+  call fzf#run(fzf#wrap({
+    \ 'source': a:candidates,
+    \ 'sink': function('octo#result_dispatcher', [a:callback]),
+    \ 'options': '+m --with-nth 2.. -d "::"',
+    \ }))
 endfunction
 
 function! octo#result_dispatcher(callback, result) abort
-    let iid = split(a:result, '::')[0]
-    call luaeval('require("octo")[_A[1]](_A[2])', [a:callback, iid])
+  let iid = split(a:result, '::')[0]
+  call luaeval('require("octo")[_A[1]](_A[2])', [a:callback, iid])
 endfunction
 
 " clear buffer undo history
