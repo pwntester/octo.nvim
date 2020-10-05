@@ -624,7 +624,7 @@ local function get_url(url, params)
 	return url
 end
 
-local function get_repo_issues(repo, query_params)
+local function get_repo_issues(opts, repo, query_params)
 
 	-- this function should be used by fuzzy pickers as a source
 	-- and then use `get_issue()` as the sink
@@ -711,7 +711,7 @@ end
 --     curl.request(issues_url, opts, choose_issue)
 -- end
 
-local function get_issue(number, repo)
+local function get_issue(opts, number, repo)
 	if nil == repo or repo == 'nil' or repo == '' then
 		repo = get_repo_name()
 	end
