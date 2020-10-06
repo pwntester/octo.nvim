@@ -1,4 +1,4 @@
-local curl = require('curl')
+local curl = require('octo.curl')
 local vim = vim
 local api = vim.api
 local max = math.max
@@ -664,52 +664,6 @@ local function get_repo_issues(repo, query_params)
 		total = total;
 	}
 end
-
--- local function list_issues(repo)
---
---     if nil == repo or repo == '' then
--- 		repo = get_repo_name()
---     end
---
---     local function choose_issue(response, status, headers)
---         local issues = json.parse(response)
--- 		if check_error(status, issues) then return end
---
---         local count, total = process_link_header(headers)
---         if count == nil and total == nil then
---             count = #issues
---             total = #issues
---         end
---
---         local source = {}
---         for _,i in ipairs(issues) do
---             table.insert(source, {
---                 id = i['id'];
---                 issue = i;
---                 number = i['number'];
---                 display = string.format('#%d - %s', i['number'], i['title']);
---             })
---         end
---         local winnr = api.nvim_get_current_win()
---         require'octo.ui'.floating_fuzzy_menu{
---             inputs = source;
---             prompt_position = 'top';
---             leave_empty_space = true;
--- 			height = 30;
---             prompt = 'Search:';
---             virtual_text = format('%d out of %d', count, total);
---             callback = function(e, _, _)
---                 api.nvim_set_current_win(winnr)
---                 local bufnr = create_issue_buffer(e.issue, repo)
---                 api.nvim_win_set_buf(winnr, bufnr)
---             end
---         }
---
---     end
---
---     local issues_url = format('https://api.github.com/repos/%s/issues?state=open\\&per_page=50', repo)
---     curl.request(issues_url, opts, choose_issue)
--- end
 
 local function get_issue(number, repo)
 	if nil == repo or repo == 'nil' or repo == '' then

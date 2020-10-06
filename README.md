@@ -18,7 +18,7 @@ e.g. `pwntester:3123123ab4324bf12371231321feb`
 
 ## Commands
 
-- `Issue <id> [<repo>]`: Opens an issue specified by Id. If repo is not provided, it will be derived from CWD.
+- `Issue [<repo>] <id>`: Opens an issue specified by Id. If repo is not provided, it will be derived from CWD.
 - `NewIssue <repo>`: Create new issue in specific repo. If repo is not provided, it will be derived from CWD.
 - `CloseIssue`: Close issue.
 - `ReopenIssue`: Reopen issue.

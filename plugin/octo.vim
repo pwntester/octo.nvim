@@ -3,25 +3,43 @@ if exists('g:loaded_octo')
 endif
 
 " commands
-command! NewComment :lua require('octo').new_comment()
-command! CloseIssue :lua require('octo').change_issue_state('closed')
-command! ReopenIssue :lua require('octo').change_issue_state('open')
-command! SaveIssue  :lua require('octo').save_issue()
-command! -nargs=? NewIssue   :lua require('octo').new_issue(<f-args>)
-command! -nargs=+ Issue :lua require('octo').get_issue(<f-args>)
+command! NewComment :lua require'octo'.new_comment()
+command! CloseIssue :lua require'octo'.change_issue_state('closed')
+command! ReopenIssue :lua require'octo'.change_issue_state('open')
+command! SaveIssue  :lua require'octo'.save_issue()
+command! -nargs=? NewIssue   :lua require'octo'.new_issue(<f-args>)
+command! -nargs=+ Issue :call octo#get_issue(<f-args>)
+command! -nargs=+ ListIssues :lua require'octo.menu'.issues(<f-args>)
 
 " FZF dispatchers
-function! octo#fzf_menu(candidates, callback) abort
-  call fzf#run(fzf#wrap({
-    \ 'source': a:candidates,
-    \ 'sink': function('octo#result_dispatcher', [a:callback]),
-    \ 'options': '+m --with-nth 2.. -d "::"',
-    \ }))
-endfunction
+" function! octo#fzf_menu(candidates, callback) abort
+"   call fzf#run(fzf#wrap({
+"     \ 'source': a:candidates,
+"     \ 'sink': function('octo#result_dispatcher', [a:callback]),
+"     \ 'options': '+m --with-nth 2.. -d "::"',
+"     \ }))
+" endfunction
+"
+" function! octo#result_dispatcher(callback, result) abort
+"   let iid = split(a:result, '::')[0]
+"   call luaeval('require("octo")[_A[1]](_A[2])', [a:callback, iid])
+" endfunction
 
-function! octo#result_dispatcher(callback, result) abort
-  let iid = split(a:result, '::')[0]
-  call luaeval('require("octo")[_A[1]](_A[2])', [a:callback, iid])
+" load issue
+function! octo#get_issue(...) abort
+  let number = v:null
+  let repo = v:null
+  if a:0 == 1
+    let repo = v:null
+    let number = a:1
+  elseif a:0 == 2
+    let repo = a:1
+    let number = a:2
+  else
+    echo "Incorrect number of parameters"
+    return
+  endif
+  return luaeval("require'octo'.get_issue(_A[1], _A[2])", [number, repo])
 endfunction
 
 " clear buffer undo history
