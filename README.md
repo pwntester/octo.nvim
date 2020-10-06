@@ -1,4 +1,4 @@
-# OCTO.NVIM
+# octo.nvim
 
 ![](https://i.imgur.com/JWkHXSa.png)
 ![](https://i.imgur.com/UuYyncG.png)
@@ -23,6 +23,7 @@ e.g. `pwntester:3123123ab4324bf12371231321feb`
 - `CloseIssue`: Close issue.
 - `ReopenIssue`: Reopen issue.
 - `NewComment`: Add new comment to open issue.
+- `ListIssues <repo>`: (require [Telescope.nvim](https://github.com/nvim-lua/telescope.nvim) to be installed). Fuzzy pick amongst 50 top open issues.
 
 ## Usage
 
@@ -42,66 +43,15 @@ nmap gi <Plug>(GoToIssue)
 
 ## Highlight groups
 
-  - OctoNvimDirty: ErrorMsg 
-  - OctoNvimCommentHeading: PreProc
-  - OctoNvimCommentUser: Underlined
-  - OctoNvimIssueTitle: PreProc
-  - OctoNvimIssueId: Question
-  - OctoNvimIssueOpen: MoreMsg
-  - OctoNvimIssueClosed: ErrorMsg
-  - OctoNvimEmpty: Comment
-  - OctoNvimFloat: NormalNC
-
-## Fuzzy pickers
-
-By default, this plugin does not expose any command to list and fuzzy pick a repo issue. However, it exposes source/sink functions to be used with your fuzzy picker of choice. For example, it can be integrated with [Telescope.nvim](https://github.com/nvim-lua/telescope.nvim) with the following function:
-
-```
-local function issues(opts, repo)
-
-  local results = {}
-  local resp = require'octo'.get_repo_issues(repo, {})
-  for _,i in ipairs(resp.issues) do
-    table.insert(results, {
-      number = i.number;
-      title = i.title;
-    })
-  end
-
-  local make_issue_entry = function(result)
-    return {
-      valid = true;
-      entry_type = make_entry.types.GENERIC;
-      value = tostring(result.number);
-      ordinal = tostring(result.number);
-      display = string.format('#%d - %s', result.number, result.title);
-    }
-  end
-
-  local custom_mappings = function(prompt_bufnr, map)
-    local run_command = function()
-      local selection = actions.get_selected_entry(prompt_bufnr)
-      actions.close(prompt_bufnr)
-      local cmd = string.format([[ lua require'octo'.get_issue('%s', '%s') ]], selection.value, repo)
-      vim.cmd [[stopinsert]]
-      vim.cmd(cmd)
-    end
-    map('i', '<CR>', run_command)
-    map('n', '<CR>', run_command)
-    return true
-  end
-
-  pickers.new(opts, {
-    prompt = 'Issues';
-    finder = finders.new_table({
-      results = results;
-      entry_maker = make_issue_entry;
-    });
-    sorter = sorters.get_generic_fuzzy_sorter();
-    attach_mappings = custom_mappings;
-  }):find()
-end
-```
+  - `OctoNvimDirty`: `ErrorMsg` 
+  - `OctoNvimCommentHeading`: `PreProc`
+  - `OctoNvimCommentUser`: `Underlined`
+  - `OctoNvimIssueTitle`: `PreProc`
+  - `OctoNvimIssueId`: `Question`
+  - `OctoNvimIssueOpen`: `MoreMsg`
+  - `OctoNvimIssueClosed`: `ErrorMsg`
+  - `OctoNvimEmpty`: `Comment`
+  - `OctoNvimFloat`: `NormalNC`
 
 ## TODO
 
@@ -110,3 +60,5 @@ end
   - [ ] autocompletion for @person
   - [ ] support pagination
   - [ ] command to hide details float
+  - [ ] command to add labels
+  - [ ] command to add assignees
