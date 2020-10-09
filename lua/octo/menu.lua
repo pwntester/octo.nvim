@@ -56,7 +56,6 @@ local function issues(repo, opts)
   local make_issue_entry = function(result)
     return {
       valid = true;
-      entry_type = make_entry.types.GENERIC;
       value = tostring(result.number);
       ordinal = tostring(result.number);
       display = string.format('#%d - %s', result.number, result.title);
