@@ -2,6 +2,7 @@ local curl = require('octo.curl')
 local vim = vim
 local api = vim.api
 local max = math.max
+local deepcopy = vim.deepcopy
 local format = string.format
 local log = require('octo.log')
 local json = {
@@ -16,6 +17,15 @@ local HIGHLIGHT_CACHE = {}
 local HIGHLIGHT_MODE_NAMES = {
 	background = "mb";
 	foreground = "mf";
+}
+
+-- curl opts
+local curl_opts = {
+  credentials = vim.fn.getenv('GITHUB_PAT');
+	headers = {
+		['Accept']       = 'application/vnd.github.v3+json',
+		['Content-Type'] = 'application/json'
+	}
 }
 
 -- autocommands
@@ -200,7 +210,7 @@ local function show_details_win()
 	local popup_width = longest_line + 1
 	local popup_height = #lines
 
-	local opts = {
+	local win_opts = {
 		relative = 'win';
 		win = current_win;
 		width = popup_width;
@@ -211,7 +221,7 @@ local function show_details_win()
 		col = win_width - horizontal_padding - popup_width;
 	}
 
-	local winnr = api.nvim_open_win(bufnr, false, opts)
+	local winnr = api.nvim_open_win(bufnr, false, win_opts)
 	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:OctoNvimFloat,EndOfBuffer:OctoNvimFloat")
 
   -- save the details win handle
@@ -269,20 +279,6 @@ local function get_repo_name()
 	end
 	return repo
 end
-
-local function get_gh_token()
-	return vim.fn.getenv('GITHUB_PAT')
-end
-
-local opts = {
-	headers = {
-		Accept = 'application/vnd.github.v3+json',
-		["Content-Type"] = 'application/json'
-	}
-}
-
--- get credentials from env var
-opts['credentials'] = get_gh_token()
 
 -- definitions
 octo_em_ns = api.nvim_create_namespace('octo_marks')
@@ -555,10 +551,6 @@ local function create_issue_buffer(issue, repo)
 	api.nvim_buf_set_option(bufnr, 'swapfile', false)
 	--api.nvim_command('execute "setlocal colorcolumn=" . join(range(81,335), ",")')
 
-	local winnr = api.nvim_get_current_win()
-	api.nvim_win_set_option(winnr, 'cursorline', false)
-	api.nvim_win_set_option(winnr, 'number', false)
-
 	-- register issue
 	api.nvim_buf_set_var(bufnr, 'iid', iid)
 	api.nvim_buf_set_var(bufnr, 'number', number)
@@ -589,9 +581,10 @@ local function create_issue_buffer(issue, repo)
 	api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
 
 	-- request issue comments
+  local req_opts = deepcopy(curl_opts)
 	api.nvim_buf_set_var(bufnr, 'comments', {})
 	if tonumber(issue['comments']) > 0 then
-		curl.request(comments_url, opts, write_comments)
+		curl.request(comments_url, req_opts, write_comments)
 	else
 		render_buffer(bufnr)
 	end
@@ -646,7 +639,7 @@ local function get_repo_issues(repo, query_params)
 	}
 
 	local issues_url = get_url(format('https://api.github.com/repos/%s/issues', repo), query_params)
-	local req_opts = vim.deepcopy(opts)
+	local req_opts = deepcopy(curl_opts)
 	req_opts.sync = true
 	local body, _, headers = curl.request(issues_url, req_opts)
 	local count, total = process_link_header(headers)
@@ -685,7 +678,7 @@ local function get_issue(number, repo)
 		if check_error(status, resp) then return end
 		create_issue_buffer(resp, repo)
 	end
-	local url_opts = vim.deepcopy(opts)
+	local url_opts = deepcopy(curl_opts)
 	curl.request(url, url_opts, load_issue)
 end
 
@@ -743,7 +736,7 @@ local function save_issue(bufnr)
 			render_signcolumn(bufnr)
 			print('Saved!')
 		end
-		local update_opts = vim.deepcopy(opts)
+		local update_opts = deepcopy(curl_opts)
 		update_opts['body'] = json.stringify({
 				title = title_metadata['body'];
 				body = desc_metadata['body'];
@@ -764,7 +757,7 @@ local function save_issue(bufnr)
 				local function remove_comment(_)
 					get_issue(api.nvim_buf_get_var(bufnr, 'number'), repo)
 				end
-				local remove_opts = vim.deepcopy(opts)
+				local remove_opts = deepcopy(curl_opts)
 				remove_opts['method'] = 'DELETE'
 				curl.request(remove_url, remove_opts, remove_comment)
 			end
@@ -788,7 +781,7 @@ local function save_issue(bufnr)
 					print('Saved!')
 				end
 			end
-			local update_opts = vim.deepcopy(opts)
+			local update_opts = deepcopy(curl_opts)
 			update_opts['body'] = json.stringify({
 					body = metadata['body']
 				})
@@ -824,7 +817,7 @@ local function new_comment()
 		end
 	end
 
-	local url_opts = vim.deepcopy(opts)
+	local url_opts = deepcopy(curl_opts)
 	url_opts['body'] = json.stringify({
 			body = NO_BODY_MSG
 		})
@@ -845,7 +838,7 @@ local function new_issue(repo)
 		if check_error(status, resp) then return end
 		create_issue_buffer(resp, repo)
 	end
-	local url_opts = vim.deepcopy(opts)
+	local url_opts = deepcopy(curl_opts)
 	url_opts['body'] = json.stringify({
 			title = 'new issue';
 			body = NO_BODY_MSG
@@ -880,7 +873,7 @@ local function change_issue_state(state)
 			get_issue(resp['number'], repo)
 		end
 	end
-	local update_opts = vim.deepcopy(opts)
+	local update_opts = deepcopy(curl_opts)
 	update_opts['body'] = json.stringify({
 			state = state;
 		})
