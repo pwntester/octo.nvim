@@ -61,7 +61,7 @@ local function asyncCmd(cmd, args, cb)
 end
 
 local function syncCmd(cmd, args)
-  local timeout = 5000
+  local timeout = 10000
   local done = false
   local body, status, headers
   local function cb(_body, _status, _headers)
@@ -132,7 +132,7 @@ local function request(url, opts, cb)
     end
 
     -- Debug
-    --print(cmd)
+    -- print(cmd)
 
     if opts.sync then
       return syncCmd('sh', {'-c', cmd})

@@ -155,7 +155,7 @@ local function show_details_win()
 	table.insert(lines, ' Labels:')
 	if labels and #labels > 0 then
 		for _, label in ipairs(labels) do
-			line = format('  - ◖%s◗', label.name)
+			line = format('  -  %s ', label.name)
 			local highlight_name = create_highlight(label.color, {})
 			table.insert(lines, line)
 			table.insert(hls, {
@@ -422,6 +422,9 @@ local function create_issue_buffer(issue, repo)
 	local content = {}
 	local hls = {}
 	local extmarks = {}
+
+  -- close detail window
+  close_details_win()
 
 	-- create buffer
 	api.nvim_command(format('noautocmd e octo://%s/%s', repo, number))
@@ -927,8 +930,48 @@ local function go_to_issue()
 	end
 end
 
+local function issue_action(action, kind, value)
+  if action ~= 'add' and action ~= 'remove' then
+    api.nvim_err_writeln('Incorrect action')
+    return
+  end
+  if kind ~= 'assignees' and kind ~= 'labels' then
+    api.nvim_err_writeln('Incorrect action kind')
+    return
+  end
+  if vim.bo.ft ~= 'octo_issue' then
+    api.nvim_err_writeln('Not in issue buffer')
+    return
+  end
+  local number = api.nvim_buf_get_var(0, 'number')
+  local repo = api.nvim_buf_get_var(0, 'repo')
+  if not number or not repo then
+    api.nvim_err_writeln('Missing issue metadata')
+    return
+  end
+
+	local url = format('https://api.github.com/repos/%s/issues/%d/%s', repo, number, kind)
+
+	local function cb(_, _)
+		get_issue(number, repo)
+	end
+	local url_opts = deepcopy(curl_opts)
+  if kind == 'assignees' then
+    url_opts['body'] = json.stringify({ assignees = {value}; })
+  elseif kind == 'labels' and action == 'add' then
+    url_opts['body'] = json.stringify({ labels = {value}; })
+  elseif kind == 'labels' and action == 'remove' then
+    url = format('%s/%s', url, value)
+  end
+  if action == 'add' then
+	  url_opts['method'] = 'POST'
+  elseif action == 'remove' then
+	  url_opts['method'] = 'DELETE'
+  end
+	curl.request(url, url_opts, cb)
+end
+
 return {
-  setup = setup;
 	change_issue_state = change_issue_state;
 	get_issue = get_issue;
 	new_issue = new_issue;
@@ -940,4 +983,5 @@ return {
 	go_to_issue = go_to_issue;
 	show_details_win = show_details_win;
   close_details_win = close_details_win;
+  issue_action = issue_action;
 }

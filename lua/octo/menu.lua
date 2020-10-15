@@ -1,25 +1,48 @@
-local make_entry = require('telescope.make_entry')
 local actions = require('telescope.actions')
 local finders = require('telescope.finders')
 local pickers = require('telescope.pickers')
 local sorters = require('telescope.sorters')
 
-local function issues(repo, opts)
+local opts = require('telescope.themes').get_dropdown({
+  results_height = 25;
+  results_width = 0.8;
+  winblend = 20;
+  borderchars = {
+    prompt = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
+    results = {' ', '▐', '▄', '▌', '▌', '▐', '▟', '▙' };
+    preview = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
+  }
+})
+
+local function encodeChar(chr)
+	return string.format("%%%X",string.byte(chr))
+end
+
+local function encodeString(str)
+	local output, _ = string.gsub(str,"[^%w]",encodeChar)
+	return output
+end
+
+local function issues(repo, ...)
   if not repo then
     vim.api.nvim_err_writeln('Please specify a repo to get the issues from')
     return
   end
- 
-  opts = opts or require('telescope.themes').get_dropdown({
-    results_height = 25;
-    results_width = 120;
-    winblend = 20;
-    borderchars = {
-      prompt = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
-      results = {' ', '▐', '▄', '▌', '▌', '▐', '▟', '▙' };
-      preview = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
-    }
-  })
+
+  local params = {}
+  local args = { n = select("#", ...), ... }
+  if #args > 0 then
+    if #args % 2 ~= 0 then
+      vim.api.nvim_err_writeln('Incorrect number of parameters, should be <repo> (<key> <value>)*')
+    end
+    for i=1,#args,1 do
+      local key = vim.split(args[i], ':')[1]
+      local value = vim.split(args[i], ":")[2]
+      params[key] = encodeString(value)
+    end
+  end
+
+  -- TODO: use params as part of the cache key
 
   if not vim.g.octo_last_results then vim.g.octo_last_results = {} end
   if not vim.g.octo_last_updatetime then vim.g.octo_last_updatetime = {} end
@@ -35,7 +58,7 @@ local function issues(repo, opts)
 
   local results = {}
   if current_time > next_check then
-    local resp = require'octo'.get_repo_issues(repo, {})
+    local resp = require'octo'.get_repo_issues(repo, params)
     for _,i in ipairs(resp.issues) do
       table.insert(results, {
         number = i.number;
@@ -73,8 +96,6 @@ local function issues(repo, opts)
 
     map('i', '<CR>', run_command)
     map('n', '<CR>', run_command)
-    map('i', '<C-j>', function() actions.move_selection_next(prompt_bufnr) end)
-    map('i', '<C-k>', function() actions.move_selection_previous(prompt_bufnr) end)
 
     return true
   end

@@ -18,6 +18,10 @@ if getenv('GITHUB_PAT') != v:null
   command! -nargs=? NewIssue   :lua require'octo'.new_issue(<f-args>)
   command! -nargs=+ Issue :call octo#get_issue(<f-args>)
   command! -nargs=+ ListIssues :lua require'octo.menu'.issues(<f-args>)
+  command! -nargs=+ AddLabel :lua require'octo'.issue_action('add', 'labels', <f-args>)
+  command! -nargs=+ RemoveLabel :lua require'octo'.issue_action('remove', 'labels', <f-args>)
+  command! -nargs=+ AddAssignee :lua require'octo'.issue_action('add', 'assignees', <f-args>)
+  command! -nargs=+ RemoveAssignee :lua require'octo'.issue_action('remove', 'assignees', <f-args>)
 else
   echo '[OCTO.NVIM] No GITHUB_PAT env variable found.'
 endif

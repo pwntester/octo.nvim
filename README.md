@@ -24,6 +24,10 @@ e.g. `pwntester:3123123ab4324bf12371231321feb`
 - `ReopenIssue`: Reopen issue.
 - `NewComment`: Add new comment to open issue.
 - `ListIssues <repo>`: (require [Telescope.nvim](https://github.com/nvim-lua/telescope.nvim) to be installed). Fuzzy pick amongst 50 top open issues.
+- `AddLabel`
+- `RemoveLabel`
+- `AddAssignee`
+- `RemoveAssignee`
 
 ## Usage
 
@@ -57,8 +61,8 @@ nmap gi <Plug>(GoToIssue)
 
   - [x] navigate links to other issues
   - [x] autocompletion for #issues
+  - [x] command to add labels
+  - [x] command to add assignees
   - [ ] autocompletion for @person
   - [ ] support pagination
   - [ ] command to hide details float
-  - [ ] command to add labels
-  - [ ] command to add assignees
