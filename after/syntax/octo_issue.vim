@@ -11,7 +11,6 @@ syntax region issue_comment matchgroup=OctoNvimCommentDelimiters start=/commente
 syntax region issue_comment matchgroup=OctoNvimCommentDelimiters start=/\n\n/ keepend end=/\n\n\nOn/  contains=@markdown
 
 hi def link OctoNvimDirty ErrorMsg
-hi def link OctoNvimCommentDelimiters Normal
 hi def link OctoNvimCommentHeading PreProc
 hi def link OctoNvimCommentUser Underlined
 hi def link OctoNvimIssueOpen MoreMsg

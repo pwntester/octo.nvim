@@ -631,7 +631,7 @@ local function get_repo_issues(repo, query_params)
 		repo = get_repo_name()
 	end
 
-	log.info('getting issues for repo', repo)
+	--log.info('getting issues for repo', repo)
 
 	query_params = {
 		state = query_params.state or 'open';
@@ -700,7 +700,7 @@ local function save_issue(bufnr)
 		return
 	end
 
-	log.info('Saving issue:', number, 'repo:', repo, 'bufnr:', bufnr)
+	--log.info('Saving issue:', number, 'repo:', repo, 'bufnr:', bufnr)
 
 	-- collect comment metadata
 	update_issue_metadata(bufnr)

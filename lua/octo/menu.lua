@@ -31,10 +31,8 @@ local function issues(repo, ...)
 
   local params = {}
   local args = { n = select("#", ...), ... }
+  --print(vim.inspect(args))
   if #args > 0 then
-    if #args % 2 ~= 0 then
-      vim.api.nvim_err_writeln('Incorrect number of parameters, should be <repo> (<key> <value>)*')
-    end
     for i=1,#args,1 do
       local key = vim.split(args[i], ':')[1]
       local value = vim.split(args[i], ":")[2]
