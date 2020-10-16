@@ -647,9 +647,12 @@ local function get_repo_issues(repo, query_params)
 	local body, _, headers = curl.request(issues_url, req_opts)
 	local count, total = process_link_header(headers)
 	local issues = json.parse(body)
+
+  -- TODO: filter out pull_requests (NOT WORKING)
   vim.tbl_filter(function(e)
     return e.pull_request == nil
   end, issues)
+
 	if count == nil and total == nil then
 		count = #issues
 		total = #issues
@@ -677,6 +680,7 @@ local function get_issue(number, repo)
 	local url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
 
 	local function load_issue(response, status)
+    print(response)
 		local resp = json.parse(response)
 		if check_error(status, resp) then return end
 		create_issue_buffer(resp, repo)
@@ -916,18 +920,38 @@ local function issue_complete(findstart, base)
 	end
 end
 
-local function go_to_issue()
-	local line = api.nvim_get_current_line()
+local function is_cursor_in_pattern(pattern)
 	local pos = vim.fn.col('.')
+	local line = api.nvim_get_current_line()
 	local i, j = 0
 	while true do
-		i, j = string.find(line, '#(%d*)', i+1)
+		local res = {string.find(line, pattern, i+1)}
+    i = table.remove(res, 1)
+    j = table.remove(res, 1)
 		if i == nil then break end
 		if pos > i and pos <= j+1 then
-			local number = string.sub(line, i+1, j)
-			get_issue(number, api.nvim_buf_get_var(0, 'repo'))
+			return res
 		end
 	end
+  return nil
+end
+
+local function go_to_issue()
+  local res = is_cursor_in_pattern('%s#(%d*)')
+  if res and #res == 1 then
+    local repo = api.nvim_buf_get_var(0, 'repo')
+    local number = res[1]
+    get_issue(number, repo)
+    return
+  else
+    res = is_cursor_in_pattern('https://github.com/([^/]+)/([^/]+)/([^/]+)/(%d+).*')
+    if res and #res == 4 then
+      local repo = string.format('%s/%s', res[1], res[2])
+      local number = res[4]
+      get_issue(number, repo)
+      return
+    end
+  end
 end
 
 local function issue_action(action, kind, value)
@@ -935,7 +959,7 @@ local function issue_action(action, kind, value)
     api.nvim_err_writeln('Incorrect action')
     return
   end
-  if kind ~= 'assignees' and kind ~= 'labels' then
+  if kind ~= 'assignees' and kind ~= 'labels' and kind ~= 'requested_reviewers' then
     api.nvim_err_writeln('Incorrect action kind')
     return
   end
@@ -949,8 +973,10 @@ local function issue_action(action, kind, value)
     api.nvim_err_writeln('Missing issue metadata')
     return
   end
-
-	local url = format('https://api.github.com/repos/%s/issues/%d/%s', repo, number, kind)
+  
+  local type = 'issues'
+  if kind == 'requested_reviewers' then type = 'pulls' end
+	local url = format('https://api.github.com/repos/%s/%s/%d/%s', repo, type, number, kind)
 
 	local function cb(_, _)
 		get_issue(number, repo)
@@ -958,6 +984,8 @@ local function issue_action(action, kind, value)
 	local url_opts = deepcopy(curl_opts)
   if kind == 'assignees' then
     url_opts['body'] = json.stringify({ assignees = {value}; })
+  elseif kind == 'requested_reviewers' then
+    url_opts['body'] = json.stringify({ reviewers = {value}; })
   elseif kind == 'labels' and action == 'add' then
     url_opts['body'] = json.stringify({ labels = {value}; })
   elseif kind == 'labels' and action == 'remove' then

@@ -22,6 +22,8 @@ if getenv('GITHUB_PAT') != v:null
   command! -nargs=+ RemoveLabel :lua require'octo'.issue_action('remove', 'labels', <f-args>)
   command! -nargs=+ AddAssignee :lua require'octo'.issue_action('add', 'assignees', <f-args>)
   command! -nargs=+ RemoveAssignee :lua require'octo'.issue_action('remove', 'assignees', <f-args>)
+  command! -nargs=+ AddReviewer :lua require'octo'.issue_action('add', 'requested_reviewers', <f-args>)
+  command! -nargs=+ RemoveReviewer :lua require'octo'.issue_action('remove', 'requested_reviewers', <f-args>)
 else
   echo '[OCTO.NVIM] No GITHUB_PAT env variable found.'
 endif
