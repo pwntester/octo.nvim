@@ -31,7 +31,6 @@ local function issues(repo, ...)
 
   local params = {}
   local args = { n = select("#", ...), ... }
-  --print(vim.inspect(args))
   if #args > 0 then
     for i=1,#args,1 do
       local key = vim.split(args[i], ':')[1]
@@ -87,7 +86,7 @@ local function issues(repo, ...)
     local run_command = function()
       local selection = actions.get_selected_entry(prompt_bufnr)
       actions.close(prompt_bufnr)
-      local cmd = string.format([[ lua require'octo'.get_issue('%s', '%s') ]], selection.value, repo)
+      local cmd = string.format([[ lua require'octo'.get_issue('%s', '%s') ]], repo, selection.value)
       vim.cmd [[stopinsert]]
       vim.cmd(cmd)
     end

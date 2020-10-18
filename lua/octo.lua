@@ -31,12 +31,13 @@ local curl_opts = {
 -- autocommands
 vim.cmd [[ augroup octo_autocmds ]]
 vim.cmd [[ autocmd!]]
-vim.cmd [[ au BufEnter octo://* nested lua require'octo'.show_details_win() ]]
-vim.cmd [[ au BufLeave octo://* nested lua require'octo'.close_details_win() ]]
-vim.cmd [[ au WinLeave * nested lua require'octo'.close_details_win() ]]
-vim.cmd [[ au TextChanged octo://* lua require"octo".render_signcolumn() ]]
-vim.cmd [[ au TextChangedI octo://* lua require"octo".render_signcolumn() ]]
-vim.cmd [[ au BufWriteCmd octo://* lua require"octo".save_issue() ]]
+-- vim.cmd [[ au BufEnter github://* nested lua require'octo'.show_details_win() ]]
+-- vim.cmd [[ au BufLeave github://* nested lua require'octo'.close_details_win() ]]
+-- vim.cmd [[ au WinLeave * nested lua require'octo'.close_details_win() ]]
+vim.cmd [[ au TextChanged github://* lua require"octo".render_signcolumn() ]]
+vim.cmd [[ au TextChangedI github://* lua require"octo".render_signcolumn() ]]
+vim.cmd [[ au BufReadCmd github://* lua require"octo".load_issue() ]]
+vim.cmd [[ au BufWriteCmd github://* lua require"octo".save_issue() ]]
 vim.cmd [[ augroup END ]]
 
 local function is_blank(s)
@@ -139,7 +140,7 @@ end
 local function show_details_win()
   local issue_bufnr = api.nvim_get_current_buf()
 	local bufname = api.nvim_buf_get_name(issue_bufnr)
-  if not vim.startswith(bufname, 'octo://') then return end
+  if not vim.startswith(bufname, 'github://') then return end
 
   --log.info('show details', issue_bufnr, bufname, vim.fn.bufname())
 
@@ -199,7 +200,7 @@ local function show_details_win()
 	end
 	table.insert(lines, '')
 
-	local bufnr = api.nvim_create_buf(true, true)
+	local bufnr = api.nvim_create_buf(true, false)
 	api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
 	highlight(bufnr, hls)
 
@@ -235,7 +236,7 @@ local function close_details_win()
   local bufnr = api.nvim_get_current_buf()
   local bufname = api.nvim_buf_get_name(bufnr)
   --log.info('close_win', bufnr, bufname, vim.fn.expand('<afile>'))
-  if vim.startswith(bufname, 'octo://') then
+  if vim.startswith(bufname, 'github://') then
     local details = api.nvim_buf_get_var(bufnr, 'details_win')
     vim.cmd(string.format('%dbw!', details.bufnr))
     --pcall(api.nvim_win_close, details.winnr, 1)
@@ -268,17 +269,17 @@ local function update_metadata(metadata, start_line, end_line, text)
 end
 
 
-local function get_repo_name()
-	local cmd = 'git config --get remote.origin.url'
-	local url = vim.fn.system(cmd):gsub('\n', '')
-	local repo
-	if string.find(url, 'git@github.com:(.*).git') then
-		_, _, repo = string.find(url, 'git@github.com:(.*).git')
-	elseif string.find(url, 'https://github.com/(.*).git') then
-		_, _, repo = string.find(url, 'https://github.com/(.*).git')[3]
-	end
-	return repo
-end
+-- local function get_repo_name()
+-- 	local cmd = 'git config --get remote.origin.url'
+-- 	local url = vim.fn.system(cmd):gsub('\n', '')
+-- 	local repo
+-- 	if string.find(url, 'git@github.com:(.*).git') then
+-- 		_, _, repo = string.find(url, 'git@github.com:(.*).git')
+-- 	elseif string.find(url, 'https://github.com/(.*).git') then
+-- 		_, _, repo = string.find(url, 'https://github.com/(.*).git')[3]
+-- 	end
+-- 	return repo
+-- end
 
 -- definitions
 octo_em_ns = api.nvim_create_namespace('octo_marks')
@@ -344,7 +345,7 @@ end
 local function render_signcolumn(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
 	local bufname = api.nvim_buf_get_name(bufnr)
-  if not vim.startswith(bufname, 'octo://') then return end
+  if not vim.startswith(bufname, 'github://') then return end
 
 	local issue_dirty = false
 
@@ -406,6 +407,217 @@ local function render_signcolumn(bufnr)
 	end
 end
 
+local function print_details(issue, content, hls)
+
+  -- author
+  local author_line = 'Created by:'
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsLabel';
+    ['line'] = #content;
+    ['start'] = 0;
+    ['end'] = #author_line;
+  })
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsValue';
+    ['line'] = #content;
+    ['start'] = #author_line+1;
+    ['end'] = -1;
+  })
+  author_line = format('%s %s', author_line, issue.user.login)
+	vim.list_extend(content, {author_line})
+
+  -- created_at
+  local created_at_line = 'Created at:'
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsLabel';
+    ['line'] = #content;
+    ['start'] = 0;
+    ['end'] = #created_at_line;
+  })
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsValue';
+    ['line'] = #content;
+    ['start'] = #created_at_line+1;
+    ['end'] = -1;
+  })
+  created_at_line = format('%s %s', created_at_line, issue.created_at)
+	vim.list_extend(content, {created_at_line})
+
+  -- updated_at
+  local updated_at_line = 'updated at:'
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsLabel';
+    ['line'] = #content;
+    ['start'] = 0;
+    ['end'] = #updated_at_line;
+  })
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsValue';
+    ['line'] = #content;
+    ['start'] = #updated_at_line+1;
+    ['end'] = -1;
+  })
+  updated_at_line = format('%s %s', updated_at_line, issue.updated_at)
+	vim.list_extend(content, {updated_at_line})
+  
+  -- closed_at
+  if state == 'closed' then
+    local closed_at_line = 'closed at:'
+    table.insert(hls, {
+      ['name'] = 'OctoNvimDetailsLabel';
+      ['line'] = #content;
+      ['start'] = 0;
+      ['end'] = #closed_at_line;
+    })
+    table.insert(hls, {
+      ['name'] = 'OctoNvimDetailsValue';
+      ['line'] = #content;
+      ['start'] = #closed_at_line+1;
+      ['end'] = -1;
+    })
+    closed_at_line = format('%s %s', closed_at_line, issue.closed_at)
+    vim.list_extend(content, {closed_at_line})
+  end
+
+  -- assignees
+	local assignees_line = 'Assignees:'
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsLabel';
+    ['line'] = #content;
+    ['start'] = 0;
+    ['end'] = #assignees_line;
+  })
+	if issue.assignees and #issue.assignees > 0 then
+		for _, as in ipairs(issue.assignees) do
+			table.insert(hls, {
+        ['name'] = 'OctoNvimDetailsValue';
+        ['line'] = #content;
+        ['start'] = #assignees_line+1;
+        ['end'] = #assignees_line + #as.login + 1;
+      })
+			assignees_line = format('%s %s ,', assignees_line, as.login)
+		end
+	else
+		assignees_line = assignees_line..' No one assigned '
+	end
+  if vim.endswith(assignees_line, ',') then
+    assignees_line = assignees_line:sub(1, -2)
+  end
+	vim.list_extend(content, {assignees_line})
+
+  -- requested reviewers
+  if issue.pull_request then
+    local req_opts = deepcopy(curl_opts)
+    req_opts.sync = true
+    local response, status = curl.request(issue.pull_request.url, req_opts)
+		local resp = json.parse(response)
+		if check_error(status, resp) then return end
+    local requested_reviewers_line = 'Requested reviewers:'
+    table.insert(hls, {
+      ['name'] = 'OctoNvimDetailsLabel';
+      ['line'] = #content;
+      ['start'] = 0;
+      ['end'] = #requested_reviewers_line;
+    })
+    if resp.requested_reviewers and #resp.requested_reviewers > 0 then
+      for _, as in ipairs(resp.requested_reviewers) do
+        table.insert(hls, {
+          ['name'] = 'OctoNvimDetailsValue';
+          ['line'] = #content;
+          ['start'] = #requested_reviewers_line+1;
+          ['end'] = #requested_reviewers_line + #as.login + 1;
+        })
+        requested_reviewers_line = format('%s %s ,', requested_reviewers_line, as.login)
+      end
+    else
+      requested_reviewers_line = requested_reviewers_line..' No reviews'
+    end
+    if vim.endswith(requested_reviewers_line, ',') then
+      requested_reviewers_line = requested_reviewers_line:sub(1, -2)
+    end
+    vim.list_extend(content, {requested_reviewers_line})
+  end
+
+  -- reviews
+  if issue.pull_request then
+    local req_opts = deepcopy(curl_opts)
+    req_opts.sync = true
+    local response, status = curl.request(issue.pull_request.url..'/reviews', req_opts)
+		local resp = json.parse(response)
+		if check_error(status, resp) then return end
+    local reviewers_line = 'Reviews:'
+    table.insert(hls, {
+      ['name'] = 'OctoNvimDetailsLabel';
+      ['line'] = #content;
+      ['start'] = 0;
+      ['end'] = #reviewers_line;
+    })
+    if resp and #resp > 0 then
+      for _, as in ipairs(resp) do
+        table.insert(hls, {
+          ['name'] = 'OctoNvimDetailsValue';
+          ['line'] = #content;
+          ['start'] = #reviewers_line+1;
+          ['end'] = #reviewers_line + #as.user.login + #as.state + 4;
+        })
+        reviewers_line = format('%s %s (%s),', reviewers_line, as.user.login, as.state)
+      end
+    else
+      reviewers_line = reviewers_line..' No reviews'
+    end
+    if vim.endswith(reviewers_line, ',') then
+      reviewers_line = reviewers_line:sub(1, -2)
+    end
+    vim.list_extend(content, {reviewers_line})
+  end
+
+  -- milestones
+  local milestone_line = 'Milestone:'
+  local ms = issue.milestone
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsLabel';
+    ['line'] = #content;
+    ['start'] = 0;
+    ['end'] = #milestone_line;
+  })
+	if ms ~= nil and ms ~= vim.NIL then
+    table.insert(hls, {
+      ['name'] = 'OctoNvimDetailsValue';
+      ['line'] = #content;
+      ['start'] = #milestone_line+1;
+      ['end'] = -1;
+    })
+    milestone_line = format('%s %s (%s)', milestone_line, ms.title, ms.state)
+	else
+		milestone_line = milestone_line..' No milestone'
+	end
+	vim.list_extend(content, {milestone_line})
+
+  -- labels
+  local labels_line = 'Labels:'
+  table.insert(hls, {
+    ['name'] = 'OctoNvimDetailsLabel';
+    ['line'] = #content;
+    ['start'] = 0;
+    ['end'] = #labels_line;
+  })
+	if issue.labels and #issue.labels > 0 then
+		for _, label in ipairs(issue.labels) do
+			table.insert(hls, {
+        ['name'] = create_highlight(label.color, {});
+        ['line'] = #content;
+        ['start'] = #labels_line+1;
+        ['end'] = #labels_line + #label.name + 1;
+      })
+			labels_line = format('%s %s', labels_line, label.name)
+		end
+	else
+    labels_line = labels_line..' None yet'
+	end
+	vim.list_extend(content, {labels_line, '', ''})
+
+end
+
 local function create_issue_buffer(issue, repo)
 
 	if not issue['id'] then
@@ -424,10 +636,10 @@ local function create_issue_buffer(issue, repo)
 	local extmarks = {}
 
   -- close detail window
-  close_details_win()
+  --close_details_win()
 
 	-- create buffer
-	api.nvim_command(format('noautocmd e octo://%s/%s', repo, number))
+	--api.nvim_command(format('noautocmd e github://%s/%s', repo, number))
 	local bufnr = api.nvim_get_current_buf()
 
 	-- delete extmarks
@@ -488,7 +700,7 @@ local function create_issue_buffer(issue, repo)
 		api.nvim_buf_set_option(bufnr, 'modified', false)
 
 		-- show details window
-		show_details_win()
+		-- show_details_win()
 	end
 
 	local function write(text)
@@ -550,8 +762,8 @@ local function create_issue_buffer(issue, repo)
 	-- configure buffer
 	api.nvim_buf_set_option(bufnr, 'filetype', 'octo_issue')
 	api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
-	api.nvim_buf_set_option(bufnr, 'bufhidden', 'hide')
-	api.nvim_buf_set_option(bufnr, 'swapfile', false)
+	-- api.nvim_buf_set_option(bufnr, 'bufhidden', 'hide')
+	-- api.nvim_buf_set_option(bufnr, 'swapfile', false)
 	--api.nvim_command('execute "setlocal colorcolumn=" . join(range(81,335), ",")')
 
 	-- register issue
@@ -565,13 +777,18 @@ local function create_issue_buffer(issue, repo)
 
 	-- write title
 	write(title)
-	vim.list_extend(content, {'', ''})
+	vim.list_extend(content, {''})
 	local title_metadata = {
 		saved_body = title;
 		body = title;
 		dirty = false
 	}
 	api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+
+  if true then
+    -- print details in buffer
+    print_details(issue, content, hls)
+  end
 
 	-- write description
 	write(body)
@@ -622,14 +839,7 @@ end
 
 local function get_repo_issues(repo, query_params)
 
-	-- this function should be used by fuzzy pickers as a source
-	-- and then use `get_issue()` as the sink
-
 	query_params = query_params or {}
-
-	if nil == repo or repo == '' then
-		repo = get_repo_name()
-	end
 
 	--log.info('getting issues for repo', repo)
 
@@ -664,35 +874,32 @@ local function get_repo_issues(repo, query_params)
 	}
 end
 
-local function get_issue(number, repo)
-	if nil == repo or repo == 'nil' or repo == '' then
-		repo = get_repo_name()
-	end
-
-	if not number then
-		api.nvim_err_writeln('Missing argument: issue number')
-		return
-	elseif not repo then
-		api.nvim_err_writeln('Missing argument: issue repo')
-		return
-	end
-
+local function load_issue()
+  local bufname = vim.fn.bufname()
+  local repo, number = string.match(bufname, 'github://(.+)/(%d+)')
+  if not repo or not number then
+		api.nvim_err_writeln('Incorrect github url: '..bufname)
+    return
+  end
 	local url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
 
-	local function load_issue(response, status)
-    print(response)
-		local resp = json.parse(response)
-		if check_error(status, resp) then return end
-		create_issue_buffer(resp, repo)
+	local function load_cb(response, status)
+		local issue = json.parse(response)
+		if check_error(status, issue) then return end
+		create_issue_buffer(issue, repo)
 	end
 	local url_opts = deepcopy(curl_opts)
-	curl.request(url, url_opts, load_issue)
+	curl.request(url, url_opts, load_cb)
+end
+
+local function get_issue(repo, number)
+  vim.cmd(format('edit github://%s/%s', repo, number))
 end
 
 local function save_issue(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
 	local bufname = api.nvim_buf_get_name(bufnr)
-  if not vim.startswith(bufname, 'octo://') then return end
+  if not vim.startswith(bufname, 'github://') then return end
 
   -- number
 	local number = api.nvim_buf_get_var(bufnr, 'number')
@@ -762,7 +969,7 @@ local function save_issue(bufnr)
 				local cid = metadata['id']
 				local remove_url = format('https://api.github.com/repos/%s/issues/comments/%s', repo, cid)
 				local function remove_comment(_)
-					get_issue(api.nvim_buf_get_var(bufnr, 'number'), repo)
+					get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
 				end
 				local remove_opts = deepcopy(curl_opts)
 				remove_opts['method'] = 'DELETE'
@@ -820,7 +1027,7 @@ local function new_comment()
 		local resp = json.parse(response)
 		if check_error(status, resp) then return end
 		if nil ~= resp['issue_url'] then
-			get_issue(number, repo)
+			get_issue(repo, number)
 		end
 	end
 
@@ -834,16 +1041,12 @@ end
 
 local function new_issue(repo)
 
-	if nil == repo or repo == '' then
-		repo = get_repo_name()
-	end
-
 	local url = format('https://api.github.com/repos/%s/issues', repo)
 
 	local function new_issue_cb(response, status)
-		local resp = json.parse(response)
-		if check_error(status, resp) then return end
-		create_issue_buffer(resp, repo)
+		local issue = json.parse(response)
+		if check_error(status, issue) then return end
+		create_issue_buffer(issue, repo)
 	end
 	local url_opts = deepcopy(curl_opts)
 	url_opts['body'] = json.stringify({
@@ -877,7 +1080,7 @@ local function change_issue_state(state)
 		if state == resp['state'] then
 			api.nvim_buf_set_var(bufnr, 'state', resp['state'])
 			print('Issue state changed to: '..resp['state'])
-			get_issue(resp['number'], repo)
+			get_issue(repo, resp['number'])
 		end
 	end
 	local update_opts = deepcopy(curl_opts)
@@ -941,14 +1144,14 @@ local function go_to_issue()
   if res and #res == 1 then
     local repo = api.nvim_buf_get_var(0, 'repo')
     local number = res[1]
-    get_issue(number, repo)
+    get_issue(repo, number)
     return
   else
     res = is_cursor_in_pattern('https://github.com/([^/]+)/([^/]+)/([^/]+)/(%d+).*')
     if res and #res == 4 then
       local repo = string.format('%s/%s', res[1], res[2])
       local number = res[4]
-      get_issue(number, repo)
+      get_issue(repo, number)
       return
     end
   end
@@ -973,13 +1176,13 @@ local function issue_action(action, kind, value)
     api.nvim_err_writeln('Missing issue metadata')
     return
   end
-  
+
   local type = 'issues'
   if kind == 'requested_reviewers' then type = 'pulls' end
 	local url = format('https://api.github.com/repos/%s/%s/%d/%s', repo, type, number, kind)
 
 	local function cb(_, _)
-		get_issue(number, repo)
+		get_issue(repo, number)
 	end
 	local url_opts = deepcopy(curl_opts)
   if kind == 'assignees' then
@@ -1002,6 +1205,7 @@ end
 return {
 	change_issue_state = change_issue_state;
 	get_issue = get_issue;
+	load_issue = load_issue;
 	new_issue = new_issue;
 	save_issue = save_issue;
 	render_signcolumn = render_signcolumn;
@@ -1009,7 +1213,7 @@ return {
 	get_repo_issues = get_repo_issues;
 	issue_complete = issue_complete;
 	go_to_issue = go_to_issue;
-	show_details_win = show_details_win;
-  close_details_win = close_details_win;
   issue_action = issue_action;
+	--show_details_win = show_details_win;
+  --close_details_win = close_details_win;
 }

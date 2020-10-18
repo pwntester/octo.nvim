@@ -15,7 +15,7 @@ if getenv('GITHUB_PAT') != v:null
   command! CloseIssue :lua require'octo'.change_issue_state('closed')
   command! ReopenIssue :lua require'octo'.change_issue_state('open')
   command! SaveIssue  :lua require'octo'.save_issue()
-  command! -nargs=? NewIssue   :lua require'octo'.new_issue(<f-args>)
+  command! -nargs=1 NewIssue :lua require'octo'.new_issue(<f-args>)
   command! -nargs=+ Issue :call octo#get_issue(<f-args>)
   command! -nargs=+ ListIssues :lua require'octo.menu'.issues(<f-args>)
   command! -nargs=+ AddLabel :lua require'octo'.issue_action('add', 'labels', <f-args>)
@@ -42,7 +42,7 @@ function! octo#get_issue(...) abort
     echo "Incorrect number of parameters"
     return
   endif
-  return luaeval("require'octo'.get_issue(_A[1], _A[2])", [number, repo])
+  return luaeval("require'octo'.get_issue(_A[1], _A[2])", [repo, number])
 endfunction
 
 " clear buffer undo history
