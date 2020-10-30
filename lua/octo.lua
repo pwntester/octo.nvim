@@ -743,7 +743,7 @@ local function create_issue_buffer(issue, repo)
 
 			-- body
 			local cbody = string.gsub(c['body'], '\r\n', '\n')
-			if cbody == NO_BODY_MSG then cbody = '' end
+			if vim.startswith(cbody, NO_BODY_MSG) then cbody = ' ' end
 			write(cbody)
 			vim.list_extend(content, {'', '', ''})
 			local comment = {
