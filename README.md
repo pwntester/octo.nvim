@@ -1,7 +1,6 @@
 # octo.nvim
 
-![](https://i.imgur.com/JWkHXSa.png)
-![](https://i.imgur.com/UuYyncG.png)
+![](https://i.imgur.com/ZRhBvls.png)
 
 ## Disclaimer
 
