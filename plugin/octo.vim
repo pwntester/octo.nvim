@@ -10,7 +10,7 @@ let s:sco = nvim_win_get_option(0,'signcolumn')
 let s:wo = nvim_win_get_option(0,'wrap')
 
 " commands
-if getenv('GITHUB_PAT') != v:null
+if getenv('OCTO_GITHUB_TOKEN') != v:null
   command! NewComment :lua require'octo'.new_comment()
   command! CloseIssue :lua require'octo'.change_issue_state('closed')
   command! ReopenIssue :lua require'octo'.change_issue_state('open')
@@ -25,7 +25,7 @@ if getenv('GITHUB_PAT') != v:null
   command! -nargs=+ AddReviewer :lua require'octo'.issue_action('add', 'requested_reviewers', <f-args>)
   command! -nargs=+ RemoveReviewer :lua require'octo'.issue_action('remove', 'requested_reviewers', <f-args>)
 else
-  echo '[OCTO.NVIM] No GITHUB_PAT env variable found.'
+  echo '[OCTO.NVIM] No OCTO_GITHUB_TOKEN env variable found.'
 endif
 
 " load issue

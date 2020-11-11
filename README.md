@@ -13,7 +13,7 @@ Use your favourite Plugin manager to install it.
 
 ## Requirements
 
-Set an env. variable named `GITHUB_PAT` containing your GitHub username and Personal Access Token:
+Set an env. variable named `OCTO_GITHUB_TOKEN` containing your GitHub username and Personal Access Token:
 e.g. `pwntester:3123123ab4324bf12371231321feb`
 
 ## Commands

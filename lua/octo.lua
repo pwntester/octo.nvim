@@ -21,7 +21,7 @@ local HIGHLIGHT_MODE_NAMES = {
 
 -- curl opts
 local curl_opts = {
-  credentials = vim.fn.getenv('GITHUB_PAT');
+  credentials = vim.fn.getenv('OCTO_GITHUB_TOKEN');
 	headers = {
 		['Accept']       = 'application/vnd.github.v3+json',
 		['Content-Type'] = 'application/json'
