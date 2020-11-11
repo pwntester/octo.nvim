@@ -1,10 +1,10 @@
 # octo.nvim
+Plugin to work with GitHub issues and PRs from Neovim. Just edit the issue description/comments and save it with `:w`.
+Modified description or comments are highlighted in the signcolumn.
+
 
 ![](https://i.imgur.com/ZRhBvls.png)
 
-## Disclaimer
-
-This is a WIP plugin, I take no responsibility of the use of this plugin.
 
 ## Installation
 
@@ -30,11 +30,11 @@ e.g. `pwntester:3123123ab4324bf12371231321feb`
 
 ## Usage
 
-Just edit the issue title, description or comments as a regular buffer and use `w(rite)` to sync the issue with GitHub.
+Just edit the issue title, description or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
 
 ## Completion
 
-`<C-x><C-o>`: When located after `#\d*` is will popup a list of repo issues starting with the same prefix.
+`<C-x><C-o>`: When cursor is located at text that matches `#\d*` will popup a list of repo issues starting with the same id prefix.
 
 ## Mappings
 
@@ -64,4 +64,3 @@ nmap gi <Plug>(GoToIssue)
   - [x] command to add assignees
   - [ ] autocompletion for @person
   - [ ] support pagination
-  - [ ] command to hide details float
