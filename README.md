@@ -15,6 +15,8 @@ Use your favourite Plugin manager to install it.
 Set an env. variable named `OCTO_GITHUB_TOKEN` containing your GitHub username and Personal Access Token:
 e.g. `pwntester:3123123ab4324bf12371231321feb`
 
+Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for using the `ListIssues` command which enables to fuzzy pick issues from a dropdown menu.
+
 ## Commands
 
 - `Issue [<repo>] <id>`: Opens an issue specified by Id. If repo is not provided, it will be derived from CWD.
