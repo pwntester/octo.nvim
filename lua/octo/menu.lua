@@ -52,6 +52,19 @@ local function open_in_browser(type, repo)
   end
 end
 
+local function get_repo_name()
+	local cmd = 'git config --get remote.origin.url'
+	--local url = vim.fn.system(cmd):gsub('\n', '')
+  local url = utils.get_os_command_output(cmd)
+	local repo
+	if string.find(url, 'git@github.com:(.*).git') then
+		_, _, repo = string.find(url, 'git@github.com:(.*).git')
+	elseif string.find(url, 'https://github.com/(.*).git') then
+		_, _, repo = string.find(url, 'https://github.com/(.*).git')[3]
+	end
+	return repo
+end
+
 --
 -- ISSUES
 --
@@ -63,6 +76,9 @@ local function open_issue(repo)
     local tmp_table = vim.split(selection.value,"\t");
     if vim.tbl_isempty(tmp_table) then
       return
+    end
+    if repo == '' then
+      repo = get_repo_name()
     end
     vim.cmd(string.format([[ lua require'octo'.get_issue('%s', '%s') ]], repo, tmp_table[1]))
   end

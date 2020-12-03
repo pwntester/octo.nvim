@@ -120,7 +120,7 @@ local function create_highlight(rgb_hex, options)
 		-- Create the highlight
 		highlight_name = make_highlight_name(rgb_hex, mode)
 		if mode == 'foreground' then
-			api.nvim_command(format('highlight %s guifg=#%s', highlight_name, rgb_hex))
+			vim.cmd(format('highlight %s guifg=#%s', highlight_name, rgb_hex))
 		else
 			local r, g, b = rgb_hex:sub(1,2), rgb_hex:sub(3,4), rgb_hex:sub(5,6)
 			r, g, b = tonumber(r,16), tonumber(g,16), tonumber(b,16)
@@ -130,118 +130,118 @@ local function create_highlight(rgb_hex, options)
 			else
 				fg_color = "ffffff"
 			end
-			api.nvim_command(format('highlight %s guifg=#%s guibg=#%s', highlight_name, fg_color, rgb_hex))
+			vim.cmd(format('highlight %s guifg=#%s guibg=#%s', highlight_name, fg_color, rgb_hex))
 		end
 		HIGHLIGHT_CACHE[cache_key] = highlight_name
 	end
 	return highlight_name
 end
 
-local function show_details_win()
-  local issue_bufnr = api.nvim_get_current_buf()
-	local bufname = api.nvim_buf_get_name(issue_bufnr)
-  if not vim.startswith(bufname, 'github://') then return end
+-- local function show_details_win()
+--   local issue_bufnr = api.nvim_get_current_buf()
+-- 	local bufname = api.nvim_buf_get_name(issue_bufnr)
+--   if not vim.startswith(bufname, 'github://') then return end
+--
+--   --log.info('show details', issue_bufnr, bufname, vim.fn.bufname())
+--
+-- 	local labels = api.nvim_buf_get_var(issue_bufnr, 'labels')
+-- 	local assignees = api.nvim_buf_get_var(issue_bufnr, 'assignees')
+-- 	local milestone = api.nvim_buf_get_var(issue_bufnr, 'milestone')
+--
+-- 	local lines = {''}
+-- 	local hls = {}
+-- 	local line
+-- 	local longest_line = 10
+--
+-- 	table.insert(lines, ' Labels:')
+-- 	if labels and #labels > 0 then
+-- 		for _, label in ipairs(labels) do
+-- 			line = format('  -  %s ', label.name)
+-- 			local highlight_name = create_highlight(label.color, {})
+-- 			table.insert(lines, line)
+-- 			table.insert(hls, {
+-- 					['name'] = highlight_name;
+-- 					['line'] = #lines-1;
+-- 					['start'] = 4;
+-- 					['end'] = #line;
+-- 				})
+-- 			longest_line = max(longest_line, #line)
+-- 		end
+-- 	else
+-- 		line = '   None yet'
+-- 		table.insert(lines, line)
+-- 		longest_line = max(longest_line, #line)
+-- 	end
+-- 	table.insert(lines, '')
+--
+-- 	table.insert(lines, ' Assignees:')
+-- 	if assignees and #assignees > 0 then
+-- 		for _, as in ipairs(assignees) do
+-- 			line = format('  - %s', as.login)
+-- 			table.insert(lines, line)
+-- 			longest_line = max(longest_line, #line)
+-- 		end
+-- 	else
+-- 		line = '   No one assigned '
+-- 		table.insert(lines, line)
+-- 		longest_line = max(longest_line, #line)
+-- 	end
+-- 	table.insert(lines, '')
+--
+-- 	table.insert(lines, ' Milestone:')
+-- 	if milestone then
+-- 		line = format('  - %s (%s)', milestone.title, milestone.state)
+-- 		table.insert(lines, line)
+-- 		longest_line = max(longest_line, #line)
+-- 	else
+-- 		line = '   No milestone'
+-- 		table.insert(lines, line)
+-- 		longest_line = max(longest_line, #line)
+-- 	end
+-- 	table.insert(lines, '')
+--
+-- 	local bufnr = api.nvim_create_buf(true, false)
+-- 	api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+-- 	highlight(bufnr, hls)
+--
+-- 	local current_win = api.nvim_get_current_win()
+-- 	local win_width = vim.fn.winwidth(current_win)
+-- 	local vertical_padding = 1
+-- 	local horizontal_padding = 1
+-- 	local popup_width = longest_line + 1
+-- 	local popup_height = #lines
+--
+-- 	local win_opts = {
+-- 		relative = 'win';
+-- 		win = current_win;
+-- 		width = popup_width;
+-- 		height = popup_height;
+-- 		style = 'minimal';
+-- 		focusable = false;
+-- 		row = vertical_padding;
+-- 		col = win_width - horizontal_padding - popup_width;
+-- 	}
+--
+-- 	local winnr = api.nvim_open_win(bufnr, false, win_opts)
+-- 	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:OctoNvimFloat,EndOfBuffer:OctoNvimFloat")
+--
+--   -- save the details win handle
+--   api.nvim_buf_set_var(issue_bufnr, 'details_win', {
+--     winnr = winnr;
+--     bufnr = bufnr;
+--   })
+-- end
 
-  --log.info('show details', issue_bufnr, bufname, vim.fn.bufname())
-
-	local labels = api.nvim_buf_get_var(issue_bufnr, 'labels')
-	local assignees = api.nvim_buf_get_var(issue_bufnr, 'assignees')
-	local milestone = api.nvim_buf_get_var(issue_bufnr, 'milestone')
-
-	local lines = {''}
-	local hls = {}
-	local line
-	local longest_line = 10
-
-	table.insert(lines, ' Labels:')
-	if labels and #labels > 0 then
-		for _, label in ipairs(labels) do
-			line = format('  -  %s ', label.name)
-			local highlight_name = create_highlight(label.color, {})
-			table.insert(lines, line)
-			table.insert(hls, {
-					['name'] = highlight_name;
-					['line'] = #lines-1;
-					['start'] = 4;
-					['end'] = #line;
-				})
-			longest_line = max(longest_line, #line)
-		end
-	else
-		line = '   None yet'
-		table.insert(lines, line)
-		longest_line = max(longest_line, #line)
-	end
-	table.insert(lines, '')
-
-	table.insert(lines, ' Assignees:')
-	if assignees and #assignees > 0 then
-		for _, as in ipairs(assignees) do
-			line = format('  - %s', as.login)
-			table.insert(lines, line)
-			longest_line = max(longest_line, #line)
-		end
-	else
-		line = '   No one assigned '
-		table.insert(lines, line)
-		longest_line = max(longest_line, #line)
-	end
-	table.insert(lines, '')
-
-	table.insert(lines, ' Milestone:')
-	if milestone then
-		line = format('  - %s (%s)', milestone.title, milestone.state)
-		table.insert(lines, line)
-		longest_line = max(longest_line, #line)
-	else
-		line = '   No milestone'
-		table.insert(lines, line)
-		longest_line = max(longest_line, #line)
-	end
-	table.insert(lines, '')
-
-	local bufnr = api.nvim_create_buf(true, false)
-	api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
-	highlight(bufnr, hls)
-
-	local current_win = api.nvim_get_current_win()
-	local win_width = vim.fn.winwidth(current_win)
-	local vertical_padding = 1
-	local horizontal_padding = 1
-	local popup_width = longest_line + 1
-	local popup_height = #lines
-
-	local win_opts = {
-		relative = 'win';
-		win = current_win;
-		width = popup_width;
-		height = popup_height;
-		style = 'minimal';
-		focusable = false;
-		row = vertical_padding;
-		col = win_width - horizontal_padding - popup_width;
-	}
-
-	local winnr = api.nvim_open_win(bufnr, false, win_opts)
-	api.nvim_win_set_option(winnr, "winhighlight", "NormalFloat:OctoNvimFloat,EndOfBuffer:OctoNvimFloat")
-
-  -- save the details win handle
-  api.nvim_buf_set_var(issue_bufnr, 'details_win', {
-    winnr = winnr;
-    bufnr = bufnr;
-  })
-end
-
-local function close_details_win()
-  local bufnr = api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(bufnr)
-  --log.info('close_win', bufnr, bufname, vim.fn.expand('<afile>'))
-  if vim.startswith(bufname, 'github://') then
-    local details = api.nvim_buf_get_var(bufnr, 'details_win')
-    vim.cmd(string.format('%dbw!', details.bufnr))
-    --pcall(api.nvim_win_close, details.winnr, 1)
-  end
-end
+-- local function close_details_win()
+--   local bufnr = api.nvim_get_current_buf()
+--   local bufname = api.nvim_buf_get_name(bufnr)
+--   --log.info('close_win', bufnr, bufname, vim.fn.expand('<afile>'))
+--   if vim.startswith(bufname, 'github://') then
+--     local details = api.nvim_buf_get_var(bufnr, 'details_win')
+--     vim.cmd(string.format('%dbw!', details.bufnr))
+--     --pcall(api.nvim_win_close, details.winnr, 1)
+--   end
+-- end
 
 local function get_extmark_region(bufnr, mark)
 	-- extmarks are placed on
@@ -268,32 +268,19 @@ local function update_metadata(metadata, start_line, end_line, text)
 	metadata['body'] = text
 end
 
-
--- local function get_repo_name()
--- 	local cmd = 'git config --get remote.origin.url'
--- 	local url = vim.fn.system(cmd):gsub('\n', '')
--- 	local repo
--- 	if string.find(url, 'git@github.com:(.*).git') then
--- 		_, _, repo = string.find(url, 'git@github.com:(.*).git')
--- 	elseif string.find(url, 'https://github.com/(.*).git') then
--- 		_, _, repo = string.find(url, 'https://github.com/(.*).git')[3]
--- 	end
--- 	return repo
--- end
-
 -- definitions
 octo_em_ns = api.nvim_create_namespace('octo_marks')
 octo_hl_ns = api.nvim_create_namespace('octo_highlights')
 octo_vt_ns = api.nvim_create_namespace('octo_virtualtexts')
 
-api.nvim_command('sign define clean_block_start text=┌')
-api.nvim_command('sign define clean_block_end text=└')
-api.nvim_command('sign define dirty_block_start text=┌ texthl=OctoNvimDirty')
-api.nvim_command('sign define dirty_block_end text=└ texthl=OctoNvimDirty')
-api.nvim_command('sign define dirty_block_middle text=│ texthl=OctoNvimDirty')
-api.nvim_command('sign define clean_block_middle text=│')
-api.nvim_command('sign define clean_line text=[')
-api.nvim_command('sign define dirty_line text=[ texthl=OctoNvimDirty')
+vim.cmd [[ sign define clean_block_start text=┌ ]]
+vim.cmd [[ sign define clean_block_end text=└ ]]
+vim.cmd [[ sign define dirty_block_start text=┌ texthl=OctoNvimDirty ]]
+vim.cmd [[ sign define dirty_block_end text=└ texthl=OctoNvimDirty ]]
+vim.cmd [[ sign define dirty_block_middle text=│ texthl=OctoNvimDirty ]]
+vim.cmd [[ sign define clean_block_middle text=│ ]]
+vim.cmd [[ sign define clean_line text=[ ]]
+vim.cmd [[ sign define dirty_line text=[ texthl=OctoNvimDirty ]]
 
 local function update_issue_metadata(bufnr)
 
@@ -639,7 +626,6 @@ local function create_issue_buffer(issue, repo)
   --close_details_win()
 
 	-- create buffer
-	--api.nvim_command(format('noautocmd e github://%s/%s', repo, number))
 	local bufnr = api.nvim_get_current_buf()
 
 	-- delete extmarks
@@ -762,9 +748,6 @@ local function create_issue_buffer(issue, repo)
 	-- configure buffer
 	api.nvim_buf_set_option(bufnr, 'filetype', 'octo_issue')
 	api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
-	-- api.nvim_buf_set_option(bufnr, 'bufhidden', 'hide')
-	-- api.nvim_buf_set_option(bufnr, 'swapfile', false)
-	--api.nvim_command('execute "setlocal colorcolumn=" . join(range(81,335), ",")')
 
 	-- register issue
 	api.nvim_buf_set_var(bufnr, 'iid', iid)
