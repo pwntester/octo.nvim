@@ -35,8 +35,21 @@ Plug 'nvim-telescope/telescope.nvim'
 - `ReopenIssue`: Reopen issue.
 - `NewComment`: Add new comment to open issue.
 - `ListIssues <opts: key=value>`: (require [GitHub CLI](https://cli.github.com) to be installed). Fuzzy pick Issues.
-- `ListGists<opts: key=value>`: (require [GitHub CLI](https://cli.github.com) to be installed). Fuzzy pick Gists.
+  - Available options: `repo`, `author`, `assignee`, `mention`, `label`, `milestone`, `state`, `limit`. See [details](https://cli.github.com/manual/gh_issue_list)
+  - Mappings:
+    - `<CR>`: Edit issue 
+    - `<C-t>`: Opens issue in web browser
 - `ListPRs<opts: key=value>`: (require [GitHub CLI](https://cli.github.com) to be installed). Fuzzy pick Pull Requests.
+  - Available options: `repo`, `assignee`, `label`, `state`, `base`, `limit`. See [details](https://cli.github.com/manual/gh_pr_list)
+  - Mappings:
+    - `<CR>`: Edit PR
+    - `<C-t>`: Opens PR in web browser
+    - `<C-o>`: Checkout PR
+- `ListGists<opts: key=value>`: (require [GitHub CLI](https://cli.github.com) to be installed). Fuzzy pick Gists.
+  - Available options: `repo`, `public`, `secret`. See [details](https://cli.github.com/manual/gh_gist_list)
+  - Mappings:
+    - `<CR>`: Append Gist to buffer
+    - `<C-t>`: Opens Gist in web browser
 - `AddLabel`
 - `RemoveLabel`
 - `AddAssignee`
@@ -72,9 +85,7 @@ nmap gi <Plug>(GoToIssue)
 
 ## TODO
 
-  - [x] navigate links to other issues
-  - [x] autocompletion for #issues
-  - [x] command to add labels
-  - [x] command to add assignees
   - [ ] autocompletion for @person
-  - [ ] support pagination
+
+## Credits
+All `List` commands are taken from @windwp [Telescope extension](https://github.com/nvim-telescope/telescope-github.nvim) and adapted to edit issues.
