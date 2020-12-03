@@ -17,7 +17,6 @@ if getenv('OCTO_GITHUB_TOKEN') != v:null
   command! SaveIssue  :lua require'octo'.save_issue()
   command! -nargs=1 NewIssue :lua require'octo'.new_issue(<f-args>)
   command! -nargs=+ Issue :call octo#get_issue(<f-args>)
-  command! -nargs=+ ListIssues :lua require'octo.menu'.issues(<f-args>)
   command! -nargs=+ AddLabel :lua require'octo'.issue_action('add', 'labels', <f-args>)
   command! -nargs=+ RemoveLabel :lua require'octo'.issue_action('remove', 'labels', <f-args>)
   command! -nargs=+ AddAssignee :lua require'octo'.issue_action('add', 'assignees', <f-args>)
@@ -27,6 +26,28 @@ if getenv('OCTO_GITHUB_TOKEN') != v:null
 else
   echo '[OCTO.NVIM] No OCTO_GITHUB_TOKEN env variable found.'
 endif
+
+if executable('gh')
+  command! -nargs=* ListIssues :call octo#load_menu('issues', <f-args>)
+  command! -nargs=* ListPRs :call octo#load_menu('pull_requests', <f-args>)
+  command! -nargs=* ListGists :call octo#load_menu('gists', <f-args>)
+endif
+
+" load menu
+function! octo#load_menu(cmd, ...) abort
+  let opts = {}
+
+  " range command args
+  " if arg in lua code is table type,we split command string by `,` to vimscript
+  " list type.
+  for arg in a:000
+    let opt = split(arg,'=')
+    let opts[opt[0]] = opt[1]
+  endfor
+
+  let octo_menu = v:lua.require('octo.menu')
+  call octo_menu[a:cmd](opts)
+endfunction
 
 " load issue
 function! octo#get_issue(...) abort
