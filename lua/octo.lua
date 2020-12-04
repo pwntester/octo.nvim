@@ -1,14 +1,16 @@
 local curl = require('octo.curl')
+local gh = require('octo.gh')
 local vim = vim
 local api = vim.api
 local max = math.max
 local deepcopy = vim.deepcopy
 local format = string.format
-local log = require('octo.log')
+local Job = require('plenary.job')
 local json = {
 	parse = vim.fn.json_decode;
 	stringify = vim.fn.json_encode;
 }
+--local log = require('octo.log')
 
 -- constants
 local NO_BODY_MSG = 'No description provided.'
@@ -80,16 +82,16 @@ end
 
 local function highlight(bufnr, hls)
 	for _, hl in ipairs(hls) do
-		api.nvim_buf_add_highlight(bufnr, octo_hl_ns, hl.name, hl.line, hl.start, hl['end'])
+		api.nvim_buf_add_highlight(bufnr, OCTO_HL_NS, hl.name, hl.line, hl.start, hl['end'])
 	end
 end
 
--- from norcalli's colorizer
+-- from https://github.com/norcalli/nvim-colorizer.lua
 local function make_highlight_name(rgb, mode)
 	return table.concat({HIGHLIGHT_NAME_PREFIX, HIGHLIGHT_MODE_NAMES[mode], rgb}, '_')
 end
 
--- from norcalli's colorizer
+-- from https://github.com/norcalli/nvim-colorizer.lua
 local function color_is_bright(r, g, b)
 	-- Counting the perceptive luminance - human eye favors green color
 	local luminance = (0.299*r + 0.587*g + 0.114*b)/255
@@ -100,7 +102,7 @@ local function color_is_bright(r, g, b)
 	end
 end
 
--- from norcalli's colorizer
+-- from https://github.com/norcalli/nvim-colorizer.lua
 local function create_highlight(rgb_hex, options)
 	local mode = options.mode or 'background'
 	rgb_hex = rgb_hex:lower()
@@ -160,9 +162,9 @@ local function update_metadata(metadata, start_line, end_line, text)
 end
 
 -- definitions
-octo_em_ns = api.nvim_create_namespace('octo_marks')
-octo_hl_ns = api.nvim_create_namespace('octo_highlights')
-octo_vt_ns = api.nvim_create_namespace('octo_virtualtexts')
+OCTO_EM_NS = api.nvim_create_namespace('octo_marks')
+OCTO_HL_NS = api.nvim_create_namespace('octo_highlights')
+OCTO_VT_NS = api.nvim_create_namespace('octo_virtualtexts')
 
 vim.cmd [[ sign define clean_block_start text=┌ ]]
 vim.cmd [[ sign define clean_block_end text=└ ]]
@@ -179,14 +181,14 @@ local function update_issue_metadata(bufnr)
 
 	-- title
 	metadata = api.nvim_buf_get_var(bufnr, 'title')
-	mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
+	mark = api.nvim_buf_get_extmark_by_id(bufnr, OCTO_EM_NS, metadata.extmark, {details=true})
 	start_line, end_line, text = get_extmark_region(bufnr, mark)
 	update_metadata(metadata, start_line, end_line, text)
 	api.nvim_buf_set_var(bufnr, 'title', metadata)
 
 	-- description
 	metadata = api.nvim_buf_get_var(bufnr, 'description')
-	mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
+	mark = api.nvim_buf_get_extmark_by_id(bufnr, OCTO_EM_NS, metadata.extmark, {details=true})
 	start_line, end_line, text = get_extmark_region(bufnr, mark)
 	if text == '' then
 		-- description has been removed
@@ -202,7 +204,7 @@ local function update_issue_metadata(bufnr)
 	local comments = api.nvim_buf_get_var(bufnr, 'comments')
 	for i, m in ipairs(comments) do
 		metadata = m
-		mark = api.nvim_buf_get_extmark_by_id(bufnr, octo_em_ns, metadata.extmark, {details=true})
+		mark = api.nvim_buf_get_extmark_by_id(bufnr, OCTO_EM_NS, metadata.extmark, {details=true})
 		start_line, end_line, text = get_extmark_region(bufnr, mark)
 
 		if text == '' then
@@ -234,7 +236,7 @@ local function render_signcolumn(bufnr)
 	sign_unplace(bufnr)
 
 	-- clear virtual texts
-	api.nvim_buf_clear_namespace(bufnr, octo_vt_ns, 0, -1)
+	api.nvim_buf_clear_namespace(bufnr, OCTO_VT_NS, 0, -1)
 
 	-- title
 	local title = api.nvim_buf_get_var(bufnr, 'title')
@@ -249,7 +251,7 @@ local function render_signcolumn(bufnr)
 		{tostring(api.nvim_buf_get_var(bufnr, 'number')), 'OctoNvimIssueId'},
 		{format(' [%s]', state), 'OctoNvimIssue'..state}
 	}
-	api.nvim_buf_set_virtual_text(bufnr, octo_vt_ns, 0, title_vt, {})
+	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, 0, title_vt, {})
 
 	-- description
 	local desc = api.nvim_buf_get_var(bufnr, 'description')
@@ -261,7 +263,7 @@ local function render_signcolumn(bufnr)
 	-- description virtual text
 	if is_blank(desc['body']) then
 		local desc_vt = {{NO_BODY_MSG, 'OctoNvimEmpty'}}
-		api.nvim_buf_set_virtual_text(bufnr, octo_vt_ns, start_line, desc_vt, {})
+		api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, start_line, desc_vt, {})
 	end
 
 	-- comments
@@ -275,7 +277,7 @@ local function render_signcolumn(bufnr)
 		-- comment virtual text
 		if is_blank(c['body']) then
 			local comment_vt = {{NO_BODY_MSG, 'OctoNvimEmpty'}}
-			api.nvim_buf_set_virtual_text(bufnr, octo_vt_ns, start_line, comment_vt, {})
+			api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, start_line, comment_vt, {})
 		end
 	end
 
@@ -544,7 +546,7 @@ local function create_issue_buffer(issue, repo)
 
 			local start_line = m[1]
 			local end_line = m[2]
-			local m_id = api.nvim_buf_set_extmark(bufnr, octo_em_ns, max(0,start_line-1), 0, {
+			local m_id = api.nvim_buf_set_extmark(bufnr, OCTO_EM_NS, max(0,start_line-1), 0, {
 					end_line=end_line+2;
 					end_col=0;
 				})
