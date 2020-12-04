@@ -8,7 +8,7 @@ Modified description or comments are highlighted in the signcolumn.
 
 ## Installation
 
-Use your favourite Plugin manager to install it.
+Use your favourite plugin manager to install it. eg:
 
 ```
 Plug 'pwntester/octo.nvim'
@@ -16,8 +16,7 @@ Plug 'pwntester/octo.nvim'
 
 ## Requirements
 
-Set an environment variable named `OCTO_GITHUB_TOKEN` containing your GitHub username and Personal Access Token. e.g. `pwntester:3123123ab4324bf12371231321feb`
-
+Install [GitHub CLI](https://cli.github.com/)
 Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for using the `ListXXX` commands which enables to fuzzy pick issues from a dropdown menu.
 
 ```
@@ -34,18 +33,18 @@ Plug 'nvim-telescope/telescope.nvim'
 - `CloseIssue`: Close issue.
 - `ReopenIssue`: Reopen issue.
 - `NewComment`: Add new comment to open issue.
-- `ListIssues <opts: key=value>`: (require [GitHub CLI](https://cli.github.com) to be installed). Fuzzy pick Issues.
+- `ListIssues <opts: key=value>`: Fuzzy pick Issues.
   - Available options: `repo`, `author`, `assignee`, `mention`, `label`, `milestone`, `state`, `limit`. See [details](https://cli.github.com/manual/gh_issue_list)
   - Mappings:
     - `<CR>`: Edit issue 
     - `<C-t>`: Opens issue in web browser
-- `ListPRs<opts: key=value>`: (require [GitHub CLI](https://cli.github.com) to be installed). Fuzzy pick Pull Requests.
+- `ListPRs<opts: key=value>`: Fuzzy pick Pull Requests.
   - Available options: `repo`, `assignee`, `label`, `state`, `base`, `limit`. See [details](https://cli.github.com/manual/gh_pr_list)
   - Mappings:
     - `<CR>`: Edit PR
     - `<C-t>`: Opens PR in web browser
     - `<C-o>`: Checkout PR
-- `ListGists<opts: key=value>`: (require [GitHub CLI](https://cli.github.com) to be installed). Fuzzy pick Gists.
+- `ListGists<opts: key=value>`: Fuzzy pick Gists.
   - Available options: `repo`, `public`, `secret`. See [details](https://cli.github.com/manual/gh_gist_list)
   - Mappings:
     - `<CR>`: Append Gist to buffer

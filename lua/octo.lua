@@ -1,4 +1,3 @@
-local curl = require('octo.curl')
 local gh = require('octo.gh')
 local vim = vim
 local api = vim.api
@@ -21,15 +20,6 @@ local HIGHLIGHT_MODE_NAMES = {
 	foreground = "mf";
 }
 
--- curl opts
-local curl_opts = {
-  credentials = vim.fn.getenv('OCTO_GITHUB_TOKEN');
-	headers = {
-		['Accept']       = 'application/vnd.github.v3+json',
-		['Content-Type'] = 'application/json'
-	}
-}
-
 -- autocommands
 vim.cmd [[ augroup octo_autocmds ]]
 vim.cmd [[ autocmd!]]
@@ -41,18 +31,6 @@ vim.cmd [[ augroup END ]]
 
 local function is_blank(s)
 	return not(s ~= nil and s:match("%S") ~= nil)
-end
-
-local function check_error(status, resp)
-	if vim.tbl_contains({100,200,201}, status) then
-		return false
-	elseif resp.message then
-		api.nvim_err_writeln('Error ('..status..'): '..resp.message)
-		return true
-	else
-		print('Unexpected status:', status, resp)
-		return true
-	end
 end
 
 local function sign_place(name, bufnr, line)
@@ -385,13 +363,19 @@ local function print_details(issue, content, hls)
   end
 	vim.list_extend(content, {assignees_line})
 
-  -- requested reviewers
   if issue.pull_request then
-    local req_opts = deepcopy(curl_opts)
-    req_opts.sync = true
-    local response, status = curl.request(issue.pull_request.url, req_opts)
+    local url = issue.pull_request.url
+    local segments = vim.split(url, '/')
+    local owner = segments[5]
+    local repo = segments[6]
+    local pr_id = segments[8]
+    local response = gh.run({
+      args = {'api', format('repos/%s/%s/pulls/%d', owner, repo, pr_id)};
+      mode = 'sync';
+    })
 		local resp = json.parse(response)
-		if check_error(status, resp) then return end
+
+    -- requested reviewers
     local requested_reviewers_line = 'Requested reviewers:'
     table.insert(hls, {
       ['name'] = 'OctoNvimDetailsLabel';
@@ -416,15 +400,8 @@ local function print_details(issue, content, hls)
       requested_reviewers_line = requested_reviewers_line:sub(1, -2)
     end
     vim.list_extend(content, {requested_reviewers_line})
-  end
 
-  -- reviews
-  if issue.pull_request then
-    local req_opts = deepcopy(curl_opts)
-    req_opts.sync = true
-    local response, status = curl.request(issue.pull_request.url..'/reviews', req_opts)
-		local resp = json.parse(response)
-		if check_error(status, resp) then return end
+    -- reviews
     local reviewers_line = 'Reviews:'
     table.insert(hls, {
       ['name'] = 'OctoNvimDetailsLabel';
@@ -495,7 +472,6 @@ local function print_details(issue, content, hls)
     labels_line = labels_line..' None yet'
 	end
 	vim.list_extend(content, {labels_line, '', ''})
-
 end
 
 local function create_issue_buffer(issue, repo)
@@ -510,7 +486,6 @@ local function create_issue_buffer(issue, repo)
 	local body = string.gsub(issue['body'], '\r\n', '\n')
 	local number = issue['number']
 	local state = issue['state']
-	local comments_url = issue['comments_url']..'?per_page=100'
 	local content = {}
 	local hls = {}
 	local extmarks = {}
@@ -585,9 +560,8 @@ local function create_issue_buffer(issue, repo)
 		table.insert(extmarks, {start_line-1, end_line-1})
 	end
 
-	local function write_comments(response, status)
+	local function write_comments(response)
 		local resp = json.parse(response)
-		if check_error(status, resp) then return end
 		local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
 		for _, c in ipairs(resp) do
 
@@ -671,10 +645,12 @@ local function create_issue_buffer(issue, repo)
 	api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
 
 	-- request issue comments
-  local req_opts = deepcopy(curl_opts)
 	api.nvim_buf_set_var(bufnr, 'comments', {})
 	if tonumber(issue['comments']) > 0 then
-		curl.request(comments_url, req_opts, write_comments)
+    gh.run({
+      args = {'api', format('repos/%s/issues/%d/comments', repo, number)};
+      cb = write_comments;
+    })
 	else
 		render_buffer(bufnr)
 	end
@@ -707,25 +683,22 @@ local function get_url(url, params)
 	return url
 end
 
-local function get_repo_issues(repo, query_params)
+local function get_repo_issues(repo, params)
 
-	query_params = query_params or {}
-
-	--log.info('getting issues for repo', repo)
-
-	query_params = {
-		state = query_params.state or 'open';
-		per_page = query_params.per_page or 50;
-		filter = query_params.filter;
-		labels = query_params.labels;
-		since = query_params.since
+	local query_params = {
+		state = params.state or 'open';
+		per_page = params.per_page or 50;
+		filter = params.filter;
+		labels = params.labels;
+		since = params.since
 	}
 
-	local issues_url = get_url(format('https://api.github.com/repos/%s/issues', repo), query_params)
-	local req_opts = deepcopy(curl_opts)
-	req_opts.sync = true
-	local body, _, headers = curl.request(issues_url, req_opts)
-	local count, total = process_link_header(headers)
+	local query = get_url(format('repos/%s/issues', repo), query_params)
+  local body = gh.run({
+    args = {'api', query};
+    mode = 'sync';
+  })
+	--local count, total = process_link_header(headers)
 	local issues = json.parse(body)
 
   -- TODO: filter out pull_requests (NOT WORKING)
@@ -751,15 +724,13 @@ local function load_issue()
 		api.nvim_err_writeln('Incorrect github url: '..bufname)
     return
   end
-	local url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
 
-	local function load_cb(response, status)
-		local issue = json.parse(response)
-		if check_error(status, issue) then return end
-		create_issue_buffer(issue, repo)
-	end
-	local url_opts = deepcopy(curl_opts)
-	curl.request(url, url_opts, load_cb)
+  gh.run({
+    args = {'api', format('repos/%s/issues/%s', repo, number)};
+    cb = function(output)
+      create_issue_buffer(json.parse(output) , repo)
+    end
+  })
 end
 
 local function get_issue(repo, number)
@@ -800,77 +771,75 @@ local function save_issue(bufnr)
 			return
 		end
 
-		local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-		local function update_cb(response, status)
-			local resp = json.parse(response)
-			if check_error(status, resp) then return end
+    gh.run({
+      args = {
+        'api', '-X', 'PATCH',
+        '-f', format('title=%s', title_metadata['body']),
+        '-f', format('body=%s', desc_metadata['body']),
+        format('repos/%s/issues/%s', repo, number)
+      };
+      cb = function(output)
+        local resp = json.parse(output)
 
-			if title_metadata['body'] == resp['title'] then
-				title_metadata['saved_body'] = resp['title']
-				title_metadata['dirty'] = false
-				api.nvim_buf_set_var(bufnr, 'title', title_metadata)
-			end
+        if title_metadata['body'] == resp['title'] then
+          title_metadata['saved_body'] = resp['title']
+          title_metadata['dirty'] = false
+          api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+        end
 
-			if desc_metadata['body'] == resp['body'] then
-				desc_metadata['saved_body'] = resp['body']
-				desc_metadata['dirty'] = false
-				api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
-			end
+        if desc_metadata['body'] == resp['body'] then
+          desc_metadata['saved_body'] = resp['body']
+          desc_metadata['dirty'] = false
+          api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
+        end
 
-			render_signcolumn(bufnr)
-			print('Saved!')
-		end
-		local update_opts = deepcopy(curl_opts)
-		update_opts['body'] = json.stringify({
-				title = title_metadata['body'];
-				body = desc_metadata['body'];
-			})
-		update_opts['method'] = 'PATCH'
-		curl.request(update_url, update_opts, update_cb)
+        render_signcolumn(bufnr)
+        print('Saved!')
+      end
+    })
 	end
 
 	-- comments
 	local comments = api.nvim_buf_get_var(bufnr, 'comments')
 	for _, metadata in ipairs(comments) do
 		if is_blank(metadata['body']) then
-			-- remove issue?
+			-- remove comment?
 			local choice = vim.fn.confirm("Comment body can't be blank, remove comment?", "&Yes\n&No\n&Cancel", 2)
 			if choice == 1 then
-				local cid = metadata['id']
-				local remove_url = format('https://api.github.com/repos/%s/issues/comments/%s', repo, cid)
-				local function remove_comment(_)
-					get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
-				end
-				local remove_opts = deepcopy(curl_opts)
-				remove_opts['method'] = 'DELETE'
-				curl.request(remove_url, remove_opts, remove_comment)
+        gh.run({
+          args = {
+            'api', '-X', 'DELETE',
+            format('repos/%s/issues/comments/%s', repo, metadata['id'])
+          };
+          cb = function(_)
+			      get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
+          end
+        })
 			end
 		elseif metadata['body'] ~= metadata['saved_body'] then
-			local cid = metadata['id']
-			local update_url = format('https://api.github.com/repos/%s/issues/comments/%s', repo, cid)
-
-			local function update_comment(response, status)
-				local resp = json.parse(response)
-				if check_error(status, resp) then return end
-				if metadata['body'] == resp['body'] then
-					for i, c in ipairs(comments) do
-						if c['id'] == resp['id'] then
-							comments[i]['saved_body'] = resp['body']
-							comments[i]['dirty'] = false
-							break
-						end
-					end
-					api.nvim_buf_set_var(bufnr, 'comments', comments)
-					render_signcolumn(bufnr)
-					print('Saved!')
-				end
-			end
-			local update_opts = deepcopy(curl_opts)
-			update_opts['body'] = json.stringify({
-					body = metadata['body']
-				})
-			update_opts['method'] = 'PATCH'
-			curl.request(update_url, update_opts, update_comment)
+      gh.run({
+        args = {
+          'api', '-X', 'PATCH',
+          '-f', format('body=%s', metadata['body']),
+          format('repos/%s/issues/comments/%s', repo, metadata['id'])
+        };
+        cb = function(output)
+          local resp = json.parse(output)
+          if metadata['body'] == resp['body'] then
+            for i, c in ipairs(comments) do
+              if c['id'] == resp['id'] then
+                comments[i]['saved_body'] = resp['body']
+                comments[i]['dirty'] = false
+                break
+              end
+            end
+            api.nvim_buf_set_var(bufnr, 'comments', comments)
+            render_signcolumn(bufnr)
+            print('Saved!')
+          end
+          get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
+        end
+      })
 		end
 	end
 
@@ -891,45 +860,37 @@ local function new_comment()
 		return
 	end
 
-	local url = format('https://api.github.com/repos/%s/issues/%s/comments', repo, number)
-
-	local function new_comment_cb(response, status)
-		local resp = json.parse(response)
-		if check_error(status, resp) then return end
-		if nil ~= resp['issue_url'] then
-			get_issue(repo, number)
-		end
-	end
-
-	local url_opts = deepcopy(curl_opts)
-	url_opts['body'] = json.stringify({
-			body = NO_BODY_MSG
-		})
-	url_opts['method'] = 'POST'
-	curl.request(url, url_opts, new_comment_cb)
+  gh.run({
+    args = {
+      'api', '-X', 'POST',
+      '-f', format('body=%s', NO_BODY_MSG),
+      format('repos/%s/issues/%s/comments', repo, number)
+    };
+    cb = function(output)
+      local resp = json.parse(output)
+      if nil ~= resp['issue_url'] then
+        get_issue(repo, number)
+      end
+    end
+  })
 end
 
 local function new_issue(repo)
-
-	local url = format('https://api.github.com/repos/%s/issues', repo)
-
-	local function new_issue_cb(response, status)
-		local issue = json.parse(response)
-		if check_error(status, issue) then return end
-		create_issue_buffer(issue, repo)
-	end
-	local url_opts = deepcopy(curl_opts)
-	url_opts['body'] = json.stringify({
-			title = 'new issue';
-			body = NO_BODY_MSG
-		})
-	url_opts['method'] = 'POST'
-	curl.request(url, url_opts, new_issue_cb)
+  gh.run({
+    args = {
+      'api', '-X', 'POST',
+      '-f', format('title=%s', 'title'),
+      '-f', format('body=%s', NO_BODY_MSG),
+      format('repos/%s/issues', repo)
+    };
+    cb = function(output)
+      create_issue_buffer(json.parse(output), repo)
+    end
+  })
 end
 
 local function change_issue_state(state)
 	local bufnr = api.nvim_get_current_buf()
-
 	local number = api.nvim_buf_get_var(bufnr, 'number')
 	local repo = api.nvim_buf_get_var(bufnr, 'repo')
 
@@ -943,22 +904,21 @@ local function change_issue_state(state)
 		return
 	end
 
-	local update_url = format('https://api.github.com/repos/%s/issues/%s', repo, number)
-	local function update_state(response, status)
-		local resp = json.parse(response)
-		if check_error(status, resp) then return end
-		if state == resp['state'] then
-			api.nvim_buf_set_var(bufnr, 'state', resp['state'])
-			print('Issue state changed to: '..resp['state'])
-			get_issue(repo, resp['number'])
-		end
-	end
-	local update_opts = deepcopy(curl_opts)
-	update_opts['body'] = json.stringify({
-			state = state;
-		})
-	update_opts['method'] = 'PATCH'
-	curl.request(update_url, update_opts, update_state)
+  gh.run({
+    args = {
+      'api', '-X', 'PATCH',
+      '-f', format('state=%s', state),
+      format('repos/%s/issues/%s', repo, number)
+    };
+    cb = function(output)
+      local resp = json.parse(output)
+      if state == resp['state'] then
+        api.nvim_buf_set_var(bufnr, 'state', resp['state'])
+        get_issue(repo, resp['number'])
+        print('Issue state changed to: '..resp['state'])
+      end
+    end
+  })
 end
 
 local function issue_complete(findstart, base)
@@ -1028,48 +988,58 @@ local function go_to_issue()
 end
 
 local function issue_action(action, kind, value)
-  if action ~= 'add' and action ~= 'remove' then
-    api.nvim_err_writeln('Incorrect action')
-    return
-  end
-  if kind ~= 'assignees' and kind ~= 'labels' and kind ~= 'requested_reviewers' then
-    api.nvim_err_writeln('Incorrect action kind')
-    return
-  end
-  if vim.bo.ft ~= 'octo_issue' then
-    api.nvim_err_writeln('Not in issue buffer')
-    return
-  end
-  local number = api.nvim_buf_get_var(0, 'number')
-  local repo = api.nvim_buf_get_var(0, 'repo')
-  if not number or not repo then
-    api.nvim_err_writeln('Missing issue metadata')
-    return
+  if vim.bo.ft ~= 'octo_issue' then api.nvim_err_writeln('Not in octo buffer') return end
+
+  local number_ok, number = pcall(api.nvim_buf_get_var, 0, 'number')
+  if not number_ok then api.nvim_err_writeln('Missing octo metadata') return end
+  local repo_ok, repo = pcall(api.nvim_buf_get_var, 0, 'repo')
+  if not repo_ok then api.nvim_err_writeln('Missing octo metadata') return end
+
+  vim.validate{
+    action = {action,
+      function(a)
+        return vim.tbl_contains({'add', 'remove'}, a)
+      end,
+      'add or remove'
+    },
+    kind = {kind,
+      function(a)
+        return vim.tbl_contains({'assignees', 'labels', 'requested_reviewers'}, a)
+      end,
+      'assignees, labels or requested_reviewers'
+    },
+  }
+
+  local endpoint
+  if kind == 'requested_reviewers' then
+    endpoint = 'pulls'
+  else
+    endpoint = 'issues'
   end
 
-  local type = 'issues'
-  if kind == 'requested_reviewers' then type = 'pulls' end
-	local url = format('https://api.github.com/repos/%s/%s/%d/%s', repo, type, number, kind)
-
-	local function cb(_, _)
-		get_issue(repo, number)
-	end
-	local url_opts = deepcopy(curl_opts)
-  if kind == 'assignees' then
-    url_opts['body'] = json.stringify({ assignees = {value}; })
-  elseif kind == 'requested_reviewers' then
-    url_opts['body'] = json.stringify({ reviewers = {value}; })
-  elseif kind == 'labels' and action == 'add' then
-    url_opts['body'] = json.stringify({ labels = {value}; })
-  elseif kind == 'labels' and action == 'remove' then
+  local url = format('repos/%s/%s/%d/%s', repo, endpoint, number, kind)
+  if kind == 'labels' and action == 'remove' then
     url = format('%s/%s', url, value)
   end
+
+  local method
   if action == 'add' then
-	  url_opts['method'] = 'POST'
+	  method = 'POST'
   elseif action == 'remove' then
-	  url_opts['method'] = 'DELETE'
+	  method = 'DELETE'
   end
-	curl.request(url, url_opts, cb)
+
+  -- gh does not allow array parameters at the moment
+  -- workaround: https://github.com/cli/cli/issues/1484
+  local cmd = format([[ jq -n '{"%s":["%s"]}' | gh api -X %s %s --input - ]], kind, value, method, url)
+  local job = Job:new({
+    command = "sh";
+    args = {'-c', cmd};
+    on_exit = vim.schedule_wrap(function(_, _, _)
+      get_issue(repo, number)
+    end)
+  })
+  job:start()
 end
 
 return {

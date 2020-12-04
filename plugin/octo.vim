@@ -10,7 +10,7 @@ let s:sco = nvim_win_get_option(0,'signcolumn')
 let s:wo = nvim_win_get_option(0,'wrap')
 
 " commands
-if getenv('OCTO_GITHUB_TOKEN') != v:null
+if executable('gh')
   command! NewComment :lua require'octo'.new_comment()
   command! CloseIssue :lua require'octo'.change_issue_state('closed')
   command! ReopenIssue :lua require'octo'.change_issue_state('open')
@@ -23,14 +23,11 @@ if getenv('OCTO_GITHUB_TOKEN') != v:null
   command! -nargs=+ RemoveAssignee :lua require'octo'.issue_action('remove', 'assignees', <f-args>)
   command! -nargs=+ AddReviewer :lua require'octo'.issue_action('add', 'requested_reviewers', <f-args>)
   command! -nargs=+ RemoveReviewer :lua require'octo'.issue_action('remove', 'requested_reviewers', <f-args>)
-else
-  echo '[OCTO.NVIM] No OCTO_GITHUB_TOKEN env variable found.'
-endif
-
-if executable('gh')
   command! -nargs=* ListIssues :call octo#load_menu('issues', <f-args>)
   command! -nargs=* ListPRs :call octo#load_menu('pull_requests', <f-args>)
   command! -nargs=* ListGists :call octo#load_menu('gists', <f-args>)
+else
+  echo '[OCTO.NVIM] Cannot find `gh` command.'
 endif
 
 " load menu
