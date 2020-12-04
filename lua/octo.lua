@@ -339,9 +339,9 @@ local function print_details(issue, content, hls)
   })
   updated_at_line = format('%s %s', updated_at_line, issue.updated_at)
 	vim.list_extend(content, {updated_at_line})
-  
+
   -- closed_at
-  if state == 'closed' then
+  if issue.state == 'closed' then
     local closed_at_line = 'closed at:'
     table.insert(hls, {
       ['name'] = 'OctoNvimDetailsLabel';
