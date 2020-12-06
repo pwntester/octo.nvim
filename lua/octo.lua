@@ -658,22 +658,22 @@ local function create_issue_buffer(issue, repo)
 	return bufnr
 end
 
-local function process_link_header(headers)
-	local h = headers['Link']
-	local page_count = 0
-	local per_page = 0
-	if nil ~= h then
-		for n in string.gmatch(h, '&page=(%d+)') do
-			page_count = max(page_count, n)
-		end
-		for p in string.gmatch(h, '&per_page=(%d+)') do
-			per_page = max(per_page, p)
-		end
-		return per_page, page_count*per_page
-	else
-		return nil, nil
-	end
-end
+-- local function process_link_header(headers)
+-- 	local h = headers['Link']
+-- 	local page_count = 0
+-- 	local per_page = 0
+-- 	if nil ~= h then
+-- 		for n in string.gmatch(h, '&page=(%d+)') do
+-- 			page_count = max(page_count, n)
+-- 		end
+-- 		for p in string.gmatch(h, '&per_page=(%d+)') do
+-- 			per_page = max(per_page, p)
+-- 		end
+-- 		return per_page, page_count*per_page
+-- 	else
+-- 		return nil, nil
+-- 	end
+-- end
 
 local function get_url(url, params)
 	url = url .. '?foo=bar'
