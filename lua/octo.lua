@@ -2,7 +2,6 @@ local gh = require('octo.gh')
 local vim = vim
 local api = vim.api
 local max = math.max
-local deepcopy = vim.deepcopy
 local format = string.format
 local Job = require('plenary.job')
 local json = {
