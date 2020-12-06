@@ -162,11 +162,15 @@ local function open_gist(prompt_bufnr)
   end
 end
 
-local function gists(repo, opts)
+local function gists(opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'gist')
-  local cmd = format('gh gist list %s -R %s', opts_query, repo)
+  local opts_repo = ''
+  if opts.repo ~= '' then
+    opts_repo = format('-R %s', opts.repo)
+  end
+  local cmd = format('gh gist list %s %s', opts_query, opts_repo)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
   pickers.new(opts, {
     prompt_title = 'gist list' ,
