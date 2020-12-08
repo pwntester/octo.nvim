@@ -28,6 +28,22 @@ vim.cmd [[ au BufReadCmd github://* lua require"octo".load_issue() ]]
 vim.cmd [[ au BufWriteCmd github://* lua require"octo".save_issue() ]]
 vim.cmd [[ augroup END ]]
 
+local function get_remote_name(remote)
+  remote = remote or 'origin'
+	local cmd = format('git config --get remote.%s.url', remote)
+  local url = string.gsub(vim.fn.system(cmd), '%s+', '')
+	local owner, repo
+  if #vim.split(url, '://') == 2 then
+    owner = vim.split(url, '/')[#vim.split(url, '/')-1]
+    repo = string.gsub(vim.split(url, '/')[#vim.split(url, '/')], '.git$', '')
+  elseif #vim.split(url, '@') == 2 then
+    local segment = vim.split(url, ':')[2]
+    owner = vim.split(segment, '/')[1]
+    repo = string.gsub(vim.split(segment, '/')[2], '.git$', '')
+	end
+	return format('%s/%s', owner, repo)
+end
+
 local function is_blank(s)
 	return not(s ~= nil and s:match("%S") ~= nil)
 end
@@ -733,6 +749,8 @@ local function load_issue()
 end
 
 local function get_issue(repo, number)
+  if not repo then repo = get_remote_name() end
+  if not repo then print("Cant find repo name"); return end
   vim.cmd(format('edit github://%s/%s', repo, number))
 end
 
@@ -875,6 +893,7 @@ local function new_comment()
 end
 
 local function new_issue(repo)
+  if not repo then repo = get_remote_name() end
   gh.run({
     args = {
       'api', '-X', 'POST',
@@ -1053,4 +1072,5 @@ return {
 	issue_complete = issue_complete;
 	go_to_issue = go_to_issue;
   issue_action = issue_action;
+  get_remote_name = get_remote_name;
 }
