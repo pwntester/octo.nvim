@@ -6,6 +6,7 @@ local previewers = require('telescope.previewers')
 local conf = require('telescope.config').values
 local make_entry = require('telescope.make_entry')
 local Job = require('plenary.job')
+local octo = require('octo')
 
 local format = string.format
 local defaulter = utils.make_default_callable
@@ -52,19 +53,6 @@ local function open_in_browser(type, repo)
   end
 end
 
-local function get_repo_name()
-	local cmd = 'git config --get remote.origin.url'
-	--local url = vim.fn.system(cmd):gsub('\n', '')
-  local url = utils.get_os_command_output(cmd)
-	local repo
-	if string.find(url, 'git@github.com:(.*).git') then
-		_, _, repo = string.find(url, 'git@github.com:(.*).git')
-	elseif string.find(url, 'https://github.com/(.*).git') then
-		_, _, repo = string.find(url, 'https://github.com/(.*).git')[3]
-	end
-	return repo
-end
-
 --
 -- ISSUES
 --
@@ -77,23 +65,17 @@ local function open_issue(repo)
     if vim.tbl_isempty(tmp_table) then
       return
     end
-    if repo == '' then
-      repo = get_repo_name()
-    end
     vim.cmd(string.format([[ lua require'octo'.get_issue('%s', '%s') ]], repo, tmp_table[1]))
   end
 end
 
-local function issues(opts)
+local function issues(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
-  opts.repo = opts.repo or ''
   local opts_query = parse_opts(opts , 'issue')
-  local opts_repo = ''
-  if opts.repo ~= '' then
-    opts_repo = format('-R %s', opts.repo)
-  end
-  local cmd = format('gh issue list %s %s', opts_query, opts_repo)
+  if repo == vim.NIL then repo = octo.get_remote_name() end
+  if not repo then print('Cannot find repo'); return end
+  local cmd = format('gh issue list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
 
   pickers.new(opts, {
@@ -108,18 +90,14 @@ local function issues(opts)
         if vim.tbl_isempty(tmp_table) then
           return {"echo", ""}
         end
-        if opts.repo == '' then
-          return { 'gh' ,'issue' , 'view', tmp_table[1] }
-        else
-          return { 'gh' ,'issue' , 'view', tmp_table[1], '-R', opts.repo }
-        end
+        return { 'gh' ,'issue' , 'view', tmp_table[1], '-R', repo }
 
       end
     },
     sorter = conf.file_sorter(opts),
     attach_mappings = function(_, map)
-      actions.goto_file_selection_edit:replace(open_issue(opts.repo))
-      map('i', '<c-t>', open_in_browser('issue', opts.repo))
+      actions.goto_file_selection_edit:replace(open_issue(repo))
+      map('i', '<c-t>', open_in_browser('issue', repo))
       return true
     end
   }):find()
@@ -166,6 +144,8 @@ local function gists(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'gist')
+  if repo == vim.NIL then repo = octo.get_remote_name() end
+  if not repo then print('Cannot find repo'); return end
   local cmd = format('gh gist list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
   pickers.new(opts, {
@@ -200,7 +180,6 @@ local function checkout_pr(repo)
     if repo == '' then
       args = {"pr", "checkout" ,tmp_table[1]}
     end
-    print(repo, vim.inspect(args))
     local job = Job:new({
         enable_recording = true ,
         command = "gh",
@@ -214,16 +193,13 @@ local function checkout_pr(repo)
   end
 end
 
-local function pull_requests(opts)
+local function pull_requests(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
-  opts.repo = opts.repo or ''
   local opts_query = parse_opts(opts , 'pr')
-  local opts_repo = ''
-  if opts.repo ~= '' then
-    opts_repo = format('-R %s', opts.repo)
-  end
-  local cmd = format('gh pr list %s %s', opts_query, opts_repo)
+  if repo == vim.NIL then repo = octo.get_remote_name() end
+  if not repo then print('Cannot find repo'); return end
+  local cmd = format('gh pr list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd) , '\n')
   pickers.new(opts, {
     prompt_title = 'Pull Requests' ,
@@ -237,17 +213,13 @@ local function pull_requests(opts)
         if vim.tbl_isempty(tmp_table) then
           return {"echo", ""}
         end
-        if opts.repo == '' then
-          return { 'gh' ,'pr' , 'view', tmp_table[1] }
-        else
-          return { 'gh' ,'pr' , 'view', tmp_table[1], '-R', opts.repo }
-        end
+        return { 'gh' ,'pr' , 'view', tmp_table[1], '-R', repo }
       end
     },
     sorter = conf.file_sorter(opts),
     attach_mappings = function(_,map)
-      actions.goto_file_selection_edit:replace(open_issue(opts.repo))
-      map('i', '<c-o>', checkout_pr(opts.repo))
+      actions.goto_file_selection_edit:replace(open_issue(repo))
+      map('i', '<c-o>', checkout_pr(repo))
       map('i', '<c-t>', open_in_browser('pr'))
       return true
     end

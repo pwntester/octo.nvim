@@ -10,43 +10,45 @@ let s:sco = nvim_win_get_option(0,'signcolumn')
 let s:wo = nvim_win_get_option(0,'wrap')
 
 " commands
-if getenv('OCTO_GITHUB_TOKEN') != v:null
+if executable('gh')
   command! NewComment :lua require'octo'.new_comment()
   command! CloseIssue :lua require'octo'.change_issue_state('closed')
   command! ReopenIssue :lua require'octo'.change_issue_state('open')
   command! SaveIssue  :lua require'octo'.save_issue()
+
   command! -nargs=1 NewIssue :lua require'octo'.new_issue(<f-args>)
   command! -nargs=+ Issue :call octo#get_issue(<f-args>)
+
   command! -nargs=+ AddLabel :lua require'octo'.issue_action('add', 'labels', <f-args>)
   command! -nargs=+ RemoveLabel :lua require'octo'.issue_action('remove', 'labels', <f-args>)
   command! -nargs=+ AddAssignee :lua require'octo'.issue_action('add', 'assignees', <f-args>)
   command! -nargs=+ RemoveAssignee :lua require'octo'.issue_action('remove', 'assignees', <f-args>)
   command! -nargs=+ AddReviewer :lua require'octo'.issue_action('add', 'requested_reviewers', <f-args>)
   command! -nargs=+ RemoveReviewer :lua require'octo'.issue_action('remove', 'requested_reviewers', <f-args>)
-else
-  echo '[OCTO.NVIM] No OCTO_GITHUB_TOKEN env variable found.'
-endif
 
-if executable('gh')
   command! -nargs=* ListIssues :call octo#load_menu('issues', <f-args>)
   command! -nargs=* ListPRs :call octo#load_menu('pull_requests', <f-args>)
   command! -nargs=* ListGists :call octo#load_menu('gists', <f-args>)
+else
+  echo 'Cannot find `gh` command.'
 endif
 
 " load menu
 function! octo#load_menu(cmd, ...) abort
   let opts = {}
+  let repo = v:null
 
-  " range command args
-  " if arg in lua code is table type,we split command string by `,` to vimscript
-  " list type.
   for arg in a:000
-    let opt = split(arg,'=')
-    let opts[opt[0]] = opt[1]
+    if arg =~ '='
+      let opt = split(arg,'=')
+      let opts[opt[0]] = opt[1]
+    else
+      let repo = arg 
+    end
   endfor
 
   let octo_menu = v:lua.require('octo.menu')
-  call octo_menu[a:cmd](opts)
+  call octo_menu[a:cmd](repo, opts)
 endfunction
 
 " load issue
