@@ -280,7 +280,7 @@ local function render_signcolumn(bufnr)
 	end
 end
 
-local function print_details(issue, content, hls)
+local function write_details(issue, content, hls)
 
   -- author
   local author_line = 'Created by:'
@@ -489,6 +489,109 @@ local function print_details(issue, content, hls)
 	vim.list_extend(content, {labels_line, '', ''})
 end
 
+local function write_and_mark(text, content, extmarks)
+  local lines = vim.split(text, '\n', true)
+  local start_line = #content + 1
+  vim.list_extend(content, lines)
+  local end_line = #content
+  -- make them 0-index based
+  table.insert(extmarks, {start_line-1, end_line-1})
+end
+
+local function write_comment(comment, bufnr, content, hls, extmarks)
+  -- heading
+  local heading = format('On %s %s comment.mmented:', comment.created_at, comment.user.login)
+  table.insert(hls, {
+      ['name'] = 'OctoNvimCommentHeading';
+      ['line'] = #content;
+      ['start'] = 0;
+      ['end'] = #format('On %s ', comment.created_at);
+    })
+  table.insert(hls, {
+      ['name'] = 'OctoNvimCommentUser';
+      ['line'] = #content;
+      ['start'] = #format('On %s ', comment.created_at);
+      ['end'] = #format('On %s %s', comment.created_at, comment.user.login);
+    })
+  table.insert(hls, {
+      ['name'] = 'OctoNvimCommentHeading';
+      ['line'] = #content;
+      ['start'] = #format('On %s %s ', comment.created_at, comment.user.login);
+      ['end'] = -1;
+    })
+
+  vim.list_extend(content, {heading, ''})
+
+  -- body
+  local comment_body = string.gsub(comment['body'], '\r\n', '\n')
+  if vim.startswith(comment_body, NO_BODY_MSG) then comment_body = ' ' end
+  write_and_mark(comment_body, content, extmarks)
+  vim.list_extend(content, {'', '', ''})
+
+  -- update metadata
+  local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
+  table.insert(comments_metadata, {
+    id = comment['id'];
+    dirty = false;
+    saved_body = comment_body;
+    body = comment_body;
+  })
+  api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
+end
+
+local function render_buffer(bufnr, content, hls, extmarks)
+  -- render buffer
+  api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
+  api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
+
+  -- add highlights
+  table.insert(hls, {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 })
+  highlight(bufnr, hls)
+
+  -- set extmarks
+  local extmarks_ids = {}
+  for _, m in ipairs(extmarks) do
+    -- (empty line) start ext mark at 0
+    -- start line
+    -- ...
+    -- end line
+    -- (empty line)
+    -- (empty line) end ext mark at 0
+
+    -- except for title where we cant place initial mark on line -1
+
+    local start_line = m[1]
+    local end_line = m[2]
+    local m_id = api.nvim_buf_set_extmark(bufnr, OCTO_EM_NS, max(0,start_line-1), 0, {
+        end_line=end_line+2;
+        end_col=0;
+      })
+    table.insert(extmarks_ids, m_id)
+  end
+  local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
+  title_metadata['extmark'] = extmarks_ids[1]
+  api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+
+  local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
+  desc_metadata['extmark'] = extmarks_ids[2]
+  api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
+
+  local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
+  for i=3,#extmarks_ids,1 do
+    comments_metadata[i-2]['extmark'] = extmarks_ids[i]
+  end
+  api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
+
+  -- drop undo history
+  vim.fn['octo#clear_history']()
+
+  -- show signs
+  render_signcolumn(bufnr)
+
+  -- reset modified option
+  api.nvim_buf_set_option(bufnr, 'modified', false)
+end
+
 local function create_issue_buffer(issue, repo)
 
 	if not issue['id'] then
@@ -498,7 +601,7 @@ local function create_issue_buffer(issue, repo)
 
 	local iid = issue['id']
 	local title = issue['title']
-	local body = string.gsub(issue['body'], '\r\n', '\n')
+	local description = string.gsub(issue['body'], '\r\n', '\n')
 	local number = issue['number']
 	local state = issue['state']
 	local content = {}
@@ -511,114 +614,6 @@ local function create_issue_buffer(issue, repo)
 	-- delete extmarks
 	for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, OCTO_EM_NS, 0, -1, {})) do
 		api.nvim_buf_del_extmark(bufnr, OCTO_EM_NS, m[1])
-	end
-
-	local function render_buffer(bufnr)
-		-- render buffer
-		api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
-		api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
-
-		-- add highlights
-		table.insert(hls, {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 })
-		highlight(bufnr, hls)
-
-		-- set extmarks
-		local extmarks_ids = {}
-		for _, m in ipairs(extmarks) do
-			-- (empty line) start ext mark at 0
-			-- start line
-			-- ...
-			-- end line
-			-- (empty line)
-			-- (empty line) end ext mark at 0
-
-			-- except for title where we cant place initial mark on line -1
-
-			local start_line = m[1]
-			local end_line = m[2]
-			local m_id = api.nvim_buf_set_extmark(bufnr, OCTO_EM_NS, max(0,start_line-1), 0, {
-					end_line=end_line+2;
-					end_col=0;
-				})
-			table.insert(extmarks_ids, m_id)
-		end
-		local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
-		title_metadata['extmark'] = extmarks_ids[1]
-		api.nvim_buf_set_var(bufnr, 'title', title_metadata)
-
-		local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
-		desc_metadata['extmark'] = extmarks_ids[2]
-		api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
-
-		local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
-		for i=3,#extmarks_ids,1 do
-			comments_metadata[i-2]['extmark'] = extmarks_ids[i]
-		end
-		api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
-
-		-- drop undo history
-		vim.fn['octo#clear_history']()
-
-		-- show signs
-		render_signcolumn(bufnr)
-
-		-- reset modified option
-		api.nvim_buf_set_option(bufnr, 'modified', false)
-	end
-
-	local function write(text)
-		local lines = vim.split(text, '\n', true)
-		local start_line = #content + 1
-		vim.list_extend(content, lines)
-		local end_line = #content
-		-- make them 0-index based
-		table.insert(extmarks, {start_line-1, end_line-1})
-	end
-
-	local function write_comments(response)
-		local resp = json.parse(response)
-		local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
-		for _, c in ipairs(resp) do
-
-			-- heading
-			local heading = format('On %s %s commented:', c.created_at, c.user.login)
-			table.insert(hls, {
-					['name'] = 'OctoNvimCommentHeading';
-					['line'] = #content;
-					['start'] = 0;
-					['end'] = #format('On %s ', c.created_at);
-				})
-			table.insert(hls, {
-					['name'] = 'OctoNvimCommentUser';
-					['line'] = #content;
-					['start'] = #format('On %s ', c.created_at);
-					['end'] = #format('On %s %s', c.created_at, c.user.login);
-				})
-			table.insert(hls, {
-					['name'] = 'OctoNvimCommentHeading';
-					['line'] = #content;
-					['start'] = #format('On %s %s ', c.created_at, c.user.login);
-					['end'] = -1;
-				})
-
-			vim.list_extend(content, {heading, ''})
-
-			-- body
-			local cbody = string.gsub(c['body'], '\r\n', '\n')
-			if vim.startswith(cbody, NO_BODY_MSG) then cbody = ' ' end
-			write(cbody)
-			vim.list_extend(content, {'', '', ''})
-			local comment = {
-				id = c['id'];
-				dirty = false;
-				saved_body = cbody;
-				body = cbody;
-			}
-			table.insert(comments_metadata, comment)
-		end
-		api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
-
-		render_buffer(bufnr)
 	end
 
 	-- configure buffer
@@ -635,39 +630,41 @@ local function create_issue_buffer(issue, repo)
 	api.nvim_buf_set_var(bufnr, 'milestone', issue.milestone)
 
 	-- write title
-	write(title)
+	write_and_mark(title, content, extmarks)
 	vim.list_extend(content, {''})
-	local title_metadata = {
+	api.nvim_buf_set_var(bufnr, 'title', {
 		saved_body = title;
 		body = title;
 		dirty = false
-	}
-	api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+	})
 
-  if true then
-    -- print details in buffer
-    print_details(issue, content, hls)
-  end
+  -- print details in buffer
+  write_details(issue, content, hls)
 
 	-- write description
-	write(body)
+	write_and_mark(description, content, extmarks)
 	vim.list_extend(content, {'','',''})
-	local desc_metadata = {
-		saved_body = body,
-		body = body,
+	api.nvim_buf_set_var(bufnr, 'description', {
+		saved_body = description,
+		body = description,
 		dirty = false
-	}
-	api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
+	})
 
 	-- request issue comments
 	api.nvim_buf_set_var(bufnr, 'comments', {})
 	if tonumber(issue['comments']) > 0 then
     gh.run({
       args = {'api', format('repos/%s/issues/%d/comments', repo, number)};
-      cb = write_comments;
+      cb = function(response)
+        local resp = json.parse(response)
+        for _, c in ipairs(resp) do
+          write_comment(c, bufnr, content, hls, extmarks)
+        end
+        render_buffer(bufnr, content, hls, extmarks)
+      end
     })
 	else
-		render_buffer(bufnr)
+    render_buffer(bufnr, content, hls, extmarks)
 	end
 
 	return bufnr
@@ -769,8 +766,6 @@ local function save_issue(bufnr)
 		return
 	end
 
-	--log.info('Saving issue:', number, 'repo:', repo, 'bufnr:', bufnr)
-
 	-- collect comment metadata
 	update_issue_metadata(bufnr)
 
@@ -779,7 +774,7 @@ local function save_issue(bufnr)
 	local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
 	if title_metadata.dirty or desc_metadata.dirty then
 
-		-- trust but validate
+		-- trust but verify
 		if string.find(title_metadata['body'], '\n') then
 			api.nvim_err_writeln("Title can't contains new lines")
 			return
@@ -829,7 +824,8 @@ local function save_issue(bufnr)
             format('repos/%s/issues/comments/%s', repo, metadata['id'])
           };
           cb = function(_)
-			      get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
+            -- TODO: do not reload whole issue, but just remove comment
+			      get_issue(repo, number)
           end
         })
 			end
@@ -854,7 +850,6 @@ local function save_issue(bufnr)
             render_signcolumn(bufnr)
             print('Saved!')
           end
-          get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
         end
       })
 		end
@@ -886,6 +881,7 @@ local function new_comment()
     cb = function(output)
       local resp = json.parse(output)
       if nil ~= resp['issue_url'] then
+        -- TODO: do not reload issue, just add new comment at the bottom
         get_issue(repo, number)
       end
     end
@@ -932,6 +928,7 @@ local function change_issue_state(state)
       local resp = json.parse(output)
       if state == resp['state'] then
         api.nvim_buf_set_var(bufnr, 'state', resp['state'])
+        -- TODO: do not reload issue, just header
         get_issue(repo, resp['number'])
         print('Issue state changed to: '..resp['state'])
       end
@@ -1054,6 +1051,7 @@ local function issue_action(action, kind, value)
     command = "sh";
     args = {'-c', cmd};
     on_exit = vim.schedule_wrap(function(_, _, _)
+      -- TODO: do not reload issue, just header
       get_issue(repo, number)
     end)
   })
