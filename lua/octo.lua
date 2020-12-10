@@ -8,7 +8,6 @@ local json = {
 	parse = vim.fn.json_decode;
 	stringify = vim.fn.json_encode;
 }
---local log = require('octo.log')
 
 -- constants
 local NO_BODY_MSG = 'No description provided.'
@@ -73,9 +72,9 @@ local function place_signs(bufnr, start_line, end_line, is_dirty)
 	end
 end
 
-local function highlight(bufnr, hls)
+local function highlight(bufnr, base, hls)
 	for _, hl in ipairs(hls) do
-		api.nvim_buf_add_highlight(bufnr, OCTO_HL_NS, hl.name, hl.line, hl.start, hl['end'])
+		api.nvim_buf_add_highlight(bufnr, OCTO_HL_NS, hl.name, base + hl.line, hl.start, hl['end'])
 	end
 end
 
@@ -280,7 +279,40 @@ local function render_signcolumn(bufnr)
 	end
 end
 
-local function write_details(issue, content, hls)
+local function write_block(lines, opts)
+  local bufnr = opts.bufnr or api.nvim_get_current_buf()
+  if type(lines) == 'string' then
+    lines = vim.split(lines, '\n', true)
+  end
+  local start_line = api.nvim_buf_line_count(bufnr) + 1
+  --local end_line = start_line + #lines - 1
+
+  -- write content lines
+  if start_line == 2 and vim.fn.getline('.') == '' then
+    print('FOO')
+    api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
+  else
+    api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
+  end
+
+  -- trailing empty lines
+  if opts.trailing_lines then
+    for _=0,opts.trailing_lines, 1 do
+      api.nvim_buf_set_lines(bufnr, -1, -1, false, {''})
+    end
+  end
+
+  -- add highlights
+  if opts.highlights then
+    highlight(bufnr, start_line, opts.highlights)
+  end
+
+end
+
+local function write_details(bufnr, issue)
+
+  local hls = {}
+  local content = {}
 
   -- author
   local author_line = 'Created by:'
@@ -487,6 +519,8 @@ local function write_details(issue, content, hls)
     labels_line = labels_line..' None yet'
 	end
 	vim.list_extend(content, {labels_line, '', ''})
+
+	write_block(content, {bufnr=bufnr; mark=false; highlights=hls})
 end
 
 local function write_and_mark(text, content, extmarks)
@@ -498,7 +532,11 @@ local function write_and_mark(text, content, extmarks)
   table.insert(extmarks, {start_line-1, end_line-1})
 end
 
-local function write_comment(comment, bufnr, content, hls, extmarks)
+local function write_comment(bufnr, comment)
+  local content = {}
+  local hls = {}
+  local extmarks = {}
+
   -- heading
   local heading = format('On %s %s comment.mmented:', comment.created_at, comment.user.login)
   table.insert(hls, {
@@ -537,60 +575,48 @@ local function write_comment(comment, bufnr, content, hls, extmarks)
     body = comment_body;
   })
   api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
+
+	write_block(content, {bufnr=bufnr; mark=true; highlights=hls, marks=extmarks})
+
 end
 
-local function render_buffer(bufnr, content, hls, extmarks)
-  -- render buffer
-  api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
-  api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
-
-  -- add highlights
-  table.insert(hls, {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 })
-  highlight(bufnr, hls)
-
-  -- set extmarks
-  local extmarks_ids = {}
-  for _, m in ipairs(extmarks) do
-    -- (empty line) start ext mark at 0
-    -- start line
-    -- ...
-    -- end line
-    -- (empty line)
-    -- (empty line) end ext mark at 0
-
-    -- except for title where we cant place initial mark on line -1
-
-    local start_line = m[1]
-    local end_line = m[2]
-    local m_id = api.nvim_buf_set_extmark(bufnr, OCTO_EM_NS, max(0,start_line-1), 0, {
-        end_line=end_line+2;
-        end_col=0;
-      })
-    table.insert(extmarks_ids, m_id)
-  end
-  local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
-  title_metadata['extmark'] = extmarks_ids[1]
-  api.nvim_buf_set_var(bufnr, 'title', title_metadata)
-
-  local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
-  desc_metadata['extmark'] = extmarks_ids[2]
-  api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
-
-  local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
-  for i=3,#extmarks_ids,1 do
-    comments_metadata[i-2]['extmark'] = extmarks_ids[i]
-  end
-  api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
-
-  -- drop undo history
-  vim.fn['octo#clear_history']()
-
-  -- show signs
-  render_signcolumn(bufnr)
-
-  -- reset modified option
-  api.nvim_buf_set_option(bufnr, 'modified', false)
-end
+-- local function render_buffer(bufnr, content, hls, extmarks)
+--
+--   -- set extmarks
+--   local extmarks_ids = {}
+--   for _, m in ipairs(extmarks) do
+--     -- (empty line) start ext mark at 0
+--     -- start line
+--     -- ...
+--     -- end line
+--     -- (empty line)
+--     -- (empty line) end ext mark at 0
+--
+--     -- except for title where we cant place initial mark on line -1
+--
+--     local start_line = m[1]
+--     local end_line = m[2]
+--     local m_id = api.nvim_buf_set_extmark(bufnr, OCTO_EM_NS, max(0,start_line-1), 0, {
+--         end_line=end_line+2;
+--         end_col=0;
+--       })
+--     table.insert(extmarks_ids, m_id)
+--   end
+--   local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
+--   title_metadata['extmark'] = extmarks_ids[1]
+--   api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+--
+--   local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
+--   desc_metadata['extmark'] = extmarks_ids[2]
+--   api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
+--
+--   local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
+--   for i=3,#extmarks_ids,1 do
+--     comments_metadata[i-2]['extmark'] = extmarks_ids[i]
+--   end
+--   api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
+--
+-- end
 
 local function create_issue_buffer(issue, repo)
 
@@ -630,8 +656,8 @@ local function create_issue_buffer(issue, repo)
 	api.nvim_buf_set_var(bufnr, 'milestone', issue.milestone)
 
 	-- write title
-	write_and_mark(title, content, extmarks)
-	vim.list_extend(content, {''})
+  local title_hls = {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 }
+	write_block(title, {bufnr=bufnr; mark=true; trailing_lines=1; highlights=title_hls})
 	api.nvim_buf_set_var(bufnr, 'title', {
 		saved_body = title;
 		body = title;
@@ -639,11 +665,10 @@ local function create_issue_buffer(issue, repo)
 	})
 
   -- print details in buffer
-  write_details(issue, content, hls)
+  write_details(bufnr, issue)
 
 	-- write description
-	write_and_mark(description, content, extmarks)
-	vim.list_extend(content, {'','',''})
+	write_block(description, {bufnr=bufnr; mark=true; trailing_lines=3})
 	api.nvim_buf_set_var(bufnr, 'description', {
 		saved_body = description,
 		body = description,
@@ -658,16 +683,20 @@ local function create_issue_buffer(issue, repo)
       cb = function(response)
         local resp = json.parse(response)
         for _, c in ipairs(resp) do
-          write_comment(c, bufnr, content, hls, extmarks)
+          write_comment(bufnr, c)
         end
-        render_buffer(bufnr, content, hls, extmarks)
       end
     })
-	else
-    render_buffer(bufnr, content, hls, extmarks)
 	end
 
-	return bufnr
+  -- drop undo history
+  vim.fn['octo#clear_history']()
+
+  -- show signs
+  render_signcolumn(bufnr)
+
+  -- reset modified option
+  api.nvim_buf_set_option(bufnr, 'modified', false)
 end
 
 -- local function process_link_header(headers)
