@@ -3,7 +3,7 @@ Plugin to work with GitHub issues and PRs from Neovim. Just edit the issue descr
 Modified description or comments are highlighted in the signcolumn.
 
 
-![](https://i.imgur.com/ZRhBvls.png)
+![](https://i.imgur.com/pv9MSJW.png)
 
 
 ## Installation
