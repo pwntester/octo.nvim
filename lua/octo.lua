@@ -378,9 +378,7 @@ local function write_details(bufnr, issue)
       end
 		end
 	else
-    table.insert(assignees_vt, {
-		  'No one assigned '
-    })
+    table.insert(assignees_vt, {'No one assigned ', 'OctoNvimDetailsValue'})
 	end
 	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, assignees_vt, {})
 
@@ -409,9 +407,7 @@ local function write_details(bufnr, issue)
         end
       end
     else
-      table.insert(requested_reviewers_vt, {
-        'No requested reviewers'
-      })
+      table.insert(requested_reviewers_vt, {'No requested reviewers', 'OctoNvimDetailsValue'})
     end
     api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, requested_reviewers_vt, {})
 
@@ -428,9 +424,7 @@ local function write_details(bufnr, issue)
         end
       end
     else
-      table.insert(reviewers_vt, {
-        'No reviewers'
-      })
+      table.insert(reviewers_vt, {'No reviewers', 'OctoNvimDetailsValue'})
     end
     api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, assignees_vt, {})
   end
