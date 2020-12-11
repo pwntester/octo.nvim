@@ -7,6 +7,9 @@ local function run(opts)
   local stdout_results = {}
   local stderr_results = {}
 
+  table.insert(opts.args, '-H')
+  table.insert(opts.args, 'Accept: application/vnd.github.squirrel-girl-preview+json')
+
   local job = Job:new({
       enable_recording = true;
       command = "gh";

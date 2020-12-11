@@ -8,9 +8,10 @@ local json = {
 	parse = vim.fn.json_decode;
 	stringify = vim.fn.json_encode;
 }
---local log = require('octo.log')
 
 -- constants
+local OCTO_EM_NS = api.nvim_create_namespace('octo_marks')
+local OCTO_VT_NS = api.nvim_create_namespace('octo_virtualtexts')
 local NO_BODY_MSG = 'No description provided.'
 local HIGHLIGHT_NAME_PREFIX = "octo"
 local HIGHLIGHT_CACHE = {}
@@ -19,11 +20,19 @@ local HIGHLIGHT_MODE_NAMES = {
 	foreground = "mf";
 }
 
+-- sign definitions
+vim.cmd [[ sign define clean_block_start text=┌ ]]
+vim.cmd [[ sign define clean_block_end text=└ ]]
+vim.cmd [[ sign define dirty_block_start text=┌ texthl=OctoNvimDirty ]]
+vim.cmd [[ sign define dirty_block_end text=└ texthl=OctoNvimDirty ]]
+vim.cmd [[ sign define dirty_block_middle text=│ texthl=OctoNvimDirty ]]
+vim.cmd [[ sign define clean_block_middle text=│ ]]
+vim.cmd [[ sign define clean_line text=[ ]]
+vim.cmd [[ sign define dirty_line text=[ texthl=OctoNvimDirty ]]
+
 -- autocommands
 vim.cmd [[ augroup octo_autocmds ]]
 vim.cmd [[ autocmd!]]
-vim.cmd [[ au TextChanged github://* lua require"octo".render_signcolumn() ]]
-vim.cmd [[ au TextChangedI github://* lua require"octo".render_signcolumn() ]]
 vim.cmd [[ au BufReadCmd github://* lua require"octo".load_issue() ]]
 vim.cmd [[ au BufWriteCmd github://* lua require"octo".save_issue() ]]
 vim.cmd [[ augroup END ]]
@@ -70,12 +79,6 @@ local function place_signs(bufnr, start_line, end_line, is_dirty)
 		for j=start_line+1,end_line-1,1 do
 			sign_place(format('%s_block_middle', dirty_mod), bufnr, j)
 		end
-	end
-end
-
-local function highlight(bufnr, hls)
-	for _, hl in ipairs(hls) do
-		api.nvim_buf_add_highlight(bufnr, OCTO_HL_NS, hl.name, hl.line, hl.start, hl['end'])
 	end
 end
 
@@ -146,27 +149,13 @@ end
 local function update_metadata(metadata, start_line, end_line, text)
 	metadata['start_line'] = start_line
 	metadata['end_line'] = end_line
-	if text ~= metadata['saved_body'] then
+	if vim.fn.trim(text) ~= vim.fn.trim(metadata['saved_body']) then
 		metadata['dirty'] = true
 	else
 		metadata['dirty'] = false
 	end
 	metadata['body'] = text
 end
-
--- definitions
-OCTO_EM_NS = api.nvim_create_namespace('octo_marks')
-OCTO_HL_NS = api.nvim_create_namespace('octo_highlights')
-OCTO_VT_NS = api.nvim_create_namespace('octo_virtualtexts')
-
-vim.cmd [[ sign define clean_block_start text=┌ ]]
-vim.cmd [[ sign define clean_block_end text=└ ]]
-vim.cmd [[ sign define dirty_block_start text=┌ texthl=OctoNvimDirty ]]
-vim.cmd [[ sign define dirty_block_end text=└ texthl=OctoNvimDirty ]]
-vim.cmd [[ sign define dirty_block_middle text=│ texthl=OctoNvimDirty ]]
-vim.cmd [[ sign define clean_block_middle text=│ ]]
-vim.cmd [[ sign define clean_line text=[ ]]
-vim.cmd [[ sign define dirty_line text=[ texthl=OctoNvimDirty ]]
 
 local function update_issue_metadata(bufnr)
 
@@ -229,7 +218,7 @@ local function render_signcolumn(bufnr)
 	sign_unplace(bufnr)
 
 	-- clear virtual texts
-	api.nvim_buf_clear_namespace(bufnr, OCTO_VT_NS, 0, -1)
+	--api.nvim_buf_clear_namespace(bufnr, OCTO_VT_NS, 0, -1)
 
 	-- title
 	local title = api.nvim_buf_get_var(bufnr, 'title')
@@ -280,103 +269,120 @@ local function render_signcolumn(bufnr)
 	end
 end
 
-local function print_details(issue, content, hls)
+local function write_block(lines, opts)
+  local bufnr = opts.bufnr or api.nvim_get_current_buf()
+  if type(lines) == 'string' then
+    lines = vim.split(lines, '\n', true)
+  end
+  local start_line = api.nvim_buf_line_count(bufnr) + 1
+
+  -- write content lines
+  if start_line == 2 and vim.fn.getline('.') == '' then
+    api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
+  else
+    api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
+  end
+
+  -- trailing empty lines
+  if opts.trailing_lines then
+    for _=1, opts.trailing_lines, 1 do
+      api.nvim_buf_set_lines(bufnr, -1, -1, false, {''})
+    end
+  end
+
+  -- remove last line when writing at the beggining of the buffer
+  if start_line == 2 then
+    --api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
+    start_line = 1
+  end
+
+  -- set extmarks
+  local end_line = start_line
+  local count = api.nvim_buf_line_count(bufnr)
+  for i=count, start_line, -1 do
+    local line = vim.fn.getline(i) or ''
+    if '' ~= line then
+      end_line = i
+      break
+    end
+  end
+
+  if opts.mark then
+
+    -- (empty line) start ext mark at 0
+    -- start line
+    -- ...
+    -- end line
+    -- (empty line)
+    -- (empty line) end ext mark at 0
+
+    -- except for title where we cant place initial mark on line -1
+    return api.nvim_buf_set_extmark(bufnr,
+      OCTO_EM_NS,
+      max(0,start_line-2),
+      0,
+      { end_line=end_line+1; end_col=0; }
+    )
+  end
+end
+
+local function write_details(bufnr, issue)
+
+  local hls = {}
+  local content = {}
 
   -- author
-  local author_line = 'Created by:'
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsLabel';
-    ['line'] = #content;
-    ['start'] = 0;
-    ['end'] = #author_line;
-  })
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsValue';
-    ['line'] = #content;
-    ['start'] = #author_line+1;
-    ['end'] = -1;
-  })
-  author_line = format('%s %s', author_line, issue.user.login)
-	vim.list_extend(content, {author_line})
+	write_block({''}, {bufnr=bufnr; mark=false;})
+	local author_vt = {
+		{'Created by: ', 'OctoNvimDetailsLabel'},
+		{issue.user.login, 'OctoNvimDetailsValue'},
+	}
+	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, author_vt, {})
 
   -- created_at
-  local created_at_line = 'Created at:'
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsLabel';
-    ['line'] = #content;
-    ['start'] = 0;
-    ['end'] = #created_at_line;
-  })
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsValue';
-    ['line'] = #content;
-    ['start'] = #created_at_line+1;
-    ['end'] = -1;
-  })
-  created_at_line = format('%s %s', created_at_line, issue.created_at)
-	vim.list_extend(content, {created_at_line})
+	write_block({''}, {bufnr=bufnr; mark=false;})
+	local created_at_vt = {
+		{'Created at: ', 'OctoNvimDetailsLabel'},
+		{issue.created_at, 'OctoNvimDetailsValue'},
+	}
+	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, created_at_vt, {})
 
   -- updated_at
-  local updated_at_line = 'updated at:'
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsLabel';
-    ['line'] = #content;
-    ['start'] = 0;
-    ['end'] = #updated_at_line;
-  })
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsValue';
-    ['line'] = #content;
-    ['start'] = #updated_at_line+1;
-    ['end'] = -1;
-  })
-  updated_at_line = format('%s %s', updated_at_line, issue.updated_at)
-	vim.list_extend(content, {updated_at_line})
+	write_block({''}, {bufnr=bufnr; mark=false;})
+	local updated_at_vt = {
+		{'Updated at: ', 'OctoNvimDetailsLabel'},
+		{issue.updated_at, 'OctoNvimDetailsValue'},
+	}
+	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, updated_at_vt, {})
 
   -- closed_at
   if issue.state == 'closed' then
-    local closed_at_line = 'closed at:'
-    table.insert(hls, {
-      ['name'] = 'OctoNvimDetailsLabel';
-      ['line'] = #content;
-      ['start'] = 0;
-      ['end'] = #closed_at_line;
-    })
-    table.insert(hls, {
-      ['name'] = 'OctoNvimDetailsValue';
-      ['line'] = #content;
-      ['start'] = #closed_at_line+1;
-      ['end'] = -1;
-    })
-    closed_at_line = format('%s %s', closed_at_line, issue.closed_at)
-    vim.list_extend(content, {closed_at_line})
+    write_block({''}, {bufnr=bufnr; mark=false;})
+    local closed_at_vt = {
+      {'Closed at: ', 'OctoNvimDetailsLabel'},
+      {issue.closed_at, 'OctoNvimDetailsValue'},
+    }
+    api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, closed_at_vt, {})
   end
 
   -- assignees
-	local assignees_line = 'Assignees:'
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsLabel';
-    ['line'] = #content;
-    ['start'] = 0;
-    ['end'] = #assignees_line;
-  })
+	write_block({''}, {bufnr=bufnr; mark=false;})
+	local assignees_vt = {
+		{'Assignees: ', 'OctoNvimDetailsLabel'},
+	}
 	if issue.assignees and #issue.assignees > 0 then
-		for _, as in ipairs(issue.assignees) do
-			table.insert(hls, {
-        ['name'] = 'OctoNvimDetailsValue';
-        ['line'] = #content;
-        ['start'] = #assignees_line+1;
-        ['end'] = #assignees_line + #as.login + 1;
-      })
-			assignees_line = format('%s %s ,', assignees_line, as.login)
+		for i, as in ipairs(issue.assignees) do
+			table.insert(assignees_vt, {as.login, 'OctoNvimDetailsValue'})
+      if i ~= #issue.assignees then
+			  table.insert(assignees_vt, {', ', 'OctoNvimDetailsLabel'})
+      end
 		end
 	else
-		assignees_line = assignees_line..' No one assigned '
+    table.insert(assignees_vt, {
+		  'No one assigned '
+    })
 	end
-  if vim.endswith(assignees_line, ',') then
-    assignees_line = assignees_line:sub(1, -2)
-  end
-	vim.list_extend(content, {assignees_line})
+	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, assignees_vt, {})
 
   if issue.pull_request then
     local url = issue.pull_request.url
@@ -391,102 +397,121 @@ local function print_details(issue, content, hls)
 		local resp = json.parse(response)
 
     -- requested reviewers
-    local requested_reviewers_line = 'Requested reviewers:'
-    table.insert(hls, {
-      ['name'] = 'OctoNvimDetailsLabel';
-      ['line'] = #content;
-      ['start'] = 0;
-      ['end'] = #requested_reviewers_line;
-    })
+    write_block({''}, {bufnr=bufnr; mark=false;})
+    local requested_reviewers_vt = {
+      {'Requested Reviewers: ', 'OctoNvimDetailsLabel'},
+    }
     if resp.requested_reviewers and #resp.requested_reviewers > 0 then
-      for _, as in ipairs(resp.requested_reviewers) do
-        table.insert(hls, {
-          ['name'] = 'OctoNvimDetailsValue';
-          ['line'] = #content;
-          ['start'] = #requested_reviewers_line+1;
-          ['end'] = #requested_reviewers_line + #as.login + 1;
-        })
-        requested_reviewers_line = format('%s %s ,', requested_reviewers_line, as.login)
+      for i, as in ipairs(resp.requested_reviewers) do
+        table.insert(requested_reviewers_vt, {as.login, 'OctoNvimDetailsValue'})
+        if i ~= #issue.assignees then
+          table.insert(requested_reviewers_vt, {', ', 'OctoNvimDetailsLabel'})
+        end
       end
     else
-      requested_reviewers_line = requested_reviewers_line..' No reviews'
+      table.insert(requested_reviewers_vt, {
+        'No requested reviewers'
+      })
     end
-    if vim.endswith(requested_reviewers_line, ',') then
-      requested_reviewers_line = requested_reviewers_line:sub(1, -2)
-    end
-    vim.list_extend(content, {requested_reviewers_line})
+    api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, requested_reviewers_vt, {})
 
     -- reviews
-    local reviewers_line = 'Reviews:'
-    table.insert(hls, {
-      ['name'] = 'OctoNvimDetailsLabel';
-      ['line'] = #content;
-      ['start'] = 0;
-      ['end'] = #reviewers_line;
-    })
+    write_block({''}, {bufnr=bufnr; mark=false;})
+    local reviewers_vt = {
+      {'Reviews: ', 'OctoNvimDetailsLabel'},
+    }
     if resp and #resp > 0 then
-      for _, as in ipairs(resp) do
-        table.insert(hls, {
-          ['name'] = 'OctoNvimDetailsValue';
-          ['line'] = #content;
-          ['start'] = #reviewers_line+1;
-          ['end'] = #reviewers_line + #as.user.login + #as.state + 4;
-        })
-        reviewers_line = format('%s %s (%s),', reviewers_line, as.user.login, as.state)
+      for i, as in ipairs(resp) do
+        table.insert(reviewers_vt, {format('%s (%s)', as.user.login, as.state), 'OctoNvimDetailsValue'})
+        if i ~= #issue.assignees then
+          table.insert(reviewers_vt, {', ', 'OctoNvimDetailsLabel'})
+        end
       end
     else
-      reviewers_line = reviewers_line..' No reviews'
+      table.insert(reviewers_vt, {
+        'No reviewers'
+      })
     end
-    if vim.endswith(reviewers_line, ',') then
-      reviewers_line = reviewers_line:sub(1, -2)
-    end
-    vim.list_extend(content, {reviewers_line})
+    api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, assignees_vt, {})
   end
 
   -- milestones
-  local milestone_line = 'Milestone:'
+  write_block({''}, {bufnr=bufnr; mark=false;})
   local ms = issue.milestone
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsLabel';
-    ['line'] = #content;
-    ['start'] = 0;
-    ['end'] = #milestone_line;
-  })
+  local milestone_vt = {
+    {'Milestone: ', 'OctoNvimDetailsLabel'},
+  }
 	if ms ~= nil and ms ~= vim.NIL then
-    table.insert(hls, {
-      ['name'] = 'OctoNvimDetailsValue';
-      ['line'] = #content;
-      ['start'] = #milestone_line+1;
-      ['end'] = -1;
-    })
-    milestone_line = format('%s %s (%s)', milestone_line, ms.title, ms.state)
+    table.insert(milestone_vt, {format('%s (%s)', ms.title, ms.state), 'OctoNvimDetailsValue'})
 	else
-		milestone_line = milestone_line..' No milestone'
+    table.insert(milestone_vt, {'No milestone', 'OctoNvimDetailsValue'})
 	end
-	vim.list_extend(content, {milestone_line})
+  api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, milestone_vt, {})
 
   -- labels
-  local labels_line = 'Labels:'
-  table.insert(hls, {
-    ['name'] = 'OctoNvimDetailsLabel';
-    ['line'] = #content;
-    ['start'] = 0;
-    ['end'] = #labels_line;
-  })
+  write_block({''}, {bufnr=bufnr; mark=false;})
+  local labels_vt = {
+    {'Labels: ', 'OctoNvimDetailsLabel'},
+  }
 	if issue.labels and #issue.labels > 0 then
 		for _, label in ipairs(issue.labels) do
-			table.insert(hls, {
-        ['name'] = create_highlight(label.color, {});
-        ['line'] = #content;
-        ['start'] = #labels_line+1;
-        ['end'] = #labels_line + #label.name + 1;
-      })
-			labels_line = format('%s %s', labels_line, label.name)
+      table.insert(labels_vt, {'', create_highlight(label.color, {mode='foreground'})})
+      table.insert(labels_vt, {label.name, create_highlight(label.color, {})})
+      table.insert(labels_vt, {'', create_highlight(label.color, {mode='foreground'})})
+      table.insert(labels_vt, {' ', 'OctoNvimDetailsLabel'})
 		end
 	else
-    labels_line = labels_line..' None yet'
+    table.insert(labels_vt, {'None yet', 'OctoNvimDetailsValue'})
 	end
-	vim.list_extend(content, {labels_line, '', ''})
+  api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, labels_vt, {})
+
+  write_block({''}, {bufnr=bufnr; mark=false;})
+end
+
+local function write_comment(bufnr, comment)
+
+  -- heading
+	write_block({'', ''}, {bufnr=bufnr; mark=false;})
+	local header_vt = {
+		{format('On %s ', comment.created_at), 'OctoNvimCommentHeading'},
+		{comment.user.login, 'OctoNvimCommentUser'},
+		{' commented', 'OctoNvimCommentHeading'}
+	}
+	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 2, header_vt, {})
+
+  -- body
+  local content = {}
+  local comment_body = string.gsub(comment['body'], '\r\n', '\n')
+  if vim.startswith(comment_body, NO_BODY_MSG) then comment_body = ' ' end
+  vim.list_extend(content, vim.split(comment_body, '\n', true))
+  vim.list_extend(content, {'', '', ''})
+	local comment_mark = write_block(content, {bufnr=bufnr; mark=true;})
+
+  -- reactions
+  if comment.reactions.total_count > 0 then
+    local reactions_vt = {}
+    for reaction, count in pairs(comment.reactions) do
+      local emoji = require'octo.util'.reaction_map[reaction]
+      if emoji and count > 0 then
+        table.insert(reactions_vt, {'', 'OctoNvimBubble1'})
+        table.insert(reactions_vt, {emoji, 'OctoNvimBubble2'})
+        table.insert(reactions_vt, {'', 'OctoNvimBubble1'})
+        table.insert(reactions_vt, {format(' %s ', count), 'Normal'})
+      end
+    end
+	  api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 2, reactions_vt, {})
+  end
+
+  -- update metadata
+  local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
+  table.insert(comments_metadata, {
+    id = comment['id'];
+    dirty = false;
+    saved_body = comment_body;
+    body = comment_body;
+    extmark = comment_mark;
+  })
+  api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
 end
 
 local function create_issue_buffer(issue, repo)
@@ -498,12 +523,9 @@ local function create_issue_buffer(issue, repo)
 
 	local iid = issue['id']
 	local title = issue['title']
-	local body = string.gsub(issue['body'], '\r\n', '\n')
+	local description = string.gsub(issue['body'], '\r\n', '\n')
 	local number = issue['number']
 	local state = issue['state']
-	local content = {}
-	local hls = {}
-	local extmarks = {}
 
 	-- create buffer
 	local bufnr = api.nvim_get_current_buf()
@@ -511,114 +533,6 @@ local function create_issue_buffer(issue, repo)
 	-- delete extmarks
 	for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, OCTO_EM_NS, 0, -1, {})) do
 		api.nvim_buf_del_extmark(bufnr, OCTO_EM_NS, m[1])
-	end
-
-	local function render_buffer(bufnr)
-		-- render buffer
-		api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
-		api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
-
-		-- add highlights
-		table.insert(hls, {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 })
-		highlight(bufnr, hls)
-
-		-- set extmarks
-		local extmarks_ids = {}
-		for _, m in ipairs(extmarks) do
-			-- (empty line) start ext mark at 0
-			-- start line
-			-- ...
-			-- end line
-			-- (empty line)
-			-- (empty line) end ext mark at 0
-
-			-- except for title where we cant place initial mark on line -1
-
-			local start_line = m[1]
-			local end_line = m[2]
-			local m_id = api.nvim_buf_set_extmark(bufnr, OCTO_EM_NS, max(0,start_line-1), 0, {
-					end_line=end_line+2;
-					end_col=0;
-				})
-			table.insert(extmarks_ids, m_id)
-		end
-		local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
-		title_metadata['extmark'] = extmarks_ids[1]
-		api.nvim_buf_set_var(bufnr, 'title', title_metadata)
-
-		local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
-		desc_metadata['extmark'] = extmarks_ids[2]
-		api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
-
-		local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
-		for i=3,#extmarks_ids,1 do
-			comments_metadata[i-2]['extmark'] = extmarks_ids[i]
-		end
-		api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
-
-		-- drop undo history
-		vim.fn['octo#clear_history']()
-
-		-- show signs
-		render_signcolumn(bufnr)
-
-		-- reset modified option
-		api.nvim_buf_set_option(bufnr, 'modified', false)
-	end
-
-	local function write(text)
-		local lines = vim.split(text, '\n', true)
-		local start_line = #content + 1
-		vim.list_extend(content, lines)
-		local end_line = #content
-		-- make them 0-index based
-		table.insert(extmarks, {start_line-1, end_line-1})
-	end
-
-	local function write_comments(response)
-		local resp = json.parse(response)
-		local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
-		for _, c in ipairs(resp) do
-
-			-- heading
-			local heading = format('On %s %s commented:', c.created_at, c.user.login)
-			table.insert(hls, {
-					['name'] = 'OctoNvimCommentHeading';
-					['line'] = #content;
-					['start'] = 0;
-					['end'] = #format('On %s ', c.created_at);
-				})
-			table.insert(hls, {
-					['name'] = 'OctoNvimCommentUser';
-					['line'] = #content;
-					['start'] = #format('On %s ', c.created_at);
-					['end'] = #format('On %s %s', c.created_at, c.user.login);
-				})
-			table.insert(hls, {
-					['name'] = 'OctoNvimCommentHeading';
-					['line'] = #content;
-					['start'] = #format('On %s %s ', c.created_at, c.user.login);
-					['end'] = -1;
-				})
-
-			vim.list_extend(content, {heading, ''})
-
-			-- body
-			local cbody = string.gsub(c['body'], '\r\n', '\n')
-			if vim.startswith(cbody, NO_BODY_MSG) then cbody = ' ' end
-			write(cbody)
-			vim.list_extend(content, {'', '', ''})
-			local comment = {
-				id = c['id'];
-				dirty = false;
-				saved_body = cbody;
-				body = cbody;
-			}
-			table.insert(comments_metadata, comment)
-		end
-		api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
-
-		render_buffer(bufnr)
 	end
 
 	-- configure buffer
@@ -635,60 +549,78 @@ local function create_issue_buffer(issue, repo)
 	api.nvim_buf_set_var(bufnr, 'milestone', issue.milestone)
 
 	-- write title
-	write(title)
-	vim.list_extend(content, {''})
-	local title_metadata = {
+  local title_hls = {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 }
+	local title_mark = write_block(title, {bufnr=bufnr; mark=true; trailing_lines=1; highlights=title_hls})
+	api.nvim_buf_set_var(bufnr, 'title', {
 		saved_body = title;
 		body = title;
-		dirty = false
-	}
-	api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+		dirty = false;
+    extmark = title_mark;
+	})
 
-  if true then
-    -- print details in buffer
-    print_details(issue, content, hls)
-  end
+  -- write details in buffer
+  write_details(bufnr, issue)
 
 	-- write description
-	write(body)
-	vim.list_extend(content, {'','',''})
-	local desc_metadata = {
-		saved_body = body,
-		body = body,
-		dirty = false
-	}
-	api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
+	local desc_mark = write_block(description, {bufnr=bufnr; mark=true; trailing_lines=3})
+	api.nvim_buf_set_var(bufnr, 'description', {
+		saved_body = description,
+		body = description,
+		dirty = false;
+    extmark = desc_mark;
+	})
+
+  -- reactions
+  if issue.reactions.total_count > 0 then
+    local reactions_vt = {}
+    for reaction, count in pairs(issue.reactions) do
+      local emoji = require'octo.util'.reaction_map[reaction]
+      if emoji and count > 0 then
+        table.insert(reactions_vt, {'', 'OctoNvimBubble1'})
+        table.insert(reactions_vt, {emoji, 'OctoNvimBubble2'})
+        table.insert(reactions_vt, {'', 'OctoNvimBubble1'})
+        table.insert(reactions_vt, {format(' %s ', count), 'Normal'})
+      end
+    end
+	  api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 2, reactions_vt, {})
+  end
 
 	-- request issue comments
 	api.nvim_buf_set_var(bufnr, 'comments', {})
-	if tonumber(issue['comments']) > 0 then
+  local comments_count = tonumber(issue['comments'])
+  local comments_processed = 0
+	if comments_count > 0 then
     gh.run({
       args = {'api', format('repos/%s/issues/%d/comments', repo, number)};
-      cb = write_comments;
+      cb = function(response)
+        local resp = json.parse(response)
+        for _, c in ipairs(resp) do
+          write_comment(bufnr, c)
+          comments_processed = comments_processed + 1
+        end
+      end
     })
-	else
-		render_buffer(bufnr)
 	end
 
-	return bufnr
-end
+  local status = vim.wait(5000, function()
+    return comments_processed == comments_count
+  end, 200)
 
--- local function process_link_header(headers)
--- 	local h = headers['Link']
--- 	local page_count = 0
--- 	local per_page = 0
--- 	if nil ~= h then
--- 		for n in string.gmatch(h, '&page=(%d+)') do
--- 			page_count = max(page_count, n)
--- 		end
--- 		for p in string.gmatch(h, '&per_page=(%d+)') do
--- 			per_page = max(per_page, p)
--- 		end
--- 		return per_page, page_count*per_page
--- 	else
--- 		return nil, nil
--- 	end
--- end
+  -- show signs
+  render_signcolumn(bufnr)
+
+  -- drop undo history
+  vim.fn['octo#clear_history']()
+
+  -- reset modified option
+  api.nvim_buf_set_option(bufnr, 'modified', false)
+
+  vim.cmd [[ augroup octo_buffer_autocmds ]]
+  vim.cmd [[ au! * <buffer> ]]
+  vim.cmd [[ au TextChanged <buffer> lua require"octo".render_signcolumn() ]]
+  vim.cmd [[ au TextChangedI <buffer> lua require"octo".render_signcolumn() ]]
+  vim.cmd [[ augroup END ]]
+end
 
 local function get_url(url, params)
 	url = url .. '?foo=bar'
@@ -713,7 +645,7 @@ local function get_repo_issues(repo, params)
     args = {'api', query};
     mode = 'sync';
   })
-	--local count, total = process_link_header(headers)
+
 	local issues = json.parse(body)
 
   -- TODO: filter out pull_requests (NOT WORKING)
@@ -721,15 +653,7 @@ local function get_repo_issues(repo, params)
     return e.pull_request == nil
   end, issues)
 
-	if count == nil and total == nil then
-		count = #issues
-		total = #issues
-	end
-	return {
-		issues = issues;
-		count = count;
-		total = total;
-	}
+	return issues
 end
 
 local function load_issue()
@@ -769,8 +693,6 @@ local function save_issue(bufnr)
 		return
 	end
 
-	--log.info('Saving issue:', number, 'repo:', repo, 'bufnr:', bufnr)
-
 	-- collect comment metadata
 	update_issue_metadata(bufnr)
 
@@ -779,7 +701,7 @@ local function save_issue(bufnr)
 	local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
 	if title_metadata.dirty or desc_metadata.dirty then
 
-		-- trust but validate
+		-- trust but verify
 		if string.find(title_metadata['body'], '\n') then
 			api.nvim_err_writeln("Title can't contains new lines")
 			return
@@ -829,7 +751,8 @@ local function save_issue(bufnr)
             format('repos/%s/issues/comments/%s', repo, metadata['id'])
           };
           cb = function(_)
-			      get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
+            -- TODO: do not reload whole issue, but just remove comment
+			      get_issue(repo, number)
           end
         })
 			end
@@ -854,7 +777,6 @@ local function save_issue(bufnr)
             render_signcolumn(bufnr)
             print('Saved!')
           end
-          get_issue(repo, api.nvim_buf_get_var(bufnr, 'number'))
         end
       })
 		end
@@ -886,6 +808,7 @@ local function new_comment()
     cb = function(output)
       local resp = json.parse(output)
       if nil ~= resp['issue_url'] then
+        -- TODO: do not reload issue, just add new comment at the bottom
         get_issue(repo, number)
       end
     end
@@ -932,6 +855,7 @@ local function change_issue_state(state)
       local resp = json.parse(output)
       if state == resp['state'] then
         api.nvim_buf_set_var(bufnr, 'state', resp['state'])
+        -- TODO: do not reload issue, just header
         get_issue(repo, resp['number'])
         print('Issue state changed to: '..resp['state'])
       end
@@ -956,9 +880,9 @@ local function issue_complete(findstart, base)
 		return -2
 	elseif findstart == 0 then
 		local repo = api.nvim_buf_get_var(0, 'repo')
-		local resp = get_repo_issues(repo)
+		local issues = get_repo_issues(repo)
 		local entries = {}
-		for _,i in ipairs(resp.issues) do
+		for _,i in ipairs(issues) do
 			if vim.startswith(tostring(i.number), base) then
 				table.insert(entries, {
 						word = tostring(i.number);
@@ -1054,6 +978,7 @@ local function issue_action(action, kind, value)
     command = "sh";
     args = {'-c', cmd};
     on_exit = vim.schedule_wrap(function(_, _, _)
+      -- TODO: do not reload issue, just header
       get_issue(repo, number)
     end)
   })
