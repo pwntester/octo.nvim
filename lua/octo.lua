@@ -21,8 +21,6 @@ local HIGHLIGHT_MODE_NAMES = {
 -- autocommands
 vim.cmd [[ augroup octo_autocmds ]]
 vim.cmd [[ autocmd!]]
-vim.cmd [[ au TextChanged github://* lua require"octo".render_signcolumn() ]]
-vim.cmd [[ au TextChangedI github://* lua require"octo".render_signcolumn() ]]
 vim.cmd [[ au BufReadCmd github://* lua require"octo".load_issue() ]]
 vim.cmd [[ au BufWriteCmd github://* lua require"octo".save_issue() ]]
 vim.cmd [[ augroup END ]]
@@ -74,7 +72,7 @@ end
 
 local function highlight(bufnr, base, hls)
 	for _, hl in ipairs(hls) do
-		api.nvim_buf_add_highlight(bufnr, OCTO_HL_NS, hl.name, base + hl.line, hl.start, hl['end'])
+		api.nvim_buf_add_highlight(bufnr, OCTO_HL_NS, hl.name, base + hl.line - 1, hl.start, hl['end'])
 	end
 end
 
@@ -285,11 +283,9 @@ local function write_block(lines, opts)
     lines = vim.split(lines, '\n', true)
   end
   local start_line = api.nvim_buf_line_count(bufnr) + 1
-  --local end_line = start_line + #lines - 1
 
   -- write content lines
   if start_line == 2 and vim.fn.getline('.') == '' then
-    print('FOO')
     api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
   else
     api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
@@ -297,9 +293,15 @@ local function write_block(lines, opts)
 
   -- trailing empty lines
   if opts.trailing_lines then
-    for _=0,opts.trailing_lines, 1 do
+    for _=1, opts.trailing_lines, 1 do
       api.nvim_buf_set_lines(bufnr, -1, -1, false, {''})
     end
+  end
+
+  -- remove last line when writing at the beggining of the buffer
+  if start_line == 2 then
+    --api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
+    start_line = 1
   end
 
   -- add highlights
@@ -307,6 +309,34 @@ local function write_block(lines, opts)
     highlight(bufnr, start_line, opts.highlights)
   end
 
+  -- set extmarks
+  local end_line = start_line
+  local count = api.nvim_buf_line_count(bufnr)
+  for i=count, start_line, -1 do
+    local line = vim.fn.getline(i) or ''
+    if '' ~= line then
+      end_line = i
+      break
+    end
+  end
+
+  if opts.mark then
+
+    -- (empty line) start ext mark at 0
+    -- start line
+    -- ...
+    -- end line
+    -- (empty line)
+    -- (empty line) end ext mark at 0
+
+    -- except for title where we cant place initial mark on line -1
+    return api.nvim_buf_set_extmark(bufnr,
+      OCTO_EM_NS,
+      max(0,start_line-2),
+      0,
+      { end_line=end_line+1; end_col=0; }
+    )
+  end
 end
 
 local function write_details(bufnr, issue)
@@ -523,48 +553,40 @@ local function write_details(bufnr, issue)
 	write_block(content, {bufnr=bufnr; mark=false; highlights=hls})
 end
 
-local function write_and_mark(text, content, extmarks)
-  local lines = vim.split(text, '\n', true)
-  local start_line = #content + 1
-  vim.list_extend(content, lines)
-  local end_line = #content
-  -- make them 0-index based
-  table.insert(extmarks, {start_line-1, end_line-1})
-end
-
 local function write_comment(bufnr, comment)
-  local content = {}
-  local hls = {}
-  local extmarks = {}
 
   -- heading
-  local heading = format('On %s %s comment.mmented:', comment.created_at, comment.user.login)
+  local hls = {}
+  local heading = format('On %s %s commented:', comment.created_at, comment.user.login)
   table.insert(hls, {
       ['name'] = 'OctoNvimCommentHeading';
-      ['line'] = #content;
+      ['line'] = 0;
       ['start'] = 0;
       ['end'] = #format('On %s ', comment.created_at);
     })
   table.insert(hls, {
       ['name'] = 'OctoNvimCommentUser';
-      ['line'] = #content;
+      ['line'] = 0;
       ['start'] = #format('On %s ', comment.created_at);
       ['end'] = #format('On %s %s', comment.created_at, comment.user.login);
     })
   table.insert(hls, {
       ['name'] = 'OctoNvimCommentHeading';
-      ['line'] = #content;
+      ['line'] = 0;
       ['start'] = #format('On %s %s ', comment.created_at, comment.user.login);
       ['end'] = -1;
     })
 
-  vim.list_extend(content, {heading, ''})
+	write_block({heading, ''}, {bufnr=bufnr; mark=false; highlights=hls})
 
   -- body
+  local content = {}
   local comment_body = string.gsub(comment['body'], '\r\n', '\n')
   if vim.startswith(comment_body, NO_BODY_MSG) then comment_body = ' ' end
-  write_and_mark(comment_body, content, extmarks)
+  vim.list_extend(content, vim.split(comment_body, '\n', true))
   vim.list_extend(content, {'', '', ''})
+
+	local comment_mark = write_block(content, {bufnr=bufnr; mark=true;})
 
   -- update metadata
   local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
@@ -573,50 +595,11 @@ local function write_comment(bufnr, comment)
     dirty = false;
     saved_body = comment_body;
     body = comment_body;
+    extmark = comment_mark;
   })
   api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
-
-	write_block(content, {bufnr=bufnr; mark=true; highlights=hls, marks=extmarks})
-
+  local comments_metadata2 = api.nvim_buf_get_var(bufnr, 'comments')
 end
-
--- local function render_buffer(bufnr, content, hls, extmarks)
---
---   -- set extmarks
---   local extmarks_ids = {}
---   for _, m in ipairs(extmarks) do
---     -- (empty line) start ext mark at 0
---     -- start line
---     -- ...
---     -- end line
---     -- (empty line)
---     -- (empty line) end ext mark at 0
---
---     -- except for title where we cant place initial mark on line -1
---
---     local start_line = m[1]
---     local end_line = m[2]
---     local m_id = api.nvim_buf_set_extmark(bufnr, OCTO_EM_NS, max(0,start_line-1), 0, {
---         end_line=end_line+2;
---         end_col=0;
---       })
---     table.insert(extmarks_ids, m_id)
---   end
---   local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
---   title_metadata['extmark'] = extmarks_ids[1]
---   api.nvim_buf_set_var(bufnr, 'title', title_metadata)
---
---   local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
---   desc_metadata['extmark'] = extmarks_ids[2]
---   api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
---
---   local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
---   for i=3,#extmarks_ids,1 do
---     comments_metadata[i-2]['extmark'] = extmarks_ids[i]
---   end
---   api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
---
--- end
 
 local function create_issue_buffer(issue, repo)
 
@@ -630,9 +613,6 @@ local function create_issue_buffer(issue, repo)
 	local description = string.gsub(issue['body'], '\r\n', '\n')
 	local number = issue['number']
 	local state = issue['state']
-	local content = {}
-	local hls = {}
-	local extmarks = {}
 
 	-- create buffer
 	local bufnr = api.nvim_get_current_buf()
@@ -657,64 +637,62 @@ local function create_issue_buffer(issue, repo)
 
 	-- write title
   local title_hls = {name = 'OctoNvimIssueTitle', line = 0, start = 0, ['end'] = -1 }
-	write_block(title, {bufnr=bufnr; mark=true; trailing_lines=1; highlights=title_hls})
+	local title_mark = write_block(title, {bufnr=bufnr; mark=true; trailing_lines=1; highlights=title_hls})
 	api.nvim_buf_set_var(bufnr, 'title', {
 		saved_body = title;
 		body = title;
-		dirty = false
+		dirty = false;
+    extmark = title_mark;
 	})
 
-  -- print details in buffer
+  -- write details in buffer
   write_details(bufnr, issue)
 
 	-- write description
-	write_block(description, {bufnr=bufnr; mark=true; trailing_lines=3})
+	local desc_mark = write_block(description, {bufnr=bufnr; mark=true; trailing_lines=3})
 	api.nvim_buf_set_var(bufnr, 'description', {
 		saved_body = description,
 		body = description,
-		dirty = false
+		dirty = false;
+    extmark = desc_mark;
 	})
 
 	-- request issue comments
 	api.nvim_buf_set_var(bufnr, 'comments', {})
-	if tonumber(issue['comments']) > 0 then
+  local comments_count = tonumber(issue['comments'])
+  local comments_processed = 0
+	if comments_count > 0 then
     gh.run({
       args = {'api', format('repos/%s/issues/%d/comments', repo, number)};
       cb = function(response)
         local resp = json.parse(response)
         for _, c in ipairs(resp) do
           write_comment(bufnr, c)
+          comments_processed = comments_processed + 1
         end
       end
     })
 	end
 
-  -- drop undo history
-  vim.fn['octo#clear_history']()
+  local status = vim.wait(5000, function()
+    return comments_processed == comments_count
+  end, 200)
 
   -- show signs
   render_signcolumn(bufnr)
 
+  -- drop undo history
+  vim.fn['octo#clear_history']()
+
   -- reset modified option
   api.nvim_buf_set_option(bufnr, 'modified', false)
-end
 
--- local function process_link_header(headers)
--- 	local h = headers['Link']
--- 	local page_count = 0
--- 	local per_page = 0
--- 	if nil ~= h then
--- 		for n in string.gmatch(h, '&page=(%d+)') do
--- 			page_count = max(page_count, n)
--- 		end
--- 		for p in string.gmatch(h, '&per_page=(%d+)') do
--- 			per_page = max(per_page, p)
--- 		end
--- 		return per_page, page_count*per_page
--- 	else
--- 		return nil, nil
--- 	end
--- end
+  vim.cmd [[ augroup octo_buffer_autocmds ]]
+  vim.cmd [[ au! * <buffer> ]]
+  vim.cmd [[ au TextChanged <buffer> lua require"octo".render_signcolumn() ]]
+  vim.cmd [[ au TextChangedI <buffer> lua require"octo".render_signcolumn() ]]
+  vim.cmd [[ augroup END ]]
+end
 
 local function get_url(url, params)
 	url = url .. '?foo=bar'
@@ -739,7 +717,7 @@ local function get_repo_issues(repo, params)
     args = {'api', query};
     mode = 'sync';
   })
-	--local count, total = process_link_header(headers)
+
 	local issues = json.parse(body)
 
   -- TODO: filter out pull_requests (NOT WORKING)
@@ -747,15 +725,7 @@ local function get_repo_issues(repo, params)
     return e.pull_request == nil
   end, issues)
 
-	if count == nil and total == nil then
-		count = #issues
-		total = #issues
-	end
-	return {
-		issues = issues;
-		count = count;
-		total = total;
-	}
+	return issues
 end
 
 local function load_issue()
@@ -982,9 +952,9 @@ local function issue_complete(findstart, base)
 		return -2
 	elseif findstart == 0 then
 		local repo = api.nvim_buf_get_var(0, 'repo')
-		local resp = get_repo_issues(repo)
+		local issues = get_repo_issues(repo)
 		local entries = {}
-		for _,i in ipairs(resp.issues) do
+		for _,i in ipairs(issues) do
 			if vim.startswith(tostring(i.number), base) then
 				table.insert(entries, {
 						word = tostring(i.number);
