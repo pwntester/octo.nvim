@@ -11,20 +11,20 @@ let s:wo = nvim_win_get_option(0,'wrap')
 
 " commands
 if executable('gh')
-  command! NewComment :lua require'octo'.new_comment()
-  command! CloseIssue :lua require'octo'.change_issue_state('closed')
-  command! ReopenIssue :lua require'octo'.change_issue_state('open')
-  command! SaveIssue  :lua require'octo'.save_issue()
+  command! NewComment :lua require'octo.commands'.new_comment()
+  command! CloseIssue :lua require'octo.commands'.change_issue_state('closed')
+  command! ReopenIssue :lua require'octo.commands'.change_issue_state('open')
+  command! SaveIssue  :lua require'octo.commands'.save_issue()
 
-  command! -nargs=1 NewIssue :lua require'octo'.new_issue(<f-args>)
+  command! -nargs=1 NewIssue :lua require'octo.commands'.new_issue(<f-args>)
   command! -nargs=+ Issue :call octo#get_issue(<f-args>)
 
-  command! -nargs=+ AddLabel :lua require'octo'.issue_action('add', 'labels', <f-args>)
-  command! -nargs=+ RemoveLabel :lua require'octo'.issue_action('remove', 'labels', <f-args>)
-  command! -nargs=+ AddAssignee :lua require'octo'.issue_action('add', 'assignees', <f-args>)
-  command! -nargs=+ RemoveAssignee :lua require'octo'.issue_action('remove', 'assignees', <f-args>)
-  command! -nargs=+ AddReviewer :lua require'octo'.issue_action('add', 'requested_reviewers', <f-args>)
-  command! -nargs=+ RemoveReviewer :lua require'octo'.issue_action('remove', 'requested_reviewers', <f-args>)
+  command! -nargs=+ AddLabel :lua require'octo.commands'.issue_action('add', 'labels', <f-args>)
+  command! -nargs=+ RemoveLabel :lua require'octo.commands'.issue_action('remove', 'labels', <f-args>)
+  command! -nargs=+ AddAssignee :lua require'octo.commands'.issue_action('add', 'assignees', <f-args>)
+  command! -nargs=+ RemoveAssignee :lua require'octo.commands'.issue_action('remove', 'assignees', <f-args>)
+  command! -nargs=+ AddReviewer :lua require'octo.commands'.issue_action('add', 'requested_reviewers', <f-args>)
+  command! -nargs=+ RemoveReviewer :lua require'octo.commands'.issue_action('remove', 'requested_reviewers', <f-args>)
 
   command! -nargs=* ListIssues :call octo#load_menu('issues', <f-args>)
   command! -nargs=* ListPRs :call octo#load_menu('pull_requests', <f-args>)
@@ -65,7 +65,7 @@ function! octo#get_issue(...) abort
     echo "Incorrect number of parameters"
     return
   endif
-  return luaeval("require'octo'.get_issue(_A[1], _A[2])", [repo, number])
+  return luaeval("require'octo.commands'.get_issue(_A[1], _A[2])", [repo, number])
 endfunction
 
 " clear buffer undo history
@@ -79,7 +79,7 @@ endfunction
 
 " # completion
 function! octo#issue_complete(findstart, base) abort
-  return luaeval("require'octo'.issue_complete(_A[1], _A[2])", [a:findstart, a:base])
+  return luaeval("require'octo.completion'.issue_complete(_A[1], _A[2])", [a:findstart, a:base])
 endfunction
 
 function! octo#configure_win() abort
@@ -111,7 +111,7 @@ autocmd Filetype octo_issue call octo#configure_win()
 autocmd BufLeave * if &ft == 'octo_issue' | call octo#restore_win() | endif 
 
 " mappings
-nnoremap <Plug>(GoToIssue) <cmd>lua require'octo'.go_to_issue()<CR>
+nnoremap <Plug>(GoToIssue) <cmd>lua require'octo.navigation'.go_to_issue()<CR>
 nmap gi <Plug>(GoToIssue)
 
 let g:loaded_octo = 1
