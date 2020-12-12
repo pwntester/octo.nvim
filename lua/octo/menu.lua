@@ -6,7 +6,7 @@ local previewers = require('telescope.previewers')
 local conf = require('telescope.config').values
 local make_entry = require('telescope.make_entry')
 local Job = require('plenary.job')
-local octo = require('octo')
+local util = require('octo.util')
 
 local format = string.format
 local defaulter = utils.make_default_callable
@@ -73,7 +73,7 @@ local function issues(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'issue')
-  if repo == vim.NIL then repo = octo.get_remote_name() end
+  if repo == vim.NIL then repo = util.get_remote_name() end
   if not repo then print('Cannot find repo'); return end
   local cmd = format('gh issue list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
@@ -144,7 +144,7 @@ local function gists(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'gist')
-  if repo == vim.NIL then repo = octo.get_remote_name() end
+  if repo == vim.NIL then repo = util.get_remote_name() end
   if not repo then print('Cannot find repo'); return end
   local cmd = format('gh gist list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
@@ -197,7 +197,7 @@ local function pull_requests(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'pr')
-  if repo == vim.NIL then repo = octo.get_remote_name() end
+  if repo == vim.NIL then repo = util.get_remote_name() end
   if not repo then print('Cannot find repo'); return end
   local cmd = format('gh pr list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd) , '\n')
