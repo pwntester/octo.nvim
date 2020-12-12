@@ -65,7 +65,7 @@ local function open_issue(repo)
     if vim.tbl_isempty(tmp_table) then
       return
     end
-    vim.cmd(string.format([[ lua require'octo'.get_issue('%s', '%s') ]], repo, tmp_table[1]))
+    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, tmp_table[1]))
   end
 end
 
