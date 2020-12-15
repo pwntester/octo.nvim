@@ -84,6 +84,7 @@ local function issues(repo, opts)
       results = results,
       entry_maker = make_entry.gen_from_string(opts),
     },
+    sorter = conf.file_sorter(opts),
     previewer = previewers.new_termopen_previewer{
       get_command = function(entry)
         local tmp_table = vim.split(entry.value,"\t");
@@ -94,9 +95,8 @@ local function issues(repo, opts)
 
       end
     },
-    sorter = conf.file_sorter(opts),
     attach_mappings = function(_, map)
-      actions.goto_file_selection_edit:replace(open_issue(repo))
+      map('i', '<CR>', open_issue(repo))
       map('i', '<c-t>', open_in_browser('issue', repo))
       return true
     end
@@ -157,7 +157,7 @@ local function gists(repo, opts)
     previewer = gist_previewer.new(opts),
     sorter = conf.file_sorter(opts),
     attach_mappings = function(_,map)
-      actions.goto_file_selection_edit:replace(open_gist)
+      map('i', '<CR>', open_gist())
       map('i','<c-t>', open_in_browser('gist'))
       return true
     end
@@ -218,7 +218,7 @@ local function pull_requests(repo, opts)
     },
     sorter = conf.file_sorter(opts),
     attach_mappings = function(_,map)
-      actions.goto_file_selection_edit:replace(open_issue(repo))
+      map('i', '<CR>', open_issue(repo))
       map('i', '<c-o>', checkout_pr(repo))
       map('i', '<c-t>', open_in_browser('pr'))
       return true
