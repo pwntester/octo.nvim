@@ -1,6 +1,8 @@
 local gh = require'octo.gh'
 local util = require'octo.util'
+local menu = require'octo.menu'
 local octo = require'octo'
+local constants = require('octo.constants')
 local api = vim.api
 local format = string.format
 local json = {
@@ -9,141 +11,117 @@ local json = {
 }
 local Job = require('plenary.job')
 
-local NO_BODY_MSG = 'No description provided.'
 local M = {}
 
-function M.load_issue()
-  local bufname = vim.fn.bufname()
-  local repo, number = string.match(bufname, 'github://(.+)/(%d+)')
-  if not repo or not number then
-		api.nvim_err_writeln('Incorrect github url: '..bufname)
-    return
-  end
-
-  gh.run({
-    args = {'api', format('repos/%s/issues/%s', repo, number)};
-    cb = function(output)
-      octo.create_issue_buffer(json.parse(output) , repo)
-    end
-  })
+function table.pack(...)
+  return { n = select("#", ...), ... }
 end
 
-function M.get_issue(repo, number)
-  if not repo then repo = util.get_remote_name() end
-  if not repo then print("Cant find repo name"); return end
-  vim.cmd(format('edit github://%s/%s', repo, number))
-end
-
-function M.save_issue(bufnr)
-  bufnr = bufnr or api.nvim_get_current_buf()
-	local bufname = api.nvim_buf_get_name(bufnr)
-  if not vim.startswith(bufname, 'github://') then return end
-
-  -- number
-	local number = api.nvim_buf_get_var(bufnr, 'number')
-
-	-- repo
-	local repo = api.nvim_buf_get_var(bufnr, 'repo')
-	if not repo then
-		api.nvim_err_writeln('Buffer is not linked to a GitHub issue')
-		return
-	end
-
-	-- collect comment metadata
-	octo.update_issue_metadata(bufnr)
-
-	-- title & description
-	local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
-	local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
-	if title_metadata.dirty or desc_metadata.dirty then
-
-		-- trust but verify
-		if string.find(title_metadata['body'], '\n') then
-			api.nvim_err_writeln("Title can't contains new lines")
-			return
-		elseif title_metadata['body'] == '' then
-			api.nvim_err_writeln("Title can't be blank")
-			return
-		end
-
-    gh.run({
-      args = {
-        'api', '-X', 'PATCH',
-        '-f', format('title=%s', title_metadata['body']),
-        '-f', format('body=%s', desc_metadata['body']),
-        format('repos/%s/issues/%s', repo, number)
-      };
-      cb = function(output)
-        local resp = json.parse(output)
-
-        if title_metadata['body'] == resp['title'] then
-          title_metadata['saved_body'] = resp['title']
-          title_metadata['dirty'] = false
-          api.nvim_buf_set_var(bufnr, 'title', title_metadata)
-        end
-
-        if desc_metadata['body'] == resp['body'] then
-          desc_metadata['saved_body'] = resp['body']
-          desc_metadata['dirty'] = false
-          api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
-        end
-
-        octo.render_signcolumn(bufnr)
-        print('Saved!')
+local commands = {
+  issue = {
+    create = function(repo)
+      M.create_issue(repo)
+    end;
+    edit = function(...)
+      M.get_issue(...)
+    end;
+    close = function()
+      M.change_issue_state('closed')
+    end;
+    open = function()
+      M.change_issue_state('open')
+    end;
+    list = function(repo, ...)
+      local args = table.pack(...)
+      local opts = {}
+      for i=1,args.n do
+        local kv = vim.split(args[i], '=')
+        opts[kv[1]] = kv[2]
       end
-    })
-	end
+      menu.issues(repo, opts);
+    end;
+  };
+  pr = {
+    list = function(repo, ...)
+      local args = table.pack(...)
+      local opts = {}
+      for i=1,args.n do
+        local kv = vim.split(args[i], '=')
+        opts[kv[1]] = kv[2]
+      end
+      menu.pull_requests(repo, opts)
+    end;
+  };
+  gist = {
+    list = function(repo, ...)
+      local args = table.pack(...)
+      local opts = {}
+      for i=1,args.n do
+        local kv = vim.split(args[i], '=')
+        opts[kv[1]] = kv[2]
+      end
+      menu.gists(repo, opts)
+    end;
+  };
+  comment = {
+    add = function()
+      M.add_comment()
+    end;
+    delete = function()
+      M.delete_comment()
+    end;
+  };
+  label = {
+    add = function(value)
+      M.issue_action('add', 'labels', value)
+    end;
+    delete = function(value)
+      M.issue_action('remove', 'labels', value)
+    end;
+  };
+  assignee = {
+    add = function(value)
+      M.issue_action('add', 'assignees', value)
+    end;
+    delete = function(value)
+      M.issue_action('remove', 'assignees', value)
+    end;
+  };
+  reviewer = {
+    add = function(value)
+      M.issue_action('add', 'requested_reviewers', value)
+    end;
+    delete = function(value)
+      M.issue_action('remove', 'requested_reviewers', value)
+    end;
+  };
+  reaction = {
+    add = function(reaction)
+      M.reaction_action('add',  reaction)
+    end;
+    delete = function(reaction)
+      M.reaction_action('remove', reaction)
+    end;
+  };
+}
 
-	-- comments
-	local comments = api.nvim_buf_get_var(bufnr, 'comments')
-	for _, metadata in ipairs(comments) do
-		if util.is_blank(metadata['body']) then
-			-- remove comment?
-			local choice = vim.fn.confirm("Comment body can't be blank, remove comment?", "&Yes\n&No\n&Cancel", 2)
-			if choice == 1 then
-        gh.run({
-          args = {
-            'api', '-X', 'DELETE',
-            format('repos/%s/issues/comments/%s', repo, metadata['id'])
-          };
-          cb = function(_)
-            -- TODO: do not reload whole issue, but just remove comment
-			      M.get_issue(repo, number)
-          end
-        })
-			end
-		elseif metadata['body'] ~= metadata['saved_body'] then
-      gh.run({
-        args = {
-          'api', '-X', 'PATCH',
-          '-f', format('body=%s', metadata['body']),
-          format('repos/%s/issues/comments/%s', repo, metadata['id'])
-        };
-        cb = function(output)
-          local resp = json.parse(output)
-          if metadata['body'] == resp['body'] then
-            for i, c in ipairs(comments) do
-              if c['id'] == resp['id'] then
-                comments[i]['saved_body'] = resp['body']
-                comments[i]['dirty'] = false
-                break
-              end
-            end
-            api.nvim_buf_set_var(bufnr, 'comments', comments)
-            octo.render_signcolumn(bufnr)
-            print('Saved!')
-          end
-        end
-      })
-		end
-	end
-
-	-- reset modified option
-	api.nvim_buf_set_option(bufnr, 'modified', false)
+function M.octo(object, action, ...)
+  local o = commands[object]
+  if not o then
+    print('Incorrect argument, valid objects are:'.. vim.inspect(vim.tbl_keys(commands)))
+    return
+  else
+    local a = o[action]
+    if not a then
+      print('Incorrect action, valid actions are:'.. vim.inspect(vim.tbl_keys(o)))
+      return
+    else
+      a(...)
+    end
+  end
 end
 
-
-function M.new_comment()
+function M.add_comment()
 	local bufnr = api.nvim_get_current_buf()
 	local iid = api.nvim_buf_get_var(bufnr, 'iid')
 	local number = api.nvim_buf_get_var(bufnr, 'number')
@@ -157,7 +135,7 @@ function M.new_comment()
   gh.run({
     args = {
       'api', '-X', 'POST',
-      '-f', format('body=%s', NO_BODY_MSG),
+      '-f', format('body=%s', constants.NO_BODY_MSG),
       format('repos/%s/issues/%s/comments', repo, number)
     };
     cb = function(output)
@@ -165,24 +143,41 @@ function M.new_comment()
       if nil ~= comment['issue_url'] then
         octo.write_comment(bufnr, comment)
         vim.fn.execute('normal! Gkkk')
+        vim.fn.execute('startinsert')
       end
     end
   })
 end
 
-function M.new_issue(repo)
-  if not repo then repo = util.get_remote_name() end
-  gh.run({
-    args = {
-      'api', '-X', 'POST',
-      '-f', format('title=%s', 'title'),
-      '-f', format('body=%s', NO_BODY_MSG),
-      format('repos/%s/issues', repo)
-    };
-    cb = function(output)
-      octo.create_issue_buffer(json.parse(output), repo)
-    end
-  })
+function M.delete_comment()
+  local bufnr = api.nvim_get_current_buf()
+	local repo = api.nvim_buf_get_var(bufnr, 'repo')
+  local comment, start_line, end_line = unpack(util.get_comment_at_cursor(bufnr))
+  if not comment then
+    print('The cursor does not seem to be located at any comment')
+    return
+  end
+  local choice = vim.fn.confirm("Remove comment?", "&Yes\n&No\n&Cancel", 2)
+  if choice == 1 then
+    gh.run({
+      args = {
+        'api', '-X', 'DELETE',
+        format('repos/%s/issues/comments/%s', repo, comment.id)
+      };
+      cb = function(_)
+        api.nvim_buf_set_lines(bufnr, start_line-2, end_line+1, false, {})
+	      api.nvim_buf_clear_namespace(bufnr, comment.namespace, 0, -1)
+	      api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line-2, end_line+1)
+        api.nvim_buf_del_extmark(bufnr, constants.OCTO_EM_NS, comment.extmark)
+	      local comments = api.nvim_buf_get_var(bufnr, 'comments')
+        local updated = {}
+        for _, c in ipairs(comments) do
+          if c.id ~= comment.id then table.insert(updated, c) end
+        end
+	      api.nvim_buf_set_var(bufnr, 'comments', updated)
+      end
+    })
+  end
 end
 
 function M.change_issue_state(state)
@@ -210,15 +205,52 @@ function M.change_issue_state(state)
       local resp = json.parse(output)
       if state == resp['state'] then
         api.nvim_buf_set_var(bufnr, 'state', resp['state'])
-        -- TODO: do not reload issue, just header
-        M.get_issue(repo, resp['number'])
+        octo.write_state(bufnr)
+        octo.write_details(bufnr, resp, 3)
         print('Issue state changed to: '..resp['state'])
       end
     end
   })
 end
 
+function M.create_issue(repo)
+  if not repo then repo = util.get_remote_name() end
+  gh.run({
+    args = {
+      'api', '-X', 'POST',
+      '-f', format('title=%s', 'title'),
+      '-f', format('body=%s', constants.NO_BODY_MSG),
+      format('repos/%s/issues', repo)
+    };
+    cb = function(output)
+      octo.create_issue_buffer(json.parse(output), repo)
+    end
+  })
+end
+
+function M.get_issue(...)
+  local repo, number
+  local args = table.pack(...)
+  if args.n == 0 then
+    print('Missing arguments')
+    return
+  elseif args.n == 1 then
+    repo = util.get_remote_name()
+    number = tonumber(args[1])
+  elseif args.n == 2 then
+    repo = args[1]
+    number = tonumber(args[2])
+  else
+    print('Unexpected arguments')
+    return
+  end
+  if not repo then print("Cant find repo name"); return end
+  if not number then print('Missing issue number'); return end
+  vim.cmd(format('edit octo://%s/%s', repo, number))
+end
+
 function M.issue_action(action, kind, value)
+  local bufnr = api.nvim_get_current_buf()
   if vim.bo.ft ~= 'octo_issue' then api.nvim_err_writeln('Not in octo buffer') return end
 
   local number_ok, number = pcall(api.nvim_buf_get_var, 0, 'number')
@@ -267,11 +299,80 @@ function M.issue_action(action, kind, value)
     command = "sh";
     args = {'-c', cmd};
     on_exit = vim.schedule_wrap(function(_, _, _)
-      -- TODO: do not reload issue, just header
-      M.get_issue(repo, number)
+      gh.run({
+        args = {'api', format('repos/%s/issues/%s', repo, number)};
+        cb = function(output)
+          octo.write_details(bufnr, json.parse(output), 3)
+        end
+      })
     end)
   })
   job:start()
+end
+
+function M.reaction_action(action, reaction)
+  local bufnr = api.nvim_get_current_buf()
+
+  local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, 'number')
+  if not number_ok then api.nvim_err_writeln('Missing octo metadata') return end
+  local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, 'repo')
+  if not repo_ok then api.nvim_err_writeln('Missing octo metadata') return end
+
+  local url, method, line, cb_url
+  local comment = util.get_comment_at_cursor(bufnr)
+
+  if comment then
+    comment = comment[1]
+    cb_url = format('repos/%s/issues/comments/%d', repo, comment.id)
+    line = comment.reaction_line
+    if action == 'add' then
+      method = 'POST'
+      url = format('repos/%s/issues/comments/%d/reactions', repo, comment.id)
+    else
+      -- TODO: we need reaction id
+      -- get list of reactions for issue and filter by user login and reaction
+      print('Not implemeted')
+      method = 'DELETE'
+      local reaction_id = 0
+      url = format('repos/%s/issues/comments/%s/reactions/%d', repo, comment.id, reaction_id)
+      return
+    end
+  else
+    cb_url = format('repos/%s/issues/%d', repo, number)
+    line = api.nvim_buf_get_var(bufnr, 'reaction_line')
+    if action == 'add' then
+      method = 'POST'
+      url = format('repos/%s/issues/%d/reactions', repo, number)
+    else
+      -- TODO: we need reaction id
+      -- get list of reactions for issue and filter by user login and reaction
+      print('Not implemeted')
+      method = 'DELETE'
+      local reaction_id = 0
+      url = format('repos/%s/issues/%d/reactions/%d', repo, number, reaction_id)
+      return
+    end
+  end
+
+  gh.run({
+    args = {
+      'api', '-X', method,
+      '-f', format('content=%s', reaction),
+      url
+    },
+    cb = function(_)
+      gh.run({
+        args = {
+          'api',
+          cb_url
+        };
+        cb = function(output)
+          print('FOO', line)
+          octo.write_reactions(bufnr, json.parse(output), line)
+        end
+      })
+    end
+  })
 end
 
 return M
