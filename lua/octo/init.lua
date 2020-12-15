@@ -1,10 +1,12 @@
 local gh = require('octo.gh')
-local util = require('octo.util')
 local signs = require('octo.signs')
 local hl = require('octo.highlights')
+local constants = require('octo.constants')
+local util = require'octo.util'
 local vim = vim
 local api = vim.api
 local max = math.max
+local min = math.min
 local format = string.format
 local json = {
 	parse = vim.fn.json_decode;
@@ -13,107 +15,17 @@ local json = {
 
 local M = {}
 
--- sign definitions
-signs.setup()
-
--- constants
-local OCTO_EM_NS = api.nvim_create_namespace('octo_marks')
-local OCTO_VT_NS = api.nvim_create_namespace('octo_virtualtexts')
-local OCTO_VT1_NS = api.nvim_create_namespace('octo_virtualtexts1')
-local NO_BODY_MSG = 'No description provided.'
-
--- autocommands
-vim.cmd [[ augroup octo_autocmds ]]
-vim.cmd [[ autocmd!]]
-vim.cmd [[ au BufReadCmd github://* lua require'octo.commands'.load_issue() ]]
-vim.cmd [[ au BufWriteCmd github://* lua require'octo.commands'.save_issue() ]]
-vim.cmd [[ augroup END ]]
-
-function M.get_extmark_region(bufnr, mark)
-	-- extmarks are placed on
-	-- start line - 1 (except for line 0)
-	-- end line + 2
-	local start_line = mark[1] + 1
-	if start_line == 1 then start_line= 0 end
-	local end_line = mark[3]['end_row'] - 2
-	if start_line > end_line then end_line = start_line end
-	-- Indexing is zero-based, end-exclusive, so adding 1 to end line
-	local lines = api.nvim_buf_get_lines(bufnr, start_line, end_line + 1, true)
-	local text = vim.fn.join(lines, '\n')
-	return start_line, end_line, text
-end
-
-function M.update_metadata(metadata, start_line, end_line, text)
-	metadata['start_line'] = start_line
-	metadata['end_line'] = end_line
-	if vim.fn.trim(text) ~= vim.fn.trim(metadata['saved_body']) then
-		metadata['dirty'] = true
-	else
-		metadata['dirty'] = false
-	end
-	metadata['body'] = text
-end
-
-function M.update_issue_metadata(bufnr)
-
-	local mark, text, start_line, end_line, metadata
-
-	-- title
-	metadata = api.nvim_buf_get_var(bufnr, 'title')
-	mark = api.nvim_buf_get_extmark_by_id(bufnr, OCTO_EM_NS, metadata.extmark, {details=true})
-	start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-	M.update_metadata(metadata, start_line, end_line, text)
-	api.nvim_buf_set_var(bufnr, 'title', metadata)
-
-	-- description
-	metadata = api.nvim_buf_get_var(bufnr, 'description')
-	mark = api.nvim_buf_get_extmark_by_id(bufnr, OCTO_EM_NS, metadata.extmark, {details=true})
-	start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-	if text == '' then
-		-- description has been removed
-		-- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
-		api.nvim_buf_set_lines(bufnr, start_line, start_line+1, false, {' ',''})
-		local winnr = api.nvim_get_current_win()
-		api.nvim_win_set_cursor(winnr, {start_line+1, 0})
-	end
-	M.update_metadata(metadata, start_line, end_line, text)
-	api.nvim_buf_set_var(bufnr, 'description', metadata)
-
-	-- comments
-	local comments = api.nvim_buf_get_var(bufnr, 'comments')
-	for i, m in ipairs(comments) do
-		metadata = m
-		mark = api.nvim_buf_get_extmark_by_id(bufnr, OCTO_EM_NS, metadata.extmark, {details=true})
-		start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-
-		if text == '' then
-			-- comment has been removed
-			-- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
-			api.nvim_buf_set_lines(bufnr, start_line, start_line+1, false, {' ', ''})
-			local winnr = api.nvim_get_current_win()
-			api.nvim_win_set_cursor(winnr, {start_line+1, 0})
-
-		end
-
-		M.update_metadata(metadata, start_line, end_line, text)
-		comments[i] = metadata
-	end
-	api.nvim_buf_set_var(bufnr, 'comments', comments)
-end
-
 local function write_block(lines, opts)
   local bufnr = opts.bufnr or api.nvim_get_current_buf()
+
   if type(lines) == 'string' then
     lines = vim.split(lines, '\n', true)
   end
-  local start_line = api.nvim_buf_line_count(bufnr) + 1
+
+  local line = opts.line or api.nvim_buf_line_count(bufnr) + 1
 
   -- write content lines
-  if start_line == 2 and vim.fn.getline('.') == '' then
-    api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
-  else
-    api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
-  end
+  api.nvim_buf_set_lines(bufnr, line-1, line-1+#lines, false, lines)
 
   -- trailing empty lines
   if opts.trailing_lines then
@@ -122,56 +34,67 @@ local function write_block(lines, opts)
     end
   end
 
-  -- remove last line when writing at the beggining of the buffer
-  if start_line == 2 then
-    --api.nvim_buf_set_lines(bufnr, -2, -1, false, {})
-    start_line = 1
-  end
-
   -- set extmarks
-  local end_line = start_line
-  local count = api.nvim_buf_line_count(bufnr)
-  for i=count, start_line, -1 do
-    local line = vim.fn.getline(i) or ''
-    if '' ~= line then
-      end_line = i
-      break
-    end
-  end
-
   if opts.mark then
-
     -- (empty line) start ext mark at 0
     -- start line
     -- ...
     -- end line
     -- (empty line)
     -- (empty line) end ext mark at 0
-
     -- except for title where we cant place initial mark on line -1
+
+    local start_line = line
+    local end_line = line
+    local count = start_line + #lines
+    for i=count, start_line, -1 do
+      local text = vim.fn.getline(i) or ''
+      if '' ~= text then
+        end_line = i
+        break
+      end
+    end
+
     return api.nvim_buf_set_extmark(bufnr,
-      OCTO_EM_NS,
-      max(0,start_line-2),
+      constants.OCTO_EM_NS,
+      max(0,start_line-1-1),
       0,
-      { end_line=end_line+1; end_col=0; }
+      {
+        end_line=min(end_line+2-1, api.nvim_buf_line_count(bufnr));
+        end_col=0;
+      }
     )
   end
 end
 
-function M.write_title(bufnr, issue)
-  local title = issue['title']
-	local title_mark = write_block(title, {bufnr=bufnr; mark=true; trailing_lines=1;})
+function M.write_title(bufnr, title, line)
+	local title_mark = write_block({title, ''}, {bufnr=bufnr; mark=true; line=line;})
+  api.nvim_buf_add_highlight(bufnr, -1, 'OctoNvimIssueTitle', 0, 0, -1)
 	api.nvim_buf_set_var(bufnr, 'title', {
 		saved_body = title;
 		body = title;
 		dirty = false;
     extmark = title_mark;
 	})
+  M.write_state(bufnr)
 end
 
-function M.write_description(bufnr, issue)
+function M.write_state(bufnr)
+	-- clear virtual texts
+	api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
+
+	-- title virtual text
+	local state = api.nvim_buf_get_var(bufnr, 'state'):upper()
+	local title_vt = {
+		{tostring(api.nvim_buf_get_var(bufnr, 'number')), 'OctoNvimIssueId'},
+		{format(' [%s]', state), 'OctoNvimIssue'..state}
+	}
+	api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
+end
+
+function M.write_description(bufnr, issue, line)
 	local description = string.gsub(issue['body'], '\r\n', '\n')
-	local desc_mark = write_block(description, {bufnr=bufnr; mark=true; trailing_lines=3;})
+	local desc_mark = write_block(description, {bufnr=bufnr; mark=true; trailing_lines=3; line=line})
 	api.nvim_buf_set_var(bufnr, 'description', {
 		saved_body = description,
 		body = description,
@@ -180,10 +103,12 @@ function M.write_description(bufnr, issue)
 	})
 end
 
-function M.write_reactions(bufnr, issue)
-  if issue.reactions.total_count > 0 then
+function M.write_reactions(bufnr, element, line)
+  line = line or api.nvim_buf_line_count(bufnr) - 1
+	api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, line-1, line)
+  if element.reactions.total_count > 0 then
     local reactions_vt = {}
-    for reaction, count in pairs(issue.reactions) do
+    for reaction, count in pairs(element.reactions) do
       local emoji = require'octo.util'.reaction_map[reaction]
       if emoji and count > 0 then
         table.insert(reactions_vt, {'', 'OctoNvimBubble1'})
@@ -192,48 +117,58 @@ function M.write_reactions(bufnr, issue)
         table.insert(reactions_vt, {format(' %s ', count), 'Normal'})
       end
     end
-	  api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 2, reactions_vt, {})
+	  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line-1, reactions_vt, {})
+    return line
   end
 end
 
-function M.write_details(bufnr, issue)
+function M.write_details(bufnr, issue, line)
+
+	-- clear virtual texts
+	api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
+
+  line = line or api.nvim_buf_line_count(bufnr) + 1
+  if issue.state == 'closed' then
+	  write_block({'', '', '', '', '', '', ''}, {bufnr=bufnr; mark=false; line=line})
+  else
+	  write_block({'', '', '', '', '', ''}, {bufnr=bufnr; mark=false; line=line})
+  end
 
   -- author
-	write_block({''}, {bufnr=bufnr; mark=false;})
 	local author_vt = {
 		{'Created by: ', 'OctoNvimDetailsLabel'},
 		{issue.user.login, 'OctoNvimDetailsValue'},
 	}
-	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, author_vt, {})
+	api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, author_vt, {})
 
   -- created_at
-	write_block({''}, {bufnr=bufnr; mark=false;})
+  line = line + 1
 	local created_at_vt = {
 		{'Created at: ', 'OctoNvimDetailsLabel'},
 		{issue.created_at, 'OctoNvimDetailsValue'},
 	}
-	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, created_at_vt, {})
+	api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, created_at_vt, {})
 
   -- updated_at
-	write_block({''}, {bufnr=bufnr; mark=false;})
+  line = line + 1
 	local updated_at_vt = {
 		{'Updated at: ', 'OctoNvimDetailsLabel'},
 		{issue.updated_at, 'OctoNvimDetailsValue'},
 	}
-	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, updated_at_vt, {})
+	api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, updated_at_vt, {})
 
   -- closed_at
   if issue.state == 'closed' then
-    write_block({''}, {bufnr=bufnr; mark=false;})
+    line = line + 1
     local closed_at_vt = {
       {'Closed at: ', 'OctoNvimDetailsLabel'},
       {issue.closed_at, 'OctoNvimDetailsValue'},
     }
-    api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, closed_at_vt, {})
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, closed_at_vt, {})
   end
 
   -- assignees
-	write_block({''}, {bufnr=bufnr; mark=false;})
+  line = line + 1
 	local assignees_vt = {
 		{'Assignees: ', 'OctoNvimDetailsLabel'},
 	}
@@ -245,9 +180,9 @@ function M.write_details(bufnr, issue)
       end
 		end
 	else
-    table.insert(assignees_vt, {'No one assigned ', 'OctoNvimDetailsValue'})
+    table.insert(assignees_vt, {'No one assigned ', 'OctoNvimMissingDetails'})
 	end
-	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, assignees_vt, {})
+	api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, assignees_vt, {})
 
   if issue.pull_request then
     local url = issue.pull_request.url
@@ -262,7 +197,7 @@ function M.write_details(bufnr, issue)
 		local resp = json.parse(response)
 
     -- requested reviewers
-    write_block({''}, {bufnr=bufnr; mark=false;})
+    line = line + 1
     local requested_reviewers_vt = {
       {'Requested Reviewers: ', 'OctoNvimDetailsLabel'},
     }
@@ -274,12 +209,12 @@ function M.write_details(bufnr, issue)
         end
       end
     else
-      table.insert(requested_reviewers_vt, {'No requested reviewers', 'OctoNvimDetailsValue'})
+      table.insert(requested_reviewers_vt, {'No requested reviewers', 'OctoNvimMissingDetails'})
     end
-    api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, requested_reviewers_vt, {})
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, requested_reviewers_vt, {})
 
     -- reviews
-    write_block({''}, {bufnr=bufnr; mark=false;})
+    line = line + 1
     local reviewers_vt = {
       {'Reviews: ', 'OctoNvimDetailsLabel'},
     }
@@ -291,13 +226,13 @@ function M.write_details(bufnr, issue)
         end
       end
     else
-      table.insert(reviewers_vt, {'No reviewers', 'OctoNvimDetailsValue'})
+      table.insert(reviewers_vt, {'No reviewers', 'OctoNvimMissingDetails'})
     end
-    api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, assignees_vt, {})
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, assignees_vt, {})
   end
 
   -- milestones
-  write_block({''}, {bufnr=bufnr; mark=false;})
+  line = line + 1
   local ms = issue.milestone
   local milestone_vt = {
     {'Milestone: ', 'OctoNvimDetailsLabel'},
@@ -305,12 +240,12 @@ function M.write_details(bufnr, issue)
 	if ms ~= nil and ms ~= vim.NIL then
     table.insert(milestone_vt, {format('%s (%s)', ms.title, ms.state), 'OctoNvimDetailsValue'})
 	else
-    table.insert(milestone_vt, {'No milestone', 'OctoNvimDetailsValue'})
+    table.insert(milestone_vt, {'No milestone', 'OctoNvimMissingDetails'})
 	end
-  api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, milestone_vt, {})
+  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, milestone_vt, {})
 
   -- labels
-  write_block({''}, {bufnr=bufnr; mark=false;})
+  line = line + 1
   local labels_vt = {
     {'Labels: ', 'OctoNvimDetailsLabel'},
   }
@@ -322,44 +257,63 @@ function M.write_details(bufnr, issue)
       table.insert(labels_vt, {' ', 'OctoNvimDetailsLabel'})
 		end
 	else
-    table.insert(labels_vt, {'None yet', 'OctoNvimDetailsValue'})
+    table.insert(labels_vt, {'None yet', 'OctoNvimMissingDetails'})
 	end
-  api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 1, labels_vt, {})
-
-  write_block({''}, {bufnr=bufnr; mark=false;})
+  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, labels_vt, {})
 end
 
-function M.write_comment(bufnr, comment)
+function M.write_comment(bufnr, comment, line)
 
   -- heading
-	write_block({'', ''}, {bufnr=bufnr; mark=false;})
+  line = line or api.nvim_buf_line_count(bufnr) + 1
+	write_block({'', ''}, {bufnr=bufnr; mark=false; line=line})
 	local header_vt = {
 		{format('On %s ', comment.created_at), 'OctoNvimCommentHeading'},
 		{comment.user.login, 'OctoNvimCommentUser'},
 		{' commented', 'OctoNvimCommentHeading'}
 	}
-	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, api.nvim_buf_line_count(bufnr) - 2, header_vt, {})
+	local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line-1, header_vt, {})
 
   -- body
+  line = line + 2
   local comment_body = string.gsub(comment['body'], '\r\n', '\n')
-  if vim.startswith(comment_body, NO_BODY_MSG) then comment_body = ' ' end
+  if vim.startswith(comment_body, constants.NO_BODY_MSG) then comment_body = ' ' end
   local content = vim.split(comment_body, '\n', true)
   vim.list_extend(content, {'', '', ''})
-	local comment_mark = write_block(content, {bufnr=bufnr; mark=true;})
+	local comment_mark = write_block(content, {bufnr=bufnr; mark=true; line=line})
 
   -- reactions
-  M.write_reactions(bufnr, comment)
+  line = line + #content
+  local reaction_line = M.write_reactions(bufnr, comment, line-2)
 
   -- update metadata
   local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
   table.insert(comments_metadata, {
-    id = comment['id'];
+    id = comment.id;
     dirty = false;
     saved_body = comment_body;
     body = comment_body;
     extmark = comment_mark;
+    namespace = comment_vt_ns;
+    reaction_line = reaction_line;
   })
   api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
+end
+
+function M.load_issue()
+  local bufname = vim.fn.bufname()
+  local repo, number = string.match(bufname, 'octo://(.+)/(%d+)')
+  if not repo or not number then
+		api.nvim_err_writeln('Incorrect github url: '..bufname)
+    return
+  end
+
+  gh.run({
+    args = {'api', format('repos/%s/issues/%s', repo, number)};
+    cb = function(output)
+      M.create_issue_buffer(json.parse(output) , repo)
+    end
+  })
 end
 
 function M.create_issue_buffer(issue, repo)
@@ -376,8 +330,8 @@ function M.create_issue_buffer(issue, repo)
 	local bufnr = api.nvim_get_current_buf()
 
 	-- delete extmarks
-	for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, OCTO_EM_NS, 0, -1, {})) do
-		api.nvim_buf_del_extmark(bufnr, OCTO_EM_NS, m[1])
+	for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, constants.OCTO_EM_NS, 0, -1, {})) do
+		api.nvim_buf_del_extmark(bufnr, constants.OCTO_EM_NS, m[1])
 	end
 
 	-- configure buffer
@@ -394,16 +348,18 @@ function M.create_issue_buffer(issue, repo)
 	api.nvim_buf_set_var(bufnr, 'milestone', issue.milestone)
 
 	-- write title
-  M.write_title(bufnr, issue)
+  M.write_title(bufnr, issue.title, 1)
 
   -- write details in buffer
-  M.write_details(bufnr, issue)
+  M.write_details(bufnr, issue, 3)
+	write_block({'', ''}, {bufnr=bufnr; mark=false;})
 
 	-- write description
   M.write_description(bufnr, issue)
 
   -- write reactions
-  M.write_reactions(bufnr, issue)
+  local reaction_line = M.write_reactions(bufnr, issue)
+	api.nvim_buf_set_var(bufnr, 'reaction_line', reaction_line)
 
 	-- write issue comments
 	api.nvim_buf_set_var(bufnr, 'comments', {})
@@ -427,7 +383,7 @@ function M.create_issue_buffer(issue, repo)
   end, 200)
 
   -- show signs
-  M.render_signcolumn(bufnr)
+  signs.render_signcolumn(bufnr)
 
   -- drop undo history
   vim.fn['octo#clear_history']()
@@ -437,74 +393,102 @@ function M.create_issue_buffer(issue, repo)
 
   vim.cmd [[ augroup octo_buffer_autocmds ]]
   vim.cmd [[ au! * <buffer> ]]
-  vim.cmd [[ au TextChanged <buffer> lua require"octo".render_signcolumn() ]]
-  vim.cmd [[ au TextChangedI <buffer> lua require"octo".render_signcolumn() ]]
+  vim.cmd [[ au TextChanged <buffer> lua require"octo.signs".render_signcolumn() ]]
+  vim.cmd [[ au TextChangedI <buffer> lua require"octo.signs".render_signcolumn() ]]
   vim.cmd [[ augroup END ]]
 end
 
-function M.render_signcolumn(bufnr)
+function M.save_issue(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
 	local bufname = api.nvim_buf_get_name(bufnr)
-  if not vim.startswith(bufname, 'github://') then return end
+  if not vim.startswith(bufname, 'octo://') then return end
 
-	local issue_dirty = false
+  -- number
+	local number = api.nvim_buf_get_var(bufnr, 'number')
 
-	-- update comment metadata (lines, etc.)
-	M.update_issue_metadata(bufnr)
+	-- repo
+	local repo = api.nvim_buf_get_var(bufnr, 'repo')
+	if not repo then
+		api.nvim_err_writeln('Buffer is not linked to a GitHub issue')
+		return
+	end
 
-	-- clear all signs
-	signs.unplace(bufnr)
+	-- collect comment metadata
+	util.update_issue_metadata(bufnr)
 
-	-- clear virtual texts
-	api.nvim_buf_clear_namespace(bufnr, OCTO_VT1_NS, 0, -1)
+	-- title & description
+	local title_metadata = api.nvim_buf_get_var(bufnr, 'title')
+	local desc_metadata = api.nvim_buf_get_var(bufnr, 'description')
+	if title_metadata.dirty or desc_metadata.dirty then
 
-	-- title
-	local title = api.nvim_buf_get_var(bufnr, 'title')
-	if title['dirty'] then issue_dirty = true end
-	local start_line = title['start_line']
-	local end_line = title['end_line']
-	signs.place_signs(bufnr, start_line, end_line, title['dirty'])
+		-- trust but verify
+		if string.find(title_metadata['body'], '\n') then
+			api.nvim_err_writeln("Title can't contains new lines")
+			return
+		elseif title_metadata['body'] == '' then
+			api.nvim_err_writeln("Title can't be blank")
+			return
+		end
 
-	-- title virtual text
-	local state = api.nvim_buf_get_var(bufnr, 'state'):upper()
-	local title_vt = {
-		{tostring(api.nvim_buf_get_var(bufnr, 'number')), 'OctoNvimIssueId'},
-		{format(' [%s]', state), 'OctoNvimIssue'..state}
-	}
-	api.nvim_buf_set_virtual_text(bufnr, OCTO_VT_NS, 0, title_vt, {})
+    gh.run({
+      args = {
+        'api', '-X', 'PATCH',
+        '-f', format('title=%s', title_metadata['body']),
+        '-f', format('body=%s', desc_metadata['body']),
+        format('repos/%s/issues/%s', repo, number)
+      };
+      cb = function(output)
+        local resp = json.parse(output)
 
-	-- description
-	local desc = api.nvim_buf_get_var(bufnr, 'description')
-	if desc.dirty then issue_dirty = true end
-	start_line = desc['start_line']
-	end_line = desc['end_line']
-	signs.place_signs(bufnr, start_line, end_line, desc.dirty)
+        if title_metadata['body'] == resp['title'] then
+          title_metadata['saved_body'] = resp['title']
+          title_metadata['dirty'] = false
+          api.nvim_buf_set_var(bufnr, 'title', title_metadata)
+        end
 
-	-- description virtual text
-	if util.is_blank(desc['body']) then
-		local desc_vt = {{NO_BODY_MSG, 'OctoNvimEmpty'}}
-		api.nvim_buf_set_virtual_text(bufnr, OCTO_VT1_NS, start_line, desc_vt, {})
+        if desc_metadata['body'] == resp['body'] then
+          desc_metadata['saved_body'] = resp['body']
+          desc_metadata['dirty'] = false
+          api.nvim_buf_set_var(bufnr, 'description', desc_metadata)
+        end
+
+        signs.render_signcolumn(bufnr)
+        print('Saved!')
+      end
+    })
 	end
 
 	-- comments
 	local comments = api.nvim_buf_get_var(bufnr, 'comments')
-	for _, c in ipairs(comments) do
-		if c.dirty then issue_dirty = true end
-		start_line = c['start_line']
-		end_line = c['end_line']
-		signs.place_signs(bufnr, start_line, end_line, c.dirty)
-
-		-- comment virtual text
-		if util.is_blank(c['body']) then
-			local comment_vt = {{NO_BODY_MSG, 'OctoNvimEmpty'}}
-			api.nvim_buf_set_virtual_text(bufnr, OCTO_VT1_NS, start_line, comment_vt, {})
+	for _, metadata in ipairs(comments) do
+		if metadata['body'] ~= metadata['saved_body'] then
+      gh.run({
+        args = {
+          'api', '-X', 'PATCH',
+          '-f', format('body=%s', metadata['body']),
+          format('repos/%s/issues/comments/%s', repo, metadata['id'])
+        };
+        cb = function(output)
+          local resp = json.parse(output)
+          if metadata['body'] == resp['body'] then
+            for i, c in ipairs(comments) do
+              if c['id'] == resp['id'] then
+                comments[i]['saved_body'] = resp['body']
+                comments[i]['dirty'] = false
+                break
+              end
+            end
+            api.nvim_buf_set_var(bufnr, 'comments', comments)
+            signs.render_signcolumn(bufnr)
+            print('Saved!')
+          end
+        end
+      })
 		end
 	end
 
 	-- reset modified option
-	if not issue_dirty then
-		api.nvim_buf_set_option(bufnr, 'modified', false)
-	end
+	api.nvim_buf_set_option(bufnr, 'modified', false)
 end
 
 return M
