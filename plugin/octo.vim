@@ -8,6 +8,10 @@ let s:rno = nvim_win_get_option(0,'relativenumber')
 let s:clo = nvim_win_get_option(0,'cursorline')
 let s:sco = nvim_win_get_option(0,'signcolumn')
 let s:wo = nvim_win_get_option(0,'wrap')
+" colors
+let g:octo_bubble_color = synIDattr(synIDtrans(hlID("NormalFloat")), "bg#")
+execute('hi! OctoNvimBubble1 guifg='.g:octo_bubble_color)
+execute('hi! OctoNvimBubble2 guibg='.g:octo_bubble_color)
 
 " commands
 if executable('gh')

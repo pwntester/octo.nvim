@@ -20,9 +20,8 @@ hi def link OctoNvimIssueTitle PreProc
 hi def link OctoNvimEmpty Comment
 hi def link OctoNvimFloat NormalNC
 hi def link OctoNvimDetailsLabel Comment
+hi def link OctoNvimMissingDetails Comment
 hi def link OctoNvimDetailsValue Identifier
-hi OctoNvimBubble1 guifg='#11305f'
-hi OctoNvimBubble2 guibg='#11305f'
 
 " restore current syntax value
 if exists('old_syntax')
