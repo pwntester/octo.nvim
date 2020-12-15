@@ -28,52 +28,27 @@ Plug 'nvim-telescope/telescope.nvim'
 
 ## Commands
 
-- `Issue [repo] <id>`: Opens specified issue.
-- `NewIssue [repo]`: Create new issue in specific repo.
-- `CloseIssue`: Close current issue.
-- `ReopenIssue`: Reopen current issue.
-- `NewComment`: Add new comment to current issue.
+| Object | Action | Arguments|
+|--------|--------|--------|
+| comment | add | |
+| | delete | |
+| issue | close | |
+| | open | |
+| | create | [repo] |
+| | get | [repo] <number> |
+| | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_issue_list): `author`\|`assignee`\|`mention`\|`label`\|`milestone`\|`state`\|`limit`<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-t>`: Opens issue in web browser |
+| pr | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_pr_list):  `assignee`\|`label`\|`state`\|`base`\|`limit`<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-t>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
+| gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-t>`: Opens Gist in web browser |
+| label | add | <label> |
+| | delete | <label> |
+| assignees| add | <assignee> |
+| | delete | <assignee> |
+| reviewer | add | <reviewer> |
+| | delete | <reviewer> |
+| reaction | add | <+1\|-1\|eyes\|laugh\|confused\|rocket\|hooray>|
+| | delete | <+1\|-1\|eyes\|laugh\|confused\|rocket\|hooray>|
 
-- `AddLabel <label>`
-- `RemoveLabel <label>`
-- `AddAssignee <assignee>`
-- `RemoveAssignee <assignee>`
-- `AddReviewer <reviewer>`
-- `RemoveReviewer <reviewer>`
-
-- `ListIssues [repo] [key=value]*`: Fuzzy pick Issues.
-  - Available [options](https://cli.github.com/manual/gh_issue_list):
-    - `author`
-    - `assignee`
-    - `mention`
-    - `label`
-    - `milestone`
-    - `state`
-    - `limit`
-  - Mappings:
-    - `<CR>`: Edit issue 
-    - `<C-t>`: Opens issue in web browser
-- `ListPRs [repo] [key=value]*`: Fuzzy pick Pull Requests.
-  - Available [options](https://cli.github.com/manual/gh_pr_list):
-    - `assignee`
-    - `label`
-    - `state`
-    - `base`
-    - `limit`
-  - Mappings:
-    - `<CR>`: Edit PR
-    - `<C-t>`: Opens PR in web browser
-    - `<C-o>`: Checkout PR
-- `ListGists [repo] [key=value]*`: Fuzzy pick Gists.
-  - Available [options](https://cli.github.com/manual/gh_gist_list):
-    - `repo`
-    - `public`
-    - `secret`
-  - Mappings:
-    - `<CR>`: Append Gist to buffer
-    - `<C-t>`: Opens Gist in web browser
-
-* If repo is not provided, it will be derived from CWD.
+* If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
 ## Usage
 
