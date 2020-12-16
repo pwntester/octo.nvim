@@ -76,7 +76,7 @@ local commands = {
       M.issue_action('add', 'labels', value)
     end;
     delete = function(value)
-      M.issue_action('remove', 'labels', value)
+      M.issue_action('delete', 'labels', value)
     end;
   };
   assignee = {
@@ -84,7 +84,7 @@ local commands = {
       M.issue_action('add', 'assignees', value)
     end;
     delete = function(value)
-      M.issue_action('remove', 'assignees', value)
+      M.issue_action('delete', 'assignees', value)
     end;
   };
   reviewer = {
@@ -92,7 +92,7 @@ local commands = {
       M.issue_action('add', 'requested_reviewers', value)
     end;
     delete = function(value)
-      M.issue_action('remove', 'requested_reviewers', value)
+      M.issue_action('delete', 'requested_reviewers', value)
     end;
   };
   reaction = {
@@ -100,7 +100,7 @@ local commands = {
       M.reaction_action('add',  reaction)
     end;
     delete = function(reaction)
-      M.reaction_action('remove', reaction)
+      M.reaction_action('delete', reaction)
     end;
   };
 }
@@ -157,7 +157,7 @@ function M.delete_comment()
     print('The cursor does not seem to be located at any comment')
     return
   end
-  local choice = vim.fn.confirm("Remove comment?", "&Yes\n&No\n&Cancel", 2)
+  local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
     gh.run({
       args = {
@@ -261,9 +261,9 @@ function M.issue_action(action, kind, value)
   vim.validate{
     action = {action,
       function(a)
-        return vim.tbl_contains({'add', 'remove'}, a)
+        return vim.tbl_contains({'add', 'delete'}, a)
       end,
-      'add or remove'
+      'add or delete'
     },
     kind = {kind,
       function(a)
@@ -281,14 +281,14 @@ function M.issue_action(action, kind, value)
   end
 
   local url = format('repos/%s/%s/%d/%s', repo, endpoint, number, kind)
-  if kind == 'labels' and action == 'remove' then
+  if kind == 'labels' and action == 'delete' then
     url = format('%s/%s', url, value)
   end
 
   local method
   if action == 'add' then
 	  method = 'POST'
-  elseif action == 'remove' then
+  elseif action == 'delete' then
 	  method = 'DELETE'
   end
 
