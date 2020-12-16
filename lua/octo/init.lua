@@ -113,12 +113,12 @@ function M.write_description(bufnr, issue, line)
 	})
 end
 
-function M.write_reactions(bufnr, element, line)
+function M.write_reactions(bufnr, reactions, line)
   line = line or api.nvim_buf_line_count(bufnr) - 1
-	api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, line-1, line)
-  if element.reactions.total_count > 0 then
+	api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line-1, line+1)
+  if reactions.total_count > 0 then
     local reactions_vt = {}
-    for reaction, count in pairs(element.reactions) do
+    for reaction, count in pairs(reactions) do
       local emoji = require'octo.util'.reaction_map[reaction]
       if emoji and count > 0 then
         table.insert(reactions_vt, {'', 'OctoNvimBubble1'})
@@ -294,7 +294,7 @@ function M.write_comment(bufnr, comment, line)
 
   -- reactions
   line = line + #content
-  local reaction_line = M.write_reactions(bufnr, comment, line-2)
+  local reaction_line = M.write_reactions(bufnr, comment.reactions, line-2)
 
   -- update metadata
   local comments_metadata = api.nvim_buf_get_var(bufnr, 'comments')
@@ -306,6 +306,7 @@ function M.write_comment(bufnr, comment, line)
     extmark = comment_mark;
     namespace = comment_vt_ns;
     reaction_line = reaction_line;
+    reactions = comment.reactions;
   })
   api.nvim_buf_set_var(bufnr, 'comments', comments_metadata)
 end
@@ -321,7 +322,12 @@ function M.load_issue()
   gh.run({
     args = {'api', format('repos/%s/issues/%s', repo, number)};
     cb = function(output)
-      M.create_issue_buffer(json.parse(output) , repo)
+      local issue = json.parse(output) 
+      if not issue.id and issue.message then
+        api.nvim_err_writeln(issue.message)
+        return
+      end
+      M.create_issue_buffer(issue , repo)
     end
   })
 end
@@ -368,8 +374,9 @@ function M.create_issue_buffer(issue, repo)
   M.write_description(bufnr, issue)
 
   -- write reactions
-  local reaction_line = M.write_reactions(bufnr, issue)
+  local reaction_line = M.write_reactions(bufnr, issue.reactions)
 	api.nvim_buf_set_var(bufnr, 'reaction_line', reaction_line)
+	api.nvim_buf_set_var(bufnr, 'reactions', issue.reactions)
 
 	-- write issue comments
 	api.nvim_buf_set_var(bufnr, 'comments', {})

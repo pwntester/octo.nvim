@@ -107,9 +107,9 @@ function M.update_issue_metadata(bufnr)
 	api.nvim_buf_set_var(bufnr, 'comments', comments)
 end
 
-function M.get_comment_at_cursor(bufnr)
+function M.get_comment_at_cursor(bufnr, cursor)
 	local comments = api.nvim_buf_get_var(bufnr, 'comments')
-  local cursor = api.nvim_win_get_cursor(0)
+  --local cursor = api.nvim_win_get_cursor(0)
 	for _, comment in ipairs(comments) do
 	  local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details=true})
     local start_line = mark[1] + 1
@@ -119,6 +119,26 @@ function M.get_comment_at_cursor(bufnr)
     end
   end
   return nil
+end
+
+function M.update_reactions_at_cursor(bufnr, cursor, reactions, reaction_line)
+	local comments = api.nvim_buf_get_var(bufnr, 'comments')
+	for i, comment in ipairs(comments) do
+	  local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details=true})
+    local start_line = mark[1] + 1
+    local end_line = mark[3]['end_row'] + 1
+    if start_line <= cursor[1] and end_line >= cursor[1] then
+      --  cursor located in the body of a comment
+      comments[i].reactions = reactions
+      comments[i].reaction_line = reaction_line
+	    api.nvim_buf_set_var(bufnr, 'comments', comments)
+      return
+    end
+  end
+
+  -- cursor not located at any comment, so updating issue
+	api.nvim_buf_set_var(bufnr, 'reactions', reactions)
+	api.nvim_buf_set_var(bufnr, 'reaction_line', reaction_line)
 end
 
 return M

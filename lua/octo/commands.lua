@@ -318,59 +318,76 @@ function M.reaction_action(action, reaction)
   local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, 'repo')
   if not repo_ok then api.nvim_err_writeln('Missing octo metadata') return end
 
-  local url, method, line, cb_url
-  local comment = util.get_comment_at_cursor(bufnr)
+  local cursor = api.nvim_win_get_cursor(0)
+  local comment = util.get_comment_at_cursor(bufnr, cursor)
+
+  local url, args, line, cb_url, reactions
 
   if comment then
+    -- found a comment at cursor
     comment = comment[1]
     cb_url = format('repos/%s/issues/comments/%d', repo, comment.id)
     line = comment.reaction_line
+    reactions = comment.reactions
     if action == 'add' then
-      method = 'POST'
       url = format('repos/%s/issues/comments/%d/reactions', repo, comment.id)
-    else
-      -- TODO: we need reaction id
-      -- get list of reactions for issue and filter by user login and reaction
-      print('Not implemeted')
-      method = 'DELETE'
-      local reaction_id = 0
-      url = format('repos/%s/issues/comments/%s/reactions/%d', repo, comment.id, reaction_id)
-      return
+      args = {'api', '-X', 'POST', '-f', format('content=%s', reaction), url};
+    elseif action == 'delete' then
+      -- get list of reactions for issue comment and filter by user login and reaction
+      local output = gh.run({
+        mode = 'sync';
+        args = { 'api', format('repos/%s/issues/comments/%d/reactions', repo, comment.id) };
+      })
+      for _, r in ipairs(json.parse(output)) do
+        if r.user.login == vim.g.octo_loggedin_user and reaction == r.content then
+          url = format('repos/%s/issues/comments/%d/reactions/%d', repo, comment.id, r.id)
+          args = {'api', '-X', 'DELETE', url};
+          break
+        end
+      end
     end
   else
+    -- cursor not located on a comment, using the issue instead
     cb_url = format('repos/%s/issues/%d', repo, number)
     line = api.nvim_buf_get_var(bufnr, 'reaction_line')
+    reactions = api.nvim_buf_get_var(bufnr, 'reactions')
     if action == 'add' then
-      method = 'POST'
       url = format('repos/%s/issues/%d/reactions', repo, number)
-    else
-      -- TODO: we need reaction id
-      -- get list of reactions for issue and filter by user login and reaction
-      print('Not implemeted')
-      method = 'DELETE'
-      local reaction_id = 0
-      url = format('repos/%s/issues/%d/reactions/%d', repo, number, reaction_id)
-      return
+      args = {'api', '-X', 'POST', '-f', format('content=%s', reaction), url};
+    elseif action == 'delete' then
+      -- get list of reactions for issue comment and filter by user login and reaction
+      local output = gh.run({
+        mode = 'sync';
+        args = { 'api', format('repos/%s/issues/%d/reactions', repo, number) };
+      })
+      for _, r in ipairs(json.parse(output)) do
+        if r.user.login == vim.g.octo_loggedin_user and reaction == r.content then
+          url = format('repos/%s/issues/%d/reactions/%d', repo, number, r.id)
+          args = {'api', '-X', 'DELETE', url};
+          break
+        end
+      end
     end
   end
 
+  if not args or not cb_url then return end
+
+  -- add/delete reaction
   gh.run({
-    args = {
-      'api', '-X', method,
-      '-f', format('content=%s', reaction),
-      url
-    },
+    args = args;
     cb = function(_)
-      gh.run({
-        args = {
-          'api',
-          cb_url
-        };
-        cb = function(output)
-          print('FOO', line)
-          octo.write_reactions(bufnr, json.parse(output), line)
+      for k,v in pairs(reactions) do
+        if k == reaction then
+          if action == 'add' then
+            reactions[k] = v + 1
+          elseif action == 'delete' then
+            reactions[k] = math.max(0, v - 1)
+          end
+          break
         end
-      })
+      end
+      util.update_reactions_at_cursor(bufnr, cursor, reactions, line)
+      octo.write_reactions(bufnr, reactions, line)
     end
   })
 end
