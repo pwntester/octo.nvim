@@ -20,12 +20,7 @@ local function run(opts)
       on_stderr = function(_, line) table.insert(stderr_results, line) end;
       on_exit = vim.schedule_wrap(function(j_self, _, _)
         if mode == 'async' and opts.cb then
-          if #(j_self:stderr_result()) > 0 then
-            print('stderr', vim.inspect(j_self:stderr_result()))
-            print('stdout', vim.inspect(j_self:result()))
-          else
-            opts.cb(table.concat(j_self:result()))
-          end
+          opts.cb(table.concat(j_self:result()), table.concat(j_self:stderr_result()))
         end
       end)
     })
