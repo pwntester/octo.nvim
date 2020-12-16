@@ -15,6 +15,16 @@ local json = {
 
 local M = {}
 
+function M.check_login()
+  gh.run({
+    args = {'auth', 'status'};
+    cb = function(_, err)
+      local _, _, name = string.find(err, 'Logged in to [^%s]+ as ([^%s]+)')
+      vim.g.octo_loggedin_user = name
+    end
+  })
+end
+
 local function write_block(lines, opts)
   local bufnr = opts.bufnr or api.nvim_get_current_buf()
 

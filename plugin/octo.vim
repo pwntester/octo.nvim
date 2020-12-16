@@ -75,4 +75,9 @@ lua require'octo.signs'.setup()
 nnoremap <Plug>(GoToIssue) <cmd>lua require'octo.navigation'.go_to_issue()<CR>
 nmap gi <Plug>(GoToIssue)
 
+if !exists("g:octo_loggedin_user")
+  let g:octo_loggedin_user = v:null
+  lua require'octo'.check_login()
+endif
+
 let g:loaded_octo = 1
