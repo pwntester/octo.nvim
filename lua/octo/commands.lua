@@ -380,8 +380,10 @@ function M.reaction_action(action, reaction)
         if k == reaction then
           if action == 'add' then
             reactions[k] = v + 1
+            reactions.total_count = reactions.total_count+1
           elseif action == 'delete' then
             reactions[k] = math.max(0, v - 1)
+            reactions.total_count = reactions.total_count-1
           end
           break
         end
