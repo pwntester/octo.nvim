@@ -223,7 +223,7 @@ function M.create_issue(repo)
       format('repos/%s/issues', repo)
     };
     cb = function(output)
-      octo.create_issue_buffer(json.parse(output), repo)
+      octo.create_issue_buffer(json.parse(output), repo, true)
     end
   })
 end

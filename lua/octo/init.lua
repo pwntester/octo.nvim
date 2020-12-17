@@ -327,12 +327,12 @@ function M.load_issue()
         api.nvim_err_writeln(issue.message)
         return
       end
-      M.create_issue_buffer(issue , repo)
+      M.create_issue_buffer(issue , repo, false)
     end
   })
 end
 
-function M.create_issue_buffer(issue, repo)
+function M.create_issue_buffer(issue, repo, create_buffer)
 	if not issue['id'] then
 		api.nvim_err_writeln(format('Cannot find issue in %s', repo))
 		return
@@ -342,9 +342,8 @@ function M.create_issue_buffer(issue, repo)
 	local number = issue['number']
 	local state = issue['state']
 
-	local bufnr
-  local bufname = vim.fn.bufname()
-  if not vim.startswith(bufname, 'octo://') then
+  local bufnr
+  if create_buffer then
     bufnr = api.nvim_create_buf(true, false)
     api.nvim_set_current_buf(bufnr)
     vim.cmd(format('file octo://%s/%d', repo, number))

@@ -11,6 +11,7 @@ local util = require('octo.util')
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
+local api = vim.api
 local bat_options = {"bat" , "--style=plain" , "--color=always" , "--paging=always" , '--decorations=never','--pager=less'}
 
 -- most of this code was taken from https://github.com/nvim-telescope/telescope-github.nvim/blob/master/lua/telescope/_extensions/ghcli.lua
@@ -73,8 +74,8 @@ local function issues(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'issue')
-  if repo == vim.NIL then repo = util.get_remote_name() end
-  if not repo then print('Cannot find repo'); return end
+  if not repo or repo == vim.NIL then repo = util.get_remote_name() end
+  if not repo then api.nvim_err_writeln('Cannot find repo'); return end
   local cmd = format('gh issue list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
 
