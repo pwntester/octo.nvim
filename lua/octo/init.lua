@@ -322,7 +322,7 @@ function M.load_issue()
   gh.run({
     args = {'api', format('repos/%s/issues/%s', repo, number)};
     cb = function(output)
-      local issue = json.parse(output) 
+      local issue = json.parse(output)
       if not issue.id and issue.message then
         api.nvim_err_writeln(issue.message)
         return
@@ -342,8 +342,15 @@ function M.create_issue_buffer(issue, repo)
 	local number = issue['number']
 	local state = issue['state']
 
-	-- create buffer
-	local bufnr = api.nvim_get_current_buf()
+	local bufnr
+  local bufname = vim.fn.bufname()
+  if not vim.startswith(bufname, 'octo://') then
+    bufnr = api.nvim_create_buf(true, false)
+    api.nvim_set_current_buf(bufnr)
+    vim.cmd(format('file octo://%s/%d', repo, number))
+  else
+    bufnr = api.nvim_get_current_buf()
+  end
 
 	-- delete extmarks
 	for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, constants.OCTO_EM_NS, 0, -1, {})) do
