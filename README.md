@@ -28,6 +28,8 @@ Plug 'nvim-telescope/telescope.nvim'
 
 ## Commands
 
+There is only an `Octo <object> <action> [arguments]` command: 
+
 | Object | Action | Arguments|
 |--------|--------|--------|
 | issue | close | |
@@ -49,6 +51,17 @@ Plug 'nvim-telescope/telescope.nvim'
 | | delete | <+1\|-1\|eyes\|laugh\|confused\|rocket\|hooray>|
 
 * If repo is not provided, it will be derived from `<cwd>/.git/config`.
+
+Examples:
+
+```
+Octo issue create
+Octo issue create pwntester/octo.nvim
+Octo comment add
+Octo reaction add hooray
+Octo issue edit pwntester/octo.nvim 1
+Octo issue edit 1
+```
 
 ## Usage
 
