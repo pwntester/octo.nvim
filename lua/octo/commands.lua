@@ -152,7 +152,8 @@ end
 function M.delete_comment()
   local bufnr = api.nvim_get_current_buf()
 	local repo = api.nvim_buf_get_var(bufnr, 'repo')
-  local comment, start_line, end_line = unpack(util.get_comment_at_cursor(bufnr))
+  local cursor = api.nvim_win_get_cursor(0)
+  local comment, start_line, end_line = unpack(util.get_comment_at_cursor(bufnr, cursor))
   if not comment then
     print('The cursor does not seem to be located at any comment')
     return
