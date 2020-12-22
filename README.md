@@ -82,7 +82,7 @@ nmap gi <Plug>(GoToIssue)
 ## Highlight groups
 
 | Name | Default |
-------------------
+|--------|--------|
 |`OctoNvimDirty`|`ErrorMsg` |
 |`OctoNvimCommentHeading`|`PreProc`|
 |`OctoNvimCommentUser`|`Underlined`|
@@ -92,10 +92,6 @@ nmap gi <Plug>(GoToIssue)
 |`OctoNvimIssueClosed`|`ErrorMsg`|
 |`OctoNvimEmpty`|`Comment`|
 |`OctoNvimFloat`|`NormalNC`|
-
-## TODO
-
-- [ ] autocompletion for @person
 
 ## Credits
 All `List` commands are taken from @windwp [Telescope extension](https://github.com/nvim-telescope/telescope-github.nvim) and adapted to edit issues.
