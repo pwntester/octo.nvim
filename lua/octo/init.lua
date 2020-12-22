@@ -369,6 +369,30 @@ function M.create_issue_buffer(issue, repo, create_buffer)
 	api.nvim_buf_set_var(bufnr, 'assignees', issue.assignees)
 	api.nvim_buf_set_var(bufnr, 'milestone', issue.milestone)
 
+  -- local mappings
+  local mapping_opts = { script = true,  silent = true}
+  api.nvim_buf_set_keymap(bufnr, 'n', 'gi', [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'ca', [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'cd', [[<cmd>lua require'octo.commands'.delete_comment()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'rp', [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'rh', [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 're', [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'r+', [[<cmd>lua require'octo.commands'.reaction_action('add', '+1')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'r-', [[<cmd>lua require'octo.commands'.reaction_action('add', '-1')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'rr', [[<cmd>lua require'octo.commands'.reaction_action('add', 'rocket')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'rl', [[<cmd>lua require'octo.commands'.reaction_action('add', 'laugh')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'rc', [[<cmd>lua require'octo.commands'.reaction_action('add', 'confused')<CR>]], mapping_opts)
+
+  vim.cmd([[nmap gi <buffer> <Plug>(OctoGoToIssue)]])
+  vim.cmd([[nmap rp <buffer> <Plug>(OctoAddHooray)]])
+  vim.cmd([[nmap rh <buffer> <Plug>(OctoAddHeart)]])
+  vim.cmd([[nmap re <buffer> <Plug>(OctoAddEyes)]])
+  vim.cmd([[nmap r+ <buffer> <Plug>(OctoAddPlusOne)]])
+  vim.cmd([[nmap r- <buffer> <Plug>(OctoAddMinusOne)]])
+  vim.cmd([[nmap rr <buffer> <Plug>(OctoAddRocket)]])
+  vim.cmd([[nmap rl <buffer> <Plug>(OctoAddLaugh)]])
+  vim.cmd([[nmap rc <buffer> <Plug>(OctoAddConfused)]])
+
 	-- write title
   M.write_title(bufnr, issue.title, 1)
 

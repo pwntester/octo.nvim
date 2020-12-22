@@ -71,10 +71,7 @@ augroup END
 " sign definitions
 lua require'octo.signs'.setup()
 
-" mappings
-nnoremap <Plug>(GoToIssue) <cmd>lua require'octo.navigation'.go_to_issue()<CR>
-nmap gi <Plug>(GoToIssue)
-
+" logged-in user
 if !exists("g:octo_loggedin_user")
   let g:octo_loggedin_user = v:null
   lua require'octo'.check_login()
