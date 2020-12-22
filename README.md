@@ -31,7 +31,7 @@ Plug 'nvim-telescope/telescope.nvim'
 There is only an `Octo <object> <action> [arguments]` command: 
 
 | Object | Action | Arguments|
-|--------|--------|--------|
+|---|---|---|
 | issue | close | |
 | | open | |
 | | create | [repo] |
@@ -73,33 +73,33 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 ## In-issue mappings
 
-| Mapping | Description |
-|--------|--------|
-|`gi`| navigate to a local repo issue|
-|`ca`| add comment|
-|`cd`| delete comment|
-|`rh`| add :heart: reaction|
-|`rp`| add :hooray: reaction|
-|`re`| add :eyes: reaction|
-|`rl`| add :laugh: reaction|
-|`rc`| add :confused: reaction|
-|`r+`| add :+1: reaction|
-|`r-`| add :-1: reaction|
-|`rr`| add :rocket: reaction|
+| Mapping | Description                    |
+| ---     | ---                            |
+| `gi`    | navigate to a local repo issue |
+| `ca`    | add comment                    |
+| `cd`    | delete comment                 |
+| `rh`    | add :heart: reaction           |
+| `rp`    | add :hooray: reaction          |
+| `re`    | add :eyes: reaction            |
+| `rl`    | add :laugh: reaction           |
+| `rc`    | add :confused: reaction        |
+| `r+`    | add :+1: reaction              |
+| `r-`    | add :-1: reaction              |
+| `rr`    | add :rocket: reaction          |
 
 ## Highlight groups
 
-| Name | Default |
-|--------|--------|
-|`OctoNvimDirty`|`ErrorMsg` |
-|`OctoNvimCommentHeading`|`PreProc`|
-|`OctoNvimCommentUser`|`Underlined`|
-|`OctoNvimIssueTitle`|`PreProc`|
-|`OctoNvimIssueId`|`Question`|
-|`OctoNvimIssueOpen`|`MoreMsg`|
-|`OctoNvimIssueClosed`|`ErrorMsg`|
-|`OctoNvimEmpty`|`Comment`|
-|`OctoNvimFloat`|`NormalNC`|
+| Name                     | Default      |
+| ---                      | ---          |
+| `OctoNvimDirty`          | `ErrorMsg`   |
+| `OctoNvimCommentHeading` | `PreProc`    |
+| `OctoNvimCommentUser`    | `Underlined` |
+| `OctoNvimIssueTitle`     | `PreProc`    |
+| `OctoNvimIssueId`        | `Question`   |
+| `OctoNvimIssueOpen`      | `MoreMsg`    |
+| `OctoNvimIssueClosed`    | `ErrorMsg`   |
+| `OctoNvimEmpty`          | `Comment`    |
+| `OctoNvimFloat`          | `NormalNC`   |
 
 ## Credits
 All `List` commands are taken from @windwp [Telescope extension](https://github.com/nvim-telescope/telescope-github.nvim) and adapted to edit issues.
