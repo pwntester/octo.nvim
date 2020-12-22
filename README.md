@@ -71,13 +71,19 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 `<C-x><C-o>`: When cursor is located at text that matches `#\d*` will popup a list of repo issues starting with the same id prefix.
 
-## Mappings
+## In-issue mappings
 
-`<Plug>(GoToIssue)` can be used to navigate to a local repo issue. By default mapped to `gi` but can be overriden with: 
-
-```
-nmap gi <Plug>(GoToIssue)
-```
+`gi`: navigate to a local repo issue
+`ca`: add comment
+`cd`: delete comment
+`rh`: add :heart: reaction
+`rp`: add :hooray: reaction
+`re`: add :eyes: reaction
+`rl`: add :laugh: reaction
+`rc`: add :confused: reaction
+`r+`: add :+1: reaction
+`r-`: add :-1: reaction
+`rr`: add :rocket: reaction
 
 ## Highlight groups
 
