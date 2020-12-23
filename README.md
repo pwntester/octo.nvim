@@ -78,6 +78,8 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `gi`    | navigate to a local repo issue |
 | `ca`    | add comment                    |
 | `cd`    | delete comment                 |
+| `ic`    | close issue                    |
+| `io`    | reopen issue                   |
 | `rh`    | add :heart: reaction           |
 | `rp`    | add :hooray: reaction          |
 | `re`    | add :eyes: reaction            |

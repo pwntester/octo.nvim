@@ -372,8 +372,13 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   -- local mappings
   local mapping_opts = { script = true,  silent = true}
   api.nvim_buf_set_keymap(bufnr, 'n', 'gi', [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]], mapping_opts)
+
   api.nvim_buf_set_keymap(bufnr, 'n', 'ca', [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 'cd', [[<cmd>lua require'octo.commands'.delete_comment()<CR>]], mapping_opts)
+
+  api.nvim_buf_set_keymap(bufnr, 'n', 'ic', [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'io', [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]], mapping_opts)
+
   api.nvim_buf_set_keymap(bufnr, 'n', 'rp', [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 'rh', [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 're', [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]], mapping_opts)
