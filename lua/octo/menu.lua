@@ -46,11 +46,13 @@ local function open_in_browser(type, repo)
     if vim.tbl_isempty(tmp_table) then
       return
     end
-    if repo == '' then
-      os.execute(format('gh %s view --web %d', type, tmp_table[1]))
+    local cmd
+    if not repo or repo == '' then
+      cmd = format('gh %s view --web %s', type, tmp_table[1])
     else
-      os.execute(format('gh %s view --web %d -R %s', type, tmp_table[1], repo))
+      cmd = format('gh %s view --web %s -R %s', type, tmp_table[1], repo)
     end
+    os.execute(cmd)
   end
 end
 
@@ -78,6 +80,11 @@ local function issues(repo, opts)
   if not repo then api.nvim_err_writeln('Cannot find repo'); return end
   local cmd = format('gh issue list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
+
+  if #results == 0 or #results == 1 and results[1] == '' then
+    api.nvim_err_writeln(format("There are no matching issues in %s.", repo))
+    return
+  end
 
   pickers.new(opts, {
     prompt_title = 'Issues',
@@ -109,21 +116,20 @@ end
 --
 
 local gist_previewer = defaulter(function(opts)
-    return previewers.new_termopen_previewer {
-        get_command = opts.get_command or function(entry)
-        local tmp_table = vim.split(entry.value,"\t");
-        if vim.tbl_isempty(tmp_table) then
-          return {"echo", ""}
-        end
-        local result={ 'gh' ,'gist' ,'view',tmp_table[1] ,'|'}
-        if vim.fn.executable("bat") then
-          table.insert(result , bat_options)
-        else
-          table.insert(result , "less")
-        end
-        -- print(vim.inspect(result))
-        return flatten(result)
+  return previewers.new_termopen_previewer {
+    get_command = opts.get_command or function(entry)
+      local tmp_table = vim.split(entry.value,"\t");
+      if vim.tbl_isempty(tmp_table) then
+        return {"echo", ""}
       end
+      local result={ 'gh' ,'gist' ,'view',tmp_table[1] ,'|'}
+      if vim.fn.executable("bat") then
+        table.insert(result , bat_options)
+      else
+        table.insert(result , "less")
+      end
+      return flatten(result)
+    end
   }
 end, {})
 
@@ -141,16 +147,15 @@ local function open_gist(prompt_bufnr)
   end
 end
 
-local function gists(repo, opts)
+local function gists(opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'gist')
-  if repo == vim.NIL then repo = util.get_remote_name() end
-  if not repo then print('Cannot find repo'); return end
-  local cmd = format('gh gist list %s -R %s', opts_query, repo)
+  local cmd = format('gh gist list %s', opts_query)
   local results = vim.split(utils.get_os_command_output(cmd), '\n')
+
   pickers.new(opts, {
-    prompt_title = 'gist list' ,
+    prompt_title = 'Gists' ,
     finder = finders.new_table {
       results = results,
       entry_maker = make_entry.gen_from_string(opts),
@@ -158,8 +163,8 @@ local function gists(repo, opts)
     previewer = gist_previewer.new(opts),
     sorter = conf.file_sorter(opts),
     attach_mappings = function(_,map)
-      map('i', '<CR>', open_gist())
-      map('i','<c-t>', open_in_browser('gist'))
+      map('i', '<CR>', open_gist)
+      map('i', '<c-t>', open_in_browser('gist'))
       return true
     end
   }):find()
@@ -198,10 +203,16 @@ local function pull_requests(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts , 'pr')
-  if repo == vim.NIL then repo = util.get_remote_name() end
+  if not repo or repo == vim.NIL then repo = util.get_remote_name() end
   if not repo then print('Cannot find repo'); return end
   local cmd = format('gh pr list %s -R %s', opts_query, repo)
   local results = vim.split(utils.get_os_command_output(cmd) , '\n')
+
+  if #results == 0 or #results == 1 and results[1] == '' then
+    api.nvim_err_writeln(format("There are no matching pull requests in %s.", repo))
+    return
+  end
+
   pickers.new(opts, {
     prompt_title = 'Pull Requests' ,
     finder = finders.new_table {
