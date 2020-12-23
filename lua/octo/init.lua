@@ -86,7 +86,6 @@ function M.write_title(bufnr, title, line)
 		dirty = false;
     extmark = title_mark;
 	})
-  M.write_state(bufnr)
 end
 
 function M.write_state(bufnr)
@@ -97,8 +96,19 @@ function M.write_state(bufnr)
 	local state = api.nvim_buf_get_var(bufnr, 'state'):upper()
 	local title_vt = {
 		{tostring(api.nvim_buf_get_var(bufnr, 'number')), 'OctoNvimIssueId'},
-		{format(' [%s]', state), 'OctoNvimIssue'..state}
+		{format(' [%s] ', state), format('OctoNvimIssue%s', state)}
 	}
+
+  -- PR virtual text
+	local status, pr = pcall(api.nvim_buf_get_var, bufnr, 'pr')
+  if status and pr then
+    if pr.draft then
+      table.insert(title_vt, {'[DRAFT] ', 'OctoNvimIssueId'})
+    end
+    if pr.merged then
+      table.insert(title_vt, {format('[MERGED by %s]', pr.merged_by.login), 'OctoNvimIssueId'})
+    end
+  end
 	api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
@@ -206,15 +216,16 @@ function M.write_details(bufnr, issue, line)
       args = {'api', format('repos/%s/%s/pulls/%d', owner, repo, pr_id)};
       mode = 'sync';
     })
-		local resp = json.parse(response)
+		local pr = json.parse(response)
+    api.nvim_buf_set_var(bufnr, 'pr', pr)
 
     -- requested reviewers
     line = line + 1
     local requested_reviewers_vt = {
       {'Requested Reviewers: ', 'OctoNvimDetailsLabel'},
     }
-    if resp.requested_reviewers and #resp.requested_reviewers > 0 then
-      for i, as in ipairs(resp.requested_reviewers) do
+    if pr.requested_reviewers and #pr.requested_reviewers > 0 then
+      for i, as in ipairs(pr.requested_reviewers) do
         table.insert(requested_reviewers_vt, {as.login, 'OctoNvimDetailsValue'})
         if i ~= #issue.assignees then
           table.insert(requested_reviewers_vt, {', ', 'OctoNvimDetailsLabel'})
@@ -230,8 +241,8 @@ function M.write_details(bufnr, issue, line)
     local reviewers_vt = {
       {'Reviews: ', 'OctoNvimDetailsLabel'},
     }
-    if resp and #resp > 0 then
-      for i, as in ipairs(resp) do
+    if pr and #pr > 0 then
+      for i, as in ipairs(pr) do
         table.insert(reviewers_vt, {format('%s (%s)', as.user.login, as.state), 'OctoNvimDetailsValue'})
         if i ~= #issue.assignees then
           table.insert(reviewers_vt, {', ', 'OctoNvimDetailsLabel'})
@@ -272,6 +283,8 @@ function M.write_details(bufnr, issue, line)
     table.insert(labels_vt, {'None yet', 'OctoNvimMissingDetails'})
 	end
   api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, labels_vt, {})
+
+	write_block({'', ''}, {bufnr=bufnr; mark=false;})
 end
 
 function M.write_comment(bufnr, comment, line)
@@ -405,7 +418,9 @@ function M.create_issue_buffer(issue, repo, create_buffer)
 
   -- write details in buffer
   M.write_details(bufnr, issue, 3)
-	write_block({'', ''}, {bufnr=bufnr; mark=false;})
+
+  -- write issue/pr status on line 1
+  M.write_state(bufnr)
 
 	-- write description
   M.write_description(bufnr, issue)
