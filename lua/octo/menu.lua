@@ -26,16 +26,16 @@ local function parse_opts(opts,target)
     tmp_table = {'assigner' , 'label' , 'state' , 'base' , 'limit' }
   elseif target == 'gist' then
     tmp_table = {'public' , 'secret'}
-    if opts.public then opts.public =' ' end
-    if opts.secret then opts.secret =' ' end
+    if opts.public then opts.public = ' ' end
+    if opts.secret then opts.secret = ' ' end
   end
 
   for _, value in pairs(tmp_table) do
     if opts[value] then
-      table.insert(query,"--" .. value .. ' ' .. opts[value])
+      table.insert(query, format('--%s %s',value, opts[value]))
     end
   end
-  return table.concat(query," ")
+  return table.concat(query, ' ')
 end
 
 local function open_in_browser(type, repo)
