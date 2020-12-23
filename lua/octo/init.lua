@@ -379,6 +379,15 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   api.nvim_buf_set_keymap(bufnr, 'n', 'ic', [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 'io', [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]], mapping_opts)
 
+  api.nvim_buf_set_keymap(bufnr, 'n', 'la', [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'labels')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'ld', [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'labels')<CR>]], mapping_opts)
+
+  api.nvim_buf_set_keymap(bufnr, 'n', 'aa', [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'assignees')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'ad', [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'assignees')<CR>]], mapping_opts)
+
+  api.nvim_buf_set_keymap(bufnr, 'n', 'va', [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'requested_reviewers')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'vd', [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'requested_reviewers')<CR>]], mapping_opts)
+
   api.nvim_buf_set_keymap(bufnr, 'n', 'rp', [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 'rh', [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 're', [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]], mapping_opts)

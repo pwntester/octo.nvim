@@ -402,4 +402,11 @@ function M.reaction_action(action, reaction)
   })
 end
 
+function M.issue_interactive_action(action, kind)
+  vim.fn.inputsave()
+  local value = vim.fn.input('Enter name: ')
+  vim.fn.inputrestore()
+  M.issue_action(action, kind, value)
+end
+
 return M
