@@ -223,15 +223,21 @@ end
 
 function M.create_issue(repo)
   if not repo then repo = util.get_remote_name() end
+  if not repo then print("Cant find repo name"); return end
+  vim.fn.inputsave()
+  local title = vim.fn.input('Enter title: ')
+  vim.fn.inputrestore()
   gh.run({
     args = {
       'api', '-X', 'POST',
-      '-f', format('title=%s', 'title'),
+      '-f', format('title=%s', title),
       '-f', format('body=%s', constants.NO_BODY_MSG),
       format('repos/%s/issues', repo)
     };
     cb = function(output)
       octo.create_issue_buffer(json.parse(output), repo, true)
+      vim.fn.execute('normal! Gkkk')
+      vim.fn.execute('startinsert')
     end
   })
 end

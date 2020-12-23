@@ -103,7 +103,9 @@ function M.write_state(bufnr)
 end
 
 function M.write_description(bufnr, issue, line)
-	local description = string.gsub(issue['body'], '\r\n', '\n')
+  local body = issue.body
+  if vim.startswith(body, constants.NO_BODY_MSG) then body = ' ' end
+	local description = string.gsub(body, '\r\n', '\n')
 	local desc_mark = write_block(description, {bufnr=bufnr; mark=true; trailing_lines=3; line=line})
 	api.nvim_buf_set_var(bufnr, 'description', {
 		saved_body = description,
