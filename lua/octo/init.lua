@@ -378,6 +378,7 @@ function M.create_issue_buffer(issue, repo, create_buffer)
 
   api.nvim_buf_set_keymap(bufnr, 'n', 'ic', [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 'io', [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, 'n', 'il', format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo), mapping_opts)
 
   api.nvim_buf_set_keymap(bufnr, 'n', 'la', [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'labels')<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, 'n', 'ld', [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'labels')<CR>]], mapping_opts)

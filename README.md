@@ -80,6 +80,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `cd`    | delete comment                 |
 | `ic`    | close issue                    |
 | `io`    | reopen issue                   |
+| `il`    | list open issues on same repo  |
 | `la`    | add label                      |
 | `ld`    | delete label                   |
 | `aa`    | add assignee                   |
