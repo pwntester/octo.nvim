@@ -19,7 +19,7 @@ hi def link OctoNvimIssueId Question
 hi def link OctoNvimIssueTitle PreProc
 hi def link OctoNvimEmpty Comment
 hi def link OctoNvimFloat NormalNC
-hi def link OctoNvimDetailsLabel Comment
+hi def link OctoNvimDetailsLabel Title 
 hi def link OctoNvimMissingDetails Comment
 hi def link OctoNvimDetailsValue Identifier
 

@@ -150,11 +150,21 @@ function M.write_details(bufnr, issue, line)
 	api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
   line = line or api.nvim_buf_line_count(bufnr) + 1
-  if issue.state == 'closed' then
-	  write_block({'', '', '', '', '', '', ''}, {bufnr=bufnr; mark=false; line=line})
-  else
-	  write_block({'', '', '', '', '', ''}, {bufnr=bufnr; mark=false; line=line})
+  local empty_lines = {}
+  for _=1,8,1 do
+    -- 'author', 'create_at', 'updated_at', 'assignees', 'milestones', 'labels', '', ''
+    table.insert(empty_lines, '')
   end
+  if issue.state == 'closed' then
+    table.insert(empty_lines, '') -- closed_at
+  end
+  if issue.pull_request then
+    table.insert(empty_lines, '') -- requested reviewers
+    table.insert(empty_lines, '') -- reviewers
+    table.insert(empty_lines, '') -- changes
+  end
+  print(#empty_lines)
+	write_block(empty_lines, {bufnr=bufnr; mark=false; line=line})
 
   -- author
 	local author_vt = {
@@ -206,6 +216,7 @@ function M.write_details(bufnr, issue, line)
 	end
 	api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, assignees_vt, {})
 
+  local pr
   if issue.pull_request then
     local url = issue.pull_request.url
     local segments = vim.split(url, '/')
@@ -216,7 +227,7 @@ function M.write_details(bufnr, issue, line)
       args = {'api', format('repos/%s/%s/pulls/%d', owner, repo, pr_id)};
       mode = 'sync';
     })
-		local pr = json.parse(response)
+		pr = json.parse(response)
     api.nvim_buf_set_var(bufnr, 'pr', pr)
 
     -- requested reviewers
@@ -236,10 +247,10 @@ function M.write_details(bufnr, issue, line)
     end
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, requested_reviewers_vt, {})
 
-    -- reviews
+    -- reviewers
     line = line + 1
     local reviewers_vt = {
-      {'Reviews: ', 'OctoNvimDetailsLabel'},
+      {'Reviewers: ', 'OctoNvimDetailsLabel'},
     }
     if pr and #pr > 0 then
       for i, as in ipairs(pr) do
@@ -251,7 +262,7 @@ function M.write_details(bufnr, issue, line)
     else
       table.insert(reviewers_vt, {'No reviewers', 'OctoNvimMissingDetails'})
     end
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, assignees_vt, {})
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, reviewers_vt, {})
   end
 
   -- milestones
@@ -284,7 +295,21 @@ function M.write_details(bufnr, issue, line)
 	end
   api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, labels_vt, {})
 
-	write_block({'', ''}, {bufnr=bufnr; mark=false;})
+  if pr then
+    line = line + 1
+
+    local unit = (pr.additions + pr.deletions)/4
+    local additions = math.floor(0.5 + pr.additions / unit)
+    local deletions = math.floor(0.5 + pr.deletions / unit)
+    local changes_vt = {
+      {format('+%d ', pr.additions), 'DiffAdd'},
+      {format('-%d ', pr.deletions), 'DiffDelete'},
+      {string.rep('■', additions), 'DiffAdd'},
+      {string.rep('■', deletions), 'DiffDelete'},
+      {'■', 'DiffChange'},
+    }
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line-1, changes_vt, {})
+  end
 end
 
 function M.write_comment(bufnr, comment, line)
