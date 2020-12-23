@@ -17,6 +17,23 @@ function table.pack(...)
   return { n = select("#", ...), ... }
 end
 
+local function process_varargs(repo, ...)
+  local args = table.pack(...)
+  if not repo then
+    repo = util.get_remote_name()
+  elseif #vim.split(repo, '/') ~= 2 then
+    table.insert(args, repo)
+    args.n = args.n + 1
+    repo = util.get_remote_name()
+  end
+  local opts = {}
+  for i=1,args.n do
+    local kv = vim.split(args[i], '=')
+    opts[kv[1]] = kv[2]
+  end
+  return repo, opts
+end
+
 local commands = {
   issue = {
     create = function(repo)
@@ -32,35 +49,25 @@ local commands = {
       M.change_issue_state('open')
     end;
     list = function(repo, ...)
-      local args = table.pack(...)
-      local opts = {}
-      for i=1,args.n do
-        local kv = vim.split(args[i], '=')
-        opts[kv[1]] = kv[2]
-      end
-      menu.issues(repo, opts);
+      local rep, opts = process_varargs(repo, ...)
+      menu.issues(rep, opts);
     end;
   };
   pr = {
     list = function(repo, ...)
-      local args = table.pack(...)
-      local opts = {}
-      for i=1,args.n do
-        local kv = vim.split(args[i], '=')
-        opts[kv[1]] = kv[2]
-      end
-      menu.pull_requests(repo, opts)
+      local rep, opts = process_varargs(repo, ...)
+      menu.pull_requests(rep, opts)
     end;
   };
   gist = {
-    list = function(repo, ...)
+    list = function(...)
       local args = table.pack(...)
       local opts = {}
       for i=1,args.n do
         local kv = vim.split(args[i], '=')
         opts[kv[1]] = kv[2]
       end
-      menu.gists(repo, opts)
+      menu.gists(opts)
     end;
   };
   comment = {
