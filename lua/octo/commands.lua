@@ -13,10 +13,6 @@ local Job = require("plenary.job")
 
 local M = {}
 
-function table.pack(...)
-  return {n = select("#", ...), ...}
-end
-
 local commands = {
   issue = {
     create = function(repo)
@@ -41,8 +37,8 @@ local commands = {
       local rep, opts = M.process_varargs(repo, ...)
       menu.pull_requests(rep, opts)
     end,
-    checkout = function(...)
-      M.checkout_pr(...)
+    checkout = function()
+      M.checkout_pr()
     end
   },
   gist = {
@@ -98,6 +94,10 @@ local commands = {
   }
 }
 
+function table.pack(...)
+  return {n = select("#", ...), ...}
+end
+
 function M.get_repo_number(...)
   local repo, number
   local args = table.pack(...)
@@ -119,7 +119,7 @@ function M.get_repo_number(...)
     return
   end
   if not number then
-    print("Missing issue number")
+    print("Missing issue/pr number")
     return
   end
   return repo, number
@@ -383,8 +383,13 @@ function M.issue_action(action, kind, value)
   job:start()
 end
 
-function M.checkout_pr(...)
-  local repo, number = M.get_repo_number(...)
+function M.checkout_pr()
+  local bufname = api.nvim_buf_get_name(0)
+  if not vim.startswith(bufname, "octo://") then
+    return
+  end
+  local repo = api.nvim_buf_get_var(0, "repo")
+  local number = api.nvim_buf_get_var(0, "number")
   gh.run(
     {
       args = {"pr", "checkput", number, "-R", repo},
