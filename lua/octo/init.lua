@@ -113,7 +113,7 @@ function M.write_state(bufnr)
       table.insert(title_vt, {"[DRAFT] ", "OctoNvimIssueId"})
     end
     if pr.merged then
-      table.insert(title_vt, {format("[MERGED by %s]", pr.merged_by.login), "OctoNvimIssueId"})
+      table.insert(title_vt, {"[MERGED]", "OctoNvimIssueId"})
     end
   end
   api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
@@ -284,6 +284,26 @@ function M.write_details(bufnr, issue, line)
       table.insert(reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
     end
     table.insert(details, reviewers_vt)
+
+    -- merged_by
+    if pr.merged then
+      local merged_by_vt = {
+        {"Merged by: ", "OctoNvimDetailsLabel"},
+        {pr.merged_by.login, "OctoNvimDetailsValue"}
+      }
+      table.insert(details, merged_by_vt)
+    end
+
+    -- from/into branches
+    local branches_vt = {
+      {"from: ", "OctoNvimDetailsLabel"},
+      {pr.head.label, "OctoNvimDetailsValue"},
+      {" into: ", "OctoNvimDetailsLabel"},
+      {pr.base.label, "OctoNvimDetailsValue"}
+    }
+    --print(pr.head.label, pr.head.ref, pr.head.repo.full_name)
+    --print(pr.base.label, pr.base.ref, pr.base.repo.full_name)
+    table.insert(details, branches_vt)
 
     -- changes 
     local unit = (pr.additions + pr.deletions) / 4
