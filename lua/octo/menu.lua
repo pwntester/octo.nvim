@@ -5,7 +5,7 @@ local utils = require("telescope.utils")
 local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
-local commands = require "octo.commands"
+local gh = require "octo.gh"
 local util = require("octo.util")
 
 local format = string.format
@@ -201,7 +201,19 @@ local function checkout_pr(repo)
       return
     end
     local number = tmp_table[1]
-    commands.checkout_pr(repo, number)
+    local args = {"pr", "checkout", number, "-R", repo}
+    if repo == "" then
+      args = {"pr", "checkout", number}
+    end
+    gh.run(
+      {
+        args = args,
+        cb = function(output)
+          print(output)
+          print(format("Checked out PR %d", number))
+        end
+      }
+    )
   end
 end
 
