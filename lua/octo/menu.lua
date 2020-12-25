@@ -5,7 +5,7 @@ local utils = require("telescope.utils")
 local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
-local Job = require("plenary.job")
+local gh = require "octo.gh"
 local util = require("octo.util")
 
 local format = string.format
@@ -204,19 +204,15 @@ local function checkout_pr(repo)
     if repo == "" then
       args = {"pr", "checkout", tmp_table[1]}
     end
-    local job =
-      Job:new(
+    gh.run(
       {
-        enable_recording = true,
-        command = "gh",
         args = args,
-        on_stderr = function(_, data)
-          print(data)
+        cb = function(output)
+          print(output)
+          print(format("Checked out PR %d", tmp_table[1]))
         end
       }
     )
-    -- need to display result in quickfix
-    job:sync()
   end
 end
 
