@@ -161,58 +161,39 @@ function M.write_details(bufnr, issue, line)
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
-  line = line or api.nvim_buf_line_count(bufnr) + 1
-  local empty_lines = {}
-  for _ = 1, 8, 1 do
-    -- 'author', 'create_at', 'updated_at', 'assignees', 'milestones', 'labels', '', ''
-    table.insert(empty_lines, "")
-  end
-  if issue.state == "closed" then
-    table.insert(empty_lines, "") -- closed_at
-  end
-  if issue.pull_request then
-    table.insert(empty_lines, "") -- requested reviewers
-    table.insert(empty_lines, "") -- reviewers
-    table.insert(empty_lines, "") -- changes
-  end
-  print(#empty_lines)
-  write_block(empty_lines, {bufnr = bufnr, mark = false, line = line})
+  local details = {}
 
   -- author
   local author_vt = {
     {"Created by: ", "OctoNvimDetailsLabel"},
     {issue.user.login, "OctoNvimDetailsValue"}
   }
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, author_vt, {})
+  table.insert(details, author_vt)
 
   -- created_at
-  line = line + 1
   local created_at_vt = {
     {"Created at: ", "OctoNvimDetailsLabel"},
     {issue.created_at, "OctoNvimDetailsValue"}
   }
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, created_at_vt, {})
+  table.insert(details, created_at_vt)
 
-  -- updated_at
-  line = line + 1
-  local updated_at_vt = {
-    {"Updated at: ", "OctoNvimDetailsLabel"},
-    {issue.updated_at, "OctoNvimDetailsValue"}
-  }
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, updated_at_vt, {})
-
-  -- closed_at
   if issue.state == "closed" then
-    line = line + 1
+    -- closed_at
     local closed_at_vt = {
       {"Closed at: ", "OctoNvimDetailsLabel"},
       {issue.closed_at, "OctoNvimDetailsValue"}
     }
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, closed_at_vt, {})
+    table.insert(details, closed_at_vt)
+  else
+    -- updated_at
+    local updated_at_vt = {
+      {"Updated at: ", "OctoNvimDetailsLabel"},
+      {issue.updated_at, "OctoNvimDetailsValue"}
+    }
+    table.insert(details, updated_at_vt)
   end
 
   -- assignees
-  line = line + 1
   local assignees_vt = {
     {"Assignees: ", "OctoNvimDetailsLabel"}
   }
@@ -226,62 +207,9 @@ function M.write_details(bufnr, issue, line)
   else
     table.insert(assignees_vt, {"No one assigned ", "OctoNvimMissingDetails"})
   end
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, assignees_vt, {})
-
-  local pr
-  if issue.pull_request then
-    local url = issue.pull_request.url
-    local segments = vim.split(url, "/")
-    local owner = segments[5]
-    local repo = segments[6]
-    local pr_id = segments[8]
-    local response =
-      gh.run(
-      {
-        args = {"api", format("repos/%s/%s/pulls/%d", owner, repo, pr_id)},
-        mode = "sync"
-      }
-    )
-    pr = json.parse(response)
-    api.nvim_buf_set_var(bufnr, "pr", pr)
-
-    -- requested reviewers
-    line = line + 1
-    local requested_reviewers_vt = {
-      {"Requested Reviewers: ", "OctoNvimDetailsLabel"}
-    }
-    if pr.requested_reviewers and #pr.requested_reviewers > 0 then
-      for i, as in ipairs(pr.requested_reviewers) do
-        table.insert(requested_reviewers_vt, {as.login, "OctoNvimDetailsValue"})
-        if i ~= #issue.assignees then
-          table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
-        end
-      end
-    else
-      table.insert(requested_reviewers_vt, {"No requested reviewers", "OctoNvimMissingDetails"})
-    end
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, requested_reviewers_vt, {})
-
-    -- reviewers
-    line = line + 1
-    local reviewers_vt = {
-      {"Reviewers: ", "OctoNvimDetailsLabel"}
-    }
-    if pr and #pr > 0 then
-      for i, as in ipairs(pr) do
-        table.insert(reviewers_vt, {format("%s (%s)", as.user.login, as.state), "OctoNvimDetailsValue"})
-        if i ~= #issue.assignees then
-          table.insert(reviewers_vt, {", ", "OctoNvimDetailsLabel"})
-        end
-      end
-    else
-      table.insert(reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
-    end
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, reviewers_vt, {})
-  end
+  table.insert(details, assignees_vt)
 
   -- milestones
-  line = line + 1
   local ms = issue.milestone
   local milestone_vt = {
     {"Milestone: ", "OctoNvimDetailsLabel"}
@@ -291,10 +219,9 @@ function M.write_details(bufnr, issue, line)
   else
     table.insert(milestone_vt, {"No milestone", "OctoNvimMissingDetails"})
   end
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, milestone_vt, {})
+  table.insert(details, milestone_vt)
 
   -- labels
-  line = line + 1
   local labels_vt = {
     {"Labels: ", "OctoNvimDetailsLabel"}
   }
@@ -308,11 +235,57 @@ function M.write_details(bufnr, issue, line)
   else
     table.insert(labels_vt, {"None yet", "OctoNvimMissingDetails"})
   end
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, labels_vt, {})
+  table.insert(details, labels_vt)
 
-  if pr then
-    line = line + 1
+  if issue.pull_request then
+    local url = issue.pull_request.url
+    local segments = vim.split(url, "/")
+    local owner = segments[5]
+    local repo = segments[6]
+    local pr_id = segments[8]
+    local response =
+      gh.run(
+      {
+        args = {"api", format("repos/%s/%s/pulls/%d", owner, repo, pr_id)},
+        mode = "sync"
+      }
+    )
+    local pr = json.parse(response)
+    api.nvim_buf_set_var(bufnr, "pr", pr)
 
+    -- requested reviewers
+    local requested_reviewers_vt = {
+      {"Requested Reviewers: ", "OctoNvimDetailsLabel"}
+    }
+    if pr.requested_reviewers and #pr.requested_reviewers > 0 then
+      for i, as in ipairs(pr.requested_reviewers) do
+        table.insert(requested_reviewers_vt, {as.login, "OctoNvimDetailsValue"})
+        if i ~= #issue.assignees then
+          table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
+        end
+      end
+    else
+      table.insert(requested_reviewers_vt, {"No requested reviewers", "OctoNvimMissingDetails"})
+    end
+    table.insert(details, requested_reviewers_vt)
+
+    -- reviewers
+    local reviewers_vt = {
+      {"Reviewers: ", "OctoNvimDetailsLabel"}
+    }
+    if pr and #pr > 0 then
+      for i, as in ipairs(pr) do
+        table.insert(reviewers_vt, {format("%s (%s)", as.user.login, as.state), "OctoNvimDetailsValue"})
+        if i ~= #issue.assignees then
+          table.insert(reviewers_vt, {", ", "OctoNvimDetailsLabel"})
+        end
+      end
+    else
+      table.insert(reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
+    end
+    table.insert(details, reviewers_vt)
+
+    -- changes 
     local unit = (pr.additions + pr.deletions) / 4
     local additions = math.floor(0.5 + pr.additions / unit)
     local deletions = math.floor(0.5 + pr.deletions / unit)
@@ -323,7 +296,21 @@ function M.write_details(bufnr, issue, line)
       {string.rep("■", deletions), "DiffDelete"},
       {"■", "DiffChange"}
     }
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, changes_vt, {})
+    table.insert(details, changes_vt)
+  end
+
+  -- print empty #details + 2 lines
+  line = line or api.nvim_buf_line_count(bufnr) + 1
+  local empty_lines = {}
+  for _ = 1, #details + 2, 1 do
+    table.insert(empty_lines, "")
+  end
+  write_block(empty_lines, {bufnr = bufnr, mark = false, line = line})
+
+  -- print details as virtual text
+  for _, d in ipairs(details) do
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, d, {})
+    line = line + 1
   end
 end
 
