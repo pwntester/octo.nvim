@@ -5,7 +5,7 @@ local utils = require("telescope.utils")
 local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
-local Job = require("plenary.job")
+local commands = require "octo.commands"
 local util = require("octo.util")
 
 local format = string.format
@@ -200,23 +200,8 @@ local function checkout_pr(repo)
     if vim.tbl_isempty(tmp_table) then
       return
     end
-    local args = {"pr", "checkout", tmp_table[1], "-R", repo}
-    if repo == "" then
-      args = {"pr", "checkout", tmp_table[1]}
-    end
-    local job =
-      Job:new(
-      {
-        enable_recording = true,
-        command = "gh",
-        args = args,
-        on_stderr = function(_, data)
-          print(data)
-        end
-      }
-    )
-    -- need to display result in quickfix
-    job:sync()
+    local number = tmp_table[1]
+    commands.checkout_pr(repo, number)
   end
 end
 

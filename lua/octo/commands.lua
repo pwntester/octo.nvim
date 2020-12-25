@@ -13,27 +13,6 @@ local Job = require("plenary.job")
 
 local M = {}
 
-function table.pack(...)
-  return {n = select("#", ...), ...}
-end
-
-local function process_varargs(repo, ...)
-  local args = table.pack(...)
-  if not repo then
-    repo = util.get_remote_name()
-  elseif #vim.split(repo, "/") ~= 2 then
-    table.insert(args, repo)
-    args.n = args.n + 1
-    repo = util.get_remote_name()
-  end
-  local opts = {}
-  for i = 1, args.n do
-    local kv = vim.split(args[i], "=")
-    opts[kv[1]] = kv[2]
-  end
-  return repo, opts
-end
-
 local commands = {
   issue = {
     create = function(repo)
@@ -49,14 +28,17 @@ local commands = {
       M.change_issue_state("open")
     end,
     list = function(repo, ...)
-      local rep, opts = process_varargs(repo, ...)
+      local rep, opts = M.process_varargs(repo, ...)
       menu.issues(rep, opts)
     end
   },
   pr = {
     list = function(repo, ...)
-      local rep, opts = process_varargs(repo, ...)
+      local rep, opts = M.process_varargs(repo, ...)
       menu.pull_requests(rep, opts)
+    end,
+    checkout = function()
+      M.checkout_pr()
     end
   },
   gist = {
@@ -111,6 +93,54 @@ local commands = {
     end
   }
 }
+
+function table.pack(...)
+  return {n = select("#", ...), ...}
+end
+
+function M.get_repo_number(...)
+  local repo, number
+  local args = table.pack(...)
+  if args.n == 0 then
+    print("Missing arguments")
+    return
+  elseif args.n == 1 then
+    repo = util.get_remote_name()
+    number = tonumber(args[1])
+  elseif args.n == 2 then
+    repo = args[1]
+    number = tonumber(args[2])
+  else
+    print("Unexpected arguments")
+    return
+  end
+  if not repo then
+    print("Cant find repo name")
+    return
+  end
+  if not number then
+    print("Missing issue/pr number")
+    return
+  end
+  return repo, number
+end
+
+function M.process_varargs(repo, ...)
+  local args = table.pack(...)
+  if not repo then
+    repo = util.get_remote_name()
+  elseif #vim.split(repo, "/") ~= 2 then
+    table.insert(args, repo)
+    args.n = args.n + 1
+    repo = util.get_remote_name()
+  end
+  local opts = {}
+  for i = 1, args.n do
+    local kv = vim.split(args[i], "=")
+    opts[kv[1]] = kv[2]
+  end
+  return repo, opts
+end
 
 function M.octo(object, action, ...)
   local o = commands[object]
@@ -270,29 +300,7 @@ function M.create_issue(repo)
 end
 
 function M.get_issue(...)
-  local repo, number
-  local args = table.pack(...)
-  if args.n == 0 then
-    print("Missing arguments")
-    return
-  elseif args.n == 1 then
-    repo = util.get_remote_name()
-    number = tonumber(args[1])
-  elseif args.n == 2 then
-    repo = args[1]
-    number = tonumber(args[2])
-  else
-    print("Unexpected arguments")
-    return
-  end
-  if not repo then
-    print("Cant find repo name")
-    return
-  end
-  if not number then
-    print("Missing issue number")
-    return
-  end
+  local repo, number = M.get_repo_number(...)
   vim.cmd(format("edit octo://%s/%s", repo, number))
 end
 
@@ -373,6 +381,24 @@ function M.issue_action(action, kind, value)
     }
   )
   job:start()
+end
+
+function M.checkout_pr()
+  local bufname = api.nvim_buf_get_name(0)
+  if not vim.startswith(bufname, "octo://") then
+    return
+  end
+  local repo = api.nvim_buf_get_var(0, "repo")
+  local number = api.nvim_buf_get_var(0, "number")
+  gh.run(
+    {
+      args = {"pr", "checkput", number, "-R", repo},
+      cb = function(output)
+        print(output)
+        print(format("Checked out PR %d", number))
+      end
+    }
+  )
 end
 
 function M.reaction_action(action, reaction)

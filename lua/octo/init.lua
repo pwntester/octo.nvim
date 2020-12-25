@@ -361,7 +361,7 @@ function M.load_issue()
   local bufname = vim.fn.bufname()
   local repo, number = string.match(bufname, "octo://(.+)/(%d+)")
   if not repo or not number then
-    api.nvim_err_writeln("Incorrect github url: " .. bufname)
+    api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
 
