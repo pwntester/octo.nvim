@@ -5,7 +5,7 @@ local utils = require("telescope.utils")
 local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
-local gh = require "octo.gh"
+local commands = require "octo.commands"
 local util = require("octo.util")
 
 local format = string.format
@@ -200,19 +200,8 @@ local function checkout_pr(repo)
     if vim.tbl_isempty(tmp_table) then
       return
     end
-    local args = {"pr", "checkout", tmp_table[1], "-R", repo}
-    if repo == "" then
-      args = {"pr", "checkout", tmp_table[1]}
-    end
-    gh.run(
-      {
-        args = args,
-        cb = function(output)
-          print(output)
-          print(format("Checked out PR %d", tmp_table[1]))
-        end
-      }
-    )
+    local number = tmp_table[1]
+    commands.checkout_pr(repo, number)
   end
 end
 
