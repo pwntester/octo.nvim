@@ -390,13 +390,16 @@ function M.checkout_pr()
   end
   local repo = api.nvim_buf_get_var(0, "repo")
   local number = api.nvim_buf_get_var(0, "number")
-  print(repo, number)
   gh.run(
     {
       args = {"pr", "checkout", number, "-R", repo},
-      cb = function(output)
-        print(output)
-        print(format("Checked out PR %d", number))
+      cb = function(output, stderr)
+        if stderr then
+          api.nvim_err_writeln(stderr)
+        else
+          print(output)
+          print(format("Checked out PR %d", number))
+        end
       end
     }
   )

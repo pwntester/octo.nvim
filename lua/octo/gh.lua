@@ -7,7 +7,7 @@ local function run(opts)
   local stdout_results = {}
   local stderr_results = {}
 
-  if opts.args[1] ~= "auth" then
+  if opts.args[1] ~= "auth" and opts.args[1] ~= "pr" then
     table.insert(opts.args, "-H")
     table.insert(opts.args, "Accept: application/vnd.github.squirrel-girl-preview+json")
   end

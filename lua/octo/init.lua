@@ -292,10 +292,14 @@ function M.write_details(bufnr, issue, line)
     local changes_vt = {
       {format("+%d ", pr.additions), "DiffAdd"},
       {format("-%d ", pr.deletions), "DiffDelete"},
-      {string.rep("■", additions), "DiffAdd"},
-      {string.rep("■", deletions), "DiffDelete"},
-      {"■", "DiffChange"}
     }
+    if pr.additions > 0 then
+      table.insert(changes_vt, {string.rep("■", additions), "DiffAdd"})
+    end
+    if pr.deletions > 0 then
+      table.insert(changes_vt, {string.rep("■", deletions), "DiffDelete"})
+    end
+    table.insert(changes_vt, {"■", "DiffChange"})
     table.insert(details, changes_vt)
   end
 
