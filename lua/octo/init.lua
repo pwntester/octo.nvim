@@ -468,6 +468,8 @@ function M.create_issue_buffer(issue, repo, create_buffer)
 
   api.nvim_buf_set_keymap(bufnr, "n", "co", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
 
+  api.nvim_buf_set_keymap(bufnr, "n", "cm", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
+
   api.nvim_buf_set_keymap(
     bufnr,
     "n",

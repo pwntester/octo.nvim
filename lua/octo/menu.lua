@@ -6,8 +6,8 @@ local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
 local entry_display = require("telescope.pickers.entry_display")
-local putils = require('telescope.previewers.utils')
-local from_entry = require('telescope.from_entry')
+local putils = require("telescope.previewers.utils")
+local from_entry = require("telescope.from_entry")
 local gh = require "octo.gh"
 local util = require("octo.util")
 local format = string.format
@@ -300,39 +300,52 @@ function gen_from_git_commits()
       value = entry.sha,
       ordinal = entry.sha .. " " .. entry.commit.message,
       msg = entry.commit.message,
-      display = make_display
+      display = make_display,
+      author = format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
+      date = entry.commit.author.date
     }
   end
 end
 
-local commit_previewer = defaulter(function(opts)
-  return previewers.new_buffer_previewer {
-    get_buffer_by_name = function(_, entry)
-      return from_entry.path(entry, true)
-    end,
-
-    define_preview = function(self, entry, status)
-      putils.with_preview_window(status, nil, function()
-        local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
-        local diff =
-          gh.run(
-          {
-            args = {"api", url},
-            mode = "sync",
-            headers = {"Accept: application/vnd.github.v3.diff"}
-          }
+local commit_previewer =
+  defaulter(
+  function(opts)
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return from_entry.path(entry, true)
+      end,
+      define_preview = function(self, entry, status)
+        putils.with_preview_window(
+          status,
+          nil,
+          function()
+            local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
+            local diff =
+              gh.run(
+              {
+                args = {"api", url},
+                mode = "sync",
+                headers = {"Accept: application/vnd.github.v3.diff"}
+              }
+            )
+            local lines = {}
+            print(vim.inspect(entry))
+            vim.list_extend(lines, {format("commit %s", entry.value)})
+            vim.list_extend(lines, {format("Author: %s", entry.author)})
+            vim.list_extend(lines, {format("Date: %s", entry.date)})
+            vim.list_extend(lines, {""})
+            vim.list_extend(lines, vim.split(entry.msg, "\n"))
+            vim.list_extend(lines, {""})
+            vim.list_extend(lines, vim.split(diff, "\n"))
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+            vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          end
         )
-        local lines = {}
-        print(vim.inspect(entry))
-        vim.list_extend(lines, vim.split(entry.msg, "\n"))
-        vim.list_extend(lines, {entry.value})
-        vim.list_extend(lines, vim.split(diff, "\n"))
-        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
-        vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
-      end)
-    end
-  }
-end, {})
+      end
+    }
+  end,
+  {}
+)
 
 local function commits()
   local bufname = api.nvim_buf_get_name(0)

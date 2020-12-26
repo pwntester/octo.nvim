@@ -83,6 +83,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `io`    | reopen issue                   |
 | `il`    | list open issues on same repo  |
 | `co`    | checkout pull request          |
+| `cm`    | list pull request commits      |
 | `la`    | add label                      |
 | `ld`    | delete label                   |
 | `aa`    | add assignee                   |
