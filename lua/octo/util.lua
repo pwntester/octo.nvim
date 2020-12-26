@@ -160,9 +160,9 @@ function M.update_reactions_at_cursor(bufnr, cursor, reactions, reaction_line)
   api.nvim_buf_set_var(bufnr, "reaction_line", reaction_line)
 end
 
-function M.format_date(to_format)
+function M.format_date(date_string)
   local time_bias = date():getbias() * -1
-  return date(to_format):addminutes(time_bias):fmt(vim.g.octo_date_format)
+  return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
 end
 
 return M
