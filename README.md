@@ -82,7 +82,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `ic`    | close issue                    |
 | `io`    | reopen issue                   |
 | `il`    | list open issues on same repo  |
-| `pc`    | checkout pull request          |
+| `co`    | checkout pull request          |
 | `la`    | add label                      |
 | `ld`    | delete label                   |
 | `aa`    | add assignee                   |
