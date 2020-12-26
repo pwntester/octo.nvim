@@ -5,14 +5,20 @@ local utils = require("telescope.utils")
 local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
+local entry_display = require("telescope.pickers.entry_display")
+local putils = require("telescope.previewers.utils")
+local from_entry = require("telescope.from_entry")
 local gh = require "octo.gh"
 local util = require("octo.util")
-
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
 local api = vim.api
 local bat_options = {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"}
+local json = {
+  parse = vim.fn.json_decode,
+  stringify = vim.fn.json_encode
+}
 
 -- most of this code was taken from https://github.com/nvim-telescope/telescope-github.nvim/blob/master/lua/telescope/_extensions/ghcli.lua
 -- thanks @windwp!
@@ -264,8 +270,134 @@ local function pull_requests(repo, opts)
   ):find()
 end
 
+--
+-- COMMITS
+--
+
+function gen_from_git_commits()
+  local displayer =
+    entry_display.create {
+    separator = " ",
+    items = {
+      {width = 8},
+      {remaining = true}
+    }
+  }
+
+  local make_display = function(entry)
+    return displayer {
+      {entry.value:sub(1, 7), "TelescopeResultsNumber"},
+      entry.msg
+    }
+  end
+
+  return function(entry)
+    if not entry then
+      return nil
+    end
+
+    return {
+      value = entry.sha,
+      ordinal = entry.sha .. " " .. entry.commit.message,
+      msg = entry.commit.message,
+      display = make_display,
+      author = format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
+      date = entry.commit.author.date
+    }
+  end
+end
+
+local commit_previewer =
+  defaulter(
+  function(opts)
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return from_entry.path(entry, true)
+      end,
+      define_preview = function(self, entry, status)
+        putils.with_preview_window(
+          status,
+          nil,
+          function()
+            local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
+            local diff =
+              gh.run(
+              {
+                args = {"api", url},
+                mode = "sync",
+                headers = {"Accept: application/vnd.github.v3.diff"}
+              }
+            )
+            local lines = {}
+            vim.list_extend(lines, {format("commit %s", entry.value)})
+            vim.list_extend(lines, {format("Author: %s", entry.author)})
+            vim.list_extend(lines, {format("Date: %s", entry.date)})
+            vim.list_extend(lines, {""})
+            vim.list_extend(lines, vim.split(entry.msg, "\n"))
+            vim.list_extend(lines, {""})
+            vim.list_extend(lines, vim.split(diff, "\n"))
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+            vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          end
+        )
+      end
+    }
+  end,
+  {}
+)
+
+local function commits()
+  local bufname = api.nvim_buf_get_name(0)
+  if not vim.startswith(bufname, "octo://") then
+    api.nvim_err_writeln("Not in octo buffer")
+    return
+  end
+  local repo = api.nvim_buf_get_var(0, "repo")
+  local number = api.nvim_buf_get_var(0, "number")
+  if not repo or not number then
+    api.nvim_err_writeln("Cannot find repo or number")
+    return
+  end
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    local url = format("repos/%s/pulls/%d/commits", repo, number)
+    gh.run(
+      {
+        args = {"api", url},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local results = json.parse(output)
+            pickers.new(
+              {},
+              {
+                prompt_title = "PR Commits",
+                finder = finders.new_table {
+                  results = results,
+                  entry_maker = gen_from_git_commits()
+                },
+                sorter = conf.file_sorter({}),
+                previewer = commit_previewer.new({repo = repo})
+                -- attach_mappings = function(_, map)
+                --   map("i", "<CR>", open_issue(repo))
+                --   map("i", "<c-t>", open_in_browser("issue", repo))
+                --   return true
+                -- end
+              }
+            ):find()
+          end
+        end
+      }
+    )
+  else
+    api.nvim_err_writeln("Not in PR buffer")
+  end
+end
+
 return {
   issues = issues,
   pull_requests = pull_requests,
-  gists = gists
+  gists = gists,
+  commits = commits
 }
