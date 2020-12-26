@@ -162,7 +162,7 @@ end
 
 function M.format_date(to_format)
   local time_bias = date():getbias() * -1
-  return date(to_format):addminutes(time_bias):fmt("%Y %b %d %I:%M %p %Z")
+  return date(to_format):addminutes(time_bias):fmt(vim.g.octo_date_format)
 end
 
 return M
