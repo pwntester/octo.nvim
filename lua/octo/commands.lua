@@ -33,12 +33,18 @@ local commands = {
     end
   },
   pr = {
+    edit = function(...)
+      M.get_issue(...)
+    end,
     list = function(repo, ...)
       local rep, opts = M.process_varargs(repo, ...)
       menu.pull_requests(rep, opts)
     end,
     checkout = function()
       M.checkout_pr()
+    end,
+    commits = function()
+      menu.commits()
     end
   },
   gist = {
@@ -394,7 +400,7 @@ function M.checkout_pr()
     {
       args = {"pr", "checkout", number, "-R", repo},
       cb = function(output, stderr)
-        if stderr then
+        if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         else
           print(output)

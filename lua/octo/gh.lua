@@ -12,6 +12,13 @@ local function run(opts)
     table.insert(opts.args, "Accept: application/vnd.github.squirrel-girl-preview+json")
   end
 
+  if opts.headers then
+    for _, header in ipairs(opts.headers) do
+      table.insert(opts.args, "-H")
+      table.insert(opts.args, header)
+    end
+  end
+
   local job =
     Job:new(
     {
@@ -35,8 +42,7 @@ local function run(opts)
   )
   if mode == "sync" then
     job:sync()
-    --print(vim.inspect(job:result()))
-    return table.concat(job:result())
+    return table.concat(job:result(), "\n")
   else
     job:start()
   end
