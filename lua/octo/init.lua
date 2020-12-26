@@ -443,10 +443,30 @@ function M.create_issue_buffer(issue, repo, create_buffer)
 
   -- local mappings
   local mapping_opts = {script = true, silent = true}
-  api.nvim_buf_set_keymap(bufnr, "n", "gi", [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]], mapping_opts)
 
-  api.nvim_buf_set_keymap(bufnr, "n", "ca", [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "cd", [[<cmd>lua require'octo.commands'.delete_comment()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "gi",
+    [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
+    mapping_opts
+  )
+
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "ca",
+    [[<cmd>lua require'octo.commands'.add_comment()<CR>]],
+    mapping_opts
+  )
+
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "cd",
+    [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
+    mapping_opts
+  )
 
   api.nvim_buf_set_keymap(
     bufnr,
@@ -462,7 +482,21 @@ function M.create_issue_buffer(issue, repo, create_buffer)
     [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
     mapping_opts
   )
-  api.nvim_buf_set_keymap(bufnr, "n", "il", format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo), mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "il",
+    format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
+    mapping_opts
+  )
+
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "pc",
+    [[<cmd>lua require'octo.menu'.checkout_pr()<CR>]],
+    mapping_opts
+  )
 
   api.nvim_buf_set_keymap(
     bufnr,
