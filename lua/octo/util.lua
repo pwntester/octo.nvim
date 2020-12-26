@@ -35,6 +35,22 @@ function M.get_remote_name(remote)
   return format("%s/%s", owner, repo)
 end
 
+function M.in_pr_branch()
+  local bufname = api.nvim_buf_get_name(0)
+  if not vim.startswith(bufname, "octo://") then
+    return
+  end
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    local cmd = "git branch --show-current"
+    local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+    local local_repo = M.get_remote_name()
+    print("pr head", pr.head.ref, pr.head.repo.full_name)
+    print("pr base", pr.base.ref, pr.base.repo.full_name)
+    print("local", local_branch, local_repo)
+  end
+end
+
 function M.get_extmark_region(bufnr, mark)
   -- extmarks are placed on
   -- start line - 1 (except for line 0)
