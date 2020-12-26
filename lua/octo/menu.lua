@@ -329,7 +329,6 @@ local commit_previewer =
               }
             )
             local lines = {}
-            print(vim.inspect(entry))
             vim.list_extend(lines, {format("commit %s", entry.value)})
             vim.list_extend(lines, {format("Author: %s", entry.author)})
             vim.list_extend(lines, {format("Date: %s", entry.date)})
