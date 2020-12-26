@@ -173,7 +173,7 @@ function M.write_details(bufnr, issue, line)
   -- created_at
   local created_at_vt = {
     {"Created at: ", "OctoNvimDetailsLabel"},
-    {issue.created_at, "OctoNvimDetailsValue"}
+    {util.format_date(issue.created_at), "OctoNvimDetailsValue"}
   }
   table.insert(details, created_at_vt)
 
@@ -181,14 +181,14 @@ function M.write_details(bufnr, issue, line)
     -- closed_at
     local closed_at_vt = {
       {"Closed at: ", "OctoNvimDetailsLabel"},
-      {issue.closed_at, "OctoNvimDetailsValue"}
+      {util.format_date(issue.closed_at), "OctoNvimDetailsValue"}
     }
     table.insert(details, closed_at_vt)
   else
     -- updated_at
     local updated_at_vt = {
       {"Updated at: ", "OctoNvimDetailsLabel"},
-      {issue.updated_at, "OctoNvimDetailsValue"}
+      {util.format_date(issue.updated_at), "OctoNvimDetailsValue"}
     }
     table.insert(details, updated_at_vt)
   end
@@ -343,7 +343,7 @@ function M.write_comment(bufnr, comment, line)
   line = line or api.nvim_buf_line_count(bufnr) + 1
   write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
   local header_vt = {
-    {format("On %s ", comment.created_at), "OctoNvimCommentHeading"},
+    {format("On %s ", util.format_date(comment.created_at)), "OctoNvimCommentHeading"},
     {comment.user.login, "OctoNvimCommentUser"},
     {" commented", "OctoNvimCommentHeading"}
   }

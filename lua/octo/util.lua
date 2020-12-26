@@ -1,4 +1,5 @@
 local constants = require("octo.constants")
+local date = require("octo.date")
 local format = string.format
 local api = vim.api
 
@@ -157,6 +158,11 @@ function M.update_reactions_at_cursor(bufnr, cursor, reactions, reaction_line)
   -- cursor not located at any comment, so updating issue
   api.nvim_buf_set_var(bufnr, "reactions", reactions)
   api.nvim_buf_set_var(bufnr, "reaction_line", reaction_line)
+end
+
+function M.format_date(date_string)
+  local time_bias = date():getbias() * -1
+  return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
 end
 
 return M
