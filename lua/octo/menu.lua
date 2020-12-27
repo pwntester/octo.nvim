@@ -380,22 +380,24 @@ local function commits()
                 sorter = conf.file_sorter({}),
                 previewer = commit_previewer.new({repo = repo}),
                 attach_mappings = function(prompt_bufnr)
-                  actions.goto_file_selection_edit:replace(function()
-                    local picker = actions.get_current_picker(prompt_bufnr)
-                    local preview_bufnr = picker.previewer.state.bufnr
-                    local lines = api.nvim_buf_get_lines(preview_bufnr, 0, -1, false)
-                    actions.close(prompt_bufnr)
-                    local new_bufnr  = api.nvim_create_buf(true, true)
-                    api.nvim_buf_set_lines(new_bufnr, 0, -1, false, lines)
-                    api.nvim_set_current_buf(new_bufnr)
-                    api.nvim_buf_set_option(new_bufnr, "filetype", "diff")
-                    api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
-                    api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
-                    api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
-                    vim.cmd[[stopinsert]]
-                  end)
+                  actions.goto_file_selection_edit:replace(
+                    function()
+                      local picker = actions.get_current_picker(prompt_bufnr)
+                      local preview_bufnr = picker.previewer.state.bufnr
+                      local lines = api.nvim_buf_get_lines(preview_bufnr, 0, -1, false)
+                      actions.close(prompt_bufnr)
+                      local new_bufnr = api.nvim_create_buf(true, true)
+                      api.nvim_buf_set_lines(new_bufnr, 0, -1, false, lines)
+                      api.nvim_set_current_buf(new_bufnr)
+                      api.nvim_buf_set_option(new_bufnr, "filetype", "diff")
+                      api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
+                      api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
+                      api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+                      vim.cmd [[stopinsert]]
+                    end
+                  )
                   return true
-                end,
+                end
               }
             ):find()
           end
