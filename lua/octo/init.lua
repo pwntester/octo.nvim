@@ -296,9 +296,9 @@ function M.write_details(bufnr, issue, line)
 
     -- from/into branches
     local branches_vt = {
-      {"from: ", "OctoNvimDetailsLabel"},
+      {"From: ", "OctoNvimDetailsLabel"},
       {pr.head.label, "OctoNvimDetailsValue"},
-      {" into: ", "OctoNvimDetailsLabel"},
+      {" Into: ", "OctoNvimDetailsLabel"},
       {pr.base.label, "OctoNvimDetailsValue"}
     }
     --print(pr.head.label, pr.head.ref, pr.head.repo.full_name)
@@ -310,6 +310,11 @@ function M.write_details(bufnr, issue, line)
     local additions = math.floor(0.5 + pr.additions / unit)
     local deletions = math.floor(0.5 + pr.deletions / unit)
     local changes_vt = {
+      {"Commits: ", "OctoNvimDetailsLabel"},
+      {tostring(pr.commits), "OctoNvimDetailsValue"},
+      {" Changed files: ", "OctoNvimDetailsLabel"},
+      {tostring(pr.changed_files), "OctoNvimDetailsValue"},
+      {" (", "OctoNvimDetailsLabel"},
       {format("+%d ", pr.additions), "DiffAdd"},
       {format("-%d ", pr.deletions), "DiffDelete"}
     }
@@ -320,6 +325,7 @@ function M.write_details(bufnr, issue, line)
       table.insert(changes_vt, {string.rep("■", deletions), "DiffDelete"})
     end
     table.insert(changes_vt, {"■", "DiffChange"})
+    table.insert(changes_vt, {")", "OctoNvimDetailsLabel"})
     table.insert(details, changes_vt)
   end
 
