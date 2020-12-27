@@ -301,8 +301,6 @@ function M.write_details(bufnr, issue, line)
       {" Into: ", "OctoNvimDetailsLabel"},
       {pr.base.label, "OctoNvimDetailsValue"}
     }
-    --print(pr.head.label, pr.head.ref, pr.head.repo.full_name)
-    --print(pr.base.label, pr.base.ref, pr.base.repo.full_name)
     table.insert(details, branches_vt)
 
     -- changes
