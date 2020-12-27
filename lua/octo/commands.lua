@@ -45,6 +45,9 @@ local commands = {
     end,
     commits = function()
       menu.commits()
+    end,
+    files = function()
+      menu.changed_files()
     end
   },
   gist = {

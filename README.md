@@ -41,6 +41,7 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | edit | [repo] <number> |
 | | checkout | |
 | | commits | |
+| | files | |
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-t>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |
@@ -78,28 +79,29 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 | Mapping | Description                    |
 | ---     | ---                            |
-| `gi`    | navigate to a local repo issue |
-| `ca`    | add comment                    |
-| `cd`    | delete comment                 |
-| `ic`    | close issue                    |
-| `io`    | reopen issue                   |
-| `il`    | list open issues on same repo  |
-| `co`    | checkout pull request          |
-| `cm`    | list pull request commits      |
-| `la`    | add label                      |
-| `ld`    | delete label                   |
-| `aa`    | add assignee                   |
-| `ad`    | delete assignee                |
-| `va`    | request reViewer               |
-| `vd`    | delete reViewer                |
-| `rh`    | add :heart: reaction           |
-| `rp`    | add :hooray: reaction          |
-| `re`    | add :eyes: reaction            |
-| `rl`    | add :laugh: reaction           |
-| `rc`    | add :confused: reaction        |
-| `r+`    | add :+1: reaction              |
-| `r-`    | add :-1: reaction              |
-| `rr`    | add :rocket: reaction          |
+| `<space>gi`    | navigate to a local repo issue |
+| `<space>ca`    | add comment                    |
+| `<space>cd`    | delete comment                 |
+| `<space>ic`    | close issue                    |
+| `<space>io`    | reopen issue                   |
+| `<space>il`    | list open issues on same repo  |
+| `<space>co`    | checkout pull request          |
+| `<space>cm`    | list pull request commits      |
+| `<space>cf`    | list pull request files        |
+| `<space>la`    | add label                      |
+| `<space>ld`    | delete label                   |
+| `<space>aa`    | add assignee                   |
+| `<space>ad`    | delete assignee                |
+| `<space>va`    | request reViewer               |
+| `<space>vd`    | delete reViewer                |
+| `<space>rh`    | add :heart: reaction           |
+| `<space>rp`    | add :hooray: reaction          |
+| `<space>re`    | add :eyes: reaction            |
+| `<space>rl`    | add :laugh: reaction           |
+| `<space>rc`    | add :confused: reaction        |
+| `<space>r+`    | add :+1: reaction              |
+| `<space>r-`    | add :-1: reaction              |
+| `<space>rr`    | add :rocket: reaction          |
 
 ## Highlight groups
 

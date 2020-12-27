@@ -7,7 +7,6 @@ local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
 local entry_display = require("telescope.pickers.entry_display")
 local putils = require("telescope.previewers.utils")
-local from_entry = require("telescope.from_entry")
 local gh = require "octo.gh"
 local util = require("octo.util")
 local format = string.format
@@ -274,7 +273,7 @@ end
 -- COMMITS
 --
 
-function gen_from_git_commits()
+local function gen_from_git_commits()
   local displayer =
     entry_display.create {
     separator = " ",
@@ -287,7 +286,7 @@ function gen_from_git_commits()
   local make_display = function(entry)
     return displayer {
       {entry.value:sub(1, 7), "TelescopeResultsNumber"},
-      entry.msg
+      vim.split(entry.msg, "\n")[1]
     }
   end
 
@@ -311,33 +310,38 @@ local commit_previewer =
   defaulter(
   function(opts)
     return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
       define_preview = function(self, entry, status)
         putils.with_preview_window(
           status,
           nil,
           function()
-            local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
-            local diff =
-              gh.run(
-              {
-                args = {"api", url},
-                mode = "sync",
-                headers = {"Accept: application/vnd.github.v3.diff"}
-              }
-            )
-            local lines = {}
-            vim.list_extend(lines, {format("Commit: %s", entry.value)})
-            vim.list_extend(lines, {format("Author: %s", entry.author)})
-            vim.list_extend(lines, {format("Date: %s", entry.date)})
-            vim.list_extend(lines, {""})
-            vim.list_extend(lines, vim.split(entry.msg, "\n"))
-            vim.list_extend(lines, {""})
-            vim.list_extend(lines, vim.split(diff, "\n"))
-            api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
-            api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
-            api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
-            api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
-            api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+            if self.state.bufname ~= entry.value then
+              local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
+              local diff =
+                gh.run(
+                {
+                  args = {"api", url},
+                  mode = "sync",
+                  headers = {"Accept: application/vnd.github.v3.diff"}
+                }
+              )
+              local lines = {}
+              vim.list_extend(lines, {format("Commit: %s", entry.value)})
+              vim.list_extend(lines, {format("Author: %s", entry.author)})
+              vim.list_extend(lines, {format("Date: %s", entry.date)})
+              vim.list_extend(lines, {""})
+              vim.list_extend(lines, vim.split(entry.msg, "\n"))
+              vim.list_extend(lines, {""})
+              vim.list_extend(lines, vim.split(diff, "\n"))
+              api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+              api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+              api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
+              api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
+              api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+            end
           end
         )
       end
@@ -409,9 +413,143 @@ local function commits()
   end
 end
 
+--
+-- FILES
+--
+
+local function gen_from_git_changed_files()
+  local displayer =
+    entry_display.create {
+    separator = " ",
+    items = {
+      {width = 8},
+      {width = 40},
+      {width = 8},
+      {remaining = true}
+    }
+  }
+
+  local make_display = function(entry)
+    return displayer {
+      {entry.value:sub(1, 7), "TelescopeResultsNumber"},
+      vim.split(entry.msg, "\n")[1],
+      entry.change.status,
+      format("+%d -%d", entry.change.additions, entry.change.deletions)
+    }
+  end
+
+  return function(entry)
+    if not entry then
+      return nil
+    end
+
+    return {
+      value = entry.sha,
+      ordinal = entry.sha .. " " .. entry.filename,
+      msg = entry.filename,
+      display = make_display,
+      change = entry
+    }
+  end
+end
+
+local changed_files_previewer =
+  defaulter(
+  function(opts)
+    return previewers.new_buffer_previewer {
+      define_preview = function(self, entry, status)
+        putils.with_preview_window(
+          status,
+          nil,
+          function()
+            if self.state.bufname ~= entry.value then
+              -- local url = format("/repos/%s/pulls/%s", opts.repo, opts.number)
+              -- local diff =
+              --   gh.run(
+              --   {
+              --     args = {"api", url},
+              --     mode = "sync",
+              --     headers = {"Accept: application/vnd.github.v3.diff"}
+              --   }
+              -- )
+              local diff = entry.change.patch
+              local lines = {}
+              vim.list_extend(lines, vim.split(diff, "\n"))
+              api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+              api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+            end
+          end
+        )
+      end
+    }
+  end,
+  {}
+)
+
+local function changed_files()
+  local bufname = api.nvim_buf_get_name(0)
+  if not vim.startswith(bufname, "octo://") then
+    api.nvim_err_writeln("Not in octo buffer")
+    return
+  end
+  local repo = api.nvim_buf_get_var(0, "repo")
+  local number = api.nvim_buf_get_var(0, "number")
+  if not repo or not number then
+    api.nvim_err_writeln("Cannot find repo or number")
+    return
+  end
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    local url = format("repos/%s/pulls/%d/files", repo, number)
+    gh.run(
+      {
+        args = {"api", url},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local results = json.parse(output)
+            pickers.new(
+              {},
+              {
+                prompt_title = "PR Files Changed",
+                finder = finders.new_table {
+                  results = results,
+                  entry_maker = gen_from_git_changed_files()
+                },
+                sorter = conf.file_sorter({}),
+                previewer = changed_files_previewer.new({repo = repo, number = number}),
+                attach_mappings = function(prompt_bufnr)
+                  actions.goto_file_selection_edit:replace(
+                    function()
+                      local picker = actions.get_current_picker(prompt_bufnr)
+                      local preview_bufnr = picker.previewer.state.bufnr
+                      local lines = api.nvim_buf_get_lines(preview_bufnr, 0, -1, false)
+                      actions.close(prompt_bufnr)
+                      local new_bufnr = api.nvim_create_buf(true, true)
+                      api.nvim_buf_set_lines(new_bufnr, 0, -1, false, lines)
+                      api.nvim_set_current_buf(new_bufnr)
+                      api.nvim_buf_set_option(new_bufnr, "filetype", "diff")
+                      vim.cmd [[stopinsert]]
+                    end
+                  )
+                  return true
+                end
+              }
+            ):find()
+          end
+        end
+      }
+    )
+  else
+    api.nvim_err_writeln("Not in PR buffer")
+  end
+end
+
 return {
   issues = issues,
   pull_requests = pull_requests,
   gists = gists,
-  commits = commits
+  commits = commits,
+  changed_files = changed_files
 }
