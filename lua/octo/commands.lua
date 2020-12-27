@@ -452,11 +452,13 @@ function M.review_pr()
             title = 'Changed Files';
             items = items;
           })
-
+          vim.cmd[[copen]]
         end
       end
     }
   )
+  -- Gdiffsplit master...review1
+  -- Gdiff master...review1
 end
 
 function M.reaction_action(action, reaction)
