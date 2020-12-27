@@ -48,6 +48,9 @@ local commands = {
     end,
     files = function()
       menu.changed_files()
+    end,
+    review = function()
+      M.review_pr()
     end
   },
   gist = {
@@ -408,6 +411,48 @@ function M.checkout_pr()
         else
           print(output)
           print(format("Checked out PR %d", number))
+        end
+      end
+    }
+  )
+end
+
+function M.review_pr()
+  local bufname = api.nvim_buf_get_name(0)
+  if not vim.startswith(bufname, "octo://") then
+    return
+  end
+  local repo = api.nvim_buf_get_var(0, "repo")
+  local number = api.nvim_buf_get_var(0, "number")
+
+  -- TODO: make sure we are in the right repo and in the pr branch
+
+  -- TODO: get list of changed files
+  local url = format("repos/%s/pulls/%d/files", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          local items = {}
+          for _, result in ipairs(results) do
+            -- TODO: get lnum and col from diff
+            local item = {
+              filename = result.filename,
+              lnum = 1,
+              col = 1,
+              text = format("%s +%d -%d", result.status, result.additions, result.deletions),
+            }
+            table.insert(items, item)
+          end
+          vim.fn.setqflist({}, ' ', {
+            title = 'Changed Files';
+            items = items;
+          })
+
         end
       end
     }

@@ -457,7 +457,7 @@ end
 
 local changed_files_previewer =
   defaulter(
-  function(opts)
+  function()
     return previewers.new_buffer_previewer {
       define_preview = function(self, entry, status)
         putils.with_preview_window(
@@ -465,15 +465,6 @@ local changed_files_previewer =
           nil,
           function()
             if self.state.bufname ~= entry.value then
-              -- local url = format("/repos/%s/pulls/%s", opts.repo, opts.number)
-              -- local diff =
-              --   gh.run(
-              --   {
-              --     args = {"api", url},
-              --     mode = "sync",
-              --     headers = {"Accept: application/vnd.github.v3.diff"}
-              --   }
-              -- )
               local diff = entry.change.patch
               local lines = {}
               vim.list_extend(lines, vim.split(diff, "\n"))
