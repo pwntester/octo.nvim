@@ -311,9 +311,6 @@ local commit_previewer =
   defaulter(
   function(opts)
     return previewers.new_buffer_previewer {
-      get_buffer_by_name = function(_, entry)
-        return from_entry.path(entry, true)
-      end,
       define_preview = function(self, entry, status)
         putils.with_preview_window(
           status,
@@ -329,15 +326,18 @@ local commit_previewer =
               }
             )
             local lines = {}
-            vim.list_extend(lines, {format("commit %s", entry.value)})
+            vim.list_extend(lines, {format("Commit: %s", entry.value)})
             vim.list_extend(lines, {format("Author: %s", entry.author)})
             vim.list_extend(lines, {format("Date: %s", entry.date)})
             vim.list_extend(lines, {""})
             vim.list_extend(lines, vim.split(entry.msg, "\n"))
             vim.list_extend(lines, {""})
             vim.list_extend(lines, vim.split(diff, "\n"))
-            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
-            vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+            api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+            api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+            api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
+            api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
+            api.nvim_buf_add_highlight(0, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
           end
         )
       end
@@ -378,12 +378,24 @@ local function commits()
                   entry_maker = gen_from_git_commits()
                 },
                 sorter = conf.file_sorter({}),
-                previewer = commit_previewer.new({repo = repo})
-                -- attach_mappings = function(_, map)
-                --   map("i", "<CR>", open_issue(repo))
-                --   map("i", "<c-t>", open_in_browser("issue", repo))
-                --   return true
-                -- end
+                previewer = commit_previewer.new({repo = repo}),
+                attach_mappings = function(prompt_bufnr)
+                  actions.goto_file_selection_edit:replace(function()
+                    local picker = actions.get_current_picker(prompt_bufnr)
+                    local preview_bufnr = picker.previewer.state.bufnr
+                    local lines = api.nvim_buf_get_lines(preview_bufnr, 0, -1, false)
+                    actions.close(prompt_bufnr)
+                    local new_bufnr  = api.nvim_create_buf(true, true)
+                    api.nvim_buf_set_lines(new_bufnr, 0, -1, false, lines)
+                    api.nvim_set_current_buf(new_bufnr)
+                    api.nvim_buf_set_option(new_bufnr, "filetype", "diff")
+                    api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
+                    api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
+                    api.nvim_buf_add_highlight(new_bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+                    vim.cmd[[stopinsert]]
+                  end)
+                  return true
+                end,
               }
             ):find()
           end
