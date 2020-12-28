@@ -17,7 +17,7 @@ Plug 'pwntester/octo.nvim'
 ## Requirements
 
 - Install [GitHub CLI](https://cli.github.com/)
-- Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for using the `ListXXX` commands which enables to fuzzy pick issues from a dropdown menu.
+- Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
 ```
 Plug 'nvim-lua/popup.nvim'
