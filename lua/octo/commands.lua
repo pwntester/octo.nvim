@@ -6,8 +6,7 @@ local constants = require("octo.constants")
 local api = vim.api
 local format = string.format
 local json = {
-  parse = vim.fn.json_decode,
-  stringify = vim.fn.json_encode
+  parse = vim.fn.json_decode
 }
 local Job = require("plenary.job")
 
@@ -54,6 +53,9 @@ local commands = {
     end,
     merge = function(...)
       M.merge_pr(...)
+    end,
+    ready = function()
+      M.pr_ready_for_review()
     end
   },
   review = {
@@ -414,35 +416,63 @@ function M.checkout_pr()
   end
 end
 
+function M.pr_ready_for_review()
+  local repo, number = util.get_repo_and_number()
+  if not repo then
+    return
+  end
+  local bufnr = api.nvim_get_current_buf()
+  local status, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
+  if status and pr then
+    gh.run(
+      {
+        args = {"pr", "ready", tostring(number)},
+        cb = function(output, stderr)
+          print(output, stderr)
+          octo.write_state(bufnr)
+        end
+      }
+    )
+  end
+end
+
 function M.merge_pr(...)
-  local args = {"pr", "merge"}
+  local repo, number = util.get_repo_and_number()
+  if not repo then
+    return
+  end
+  local args = {"pr", "merge", tostring(number)}
   local params = table.pack(...)
   for i = 1, params.n do
     if params[i] == "delete" then
       table.insert(args, "--delete-branch")
-    elseif params[i] == "commit" then
-      table.insert(args, "--merge")
-    elseif params[i] == "squash" then
-      table.insert(args, "--squash")
-    elseif params[i] == "rebase" then
-      table.insert(args, "--rebase")
     end
   end
-  local repo, _ = util.get_repo_and_number()
-  if not repo then
-    return
+  local has_flag = false
+  for i = 1, params.n do
+    if params[i] == "commit" then
+      table.insert(args, "--merge")
+      has_flag = true
+    elseif params[i] == "squash" then
+      table.insert(args, "--squash")
+      has_flag = true
+    elseif params[i] == "rebase" then
+      table.insert(args, "--rebase")
+      has_flag = true
+    end
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if not has_flag then
+    table.insert(args, "--merge")
+  end
+  local bufnr = api.nvim_get_current_buf()
+  local status, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
   if status and pr then
     gh.run(
       {
         args = args,
         cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            print(output)
-          end
+          print(output, stderr)
+          octo.write_state(bufnr)
         end
       }
     )
@@ -524,9 +554,9 @@ function M.review_pr()
         end
       }
     )
-  -- Gdiffsplit master...review1
-  -- Gdiff master...review1
-  print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
+    -- Gdiffsplit master...review1
+    -- Gdiff master...review1
+    print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
   end
 end
 

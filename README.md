@@ -44,6 +44,7 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | files | |
 | | diff | |
 | | merge | [commit|rebase|squash] [delete] |
+| | ready| |
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-t>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |
@@ -79,33 +80,34 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 ## In-issue mappings
 
-| Mapping | Description                    |
-| ---     | ---                            |
-| `<space>gi`    | navigate to a local repo issue |
-| `<space>ca`    | add comment                    |
-| `<space>cd`    | delete comment                 |
-| `<space>ic`    | close issue                    |
-| `<space>io`    | reopen issue                   |
-| `<space>il`    | list open issues on same repo  |
-| `<space>po`    | checkout pull request          |
-| `<space>pc`    | list pull request commits      |
-| `<space>pf`    | list pull request files        |
-| `<space>pd`    | show pull request diff         |
-| `<space>pm`    | merge pull request             |
-| `<space>la`    | add label                      |
-| `<space>ld`    | delete label                   |
-| `<space>aa`    | add assignee                   |
-| `<space>ad`    | delete assignee                |
-| `<space>va`    | request reViewer               |
-| `<space>vd`    | delete reViewer                |
-| `<space>rh`    | add :heart: reaction           |
-| `<space>rp`    | add :hooray: reaction          |
-| `<space>re`    | add :eyes: reaction            |
-| `<space>rl`    | add :laugh: reaction           |
-| `<space>rc`    | add :confused: reaction        |
-| `<space>r+`    | add :+1: reaction              |
-| `<space>r-`    | add :-1: reaction              |
-| `<space>rr`    | add :rocket: reaction          |
+| Mapping     | Description                           |
+| ---         | ---                                   |
+| `<space>gi` | navigate to a local repo issue        |
+| `<space>ca` | add comment                           |
+| `<space>cd` | delete comment                        |
+| `<space>ic` | close issue                           |
+| `<space>io` | reopen issue                          |
+| `<space>il` | list open issues on same repo         |
+| `<space>po` | checkout pull request                 |
+| `<space>pc` | list pull request commits             |
+| `<space>pf` | list pull request files               |
+| `<space>pd` | show pull request diff                |
+| `<space>pr` | mark pull request as ready for review |
+| `<space>pm` | merge pull request                    |
+| `<space>la` | add label                             |
+| `<space>ld` | delete label                          |
+| `<space>aa` | add assignee                          |
+| `<space>ad` | delete assignee                       |
+| `<space>va` | request reViewer                      |
+| `<space>vd` | delete reViewer                       |
+| `<space>rh` | add :heart: reaction                  |
+| `<space>rp` | add :hooray: reaction                 |
+| `<space>re` | add :eyes: reaction                   |
+| `<space>rl` | add :laugh: reaction                  |
+| `<space>rc` | add :confused: reaction               |
+| `<space>r+` | add :+1: reaction                     |
+| `<space>r-` | add :-1: reaction                     |
+| `<space>rr` | add :rocket: reaction                 |
 
 ## Highlight groups
 
