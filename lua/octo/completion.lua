@@ -75,12 +75,15 @@ function M.issue_complete(findstart, base)
     local entries = {}
     if vim.startswith(base, "@") then
       local users = api.nvim_buf_get_var(0, "taggable_users") or {}
-      for _, user in pairs(users) do table.insert(entries, {word = format("@%s", user), abbr = user}) end
-    else if vim.startswith(base, "#") then
+      for _, user in pairs(users) do
+        table.insert(entries, {word = format("@%s", user), abbr = user})
+      end
+    else
+      if vim.startswith(base, "#") then
         local repo = api.nvim_buf_get_var(0, "repo")
         local issues = get_repo_issues(repo)
         for _, i in ipairs(issues) do
-          if vim.startswith('#'..tostring(i.number), base) then
+          if vim.startswith("#" .. tostring(i.number), base) then
             table.insert(
               entries,
               {
@@ -88,7 +91,7 @@ function M.issue_complete(findstart, base)
                 word = format("#%d", i.number),
                 menu = i.title
               }
-              )
+            )
           end
         end
       end

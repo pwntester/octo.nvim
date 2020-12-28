@@ -419,7 +419,9 @@ end
 local function async_fetch_taggable_users(bufnr, repo)
   local users = api.nvim_buf_get_var(bufnr, "taggable_users") or {}
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
-  for _, c in pairs(comments_metadata) do table.insert(users, c.author) end
+  for _, c in pairs(comments_metadata) do
+    table.insert(users, c.author)
+  end
   api.nvim_buf_set_var(bufnr, "taggable_users", users)
   gh.run(
     {
@@ -432,7 +434,7 @@ local function async_fetch_taggable_users(bufnr, repo)
         api.nvim_buf_set_var(bufnr, "taggable_users", users)
       end
     }
-    )
+  )
 end
 
 function M.create_issue_buffer(issue, repo, create_buffer)
@@ -479,11 +481,23 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
 
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>gi", [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<space>gi",
+    [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
+    mapping_opts
+  )
 
   api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
 
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>cd", [[<cmd>lua require'octo.commands'.delete_comment()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<space>cd",
+    [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
+    mapping_opts
+  )
 
   api.nvim_buf_set_keymap(
     bufnr,
@@ -499,7 +513,13 @@ function M.create_issue_buffer(issue, repo, create_buffer)
     [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
     mapping_opts
   )
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>il", format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo), mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<space>il",
+    format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
+    mapping_opts
+  )
 
   api.nvim_buf_set_keymap(bufnr, "n", "<space>co", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
 
