@@ -54,6 +54,9 @@ local commands = {
     end,
     merge = function(...)
       M.merge_pr(...)
+    end,
+    checks = function()
+      M.pr_checks()
     end
   },
   review = {
@@ -407,6 +410,28 @@ function M.checkout_pr()
           else
             print(output)
             print(format("Checked out PR %d", number))
+          end
+        end
+      }
+    )
+  end
+end
+
+function M.pr_checks()
+  local repo, number = util.get_repo_and_number()
+  if not repo then
+    return
+  end
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    gh.run(
+      {
+        args = {"pr", "checks", tostring(number)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            print(output)
           end
         end
       }
