@@ -43,7 +43,7 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | commits | |
 | | files | |
 | | diff | |
-| | merge | [commit|rebase|squash] [delete] |
+| | merge | [commit\|rebase\|squash] [delete] |
 | | ready| |
 | | checks | |
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-t>`: Opens Gist in web browser |
