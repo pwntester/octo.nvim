@@ -49,7 +49,7 @@ local function get_repo_issues(repo, params)
 end
 
 function M.issue_complete(findstart, base)
-  -- the complete-functions
+  -- :help complete-functions
   if findstart == 1 then
     -- findstart
     local line = api.nvim_get_current_line()
