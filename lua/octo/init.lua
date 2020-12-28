@@ -372,6 +372,7 @@ function M.write_comment(bufnr, comment, line)
   table.insert(
     comments_metadata,
     {
+      author = comment.user.login,
       id = comment.id,
       dirty = false,
       saved_body = comment_body,
@@ -406,6 +407,32 @@ function M.load_issue()
       end
     }
   )
+end
+
+-- This function accumulates all the taggable users into a single list that
+-- gets set as a buffer variable `taggable_users`. If this list of users
+-- is needed syncronously, this function will need to be refactored.
+-- The list of taggable users should contain:
+--   - The PR author
+--   - The authors of all the existing comments
+--   - The contributors of the repo
+local function async_fetch_taggable_users(bufnr, repo, issue_author)
+  local users = {issue_author}
+  local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
+  for _, c in pairs(comments_metadata) do table.insert(users, c.author) end
+  api.nvim_buf_set_var(bufnr, "taggable_users", users)
+  gh.run(
+    {
+      args = {"api", format("repos/%s/contributors", repo)},
+      cb = function(response)
+        local resp = json.parse(response)
+        for _, contributor in ipairs(resp) do
+          table.insert(users, contributor.login)
+        end
+        api.nvim_buf_set_var(bufnr, "taggable_users", users)
+      end
+    }
+    )
 end
 
 function M.create_issue_buffer(issue, repo, create_buffer)
@@ -444,9 +471,13 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   api.nvim_buf_set_var(bufnr, "labels", issue.labels)
   api.nvim_buf_set_var(bufnr, "assignees", issue.assignees)
   api.nvim_buf_set_var(bufnr, "milestone", issue.milestone)
+  api.nvim_buf_set_var(bufnr, "taggable_users", {issue.user.login})
 
   -- local mappings
-  local mapping_opts = {script = true, silent = true}
+  local mapping_opts = {script = true, silent = true, noremap = true}
+
+  api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
 
   api.nvim_buf_set_keymap(bufnr, "n", "<space>gi", [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]], mapping_opts)
 
@@ -622,6 +653,8 @@ function M.create_issue_buffer(issue, repo, create_buffer)
     end,
     200
   )
+
+  async_fetch_taggable_users(bufnr, repo, issue.user.login)
 
   -- show signs
   signs.render_signcolumn(bufnr)
