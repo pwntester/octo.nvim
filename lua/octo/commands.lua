@@ -51,6 +51,9 @@ local commands = {
     end,
     diff = function()
       M.show_pr_diff()
+    end,
+    merge = function(...)
+      M.merge_pr(...)
     end
   },
   review = {
@@ -404,6 +407,41 @@ function M.checkout_pr()
           else
             print(output)
             print(format("Checked out PR %d", number))
+          end
+        end
+      }
+    )
+  end
+end
+
+function M.merge_pr(...)
+  local args = {"pr", "merge"}
+  local params = table.pack(...)
+  for i = 1, params.n do
+    if params[i] == "delete" then
+      table.insert(args, "--delete-branch")
+    elseif params[i] == "commit" then
+      table.insert(args, "--merge")
+    elseif params[i] == "squash" then
+      table.insert(args, "--squash")
+    elseif params[i] == "rebase" then
+      table.insert(args, "--rebase")
+    end
+  end
+  local repo, _ = util.get_repo_and_number()
+  if not repo then
+    return
+  end
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    gh.run(
+      {
+        args = args,
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            print(output)
           end
         end
       }

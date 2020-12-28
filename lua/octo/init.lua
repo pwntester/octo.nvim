@@ -470,9 +470,11 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   )
   api.nvim_buf_set_keymap(bufnr, "n", "<space>il", format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo), mapping_opts)
 
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>co", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
-
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>cm", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<space>po", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<space>pd", [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<space>pm", [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]], mapping_opts)
 
   api.nvim_buf_set_keymap(
     bufnr,

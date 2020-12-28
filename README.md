@@ -42,6 +42,8 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | checkout | |
 | | commits | |
 | | files | |
+| | diff | |
+| | merge | [commit|rebase|squash] [delete] |
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-t>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |
@@ -85,9 +87,11 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `<space>ic`    | close issue                    |
 | `<space>io`    | reopen issue                   |
 | `<space>il`    | list open issues on same repo  |
-| `<space>co`    | checkout pull request          |
-| `<space>cm`    | list pull request commits      |
-| `<space>cf`    | list pull request files        |
+| `<space>po`    | checkout pull request          |
+| `<space>pc`    | list pull request commits      |
+| `<space>pf`    | list pull request files        |
+| `<space>pd`    | show pull request diff         |
+| `<space>pm`    | merge pull request             |
 | `<space>la`    | add label                      |
 | `<space>ld`    | delete label                   |
 | `<space>aa`    | add assignee                   |
