@@ -416,8 +416,8 @@ end
 --   - The PR author
 --   - The authors of all the existing comments
 --   - The contributors of the repo
-local function async_fetch_taggable_users(bufnr, repo, issue_author)
-  local users = {issue_author}
+local function async_fetch_taggable_users(bufnr, repo)
+  local users = api.nvim_buf_get_var(bufnr, "taggable_users") or {}
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
   for _, c in pairs(comments_metadata) do table.insert(users, c.author) end
   api.nvim_buf_set_var(bufnr, "taggable_users", users)
@@ -652,7 +652,7 @@ function M.create_issue_buffer(issue, repo, create_buffer)
     200
   )
 
-  async_fetch_taggable_users(bufnr, repo, issue.user.login)
+  async_fetch_taggable_users(bufnr, repo)
 
   -- show signs
   signs.render_signcolumn(bufnr)
