@@ -448,12 +448,17 @@ function M.pr_checks()
   if status and pr then
     gh.run(
       {
-        args = {"pr", "checks", tostring(number)},
+        args = {"pr", "checks", tostring(number), "-R", repo},
         cb = function(output, stderr)
           if stderr and not util.is_blank(stderr) then
             api.nvim_err_writeln(stderr)
           elseif output then
-            print(output)
+            local lines = vim.split(output, "\n")
+            local bufnr = api.nvim_create_buf(true, true)
+            -- TODO: conceal pass/fail with colored emojis
+            -- TODO: open it in float instead
+            api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+            api.nvim_set_current_buf(bufnr)
           end
         end
       }
