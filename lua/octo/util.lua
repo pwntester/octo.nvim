@@ -46,10 +46,36 @@ function M.in_pr_branch()
     local cmd = "git branch --show-current"
     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
     local local_repo = M.get_remote_name()
-    print("pr head", pr.head.ref, pr.head.repo.full_name)
-    print("pr base", pr.base.ref, pr.base.repo.full_name)
-    print("local", local_branch, local_repo)
+    if pr.base.repo.full_name ~= local_repo then
+      api.nvim_err_writeln(format("Not in PR repo, expected %s, found %s", pr.base.repo.full_name, local_repo))
+      return false
+    elseif pr.head.ref ~= local_branch then
+      api.nvim_err_writeln(format("Not in PR branch, expected %s, found %s", pr.head.ref, local_branch))
+      return false
+    end
+    return true
   end
+  return false
+end
+
+function M.get_repo_and_number()
+  local bufnr = api.nvim_get_current_buf()
+  if vim.bo.ft ~= "octo_issue" then
+    api.nvim_err_writeln("Not in octo buffer")
+    return nil
+  end
+
+  local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
+  if not number_ok then
+    api.nvim_err_writeln("Missing octo metadata")
+    return nil
+  end
+  local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
+  if not repo_ok then
+    api.nvim_err_writeln("Missing octo metadata")
+    return nil
+  end
+  return repo, number
 end
 
 function M.get_extmark_region(bufnr, mark)

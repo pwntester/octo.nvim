@@ -49,7 +49,12 @@ local commands = {
     files = function()
       menu.changed_files()
     end,
-    review = function()
+    diff = function()
+      M.show_pr_diff()
+    end
+  },
+  review = {
+    start = function()
       M.review_pr()
     end
   },
@@ -317,20 +322,8 @@ function M.get_issue(...)
 end
 
 function M.issue_action(action, kind, value)
-  local bufnr = api.nvim_get_current_buf()
-  if vim.bo.ft ~= "octo_issue" then
-    api.nvim_err_writeln("Not in octo buffer")
-    return
-  end
-
-  local number_ok, number = pcall(api.nvim_buf_get_var, 0, "number")
-  if not number_ok then
-    api.nvim_err_writeln("Missing octo metadata")
-    return
-  end
-  local repo_ok, repo = pcall(api.nvim_buf_get_var, 0, "repo")
-  if not repo_ok then
-    api.nvim_err_writeln("Missing octo metadata")
+  local repo, number = util.get_repo_and_number()
+  if not repo then
     return
   end
 
@@ -396,69 +389,107 @@ function M.issue_action(action, kind, value)
 end
 
 function M.checkout_pr()
-  local bufname = api.nvim_buf_get_name(0)
-  if not vim.startswith(bufname, "octo://") then
+  local repo, number = util.get_repo_and_number()
+  if not repo then
     return
   end
-  local repo = api.nvim_buf_get_var(0, "repo")
-  local number = api.nvim_buf_get_var(0, "number")
-  gh.run(
-    {
-      args = {"pr", "checkout", number, "-R", repo},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        else
-          print(output)
-          print(format("Checked out PR %d", number))
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    gh.run(
+      {
+        args = {"pr", "checkout", number, "-R", repo},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          else
+            print(output)
+            print(format("Checked out PR %d", number))
+          end
         end
-      end
-    }
-  )
+      }
+    )
+  end
+end
+
+function M.show_pr_diff()
+  local repo, number = util.get_repo_and_number()
+  if not repo then
+    return
+  end
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    local url = format("/repos/%s/pulls/%s", repo, number)
+    gh.run(
+      {
+        args = {"api", url},
+        headers = {"Accept: application/vnd.github.v3.diff"},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local lines = vim.split(output, "\n")
+            local bufnr = api.nvim_create_buf(true, true)
+            api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+            api.nvim_set_current_buf(bufnr)
+            api.nvim_buf_set_option(bufnr, "filetype", "diff")
+          end
+        end
+      }
+    )
+  end
 end
 
 function M.review_pr()
-  local bufname = api.nvim_buf_get_name(0)
-  if not vim.startswith(bufname, "octo://") then
+  local repo, number = util.get_repo_and_number()
+  if not repo then
     return
   end
-  local repo = api.nvim_buf_get_var(0, "repo")
-  local number = api.nvim_buf_get_var(0, "number")
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    -- make sure CWD is in PR repo and branch
+    if not util.in_pr_branch() then
+      return
+    end
 
-  -- TODO: make sure we are in the right repo and in the pr branch
-
-  -- TODO: get list of changed files
-  local url = format("repos/%s/pulls/%d/files", repo, number)
-  gh.run(
-    {
-      args = {"api", url},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local results = json.parse(output)
-          local items = {}
-          for _, result in ipairs(results) do
-            -- TODO: get lnum and col from diff
-            local item = {
-              filename = result.filename,
-              lnum = 1,
-              col = 1,
-              text = format("%s +%d -%d", result.status, result.additions, result.deletions),
-            }
-            table.insert(items, item)
+    -- get list of changed files
+    local url = format("repos/%s/pulls/%d/files", repo, number)
+    gh.run(
+      {
+        args = {"api", url},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local results = json.parse(output)
+            local items = {}
+            for _, result in ipairs(results) do
+              -- TODO: get lnum and col from diff
+              -- TODO: each result will unwrap into multiple items, one per chunck
+              local item = {
+                filename = result.filename,
+                lnum = 1,
+                text = format("%s +%d -%d", result.status, result.additions, result.deletions)
+              }
+              table.insert(items, item)
+            end
+            vim.fn.setqflist(
+              {},
+              " ",
+              {
+                title = "Changed Files",
+                items = items
+              }
+            )
+            vim.cmd [[copen]]
+          -- TODO: reuse existing window
           end
-          vim.fn.setqflist({}, ' ', {
-            title = 'Changed Files';
-            items = items;
-          })
-          vim.cmd[[copen]]
         end
-      end
-    }
-  )
+      }
+    )
   -- Gdiffsplit master...review1
   -- Gdiff master...review1
+  print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
+  end
 end
 
 function M.reaction_action(action, reaction)
