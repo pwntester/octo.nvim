@@ -34,7 +34,7 @@ local function run(opts)
       on_exit = vim.schedule_wrap(
         function(j_self, _, _)
           if mode == "async" and opts.cb then
-            opts.cb(table.concat(j_self:result()), table.concat(j_self:stderr_result()))
+            opts.cb(table.concat(j_self:result(), "\n"), table.concat(j_self:stderr_result(), "\n"))
           end
         end
       )
