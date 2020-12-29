@@ -437,6 +437,20 @@ local function async_fetch_taggable_users(bufnr, repo)
   )
 end
 
+-- This function fetches the issues in the repo so they can be used for
+-- completion.
+local function async_fetch_issues(bufnr, repo)
+  gh.run(
+    {
+      args = {"api", format(format("repos/%s/issues", repo))},
+      cb = function(response)
+        local resp = json.parse(response)
+        api.nvim_buf_set_var(bufnr, "issues", resp)
+      end
+    }
+  )
+end
+
 function M.create_issue_buffer(issue, repo, create_buffer)
   if not issue["id"] then
     api.nvim_err_writeln(format("Cannot find issue in %s", repo))
@@ -673,6 +687,7 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   )
 
   async_fetch_taggable_users(bufnr, repo)
+  async_fetch_issues(bufnr, repo)
 
   -- show signs
   signs.render_signcolumn(bufnr)
