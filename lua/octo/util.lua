@@ -1,5 +1,6 @@
-local constants = require("octo.constants")
-local date = require("octo.date")
+local constants = require"octo.constants"
+local date = require"octo.date"
+local popup = require"popup"
 local format = string.format
 local api = vim.api
 
@@ -189,6 +190,30 @@ end
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
+end
+
+function M.create_content_popup(lines)
+  local max_line = -1
+  for _, line in ipairs(lines) do
+    max_line = math.max(#line, max_line)
+  end
+  local line_count = vim.o.lines - vim.o.cmdheight
+  local max_width = math.min(vim.o.columns * 0.9, max_line)
+  if vim.o.laststatus ~= 0 then line_count = line_count - 1 end
+  local winnr, _ = popup.create(lines, {
+    line =  (line_count - #lines) / 2,
+    col =  (vim.o.columns - max_width) / 2,
+    minwidth = 40,
+    border = { 1, 1, 1, 1 },
+    borderchars = {"─", "│", "─", "│", "┌", "┐", "┘", "└"},
+    padding = { 0, 1, 0, 1 },
+  })
+  local bufnr = api.nvim_win_get_buf(winnr)
+  local mapping_opts = {script = true, silent = true, noremap = true}
+  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  return winnr, bufnr
 end
 
 return M

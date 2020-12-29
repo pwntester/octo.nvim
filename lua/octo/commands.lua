@@ -454,11 +454,16 @@ function M.pr_checks()
             api.nvim_err_writeln(stderr)
           elseif output then
             local lines = vim.split(output, "\n")
-            local bufnr = api.nvim_create_buf(true, true)
-            -- TODO: conceal pass/fail with colored emojis
-            -- TODO: open it in float instead
-            api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-            api.nvim_set_current_buf(bufnr)
+            table.insert(lines, '')
+            local _, bufnr = util.create_content_popup(lines)
+            local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+            for i, l in ipairs(buf_lines) do
+              if #vim.split(l, "pass") > 1 then
+                api.nvim_buf_add_highlight(bufnr, -1, "DiffAdd", i-1, 0, -1)
+              elseif #vim.split(l, "fail") > 1 then
+                api.nvim_buf_add_highlight(bufnr, -1, "DiffDelete", i-1, 0, -1)
+              end
+            end
           end
         end
       }
