@@ -12,6 +12,11 @@ Modified description or comments are highlighted in the signcolumn.
 ### Pull Request (review threads)
 ![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
 
+FOO
+FOO
+FOO
+FOO
+FOO
 ## Installation
 
 Use your favourite plugin manager to install it. eg:
@@ -22,6 +27,11 @@ Plug 'pwntester/octo.nvim'
 
 ## Requirements
 
+BAR
+BAR
+BAR
+BAR
+BAR
 - Install [GitHub CLI](https://cli.github.com/)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
