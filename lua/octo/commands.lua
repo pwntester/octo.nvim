@@ -123,7 +123,7 @@ function table.pack(...)
   return {n = select("#", ...), ...}
 end
 
-function M.get_repo_number(...)
+function M.get_repo_number_from_varargs(...)
   local repo, number
   local args = table.pack(...)
   if args.n == 0 then
@@ -256,16 +256,13 @@ end
 
 function M.change_issue_state(state)
   local bufnr = api.nvim_get_current_buf()
-  local number = api.nvim_buf_get_var(bufnr, "number")
-  local repo = api.nvim_buf_get_var(bufnr, "repo")
-
-  if not state then
-    api.nvim_err_writeln("Missing argument: state")
+  local repo, number = util.get_repo_and_number()
+  if not repo then
     return
   end
 
-  if not number or not repo then
-    api.nvim_err_writeln("Buffer is not linked to a GitHub issues")
+  if not state then
+    api.nvim_err_writeln("Missing argument: state")
     return
   end
 
@@ -284,7 +281,7 @@ function M.change_issue_state(state)
         if state == resp["state"] then
           api.nvim_buf_set_var(bufnr, "state", resp["state"])
           octo.write_state(bufnr)
-          octo.write_details(bufnr, resp, 3)
+          octo.write_details(bufnr, resp, true)
           print("Issue state changed to: " .. resp["state"])
         end
       end
@@ -325,11 +322,12 @@ function M.create_issue(repo)
 end
 
 function M.get_issue(...)
-  local repo, number = M.get_repo_number(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
   vim.cmd(format("edit octo://%s/%s", repo, number))
 end
 
 function M.issue_action(action, kind, value)
+  local bufnr = api.nvim_get_current_buf()
   local repo, number = util.get_repo_and_number()
   if not repo then
     return
@@ -385,7 +383,7 @@ function M.issue_action(action, kind, value)
             {
               args = {"api", format("repos/%s/issues/%s", repo, number)},
               cb = function(output)
-                octo.write_details(bufnr, json.parse(output), 3)
+                octo.write_details(bufnr, json.parse(output), true)
               end
             }
           )
@@ -454,14 +452,14 @@ function M.pr_checks()
             api.nvim_err_writeln(stderr)
           elseif output then
             local lines = vim.split(output, "\n")
-            table.insert(lines, '')
+            table.insert(lines, "")
             local _, bufnr = util.create_content_popup(lines)
             local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
             for i, l in ipairs(buf_lines) do
               if #vim.split(l, "pass") > 1 then
-                api.nvim_buf_add_highlight(bufnr, -1, "DiffAdd", i-1, 0, -1)
+                api.nvim_buf_add_highlight(bufnr, -1, "DiffAdd", i - 1, 0, -1)
               elseif #vim.split(l, "fail") > 1 then
-                api.nvim_buf_add_highlight(bufnr, -1, "DiffDelete", i-1, 0, -1)
+                api.nvim_buf_add_highlight(bufnr, -1, "DiffDelete", i - 1, 0, -1)
               end
             end
           end

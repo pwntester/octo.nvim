@@ -157,7 +157,7 @@ function M.write_reactions(bufnr, reactions, line)
   end
 end
 
-function M.write_details(bufnr, issue, line)
+function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
@@ -327,13 +327,15 @@ function M.write_details(bufnr, issue, line)
     table.insert(details, changes_vt)
   end
 
-  -- print empty #details + 2 lines
-  line = line or api.nvim_buf_line_count(bufnr) + 1
+  local line = 3
+  -- print #details + 2 empty lines
   local empty_lines = {}
   for _ = 1, #details + 2, 1 do
     table.insert(empty_lines, "")
   end
-  write_block(empty_lines, {bufnr = bufnr, mark = false, line = line})
+  if not update then
+    write_block(empty_lines, {bufnr = bufnr, mark = false, line = line })
+  end
 
   -- print details as virtual text
   for _, d in ipairs(details) do
@@ -651,7 +653,7 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   M.write_title(bufnr, issue.title, 1)
 
   -- write details in buffer
-  M.write_details(bufnr, issue, 3)
+  M.write_details(bufnr, issue)
 
   -- write issue/pr status on line 1
   M.write_state(bufnr)
