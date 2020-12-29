@@ -2,6 +2,7 @@ local actions = require("telescope.actions")
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
 local utils = require("telescope.utils")
+local putils = require("telescope.previewers.utils")
 local previewers = require("telescope.previewers")
 local conf = require("telescope.config").values
 local make_entry = require("telescope.make_entry")
@@ -16,9 +17,6 @@ local bat_options = {"bat", "--style=plain", "--color=always", "--paging=always"
 local json = {
   parse = vim.fn.json_decode
 }
-
--- most of this code was taken from https://github.com/nvim-telescope/telescope-github.nvim/blob/master/lua/telescope/_extensions/ghcli.lua
--- thanks @windwp!
 
 local function parse_opts(opts, target)
   local query = {}
@@ -63,6 +61,22 @@ local function open_in_browser(type, repo)
   end
 end
 
+local function highlight_buffer(bufnr, content)
+  if content and table.getn(content) > 1 then
+    for i = 1, #content do
+      local line = content[i]
+      if line == "--" then
+        break
+      end
+      local _, colon_start = line:find(":")
+      if colon_start then
+        vim.api.nvim_buf_add_highlight(bufnr, -1, "TelescopeResultsIdentifier", i - 1, 0, colon_start)
+        vim.api.nvim_buf_add_highlight(bufnr, -1, "TelescopeResultsComment", i - 1, colon_start + 1, -1)
+      end
+    end
+  end
+end
+
 --
 -- ISSUES
 --
@@ -76,6 +90,82 @@ local function open_issue(repo)
       return
     end
     vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, tmp_table[1]))
+  end
+end
+
+local issue_previewer =
+  defaulter(
+  function(opts)
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
+      define_preview = function(self, entry)
+        local tmp_table = vim.split(entry.value, "\t")
+        if vim.tbl_isempty(tmp_table) then
+          putils.job_maker({"echo", ""}, nil, entry.value, self.state.bufnr, self.state.bufname, highlight_buffer)
+        end
+        putils.job_maker(
+          {"gh", "issue", "view", tmp_table[1], "-R", opts.repo},
+          nil,
+          entry.value,
+          self.state.bufnr,
+          self.state.bufname,
+          highlight_buffer
+        )
+      end
+    }
+  end
+)
+
+local function gen_from_issue()
+  local displayer =
+    entry_display.create {
+    separator = " ",
+    items = {
+      {width = 6},
+      {width = 6},
+      {remaining = true},
+      {width = 20}
+    }
+  }
+
+  local make_display = function(entry)
+    local labels_str
+    if util.is_blank(entry.labels) then
+      labels_str = ""
+    else
+      labels_str = format("(%s)", entry.labels)
+    end
+    return displayer {
+      {entry.value, "TelescopeResultsNumber"},
+      {entry.status, "TelescopeResultsFunction"},
+      {entry.msg},
+      {labels_str, "TelescopeResultsSpecialComment"}
+    }
+  end
+
+  return function(entry)
+    if not entry then
+      return nil
+    end
+
+    local parts = vim.split(entry, "\t")
+    local number = parts[1]
+    local status = parts[2]
+    local title = parts[3]
+    local labels = parts[4]
+    local date = parts[5]
+
+    return {
+      value = number,
+      ordinal = number,
+      msg = title,
+      display = make_display,
+      status = status,
+      labels = labels,
+      date = date
+    }
   end
 end
 
@@ -104,18 +194,10 @@ local function issues(repo, opts)
       prompt_title = "Issues",
       finder = finders.new_table {
         results = results,
-        entry_maker = make_entry.gen_from_string(opts)
+        entry_maker = gen_from_issue()
       },
       sorter = conf.file_sorter(opts),
-      previewer = previewers.new_termopen_previewer {
-        get_command = function(entry)
-          local tmp_table = vim.split(entry.value, "\t")
-          if vim.tbl_isempty(tmp_table) then
-            return {"echo", ""}
-          end
-          return {"gh", "issue", "view", tmp_table[1], "-R", repo}
-        end
-      },
+      previewer = issue_previewer.new({repo = repo}),
       attach_mappings = function(_, map)
         map("i", "<CR>", open_issue(repo))
         map("i", "<c-t>", open_in_browser("issue", repo))
@@ -220,6 +302,74 @@ local function checkout_pr(repo)
   end
 end
 
+local pr_previewer =
+  defaulter(
+  function(opts)
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
+      define_preview = function(self, entry)
+        local tmp_table = vim.split(entry.value, "\t")
+        if vim.tbl_isempty(tmp_table) then
+          putils.job_maker({"echo", ""}, nil, entry.value, self.state.bufnr, self.state.bufname, highlight_buffer)
+        end
+        putils.job_maker(
+          {"gh", "pr", "view", tmp_table[1], "-R", opts.repo},
+          nil,
+          entry.value,
+          self.state.bufnr,
+          self.state.bufname,
+          highlight_buffer
+        )
+      end
+    }
+  end
+)
+
+local function gen_from_pr()
+  local displayer =
+    entry_display.create {
+    separator = " ",
+    items = {
+      {width = 6},
+      {width = 6},
+      {remaining = true},
+      {width = 20}
+    }
+  }
+
+  local make_display = function(entry)
+    return displayer {
+      {entry.value, "TelescopeResultsNumber"},
+      {entry.status, "TelescopeResultsFunction"},
+      {entry.msg},
+      {entry.head, "TelescopeResultsSpecialComment"}
+    }
+  end
+
+  return function(entry)
+    if not entry then
+      return nil
+    end
+
+    local parts = vim.split(entry, "\t")
+    local number = parts[1]
+    local title = parts[2]
+    local head = parts[3]
+    local status = parts[4]
+
+    return {
+      value = number,
+      ordinal = number,
+      msg = title,
+      display = make_display,
+      status = status,
+      head = head
+    }
+  end
+end
+
 local function pull_requests(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
@@ -245,17 +395,9 @@ local function pull_requests(repo, opts)
       prompt_title = "Pull Requests",
       finder = finders.new_table {
         results = results,
-        entry_maker = make_entry.gen_from_string(opts)
+        entry_maker = gen_from_pr()
       },
-      previewer = previewers.new_termopen_previewer {
-        get_command = function(entry)
-          local tmp_table = vim.split(entry.value, "\t")
-          if vim.tbl_isempty(tmp_table) then
-            return {"echo", ""}
-          end
-          return {"gh", "pr", "view", tmp_table[1], "-R", repo}
-        end
-      },
+      previewer = pr_previewer.new({repo = repo}),
       sorter = conf.file_sorter(opts),
       attach_mappings = function(_, map)
         map("i", "<CR>", open_issue(repo))
@@ -373,8 +515,7 @@ local function commits()
                   actions.goto_file_selection_edit:replace(
                     function()
                       actions.close(prompt_bufnr)
-                      local preview_bufnr = require'telescope.state'.get_global_key('last_preview_bufnr')
-                      print(preview_bufnr)
+                      local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
                       api.nvim_set_current_buf(preview_bufnr)
                       vim.cmd [[stopinsert]]
                     end
@@ -438,6 +579,10 @@ local changed_files_previewer =
   defaulter(
   function()
     return previewers.new_buffer_previewer {
+      keep_last_buf = true,
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
       define_preview = function(self, entry)
         if self.state.bufname ~= entry.value then
           local diff = entry.change.patch
@@ -481,14 +626,9 @@ local function changed_files()
                 attach_mappings = function(prompt_bufnr)
                   actions.goto_file_selection_edit:replace(
                     function()
-                      local picker = actions.get_current_picker(prompt_bufnr)
-                      local preview_bufnr = picker.previewer.state.bufnr
-                      local lines = api.nvim_buf_get_lines(preview_bufnr, 0, -1, false)
                       actions.close(prompt_bufnr)
-                      local new_bufnr = api.nvim_create_buf(true, true)
-                      api.nvim_buf_set_lines(new_bufnr, 0, -1, false, lines)
-                      api.nvim_set_current_buf(new_bufnr)
-                      api.nvim_buf_set_option(new_bufnr, "filetype", "diff")
+                      local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
+                      api.nvim_set_current_buf(preview_bufnr)
                       vim.cmd [[stopinsert]]
                     end
                   )
