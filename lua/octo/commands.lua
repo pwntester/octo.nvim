@@ -564,8 +564,6 @@ function M.review_pr()
             local results = json.parse(output)
             local items = {}
             for _, result in ipairs(results) do
-              -- TODO: get lnum and col from diff
-              -- TODO: each result will unwrap into multiple items, one per chunck
               local item = {
                 filename = result.filename,
                 lnum = 1,
@@ -587,8 +585,6 @@ function M.review_pr()
         end
       }
     )
-    -- Gdiffsplit master...review1
-    -- Gdiff master...review1
     print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
   end
 end
