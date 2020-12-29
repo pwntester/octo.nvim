@@ -444,8 +444,12 @@ local function async_fetch_issues(bufnr, repo)
     {
       args = {"api", format(format("repos/%s/issues", repo))},
       cb = function(response)
+        local issues_metadata = {}
         local resp = json.parse(response)
-        api.nvim_buf_set_var(bufnr, "issues", resp)
+        for _, issue in ipairs(resp) do
+          table.insert(issues_metadata, {number = issue.number, title = issue.title})
+        end
+        api.nvim_buf_set_var(bufnr, "issues", issues_metadata)
       end
     }
   )
