@@ -2,7 +2,7 @@ local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local menu = require "octo.menu"
-local review = require "octo.review"
+local fugitive = require "octo.fugitive"
 local constants = require("octo.constants")
 local api = vim.api
 local format = string.format
@@ -554,43 +554,40 @@ function M.review_pr()
     end
 
     -- get list of changed files
-    local url = format("repos/%s/pulls/%d/files", repo, number)
-    gh.run(
-      {
-        args = {"api", url},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local results = json.parse(output)
-            local items = {}
-            for _, result in ipairs(results) do
-              local item = {
-                filename = result.filename,
-                lnum = 1,
-                text = format("%s +%d -%d", result.status, result.additions, result.deletions)
-              }
-              table.insert(items, item)
-            end
-            vim.fn.setqflist(
-              {},
-              " ",
-              {
-                title = "Changed Files",
-                items = items
-              }
-            )
-            review.diff_current_quickfix_entry()
-            -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
-            -- there's probably a better way to map this without changing the window
-            vim.cmd [[copen]]
-            vim.cmd [[nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.review'.diff_current_quickfix_entry()<CR>]]
-            vim.cmd [[wincmd p]]
-          end
-        end
-      }
-    )
-    --print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
+    -- local url = format("repos/%s/pulls/%d/files", repo, number)
+    -- gh.run(
+    --   {
+    --     args = {"api", url},
+    --     cb = function(output, stderr)
+    --       if stderr and not util.is_blank(stderr) then
+    --         api.nvim_err_writeln(stderr)
+    --       elseif output then
+    --         local results = json.parse(output)
+    --         local items = {}
+    --         for _, result in ipairs(results) do
+    --           local item = {
+    --             filename = result.filename,
+    --             lnum = 1,
+    --             text = format("%s +%d -%d", result.status, result.additions, result.deletions)
+    --           }
+    --           table.insert(items, item)
+    --         end
+    --         vim.fn.setqflist(
+    --           {},
+    --           " ",
+    --           {
+    --             title = "Changed Files",
+    --             items = items
+    --           }
+    --         )
+    --       end
+    --     end
+    --   }
+    -- )
+
+    if vim.fn.exists("*fugitive#repo") then
+      fugitive.diff_pr(pr.base.ref, pr.head.ref)
+    end
   end
 end
 
