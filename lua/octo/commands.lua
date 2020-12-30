@@ -1,7 +1,8 @@
+local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local menu = require "octo.menu"
-local octo = require "octo"
+local fugitive = require "octo.fugitive"
 local constants = require("octo.constants")
 local api = vim.api
 local format = string.format
@@ -545,6 +546,10 @@ function M.review_pr()
   if not repo then
     return
   end
+  if not vim.fn.exists("*fugitive#repo") then
+    print("vim-fugitive required")
+    return
+  end
   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
   if status and pr then
     -- make sure CWD is in PR repo and branch
@@ -562,30 +567,21 @@ function M.review_pr()
             api.nvim_err_writeln(stderr)
           elseif output then
             local results = json.parse(output)
-            local items = {}
+            local changes = {}
             for _, result in ipairs(results) do
-              local item = {
+              local change = {
+                branch = pr.base.ref,
                 filename = result.filename,
-                lnum = 1,
-                text = format("%s +%d -%d", result.status, result.additions, result.deletions)
+                status = result.status,
+                text = format("+%d -%d", result.additions, result.deletions)
               }
-              table.insert(items, item)
+              table.insert(changes, change)
             end
-            vim.fn.setqflist(
-              {},
-              " ",
-              {
-                title = "Changed Files",
-                items = items
-              }
-            )
-            vim.cmd [[copen]]
-          -- TODO: reuse existing window
+            fugitive.diff_pr(pr.base.ref, pr.head.ref, changes)
           end
         end
       }
     )
-    print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
   end
 end
 
