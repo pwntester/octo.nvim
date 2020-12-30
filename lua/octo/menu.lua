@@ -103,16 +103,18 @@ local issue_previewer =
       define_preview = function(self, entry)
         local tmp_table = vim.split(entry.value, "\t")
         if vim.tbl_isempty(tmp_table) then
-          putils.job_maker({"echo", ""}, nil, entry.value, self.state.bufnr, self.state.bufname, highlight_buffer)
+          putils.job_maker({'echo', ''}, self.state.bufnr, {
+            value = entry.value,
+            bufname = self.state.bufname,
+            callback = highlight_buffer
+          })
+        else
+          putils.job_maker({"gh", "issue", "view", tmp_table[1], "-R", opts.repo}, self.state.bufnr, {
+            value = entry.value,
+            bufname = self.state.bufname,
+            callback = highlight_buffer
+          })
         end
-        putils.job_maker(
-          {"gh", "issue", "view", tmp_table[1], "-R", opts.repo},
-          nil,
-          entry.value,
-          self.state.bufnr,
-          self.state.bufname,
-          highlight_buffer
-        )
       end
     }
   end
@@ -312,16 +314,18 @@ local pr_previewer =
       define_preview = function(self, entry)
         local tmp_table = vim.split(entry.value, "\t")
         if vim.tbl_isempty(tmp_table) then
-          putils.job_maker({"echo", ""}, nil, entry.value, self.state.bufnr, self.state.bufname, highlight_buffer)
+          putils.job_maker({'echo', ''}, self.state.bufnr, {
+            value = entry.value,
+            bufname = self.state.bufname,
+            callback = highlight_buffer
+          })
+        else
+          putils.job_maker({"gh", "pr", "view", tmp_table[1], "-R", opts.repo}, self.state.bufnr, {
+            value = entry.value,
+            bufname = self.state.bufname,
+            callback = highlight_buffer
+          })
         end
-        putils.job_maker(
-          {"gh", "pr", "view", tmp_table[1], "-R", opts.repo},
-          nil,
-          entry.value,
-          self.state.bufnr,
-          self.state.bufname,
-          highlight_buffer
-        )
       end
     }
   end
@@ -456,15 +460,6 @@ local commit_previewer =
       end,
       define_preview = function(self, entry)
         if self.state.bufname ~= entry.value then
-          local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
-          local diff =
-            gh.run(
-            {
-              args = {"api", url},
-              mode = "sync",
-              headers = {"Accept: application/vnd.github.v3.diff"}
-            }
-          )
           local lines = {}
           vim.list_extend(lines, {format("Commit: %s", entry.value)})
           vim.list_extend(lines, {format("Author: %s", entry.author)})
@@ -472,12 +467,20 @@ local commit_previewer =
           vim.list_extend(lines, {""})
           vim.list_extend(lines, vim.split(entry.msg, "\n"))
           vim.list_extend(lines, {""})
-          vim.list_extend(lines, vim.split(diff, "\n"))
           api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
-          api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
-          api.nvim_buf_add_highlight(self.state.bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
-          api.nvim_buf_add_highlight(self.state.bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
-          api.nvim_buf_add_highlight(self.state.bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+
+          local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
+          putils.job_maker({"gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff"}, self.state.bufnr, {
+            value = entry.value,
+            bufname = self.state.bufname,
+            mode = "append",
+            callback = function(bufnr, _)
+              api.nvim_buf_set_option(bufnr, "filetype", "diff")
+              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
+              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
+              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+            end
+          })
         end
       end
     }
