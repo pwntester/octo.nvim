@@ -546,6 +546,10 @@ function M.review_pr()
   if not repo then
     return
   end
+  if not vim.fn.exists("*fugitive#repo") then
+    print("vim-fugitive required")
+    return
+  end
   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
   if status and pr then
     -- make sure CWD is in PR repo and branch
@@ -554,40 +558,30 @@ function M.review_pr()
     end
 
     -- get list of changed files
-    -- local url = format("repos/%s/pulls/%d/files", repo, number)
-    -- gh.run(
-    --   {
-    --     args = {"api", url},
-    --     cb = function(output, stderr)
-    --       if stderr and not util.is_blank(stderr) then
-    --         api.nvim_err_writeln(stderr)
-    --       elseif output then
-    --         local results = json.parse(output)
-    --         local items = {}
-    --         for _, result in ipairs(results) do
-    --           local item = {
-    --             filename = result.filename,
-    --             lnum = 1,
-    --             text = format("%s +%d -%d", result.status, result.additions, result.deletions)
-    --           }
-    --           table.insert(items, item)
-    --         end
-    --         vim.fn.setqflist(
-    --           {},
-    --           " ",
-    --           {
-    --             title = "Changed Files",
-    --             items = items
-    --           }
-    --         )
-    --       end
-    --     end
-    --   }
-    -- )
-
-    if vim.fn.exists("*fugitive#repo") then
-      fugitive.diff_pr(pr.base.ref, pr.head.ref)
-    end
+    local url = format("repos/%s/pulls/%d/files", repo, number)
+    gh.run(
+      {
+        args = {"api", url},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local results = json.parse(output)
+            local changes = {}
+            for _, result in ipairs(results) do
+              local change = {
+                branch = pr.base.ref,
+                filename = result.filename,
+                status = result.status,
+                text = format("+%d -%d", result.additions, result.deletions)
+              }
+              table.insert(changes, change)
+            end
+            fugitive.diff_pr(pr.base.ref, pr.head.ref, changes)
+          end
+        end
+      }
+    )
   end
 end
 
