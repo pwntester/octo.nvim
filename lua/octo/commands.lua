@@ -1,7 +1,8 @@
+local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local menu = require "octo.menu"
-local octo = require "octo"
+local review = require "octo.review"
 local constants = require("octo.constants")
 local api = vim.api
 local format = string.format
@@ -579,13 +580,17 @@ function M.review_pr()
                 items = items
               }
             )
+            review.diff_current_quickfix_entry()
+            -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
+            -- there's probably a better way to map this without changing the window
             vim.cmd [[copen]]
-          -- TODO: reuse existing window
+            vim.cmd [[nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.review'.diff_current_quickfix_entry()<CR>]]
+            vim.cmd [[wincmd p]]
           end
         end
       }
     )
-    print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
+    --print(format("Gdiff %s...%s", pr.base.ref, pr.head.ref))
   end
 end
 
