@@ -133,7 +133,7 @@ local function gen_from_issue()
   }
 
   local make_display = function(entry)
-    if not entry or util.is_blank(entry) then
+    if not entry then
       return nil
     end
     local labels_str
@@ -151,7 +151,7 @@ local function gen_from_issue()
   end
 
   return function(entry)
-    if not entry then
+    if not entry or util.is_blank(entry) then
       return nil
     end
 
