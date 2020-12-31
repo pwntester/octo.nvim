@@ -2,9 +2,11 @@
 Plugin to work with GitHub issues and PRs from Neovim. Just edit the issue description/comments and save it with `:w`.
 Modified description or comments are highlighted in the signcolumn.
 
+### Issue
+![](https://i.imgur.com/ipbMFUs.png)
 
-![](https://i.imgur.com/pv9MSJW.png)
-
+### Pull Request
+![](https://i.imgur.com/rN4tSPP.png)
 
 ## Installation
 
@@ -77,7 +79,8 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 ## Completion
 
-`<C-x><C-o>`: When cursor is located at text that matches `#\d*` will popup a list of repo issues starting with the same id prefix.
+- Issue/PR id completion (#)
+- User completion (@)
 
 ## In-issue mappings
 
@@ -123,6 +126,12 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimIssueClosed`    | `ErrorMsg`   |
 | `OctoNvimEmpty`          | `Comment`    |
 | `OctoNvimFloat`          | `NormalNC`   |
+| `OctoNvimBubble1`        | `NormalFloat`|
+| `OctoNvimBubble2`        | `NormalFloat`|
+| `OctoNvimDetailsLabel`   | `Title`      |
+| `OctoNvimMissingDetails` | `Comment`    |                                                                                                              3 hi def 
+| `OctoNvimDetailsValue `  | `Identifier` |
+
 
 ## Credits
 All `List` commands are taken from @windwp [Telescope extension](https://github.com/nvim-telescope/telescope-github.nvim) and adapted to edit issues.
