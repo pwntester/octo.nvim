@@ -39,7 +39,6 @@ end
 
 function M.clean_fugitive_buffers()
   for _, w in ipairs(api.nvim_list_wins()) do
-    --if w ~= api.nvim_get_current_win() and vim.startswith(api.nvim_buf_get_name(api.nvim_win_get_buf(w)), "fugitive:") then
     if vim.startswith(api.nvim_buf_get_name(api.nvim_win_get_buf(w)), "fugitive:") then
       vim.cmd(format("bdelete %d", api.nvim_win_get_buf(w)))
     end

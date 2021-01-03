@@ -787,8 +787,27 @@ local function reviews()
               attach_mappings = function(prompt_bufnr)
                 actions.goto_file_selection_edit:replace(
                   function()
+                    local selection = actions.get_selected_entry(prompt_bufnr)
                     actions.close(prompt_bufnr)
                     -- TODO: populate QF
+                    print(format("fugitive:///Users/pwntester/dev/octo.nvim/.git//9b8f21e270c6ec904e54457979408f33bf05bab2/lua/octo/commands.lua"))
+                    local curl = format("/repos/%s/pulls/%d/reviews/%d/comments", repo, number, selection.review.id)
+                    gh.run(
+                      {
+                        args = {"api", curl},
+                        cb = function(output, stderr)
+                          if stderr and not util.is_blank(stderr) then
+                            api.nvim_err_writeln(stderr)
+                          elseif output then
+                            local comments = json.parse(output)
+                            for _, comment in ipairs(comments) do
+                              print(format("fugitive://%s/.git/%s/%s", vim.fn.getcwd(), comment.commit_id, comment.path))
+                              print(format("Gedit %s:%s", comment.commit_id, comment.path))
+                            end
+                          end
+                        end
+                      }
+                    )
                   end
                 )
                 return true
