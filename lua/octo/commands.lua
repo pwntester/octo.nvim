@@ -60,6 +60,9 @@ local commands = {
     end,
     ready = function()
       M.pr_ready_for_review()
+    end,
+    reviews = function()
+      menu.reviews()
     end
   },
   review = {

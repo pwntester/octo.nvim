@@ -619,51 +619,186 @@ local changed_files_previewer =
 )
 
 local function changed_files()
-  local repo, number = util.get_repo_number()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    local url = format("repos/%s/pulls/%d/files", repo, number)
-    gh.run(
-      {
-        args = {"api", url},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local results = json.parse(output)
-            pickers.new(
-              {},
-              {
-                prompt_title = "PR Files Changed",
-                finder = finders.new_table {
-                  results = results,
-                  entry_maker = gen_from_git_changed_files()
-                },
-                sorter = conf.file_sorter({}),
-                previewer = changed_files_previewer.new({repo = repo, number = number}),
-                attach_mappings = function(prompt_bufnr)
-                  actions.goto_file_selection_edit:replace(
-                    function()
-                      actions.close(prompt_bufnr)
-                      local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
-                      api.nvim_set_current_buf(preview_bufnr)
-                      vim.cmd [[stopinsert]]
-                    end
-                  )
-                  return true
-                end
-              }
-            ):find()
-          end
+  local url = format("repos/%s/pulls/%d/files", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          pickers.new(
+            {},
+            {
+              prompt_title = "PR Files Changed",
+              finder = finders.new_table {
+                results = results,
+                entry_maker = gen_from_git_changed_files()
+              },
+              sorter = conf.file_sorter({}),
+              previewer = changed_files_previewer.new({repo = repo, number = number}),
+              attach_mappings = function(prompt_bufnr)
+                actions.goto_file_selection_edit:replace(
+                  function()
+                    actions.close(prompt_bufnr)
+                    local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
+                    api.nvim_set_current_buf(preview_bufnr)
+                    vim.cmd [[stopinsert]]
+                  end
+                )
+                return true
+              end
+            }
+          ):find()
         end
-      }
-    )
-  else
-    api.nvim_err_writeln("Not in PR buffer")
+      end
+    }
+  )
+end
+
+--
+-- REVIEWS
+--
+
+local function gen_from_review(max_state, max_author)
+  local displayer =
+    entry_display.create {
+    separator = " ",
+    items = {
+      {width = 7},
+      {width = max_state},
+      {width = max_author},
+      {width = 25},
+      {remaining = true}
+    }
+  }
+
+  local make_display = function(entry)
+    return displayer {
+      {entry.review.commit_id:sub(1, 7), "TelescopeResultsNumber"},
+      {entry.review.state, "TelescopeResultsIdentifier"},
+      {entry.review.author_association, "TelescopeResultsSpecialComment"},
+      {util.format_date(entry.review.submitted_at), "TelescopeResultsComment"},
+      vim.split(entry.review.body, "\n")[1]
+    }
   end
+
+  return function(entry)
+    if not entry then
+      return nil
+    end
+
+    return {
+      value = entry.id,
+      ordinal = entry.commit_id .. " " .. entry.state,
+      msg = entry.state,
+      display = make_display,
+      review = entry
+    }
+  end
+end
+
+local review_previewer =
+  defaulter(
+  function(opts)
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
+      define_preview = function(self, entry)
+        if self.state.bufname ~= entry.value then
+          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, {"Author: " .. entry.review.user.login})
+          local body = entry.review.body
+          if not util.is_blank(body) then
+            api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, vim.split("Body: " .. body, "\n"))
+          end
+          api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
+          local url = format("/repos/%s/pulls/%d/reviews/%d/comments", opts.repo, opts.number, entry.review.id)
+          gh.run(
+            {
+              args = {"api", url},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  local results = json.parse(output)
+                  for _, comment in ipairs(results) do
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {"--"})
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {"Path: " .. comment.path})
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, vim.split(comment.diff_hunk, "\n"))
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, vim.split(comment.body, "\n"))
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
+                  end
+                end
+                api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+              end
+            }
+          )
+        end
+      end
+    }
+  end,
+  {}
+)
+
+local function reviews()
+  local repo, number, _ = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+  local url = format("repos/%s/pulls/%d/reviews", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+
+          local max_state = -1
+          local max_author = -1
+          for _, result in ipairs(results) do
+            if #result.author_association > max_author then
+              max_author = #result.author_association
+            end
+            if #result.state > max_state then
+              max_state = #result.state
+            end
+          end
+
+          pickers.new(
+            {},
+            {
+              prompt_title = "Reviews",
+              finder = finders.new_table {
+                results = results,
+                entry_maker = gen_from_review(max_state, max_author)
+              },
+              sorter = conf.file_sorter({}),
+              previewer = review_previewer.new({repo = repo, number = number}),
+              attach_mappings = function(prompt_bufnr)
+                actions.goto_file_selection_edit:replace(
+                  function()
+                    actions.close(prompt_bufnr)
+                    -- TODO: populate QF
+                  end
+                )
+                return true
+              end
+            }
+          ):find()
+        end
+      end
+    }
+  )
 end
 
 return {
@@ -671,5 +806,6 @@ return {
   pull_requests = pull_requests,
   gists = gists,
   commits = commits,
-  changed_files = changed_files
+  changed_files = changed_files,
+  reviews = reviews
 }
