@@ -103,17 +103,25 @@ local issue_previewer =
       define_preview = function(self, entry)
         local tmp_table = vim.split(entry.value, "\t")
         if vim.tbl_isempty(tmp_table) then
-          putils.job_maker({'echo', ''}, self.state.bufnr, {
-            value = entry.value,
-            bufname = self.state.bufname,
-            callback = highlight_buffer
-          })
+          putils.job_maker(
+            {"echo", ""},
+            self.state.bufnr,
+            {
+              value = entry.value,
+              bufname = self.state.bufname,
+              callback = highlight_buffer
+            }
+          )
         else
-          putils.job_maker({"gh", "issue", "view", tmp_table[1], "-R", opts.repo}, self.state.bufnr, {
-            value = entry.value,
-            bufname = self.state.bufname,
-            callback = highlight_buffer
-          })
+          putils.job_maker(
+            {"gh", "issue", "view", tmp_table[1], "-R", opts.repo},
+            self.state.bufnr,
+            {
+              value = entry.value,
+              bufname = self.state.bufname,
+              callback = highlight_buffer
+            }
+          )
         end
       end
     }
@@ -317,17 +325,25 @@ local pr_previewer =
       define_preview = function(self, entry)
         local tmp_table = vim.split(entry.value, "\t")
         if vim.tbl_isempty(tmp_table) then
-          putils.job_maker({'echo', ''}, self.state.bufnr, {
-            value = entry.value,
-            bufname = self.state.bufname,
-            callback = highlight_buffer
-          })
+          putils.job_maker(
+            {"echo", ""},
+            self.state.bufnr,
+            {
+              value = entry.value,
+              bufname = self.state.bufname,
+              callback = highlight_buffer
+            }
+          )
         else
-          putils.job_maker({"gh", "pr", "view", tmp_table[1], "-R", opts.repo}, self.state.bufnr, {
-            value = entry.value,
-            bufname = self.state.bufname,
-            callback = highlight_buffer
-          })
+          putils.job_maker(
+            {"gh", "pr", "view", tmp_table[1], "-R", opts.repo},
+            self.state.bufnr,
+            {
+              value = entry.value,
+              bufname = self.state.bufname,
+              callback = highlight_buffer
+            }
+          )
         end
       end
     }
@@ -473,17 +489,21 @@ local commit_previewer =
           api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
 
           local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
-          putils.job_maker({"gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff"}, self.state.bufnr, {
-            value = entry.value,
-            bufname = self.state.bufname,
-            mode = "append",
-            callback = function(bufnr, _)
-              api.nvim_buf_set_option(bufnr, "filetype", "diff")
-              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
-              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
-              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
-            end
-          })
+          putils.job_maker(
+            {"gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff"},
+            self.state.bufnr,
+            {
+              value = entry.value,
+              bufname = self.state.bufname,
+              mode = "append",
+              callback = function(bufnr, _)
+                api.nvim_buf_set_option(bufnr, "filetype", "diff")
+                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
+                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
+                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+              end
+            }
+          )
         end
       end
     }
@@ -492,51 +512,46 @@ local commit_previewer =
 )
 
 local function commits()
-  local repo, number = util.get_repo_and_number()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    local url = format("repos/%s/pulls/%d/commits", repo, number)
-    gh.run(
-      {
-        args = {"api", url},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local results = json.parse(output)
-            pickers.new(
-              {},
-              {
-                prompt_title = "PR Commits",
-                finder = finders.new_table {
-                  results = results,
-                  entry_maker = gen_from_git_commits()
-                },
-                sorter = conf.file_sorter({}),
-                previewer = commit_previewer.new({repo = repo}),
-                attach_mappings = function(prompt_bufnr)
-                  actions.goto_file_selection_edit:replace(
-                    function()
-                      actions.close(prompt_bufnr)
-                      local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
-                      api.nvim_set_current_buf(preview_bufnr)
-                      vim.cmd [[stopinsert]]
-                    end
-                  )
-                  return true
-                end
-              }
-            ):find()
-          end
+  local url = format("repos/%s/pulls/%d/commits", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          pickers.new(
+            {},
+            {
+              prompt_title = "PR Commits",
+              finder = finders.new_table {
+                results = results,
+                entry_maker = gen_from_git_commits()
+              },
+              sorter = conf.file_sorter({}),
+              previewer = commit_previewer.new({repo = repo}),
+              attach_mappings = function(prompt_bufnr)
+                actions.goto_file_selection_edit:replace(
+                  function()
+                    actions.close(prompt_bufnr)
+                    local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
+                    api.nvim_set_current_buf(preview_bufnr)
+                    vim.cmd [[stopinsert]]
+                  end
+                )
+                return true
+              end
+            }
+          ):find()
         end
-      }
-    )
-  else
-    api.nvim_err_writeln("Not in PR buffer")
-  end
+      end
+    }
+  )
 end
 
 --
@@ -604,7 +619,7 @@ local changed_files_previewer =
 )
 
 local function changed_files()
-  local repo, number = util.get_repo_and_number()
+  local repo, number = util.get_repo_number()
   if not repo then
     return
   end

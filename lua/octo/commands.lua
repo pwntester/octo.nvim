@@ -104,10 +104,10 @@ local commands = {
   },
   reviewer = {
     add = function(value)
-      M.issue_action("add", "requested_reviewers", value)
+      M.issue_action("add", "reviewers", value)
     end,
     delete = function(value)
-      M.issue_action("delete", "requested_reviewers", value)
+      M.issue_action("delete", "reviewers", value)
     end
   },
   reaction = {
@@ -257,7 +257,7 @@ end
 
 function M.change_issue_state(state)
   local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_and_number()
+  local repo, number = util.get_repo_number()
   if not repo then
     return
   end
@@ -329,7 +329,7 @@ end
 
 function M.issue_action(action, kind, value)
   local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_and_number()
+  local repo, number = util.get_repo_number()
   if not repo then
     return
   end
@@ -345,14 +345,18 @@ function M.issue_action(action, kind, value)
     kind = {
       kind,
       function(a)
-        return vim.tbl_contains({"assignees", "labels", "requested_reviewers"}, a)
+        return vim.tbl_contains({"assignees", "labels", "reviewers"}, a)
       end,
-      "assignees, labels or requested_reviewers"
+      "assignees, labels or reviewers"
     }
   }
 
   local endpoint
-  if kind == "requested_reviewers" then
+  if kind == "reviewers" then
+    local _, _, pr = util.get_repo_number_pr()
+    if not pr then
+      return
+    end
     endpoint = "pulls"
   else
     endpoint = "issues"
@@ -361,6 +365,8 @@ function M.issue_action(action, kind, value)
   local url = format("repos/%s/%s/%d/%s", repo, endpoint, number, kind)
   if kind == "labels" and action == "delete" then
     url = format("%s/%s", url, value)
+  elseif kind == "reviewers" then
+    url = format("repos/%s/%s/%d/requested_reviewers", repo, endpoint, number)
   end
 
   local method
@@ -379,7 +385,10 @@ function M.issue_action(action, kind, value)
       command = "sh",
       args = {"-c", cmd},
       on_exit = vim.schedule_wrap(
-        function(_, _, _)
+        function(jself, _, _)
+          if jself:stderr_result() and not vim.tbl_isempty(jself:stderr_result()) then
+            api.nvim_err_writeln(vim.inspect(jself:stderr_result()))
+          end
           gh.run(
             {
               args = {"api", format("repos/%s/issues/%s", repo, number)},
@@ -396,82 +405,73 @@ function M.issue_action(action, kind, value)
 end
 
 function M.checkout_pr()
-  local repo, number = util.get_repo_and_number()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    gh.run(
-      {
-        args = {"pr", "checkout", number, "-R", repo},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          else
-            print(output)
-            print(format("Checked out PR %d", number))
-          end
+  gh.run(
+    {
+      args = {"pr", "checkout", number, "-R", repo},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        else
+          print(output)
+          print(format("Checked out PR %d", number))
         end
-      }
-    )
-  end
+      end
+    }
+  )
 end
 
 function M.pr_ready_for_review()
-  local repo, number = util.get_repo_and_number()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
   local bufnr = api.nvim_get_current_buf()
-  local status, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
-  if status and pr then
-    gh.run(
-      {
-        args = {"pr", "ready", tostring(number)},
-        cb = function(output, stderr)
-          print(output, stderr)
-          octo.write_state(bufnr)
-        end
-      }
-    )
-  end
+  gh.run(
+    {
+      args = {"pr", "ready", tostring(number)},
+      cb = function(output, stderr)
+        print(output, stderr)
+        octo.write_state(bufnr)
+      end
+    }
+  )
 end
 
 function M.pr_checks()
-  local repo, number = util.get_repo_and_number()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    gh.run(
-      {
-        args = {"pr", "checks", tostring(number), "-R", repo},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local lines = vim.split(output, "\n")
-            table.insert(lines, "")
-            local _, bufnr = util.create_content_popup(lines)
-            local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
-            for i, l in ipairs(buf_lines) do
-              if #vim.split(l, "pass") > 1 then
-                api.nvim_buf_add_highlight(bufnr, -1, "DiffAdd", i - 1, 0, -1)
-              elseif #vim.split(l, "fail") > 1 then
-                api.nvim_buf_add_highlight(bufnr, -1, "DiffDelete", i - 1, 0, -1)
-              end
+  gh.run(
+    {
+      args = {"pr", "checks", tostring(number), "-R", repo},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local lines = vim.split(output, "\n")
+          table.insert(lines, "")
+          local _, bufnr = util.create_content_popup(lines)
+          local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+          for i, l in ipairs(buf_lines) do
+            if #vim.split(l, "pass") > 1 then
+              api.nvim_buf_add_highlight(bufnr, -1, "DiffAdd", i - 1, 0, -1)
+            elseif #vim.split(l, "fail") > 1 then
+              api.nvim_buf_add_highlight(bufnr, -1, "DiffDelete", i - 1, 0, -1)
             end
           end
         end
-      }
-    )
-  end
+      end
+    }
+  )
 end
 
 function M.merge_pr(...)
-  local repo, number = util.get_repo_and_number()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
@@ -499,50 +499,44 @@ function M.merge_pr(...)
     table.insert(args, "--merge")
   end
   local bufnr = api.nvim_get_current_buf()
-  local status, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
-  if status and pr then
-    gh.run(
-      {
-        args = args,
-        cb = function(output, stderr)
-          print(output, stderr)
-          octo.write_state(bufnr)
-        end
-      }
-    )
-  end
+  gh.run(
+    {
+      args = args,
+      cb = function(output, stderr)
+        print(output, stderr)
+        octo.write_state(bufnr)
+      end
+    }
+  )
 end
 
 function M.show_pr_diff()
-  local repo, number = util.get_repo_and_number()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    local url = format("/repos/%s/pulls/%s", repo, number)
-    gh.run(
-      {
-        args = {"api", url},
-        headers = {"Accept: application/vnd.github.v3.diff"},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local lines = vim.split(output, "\n")
-            local bufnr = api.nvim_create_buf(true, true)
-            api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-            api.nvim_set_current_buf(bufnr)
-            api.nvim_buf_set_option(bufnr, "filetype", "diff")
-          end
+  local url = format("/repos/%s/pulls/%s", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      headers = {"Accept: application/vnd.github.v3.diff"},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local lines = vim.split(output, "\n")
+          local bufnr = api.nvim_create_buf(true, true)
+          api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+          api.nvim_set_current_buf(bufnr)
+          api.nvim_buf_set_option(bufnr, "filetype", "diff")
         end
-      }
-    )
-  end
+      end
+    }
+  )
 end
 
 function M.review_pr()
-  local repo, number = util.get_repo_and_number()
+  local repo, number, pr = util.get_repo_number_pr()
   if not repo then
     return
   end
@@ -550,52 +544,43 @@ function M.review_pr()
     print("vim-fugitive required")
     return
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    -- make sure CWD is in PR repo and branch
-    if not util.in_pr_branch() then
-      return
-    end
-
-    -- get list of changed files
-    local url = format("repos/%s/pulls/%d/files", repo, number)
-    gh.run(
-      {
-        args = {"api", url},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local results = json.parse(output)
-            local changes = {}
-            for _, result in ipairs(results) do
-              local change = {
-                branch = pr.base.ref,
-                filename = result.filename,
-                status = result.status,
-                text = format("+%d -%d", result.additions, result.deletions)
-              }
-              table.insert(changes, change)
-            end
-            fugitive.diff_pr(pr.base.ref, pr.head.ref, changes)
-          end
-        end
-      }
-    )
+  -- make sure CWD is in PR repo and branch
+  if not util.in_pr_branch() then
+    return
   end
+
+  -- get list of changed files
+  local url = format("repos/%s/pulls/%d/files", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          local changes = {}
+          for _, result in ipairs(results) do
+            local change = {
+              branch = pr.base.ref,
+              filename = result.filename,
+              status = result.status,
+              text = format("+%d -%d", result.additions, result.deletions)
+            }
+            table.insert(changes, change)
+          end
+          fugitive.diff_pr(pr.base.ref, pr.head.ref, changes)
+        end
+      end
+    }
+  )
 end
 
 function M.reaction_action(action, reaction)
   local bufnr = api.nvim_get_current_buf()
 
-  local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
-  if not number_ok then
-    api.nvim_err_writeln("Missing octo metadata")
-    return
-  end
-  local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
-  if not repo_ok then
-    api.nvim_err_writeln("Missing octo metadata")
+  local repo, number = util.get_repo_number()
+  if not repo then
     return
   end
 

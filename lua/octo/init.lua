@@ -253,37 +253,21 @@ function M.write_details(bufnr, issue, update)
     local pr = json.parse(response)
     api.nvim_buf_set_var(bufnr, "pr", pr)
 
-    -- requested reviewers
+    -- reviewers
     local requested_reviewers_vt = {
-      {"Requested Reviewers: ", "OctoNvimDetailsLabel"}
+      {"Reviewers: ", "OctoNvimDetailsLabel"}
     }
     if pr.requested_reviewers and #pr.requested_reviewers > 0 then
       for i, as in ipairs(pr.requested_reviewers) do
         table.insert(requested_reviewers_vt, {as.login, "OctoNvimDetailsValue"})
-        if i ~= #issue.assignees then
+        if i ~= #pr.requested_reviewers then
           table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
         end
       end
     else
-      table.insert(requested_reviewers_vt, {"No requested reviewers", "OctoNvimMissingDetails"})
+      table.insert(requested_reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
     end
     table.insert(details, requested_reviewers_vt)
-
-    -- reviewers
-    local reviewers_vt = {
-      {"Reviewers: ", "OctoNvimDetailsLabel"}
-    }
-    if pr and #pr > 0 then
-      for i, as in ipairs(pr) do
-        table.insert(reviewers_vt, {format("%s (%s)", as.user.login, as.state), "OctoNvimDetailsValue"})
-        if i ~= #issue.assignees then
-          table.insert(reviewers_vt, {", ", "OctoNvimDetailsLabel"})
-        end
-      end
-    else
-      table.insert(reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
-    end
-    table.insert(details, reviewers_vt)
 
     -- merged_by
     if pr.merged then
