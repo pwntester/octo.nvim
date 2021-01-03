@@ -1,6 +1,6 @@
-local constants = require"octo.constants"
-local date = require"octo.date"
-local popup = require"popup"
+local constants = require "octo.constants"
+local date = require "octo.date"
+local popup = require "popup"
 local format = string.format
 local api = vim.api
 
@@ -59,7 +59,7 @@ function M.in_pr_branch()
   return false
 end
 
-function M.get_repo_and_number()
+function M.get_repo_number()
   local bufnr = api.nvim_get_current_buf()
   if vim.bo.ft ~= "octo_issue" then
     api.nvim_err_writeln("Not in octo buffer")
@@ -77,6 +77,20 @@ function M.get_repo_and_number()
     return nil
   end
   return repo, number
+end
+
+function M.get_repo_number_pr()
+  local repo, number = M.get_repo_number()
+  if not repo then
+    return
+  end
+  local bufnr = api.nvim_get_current_buf()
+  local pr_ok, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
+  if not pr_ok then
+    api.nvim_err_writeln("Not PR buffer")
+    return nil
+  end
+  return repo, number, pr
 end
 
 function M.get_extmark_region(bufnr, mark)
@@ -199,15 +213,21 @@ function M.create_content_popup(lines)
   end
   local line_count = vim.o.lines - vim.o.cmdheight
   local max_width = math.min(vim.o.columns * 0.9, max_line)
-  if vim.o.laststatus ~= 0 then line_count = line_count - 1 end
-  local winnr, _ = popup.create(lines, {
-    line =  (line_count - #lines) / 2,
-    col =  (vim.o.columns - max_width) / 2,
-    minwidth = 40,
-    border = { 1, 1, 1, 1 },
-    borderchars = {"─", "│", "─", "│", "┌", "┐", "┘", "└"},
-    padding = { 0, 1, 0, 1 },
-  })
+  if vim.o.laststatus ~= 0 then
+    line_count = line_count - 1
+  end
+  local winnr, _ =
+    popup.create(
+    lines,
+    {
+      line = (line_count - #lines) / 2,
+      col = (vim.o.columns - max_width) / 2,
+      minwidth = 40,
+      border = {1, 1, 1, 1},
+      borderchars = {"─", "│", "─", "│", "┌", "┐", "┘", "└"},
+      padding = {0, 1, 0, 1}
+    }
+  )
   local bufnr = api.nvim_win_get_buf(winnr)
   local mapping_opts = {script = true, silent = true, noremap = true}
   api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)

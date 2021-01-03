@@ -24,7 +24,6 @@ function M.diff_pr(base, head, changes)
 end
 
 function M.update_qf(changes)
-  print("foo")
   local qf = vim.fn.getqflist({context = 0, items = 0})
   local items = qf.items
   for _, item in ipairs(items) do
