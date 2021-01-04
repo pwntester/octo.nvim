@@ -783,6 +783,10 @@ function M.reviews()
             end
           end
 
+          -- TODO: group similar comments from different review together?
+          -- group "COMMENT" from same author and same commit since they will
+          -- normally come from "Add single comment"
+
           pickers.new(
             {},
             {
@@ -835,7 +839,7 @@ function M.reviews()
                             vim.cmd [[copen]]
                             vim.cmd(
                               format(
-                                "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.menu'.get_comment('%s', %d, %d)<CR>",
+                                "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.menu'.get_comment_for_quickfix_entry('%s', %d, %d)<CR>",
                                 repo,
                                 comment_buf,
                                 main_win
@@ -844,7 +848,7 @@ function M.reviews()
 
                             -- select first item in qf
                             vim.cmd [[cc]]
-                            M.get_comment(repo, comment_buf, main_win)
+                            M.get_comment_for_quickfix_entry(repo, comment_buf, main_win)
 
                             -- back to qf, split and create comment window
                             vim.cmd [[wincmd p]]
@@ -868,7 +872,7 @@ function M.reviews()
   )
 end
 
-function M.get_comment(repo, comment_bufnr, main_win)
+function M.get_comment_for_quickfix_entry(repo, comment_bufnr, main_win)
   local qf = vim.fn.getqflist({idx = 0, items = 0})
   local idx = qf.idx or 0
   local items = qf.items or {}
