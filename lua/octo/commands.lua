@@ -453,8 +453,26 @@ function M.pr_checks()
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          local lines = vim.split(output, "\n")
-          table.insert(lines, "")
+          local max_lengths = {}
+          local parts = {}
+          for _, l in pairs(vim.split(output, "\n")) do
+            local line_parts = vim.split(l, "\t")
+            for i, p in pairs(line_parts) do
+              if max_lengths[i] == nil or max_lengths[i] < #p then
+                max_lengths[i] = #p
+              end
+            end
+            table.insert(parts, line_parts)
+          end
+
+          local lines = {}
+          for _, p in pairs(parts) do
+            local line = {}
+            for i, pp in pairs(p) do
+              table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
+            end
+            table.insert(lines, table.concat(line, "  "))
+          end
           local _, bufnr = util.create_content_popup(lines)
           local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
           for i, l in ipairs(buf_lines) do
