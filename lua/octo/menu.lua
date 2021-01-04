@@ -18,6 +18,8 @@ local json = {
   parse = vim.fn.json_decode
 }
 
+local M = {}
+
 local function parse_opts(opts, target)
   local query = {}
   local tmp_table = {}
@@ -182,7 +184,7 @@ local function gen_from_issue()
   end
 end
 
-local function issues(repo, opts)
+function M.issues(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts, "issue")
@@ -260,7 +262,7 @@ local function open_gist(prompt_bufnr)
   end
 end
 
-local function gists(opts)
+function M.gists(opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts, "gist")
@@ -393,7 +395,7 @@ local function gen_from_pr()
   end
 end
 
-local function pull_requests(repo, opts)
+function M.pull_requests(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts, "pr")
@@ -511,7 +513,7 @@ local commit_previewer =
   {}
 )
 
-local function commits()
+function M.commits()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
@@ -618,7 +620,7 @@ local changed_files_previewer =
   {}
 )
 
-local function changed_files()
+function M.changed_files()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
@@ -679,6 +681,7 @@ local function gen_from_review(max_state, max_author)
   }
 
   local make_display = function(entry)
+    -- TODO: mark commit_id as outdated if a newer commit touches the same line
     return displayer {
       {entry.review.commit_id:sub(1, 7), "TelescopeResultsNumber"},
       {entry.review.state, "TelescopeResultsIdentifier"},
@@ -748,11 +751,17 @@ local review_previewer =
   {}
 )
 
-local function reviews()
+function M.reviews()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
+
+  -- make sure CWD is in PR repo and branch
+  if not util.in_pr_branch() then
+    return
+  end
+
   local url = format("repos/%s/pulls/%d/reviews", repo, number)
   gh.run(
     {
@@ -790,7 +799,6 @@ local function reviews()
                     local selection = actions.get_selected_entry(prompt_bufnr)
                     actions.close(prompt_bufnr)
                     -- TODO: populate QF
-                    print(format("fugitive:///Users/pwntester/dev/octo.nvim/.git//9b8f21e270c6ec904e54457979408f33bf05bab2/lua/octo/commands.lua"))
                     local curl = format("/repos/%s/pulls/%d/reviews/%d/comments", repo, number, selection.review.id)
                     gh.run(
                       {
@@ -799,11 +807,51 @@ local function reviews()
                           if stderr and not util.is_blank(stderr) then
                             api.nvim_err_writeln(stderr)
                           elseif output then
+                            local items = {}
                             local comments = json.parse(output)
                             for _, comment in ipairs(comments) do
-                              print(format("fugitive://%s/.git/%s/%s", vim.fn.getcwd(), comment.commit_id, comment.path))
-                              print(format("Gedit %s:%s", comment.commit_id, comment.path))
+                              local item = {}
+                              --item.bufnr = vim.fn.bufnr(comment.path)
+                              item.filename = comment.path
+                              local _, _, line = string.find(comment.diff_hunk, "@@%s+-%d+,%d+%s%+(%d+),%d+%s@@")
+                              item.lnum = line + comment.position - 2
+                              item.text = vim.split(comment.body, "\n")[1]
+                              item.pattern = comment.id
+
+                              -- print(format("Gedit %s:%s", comment.commit_id, comment.path))
+                              -- print(format("fugitive://%s/.git//%s/%s", vim.fn.getcwd(), comment.commit_id, comment.path))
+
+                              table.insert(items, item)
                             end
+                            vim.fn.setqflist(items)
+
+                            local comment_buf = api.nvim_create_buf(false, true)
+
+                            -- new tab to main, qf and comment windows
+                            vim.cmd [[tabnew]]
+                            local main_win = api.nvim_get_current_win()
+
+                            -- open qf and set a <CR> mapping
+                            vim.cmd [[copen]]
+                            vim.cmd(
+                              format(
+                                "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.menu'.get_comment('%s', %d, %d)<CR>",
+                                repo,
+                                comment_buf,
+                                main_win
+                              )
+                            )
+
+                            -- select first item in qf
+                            vim.cmd [[cc]]
+                            M.get_comment(repo, comment_buf, main_win)
+
+                            -- back to qf, split and create comment window
+                            vim.cmd [[wincmd p]]
+                            vim.cmd [[set splitright]]
+                            vim.cmd [[vsplit]]
+                            api.nvim_set_current_buf(comment_buf)
+                          --vim.cmd [[wincmd l]]
                           end
                         end
                       }
@@ -820,11 +868,27 @@ local function reviews()
   )
 end
 
-return {
-  issues = issues,
-  pull_requests = pull_requests,
-  gists = gists,
-  commits = commits,
-  changed_files = changed_files,
-  reviews = reviews
-}
+function M.get_comment(repo, comment_bufnr, main_win)
+  local qf = vim.fn.getqflist({idx = 0, items = 0})
+  local idx = qf.idx or 0
+  local items = qf.items or {}
+  local selected_item = items[idx]
+  local comment_id = selected_item.pattern
+  local comment_url = format("/repos/%s/pulls/comments/%d", repo, comment_id)
+  gh.run(
+    {
+      args = {"api", comment_url},
+      cb = function(output)
+        local comment = json.parse(output)
+        api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.diff_hunk, "\n"))
+        api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, {""})
+        api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, vim.split(comment.body, "\n"))
+        api.nvim_buf_set_option(comment_bufnr, "filetype", "diff")
+        local row = (selected_item.lnum) or 1
+        api.nvim_win_set_cursor(main_win, {row, 1})
+      end
+    }
+  )
+end
+
+return M
