@@ -9,6 +9,7 @@ local make_entry = require("telescope.make_entry")
 local entry_display = require("telescope.pickers.entry_display")
 local gh = require "octo.gh"
 local util = require("octo.util")
+local fugitive = require("octo.fugitive")
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
@@ -751,17 +752,7 @@ local review_previewer =
   {}
 )
 
-function M.reviews()
-  local repo, number, _ = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
-
-  -- make sure CWD is in PR repo and branch
-  if not util.in_pr_branch() then
-    return
-  end
-
+function M.reviews(repo, number)
   local url = format("repos/%s/pulls/%d/reviews", repo, number)
   gh.run(
     {
@@ -802,64 +793,7 @@ function M.reviews()
                   function()
                     local selection = actions.get_selected_entry(prompt_bufnr)
                     actions.close(prompt_bufnr)
-                    -- TODO: populate QF
-                    local curl = format("/repos/%s/pulls/%d/reviews/%d/comments", repo, number, selection.review.id)
-                    gh.run(
-                      {
-                        args = {"api", curl},
-                        cb = function(output, stderr)
-                          if stderr and not util.is_blank(stderr) then
-                            api.nvim_err_writeln(stderr)
-                          elseif output then
-                            local items = {}
-                            local comments = json.parse(output)
-                            for _, comment in ipairs(comments) do
-                              local item = {}
-                              --item.bufnr = vim.fn.bufnr(comment.path)
-                              item.filename = comment.path
-                              local _, _, line = string.find(comment.diff_hunk, "@@%s+-%d+,%d+%s%+(%d+),%d+%s@@")
-                              item.lnum = line + comment.position - 2
-                              item.text = vim.split(comment.body, "\n")[1]
-                              item.pattern = comment.id
-
-                              -- print(format("Gedit %s:%s", comment.commit_id, comment.path))
-                              -- print(format("fugitive://%s/.git//%s/%s", vim.fn.getcwd(), comment.commit_id, comment.path))
-
-                              table.insert(items, item)
-                            end
-                            vim.fn.setqflist(items)
-
-                            local comment_buf = api.nvim_create_buf(false, true)
-
-                            -- new tab to main, qf and comment windows
-                            vim.cmd [[tabnew]]
-                            local main_win = api.nvim_get_current_win()
-
-                            -- open qf and set a <CR> mapping
-                            vim.cmd [[copen]]
-                            vim.cmd(
-                              format(
-                                "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.menu'.get_comment_for_quickfix_entry('%s', %d, %d)<CR>",
-                                repo,
-                                comment_buf,
-                                main_win
-                              )
-                            )
-
-                            -- select first item in qf
-                            vim.cmd [[cc]]
-                            M.get_comment_for_quickfix_entry(repo, comment_buf, main_win)
-
-                            -- back to qf, split and create comment window
-                            vim.cmd [[wincmd p]]
-                            vim.cmd [[set splitright]]
-                            vim.cmd [[vsplit]]
-                            api.nvim_set_current_buf(comment_buf)
-                          --vim.cmd [[wincmd l]]
-                          end
-                        end
-                      }
-                    )
+                    fugitive.populate_comments_qf(repo, number, selection)
                   end
                 )
                 return true
@@ -867,29 +801,6 @@ function M.reviews()
             }
           ):find()
         end
-      end
-    }
-  )
-end
-
-function M.get_comment_for_quickfix_entry(repo, comment_bufnr, main_win)
-  local qf = vim.fn.getqflist({idx = 0, items = 0})
-  local idx = qf.idx or 0
-  local items = qf.items or {}
-  local selected_item = items[idx]
-  local comment_id = selected_item.pattern
-  local comment_url = format("/repos/%s/pulls/comments/%d", repo, comment_id)
-  gh.run(
-    {
-      args = {"api", comment_url},
-      cb = function(output)
-        local comment = json.parse(output)
-        api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.diff_hunk, "\n"))
-        api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, {""})
-        api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, vim.split(comment.body, "\n"))
-        api.nvim_buf_set_option(comment_bufnr, "filetype", "diff")
-        local row = (selected_item.lnum) or 1
-        api.nvim_win_set_cursor(main_win, {row, 1})
       end
     }
   )

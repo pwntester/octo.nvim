@@ -62,7 +62,7 @@ local commands = {
       M.pr_ready_for_review()
     end,
     reviews = function()
-      menu.reviews()
+      M.pr_reviews()
     end
   },
   review = {
@@ -538,6 +538,19 @@ function M.show_pr_diff()
   )
 end
 
+function M.pr_reviews()
+  local repo, number, _ = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+
+  -- make sure CWD is in PR repo and branch
+  if not util.in_pr_branch() then
+    return
+  end
+  menu.reviews(repo, number)
+end
+
 function M.review_pr()
   local repo, number, pr = util.get_repo_number_pr()
   if not repo then
@@ -572,7 +585,7 @@ function M.review_pr()
             }
             table.insert(changes, change)
           end
-          fugitive.diff_pr(pr.base.ref, pr.head.ref, changes)
+          fugitive.populate_changes_qf(pr.base.ref, pr.head.ref, changes)
         end
       end
     }
