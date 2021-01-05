@@ -1,5 +1,6 @@
 local gh = require "octo.gh"
 local util = require "octo.util"
+local signs = require "octo.signs"
 local format = string.format
 local api = vim.api
 local json = {
@@ -93,6 +94,7 @@ function M.diff_changes_qf_entry()
 end
 
 function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
+  -- TODO: add ]c and [c mappings to change comments
   vim.cmd(
     format(
       "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
@@ -128,6 +130,7 @@ function M.populate_comments_qf(repo, number, selection)
           api.nvim_err_writeln(stderr)
         elseif output then
           local items = {}
+
           local review_comments = json.parse(output)
           for _, review_comment in ipairs(review_comments) do
             local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
@@ -135,15 +138,10 @@ function M.populate_comments_qf(repo, number, selection)
             local comment = comments[tostring(review_comment.id)]
             if comment then
               local item = {}
-              --local _, _, line = string.find(comment.diff_hunk, "@@%s+-%d+,%d+%s%+(%d+),%d+%s@@")
-              -- line + comment.position - 2
               item.filename = comment.path
               item.lnum = comment.original_line
-              item.text = format("%s: %s...", comment.author, vim.split(comment.body, "\n")[1])
+              item.text = format("%s (%s): %s...", comment.author, string.lower(comment.author_association), vim.split(comment.body, "\n")[1])
               item.pattern = comment.id
-
-              -- print(format("Gedit %s:%s", comment.commit_id, comment.path))
-              -- print(format("fugitive://%s/.git//%s/%s", vim.fn.getcwd(), comment.commit_id, comment.path))
 
               if not comment.in_reply_to_id then
                 table.insert(items, item)
@@ -166,6 +164,9 @@ function M.populate_comments_qf(repo, number, selection)
 
           -- open qf
           vim.cmd [[copen]]
+
+          -- save review comments in main window var
+          api.nvim_win_set_var(main_win, "review_comments", review_comments)
 
           -- add a <CR> mapping to the qf window
           vim.cmd(
@@ -218,6 +219,10 @@ function M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
   -- jump to comment line in main window
   local row = (selected_item.lnum) or 1
   api.nvim_win_set_cursor(main_win, {row, 1})
+
+  -- place signs
+  local review_comments = api.nvim_win_get_var(main_win, "review_comments")
+  signs.place_comments_signs(main_win, pr_bufnr, review_comments)
 
   local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
   local comment = comments[comment_id]

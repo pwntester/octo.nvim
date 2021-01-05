@@ -444,8 +444,6 @@ function M.pull_requests(repo, opts)
     pull.head = parts[3]
     pull.status = parts[4]
 
-    print(result, vim.inspect(pull))
-
     if #pull.number > max_number then
       max_number = #pull.number
     end
