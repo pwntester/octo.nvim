@@ -7,9 +7,13 @@ let g:octo_bubble_color = synIDattr(synIDtrans(hlID("NormalFloat")), "bg#")
 execute('hi! OctoNvimBubble1 guifg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubble2 guibg='.g:octo_bubble_color)
 
+function! s:command_complete(...)
+  return luaeval('require("octo.commands").command_complete(_A)', a:000)
+endfunction
+
 " commands
 if executable('gh')
-  command! -nargs=* Octo :lua require'octo.commands'.octo(<f-args>)
+  command! -complete=customlist,s:command_complete -nargs=* Octo :lua require'octo.commands'.octo(<f-args>)
 else
   echo 'Cannot find `gh` command.'
 endif

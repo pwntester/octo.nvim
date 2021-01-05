@@ -695,4 +695,30 @@ function M.issue_interactive_action(action, kind)
   M.issue_action(action, kind, value)
 end
 
+function M.command_complete(args)
+  local command_keys = vim.tbl_keys(commands)
+  local argLead, cmdLine, _ = unpack(args)
+  local parts = vim.split(cmdLine, " ")
+
+  local get_options = function(options)
+    local valid_options = {}
+    for _, option in pairs(options) do
+      if string.sub(option, 1, #argLead) == argLead then
+        table.insert(valid_options, option)
+      end
+    end
+    return valid_options
+  end
+
+  if #parts == 2 then
+    return get_options(command_keys)
+  elseif #parts == 3 then
+    local o = commands[parts[2]]
+    if not o then
+      return
+    end
+    return get_options(vim.tbl_keys(o))
+  end
+end
+
 return M
