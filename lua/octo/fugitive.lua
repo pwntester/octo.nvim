@@ -43,7 +43,6 @@ function M.update_changes_qf(changes)
   local items = qf.items
   for _, item in ipairs(items) do
     for _, change in ipairs(changes) do
-      print(item.module, change.branch, change.filename)
       if item.module == format("%s:%s", change.branch, change.filename) then
         item.text = change.text .. " " .. change.status
       end
@@ -89,21 +88,23 @@ function M.diff_changes_qf_entry()
 end
 
 
-function M.add_comments_qf_mappings(repo, comment_bufnr, main_win)
+function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
   vim.cmd(
     format(
-      "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d)<CR>",
+      "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
       main_win,
       repo,
+      number,
       comment_bufnr,
       main_win
     )
   )
   vim.cmd(
     format(
-      "nnoremap <buffer>[q :call nvim_set_current_win(%d) <BAR> :cprevious <BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d)<CR>",
+      "nnoremap <buffer>[q :call nvim_set_current_win(%d) <BAR> :cprevious <BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
       main_win,
       repo,
+      number,
       comment_bufnr,
       main_win
     )
@@ -116,6 +117,10 @@ end
 
 function M.populate_comments_qf(repo, number, selection)
   local curl = format("/repos/%s/pulls/%d/reviews/%d/comments", repo, number, selection.review.id)
+
+  local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
+  local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
+
   gh.run(
     {
       args = {"api", curl},
@@ -124,20 +129,25 @@ function M.populate_comments_qf(repo, number, selection)
           api.nvim_err_writeln(stderr)
         elseif output then
           local items = {}
-          local comments = json.parse(output)
-          for _, comment in ipairs(comments) do
-            local item = {}
-            --item.bufnr = vim.fn.bufnr(comment.path)
-            item.filename = comment.path
-            local _, _, line = string.find(comment.diff_hunk, "@@%s+-%d+,%d+%s%+(%d+),%d+%s@@")
-            item.lnum = line + comment.position - 2
-            item.text = vim.split(comment.body, "\n")[1]
-            item.pattern = comment.id
+          local review_comments = json.parse(output)
+          for _, review_comment in ipairs(review_comments) do
+            local comment = comments[tostring(review_comment.id)]
+            if comment then
+              local item = {}
+              --local _, _, line = string.find(comment.diff_hunk, "@@%s+-%d+,%d+%s%+(%d+),%d+%s@@")
+              -- line + comment.position - 2
+              item.filename = comment.path
+              item.lnum = comment.original_line
+              item.text = vim.split(comment.body, "\n")[1] .. " " .. comment.id
+              item.pattern = comment.id
 
-            -- print(format("Gedit %s:%s", comment.commit_id, comment.path))
-            -- print(format("fugitive://%s/.git//%s/%s", vim.fn.getcwd(), comment.commit_id, comment.path))
+              -- print(format("Gedit %s:%s", comment.commit_id, comment.path))
+              -- print(format("fugitive://%s/.git//%s/%s", vim.fn.getcwd(), comment.commit_id, comment.path))
 
-            table.insert(items, item)
+              if not comment.in_reply_to_id then
+                table.insert(items, item)
+              end
+            end
           end
 
           -- populate qf
@@ -158,18 +168,19 @@ function M.populate_comments_qf(repo, number, selection)
           -- add a <CR> mapping to the qf window
           vim.cmd(
             format(
-              "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d)<CR>",
+              "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
               repo,
+              number,
               comment_bufnr,
               main_win
             )
           )
 
           -- add ]q and [q mappints to the qf window
-          M.add_comments_qf_mappings(repo, comment_bufnr, main_win)
+          M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
 
           -- get comment for first element in qf
-          M.show_comments_qf_entry(repo, comment_bufnr, main_win)
+          M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
 
           -- back to qf
           vim.cmd [[wincmd p]]
@@ -180,19 +191,19 @@ function M.populate_comments_qf(repo, number, selection)
           api.nvim_set_current_buf(comment_bufnr)
 
           -- set mappings to the comment window
-          M.add_comments_qf_mappings(repo, comment_bufnr, main_win)
+          M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
         end
       end
     }
   )
 end
 
-function M.show_comments_qf_entry(repo, comment_bufnr, main_win)
+function M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
   -- select qf entry
   vim.cmd [[cc]]
 
   -- set [q and ]q mappings for the main window
-  M.add_comments_qf_mappings(repo, comment_bufnr, main_win)
+  M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
 
   -- get comment details
   local qf = vim.fn.getqflist({idx = 0, items = 0})
@@ -200,25 +211,33 @@ function M.show_comments_qf_entry(repo, comment_bufnr, main_win)
   local items = qf.items or {}
   local selected_item = items[idx]
   local comment_id = selected_item.pattern
-  local comment_url = format("/repos/%s/pulls/comments/%d", repo, comment_id)
+
+  local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
 
   -- jump to comment line in main window
   local row = (selected_item.lnum) or 1
   api.nvim_win_set_cursor(main_win, {row, 1})
 
-  -- fetch comment details and show them in the comment buffer
-  gh.run(
-    {
-      args = {"api", comment_url},
-      cb = function(output)
-        local comment = json.parse(output)
-        api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.diff_hunk, "\n"))
-        api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, {""})
-        api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, vim.split(comment.body, "\n"))
-        api.nvim_buf_set_option(comment_bufnr, "filetype", "diff")
-      end
-    }
-  )
+  local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
+  local comment = comments[comment_id]
+  local lines = {}
+  vim.list_extend(lines, vim.split(comment.diff_hunk, "\n"))
+  vim.list_extend(lines, {""})
+  vim.list_extend(lines, vim.split(comment.body, "\n"))
+  api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, lines)
+
+  local replies = api.nvim_buf_get_var(pr_bufnr, "pr_replies")
+  for id, reply in pairs(replies) do
+    -- TODO: print replies to comment
+    if reply.in_reply_to_id == comment_id then
+      vim.list_extend(lines, {"-- reply --"})
+      vim.list_extend(lines, vim.split(comment.diff_hunk, "\n"))
+      vim.list_extend(lines, {""})
+      vim.list_extend(lines, vim.split(comment.body, "\n"))
+      api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, lines)
+    end
+  end
+  api.nvim_buf_set_option(comment_bufnr, "filetype", "diff")
 end
 
 return M

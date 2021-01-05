@@ -243,6 +243,7 @@ function M.write_details(bufnr, issue, update)
     local owner = segments[5]
     local repo = segments[6]
     local pr_id = segments[8]
+
     local response =
       gh.run(
       {
@@ -318,7 +319,7 @@ function M.write_details(bufnr, issue, update)
     table.insert(empty_lines, "")
   end
   if not update then
-    write_block(empty_lines, {bufnr = bufnr, mark = false, line = line })
+    write_block(empty_lines, {bufnr = bufnr, mark = false, line = line})
   end
 
   -- print details as virtual text
@@ -390,6 +391,54 @@ function M.load_issue()
           return
         end
         M.create_issue_buffer(issue, repo, false)
+      end
+    }
+  )
+end
+
+-- This function accumulates all the PR review comments into a couple of dicts
+-- that are stored as a buffer variable in `pr_comments` and `pr_replies`.
+local function async_fetch_review_comments(bufnr, repo, number)
+  gh.run(
+    {
+      args = {"api", format("repos/%s/pulls/%d/comments", repo, number), "--paginate"},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          local comments = {}
+          local replies = {}
+          for _, comment in ipairs(results) do
+            local c = {}
+            c.pull_request_review_id = comment.pull_request_review_id
+            c.id = comment.id
+            c.diff_hunk = comment.diff_hunk
+            c.body = comment.body
+            c.path = comment.path
+            c.in_reply_to_id = comment.in_reply_to_id
+            c.author_association = comment.author_association
+
+            c.original_commit_id = comment.original_commit_id
+            c.original_position = comment.original_position
+            c.original_line = comment.original_line
+            c.original_start_line = comment.original_start_line
+
+            c.commit_id = comment.commit_id
+            c.position = comment.position
+            c.line = comment.line
+            c.start_line = comment.start_line
+
+            c.side = comment.side
+            if comment.in_reply_to_id then
+              replies[tostring(comment.id)] = c
+            else
+              comments[tostring(comment.id)] = c
+            end
+          end
+          api.nvim_buf_set_var(bufnr, "pr_comments", comments)
+          api.nvim_buf_set_var(bufnr, "pr_replies", replies)
+        end
       end
     }
   )
@@ -529,7 +578,13 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<space>pd", [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pm", [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<space>pm",
+    [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]],
+    mapping_opts
+  )
 
   api.nvim_buf_set_keymap(
     bufnr,
@@ -678,6 +733,9 @@ function M.create_issue_buffer(issue, repo, create_buffer)
     200
   )
 
+  if issue.pull_request then
+    async_fetch_review_comments(bufnr, repo, number)
+  end
   async_fetch_taggable_users(bufnr, repo)
   async_fetch_issues(bufnr, repo)
 

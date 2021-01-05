@@ -610,9 +610,7 @@ local changed_files_previewer =
       define_preview = function(self, entry)
         if self.state.bufname ~= entry.value then
           local diff = entry.change.patch
-          local lines = {}
-          vim.list_extend(lines, vim.split(diff, "\n"))
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
           api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
         end
       end
@@ -716,12 +714,15 @@ local review_previewer =
       end,
       define_preview = function(self, entry)
         if self.state.bufname ~= entry.value then
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, {"Author: " .. entry.review.user.login})
+          local lines = {}
+          vim.list_extend(lines, {"Author: " .. entry.review.user.login})
           local body = entry.review.body
           if not util.is_blank(body) then
-            api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, vim.split("Body: " .. body, "\n"))
+            vim.list_extend(lines, vim.split("Body: " .. body, "\n"))
           end
-          api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
+          vim.list_extend(lines, {""})
+          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+
           local url = format("/repos/%s/pulls/%d/reviews/%d/comments", opts.repo, opts.number, entry.review.id)
           gh.run(
             {
@@ -732,13 +733,15 @@ local review_previewer =
                 elseif output then
                   local results = json.parse(output)
                   for _, comment in ipairs(results) do
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {"--"})
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {"Path: " .. comment.path})
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, vim.split(comment.diff_hunk, "\n"))
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, vim.split(comment.body, "\n"))
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, {""})
+                    local lines = {}
+                    vim.list_extend(lines, {"--"})
+                    vim.list_extend(lines, {"Path: " .. comment.path})
+                    vim.list_extend(lines, {""})
+                    vim.list_extend(lines, vim.split(comment.diff_hunk, "\n"))
+                    vim.list_extend(lines, {""})
+                    vim.list_extend(lines, vim.split(comment.body, "\n"))
+                    vim.list_extend(lines, {""})
+                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, lines)
                   end
                 end
                 api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
@@ -761,16 +764,16 @@ function M.reviews(repo, number)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          local results = json.parse(output)
+          local reviews = json.parse(output)
 
           local max_state = -1
           local max_author = -1
-          for _, result in ipairs(results) do
-            if #result.author_association > max_author then
-              max_author = #result.author_association
+          for _, review in ipairs(reviews) do
+            if #review.author_association > max_author then
+              max_author = #review.author_association
             end
-            if #result.state > max_state then
-              max_state = #result.state
+            if #review.state > max_state then
+              max_state = #review.state
             end
           end
 
@@ -783,7 +786,7 @@ function M.reviews(repo, number)
             {
               prompt_title = "Reviews",
               finder = finders.new_table {
-                results = results,
+                results = reviews,
                 entry_maker = gen_from_review(max_state, max_author)
               },
               sorter = conf.file_sorter({}),
