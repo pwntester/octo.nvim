@@ -2,7 +2,7 @@ local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local menu = require "octo.menu"
-local fugitive = require "octo.fugitive"
+local reviews = require "octo.reviews"
 local constants = require("octo.constants")
 local api = vim.api
 local format = string.format
@@ -585,7 +585,7 @@ function M.review_pr()
             }
             table.insert(changes, change)
           end
-          fugitive.populate_changes_qf(pr.base.ref, pr.head.ref, changes)
+          reviews.populate_changes_qf(pr.base.ref, pr.head.ref, changes)
         end
       end
     }

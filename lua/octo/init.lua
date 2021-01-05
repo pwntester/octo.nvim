@@ -1,7 +1,7 @@
-local gh = require("octo.gh")
-local signs = require("octo.signs")
-local hl = require("octo.highlights")
-local constants = require("octo.constants")
+local gh = require "octo.gh"
+local signs = require "octo.signs"
+local hl = require "octo.highlights"
+local constants = require "octo.constants"
 local util = require "octo.util"
 local vim = vim
 local api = vim.api
@@ -417,6 +417,7 @@ local function async_fetch_review_comments(bufnr, repo, number)
             c.body = comment.body
             c.path = comment.path
             c.in_reply_to_id = comment.in_reply_to_id
+            c.author = comment.user.login
             c.author_association = comment.author_association
 
             c.original_commit_id = comment.original_commit_id
@@ -431,7 +432,13 @@ local function async_fetch_review_comments(bufnr, repo, number)
 
             c.side = comment.side
             if comment.in_reply_to_id then
-              replies[tostring(comment.id)] = c
+              if replies[tostring(comment.in_reply_to_id)] then
+                local rs = replies[tostring(comment.in_reply_to_id)]
+                table.insert(rs, c)
+                replies[tostring(comment.in_reply_to_id)] = rs
+              else
+                replies[tostring(comment.in_reply_to_id)] = {c}
+              end
             else
               comments[tostring(comment.id)] = c
             end

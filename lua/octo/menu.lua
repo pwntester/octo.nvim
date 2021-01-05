@@ -9,7 +9,6 @@ local make_entry = require("telescope.make_entry")
 local entry_display = require("telescope.pickers.entry_display")
 local gh = require "octo.gh"
 local util = require("octo.util")
-local fugitive = require("octo.fugitive")
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
@@ -131,15 +130,15 @@ local issue_previewer =
   end
 )
 
-local function gen_from_issue()
+local function gen_from_issue(max_number, max_status, max_labels)
   local displayer =
     entry_display.create {
     separator = " ",
     items = {
-      {width = 6},
-      {width = 6},
+      {width = max_number},
+      {width = max_status},
       {remaining = true},
-      {width = 20}
+      {width = max_labels + 2}
     }
   }
 
@@ -162,25 +161,18 @@ local function gen_from_issue()
   end
 
   return function(entry)
-    if not entry or util.is_blank(entry) then
+    if not entry or vim.tbl_isempty(entry) then
       return nil
     end
 
-    local parts = vim.split(entry, "\t")
-    local number = parts[1]
-    local status = parts[2]
-    local title = parts[3]
-    local labels = parts[4]
-    local date = parts[5]
-
     return {
-      value = number,
-      ordinal = number,
-      msg = title,
+      value = entry.number,
+      ordinal = entry.number,
+      msg = entry.title,
       display = make_display,
-      status = status,
-      labels = labels,
-      date = date
+      status = entry.status,
+      labels = entry.labels,
+      date = entry.date
     }
   end
 end
@@ -204,13 +196,41 @@ function M.issues(repo, opts)
     return
   end
 
+  local issues = {}
+  local max_number = -1
+  local max_status = -1
+  local max_labels = -1
+  for _, result in ipairs(results) do
+    if util.is_blank(result) then
+      break
+    end
+    local parts = vim.split(result, "\t")
+    local issue = {}
+    issue.number = tostring(parts[1])
+    issue.status = parts[2]
+    issue.title = parts[3]
+    issue.labels = parts[4]
+    issue.date = parts[5]
+
+    if #issue.status > max_status then
+      max_status = #issue.status
+    end
+    if #issue.number > max_number then
+      max_number = #issue.number
+    end
+    if #issue.labels > max_labels then
+      max_labels = #issue.labels
+    end
+    table.insert(issues, issue)
+  end
+
   pickers.new(
     opts,
     {
       prompt_title = "Issues",
       finder = finders.new_table {
-        results = results,
-        entry_maker = gen_from_issue()
+        results = issues,
+        entry_maker = gen_from_issue(max_number, max_status, max_labels)
       },
       sorter = conf.file_sorter(opts),
       previewer = issue_previewer.new({repo = repo}),
@@ -353,15 +373,15 @@ local pr_previewer =
   end
 )
 
-local function gen_from_pr()
+local function gen_from_pr(max_number, max_head, max_status)
   local displayer =
     entry_display.create {
     separator = " ",
     items = {
-      {width = 6},
-      {width = 6},
+      {width = max_number},
+      {width = max_status},
       {remaining = true},
-      {width = 20}
+      {width = max_head}
     }
   }
 
@@ -375,23 +395,17 @@ local function gen_from_pr()
   end
 
   return function(entry)
-    if not entry or util.is_blank(entry) then
+    if not entry or vim.tbl_isempty(entry) then
       return nil
     end
 
-    local parts = vim.split(entry, "\t")
-    local number = parts[1]
-    local title = parts[2]
-    local head = parts[3]
-    local status = parts[4]
-
     return {
-      value = number,
-      ordinal = number,
-      msg = title,
+      value = entry.number,
+      ordinal = entry.number,
+      msg = entry.title,
       display = make_display,
-      status = status,
-      head = head
+      status = entry.status,
+      head = entry.head
     }
   end
 end
@@ -415,13 +429,43 @@ function M.pull_requests(repo, opts)
     return
   end
 
+  local max_number = -1
+  local max_head = -1
+  local max_status = -1
+  local pulls = {}
+  for _, result in ipairs(results) do
+    if util.is_blank(result) then
+      break
+    end
+    local parts = vim.split(result, "\t")
+    local pull = {}
+    pull.number = tostring(parts[1])
+    pull.title = parts[2]
+    pull.head = parts[3]
+    pull.status = parts[4]
+
+    print(result, vim.inspect(pull))
+
+    if #pull.number > max_number then
+      max_number = #pull.number
+    end
+    if #pull.head > max_head then
+      max_head = #pull.head
+    end
+    if #pull.status > max_status then
+      max_status = #pull.status
+    end
+
+    table.insert(pulls, pull)
+  end
+
   pickers.new(
     opts,
     {
       prompt_title = "Pull Requests",
       finder = finders.new_table {
-        results = results,
-        entry_maker = gen_from_pr()
+        results = pulls,
+        entry_maker = gen_from_pr(max_number, max_head, max_status)
       },
       previewer = pr_previewer.new({repo = repo}),
       sorter = conf.file_sorter(opts),
@@ -796,7 +840,7 @@ function M.reviews(repo, number)
                   function()
                     local selection = actions.get_selected_entry(prompt_bufnr)
                     actions.close(prompt_bufnr)
-                    fugitive.populate_comments_qf(repo, number, selection)
+                    require "octo.reviews".populate_comments_qf(repo, number, selection)
                   end
                 )
                 return true

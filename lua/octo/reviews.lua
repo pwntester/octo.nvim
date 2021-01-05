@@ -9,9 +9,9 @@ local json = {
 local M = {}
 
 function M.add_changes_qf_mappings()
-  vim.cmd [[nnoremap <buffer>]q :cnext <BAR> :lua require'octo.fugitive'.diff_changes_qf_entry()<CR>]]
-  vim.cmd [[nnoremap <buffer>[q :cprevious <BAR> :lua require'octo.fugitive'.diff_changes_qf_entry()<CR>]]
-  vim.cmd [[nnoremap <buffer><C-c> :cclose <BAR> :lua require'octo.fugitive'.clean_fugitive_buffers()<CR>]]
+  vim.cmd [[nnoremap <buffer>]q :cnext <BAR> :lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
+  vim.cmd [[nnoremap <buffer>[q :cprevious <BAR> :lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
+  vim.cmd [[nnoremap <buffer><C-c> :cclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd [[11copen]]
@@ -21,7 +21,7 @@ end
 function M.populate_changes_qf(base, head, changes)
   -- open a new tab so we can easily clean all the windows mess
   if true then
-    vim.cmd [[tabnew]]
+    vim.cmd [[tabnew %]]
   end
 
   -- run the diff between head and base commits
@@ -34,7 +34,7 @@ function M.populate_changes_qf(base, head, changes)
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
   -- there's probably a better way to map this without changing the window
   vim.cmd [[copen]]
-  vim.cmd [[nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.fugitive'.diff_changes_qf_entry()<CR>]]
+  vim.cmd [[nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
   vim.cmd [[wincmd p]]
 end
 
@@ -53,8 +53,12 @@ end
 
 function M.clean_fugitive_buffers()
   for _, w in ipairs(api.nvim_list_wins()) do
-    if vim.startswith(api.nvim_buf_get_name(api.nvim_win_get_buf(w)), "fugitive:") then
-      vim.cmd(format("bdelete %d", api.nvim_win_get_buf(w)))
+    if api.nvim_win_is_valid(w) then
+      local bufnr = api.nvim_win_get_buf(w)
+      local bufname = api.nvim_buf_get_name(bufnr)
+      if vim.startswith(bufname, "fugitive:") then
+        vim.cmd(format("bdelete %d", bufnr))
+      end
     end
   end
 end
@@ -80,6 +84,7 @@ function M.diff_changes_qf_entry()
       else
         vim.cmd(format("rightbelow vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
       end
+      vim.cmd [[normal! ]c]]
 
       -- set `]q` and `[q` mappings to the diff entry buffer (base)
       M.add_changes_qf_mappings()
@@ -87,11 +92,10 @@ function M.diff_changes_qf_entry()
   end
 end
 
-
 function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
   vim.cmd(
     format(
-      "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
+      "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
       main_win,
       repo,
       number,
@@ -101,7 +105,7 @@ function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
   )
   vim.cmd(
     format(
-      "nnoremap <buffer>[q :call nvim_set_current_win(%d) <BAR> :cprevious <BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
+      "nnoremap <buffer>[q :call nvim_set_current_win(%d) <BAR> :cprevious <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
       main_win,
       repo,
       number,
@@ -116,14 +120,9 @@ function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
 end
 
 function M.populate_comments_qf(repo, number, selection)
-  local curl = format("/repos/%s/pulls/%d/reviews/%d/comments", repo, number, selection.review.id)
-
-  local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
-  local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
-
   gh.run(
     {
-      args = {"api", curl},
+      args = {"api", format("/repos/%s/pulls/%d/reviews/%d/comments", repo, number, selection.review.id)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
@@ -131,6 +130,8 @@ function M.populate_comments_qf(repo, number, selection)
           local items = {}
           local review_comments = json.parse(output)
           for _, review_comment in ipairs(review_comments) do
+            local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
+            local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
             local comment = comments[tostring(review_comment.id)]
             if comment then
               local item = {}
@@ -138,7 +139,7 @@ function M.populate_comments_qf(repo, number, selection)
               -- line + comment.position - 2
               item.filename = comment.path
               item.lnum = comment.original_line
-              item.text = vim.split(comment.body, "\n")[1] .. " " .. comment.id
+              item.text = format("%s: %s...", comment.author, vim.split(comment.body, "\n")[1])
               item.pattern = comment.id
 
               -- print(format("Gedit %s:%s", comment.commit_id, comment.path))
@@ -158,7 +159,8 @@ function M.populate_comments_qf(repo, number, selection)
 
           -- new tab to hold the main, qf and comment windows
           if true then
-            vim.cmd [[tabnew]]
+            --vim.cmd(format("tabnew %s", items[1].filename))
+            vim.cmd [[tabnew %]]
           end
           local main_win = api.nvim_get_current_win()
 
@@ -168,7 +170,7 @@ function M.populate_comments_qf(repo, number, selection)
           -- add a <CR> mapping to the qf window
           vim.cmd(
             format(
-              "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.fugitive'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
+              "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
               repo,
               number,
               comment_bufnr,
@@ -186,9 +188,8 @@ function M.populate_comments_qf(repo, number, selection)
           vim.cmd [[wincmd p]]
 
           -- create comment window and set the comment buffer
-          vim.cmd [[set splitright]]
-          vim.cmd [[vsplit]]
-          api.nvim_set_current_buf(comment_bufnr)
+          --vim.cmd [[set splitright]]
+          vim.cmd(format("vertical sbuffer %d", comment_bufnr))
 
           -- set mappings to the comment window
           M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
@@ -222,22 +223,31 @@ function M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
   local comment = comments[comment_id]
   local lines = {}
   vim.list_extend(lines, vim.split(comment.diff_hunk, "\n"))
-  vim.list_extend(lines, {""})
+  vim.list_extend(lines, {format("----- comment by %s ------", comment.author)})
   vim.list_extend(lines, vim.split(comment.body, "\n"))
   api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, lines)
 
   local replies = api.nvim_buf_get_var(pr_bufnr, "pr_replies")
-  for id, reply in pairs(replies) do
-    -- TODO: print replies to comment
-    if reply.in_reply_to_id == comment_id then
-      vim.list_extend(lines, {"-- reply --"})
-      vim.list_extend(lines, vim.split(comment.diff_hunk, "\n"))
+  M.get_reply(comment_bufnr, replies, comment_id)
+
+  api.nvim_buf_set_option(comment_bufnr, "filetype", "diff")
+end
+
+function M.get_reply(comment_bufnr, replies, id)
+  local creplies = replies[id]
+  if creplies then
+    for _, reply in ipairs(creplies) do
+      print("FOO", id, #creplies)
+      local lines = {}
+      vim.list_extend(lines, {format("-- reply by %s --", reply.author)})
+      vim.list_extend(lines, vim.split(reply.body, "\n"))
+      vim.list_extend(lines, {"-----------"})
       vim.list_extend(lines, {""})
-      vim.list_extend(lines, vim.split(comment.body, "\n"))
-      api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, lines)
+      api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, lines)
+
+      M.get_reply(comment_bufnr, replies, reply.id)
     end
   end
-  api.nvim_buf_set_option(comment_bufnr, "filetype", "diff")
 end
 
 return M
