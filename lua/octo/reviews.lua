@@ -97,6 +97,24 @@ function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
   -- TODO: add ]c and [c mappings to change comments
   vim.cmd(
     format(
+      "nnoremap <buffer>]c :call nvim_set_current_win(%d) <BAR> :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
+      main_win,
+      repo,
+      number,
+      main_win
+    )
+  )
+  vim.cmd(
+    format(
+      "nnoremap <buffer>[c :call nvim_set_current_win(%d) <BAR> :lua require'octo.reviews'.prev_file_comment('%s', %d, %d)<CR>",
+      main_win,
+      repo,
+      number,
+      main_win
+    )
+  )
+  vim.cmd(
+    format(
       "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
       main_win,
       repo,
@@ -253,6 +271,50 @@ function M.get_reply(comment_bufnr, replies, id)
       M.get_reply(comment_bufnr, replies, reply.id)
     end
   end
+end
+
+function M.get_file_comment_lines(repo, number, main_win)
+  local review_comments = api.nvim_win_get_var(main_win, "review_comments")
+  local bufnr = api.nvim_win_get_buf(main_win)
+  local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
+  local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
+  local lines = {}
+  for _, c in ipairs(review_comments) do
+    local comment = comments[tostring(c.id)]
+    if comment and comment.path == vim.fn.bufname(bufnr) then
+      table.insert(lines, comment.original_line)
+    end
+  end
+  table.sort(lines, function(a, b)
+    return a < b
+  end)
+  return lines
+end
+
+function M.next_file_comment(repo, number, main_win)
+  local lines = M.get_file_comment_lines(repo, number, main_win)
+  local current_line = vim.fn.line(".")
+  local target_line = current_line
+  for _, l in ipairs(lines) do
+    if current_line < l then
+      target_line = l
+      break
+    end
+  end
+  vim.cmd(tostring(target_line))
+end
+
+function M.prev_file_comment(repo, number, main_win)
+  local lines = M.get_file_comment_lines(repo, number, main_win)
+  local current_line = vim.fn.line(".")
+  local target_line = current_line
+  for _, l in ipairs(vim.fn.reverse(lines)) do
+    if current_line > l then
+      target_line = l
+      break
+    end
+  end
+  vim.cmd(tostring(target_line))
 end
 
 return M
