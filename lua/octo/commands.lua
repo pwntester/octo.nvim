@@ -87,6 +87,9 @@ local commands = {
     end,
     delete = function()
       M.delete_comment()
+    end,
+    reply = function()
+      reviews.reply_to_comment("FOO")
     end
   },
   label = {

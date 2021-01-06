@@ -1,6 +1,8 @@
+local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local signs = require "octo.signs"
+local constants = require "octo.constants"
 local format = string.format
 local api = vim.api
 local json = {
@@ -94,7 +96,6 @@ function M.diff_changes_qf_entry()
 end
 
 function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
-  -- TODO: add ]c and [c mappings to change comments
   vim.cmd(
     format(
       "nnoremap <buffer>]c :call nvim_set_current_win(%d) <BAR> :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
@@ -158,7 +159,13 @@ function M.populate_comments_qf(repo, number, selection)
               local item = {}
               item.filename = comment.path
               item.lnum = comment.original_line
-              item.text = format("%s (%s): %s...", comment.author, string.lower(comment.author_association), vim.split(comment.body, "\n")[1])
+              item.text =
+                format(
+                "%s (%s): %s...",
+                comment.author,
+                string.lower(comment.author_association),
+                vim.split(comment.body, "\n")[1]
+              )
               item.pattern = comment.id
 
               if not comment.in_reply_to_id then
@@ -172,6 +179,8 @@ function M.populate_comments_qf(repo, number, selection)
 
           -- create comment buffer
           local comment_bufnr = api.nvim_create_buf(false, true)
+          api.nvim_buf_set_var(comment_bufnr, "repo", repo)
+          api.nvim_buf_set_var(comment_bufnr, "number", number)
 
           -- new tab to hold the main, qf and comment windows
           if true then
@@ -232,6 +241,9 @@ function M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
   local selected_item = items[idx]
   local comment_id = selected_item.pattern
 
+  -- store main comment_id as a buffer var
+  api.nvim_buf_set_var(comment_bufnr, "comment_id", comment_id)
+
   local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
 
   -- jump to comment line in main window
@@ -244,31 +256,28 @@ function M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
 
   local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
   local comment = comments[comment_id]
-  local lines = {}
-  vim.list_extend(lines, vim.split(comment.diff_hunk, "\n"))
-  vim.list_extend(lines, {format("----- comment by %s ------", comment.author)})
-  vim.list_extend(lines, vim.split(comment.body, "\n"))
-  api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, lines)
 
+  -- write diff hunk
+  M.write_diff_hunk(comment_bufnr, comment.diff_hunk)
+
+  -- write comment
+  M.write_comment(comment_bufnr, comment)
+
+  -- write replies
   local replies = api.nvim_buf_get_var(pr_bufnr, "pr_replies")
-  M.get_reply(comment_bufnr, replies, comment_id)
+  M.write_replies(comment_bufnr, replies, comment_id)
 
-  api.nvim_buf_set_option(comment_bufnr, "filetype", "diff")
+  api.nvim_buf_set_option(comment_bufnr, "filetype", "octo-review-comments")
 end
 
-function M.get_reply(comment_bufnr, replies, id)
+function M.write_replies(comment_bufnr, replies, id)
   local creplies = replies[id]
   if creplies then
     for _, reply in ipairs(creplies) do
-      print("FOO", id, #creplies)
-      local lines = {}
-      vim.list_extend(lines, {format("-- reply by %s --", reply.author)})
-      vim.list_extend(lines, vim.split(reply.body, "\n"))
-      vim.list_extend(lines, {"-----------"})
-      vim.list_extend(lines, {""})
-      api.nvim_buf_set_lines(comment_bufnr, -1, -1, false, lines)
+      -- write comment
+      M.write_comment(comment_bufnr, reply)
 
-      M.get_reply(comment_bufnr, replies, reply.id)
+      M.write_replies(comment_bufnr, replies, reply.id)
     end
   end
 end
@@ -285,9 +294,12 @@ function M.get_file_comment_lines(repo, number, main_win)
       table.insert(lines, comment.original_line)
     end
   end
-  table.sort(lines, function(a, b)
-    return a < b
-  end)
+  table.sort(
+    lines,
+    function(a, b)
+      return a < b
+    end
+  )
   return lines
 end
 
@@ -315,6 +327,142 @@ function M.prev_file_comment(repo, number, main_win)
     end
   end
   vim.cmd(tostring(target_line))
+end
+
+function M.reply_to_comment(body)
+  -- Creates a reply to a review comment for a pull request. For the comment_id,
+  -- provide the ID of the review comment you are replying to. This must be the ID
+  -- of a top-level review comment, not a reply to that comment.
+  -- Replies to replies are not supported.
+
+  local bufnr = api.nvim_get_current_buf()
+  local comment_id_ok, comment_id = pcall(api.nvim_buf_get_var, 0, "comment_id")
+  if not comment_id_ok then
+    return
+  end
+  local repo_ok, repo = pcall(api.nvim_buf_get_var, 0, "repo")
+  if not repo_ok then
+    return
+  end
+  local number_ok, number = pcall(api.nvim_buf_get_var, 0, "number")
+  if not number_ok then
+    return
+  end
+
+  gh.run(
+    {
+      args = {
+        "api",
+        "-X",
+        "POST",
+        "-f",
+        format("body=%s", body),
+        format("/repos/%s/pulls/%d/comments/%d/replies", repo, number, comment_id)
+      },
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local reply = json.parse(output)
+          if tostring(reply.in_reply_to_id) ~= tostring(comment_id) or vim.fn.trim(reply.body) ~= vim.fn.trim(body) then
+            api.nvim_err_writeln("Error posting reply to comment")
+          else
+            print("Successfully posted comment")
+            local lines = vim.split(reply.body, "\n")
+            vim.list_extend(lines, {"-----------"})
+            api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
+          end
+        end
+      end
+    }
+  )
+end
+
+function M.write_diff_hunk(bufnr, diff_hunk)
+  -- clear virtual texts
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
+
+  local lines = vim.split(diff_hunk, "\n")
+
+  -- print #lines + 2 empty lines
+  local empty_lines = {}
+  local max_length = -1
+  for _, l in ipairs(lines) do
+    table.insert(empty_lines, "")
+    if #l > max_length then max_length = #l end
+  end
+  vim.list_extend(empty_lines, {"", "", ""})
+  octo.write_block(empty_lines, {bufnr = bufnr, mark = false, line = 1})
+
+  local vt_lines = {}
+  table.insert(vt_lines, {{format("┌%s┐", string.rep ("─", max_length + 2))}})
+  for _, line in ipairs(lines) do
+    if vim.startswith(line, "@@ ") then
+      local index = string.find(line, "@[^@]*$")
+      table.insert(vt_lines, {
+        {"│ "},
+        {string.sub(line, 0, index), "DiffLine"},
+        {string.sub(line, index + 1), "DiffSubname"},
+        {string.rep(" ", max_length - #line - 1)},
+        {"│"}
+      })
+    elseif vim.startswith(line, "+") then
+      table.insert(vt_lines, {
+        {"│ "},
+        {line, "DiffAdd"},
+        {string.rep(" ", max_length - #line)},
+        {" │"}
+      })
+    elseif vim.startswith(line, "-") then
+      table.insert(vt_lines, {
+        {"│ "},
+        {line, "DiffDelete"},
+        {string.rep(" ", max_length - #line)},
+        {" │"}
+      })
+    else
+      table.insert(vt_lines, {
+        {"│ "},
+        {line},
+        {string.rep(" ", max_length - #line)},
+        {" │"}
+      })
+    end
+  end
+  table.insert(vt_lines, {{format("└%s┘", string.rep ("─", max_length + 2))}})
+
+  -- print diff_hunk as virtual text
+  local line = 0
+  for _, vt_line in ipairs(vt_lines) do
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
+    line = line + 1
+  end
+end
+
+function M.write_comment(bufnr, comment)
+  -- heading
+  local line = api.nvim_buf_line_count(bufnr) + 1
+  octo.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
+  local header_vt = {
+    {format("On %s ", util.format_date(comment.created_at)), "OctoNvimCommentHeading"},
+    {comment.author, "OctoNvimCommentUser"},
+    {" commented", "OctoNvimCommentHeading"}
+  }
+  api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
+
+  -- body
+  line = line + 2
+  local comment_body = string.gsub(comment.body, "\r\n", "\n")
+  if vim.startswith(comment_body, constants.NO_BODY_MSG) then
+    comment_body = " "
+  end
+  local content = vim.split(comment_body, "\n", true)
+  vim.list_extend(content, {"", "", ""})
+  octo.write_block(content, {bufnr = bufnr, mark = true, line = line})
+
+  -- reactions
+  line = line + #content
+  octo.write_reactions(bufnr, comment.reactions, line - 2)
 end
 
 return M

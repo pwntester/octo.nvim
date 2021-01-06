@@ -27,7 +27,7 @@ function M.check_login()
   )
 end
 
-local function write_block(lines, opts)
+function M.write_block(lines, opts)
   local bufnr = opts.bufnr or api.nvim_get_current_buf()
 
   if type(lines) == "string" then
@@ -37,7 +37,7 @@ local function write_block(lines, opts)
   local line = opts.line or api.nvim_buf_line_count(bufnr) + 1
 
   -- write content lines
-  api.nvim_buf_set_lines(bufnr, line - 1, line - 1 + #lines, false, lines)
+  api.nvim_buf_set_lines(bufnr, math.max(0, line - 1), line - 1 + #lines, false, lines)
 
   -- trailing empty lines
   if opts.trailing_lines then
@@ -81,7 +81,7 @@ local function write_block(lines, opts)
 end
 
 function M.write_title(bufnr, title, line)
-  local title_mark = write_block({title, ""}, {bufnr = bufnr, mark = true, line = line})
+  local title_mark = M.write_block({title, ""}, {bufnr = bufnr, mark = true, line = line})
   api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimIssueTitle", 0, 0, -1)
   api.nvim_buf_set_var(
     bufnr,
@@ -125,7 +125,7 @@ function M.write_description(bufnr, issue, line)
     body = " "
   end
   local description = string.gsub(body, "\r\n", "\n")
-  local desc_mark = write_block(description, {bufnr = bufnr, mark = true, trailing_lines = 3, line = line})
+  local desc_mark = M.write_block(description, {bufnr = bufnr, mark = true, trailing_lines = 3, line = line})
   api.nvim_buf_set_var(
     bufnr,
     "description",
@@ -319,7 +319,7 @@ function M.write_details(bufnr, issue, update)
     table.insert(empty_lines, "")
   end
   if not update then
-    write_block(empty_lines, {bufnr = bufnr, mark = false, line = line})
+    M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = line})
   end
 
   -- print details as virtual text
@@ -332,7 +332,7 @@ end
 function M.write_comment(bufnr, comment, line)
   -- heading
   line = line or api.nvim_buf_line_count(bufnr) + 1
-  write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
+  M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
   local header_vt = {
     {format("On %s ", util.format_date(comment.created_at)), "OctoNvimCommentHeading"},
     {comment.user.login, "OctoNvimCommentUser"},
@@ -348,7 +348,7 @@ function M.write_comment(bufnr, comment, line)
   end
   local content = vim.split(comment_body, "\n", true)
   vim.list_extend(content, {"", "", ""})
-  local comment_mark = write_block(content, {bufnr = bufnr, mark = true, line = line})
+  local comment_mark = M.write_block(content, {bufnr = bufnr, mark = true, line = line})
 
   -- reactions
   line = line + #content
@@ -416,7 +416,9 @@ local function async_fetch_review_comments(bufnr, repo, number)
             c.diff_hunk = comment.diff_hunk
             c.body = comment.body
             c.path = comment.path
+            c.created_at = comment.created_at
             c.in_reply_to_id = comment.in_reply_to_id
+            c.reactions = comment.reactions
             c.author = comment.user.login
             c.author_association = comment.author_association
 
