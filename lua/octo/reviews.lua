@@ -255,6 +255,8 @@ function M.show_comments_qf_entry(repo, number, main_win)
   local selected_item = items[idx]
   local comment_id = selected_item.pattern
 
+  -- TODO: save main window buffers for cleanup on <C-c>
+
   -- jump back to main win and go to comment line
   api.nvim_set_current_win(main_win)
   local row = (selected_item.lnum) or 1
