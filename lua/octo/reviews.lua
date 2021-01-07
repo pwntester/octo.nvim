@@ -181,8 +181,8 @@ function M.populate_comments_qf(repo, number, selection)
 
           -- new tab to hold the main, qf and comment windows
           if true then
-            --vim.cmd(format("tabnew %s", items[1].filename))
-            vim.cmd [[tabnew %]]
+            vim.cmd(format("tabnew %s", items[1].filename))
+            --vim.cmd [[tabnew %]]
           end
           local main_win = api.nvim_get_current_win()
 
@@ -206,14 +206,19 @@ function M.populate_comments_qf(repo, number, selection)
           -- add mappings to the qf window
           M.add_comments_qf_mappings(repo, number, main_win)
 
-
           -- back to qf
           api.nvim_set_current_win(qf_win)
           api.nvim_win_set_option(qf_win, "number", false)
           api.nvim_win_set_option(qf_win, "relativenumber", false)
 
           -- create comment window and set the comment buffer
-          vim.cmd("vsplit")
+          local review_comments_position = "main"
+          if review_comments_position == "main" then
+            api.nvim_set_current_win(main_win)
+          elseif review_comments_position == "qf" then
+            api.nvim_set_current_win(qf_win)
+          end
+          vim.cmd("vsplit %")
           local comment_win = api.nvim_get_current_win()
           api.nvim_win_set_option(comment_win, "number", false)
           api.nvim_win_set_option(comment_win, "relativenumber", false)
