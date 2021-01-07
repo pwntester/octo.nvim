@@ -45,8 +45,8 @@ end
 
 function M.render_signcolumn(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(bufnr)
-  if not vim.startswith(bufname, "octo://") then
+  local ft = api.nvim_buf_get_option(bufnr, "filetype")
+  if not vim.startswith(ft, "octo_") then
     return
   end
 
@@ -61,28 +61,31 @@ function M.render_signcolumn(bufnr)
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, 0, -1)
 
-  -- title
-  local title = api.nvim_buf_get_var(bufnr, "title")
-  if title["dirty"] then
-    issue_dirty = true
-  end
-  local start_line = title["start_line"]
-  local end_line = title["end_line"]
-  M.place_signs(bufnr, start_line, end_line, title["dirty"])
+  local start_line, end_line
+  if ft == "octo_issue" then
+    -- title
+    local title = api.nvim_buf_get_var(bufnr, "title")
+    if title["dirty"] then
+      issue_dirty = true
+    end
+    start_line = title["start_line"]
+    end_line = title["end_line"]
+    M.place_signs(bufnr, start_line, end_line, title["dirty"])
 
-  -- description
-  local desc = api.nvim_buf_get_var(bufnr, "description")
-  if desc.dirty then
-    issue_dirty = true
-  end
-  start_line = desc["start_line"]
-  end_line = desc["end_line"]
-  M.place_signs(bufnr, start_line, end_line, desc.dirty)
+    -- description
+    local desc = api.nvim_buf_get_var(bufnr, "description")
+    if desc.dirty then
+      issue_dirty = true
+    end
+    start_line = desc["start_line"]
+    end_line = desc["end_line"]
+    M.place_signs(bufnr, start_line, end_line, desc.dirty)
 
-  -- description virtual text
-  if util.is_blank(desc["body"]) then
-    local desc_vt = {{constants.NO_BODY_MSG, "OctoNvimEmpty"}}
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, start_line, desc_vt, {})
+    -- description virtual text
+    if util.is_blank(desc["body"]) then
+      local desc_vt = {{constants.NO_BODY_MSG, "OctoNvimEmpty"}}
+      api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, start_line, desc_vt, {})
+    end
   end
 
   -- comments

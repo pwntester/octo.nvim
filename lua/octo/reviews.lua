@@ -242,7 +242,7 @@ function M.clean_review_comments_buffers()
     if api.nvim_win_is_valid(w) then
       local bufnr = api.nvim_win_get_buf(w)
       local ft = api.nvim_buf_get_option(bufnr, "filetype")
-      if ft == "octo-review-comments" then
+      if ft == "octo_review_comments" then
         vim.cmd(format("bdelete %d", bufnr))
       end
     end
@@ -285,7 +285,7 @@ function M.show_comments_qf_entry(repo, number, main_win)
     comment_bufnr = api.nvim_create_buf(false, true)
     api.nvim_buf_set_var(comment_bufnr, "repo", repo)
     api.nvim_buf_set_var(comment_bufnr, "number", number)
-    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo-review-comments")
+    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_review_comments")
     api.nvim_buf_set_name(comment_bufnr, comment_id)
     api.nvim_win_set_buf(comment_win, comment_bufnr)
 
@@ -300,12 +300,23 @@ function M.show_comments_qf_entry(repo, number, main_win)
     M.write_diff_hunk(comment_bufnr, comment.diff_hunk)
 
     -- write comment
+    api.nvim_buf_set_var(comment_bufnr, "comments", {})
     M.write_comment(comment_bufnr, comment)
 
     -- write replies
     local replies = api.nvim_buf_get_var(pr_bufnr, "pr_replies")
     M.write_replies(comment_bufnr, replies, comment_id)
   end
+
+  -- show signs
+  signs.render_signcolumn(comment_bufnr)
+
+  -- autocmds
+  vim.cmd [[ augroup octo_review_comments_autocmds ]]
+  vim.cmd [[ au! * <buffer> ]]
+  vim.cmd [[ au TextChanged <buffer> lua require"octo.signs".render_signcolumn() ]]
+  vim.cmd [[ au TextChangedI <buffer> lua require"octo.signs".render_signcolumn() ]]
+  vim.cmd [[ augroup END ]]
 end
 
 function M.write_replies(comment_bufnr, replies, id)
@@ -374,11 +385,11 @@ function M.reply_to_comment(body)
   -- of a top-level review comment, not a reply to that comment.
   -- Replies to replies are not supported.
 
-  -- TODO: this is like util.get_repo_number() but for `octo-review-comments` buffer
+  -- TODO: this is like util.get_repo_number() but for `octo_review_comments` buffer
   -- refactor function to take a ft and then reuse.
   -- we also need a better name.
   local bufnr = api.nvim_get_current_buf()
-  if api.nvim_buf_get_option(bufnr, "filetype") ~=  "octo-review-comments" then
+  if api.nvim_buf_get_option(bufnr, "filetype") ~=  "octo_review_comments" then
     return
   end
   local comment_id = api.nvim_buf_get_name(bufnr)
@@ -488,7 +499,7 @@ function M.write_comment(bufnr, comment)
     {comment.author, "OctoNvimCommentUser"},
     {" commented", "OctoNvimCommentHeading"}
   }
-  api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
+  local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
 
   -- body
   line = line + 2
@@ -498,11 +509,29 @@ function M.write_comment(bufnr, comment)
   end
   local content = vim.split(comment_body, "\n", true)
   vim.list_extend(content, {"", "", ""})
-  octo.write_block(content, {bufnr = bufnr, mark = true, line = line})
+  local comment_mark = octo.write_block(content, {bufnr = bufnr, mark = true, line = line})
 
   -- reactions
   line = line + #content
-  octo.write_reactions(bufnr, comment.reactions, line - 2)
+  local reaction_line = octo.write_reactions(bufnr, comment.reactions, line - 2)
+
+  -- update metadata
+  local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
+  table.insert(
+    comments_metadata,
+    {
+      author = comment.author,
+      id = comment.id,
+      dirty = false,
+      saved_body = comment_body,
+      body = comment_body,
+      extmark = comment_mark,
+      namespace = comment_vt_ns,
+      reaction_line = reaction_line,
+      reactions = comment.reactions
+    }
+  )
+  api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 end
 
 return M

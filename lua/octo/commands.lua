@@ -598,7 +598,7 @@ end
 function M.reaction_action(action, reaction)
   local bufnr = api.nvim_get_current_buf()
 
-  local repo, number = util.get_repo_number()
+  local repo, number = util.get_repo_number({"octo_issue", "octo_review_comments"})
   if not repo then
     return
   end
@@ -614,8 +614,14 @@ function M.reaction_action(action, reaction)
     cb_url = format("repos/%s/issues/comments/%d", repo, comment.id)
     line = comment.reaction_line
     reactions = comment.reactions
+    local kind
+    if vim.bo.ft == "octo_review_comments" then
+      kind = "pulls"
+    elseif vim.bo.ft == "octo_issue" then
+      kind = "issues"
+    end
     if action == "add" then
-      url = format("repos/%s/issues/comments/%d/reactions", repo, comment.id)
+      url = format("repos/%s/%s/comments/%d/reactions", repo, kind, comment.id)
       args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}
     elseif action == "delete" then
       -- get list of reactions for issue comment and filter by user login and reaction
@@ -623,18 +629,18 @@ function M.reaction_action(action, reaction)
         gh.run(
         {
           mode = "sync",
-          args = {"api", format("repos/%s/issues/comments/%d/reactions", repo, comment.id)}
+          args = {"api", format("repos/%s/%s/comments/%d/reactions", repo, kind, comment.id)}
         }
       )
       for _, r in ipairs(json.parse(output)) do
         if r.user.login == vim.g.octo_loggedin_user and reaction == r.content then
-          url = format("repos/%s/issues/comments/%d/reactions/%d", repo, comment.id, r.id)
+          url = format("repos/%s/%s/comments/%d/reactions/%d", repo, kind, comment.id, r.id)
           args = {"api", "-X", "DELETE", url}
           break
         end
       end
     end
-  else
+  elseif vim.bo.ft == "octo_issue" then
     -- cursor not located on a comment, using the issue instead
     cb_url = format("repos/%s/issues/%d", repo, number)
     line = api.nvim_buf_get_var(bufnr, "reaction_line")

@@ -59,22 +59,23 @@ function M.in_pr_branch()
   return false
 end
 
-function M.get_repo_number()
+function M.get_repo_number(filetypes)
   local bufnr = api.nvim_get_current_buf()
-  if vim.bo.ft ~= "octo_issue" then
+  filetypes = filetypes or {"octo_issue"}
+  if not vim.tbl_contains(filetypes, vim.bo.ft) then
     api.nvim_err_writeln("Not in octo buffer")
-    return nil
+    return
   end
 
   local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
   if not number_ok then
     api.nvim_err_writeln("Missing octo metadata")
-    return nil
+    return
   end
   local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
   if not repo_ok then
     api.nvim_err_writeln("Missing octo metadata")
-    return nil
+    return
   end
   return repo, number
 end
@@ -125,26 +126,29 @@ end
 function M.update_issue_metadata(bufnr)
   local mark, text, start_line, end_line, metadata
 
-  -- title
-  metadata = api.nvim_buf_get_var(bufnr, "title")
-  mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, metadata.extmark, {details = true})
-  start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-  M.update_metadata(metadata, start_line, end_line, text)
-  api.nvim_buf_set_var(bufnr, "title", metadata)
+  local ft = api.nvim_buf_get_option(bufnr, "filetype")
+  if ft == "octo_issue" then
+    -- title
+    metadata = api.nvim_buf_get_var(bufnr, "title")
+    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, metadata.extmark, {details = true})
+    start_line, end_line, text = M.get_extmark_region(bufnr, mark)
+    M.update_metadata(metadata, start_line, end_line, text)
+    api.nvim_buf_set_var(bufnr, "title", metadata)
 
-  -- description
-  metadata = api.nvim_buf_get_var(bufnr, "description")
-  mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, metadata.extmark, {details = true})
-  start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-  if text == "" then
-    -- description has been removed
-    -- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
-    api.nvim_buf_set_lines(bufnr, start_line, start_line + 1, false, {" ", ""})
-    local winnr = api.nvim_get_current_win()
-    api.nvim_win_set_cursor(winnr, {start_line + 1, 0})
+    -- description
+    metadata = api.nvim_buf_get_var(bufnr, "description")
+    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, metadata.extmark, {details = true})
+    start_line, end_line, text = M.get_extmark_region(bufnr, mark)
+    if text == "" then
+      -- description has been removed
+      -- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
+      api.nvim_buf_set_lines(bufnr, start_line, start_line + 1, false, {" ", ""})
+      local winnr = api.nvim_get_current_win()
+      api.nvim_win_set_cursor(winnr, {start_line + 1, 0})
+    end
+    M.update_metadata(metadata, start_line, end_line, text)
+    api.nvim_buf_set_var(bufnr, "description", metadata)
   end
-  M.update_metadata(metadata, start_line, end_line, text)
-  api.nvim_buf_set_var(bufnr, "description", metadata)
 
   -- comments
   local comments = api.nvim_buf_get_var(bufnr, "comments")
