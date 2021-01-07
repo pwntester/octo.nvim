@@ -14,7 +14,7 @@ local M = {}
 function M.add_changes_qf_mappings()
   vim.cmd [[nnoremap <buffer>]q :cnext <BAR> :lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
   vim.cmd [[nnoremap <buffer>[q :cprevious <BAR> :lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
-  vim.cmd [[nnoremap <buffer><C-c> :cclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
+  vim.cmd [[nnoremap <buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd [[20copen]]
@@ -55,7 +55,8 @@ function M.update_changes_qf(changes)
 end
 
 function M.clean_fugitive_buffers()
-  for _, w in ipairs(api.nvim_list_wins()) do
+  local tabpage = api.nvim_get_current_tabpage()
+  for _, w in ipairs(api.nvim_tabpage_list_wins(tabpage)) do
     if api.nvim_win_is_valid(w) then
       local bufnr = api.nvim_win_get_buf(w)
       local bufname = api.nvim_buf_get_name(bufnr)
@@ -132,6 +133,8 @@ function M.add_comments_qf_mappings(repo, number, main_win)
       main_win
     )
   )
+
+  vim.cmd [[nnoremap <buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_review_comments_buffers()<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd [[20copen]]
@@ -226,6 +229,19 @@ function M.populate_comments_qf(repo, number, selection)
       end
     }
   )
+end
+
+function M.clean_review_comments_buffers()
+  local tabpage = api.nvim_get_current_tabpage()
+  for _, w in ipairs(api.nvim_tabpage_list_wins(tabpage)) do
+    if api.nvim_win_is_valid(w) then
+      local bufnr = api.nvim_win_get_buf(w)
+      local ft = api.nvim_buf_get_option(bufnr, "filetype")
+      if ft == "octo-review-comments" then
+        vim.cmd(format("bdelete %d", bufnr))
+      end
+    end
+  end
 end
 
 function M.show_comments_qf_entry(repo, number, main_win)
