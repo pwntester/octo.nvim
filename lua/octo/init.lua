@@ -37,7 +37,7 @@ function M.write_block(lines, opts)
   local line = opts.line or api.nvim_buf_line_count(bufnr) + 1
 
   -- write content lines
-  api.nvim_buf_set_lines(bufnr, math.max(0, line - 1), line - 1 + #lines, false, lines)
+  api.nvim_buf_set_lines(bufnr, line - 1, line - 1 + #lines, false, lines)
 
   -- trailing empty lines
   if opts.trailing_lines then

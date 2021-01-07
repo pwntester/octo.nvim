@@ -17,7 +17,7 @@ function M.add_changes_qf_mappings()
   vim.cmd [[nnoremap <buffer><C-c> :cclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
-  vim.cmd [[11copen]]
+  vim.cmd [[20copen]]
   vim.cmd [[wincmd p]]
 end
 
@@ -36,7 +36,7 @@ function M.populate_changes_qf(base, head, changes)
   M.diff_changes_qf_entry()
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
   -- there's probably a better way to map this without changing the window
-  vim.cmd [[copen]]
+  vim.cmd [[20copen]]
   vim.cmd [[nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
   vim.cmd [[wincmd p]]
 end
@@ -95,7 +95,7 @@ function M.diff_changes_qf_entry()
   end
 end
 
-function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
+function M.add_comments_qf_mappings(repo, number, main_win)
   vim.cmd(
     format(
       "nnoremap <buffer>]c :call nvim_set_current_win(%d) <BAR> :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
@@ -116,31 +116,30 @@ function M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
   )
   vim.cmd(
     format(
-      "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
+      "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d)<CR>",
       main_win,
       repo,
       number,
-      comment_bufnr,
       main_win
     )
   )
   vim.cmd(
     format(
-      "nnoremap <buffer>[q :call nvim_set_current_win(%d) <BAR> :cprevious <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
+      "nnoremap <buffer>[q :call nvim_set_current_win(%d) <BAR> :cprevious <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d)<CR>",
       main_win,
       repo,
       number,
-      comment_bufnr,
       main_win
     )
   )
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
-  vim.cmd [[11copen]]
+  vim.cmd [[20copen]]
   vim.cmd [[wincmd p]]
 end
 
 function M.populate_comments_qf(repo, number, selection)
+  -- fetch review comments
   gh.run(
     {
       args = {"api", format("/repos/%s/pulls/%d/reviews/%d/comments", repo, number, selection.review.id)},
@@ -177,11 +176,6 @@ function M.populate_comments_qf(repo, number, selection)
           -- populate qf
           vim.fn.setqflist(items)
 
-          -- create comment buffer
-          local comment_bufnr = api.nvim_create_buf(false, true)
-          api.nvim_buf_set_var(comment_bufnr, "repo", repo)
-          api.nvim_buf_set_var(comment_bufnr, "number", number)
-
           -- new tab to hold the main, qf and comment windows
           if true then
             --vim.cmd(format("tabnew %s", items[1].filename))
@@ -189,50 +183,54 @@ function M.populate_comments_qf(repo, number, selection)
           end
           local main_win = api.nvim_get_current_win()
 
-          -- open qf
-          vim.cmd [[copen]]
-
           -- save review comments in main window var
           api.nvim_win_set_var(main_win, "review_comments", review_comments)
+
+          -- open qf
+          vim.cmd [[20copen]]
+          local qf_win = api.nvim_get_current_win()
 
           -- add a <CR> mapping to the qf window
           vim.cmd(
             format(
-              "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d, %d)<CR>",
+              "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d)<CR>",
               repo,
               number,
-              comment_bufnr,
               main_win
             )
           )
 
-          -- add ]q and [q mappints to the qf window
-          M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
+          -- add mappings to the qf window
+          M.add_comments_qf_mappings(repo, number, main_win)
 
-          -- get comment for first element in qf
-          M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
 
           -- back to qf
-          vim.cmd [[wincmd p]]
+          api.nvim_set_current_win(qf_win)
+          api.nvim_win_set_option(qf_win, "number", false)
+          api.nvim_win_set_option(qf_win, "relativenumber", false)
 
           -- create comment window and set the comment buffer
-          --vim.cmd [[set splitright]]
-          vim.cmd(format("vertical sbuffer %d", comment_bufnr))
+          vim.cmd("vsplit")
+          local comment_win = api.nvim_get_current_win()
+          api.nvim_win_set_option(comment_win, "number", false)
+          api.nvim_win_set_option(comment_win, "relativenumber", false)
 
-          -- set mappings to the comment window
-          M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
+          -- jump to main window and select qf entry
+          api.nvim_set_current_win(main_win)
+          api.nvim_win_set_var(main_win, "comment_win", comment_win)
+          vim.cmd [[cc]]
+
+          -- show comment for first element in qf
+          M.show_comments_qf_entry(repo, number, main_win)
         end
       end
     }
   )
 end
 
-function M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
-  -- select qf entry
-  vim.cmd [[cc]]
-
-  -- set [q and ]q mappings for the main window
-  M.add_comments_qf_mappings(repo, number, comment_bufnr, main_win)
+function M.show_comments_qf_entry(repo, number, main_win)
+  -- set mappings for the main window buffer
+  M.add_comments_qf_mappings(repo, number, main_win)
 
   -- get comment details
   local qf = vim.fn.getqflist({idx = 0, items = 0})
@@ -241,42 +239,60 @@ function M.show_comments_qf_entry(repo, number, comment_bufnr, main_win)
   local selected_item = items[idx]
   local comment_id = selected_item.pattern
 
-  -- store main comment_id as a buffer var
-  api.nvim_buf_set_var(comment_bufnr, "comment_id", comment_id)
-
-  local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
-
-  -- jump to comment line in main window
+  -- jump back to main win and go to comment line
+  api.nvim_set_current_win(main_win)
   local row = (selected_item.lnum) or 1
   api.nvim_win_set_cursor(main_win, {row, 1})
 
-  -- place signs
+  -- place signs in main window buffer
   local review_comments = api.nvim_win_get_var(main_win, "review_comments")
+  local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
   signs.place_comments_signs(main_win, pr_bufnr, review_comments)
 
-  local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
-  local comment = comments[comment_id]
+  -- jump to comment window
+  local comment_win = api.nvim_win_get_var(main_win, "comment_win")
+  api.nvim_set_current_win(comment_win)
 
-  -- write diff hunk
-  M.write_diff_hunk(comment_bufnr, comment.diff_hunk)
+  local comment_bufnr = vim.fn.bufnr(comment_id)
+  if comment_bufnr > -1 then
+    -- show existing comment buffer
+    api.nvim_win_set_buf(comment_win, comment_bufnr)
+  else
+    -- create new comment buffer
+    comment_bufnr = api.nvim_create_buf(false, true)
+    api.nvim_buf_set_var(comment_bufnr, "repo", repo)
+    api.nvim_buf_set_var(comment_bufnr, "number", number)
+    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo-review-comments")
+    api.nvim_buf_set_name(comment_bufnr, comment_id)
+    api.nvim_win_set_buf(comment_win, comment_bufnr)
 
-  -- write comment
-  M.write_comment(comment_bufnr, comment)
+    -- add mappings to the comment window buffer
+    M.add_comments_qf_mappings(repo, number, main_win)
 
-  -- write replies
-  local replies = api.nvim_buf_get_var(pr_bufnr, "pr_replies")
-  M.write_replies(comment_bufnr, replies, comment_id)
+    -- get cached comment
+    local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
+    local comment = comments[comment_id]
 
-  api.nvim_buf_set_option(comment_bufnr, "filetype", "octo-review-comments")
+    -- write diff hunk
+    M.write_diff_hunk(comment_bufnr, comment.diff_hunk)
+
+    -- write comment
+    M.write_comment(comment_bufnr, comment)
+
+    -- write replies
+    local replies = api.nvim_buf_get_var(pr_bufnr, "pr_replies")
+    M.write_replies(comment_bufnr, replies, comment_id)
+  end
 end
 
 function M.write_replies(comment_bufnr, replies, id)
   local creplies = replies[id]
   if creplies then
     for _, reply in ipairs(creplies) do
-      -- write comment
+      -- write main comment
       M.write_comment(comment_bufnr, reply)
 
+      -- write replies
       M.write_replies(comment_bufnr, replies, reply.id)
     end
   end
@@ -335,11 +351,14 @@ function M.reply_to_comment(body)
   -- of a top-level review comment, not a reply to that comment.
   -- Replies to replies are not supported.
 
+  -- TODO: this is like util.get_repo_number() but for `octo-review-comments` buffer
+  -- refactor function to take a ft and then reuse.
+  -- we also need a better name.
   local bufnr = api.nvim_get_current_buf()
-  local comment_id_ok, comment_id = pcall(api.nvim_buf_get_var, 0, "comment_id")
-  if not comment_id_ok then
+  if api.nvim_buf_get_option(bufnr, "filetype") ~=  "octo-review-comments" then
     return
   end
+  local comment_id = api.nvim_buf_get_name(bufnr)
   local repo_ok, repo = pcall(api.nvim_buf_get_var, 0, "repo")
   if not repo_ok then
     return
@@ -368,9 +387,7 @@ function M.reply_to_comment(body)
             api.nvim_err_writeln("Error posting reply to comment")
           else
             print("Successfully posted comment")
-            local lines = vim.split(reply.body, "\n")
-            vim.list_extend(lines, {"-----------"})
-            api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
+            M.write_comment(bufnr, reply)
           end
         end
       end
