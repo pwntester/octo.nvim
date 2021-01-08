@@ -1,14 +1,15 @@
-local actions = require("telescope.actions")
-local finders = require("telescope.finders")
-local pickers = require("telescope.pickers")
-local utils = require("telescope.utils")
-local putils = require("telescope.previewers.utils")
-local previewers = require("telescope.previewers")
-local conf = require("telescope.config").values
-local make_entry = require("telescope.make_entry")
-local entry_display = require("telescope.pickers.entry_display")
+local actions = require "telescope.actions"
+local finders = require "telescope.finders"
+local pickers = require "telescope.pickers"
+local utils = require "telescope.utils"
+local putils = require "telescope.previewers.utils"
+local previewers = require "telescope.previewers"
+local conf = require "telescope.config".values
+local make_entry = require "telescope.make_entry"
+local entry_display = require "telescope.pickers.entry_display"
+local octo = require "octo"
 local gh = require "octo.gh"
-local util = require("octo.util")
+local util = require "octo.util"
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
@@ -759,6 +760,7 @@ local review_previewer =
           local lines = {}
           vim.list_extend(lines, {"Author: " .. entry.review.user.login})
           local body = entry.review.body
+          body = string.gsub(body, "\", "")
           if not util.is_blank(body) then
             vim.list_extend(lines, vim.split("Body: " .. body, "\n"))
           end
@@ -776,14 +778,16 @@ local review_previewer =
                   local results = json.parse(output)
                   for _, comment in ipairs(results) do
                     local lines = {}
-                    vim.list_extend(lines, {"--"})
-                    vim.list_extend(lines, {"Path: " .. comment.path})
-                    vim.list_extend(lines, {""})
-                    vim.list_extend(lines, vim.split(comment.diff_hunk, "\n"))
-                    vim.list_extend(lines, {""})
-                    vim.list_extend(lines, vim.split(comment.body, "\n"))
+                    vim.list_extend(lines, {"Changed file: " .. comment.path})
                     vim.list_extend(lines, {""})
                     api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, lines)
+
+                    -- write diff hunk
+                    octo.write_diff_hunk(self.state.bufnr, comment.diff_hunk, api.nvim_buf_line_count(self.state.bufnr))
+
+                    -- write comment
+                    api.nvim_buf_set_var(self.state.bufnr, "comments", {})
+                    octo.write_comment(self.state.bufnr, comment)
                   end
                 end
                 api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
@@ -797,7 +801,7 @@ local review_previewer =
   {}
 )
 
-function M.reviews(repo, number)
+function M.reviews(bufnr, repo, number)
   local url = format("repos/%s/pulls/%d/reviews", repo, number)
   gh.run(
     {
@@ -808,6 +812,9 @@ function M.reviews(repo, number)
         elseif output then
           local reviews = json.parse(output)
 
+          local review_ids = api.nvim_buf_get_var(bufnr, "pr_reviews")
+          local filtered_reviews = {}
+
           local max_state = -1
           local max_author = -1
           for _, review in ipairs(reviews) do
@@ -817,18 +824,22 @@ function M.reviews(repo, number)
             if #review.state > max_state then
               max_state = #review.state
             end
+            if vim.tbl_contains(review_ids, review.id) then
+              table.insert(filtered_reviews, review)
+            end
           end
 
-          -- TODO: group similar comments from different review together?
-          -- group "COMMENT" from same author and same commit since they will
-          -- normally come from "Add single comment"
+          -- TODO:
+          --- group similar comments from different review together?
+          --- group "COMMENT" from same author and same commit since they will
+          --- normally come from "Add single comment"
 
           pickers.new(
             {},
             {
               prompt_title = "Reviews",
               finder = finders.new_table {
-                results = reviews,
+                results = filtered_reviews,
                 entry_maker = gen_from_review(max_state, max_author)
               },
               sorter = conf.file_sorter({}),

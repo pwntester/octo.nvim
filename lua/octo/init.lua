@@ -373,9 +373,11 @@ function M.write_comment(bufnr, comment, line)
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 end
 
-function M.write_diff_hunk(bufnr, diff_hunk)
+function M.write_diff_hunk(bufnr, diff_hunk, start_line)
+  start_line = start_line or 1
+
   -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
 
   local lines = vim.split(diff_hunk, "\n")
 
@@ -387,7 +389,7 @@ function M.write_diff_hunk(bufnr, diff_hunk)
     if #l > max_length then max_length = #l end
   end
   vim.list_extend(empty_lines, {"", "", ""})
-  M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = 1})
+  M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
 
   local vt_lines = {}
   table.insert(vt_lines, {{format("┌%s┐", string.rep ("─", max_length + 2))}})
@@ -427,7 +429,7 @@ function M.write_diff_hunk(bufnr, diff_hunk)
   table.insert(vt_lines, {{format("└%s┘", string.rep ("─", max_length + 2))}})
 
   -- print diff_hunk as virtual text
-  local line = 0
+  local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
     line = line + 1
@@ -483,8 +485,14 @@ local function async_fetch_review_comments(bufnr, repo, number)
           local results = json.parse(output)
           local comments = {}
           local replies = {}
+          local reviews = {}
           for _, comment in ipairs(results) do
             local c = {}
+
+            if not comment.in_reply_to_id and not vim.tbl_contains(reviews, comment.pull_request_review_id) then
+              table.insert(reviews, comment.pull_request_review_id)
+            end
+
             c.pull_request_review_id = comment.pull_request_review_id
             c.id = comment.id
             c.diff_hunk = comment.diff_hunk
@@ -521,6 +529,7 @@ local function async_fetch_review_comments(bufnr, repo, number)
           end
           api.nvim_buf_set_var(bufnr, "pr_comments", comments)
           api.nvim_buf_set_var(bufnr, "pr_replies", replies)
+          api.nvim_buf_set_var(bufnr, "pr_reviews", reviews)
         end
       end
     }

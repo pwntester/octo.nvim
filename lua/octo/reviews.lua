@@ -8,7 +8,16 @@ local json = {
   parse = vim.fn.json_decode
 }
 
+-- TODO: x make qf height configurable and default to 0.2 vim height
+-- TODO: x truncate qf entries
+-- TODO: x add diff_hunk borders in review previews
+-- TODO: map issue buffer mappings to review_comments buffer
+-- TODO: make ]c and ]q cycle
+-- TODO: save main window buffers for cleanup on <C-c>
+
 local M = {}
+
+local qf_height = vim.g.octo_qf_height or vim.o.lines*0.2
 
 function M.add_changes_qf_mappings()
   vim.cmd [[nnoremap <buffer>]q :cnext <BAR> :lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
@@ -16,7 +25,7 @@ function M.add_changes_qf_mappings()
   vim.cmd [[nnoremap <buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
-  vim.cmd [[20copen]]
+  vim.cmd(format("%dcopen", qf_height))
   vim.cmd [[wincmd p]]
 end
 
@@ -29,13 +38,19 @@ function M.populate_changes_qf(base, head, changes)
   -- run the diff between head and base commits
   vim.cmd(format("Git difftool --name-only %s..%s", base, head))
 
+  local qf = vim.fn.getqflist({size = 0})
+  if qf.size == 0 then
+    api.nvim_err_writeln(format("No changes found for pr %s", head))
+    return
+  end
+
   -- update qf with gh info (additions/deletions ...)
   M.update_changes_qf(changes)
 
   M.diff_changes_qf_entry()
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
   -- there's probably a better way to map this without changing the window
-  vim.cmd [[20copen]]
+  vim.cmd(format("%dcopen", qf_height))
   vim.cmd [[nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
   vim.cmd [[wincmd p]]
 end
@@ -136,7 +151,7 @@ function M.add_comments_qf_mappings(repo, number, main_win)
   vim.cmd [[nnoremap <buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_review_comments_buffers()<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
-  vim.cmd [[20copen]]
+  vim.cmd(format("%dcopen", qf_height))
   vim.cmd [[wincmd p]]
 end
 
@@ -156,23 +171,31 @@ function M.populate_comments_qf(repo, number, selection)
             local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
             local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
             local comment = comments[tostring(review_comment.id)]
+            local qf = vim.fn.getqflist({winid = 0})
+            local qf_width = vim.fn.winwidth(qf.winid) * 0.6
             if comment then
-              local item = {}
-              item.filename = comment.path
-              item.lnum = comment.original_line
-              item.text =
-                format(
-                "%s (%s): %s...",
-                comment.user.login,
-                string.lower(comment.author_association),
-                vim.split(comment.body, "\n")[1]
-              )
-              item.pattern = comment.id
+              local item = {
+                filename = comment.path,
+                lnum = comment.original_line,
+                text =
+                  format(
+                  "%s (%s): %s...",
+                  comment.user.login,
+                  string.lower(comment.author_association),
+                  string.sub(vim.split(comment.body, "\n")[1], 0, qf_width)
+                ),
+                pattern = comment.id
+              }
 
               if not comment.in_reply_to_id then
                 table.insert(items, item)
               end
             end
+          end
+
+          if #items == 0 then
+            api.nvim_err_writeln(format("No comments found for review %d", selection.review.id))
+            return
           end
 
           -- populate qf
@@ -181,7 +204,6 @@ function M.populate_comments_qf(repo, number, selection)
           -- new tab to hold the main, qf and comment windows
           if true then
             vim.cmd(format("tabnew %s", items[1].filename))
-            --vim.cmd [[tabnew %]]
           end
           local main_win = api.nvim_get_current_win()
 
@@ -189,7 +211,7 @@ function M.populate_comments_qf(repo, number, selection)
           api.nvim_win_set_var(main_win, "review_comments", review_comments)
 
           -- open qf
-          vim.cmd [[20copen]]
+          vim.cmd(format("%dcopen", qf_height))
           local qf_win = api.nvim_get_current_win()
 
           -- add a <CR> mapping to the qf window
@@ -258,8 +280,6 @@ function M.show_comments_qf_entry(repo, number, main_win)
   local items = qf.items or {}
   local selected_item = items[idx]
   local comment_id = selected_item.pattern
-
-  -- TODO: save main window buffers for cleanup on <C-c>
 
   -- jump back to main win and go to comment line
   api.nvim_set_current_win(main_win)

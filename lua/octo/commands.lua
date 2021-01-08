@@ -538,7 +538,8 @@ function M.pr_reviews()
   if not util.in_pr_branch() then
     return
   end
-  menu.reviews(repo, number)
+  local bufnr = api.nvim_get_current_buf()
+  menu.reviews(bufnr, repo, number)
 end
 
 function M.review_pr()
