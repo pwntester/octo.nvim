@@ -240,4 +240,15 @@ function M.create_content_popup(lines)
   return winnr, bufnr
 end
 
+function M.get_buffer_kind(bufnr)
+  local ft = api.nvim_buf_get_option(bufnr, "filetype")
+  local kind
+  if ft == "octo_issue" then
+    kind = "issues"
+  elseif ft == "octo_review_comments" then
+    kind = "pulls"
+  end
+  return kind
+end
+
 return M

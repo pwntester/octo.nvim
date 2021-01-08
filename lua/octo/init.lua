@@ -373,6 +373,80 @@ function M.write_comment(bufnr, comment, line)
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 end
 
+function M.write_diff_hunk(bufnr, diff_hunk)
+  -- clear virtual texts
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
+
+  local lines = vim.split(diff_hunk, "\n")
+
+  -- print #lines + 2 empty lines
+  local empty_lines = {}
+  local max_length = -1
+  for _, l in ipairs(lines) do
+    table.insert(empty_lines, "")
+    if #l > max_length then max_length = #l end
+  end
+  vim.list_extend(empty_lines, {"", "", ""})
+  M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = 1})
+
+  local vt_lines = {}
+  table.insert(vt_lines, {{format("┌%s┐", string.rep ("─", max_length + 2))}})
+  for _, line in ipairs(lines) do
+    if vim.startswith(line, "@@ ") then
+      local index = string.find(line, "@[^@]*$")
+      table.insert(vt_lines, {
+        {"│ "},
+        {string.sub(line, 0, index), "DiffLine"},
+        {string.sub(line, index + 1), "DiffSubname"},
+        {string.rep(" ", max_length - #line - 1)},
+        {"│"}
+      })
+    elseif vim.startswith(line, "+") then
+      table.insert(vt_lines, {
+        {"│ "},
+        {line, "DiffAdd"},
+        {string.rep(" ", max_length - #line)},
+        {" │"}
+      })
+    elseif vim.startswith(line, "-") then
+      table.insert(vt_lines, {
+        {"│ "},
+        {line, "DiffDelete"},
+        {string.rep(" ", max_length - #line)},
+        {" │"}
+      })
+    else
+      table.insert(vt_lines, {
+        {"│ "},
+        {line},
+        {string.rep(" ", max_length - #line)},
+        {" │"}
+      })
+    end
+  end
+  table.insert(vt_lines, {{format("└%s┘", string.rep ("─", max_length + 2))}})
+
+  -- print diff_hunk as virtual text
+  local line = 0
+  for _, vt_line in ipairs(vt_lines) do
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
+    line = line + 1
+  end
+end
+
+function M.write_replies(comment_bufnr, replies, id)
+  local creplies = replies[id]
+  if creplies then
+    for _, reply in ipairs(creplies) do
+      -- write main comment
+      M.write_comment(comment_bufnr, reply)
+
+      -- write replies
+      M.write_replies(comment_bufnr, replies, reply.id)
+    end
+  end
+end
+
 function M.load_issue()
   local bufname = vim.fn.bufname()
   local repo, number = string.match(bufname, "octo://(.+)/(%d+)")
@@ -419,7 +493,7 @@ local function async_fetch_review_comments(bufnr, repo, number)
             c.created_at = comment.created_at
             c.in_reply_to_id = comment.in_reply_to_id
             c.reactions = comment.reactions
-            c.author = comment.user.login
+            c.user = comment.user
             c.author_association = comment.author_association
 
             c.original_commit_id = comment.original_commit_id
@@ -764,74 +838,74 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   vim.cmd [[ augroup END ]]
 end
 
-function M.save_issue(bufnr)
-  bufnr = bufnr or api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(bufnr)
-  if not vim.startswith(bufname, "octo://") then
-    return
-  end
+function M.save_issue()
+  local bufnr = api.nvim_get_current_buf()
 
-  -- number
-  local number = api.nvim_buf_get_var(bufnr, "number")
-
-  -- repo
-  local repo = api.nvim_buf_get_var(bufnr, "repo")
+  local repo, number = util.get_repo_number({"octo_issue", "octo_review_comments"})
   if not repo then
-    api.nvim_err_writeln("Buffer is not linked to a GitHub issue")
     return
   end
 
   -- collect comment metadata
   util.update_issue_metadata(bufnr)
 
-  -- title & description
-  local title_metadata = api.nvim_buf_get_var(bufnr, "title")
-  local desc_metadata = api.nvim_buf_get_var(bufnr, "description")
-  if title_metadata.dirty or desc_metadata.dirty then
-    -- trust but verify
-    if string.find(title_metadata["body"], "\n") then
-      api.nvim_err_writeln("Title can't contains new lines")
-      return
-    elseif title_metadata["body"] == "" then
-      api.nvim_err_writeln("Title can't be blank")
-      return
+  local ft = api.nvim_buf_get_option(bufnr, "filetype")
+  if ft == "octo_issue" then
+    -- title & description
+    local title_metadata = api.nvim_buf_get_var(bufnr, "title")
+    local desc_metadata = api.nvim_buf_get_var(bufnr, "description")
+    if title_metadata.dirty or desc_metadata.dirty then
+      -- trust but verify
+      if string.find(title_metadata["body"], "\n") then
+        api.nvim_err_writeln("Title can't contains new lines")
+        return
+      elseif title_metadata["body"] == "" then
+        api.nvim_err_writeln("Title can't be blank")
+        return
+      end
+
+      gh.run(
+        {
+          args = {
+            "api",
+            "-X",
+            "PATCH",
+            "-f",
+            format("title=%s", title_metadata["body"]),
+            "-f",
+            format("body=%s", desc_metadata["body"]),
+            format("repos/%s/issues/%s", repo, number)
+          },
+          cb = function(output)
+            local resp = json.parse(output)
+
+            if title_metadata["body"] == resp["title"] then
+              title_metadata["saved_body"] = resp["title"]
+              title_metadata["dirty"] = false
+              api.nvim_buf_set_var(bufnr, "title", title_metadata)
+            end
+
+            if desc_metadata["body"] == resp["body"] then
+              desc_metadata["saved_body"] = resp["body"]
+              desc_metadata["dirty"] = false
+              api.nvim_buf_set_var(bufnr, "description", desc_metadata)
+            end
+
+            signs.render_signcolumn(bufnr)
+            print("Saved!")
+          end
+        }
+      )
     end
-
-    gh.run(
-      {
-        args = {
-          "api",
-          "-X",
-          "PATCH",
-          "-f",
-          format("title=%s", title_metadata["body"]),
-          "-f",
-          format("body=%s", desc_metadata["body"]),
-          format("repos/%s/issues/%s", repo, number)
-        },
-        cb = function(output)
-          local resp = json.parse(output)
-
-          if title_metadata["body"] == resp["title"] then
-            title_metadata["saved_body"] = resp["title"]
-            title_metadata["dirty"] = false
-            api.nvim_buf_set_var(bufnr, "title", title_metadata)
-          end
-
-          if desc_metadata["body"] == resp["body"] then
-            desc_metadata["saved_body"] = resp["body"]
-            desc_metadata["dirty"] = false
-            api.nvim_buf_set_var(bufnr, "description", desc_metadata)
-          end
-
-          signs.render_signcolumn(bufnr)
-          print("Saved!")
-        end
-      }
-    )
   end
 
   -- comments
+  local kind
+  if ft == "octo_issue" then
+    kind = "issues"
+  elseif ft == "octo_review_comments" then
+    kind = "pulls"
+  end
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for _, metadata in ipairs(comments) do
     if metadata["body"] ~= metadata["saved_body"] then
@@ -843,7 +917,7 @@ function M.save_issue(bufnr)
             "PATCH",
             "-f",
             format("body=%s", metadata["body"]),
-            format("repos/%s/issues/comments/%s", repo, metadata["id"])
+            format("repos/%s/%s/comments/%s", repo, kind, metadata["id"])
           },
           cb = function(output)
             local resp = json.parse(output)

@@ -87,9 +87,6 @@ local commands = {
     end,
     delete = function()
       M.delete_comment()
-    end,
-    reply = function()
-      reviews.reply_to_comment("FOO")
     end
   },
   label = {
@@ -192,15 +189,18 @@ end
 
 function M.add_comment()
   local bufnr = api.nvim_get_current_buf()
-  local iid = api.nvim_buf_get_var(bufnr, "iid")
-  local number = api.nvim_buf_get_var(bufnr, "number")
-  local repo = api.nvim_buf_get_var(bufnr, "repo")
+  local repo, number = util.get_repo_number({"octo_issue", "octo_review_comments"})
+  if not repo then
+    return
+  end
 
-  if not iid or not number or not repo then
+  local iid = api.nvim_buf_get_var(bufnr, "iid")
+  if not iid then
     api.nvim_err_writeln("Buffer is not linked to a GitHub issue")
     return
   end
 
+  local kind = util.get_buffer_kind(bufnr)
   gh.run(
     {
       args = {
@@ -209,7 +209,7 @@ function M.add_comment()
         "POST",
         "-f",
         format("body=%s", constants.NO_BODY_MSG),
-        format("repos/%s/issues/%s/comments", repo, number)
+        format("repos/%s/%s/%d/comments", repo, kind, number)
       },
       cb = function(output)
         local comment = json.parse(output)
@@ -223,9 +223,63 @@ function M.add_comment()
   )
 end
 
+function M.reply_to_comment(body)
+  -- Creates a reply to a review comment for a pull request. For the comment_id,
+  -- provide the ID of the review comment you are replying to. This must be the ID
+  -- of a top-level review comment, not a reply to that comment.
+  -- Replies to replies are not supported.
+
+  -- TODO: this is like util.get_repo_number() but for `octo_review_comments` buffer
+  -- refactor function to take a ft and then reuse.
+  -- we also need a better name.
+  local bufnr = api.nvim_get_current_buf()
+  if api.nvim_buf_get_option(bufnr, "filetype") ~=  "octo_review_comments" then
+    return
+  end
+  -- TODO: extract comment_id from bufname: octo://:owner/:repo/:id/comment/:comment_id
+  local comment_id = api.nvim_buf_get_name(bufnr)
+  local repo_ok, repo = pcall(api.nvim_buf_get_var, 0, "repo")
+  if not repo_ok then
+    return
+  end
+  local number_ok, number = pcall(api.nvim_buf_get_var, 0, "number")
+  if not number_ok then
+    return
+  end
+
+  gh.run(
+    {
+      args = {
+        "api",
+        "-X",
+        "POST",
+        "-f",
+        format("body=%s", body),
+        format("/repos/%s/pulls/%d/comments/%d/replies", repo, number, comment_id)
+      },
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local reply = json.parse(output)
+          if tostring(reply.in_reply_to_id) ~= tostring(comment_id) or vim.fn.trim(reply.body) ~= vim.fn.trim(body) then
+            api.nvim_err_writeln("Error posting reply to comment")
+          else
+            print("Successfully posted comment")
+            octo.write_comment(bufnr, reply)
+          end
+        end
+      end
+    }
+  )
+end
+
 function M.delete_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo = api.nvim_buf_get_var(bufnr, "repo")
+  local repo, _ = util.get_repo_number({"octo_issue", "octo_review_comments"})
+  if not repo then
+    return
+  end
   local cursor = api.nvim_win_get_cursor(0)
   local comment, start_line, end_line = unpack(util.get_comment_at_cursor(bufnr, cursor))
   if not comment then
@@ -234,13 +288,14 @@ function M.delete_comment()
   end
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
+    local kind = util.get_buffer_kind(bufnr)
     gh.run(
       {
         args = {
           "api",
           "-X",
           "DELETE",
-          format("repos/%s/issues/comments/%s", repo, comment.id)
+          format("repos/%s/%s/comments/%s", repo, kind, comment.id)
         },
         cb = function(_)
           api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
@@ -614,12 +669,7 @@ function M.reaction_action(action, reaction)
     cb_url = format("repos/%s/issues/comments/%d", repo, comment.id)
     line = comment.reaction_line
     reactions = comment.reactions
-    local kind
-    if vim.bo.ft == "octo_review_comments" then
-      kind = "pulls"
-    elseif vim.bo.ft == "octo_issue" then
-      kind = "issues"
-    end
+    local kind = util.get_buffer_kind(bufnr)
     if action == "add" then
       url = format("repos/%s/%s/comments/%d/reactions", repo, kind, comment.id)
       args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}
