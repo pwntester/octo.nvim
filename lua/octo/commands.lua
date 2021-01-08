@@ -229,23 +229,13 @@ function M.reply_to_comment(body)
   -- of a top-level review comment, not a reply to that comment.
   -- Replies to replies are not supported.
 
-  -- TODO: this is like util.get_repo_number() but for `octo_review_comments` buffer
-  -- refactor function to take a ft and then reuse.
-  -- we also need a better name.
   local bufnr = api.nvim_get_current_buf()
-  if api.nvim_buf_get_option(bufnr, "filetype") ~=  "octo_review_comments" then
+  local repo, number = util.get_repo_number({"octo_review_comments"})
+  if not repo then
     return
   end
   -- TODO: extract comment_id from bufname: octo://:owner/:repo/:id/comment/:comment_id
   local comment_id = api.nvim_buf_get_name(bufnr)
-  local repo_ok, repo = pcall(api.nvim_buf_get_var, 0, "repo")
-  if not repo_ok then
-    return
-  end
-  local number_ok, number = pcall(api.nvim_buf_get_var, 0, "number")
-  if not number_ok then
-    return
-  end
 
   gh.run(
     {

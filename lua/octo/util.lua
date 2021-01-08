@@ -59,6 +59,7 @@ function M.in_pr_branch()
   return false
 end
 
+-- TODO: we need a better name for this
 function M.get_repo_number(filetypes)
   local bufnr = api.nvim_get_current_buf()
   filetypes = filetypes or {"octo_issue"}
