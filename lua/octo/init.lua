@@ -342,7 +342,7 @@ function M.write_comment(bufnr, comment, line)
 
   -- body
   line = line + 2
-  local comment_body = string.gsub(comment["body"], "\r\n", "\n")
+  local comment_body = string.gsub(comment.body, "\r\n", "\n")
   if vim.startswith(comment_body, constants.NO_BODY_MSG) then
     comment_body = " "
   end
@@ -574,14 +574,14 @@ local function async_fetch_issues(bufnr, repo)
 end
 
 function M.create_issue_buffer(issue, repo, create_buffer)
-  if not issue["id"] then
+  if not issue.id then
     api.nvim_err_writeln(format("Cannot find issue in %s", repo))
     return
   end
 
-  local iid = issue["id"]
-  local number = issue["number"]
-  local state = issue["state"]
+  local iid = issue.id
+  local number = issue.number
+  local state = issue.state
 
   local bufnr
   if create_buffer then
@@ -790,7 +790,7 @@ function M.create_issue_buffer(issue, repo, create_buffer)
 
   -- write issue comments
   api.nvim_buf_set_var(bufnr, "comments", {})
-  local comments_count = tonumber(issue["comments"])
+  local comments_count = tonumber(issue.comments)
   local comments_processed = 0
   if comments_count > 0 then
     gh.run(
@@ -840,7 +840,6 @@ end
 
 function M.save_issue()
   local bufnr = api.nvim_get_current_buf()
-
   local repo, number = util.get_repo_number({"octo_issue", "octo_review_comments"})
   if not repo then
     return
@@ -856,10 +855,10 @@ function M.save_issue()
     local desc_metadata = api.nvim_buf_get_var(bufnr, "description")
     if title_metadata.dirty or desc_metadata.dirty then
       -- trust but verify
-      if string.find(title_metadata["body"], "\n") then
+      if string.find(title_metadata.body, "\n") then
         api.nvim_err_writeln("Title can't contains new lines")
         return
-      elseif title_metadata["body"] == "" then
+      elseif title_metadata.body == "" then
         api.nvim_err_writeln("Title can't be blank")
         return
       end
@@ -871,23 +870,23 @@ function M.save_issue()
             "-X",
             "PATCH",
             "-f",
-            format("title=%s", title_metadata["body"]),
+            format("title=%s", title_metadata.body),
             "-f",
-            format("body=%s", desc_metadata["body"]),
+            format("body=%s", desc_metadata.body),
             format("repos/%s/issues/%s", repo, number)
           },
           cb = function(output)
             local resp = json.parse(output)
 
-            if title_metadata["body"] == resp["title"] then
-              title_metadata["saved_body"] = resp["title"]
-              title_metadata["dirty"] = false
+            if title_metadata.body == resp.title then
+              title_metadata.saved_body = resp.title
+              title_metadata.dirty = false
               api.nvim_buf_set_var(bufnr, "title", title_metadata)
             end
 
-            if desc_metadata["body"] == resp["body"] then
-              desc_metadata["saved_body"] = resp["body"]
-              desc_metadata["dirty"] = false
+            if desc_metadata.body == resp.body then
+              desc_metadata.saved_body = resp.body
+              desc_metadata.dirty = false
               api.nvim_buf_set_var(bufnr, "description", desc_metadata)
             end
 
@@ -899,43 +898,89 @@ function M.save_issue()
     end
   end
 
-  -- comments
-  local kind
+  local kind, post_url
   if ft == "octo_issue" then
     kind = "issues"
+    post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
   elseif ft == "octo_review_comments" then
     kind = "pulls"
+    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/comment/(%d+)")
+    if not status then
+      api.nvim_err_writeln("Cannot extract comment id from buffer name")
+      return
+    end
+    post_url = format("/repos/%s/pulls/%d/comments/%d/replies", repo, number, comment_id)
   end
+
+  -- comments
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for _, metadata in ipairs(comments) do
-    if metadata["body"] ~= metadata["saved_body"] then
-      gh.run(
-        {
-          args = {
-            "api",
-            "-X",
-            "PATCH",
-            "-f",
-            format("body=%s", metadata["body"]),
-            format("repos/%s/%s/comments/%s", repo, kind, metadata["id"])
-          },
-          cb = function(output)
-            local resp = json.parse(output)
-            if metadata["body"] == resp["body"] then
-              for i, c in ipairs(comments) do
-                if c["id"] == resp["id"] then
-                  comments[i]["saved_body"] = resp["body"]
-                  comments[i]["dirty"] = false
-                  break
+
+    if metadata.body ~= metadata.saved_body then
+      if metadata.id == -1 then
+        -- create new comment/reply
+        gh.run(
+          {
+            args = {
+              "api",
+              "-X",
+              "POST",
+              "-f",
+              format("body=%s", metadata.body),
+              post_url
+            },
+            cb = function(output, stderr)
+              if stderr and not util.is_blank(stderr) then
+                api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = json.parse(output)
+                if metadata.body == resp.body then
+                  for i, c in ipairs(comments) do
+                    if c.id == -1 then
+                      comments[i].saved_body = resp.body
+                      comments[i].dirty = false
+                      comments[i].id = resp.id
+                      break
+                    end
+                  end
+                  api.nvim_buf_set_var(bufnr, "comments", comments)
+                  signs.render_signcolumn(bufnr)
+                  print("Saved!")
                 end
               end
-              api.nvim_buf_set_var(bufnr, "comments", comments)
-              signs.render_signcolumn(bufnr)
-              print("Saved!")
             end
-          end
-        }
-      )
+          }
+        )
+      else
+        -- update comment/reply
+        gh.run(
+          {
+            args = {
+              "api",
+              "-X",
+              "PATCH",
+              "-f",
+              format("body=%s", metadata.body),
+              format("repos/%s/%s/comments/%s", repo, kind, metadata.id)
+            },
+            cb = function(output)
+              local resp = json.parse(output)
+              if metadata.body == resp.body then
+                for i, c in ipairs(comments) do
+                  if c.id == resp.id then
+                    comments[i].saved_body = resp.body
+                    comments[i].dirty = false
+                    break
+                  end
+                end
+                api.nvim_buf_set_var(bufnr, "comments", comments)
+                signs.render_signcolumn(bufnr)
+                print("Saved!")
+              end
+            end
+          }
+        )
+      end
     end
   end
 

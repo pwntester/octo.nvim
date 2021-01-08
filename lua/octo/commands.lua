@@ -189,79 +189,21 @@ end
 
 function M.add_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_number({"octo_issue", "octo_review_comments"})
+  local repo, _ = util.get_repo_number({"octo_issue", "octo_review_comments"})
   if not repo then
     return
   end
 
-  local iid = api.nvim_buf_get_var(bufnr, "iid")
-  if not iid then
-    api.nvim_err_writeln("Buffer is not linked to a GitHub issue")
-    return
-  end
-
-  local kind = util.get_buffer_kind(bufnr)
-  gh.run(
-    {
-      args = {
-        "api",
-        "-X",
-        "POST",
-        "-f",
-        format("body=%s", constants.NO_BODY_MSG),
-        format("repos/%s/%s/%d/comments", repo, kind, number)
-      },
-      cb = function(output)
-        local comment = json.parse(output)
-        if nil ~= comment["issue_url"] then
-          octo.write_comment(bufnr, comment)
-          vim.fn.execute("normal! Gkkk")
-          vim.fn.execute("startinsert")
-        end
-      end
-    }
-  )
-end
-
-function M.reply_to_comment(body)
-  -- Creates a reply to a review comment for a pull request. For the comment_id,
-  -- provide the ID of the review comment you are replying to. This must be the ID
-  -- of a top-level review comment, not a reply to that comment.
-  -- Replies to replies are not supported.
-
-  local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_number({"octo_review_comments"})
-  if not repo then
-    return
-  end
-  local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/comment/(%d+)")
-  if status and comment_id > 0 then
-    gh.run(
-      {
-        args = {
-          "api",
-          "-X",
-          "POST",
-          "-f",
-          format("body=%s", body),
-          format("/repos/%s/pulls/%d/comments/%d/replies", repo, number, comment_id)
-        },
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local reply = json.parse(output)
-            if tostring(reply.in_reply_to_id) ~= tostring(comment_id) or vim.fn.trim(reply.body) ~= vim.fn.trim(body) then
-              api.nvim_err_writeln("Error posting reply to comment")
-            else
-              print("Successfully posted comment")
-              octo.write_comment(bufnr, reply)
-            end
-          end
-        end
-      }
-    )
-  end
+  local comment = {
+    created_at = vim.fn.strftime("%FT%TZ"),
+    user = {login = vim.g.octo_loggedin_user},
+    body = "",
+    reactions = {total_count = 0},
+    id = -1,
+  }
+  octo.write_comment(bufnr, comment)
+  --vim.fn.execute("normal! Gkkk")
+  --vim.fn.execute("startinsert")
 end
 
 function M.delete_comment()
