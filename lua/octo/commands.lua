@@ -234,34 +234,34 @@ function M.reply_to_comment(body)
   if not repo then
     return
   end
-  -- TODO: extract comment_id from bufname: octo://:owner/:repo/:id/comment/:comment_id
-  local comment_id = api.nvim_buf_get_name(bufnr)
-
-  gh.run(
-    {
-      args = {
-        "api",
-        "-X",
-        "POST",
-        "-f",
-        format("body=%s", body),
-        format("/repos/%s/pulls/%d/comments/%d/replies", repo, number, comment_id)
-      },
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local reply = json.parse(output)
-          if tostring(reply.in_reply_to_id) ~= tostring(comment_id) or vim.fn.trim(reply.body) ~= vim.fn.trim(body) then
-            api.nvim_err_writeln("Error posting reply to comment")
-          else
-            print("Successfully posted comment")
-            octo.write_comment(bufnr, reply)
+  local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/comment/(%d+)")
+  if status and comment_id > 0 then
+    gh.run(
+      {
+        args = {
+          "api",
+          "-X",
+          "POST",
+          "-f",
+          format("body=%s", body),
+          format("/repos/%s/pulls/%d/comments/%d/replies", repo, number, comment_id)
+        },
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local reply = json.parse(output)
+            if tostring(reply.in_reply_to_id) ~= tostring(comment_id) or vim.fn.trim(reply.body) ~= vim.fn.trim(body) then
+              api.nvim_err_writeln("Error posting reply to comment")
+            else
+              print("Successfully posted comment")
+              octo.write_comment(bufnr, reply)
+            end
           end
         end
-      end
-    }
-  )
+      }
+    )
+  end
 end
 
 function M.delete_comment()
