@@ -8,7 +8,9 @@ local M = {}
 
 M.reaction_map = {
   ["+1"] = "👍",
+  ["thumbs_up"] = "👍",
   ["-1"] = "👎",
+  ["thumbs_down"] = "👎",
   ["laugh"] = "😀",
   ["hooray"] = "🎉",
   ["confused"] = "😕",

@@ -189,7 +189,7 @@ end
 
 function M.add_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_issue", "octo_review_comments"})
+  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
@@ -199,7 +199,7 @@ function M.add_comment()
     user = {login = vim.g.octo_loggedin_user},
     body = "",
     reactions = {total_count = 0},
-    id = -1,
+    id = -1
   }
   octo.write_comment(bufnr, comment)
   --vim.fn.execute("normal! Gkkk")
@@ -208,7 +208,7 @@ end
 
 function M.delete_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_issue", "octo_review_comments"})
+  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
@@ -529,8 +529,8 @@ function M.show_pr_diff()
 end
 
 function M.pr_reviews()
-  local repo, number, _ = util.get_repo_number_pr()
-  if not repo then
+  local rep, number, _ = util.get_repo_number_pr()
+  if not rep then
     return
   end
 
@@ -538,8 +538,69 @@ function M.pr_reviews()
   if not util.in_pr_branch() then
     return
   end
-  local bufnr = api.nvim_get_current_buf()
-  menu.reviews(bufnr, repo, number)
+
+  local owner = vim.split(rep, "/")[1]
+  local repo = vim.split(rep, "/")[2]
+  local query =
+    format(
+    [[
+    query($endCursor: String) {
+      repository(owner:"%s", name:"%s") {
+        pullRequest(number:%d){
+           reviewThreads(last:80) {
+              nodes{
+                id,
+                isResolved,
+                isOutdated,
+                path,
+                line,
+                resolvedBy { login },
+                originalLine,
+                startLine,
+                originalStartLine,
+                comments(first: 100, after: $endCursor) {
+                  nodes{
+                    id,
+                    body,
+                    author { login },
+                    authorAssociation,
+                    diffHunk,
+                    reactions(last:50) {
+                      totalCount,
+                      nodes{
+                        content
+                      }
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                },
+              }
+
+          }
+        }
+      }
+    }
+  ]],
+    owner,
+    repo,
+    number
+  )
+  gh.run(
+    {
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          reviews.populate_reviewthreads_qf(rep, number, resp.data.repository.pullRequest.reviewThreads.nodes)
+        end
+      end
+    }
+  )
 end
 
 function M.review_pr()
@@ -586,7 +647,7 @@ end
 function M.reaction_action(action, reaction)
   local bufnr = api.nvim_get_current_buf()
 
-  local repo, number = util.get_repo_number({"octo_issue", "octo_review_comments"})
+  local repo, number = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end

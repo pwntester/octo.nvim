@@ -141,15 +141,37 @@ end
 function M.write_reactions(bufnr, reactions, line)
   line = line or api.nvim_buf_line_count(bufnr) - 1
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
-  if reactions.total_count > 0 then
+  if (reactions.total_count and reactions.total_count > 0) or (reactions.totalCount and reactions.totalCount > 0) then
     local reactions_vt = {}
-    for reaction, count in pairs(reactions) do
-      local emoji = require "octo.util".reaction_map[reaction]
-      if emoji and count > 0 then
-        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-        table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
-        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-        table.insert(reactions_vt, {format(" %s ", count), "Normal"})
+    if reactions.nodes then
+      -- graphql api
+      local reaction_map = {}
+      for _, reaction in ipairs(reactions.nodes) do
+        if not reaction_map[reaction.content] then
+          reaction_map[reaction.content] = 1
+        else
+          reaction_map[reaction.content] = reaction_map[reaction.content] + 1
+        end
+      end
+      for content, count in pairs(reaction_map) do
+        local emoji = require "octo.util".reaction_map[string.lower(content)]
+        if emoji and count > 0 then
+          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+          table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
+          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+          table.insert(reactions_vt, {format(" %s ", count), "Normal"})
+        end
+      end
+    else
+      -- rest api
+      for reaction, count in pairs(reactions) do
+        local emoji = require "octo.util".reaction_map[reaction]
+        if emoji and count > 0 then
+          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+          table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
+          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+          table.insert(reactions_vt, {format(" %s ", count), "Normal"})
+        end
       end
     end
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt, {})
@@ -333,9 +355,15 @@ function M.write_comment(bufnr, comment, line)
   -- heading
   line = line or api.nvim_buf_line_count(bufnr) + 1
   M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
+  local name
+  if comment.author then
+    name = comment.author.login
+  else
+    name = comment.user.login
+  end
   local header_vt = {
     {format("On %s ", util.format_date(comment.created_at)), "OctoNvimCommentHeading"},
-    {comment.user.login, "OctoNvimCommentUser"},
+    {name, "OctoNvimCommentUser"},
     {" commented", "OctoNvimCommentHeading"}
   }
   local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
@@ -359,7 +387,7 @@ function M.write_comment(bufnr, comment, line)
   table.insert(
     comments_metadata,
     {
-      author = comment.user.login,
+      author = name,
       id = comment.id,
       dirty = false,
       saved_body = comment_body,
@@ -390,6 +418,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
       max_length = #l
     end
   end
+  max_length = math.max(max_length, vim.fn.winwidth(0) - 8)
   vim.list_extend(empty_lines, {"", "", ""})
   M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
 
@@ -404,7 +433,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
           {"│ "},
           {string.sub(line, 0, index), "DiffLine"},
           {string.sub(line, index + 1), "DiffSubname"},
-          {string.rep(" ", max_length - #line - 1)},
+          {string.rep(" ", 1 + max_length - #line)},
           {"│"}
         }
       )
@@ -450,18 +479,18 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
   end
 end
 
-function M.write_replies(comment_bufnr, replies, id)
-  local creplies = replies[id]
-  if creplies then
-    for _, reply in ipairs(creplies) do
-      -- write main comment
-      M.write_comment(comment_bufnr, reply)
-
-      -- write replies
-      M.write_replies(comment_bufnr, replies, reply.id)
-    end
-  end
-end
+-- function M.write_replies(comment_bufnr, replies, id)
+--   local creplies = replies[id]
+--   if creplies then
+--     for _, reply in ipairs(creplies) do
+--       -- write main comment
+--       M.write_comment(comment_bufnr, reply)
+--
+--       -- write replies
+--       M.write_replies(comment_bufnr, replies, reply.id)
+--     end
+--   end
+-- end
 
 function M.load_issue()
   local bufname = vim.fn.bufname()
@@ -488,67 +517,67 @@ end
 
 -- This function accumulates all the PR review comments into a couple of dicts
 -- that are stored as a buffer variable in `pr_comments` and `pr_replies`.
-local function async_fetch_review_comments(bufnr, repo, number)
-  gh.run(
-    {
-      args = {"api", format("repos/%s/pulls/%d/comments", repo, number), "--paginate"},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local results = json.parse(output)
-          local comments = {}
-          local replies = {}
-          local reviews = {}
-          for _, comment in ipairs(results) do
-            local c = {}
-
-            if not comment.in_reply_to_id and not vim.tbl_contains(reviews, comment.pull_request_review_id) then
-              table.insert(reviews, comment.pull_request_review_id)
-            end
-
-            c.pull_request_review_id = comment.pull_request_review_id
-            c.id = comment.id
-            c.diff_hunk = comment.diff_hunk
-            c.body = comment.body
-            c.path = comment.path
-            c.created_at = comment.created_at
-            c.in_reply_to_id = comment.in_reply_to_id
-            c.reactions = comment.reactions
-            c.user = comment.user
-            c.author_association = comment.author_association
-
-            c.original_commit_id = comment.original_commit_id
-            c.original_position = comment.original_position
-            c.original_line = comment.original_line
-            c.original_start_line = comment.original_start_line
-
-            c.commit_id = comment.commit_id
-            c.position = comment.position
-            c.line = comment.line
-            c.start_line = comment.start_line
-
-            c.side = comment.side
-            if comment.in_reply_to_id then
-              if replies[tostring(comment.in_reply_to_id)] then
-                local rs = replies[tostring(comment.in_reply_to_id)]
-                table.insert(rs, c)
-                replies[tostring(comment.in_reply_to_id)] = rs
-              else
-                replies[tostring(comment.in_reply_to_id)] = {c}
-              end
-            else
-              comments[tostring(comment.id)] = c
-            end
-          end
-          api.nvim_buf_set_var(bufnr, "pr_comments", comments)
-          api.nvim_buf_set_var(bufnr, "pr_replies", replies)
-          api.nvim_buf_set_var(bufnr, "pr_reviews", reviews)
-        end
-      end
-    }
-  )
-end
+-- local function async_fetch_review_comments(bufnr, repo, number)
+--   gh.run(
+--     {
+--       args = {"api", format("repos/%s/pulls/%d/comments", repo, number), "--paginate"},
+--       cb = function(output, stderr)
+--         if stderr and not util.is_blank(stderr) then
+--           api.nvim_err_writeln(stderr)
+--         elseif output then
+--           local results = json.parse(output)
+--           local comments = {}
+--           local replies = {}
+--           local reviews = {}
+--           for _, comment in ipairs(results) do
+--             local c = {}
+--
+--             if not comment.in_reply_to_id and not vim.tbl_contains(reviews, comment.pull_request_review_id) then
+--               table.insert(reviews, comment.pull_request_review_id)
+--             end
+--
+--             c.pull_request_review_id = comment.pull_request_review_id
+--             c.id = comment.id
+--             c.diff_hunk = comment.diff_hunk
+--             c.body = comment.body
+--             c.path = comment.path
+--             c.created_at = comment.created_at
+--             c.in_reply_to_id = comment.in_reply_to_id
+--             c.reactions = comment.reactions
+--             c.user = comment.user
+--             c.author_association = comment.author_association
+--
+--             c.original_commit_id = comment.original_commit_id
+--             c.original_position = comment.original_position
+--             c.original_line = comment.original_line
+--             c.original_start_line = comment.original_start_line
+--
+--             c.commit_id = comment.commit_id
+--             c.position = comment.position
+--             c.line = comment.line
+--             c.start_line = comment.start_line
+--
+--             c.side = comment.side
+--             if comment.in_reply_to_id then
+--               if replies[tostring(comment.in_reply_to_id)] then
+--                 local rs = replies[tostring(comment.in_reply_to_id)]
+--                 table.insert(rs, c)
+--                 replies[tostring(comment.in_reply_to_id)] = rs
+--               else
+--                 replies[tostring(comment.in_reply_to_id)] = {c}
+--               end
+--             else
+--               comments[tostring(comment.id)] = c
+--             end
+--           end
+--           api.nvim_buf_set_var(bufnr, "pr_comments", comments)
+--           api.nvim_buf_set_var(bufnr, "pr_replies", replies)
+--           api.nvim_buf_set_var(bufnr, "pr_reviews", reviews)
+--         end
+--       end
+--     }
+--   )
+-- end
 
 -- This function accumulates all the taggable users into a single list that
 -- gets set as a buffer variable `taggable_users`. If this list of users
@@ -686,9 +715,9 @@ function M.create_issue_buffer(issue, repo, create_buffer)
     200
   )
 
-  if issue.pull_request then
-    async_fetch_review_comments(bufnr, repo, number)
-  end
+  -- if issue.pull_request then
+  --   async_fetch_review_comments(bufnr, repo, number)
+  -- end
   async_fetch_taggable_users(bufnr, repo)
   async_fetch_issues(bufnr, repo)
 
@@ -710,7 +739,7 @@ end
 
 function M.save_issue()
   local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_number({"octo_issue", "octo_review_comments"})
+  local repo, number = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
@@ -772,7 +801,7 @@ function M.save_issue()
   if ft == "octo_issue" then
     kind = "issues"
     post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
-  elseif ft == "octo_review_comments" then
+  elseif ft == "octo_reviewthread" then
     kind = "pulls"
     local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/comment/(%d+)")
     if not status then
@@ -889,10 +918,22 @@ function M.apply_buffer_mappings(bufnr, kind)
   end
 
   if kind == "pull" then
-    api.nvim_buf_set_keymap(bufnr, "n", "<space>po", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>po",
+      [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]],
+      mapping_opts
+    )
     api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
     api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
-    api.nvim_buf_set_keymap(bufnr, "n", "<space>pd", [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>pd",
+      [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]],
+      mapping_opts
+    )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
@@ -948,8 +989,7 @@ function M.apply_buffer_mappings(bufnr, kind)
     )
   end
 
-
-  if kind == "issue" or kind == "pull" or kind == "review_comments" then
+  if kind == "issue" or kind == "pull" or kind == "reviewthreads" then
     -- autocomplete
     api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
     api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
@@ -964,7 +1004,13 @@ function M.apply_buffer_mappings(bufnr, kind)
     )
 
     -- comments
-    api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ca",
+      [[<cmd>lua require'octo.commands'.add_comment()<CR>]],
+      mapping_opts
+    )
 
     api.nvim_buf_set_keymap(
       bufnr,

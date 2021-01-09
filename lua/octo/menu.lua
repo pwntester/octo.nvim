@@ -169,7 +169,7 @@ local function gen_from_issue(max_number, max_status, max_labels)
 
     return {
       value = entry.number,
-      ordinal = entry.number,
+      ordinal = entry.number .. " " .. entry.title,
       msg = entry.title,
       display = make_display,
       status = entry.status,
@@ -403,7 +403,7 @@ local function gen_from_pr(max_number, max_head, max_status)
 
     return {
       value = entry.number,
-      ordinal = entry.number,
+      ordinal = entry.number .. " " .. entry.title,
       msg = entry.title,
       display = make_display,
       status = entry.status,
@@ -694,176 +694,6 @@ function M.changed_files()
                     local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
                     api.nvim_set_current_buf(preview_bufnr)
                     vim.cmd [[stopinsert]]
-                  end
-                )
-                return true
-              end
-            }
-          ):find()
-        end
-      end
-    }
-  )
-end
-
---
--- REVIEWS
---
-
-local function gen_from_review(max_state, max_author)
-  local displayer =
-    entry_display.create {
-    separator = " ",
-    items = {
-      {width = 7},
-      {width = max_state},
-      {width = max_author},
-      {width = 25},
-      {remaining = true}
-    }
-  }
-
-  local make_display = function(entry)
-    -- TODO: mark commit_id as outdated if a newer commit touches the same line
-    return displayer {
-      {entry.review.commit_id:sub(1, 7), "TelescopeResultsNumber"},
-      {entry.review.state, "TelescopeResultsIdentifier"},
-      {entry.review.author_association, "TelescopeResultsSpecialComment"},
-      {util.format_date(entry.review.submitted_at), "TelescopeResultsComment"},
-      vim.split(entry.review.body, "\n")[1]
-    }
-  end
-
-  return function(entry)
-    if not entry then
-      return nil
-    end
-
-    return {
-      value = entry.id,
-      ordinal = entry.commit_id .. " " .. entry.state,
-      msg = entry.state,
-      display = make_display,
-      review = entry
-    }
-  end
-end
-
-local review_previewer =
-  defaulter(
-  function(opts)
-    return previewers.new_buffer_previewer {
-      get_buffer_by_name = function(_, entry)
-        return entry.value
-      end,
-      define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value then
-          local lines = {}
-          vim.list_extend(lines, {"Author: " .. entry.review.user.login})
-          local body = entry.review.body
-          body = string.gsub(body, "\", "")
-          if not util.is_blank(body) then
-            vim.list_extend(lines, vim.split("Body: " .. body, "\n"))
-          end
-          vim.list_extend(lines, {""})
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
-
-          local url = format("/repos/%s/pulls/%d/reviews/%d/comments", opts.repo, opts.number, entry.review.id)
-          gh.run(
-            {
-              args = {"api", url},
-              cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
-                elseif output then
-                  local results = json.parse(output)
-                  for _, comment in ipairs(results) do
-                    local start_line = api.nvim_buf_line_count(self.state.bufnr)
-                    octo.write_block({"", "", "", "", ""}, {bufnr = self.state.bufnr, mark = false, line = start_line})
-                    local vt_lines = {
-                      {{""}},
-                      {{"---------"}},
-                      {{""}},
-                      {
-                        {"Changed file: ", "OctoNvimDetailsLabel"},
-                        {comment.path}
-                      },
-                      {{""}}
-                    }
-                    local line = start_line - 1
-                    for _, vt_line in ipairs(vt_lines) do
-                      api.nvim_buf_set_virtual_text(self.state.bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
-                      line = line + 1
-                    end
-
-                    -- write diff hunk
-                    octo.write_diff_hunk(self.state.bufnr, comment.diff_hunk, api.nvim_buf_line_count(self.state.bufnr))
-
-                    -- write comment
-                    api.nvim_buf_set_var(self.state.bufnr, "comments", {})
-                    octo.write_comment(self.state.bufnr, comment)
-                  end
-                end
-                api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
-              end
-            }
-          )
-        end
-      end
-    }
-  end,
-  {}
-)
-
-function M.reviews(bufnr, repo, number)
-  local url = format("repos/%s/pulls/%d/reviews", repo, number)
-  gh.run(
-    {
-      args = {"api", url},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local reviews = json.parse(output)
-
-          local review_ids = api.nvim_buf_get_var(bufnr, "pr_reviews")
-          local filtered_reviews = {}
-
-          local max_state = -1
-          local max_author = -1
-          for _, review in ipairs(reviews) do
-            if #review.author_association > max_author then
-              max_author = #review.author_association
-            end
-            if #review.state > max_state then
-              max_state = #review.state
-            end
-            if vim.tbl_contains(review_ids, review.id) then
-              table.insert(filtered_reviews, review)
-            end
-          end
-
-          -- TODO:
-          --- group similar comments from different review together?
-          --- group "COMMENT" from same author and same commit since they will
-          --- normally come from "Add single comment"
-
-          pickers.new(
-            {},
-            {
-              prompt_title = "Reviews",
-              finder = finders.new_table {
-                results = filtered_reviews,
-                entry_maker = gen_from_review(max_state, max_author)
-              },
-              sorter = conf.file_sorter({}),
-              previewer = review_previewer.new({repo = repo, number = number}),
-              attach_mappings = function(prompt_bufnr)
-                actions.goto_file_selection_edit:replace(
-                  function()
-                    local selection = actions.get_selected_entry(prompt_bufnr)
-                    actions.close(prompt_bufnr)
-                    require "octo.reviews".populate_comments_qf(repo, number, selection)
                   end
                 )
                 return true

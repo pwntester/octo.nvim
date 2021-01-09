@@ -111,13 +111,11 @@ function M.render_signcolumn(bufnr)
   end
 end
 
-function M.place_comments_signs(main_win, pr_bufnr, review_comments)
+function M.place_reviewthread_signs(main_win, reviewthreads)
   local bufnr = api.nvim_win_get_buf(main_win)
-  local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
-  for _, c in ipairs(review_comments) do
-    local comment = comments[tostring(c.id)]
-    if comment and comment.path == vim.fn.bufname(bufnr) then
-      M.place("comment", bufnr, comment.original_line - 1)
+  for _, thread in ipairs(reviewthreads) do
+    if thread.path == vim.fn.bufname(bufnr) then
+      M.place("comment", bufnr, thread.originalLine - 1)
     end
   end
 end
