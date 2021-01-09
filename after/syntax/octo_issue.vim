@@ -12,7 +12,7 @@ syntax region issue_comment matchgroup=OctoNvimCommentDelimiters start=/\n\n/ ke
 
 hi def link OctoNvimDirty ErrorMsg
 hi def link OctoNvimCommentHeading PreProc
-hi def link OctoNvimCommentUser Underlined
+hi def link OctoNvimCommentUser String 
 hi def link OctoNvimIssueOpen MoreMsg
 hi def link OctoNvimIssueClosed ErrorMsg
 hi def link OctoNvimIssueId Question

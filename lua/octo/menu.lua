@@ -10,6 +10,7 @@ local entry_display = require "telescope.pickers.entry_display"
 local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
+local constants = require "octo.constants"
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
@@ -777,10 +778,23 @@ local review_previewer =
                 elseif output then
                   local results = json.parse(output)
                   for _, comment in ipairs(results) do
-                    local lines = {}
-                    vim.list_extend(lines, {"Changed file: " .. comment.path})
-                    vim.list_extend(lines, {""})
-                    api.nvim_buf_set_lines(self.state.bufnr, -1, -1, false, lines)
+                    local start_line = api.nvim_buf_line_count(self.state.bufnr)
+                    octo.write_block({"", "", "", "", ""}, {bufnr = self.state.bufnr, mark = false, line = start_line})
+                    local vt_lines = {
+                      {{""}},
+                      {{"---------"}},
+                      {{""}},
+                      {
+                        {"Changed file: ", "OctoNvimDetailsLabel"},
+                        {comment.path}
+                      },
+                      {{""}}
+                    }
+                    local line = start_line - 1
+                    for _, vt_line in ipairs(vt_lines) do
+                      api.nvim_buf_set_virtual_text(self.state.bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
+                      line = line + 1
+                    end
 
                     -- write diff hunk
                     octo.write_diff_hunk(self.state.bufnr, comment.diff_hunk, api.nvim_buf_line_count(self.state.bufnr))

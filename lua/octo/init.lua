@@ -386,47 +386,61 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
   local max_length = -1
   for _, l in ipairs(lines) do
     table.insert(empty_lines, "")
-    if #l > max_length then max_length = #l end
+    if #l > max_length then
+      max_length = #l
+    end
   end
   vim.list_extend(empty_lines, {"", "", ""})
   M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
 
   local vt_lines = {}
-  table.insert(vt_lines, {{format("┌%s┐", string.rep ("─", max_length + 2))}})
+  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
   for _, line in ipairs(lines) do
     if vim.startswith(line, "@@ ") then
       local index = string.find(line, "@[^@]*$")
-      table.insert(vt_lines, {
-        {"│ "},
-        {string.sub(line, 0, index), "DiffLine"},
-        {string.sub(line, index + 1), "DiffSubname"},
-        {string.rep(" ", max_length - #line - 1)},
-        {"│"}
-      })
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {string.sub(line, 0, index), "DiffLine"},
+          {string.sub(line, index + 1), "DiffSubname"},
+          {string.rep(" ", max_length - #line - 1)},
+          {"│"}
+        }
+      )
     elseif vim.startswith(line, "+") then
-      table.insert(vt_lines, {
-        {"│ "},
-        {line, "DiffAdd"},
-        {string.rep(" ", max_length - #line)},
-        {" │"}
-      })
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line, "DiffAdd"},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
     elseif vim.startswith(line, "-") then
-      table.insert(vt_lines, {
-        {"│ "},
-        {line, "DiffDelete"},
-        {string.rep(" ", max_length - #line)},
-        {" │"}
-      })
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line, "DiffDelete"},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
     else
-      table.insert(vt_lines, {
-        {"│ "},
-        {line},
-        {string.rep(" ", max_length - #line)},
-        {" │"}
-      })
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
     end
   end
-  table.insert(vt_lines, {{format("└%s┘", string.rep ("─", max_length + 2))}})
+  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
 
   -- print diff_hunk as virtual text
   local line = start_line - 1
@@ -620,165 +634,12 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   api.nvim_buf_set_var(bufnr, "milestone", issue.milestone)
   api.nvim_buf_set_var(bufnr, "taggable_users", {issue.user.login})
 
-  -- local mappings
-  local mapping_opts = {script = true, silent = true, noremap = true}
-
-  api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>gi",
-    [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>cd",
-    [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>ic",
-    [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>io",
-    [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>il",
-    format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>po", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pd", [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>pm",
-    [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>la",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'labels')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>ld",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'labels')<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>aa",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'assignees')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>ad",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'assignees')<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>va",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'requested_reviewers')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>vd",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'requested_reviewers')<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rp",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rh",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>re",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>r+",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', '+1')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>r-",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', '-1')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rr",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'rocket')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rl",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'laugh')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rc",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'confused')<CR>]],
-    mapping_opts
-  )
+  -- buffer mappings
+  if issue.pull_request then
+    M.apply_buffer_mappings(bufnr, "pull")
+  else
+    M.apply_buffer_mappings(bufnr, "issue")
+  end
 
   -- write title
   M.write_title(bufnr, issue.title, 1)
@@ -924,7 +785,6 @@ function M.save_issue()
   -- comments
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for _, metadata in ipairs(comments) do
-
     if metadata.body ~= metadata.saved_body then
       if metadata.id == -1 then
         -- create new comment/reply
@@ -995,6 +855,183 @@ function M.save_issue()
 
   -- reset modified option
   api.nvim_buf_set_option(bufnr, "modified", false)
+end
+
+function M.apply_buffer_mappings(bufnr, kind)
+  local mapping_opts = {script = true, silent = true, noremap = true}
+
+  if kind == "issue" then
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ic",
+      [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>io",
+      [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
+      mapping_opts
+    )
+
+    local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
+    if repo_ok then
+      api.nvim_buf_set_keymap(
+        bufnr,
+        "n",
+        "<space>il",
+        format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
+        mapping_opts
+      )
+    end
+  end
+
+  if kind == "pull" then
+    api.nvim_buf_set_keymap(bufnr, "n", "<space>po", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(bufnr, "n", "<space>pd", [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>pm",
+      [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>va",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'reviewers')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>vd",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'reviewers')<CR>]],
+      mapping_opts
+    )
+  end
+
+  if kind == "issue" or kind == "pull" then
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>la",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'labels')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ld",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'labels')<CR>]],
+      mapping_opts
+    )
+
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>aa",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'assignees')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ad",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'assignees')<CR>]],
+      mapping_opts
+    )
+  end
+
+
+  if kind == "issue" or kind == "pull" or kind == "review_comments" then
+    -- autocomplete
+    api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
+    api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
+
+    -- navigation
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>gi",
+      [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
+      mapping_opts
+    )
+
+    -- comments
+    api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
+
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>cd",
+      [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
+      mapping_opts
+    )
+
+    -- reactions
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rp",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rh",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>re",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>r+",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', '+1')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>r-",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', '-1')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rr",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'rocket')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rl",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'laugh')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rc",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'confused')<CR>]],
+      mapping_opts
+    )
+  end
 end
 
 return M

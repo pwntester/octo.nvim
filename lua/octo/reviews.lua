@@ -11,23 +11,14 @@ local json = {
 -- TODO: x make qf height configurable and default to 0.2 vim height
 -- TODO: x truncate qf entries
 -- TODO: x add diff_hunk borders in review previews
--- TODO: map issue buffer mappings to review_comments buffer
--- TODO: make ]c and ]q cycle
+-- TODO: x silent mappings
+-- TODO: x make ]c and ]q cycle
+-- TODO: x map issue buffer mappings to review_comments buffer
 -- TODO: save main window buffers for cleanup on <C-c>
 
 local M = {}
 
-local qf_height = vim.g.octo_qf_height or vim.o.lines*0.2
-
-function M.add_changes_qf_mappings()
-  vim.cmd [[nnoremap <buffer>]q :cnext <BAR> :lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
-  vim.cmd [[nnoremap <buffer>[q :cprevious <BAR> :lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
-  vim.cmd [[nnoremap <buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
-
-  -- reset quickfix height. Sometimes it messes up after selecting another item
-  vim.cmd(format("%dcopen", qf_height))
-  vim.cmd [[wincmd p]]
-end
+local qf_height = vim.g.octo_qf_height or math.floor(vim.o.lines*0.2)
 
 function M.populate_changes_qf(base, head, changes)
   -- open a new tab so we can easily clean all the windows mess
@@ -51,7 +42,7 @@ function M.populate_changes_qf(base, head, changes)
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
   -- there's probably a better way to map this without changing the window
   vim.cmd(format("%dcopen", qf_height))
-  vim.cmd [[nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
+  vim.cmd [[nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
   vim.cmd [[wincmd p]]
 end
 
@@ -108,51 +99,6 @@ function M.diff_changes_qf_entry()
       M.add_changes_qf_mappings()
     end
   end
-end
-
-function M.add_comments_qf_mappings(repo, number, main_win)
-  vim.cmd(
-    format(
-      "nnoremap <buffer>]c :call nvim_set_current_win(%d) <BAR> :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
-      main_win,
-      repo,
-      number,
-      main_win
-    )
-  )
-  vim.cmd(
-    format(
-      "nnoremap <buffer>[c :call nvim_set_current_win(%d) <BAR> :lua require'octo.reviews'.prev_file_comment('%s', %d, %d)<CR>",
-      main_win,
-      repo,
-      number,
-      main_win
-    )
-  )
-  vim.cmd(
-    format(
-      "nnoremap <buffer>]q :call nvim_set_current_win(%d) <BAR> :cnext <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d)<CR>",
-      main_win,
-      repo,
-      number,
-      main_win
-    )
-  )
-  vim.cmd(
-    format(
-      "nnoremap <buffer>[q :call nvim_set_current_win(%d) <BAR> :cprevious <BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d)<CR>",
-      main_win,
-      repo,
-      number,
-      main_win
-    )
-  )
-
-  vim.cmd [[nnoremap <buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_review_comments_buffers()<CR>]]
-
-  -- reset quickfix height. Sometimes it messes up after selecting another item
-  vim.cmd(format("%dcopen", qf_height))
-  vim.cmd [[wincmd p]]
 end
 
 function M.populate_comments_qf(repo, number, selection)
@@ -214,10 +160,14 @@ function M.populate_comments_qf(repo, number, selection)
           vim.cmd(format("%dcopen", qf_height))
           local qf_win = api.nvim_get_current_win()
 
+          -- highlight qf entries
+          vim.cmd [[call matchadd("Comment", "\(.*\)")]]
+          vim.cmd [[call matchadd("OctoNvimCommentUser", "|\\s\\zs.*\\ze\(")]]
+
           -- add a <CR> mapping to the qf window
           vim.cmd(
             format(
-              "nnoremap <buffer> <CR> <CR><BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d)<CR>",
+              "nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.show_comments_qf_entry('%s', %d, %d)<CR>",
               repo,
               number,
               main_win
@@ -311,6 +261,7 @@ function M.show_comments_qf_entry(repo, number, main_win)
 
     -- add mappings to the comment window buffer
     M.add_comments_qf_mappings(repo, number, main_win)
+    octo.apply_buffer_mappings(comment_bufnr, "review_comments")
 
     -- get cached comment
     local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
@@ -339,6 +290,48 @@ function M.show_comments_qf_entry(repo, number, main_win)
   vim.cmd [[ augroup END ]]
 end
 
+-- MAPPINGS
+function M.add_comments_qf_mappings(repo, number, main_win)
+  vim.cmd(
+    format(
+      "nnoremap <silent><buffer>]c :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
+      repo,
+      number,
+      main_win
+    )
+  )
+  vim.cmd(
+    format(
+      "nnoremap <silent><buffer>[c :lua require'octo.reviews'.prev_file_comment('%s', %d, %d)<CR>",
+      repo,
+      number,
+      main_win
+    )
+  )
+  vim.cmd(
+    format(
+      "nnoremap <silent><buffer>]q :lua require'octo.reviews'.next_comment('%s', %d, %d)<CR>",
+      repo,
+      number,
+      main_win
+    )
+  )
+  vim.cmd(
+    format(
+      "nnoremap <silent><buffer>[q :lua require'octo.reviews'.prev_comment('%s', %d, %d)<CR>",
+      repo,
+      number,
+      main_win
+    )
+  )
+
+  vim.cmd [[nnoremap <silent><buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_review_comments_buffers()<CR>]]
+
+  -- reset quickfix height. Sometimes it messes up after selecting another item
+  vim.cmd(format("%dcopen", qf_height))
+  vim.cmd [[wincmd p]]
+end
+
 function M.get_file_comment_lines(repo, number, main_win)
   local review_comments = api.nvim_win_get_var(main_win, "review_comments")
   local bufnr = api.nvim_win_get_buf(main_win)
@@ -361,6 +354,7 @@ function M.get_file_comment_lines(repo, number, main_win)
 end
 
 function M.next_file_comment(repo, number, main_win)
+  api.nvim_set_current_win(main_win)
   local lines = M.get_file_comment_lines(repo, number, main_win)
   local current_line = vim.fn.line(".")
   local target_line = current_line
@@ -370,10 +364,15 @@ function M.next_file_comment(repo, number, main_win)
       break
     end
   end
+  -- cycle
+  if current_line >= lines[#lines] then
+    target_line = lines[1]
+  end
   vim.cmd(tostring(target_line))
 end
 
 function M.prev_file_comment(repo, number, main_win)
+  api.nvim_set_current_win(main_win)
   local lines = M.get_file_comment_lines(repo, number, main_win)
   local current_line = vim.fn.line(".")
   local target_line = current_line
@@ -383,7 +382,63 @@ function M.prev_file_comment(repo, number, main_win)
       break
     end
   end
+  -- cycle
+  if current_line <= lines[1] then
+    target_line = lines[#lines]
+  end
   vim.cmd(tostring(target_line))
+end
+
+function M.next_comment(repo, number, main_win)
+  api.nvim_set_current_win(main_win)
+  local qf = vim.fn.getqflist({idx = 0, size = 0})
+  if qf.idx == qf.size then
+    vim.cmd [[cfirst]]
+  else
+    vim.cmd [[cnext]]
+  end
+  M.show_comments_qf_entry(repo, number, main_win)
+end
+
+function M.prev_comment(repo, number, main_win)
+  api.nvim_set_current_win(main_win)
+  local qf = vim.fn.getqflist({idx = 0})
+  if qf.idx == 1 then
+    vim.cmd [[clast]]
+  else
+    vim.cmd [[cprev]]
+  end
+  M.show_comments_qf_entry(repo, number, main_win)
+end
+
+function M.add_changes_qf_mappings()
+  vim.cmd [[nnoremap <silent><buffer>]q :lua require'octo.reviews'.next_change()<CR>]]
+  vim.cmd [[nnoremap <silent><buffer>[q :lua require'octo.reviews'.prev_change()<CR>]]
+  vim.cmd [[nnoremap <silent><buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
+
+  -- reset quickfix height. Sometimes it messes up after selecting another item
+  vim.cmd(format("%dcopen", qf_height))
+  vim.cmd [[wincmd p]]
+end
+
+function M.next_change()
+  local qf = vim.fn.getqflist({idx = 0, size = 0})
+  if qf.idx == qf.size then
+    vim.cmd [[cfirst]]
+  else
+    vim.cmd [[cnext]]
+  end
+  M.diff_changes_qf_entry()
+end
+
+function M.prev_change()
+  local qf = vim.fn.getqflist({idx = 0})
+  if qf.idx == 1 then
+    vim.cmd [[clast]]
+  else
+    vim.cmd [[cprev]]
+  end
+  M.diff_changes_qf_entry()
 end
 
 return M
