@@ -803,12 +803,12 @@ function M.save_issue()
     post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
   elseif ft == "octo_reviewthread" then
     kind = "pulls"
-    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/comment/(%d+)")
+    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/.*/comment(.*)")
     if not status then
       api.nvim_err_writeln("Cannot extract comment id from buffer name")
       return
     end
-    post_url = format("/repos/%s/pulls/%d/comments/%d/replies", repo, number, comment_id)
+    post_url = format("/repos/%s/pulls/%d/comments/%s/replies", repo, number, comment_id)
   end
 
   -- comments
@@ -989,7 +989,7 @@ function M.apply_buffer_mappings(bufnr, kind)
     )
   end
 
-  if kind == "issue" or kind == "pull" or kind == "reviewthreads" then
+  if kind == "issue" or kind == "pull" or kind == "reviewthread" then
     -- autocomplete
     api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
     api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)

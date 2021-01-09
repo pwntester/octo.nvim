@@ -115,7 +115,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
           mods,
           string.sub(vim.split(comment.body, "\n")[1], 0, qf_width)
         ),
-        pattern = thread.id
+        pattern = format("%s/%s", thread.id, comment.id)
       }
     )
   end
@@ -208,7 +208,9 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   local idx = qf.idx or 0
   local items = qf.items or {}
   local selected_item = items[idx]
-  local reviewthread_id = selected_item.pattern
+  local ids = selected_item.pattern
+  local reviewthread_id = vim.split(ids, "/")[1]
+  local comment_id = vim.split(ids, "/")[2]
 
   -- jump back to main win and go to comment line
   api.nvim_set_current_win(main_win)
@@ -223,7 +225,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   local comment_win = api.nvim_win_get_var(main_win, "comment_win")
   api.nvim_set_current_win(comment_win)
 
-  local bufnr = vim.fn.bufnr(reviewthread_id)
+  local bufnr = vim.fn.bufnr(format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
   if bufnr > -1 then
     -- show existing comment buffer
     api.nvim_win_set_buf(comment_win, bufnr)
@@ -234,7 +236,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     api.nvim_buf_set_var(bufnr, "number", number)
     api.nvim_buf_set_option(bufnr, "filetype", "octo_reviewthread")
     api.nvim_buf_set_option(bufnr, "buftype", "acwrite")
-    api.nvim_buf_set_name(bufnr, format("octo://%s/%d/reviewthread/%s", repo, number, reviewthread_id))
+    api.nvim_buf_set_name(bufnr, format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
     api.nvim_win_set_buf(comment_win, bufnr)
 
     -- add mappings to the comment window buffer
