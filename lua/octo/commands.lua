@@ -87,6 +87,12 @@ local commands = {
     end,
     delete = function()
       M.delete_comment()
+    end,
+    resolve = function()
+      M.resolve_comment()
+    end,
+    unresolve = function()
+      M.unresolve_comment()
     end
   },
   label = {
@@ -246,6 +252,92 @@ function M.delete_comment()
       }
     )
   end
+end
+
+function M.resolve_comment()
+  local bufnr = api.nvim_get_current_buf()
+  local repo, _ = util.get_repo_number({"octo_reviewthread"})
+  if not repo then
+    return
+  end
+  local status, _, thread_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/.*")
+  if not status then
+    api.nvim_err_writeln("Cannot extract thread id from buffer name")
+    return
+  end
+  local query =
+    format(
+    [[
+      mutation ResolveReview {
+        resolveReviewThread(input: {threadId: "%s"}) {
+          thread {
+            isResolved
+          }
+        }
+      }
+    ]],
+    thread_id
+  )
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          if resp.data.resolveReviewThread.thread.isResolved then
+            -- TODO: update QF
+            print("RESOLVED!")
+          end
+        end
+      end
+    }
+  )
+end
+
+function M.unresolve_comment()
+  local bufnr = api.nvim_get_current_buf()
+  local repo, _ = util.get_repo_number({"octo_reviewthread"})
+  if not repo then
+    return
+  end
+  local status, _, thread_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/.*")
+  if not status then
+    api.nvim_err_writeln("Cannot extract thread id from buffer name")
+    return
+  end
+  local query =
+    format(
+    [[
+      mutation UnresolveReview {
+        unresolveReviewThread(input: {threadId: "%s"}) {
+          thread {
+            isResolved
+          }
+        }
+      }
+    ]],
+    thread_id
+  )
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          if not resp.data.unresolveReviewThread.thread.isResolved then
+            -- TODO: update QF
+            print("UNRESOLVED!")
+          end
+        end
+      end
+    }
+  )
 end
 
 function M.change_issue_state(state)
@@ -587,6 +679,7 @@ function M.pr_reviews()
     repo,
     number
   )
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},

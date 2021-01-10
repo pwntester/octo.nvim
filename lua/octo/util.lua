@@ -51,10 +51,10 @@ function M.in_pr_branch()
     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
     local local_repo = M.get_remote_name()
     if pr.base.repo.full_name ~= local_repo then
-      api.nvim_err_writeln(format("Not in PR repo, expected %s, found %s", pr.base.repo.full_name, local_repo))
+      api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.base.repo.full_name, local_repo))
       return false
     elseif pr.head.ref ~= local_branch then
-      api.nvim_err_writeln(format("Not in PR branch, expected %s, found %s", pr.head.ref, local_branch))
+      api.nvim_err_writeln(format("Not in PR branch. Expected %s, got %s", pr.head.ref, local_branch))
       return false
     end
     return true
@@ -67,7 +67,7 @@ function M.get_repo_number(filetypes)
   local bufnr = api.nvim_get_current_buf()
   filetypes = filetypes or {"octo_issue"}
   if not vim.tbl_contains(filetypes, vim.bo.ft) then
-    api.nvim_err_writeln("Not in octo buffer")
+    api.nvim_err_writeln(format("Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(filetypes), vim.bo.ft))
     return
   end
 
