@@ -103,7 +103,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
       mods = "RESOLVED "
     end
     if thread.isOutdated then
-      mods = mods ..  "OUTDATED "
+      mods = mods .. "OUTDATED "
     end
     local comment_id = util.graph2rest(comment.id)
     table.insert(
@@ -222,7 +222,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   local row = (selected_item.lnum) or 1
   local ok = pcall(api.nvim_win_set_cursor, main_win, {row, 1})
   if not ok then
-    api.nvim_err_writeln("Cannot move cursor to line ".. row)
+    api.nvim_err_writeln("Cannot move cursor to line " .. row)
   end
 
   -- place signs in main window buffer
@@ -233,7 +233,8 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   local comment_win = api.nvim_win_get_var(main_win, "comment_win")
   api.nvim_set_current_win(comment_win)
 
-  local bufnr = vim.fn.bufnr(format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
+  local bufnr =
+    vim.fn.bufnr(format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
   if bufnr > -1 then
     -- show existing comment buffer
     api.nvim_win_set_buf(comment_win, bufnr)
@@ -244,7 +245,10 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     api.nvim_buf_set_var(bufnr, "number", number)
     api.nvim_buf_set_option(bufnr, "filetype", "octo_reviewthread")
     api.nvim_buf_set_option(bufnr, "buftype", "acwrite")
-    api.nvim_buf_set_name(bufnr, format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
+    api.nvim_buf_set_name(
+      bufnr,
+      format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id)
+    )
     api.nvim_win_set_buf(comment_win, bufnr)
 
     -- add mappings to the comment window buffer

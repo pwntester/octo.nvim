@@ -65,7 +65,9 @@ function M.get_repo_number(filetypes)
   local bufnr = api.nvim_get_current_buf()
   filetypes = filetypes or {"octo_issue"}
   if not vim.tbl_contains(filetypes, vim.bo.ft) then
-    api.nvim_err_writeln(format("Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(filetypes), vim.bo.ft))
+    api.nvim_err_writeln(
+      format("Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(filetypes), vim.bo.ft)
+    )
     return
   end
 

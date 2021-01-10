@@ -260,7 +260,8 @@ function M.resolve_comment()
   if not repo then
     return
   end
-  local status, _, thread_id, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
+  local status, _, thread_id, comment_id =
+    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
   if not status then
     api.nvim_err_writeln("Cannot extract thread id from buffer name")
     return
@@ -312,7 +313,8 @@ function M.unresolve_comment()
   if not repo then
     return
   end
-  local status, _, thread_id, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
+  local status, _, thread_id, comment_id =
+    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
   if not status then
     api.nvim_err_writeln("Cannot extract thread id from buffer name")
     return
