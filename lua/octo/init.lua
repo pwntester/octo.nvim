@@ -246,6 +246,7 @@ function M.write_details(bufnr, issue, update)
     local pr_id = segments[8]
 
     local response =
+      -- TODO: can we pre-fetch this using the GraphQL api?
       gh.run(
       {
         args = {"api", format("repos/%s/%s/pulls/%d", owner, repo, pr_id)},
@@ -485,6 +486,7 @@ function M.load_issue()
     return
   end
 
+  -- TODO: use the GraphQL api, so that we also get all the comments in advance
   gh.run(
     {
       args = {"api", format("repos/%s/issues/%s", repo, number)},
@@ -499,70 +501,6 @@ function M.load_issue()
     }
   )
 end
-
--- This function accumulates all the PR review comments into a couple of dicts
--- that are stored as a buffer variable in `pr_comments` and `pr_replies`.
--- local function async_fetch_review_comments(bufnr, repo, number)
---   gh.run(
---     {
---       args = {"api", format("repos/%s/pulls/%d/comments", repo, number), "--paginate"},
---       cb = function(output, stderr)
---         if stderr and not util.is_blank(stderr) then
---           api.nvim_err_writeln(stderr)
---         elseif output then
---           local results = json.parse(output)
---           local comments = {}
---           local replies = {}
---           local reviews = {}
---           for _, comment in ipairs(results) do
---             local c = {}
---
---             if not comment.in_reply_to_id and not vim.tbl_contains(reviews, comment.pull_request_review_id) then
---               table.insert(reviews, comment.pull_request_review_id)
---             end
---
---             c.pull_request_review_id = comment.pull_request_review_id
---             c.id = comment.id
---             c.diff_hunk = comment.diff_hunk
---             c.body = comment.body
---             c.path = comment.path
---             c.created_at = comment.created_at
---             c.in_reply_to_id = comment.in_reply_to_id
---             c.reactions = comment.reactions
---             c.user = comment.user
---             c.author_association = comment.author_association
---
---             c.original_commit_id = comment.original_commit_id
---             c.original_position = comment.original_position
---             c.original_line = comment.original_line
---             c.original_start_line = comment.original_start_line
---
---             c.commit_id = comment.commit_id
---             c.position = comment.position
---             c.line = comment.line
---             c.start_line = comment.start_line
---
---             c.side = comment.side
---             if comment.in_reply_to_id then
---               if replies[tostring(comment.in_reply_to_id)] then
---                 local rs = replies[tostring(comment.in_reply_to_id)]
---                 table.insert(rs, c)
---                 replies[tostring(comment.in_reply_to_id)] = rs
---               else
---                 replies[tostring(comment.in_reply_to_id)] = {c}
---               end
---             else
---               comments[tostring(comment.id)] = c
---             end
---           end
---           api.nvim_buf_set_var(bufnr, "pr_comments", comments)
---           api.nvim_buf_set_var(bufnr, "pr_replies", replies)
---           api.nvim_buf_set_var(bufnr, "pr_reviews", reviews)
---         end
---       end
---     }
---   )
--- end
 
 -- This function accumulates all the taggable users into a single list that
 -- gets set as a buffer variable `taggable_users`. If this list of users
@@ -677,6 +615,7 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   local comments_count = tonumber(issue.comments)
   local comments_processed = 0
   if comments_count > 0 then
+    -- TODO: if we use the GraphQL api, we shouldnt need to get the comments here
     gh.run(
       {
         args = {"api", format("repos/%s/issues/%d/comments", repo, number)},
@@ -691,6 +630,8 @@ function M.create_issue_buffer(issue, repo, create_buffer)
     )
   end
 
+  -- wait till all comments are fetched and processed
+  -- TODO: if we use the GraphQL api, we shouldnt need to wait here
   local status =
     vim.wait(
     5000,
@@ -802,6 +743,7 @@ function M.save_issue()
     if metadata.body ~= metadata.saved_body then
       if metadata.id == -1 then
         -- create new comment/reply
+        -- TODO: can we save the issue/pull and the comments at once if we use the GraphQL api?
         gh.run(
           {
             args = {
@@ -836,6 +778,7 @@ function M.save_issue()
         )
       else
         -- update comment/reply
+        -- TODO: can we save the issue/pull and the comments at once if we use the GraphQL api?
         gh.run(
           {
             args = {
