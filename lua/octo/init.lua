@@ -147,9 +147,9 @@ function M.write_reactions(bufnr, reactions, line)
     for reaction, count in pairs(reactions) do
       local emoji = require "octo.util".reaction_map[reaction]
       if emoji and count > 0 then
-        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-        table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
-        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+        table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
+        table.insert(reactions_vt, {emoji, "OctoNvimBubbleBody"})
+        table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
         table.insert(reactions_vt, {format(" %s ", count), "Normal"})
       end
     end

@@ -129,10 +129,12 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimIssueClosed`    | `ErrorMsg`   |
 | `OctoNvimEmpty`          | `Comment`    |
 | `OctoNvimFloat`          | `NormalNC`   |
-| `OctoNvimBubble1`        | `NormalFloat`|
-| `OctoNvimBubble2`        | `NormalFloat`|
+| `OctoNvimBubbleRed`      | `DiffDelete` |
+| `OctoNvimBubbleGreen`    | `DiffAdd`    |
+| `OctoNvimBubbleDelimiter`| `NormalFloat`|
+| `OctoNvimBubbleBody`     | `NormalFloat`|
 | `OctoNvimDetailsLabel`   | `Title`      |
-| `OctoNvimMissingDetails` | `Comment`    |                                                                                                              3 hi def 
+| `OctoNvimMissingDetails` | `Comment`    |
 | `OctoNvimDetailsValue `  | `Identifier` |
 
 

@@ -203,7 +203,7 @@ function M.add_comment()
   local comment = {
     created_at = vim.fn.strftime("%FT%TZ"),
     user = {login = vim.g.octo_loggedin_user},
-    body = "",
+    body = " ",
     reactions = {total_count = 0},
     id = -1
   }
@@ -260,7 +260,7 @@ function M.resolve_comment()
   if not repo then
     return
   end
-  local status, _, thread_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/.*")
+  local status, _, thread_id, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
   if not status then
     api.nvim_err_writeln("Cannot extract thread id from buffer name")
     return
@@ -288,7 +288,16 @@ function M.resolve_comment()
         elseif output then
           local resp = json.parse(output)
           if resp.data.resolveReviewThread.thread.isResolved then
-            -- TODO: update QF
+            local pattern = format("%s/%s", thread_id, comment_id)
+            local qf = vim.fn.getqflist({items = 0})
+            local items = qf.items
+            for _, item in ipairs(items) do
+              if item.pattern == pattern then
+                item.text = string.gsub(item.text, "%) ", ") RESOLVED ", 1)
+                break
+              end
+            end
+            vim.fn.setqflist({}, "r", {items = items})
             print("RESOLVED!")
           end
         end
@@ -303,7 +312,7 @@ function M.unresolve_comment()
   if not repo then
     return
   end
-  local status, _, thread_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/.*")
+  local status, _, thread_id, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
   if not status then
     api.nvim_err_writeln("Cannot extract thread id from buffer name")
     return
@@ -331,7 +340,16 @@ function M.unresolve_comment()
         elseif output then
           local resp = json.parse(output)
           if not resp.data.unresolveReviewThread.thread.isResolved then
-            -- TODO: update QF
+            local pattern = format("%s/%s", thread_id, comment_id)
+            local qf = vim.fn.getqflist({items = 0})
+            local items = qf.items
+            for _, item in ipairs(items) do
+              if item.pattern == pattern then
+                item.text = string.gsub(item.text, "RESOLVED ", "")
+                break
+              end
+            end
+            vim.fn.setqflist({}, "r", {items = items})
             print("UNRESOLVED!")
           end
         end
@@ -825,8 +843,6 @@ function M.reaction_action(action, reaction)
                 reactions.total_count = reactions.total_count - 1
               end
               break
-            else
-              reactions[reaction] = 1
             end
           end
           util.update_reactions_at_cursor(bufnr, cursor, reactions, line)

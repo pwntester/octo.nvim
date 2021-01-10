@@ -4,8 +4,12 @@ endif
 
 " colors
 let g:octo_bubble_color = synIDattr(synIDtrans(hlID("NormalFloat")), "bg#")
-execute('hi! OctoNvimBubble1 guifg='.g:octo_bubble_color)
-execute('hi! OctoNvimBubble2 guibg='.g:octo_bubble_color)
+let g:octo_bubble_green = synIDattr(synIDtrans(hlID("DiffAdd")), "fg#")
+let g:octo_bubble_red = synIDattr(synIDtrans(hlID("DiffDelete")), "fg#")
+execute('hi! OctoNvimBubbleDelimiter guifg='.g:octo_bubble_color)
+execute('hi! OctoNvimBubbleBody guibg='.g:octo_bubble_color)
+execute('hi! OctoNvimBubbleRed guifg='.g:octo_bubble_red.' guibg='.g:octo_bubble_color)
+execute('hi! OctoNvimBubbleGreen guifg='.g:octo_bubble_green.' guibg='.g:octo_bubble_color)
 
 " commands
 if executable('gh')

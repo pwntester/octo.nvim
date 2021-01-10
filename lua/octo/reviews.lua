@@ -100,10 +100,10 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
     local qf_width = vim.fn.winwidth(qf.winid) * 0.4
     local mods = ""
     if thread.isResolved then
-      mods = "[RESOLVED] "
+      mods = "RESOLVED "
     end
     if thread.isOutdated then
-      mods = mods .. "[OUTDATED] "
+      mods = mods ..  "OUTDATED "
     end
     local comment_id = util.graph2rest(comment.id)
     table.insert(
@@ -147,8 +147,10 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   -- highlight qf entries
   vim.cmd [[call matchadd("Comment", "\(.*\)")]]
   vim.cmd [[call matchadd("OctoNvimCommentUser", "|\\s\\zs.*\\ze\(")]]
-  vim.cmd [[call matchadd("DiffDelete", "OUTDATED")]]
-  vim.cmd [[call matchadd("DiffAdd", "RESOLVED")]]
+  vim.cmd [[call matchadd("OctoNvimBubbleRed", "OUTDATED")]]
+  vim.cmd [[call matchadd("OctoNvimBubbleGreen", "RESOLVED")]]
+  vim.cmd [[call matchadd("OctoNvimBubbleDelimiter", "")]]
+  vim.cmd [[call matchadd("OctoNvimBubbleDelimiter", "")]]
 
   -- add a <CR> mapping to the qf window
   vim.cmd(
@@ -218,7 +220,10 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   -- jump back to main win and go to comment line
   api.nvim_set_current_win(main_win)
   local row = (selected_item.lnum) or 1
-  api.nvim_win_set_cursor(main_win, {row, 1})
+  local ok = pcall(api.nvim_win_set_cursor, main_win, {row, 1})
+  if not ok then
+    api.nvim_err_writeln("Cannot move cursor to line ".. row)
+  end
 
   -- place signs in main window buffer
   local reviewthreads = api.nvim_win_get_var(main_win, "reviewthreads")

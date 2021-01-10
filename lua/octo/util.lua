@@ -9,9 +9,7 @@ local M = {}
 
 M.reaction_map = {
   ["+1"] = "👍",
-  ["thumbs_up"] = "👍",
   ["-1"] = "👎",
-  ["thumbs_down"] = "👎",
   ["laugh"] = "😀",
   ["hooray"] = "🎉",
   ["confused"] = "😕",
@@ -262,15 +260,25 @@ function M.graph2rest(id)
 end
 
 function M.convert_reactions(v4_reactions)
-  local v3_reactions = {}
+  local v3_reactions = {
+    ["+1"] = 0,
+    ["-1"] = 0,
+    ["laugh"] = 0,
+    ["hooray"] = 0,
+    ["confused"] = 0,
+    ["heart"] = 0,
+    ["rocket"] = 0,
+    ["eyes"] = 0
+  }
   v3_reactions.url = v4_reactions.url
   v3_reactions.total_count = v4_reactions.totalCount
   for _, reaction in ipairs(v4_reactions.nodes) do
-    if not v3_reactions[reaction.content] then
-      v3_reactions[string.lower(reaction.content)] = 1
-    else
-      v3_reactions[string.lower(reaction.content)] = v3_reactions[string.lower(reaction.content)] + 1
+    if string.upper(reaction.content) == "THUMBS_UP" then
+      reaction.content = "+1"
+    elseif string.upper(reaction.content) == "THUMBS_DOWN" then
+      reaction.content = "-1"
     end
+    v3_reactions[string.lower(reaction.content)] = v3_reactions[string.lower(reaction.content)] + 1
   end
   return v3_reactions
 end
