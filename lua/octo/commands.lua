@@ -202,8 +202,8 @@ function M.add_comment()
     id = -1
   }
   octo.write_comment(bufnr, comment)
-  --vim.fn.execute("normal! Gkkk")
-  --vim.fn.execute("startinsert")
+  vim.fn.execute("normal! Gkkk")
+  vim.fn.execute("startinsert")
 end
 
 function M.delete_comment()
@@ -578,7 +578,6 @@ function M.pr_reviews()
                   }
                 },
               }
-
           }
         }
       }
@@ -719,21 +718,27 @@ function M.reaction_action(action, reaction)
   gh.run(
     {
       args = args,
-      cb = function(_)
-        for k, v in pairs(reactions) do
-          if k == reaction then
-            if action == "add" then
-              reactions[k] = v + 1
-              reactions.total_count = reactions.total_count + 1
-            elseif action == "delete" then
-              reactions[k] = math.max(0, v - 1)
-              reactions.total_count = reactions.total_count - 1
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          for k, v in pairs(reactions) do
+            if k == reaction then
+              if action == "add" then
+                reactions[k] = v + 1
+                reactions.total_count = reactions.total_count + 1
+              elseif action == "delete" then
+                reactions[k] = math.max(0, v - 1)
+                reactions.total_count = reactions.total_count - 1
+              end
+              break
+            else
+              reactions[reaction] = 1
             end
-            break
           end
+          util.update_reactions_at_cursor(bufnr, cursor, reactions, line)
+          octo.write_reactions(bufnr, reactions, line)
         end
-        util.update_reactions_at_cursor(bufnr, cursor, reactions, line)
-        octo.write_reactions(bufnr, reactions, line)
       end
     }
   )

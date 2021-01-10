@@ -261,4 +261,18 @@ function M.graph2rest(id)
   return rest_id
 end
 
+function M.convert_reactions(v4_reactions)
+  local v3_reactions = {}
+  v3_reactions.url = v4_reactions.url
+  v3_reactions.total_count = v4_reactions.totalCount
+  for _, reaction in ipairs(v4_reactions.nodes) do
+    if not v3_reactions[reaction.content] then
+      v3_reactions[string.lower(reaction.content)] = 1
+    else
+      v3_reactions[string.lower(reaction.content)] = v3_reactions[string.lower(reaction.content)] + 1
+    end
+  end
+  return v3_reactions
+end
+
 return M

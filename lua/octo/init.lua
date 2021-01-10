@@ -141,37 +141,16 @@ end
 function M.write_reactions(bufnr, reactions, line)
   line = line or api.nvim_buf_line_count(bufnr) - 1
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
-  if (reactions.total_count and reactions.total_count > 0) or (reactions.totalCount and reactions.totalCount > 0) then
+
+  if reactions.total_count and reactions.total_count > 0 then
     local reactions_vt = {}
-    if reactions.nodes then
-      -- graphql api
-      local reaction_map = {}
-      for _, reaction in ipairs(reactions.nodes) do
-        if not reaction_map[reaction.content] then
-          reaction_map[reaction.content] = 1
-        else
-          reaction_map[reaction.content] = reaction_map[reaction.content] + 1
-        end
-      end
-      for content, count in pairs(reaction_map) do
-        local emoji = require "octo.util".reaction_map[string.lower(content)]
-        if emoji and count > 0 then
-          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-          table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
-          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-          table.insert(reactions_vt, {format(" %s ", count), "Normal"})
-        end
-      end
-    else
-      -- rest api
-      for reaction, count in pairs(reactions) do
-        local emoji = require "octo.util".reaction_map[reaction]
-        if emoji and count > 0 then
-          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-          table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
-          table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-          table.insert(reactions_vt, {format(" %s ", count), "Normal"})
-        end
+    for reaction, count in pairs(reactions) do
+      local emoji = require "octo.util".reaction_map[reaction]
+      if emoji and count > 0 then
+        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+        table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
+        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+        table.insert(reactions_vt, {format(" %s ", count), "Normal"})
       end
     end
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt, {})
@@ -355,12 +334,15 @@ function M.write_comment(bufnr, comment, line)
   -- heading
   line = line or api.nvim_buf_line_count(bufnr) + 1
   M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
+
+  -- rest vs graphQL adjustments
   local name
   if comment.author then
     name = comment.author.login
   else
     name = comment.user.login
   end
+
   local header_vt = {
     {format("On %s ", util.format_date(comment.created_at)), "OctoNvimCommentHeading"},
     {name, "OctoNvimCommentUser"},

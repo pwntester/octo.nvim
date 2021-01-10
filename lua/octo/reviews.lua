@@ -5,6 +5,7 @@ local format = string.format
 local api = vim.api
 
 -- TODO: save main window buffers for cleanup on <C-c>
+-- TODO: make [c and ]c cycle on diff view
 
 local M = {}
 
@@ -259,6 +260,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     -- write thread
     api.nvim_buf_set_var(bufnr, "comments", {})
     for _, comment in ipairs(reviewthread.comments.nodes) do
+      comment.reactions = util.convert_reactions(comment.reactions)
       octo.write_comment(bufnr, comment)
     end
   end
