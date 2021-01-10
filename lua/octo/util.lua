@@ -1,6 +1,7 @@
 local constants = require "octo.constants"
 local date = require "octo.date"
 local popup = require "popup"
+local base64 = require "octo.base64"
 local format = string.format
 local api = vim.api
 
@@ -248,10 +249,16 @@ function M.get_buffer_kind(bufnr)
   local kind
   if ft == "octo_issue" then
     kind = "issues"
-  elseif ft == "octo_review_comments" then
+  elseif ft == "octo_reviewthread" then
     kind = "pulls"
   end
   return kind
+end
+
+function M.graph2rest(id)
+  local decoded = base64.decode(id)
+  local _, _, rest_id = string.find(decoded, "(%d+)$")
+  return rest_id
 end
 
 return M

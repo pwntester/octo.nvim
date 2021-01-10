@@ -659,11 +659,11 @@ function M.reaction_action(action, reaction)
 
   if comment then
     -- found a comment at cursor
+    local kind = util.get_buffer_kind(bufnr)
     comment = comment[1]
-    cb_url = format("repos/%s/issues/comments/%d", repo, comment.id)
+    cb_url = format("repos/%s/%s/comments/%d", repo, kind, comment.id)
     line = comment.reaction_line
     reactions = comment.reactions
-    local kind = util.get_buffer_kind(bufnr)
     if action == "add" then
       url = format("repos/%s/%s/comments/%d/reactions", repo, kind, comment.id)
       args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}

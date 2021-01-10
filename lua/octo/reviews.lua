@@ -1,5 +1,6 @@
 local octo = require "octo"
 local signs = require "octo.signs"
+local util = require "octo.util"
 local format = string.format
 local api = vim.api
 
@@ -103,6 +104,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
     if thread.isOutdated then
       mods = mods .. "[OUTDATED] "
     end
+    local comment_id = util.graph2rest(comment.id)
     table.insert(
       items,
       {
@@ -115,7 +117,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
           mods,
           string.sub(vim.split(comment.body, "\n")[1], 0, qf_width)
         ),
-        pattern = format("%s/%s", thread.id, comment.id)
+        pattern = format("%s/%s", thread.id, comment_id)
       }
     )
   end

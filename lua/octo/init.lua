@@ -384,6 +384,9 @@ function M.write_comment(bufnr, comment, line)
 
   -- update metadata
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
+  if not tonumber(comment.id) then
+    comment.id = util.graph2rest(comment.id)
+  end
   table.insert(
     comments_metadata,
     {
@@ -803,7 +806,7 @@ function M.save_issue()
     post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
   elseif ft == "octo_reviewthread" then
     kind = "pulls"
-    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/.*/comment(.*)")
+    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/.*/comment/(.*)")
     if not status then
       api.nvim_err_writeln("Cannot extract comment id from buffer name")
       return
@@ -859,21 +862,25 @@ function M.save_issue()
               "PATCH",
               "-f",
               format("body=%s", metadata.body),
-              format("repos/%s/%s/comments/%s", repo, kind, metadata.id)
+              format("repos/%s/%s/comments/%d", repo, kind, metadata.id)
             },
-            cb = function(output)
-              local resp = json.parse(output)
-              if metadata.body == resp.body then
-                for i, c in ipairs(comments) do
-                  if c.id == resp.id then
-                    comments[i].saved_body = resp.body
-                    comments[i].dirty = false
-                    break
+            cb = function(output, stderr)
+              if stderr and not util.is_blank(stderr) then
+                api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = json.parse(output)
+                if metadata.body == resp.body then
+                  for i, c in ipairs(comments) do
+                    if c.id == resp.id then
+                      comments[i].saved_body = resp.body
+                      comments[i].dirty = false
+                      break
+                    end
                   end
+                  api.nvim_buf_set_var(bufnr, "comments", comments)
+                  signs.render_signcolumn(bufnr)
+                  print("Saved!")
                 end
-                api.nvim_buf_set_var(bufnr, "comments", comments)
-                signs.render_signcolumn(bufnr)
-                print("Saved!")
               end
             end
           }
