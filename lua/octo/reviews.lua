@@ -234,7 +234,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   api.nvim_set_current_win(comment_win)
 
   local bufnr =
-    vim.fn.bufnr(format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
+    vim.fn.bufnr(format("octo://%s/pull/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
   if bufnr > -1 then
     -- show existing comment buffer
     api.nvim_win_set_buf(comment_win, bufnr)
@@ -247,7 +247,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     api.nvim_buf_set_option(bufnr, "buftype", "acwrite")
     api.nvim_buf_set_name(
       bufnr,
-      format("octo://%s/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id)
+      format("octo://%s/pull/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id)
     )
     api.nvim_win_set_buf(comment_win, bufnr)
 
@@ -269,7 +269,6 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     -- write thread
     api.nvim_buf_set_var(bufnr, "comments", {})
     for _, comment in ipairs(reviewthread.comments.nodes) do
-      comment.reactions = util.convert_reactions(comment.reactions)
       octo.write_comment(bufnr, comment)
     end
   end
@@ -287,22 +286,22 @@ end
 
 -- MAPPINGS
 function M.add_reviewthread_qf_mappings(repo, number, main_win)
-  vim.cmd(
-    format(
-      "nnoremap <silent><buffer>]c :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
-      repo,
-      number,
-      main_win
-    )
-  )
-  vim.cmd(
-    format(
-      "nnoremap <silent><buffer>[c :lua require'octo.reviews'.prev_file_comment('%s', %d, %d)<CR>",
-      repo,
-      number,
-      main_win
-    )
-  )
+  -- vim.cmd(
+  --   format(
+  --     "nnoremap <silent><buffer>]c :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
+  --     repo,
+  --     number,
+  --     main_win
+  --   )
+  -- )
+  -- vim.cmd(
+  --   format(
+  --     "nnoremap <silent><buffer>[c :lua require'octo.reviews'.prev_file_comment('%s', %d, %d)<CR>",
+  --     repo,
+  --     number,
+  --     main_win
+  --   )
+  -- )
   vim.cmd(
     format(
       "nnoremap <silent><buffer>]q :lua require'octo.reviews'.next_comment('%s', %d, %d)<CR>",
@@ -327,62 +326,62 @@ function M.add_reviewthread_qf_mappings(repo, number, main_win)
   vim.cmd [[wincmd p]]
 end
 
-function M.get_file_comment_lines(repo, number, main_win)
-  local reviewthreads = api.nvim_win_get_var(main_win, "reviewthreads")
-  local bufnr = api.nvim_win_get_buf(main_win)
-  local pr_bufnr = vim.fn.bufnr(format("octo://%s/%d", repo, number))
-  local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
-  local lines = {}
-  for _, c in ipairs(reviewthreads) do
-    local comment = comments[tostring(c.id)]
-    if comment and comment.path == vim.fn.bufname(bufnr) then
-      table.insert(lines, comment.original_line)
-    end
-  end
-  table.sort(
-    lines,
-    function(a, b)
-      return a < b
-    end
-  )
-  return lines
-end
-
-function M.next_file_comment(repo, number, main_win)
-  api.nvim_set_current_win(main_win)
-  local lines = M.get_file_comment_lines(repo, number, main_win)
-  local current_line = vim.fn.line(".")
-  local target_line = current_line
-  for _, l in ipairs(lines) do
-    if current_line < l then
-      target_line = l
-      break
-    end
-  end
-  -- cycle
-  if current_line >= lines[#lines] then
-    target_line = lines[1]
-  end
-  vim.cmd(tostring(target_line))
-end
-
-function M.prev_file_comment(repo, number, main_win)
-  api.nvim_set_current_win(main_win)
-  local lines = M.get_file_comment_lines(repo, number, main_win)
-  local current_line = vim.fn.line(".")
-  local target_line = current_line
-  for _, l in ipairs(vim.fn.reverse(lines)) do
-    if current_line > l then
-      target_line = l
-      break
-    end
-  end
-  -- cycle
-  if current_line <= lines[1] then
-    target_line = lines[#lines]
-  end
-  vim.cmd(tostring(target_line))
-end
+-- function M.get_file_comment_lines(repo, number, main_win)
+--   local reviewthreads = api.nvim_win_get_var(main_win, "reviewthreads")
+--   local bufnr = api.nvim_win_get_buf(main_win)
+--   local pr_bufnr = vim.fn.bufnr(format("octo://%s/pull/%d", repo, number))
+--   local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
+--   local lines = {}
+--   for _, c in ipairs(reviewthreads) do
+--     local comment = comments[tostring(c.id)]
+--     if comment and comment.path == vim.fn.bufname(bufnr) then
+--       table.insert(lines, comment.original_line)
+--     end
+--   end
+--   table.sort(
+--     lines,
+--     function(a, b)
+--       return a < b
+--     end
+--   )
+--   return lines
+-- end
+--
+-- function M.next_file_comment(repo, number, main_win)
+--   api.nvim_set_current_win(main_win)
+--   local lines = M.get_file_comment_lines(repo, number, main_win)
+--   local current_line = vim.fn.line(".")
+--   local target_line = current_line
+--   for _, l in ipairs(lines) do
+--     if current_line < l then
+--       target_line = l
+--       break
+--     end
+--   end
+--   -- cycle
+--   if current_line >= lines[#lines] then
+--     target_line = lines[1]
+--   end
+--   vim.cmd(tostring(target_line))
+-- end
+--
+-- function M.prev_file_comment(repo, number, main_win)
+--   api.nvim_set_current_win(main_win)
+--   local lines = M.get_file_comment_lines(repo, number, main_win)
+--   local current_line = vim.fn.line(".")
+--   local target_line = current_line
+--   for _, l in ipairs(vim.fn.reverse(lines)) do
+--     if current_line > l then
+--       target_line = l
+--       break
+--     end
+--   end
+--   -- cycle
+--   if current_line <= lines[1] then
+--     target_line = lines[#lines]
+--   end
+--   vim.cmd(tostring(target_line))
+-- end
 
 function M.next_comment(repo, number, main_win)
   api.nvim_set_current_win(main_win)

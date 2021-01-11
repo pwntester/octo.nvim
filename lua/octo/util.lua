@@ -8,14 +8,14 @@ local api = vim.api
 local M = {}
 
 M.reaction_map = {
-  ["+1"] = "👍",
-  ["-1"] = "👎",
-  ["laugh"] = "😀",
-  ["hooray"] = "🎉",
-  ["confused"] = "😕",
-  ["heart"] = "❤️",
-  ["rocket"] = "🚀",
-  ["eyes"] = "👀"
+  ["THUMBS_UP"] = "👍",
+  ["THUMBS_DOWN"] = "👎",
+  ["LAUGH"] = "😀",
+  ["HOORAY"] = "🎉",
+  ["CONFUSED"] = "😕",
+  ["HEART"] = "❤️",
+  ["ROCKET"] = "🚀",
+  ["EYES"] = "👀"
 }
 
 function M.is_blank(s)
@@ -48,11 +48,11 @@ function M.in_pr_branch()
     local cmd = "git branch --show-current"
     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
     local local_repo = M.get_remote_name()
-    if pr.base.repo.full_name ~= local_repo then
-      api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.base.repo.full_name, local_repo))
+    if pr.baseRepoName ~= local_repo then
+      api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
       return false
-    elseif pr.head.ref ~= local_branch then
-      api.nvim_err_writeln(format("Not in PR branch. Expected %s, got %s", pr.head.ref, local_branch))
+    elseif pr.headRefName ~= local_branch then
+      api.nvim_err_writeln(format("Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
       return false
     end
     return true
@@ -177,7 +177,6 @@ end
 
 function M.get_comment_at_cursor(bufnr, cursor)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
-  --local cursor = api.nvim_win_get_cursor(0)
   for _, comment in ipairs(comments) do
     local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details = true})
     local start_line = mark[1] + 1
@@ -189,7 +188,7 @@ function M.get_comment_at_cursor(bufnr, cursor)
   return nil
 end
 
-function M.update_reactions_at_cursor(bufnr, cursor, reactions, reaction_line)
+function M.update_reactions_at_cursor(bufnr, cursor, reactions) --, reaction_line)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for i, comment in ipairs(comments) do
     local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details = true})
@@ -198,15 +197,16 @@ function M.update_reactions_at_cursor(bufnr, cursor, reactions, reaction_line)
     if start_line <= cursor[1] and end_line >= cursor[1] then
       --  cursor located in the body of a comment
       comments[i].reactions = reactions
-      comments[i].reaction_line = reaction_line
+      --print("DIFF", comments[i].reaction_line, reaction_line)
+      --comments[i].reaction_line = reaction_line
       api.nvim_buf_set_var(bufnr, "comments", comments)
       return
     end
   end
 
   -- cursor not located at any comment, so updating issue
-  api.nvim_buf_set_var(bufnr, "reactions", reactions)
-  api.nvim_buf_set_var(bufnr, "reaction_line", reaction_line)
+  api.nvim_buf_set_var(bufnr, "body_reactions", reactions)
+  --api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 end
 
 function M.format_date(date_string)
@@ -259,30 +259,6 @@ function M.graph2rest(id)
   local decoded = base64.decode(id)
   local _, _, rest_id = string.find(decoded, "(%d+)$")
   return rest_id
-end
-
-function M.convert_reactions(v4_reactions)
-  local v3_reactions = {
-    ["+1"] = 0,
-    ["-1"] = 0,
-    ["laugh"] = 0,
-    ["hooray"] = 0,
-    ["confused"] = 0,
-    ["heart"] = 0,
-    ["rocket"] = 0,
-    ["eyes"] = 0
-  }
-  v3_reactions.url = v4_reactions.url
-  v3_reactions.total_count = v4_reactions.totalCount
-  for _, reaction in ipairs(v4_reactions.nodes) do
-    if string.upper(reaction.content) == "THUMBS_UP" then
-      reaction.content = "+1"
-    elseif string.upper(reaction.content) == "THUMBS_DOWN" then
-      reaction.content = "-1"
-    end
-    v3_reactions[string.lower(reaction.content)] = v3_reactions[string.lower(reaction.content)] + 1
-  end
-  return v3_reactions
 end
 
 return M

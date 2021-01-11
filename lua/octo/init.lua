@@ -3,6 +3,7 @@ local signs = require "octo.signs"
 local hl = require "octo.highlights"
 local constants = require "octo.constants"
 local util = require "octo.util"
+local graphql = require "octo.graphql"
 local vim = vim
 local api = vim.api
 local max = math.max
@@ -109,7 +110,7 @@ function M.write_state(bufnr)
   -- PR virtual text
   local status, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
   if status and pr then
-    if pr.draft then
+    if pr.isDraft then
       table.insert(title_vt, {"[DRAFT] ", "OctoNvimIssueId"})
     end
     if pr.merged then
@@ -119,9 +120,9 @@ function M.write_state(bufnr)
   api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
-function M.write_description(bufnr, issue, line)
+function M.write_body(bufnr, issue, line)
   local body = issue.body
-  if vim.startswith(body, constants.NO_BODY_MSG) then
+  if vim.startswith(body, constants.NO_BODY_MSG) or util.is_blank(body) then
     body = " "
   end
   local description = string.gsub(body, "\r\n", "\n")
@@ -139,23 +140,39 @@ function M.write_description(bufnr, issue, line)
 end
 
 function M.write_reactions(bufnr, reactions, line)
-  line = line or api.nvim_buf_line_count(bufnr) - 1
+  -- clear namespace and set vt
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
-  if reactions.total_count and reactions.total_count > 0 then
+  local reaction_map = {
+    ["THUMBS_UP"] = 0,
+    ["THUMBS_DOWN"] = 0,
+    ["LAUGH"] = 0,
+    ["HOORAY"] = 0,
+    ["CONFUSED"] = 0,
+    ["HEART"] = 0,
+    ["ROCKET"] = 0,
+    ["EYES"] = 0,
+    ["totalCount"] = reactions.totalCount
+  }
+  for _, reaction in ipairs(reactions.nodes) do
+    reaction_map[reaction.content] = reaction_map[reaction.content] + 1
+  end
+
+  if reaction_map.totalCount > 0 then
     local reactions_vt = {}
-    for reaction, count in pairs(reactions) do
-      local emoji = require "octo.util".reaction_map[reaction]
-      if emoji and count > 0 then
+    for reaction, count in pairs(reaction_map) do
+      local content = util.reaction_map[reaction]
+      if content and count > 0 then
         table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
-        table.insert(reactions_vt, {emoji, "OctoNvimBubbleBody"})
+        table.insert(reactions_vt, {content, "OctoNvimBubbleBody"})
         table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
         table.insert(reactions_vt, {format(" %s ", count), "Normal"})
       end
     end
+
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt, {})
-    return line
   end
+  return line
 end
 
 function M.write_details(bufnr, issue, update)
@@ -167,14 +184,14 @@ function M.write_details(bufnr, issue, update)
   -- author
   local author_vt = {
     {"Created by: ", "OctoNvimDetailsLabel"},
-    {issue.user.login, "OctoNvimDetailsValue"}
+    {issue.author.login, "OctoNvimDetailsValue"}
   }
   table.insert(details, author_vt)
 
   -- created_at
   local created_at_vt = {
     {"Created at: ", "OctoNvimDetailsLabel"},
-    {util.format_date(issue.created_at), "OctoNvimDetailsValue"}
+    {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
   }
   table.insert(details, created_at_vt)
 
@@ -182,14 +199,14 @@ function M.write_details(bufnr, issue, update)
     -- closed_at
     local closed_at_vt = {
       {"Closed at: ", "OctoNvimDetailsLabel"},
-      {util.format_date(issue.closed_at), "OctoNvimDetailsValue"}
+      {util.format_date(issue.closedAt), "OctoNvimDetailsValue"}
     }
     table.insert(details, closed_at_vt)
   else
     -- updated_at
     local updated_at_vt = {
       {"Updated at: ", "OctoNvimDetailsLabel"},
-      {util.format_date(issue.updated_at), "OctoNvimDetailsValue"}
+      {util.format_date(issue.updatedAt), "OctoNvimDetailsValue"}
     }
     table.insert(details, updated_at_vt)
   end
@@ -238,32 +255,17 @@ function M.write_details(bufnr, issue, update)
   end
   table.insert(details, labels_vt)
 
-  if issue.pull_request then
-    local url = issue.pull_request.url
-    local segments = vim.split(url, "/")
-    local owner = segments[5]
-    local repo = segments[6]
-    local pr_id = segments[8]
-
-    local response =
-      -- TODO: can we pre-fetch this using the GraphQL api?
-      gh.run(
-      {
-        args = {"api", format("repos/%s/%s/pulls/%d", owner, repo, pr_id)},
-        mode = "sync"
-      }
-    )
-    local pr = json.parse(response)
-    api.nvim_buf_set_var(bufnr, "pr", pr)
+  -- for pulls add additional details
+  if issue.commits then
 
     -- reviewers
     local requested_reviewers_vt = {
       {"Reviewers: ", "OctoNvimDetailsLabel"}
     }
-    if pr.requested_reviewers and #pr.requested_reviewers > 0 then
-      for i, as in ipairs(pr.requested_reviewers) do
-        table.insert(requested_reviewers_vt, {as.login, "OctoNvimDetailsValue"})
-        if i ~= #pr.requested_reviewers then
+    if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
+      for i, reviewRequest in ipairs(issue.reviewRequests.nodes) do
+        table.insert(requested_reviewers_vt, {reviewRequest.login or reviewRequest.name, "OctoNvimDetailsValue"})
+        if i ~= issue.reviewRequests.totalCount then
           table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
         end
       end
@@ -273,10 +275,10 @@ function M.write_details(bufnr, issue, update)
     table.insert(details, requested_reviewers_vt)
 
     -- merged_by
-    if pr.merged then
+    if issue.merged then
       local merged_by_vt = {
         {"Merged by: ", "OctoNvimDetailsLabel"},
-        {pr.merged_by.login, "OctoNvimDetailsValue"}
+        {issue.mergedBy.login, "OctoNvimDetailsValue"}
       }
       table.insert(details, merged_by_vt)
     end
@@ -284,24 +286,24 @@ function M.write_details(bufnr, issue, update)
     -- from/into branches
     local branches_vt = {
       {"From: ", "OctoNvimDetailsLabel"},
-      {pr.head.label, "OctoNvimDetailsValue"},
+      {issue.headRefName, "OctoNvimDetailsValue"},
       {" Into: ", "OctoNvimDetailsLabel"},
-      {pr.base.label, "OctoNvimDetailsValue"}
+      {issue.baseRefName, "OctoNvimDetailsValue"}
     }
     table.insert(details, branches_vt)
 
     -- changes
-    local unit = (pr.additions + pr.deletions) / 4
-    local additions = math.floor(0.5 + pr.additions / unit)
-    local deletions = math.floor(0.5 + pr.deletions / unit)
+    local unit = (issue.additions + issue.deletions) / 4
+    local additions = math.floor(0.5 + issue.additions / unit)
+    local deletions = math.floor(0.5 + issue.deletions / unit)
     local changes_vt = {
       {"Commits: ", "OctoNvimDetailsLabel"},
-      {tostring(pr.commits), "OctoNvimDetailsValue"},
+      {tostring(issue.commits.totalCount), "OctoNvimDetailsValue"},
       {" Changed files: ", "OctoNvimDetailsLabel"},
-      {tostring(pr.changed_files), "OctoNvimDetailsValue"},
+      {tostring(issue.changedFiles), "OctoNvimDetailsValue"},
       {" (", "OctoNvimDetailsLabel"},
-      {format("+%d ", pr.additions), "DiffAdd"},
-      {format("-%d ", pr.deletions), "DiffDelete"}
+      {format("+%d ", issue.additions), "DiffAdd"},
+      {format("-%d ", issue.deletions), "DiffDelete"}
     }
     if additions > 0 then
       table.insert(changes_vt, {string.rep("■", additions), "DiffAdd"})
@@ -336,17 +338,9 @@ function M.write_comment(bufnr, comment, line)
   line = line or api.nvim_buf_line_count(bufnr) + 1
   M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
 
-  -- rest vs graphQL adjustments
-  local name
-  if comment.author then
-    name = comment.author.login
-  else
-    name = comment.user.login
-  end
-
   local header_vt = {
-    {format("On %s ", util.format_date(comment.created_at)), "OctoNvimCommentHeading"},
-    {name, "OctoNvimCommentUser"},
+    {format("On %s ", util.format_date(comment.createdAt)), "OctoNvimCommentHeading"},
+    {comment.author.login, "OctoNvimCommentUser"},
     {" commented", "OctoNvimCommentHeading"}
   }
   local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
@@ -354,7 +348,7 @@ function M.write_comment(bufnr, comment, line)
   -- body
   line = line + 2
   local comment_body = string.gsub(comment.body, "\r\n", "\n")
-  if vim.startswith(comment_body, constants.NO_BODY_MSG) then
+  if vim.startswith(comment_body, constants.NO_BODY_MSG) or util.is_blank(comment_body) then
     comment_body = " "
   end
   local content = vim.split(comment_body, "\n", true)
@@ -362,18 +356,20 @@ function M.write_comment(bufnr, comment, line)
   local comment_mark = M.write_block(content, {bufnr = bufnr, mark = true, line = line})
 
   -- reactions
-  line = line + #content
-  local reaction_line = M.write_reactions(bufnr, comment.reactions, line - 2)
+  line = line + #content - 2
+  local reaction_line = M.write_reactions(bufnr, comment.reactions, line)
 
-  -- update metadata
-  local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
+  -- use v3 IDs
   if not tonumber(comment.id) then
     comment.id = util.graph2rest(comment.id)
   end
+
+  -- update metadata
+  local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
   table.insert(
     comments_metadata,
     {
-      author = name,
+      author = comment.author.name,
       id = comment.id,
       dirty = false,
       saved_body = comment_body,
@@ -465,38 +461,35 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
   end
 end
 
--- function M.write_replies(comment_bufnr, replies, id)
---   local creplies = replies[id]
---   if creplies then
---     for _, reply in ipairs(creplies) do
---       -- write main comment
---       M.write_comment(comment_bufnr, reply)
---
---       -- write replies
---       M.write_replies(comment_bufnr, replies, reply.id)
---     end
---   end
--- end
-
 function M.load_issue()
   local bufname = vim.fn.bufname()
-  local repo, number = string.match(bufname, "octo://(.+)/(%d+)")
-  if not repo or not number then
+  local repo, type, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  if not repo or not type or not number then
     api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
 
-  -- TODO: use the GraphQL api, so that we also get all the comments in advance
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query, key
+  if type == "pull" then
+    query = format(graphql.pull_query, owner, name, number)
+    key = "pullRequest"
+  elseif type == "issue" then
+    query = format(graphql.issue_query, owner, name, number)
+    key = "issue"
+  end
   gh.run(
     {
-      args = {"api", format("repos/%s/issues/%s", repo, number)},
-      cb = function(output)
-        local issue = json.parse(output)
-        if not issue.id and issue.message then
-          api.nvim_err_writeln(issue.message)
-          return
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local result = json.parse(output)
+          --print("DEBUG", vim.inspect(result.data.repository[key]))
+          M.create_buffer(type, result.data.repository[key], repo, false)
         end
-        M.create_issue_buffer(issue, repo, false)
       end
     }
   )
@@ -548,21 +541,21 @@ local function async_fetch_issues(bufnr, repo)
   )
 end
 
-function M.create_issue_buffer(issue, repo, create_buffer)
-  if not issue.id then
+function M.create_buffer(type, obj, repo, create)
+  if not obj.id then
     api.nvim_err_writeln(format("Cannot find issue in %s", repo))
     return
   end
 
-  local iid = issue.id
-  local number = issue.number
-  local state = issue.state
+  local iid = obj.id
+  local number = obj.number
+  local state = obj.state
 
   local bufnr
-  if create_buffer then
+  if create then
     bufnr = api.nvim_create_buf(true, false)
     api.nvim_set_current_buf(bufnr)
-    vim.cmd(format("file octo://%s/%d", repo, number))
+    vim.cmd(format("file octo://%s/%s/%d", repo, type, number))
   else
     bufnr = api.nvim_get_current_buf()
   end
@@ -581,69 +574,47 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   api.nvim_buf_set_var(bufnr, "number", number)
   api.nvim_buf_set_var(bufnr, "repo", repo)
   api.nvim_buf_set_var(bufnr, "state", state)
-  api.nvim_buf_set_var(bufnr, "labels", issue.labels)
-  api.nvim_buf_set_var(bufnr, "assignees", issue.assignees)
-  api.nvim_buf_set_var(bufnr, "milestone", issue.milestone)
-  api.nvim_buf_set_var(bufnr, "taggable_users", {issue.user.login})
+  api.nvim_buf_set_var(bufnr, "labels", obj.labels)
+  api.nvim_buf_set_var(bufnr, "assignees", obj.assignees)
+  api.nvim_buf_set_var(bufnr, "milestone", obj.milestone)
+  api.nvim_buf_set_var(bufnr, "taggable_users", {obj.author.login})
 
-  -- buffer mappings
-  if issue.pull_request then
-    M.apply_buffer_mappings(bufnr, "pull")
-  else
-    M.apply_buffer_mappings(bufnr, "issue")
+  -- for pulls, store some additional info
+  if obj.commits then
+    api.nvim_buf_set_var(bufnr, "pr", {
+      isDraft = obj.isDraft,
+      merged = obj.merged,
+      headRefName = obj.headRefName,
+      baseRepoName = obj.baseRepository.nameWithOwner
+    })
   end
 
+  -- buffer mappings
+  M.apply_buffer_mappings(bufnr, type)
+
   -- write title
-  M.write_title(bufnr, issue.title, 1)
+  M.write_title(bufnr, obj.title, 1)
 
   -- write details in buffer
-  M.write_details(bufnr, issue)
+  M.write_details(bufnr, obj)
 
-  -- write issue/pr status on line 1
+  -- write issue/pr status
   M.write_state(bufnr)
 
-  -- write description
-  M.write_description(bufnr, issue)
+  -- write body
+  M.write_body(bufnr, obj)
 
-  -- write reactions
-  local reaction_line = M.write_reactions(bufnr, issue.reactions)
-  api.nvim_buf_set_var(bufnr, "reaction_line", reaction_line)
-  api.nvim_buf_set_var(bufnr, "reactions", issue.reactions)
+  -- write body reactions
+  local reaction_line = M.write_reactions(bufnr, obj.reactions, api.nvim_buf_line_count(bufnr) - 1)
+  api.nvim_buf_set_var(bufnr, "body_reactions", obj.reactions)
+  api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 
   -- write issue comments
   api.nvim_buf_set_var(bufnr, "comments", {})
-  local comments_count = tonumber(issue.comments)
-  local comments_processed = 0
-  if comments_count > 0 then
-    -- TODO: if we use the GraphQL api, we shouldnt need to get the comments here
-    gh.run(
-      {
-        args = {"api", format("repos/%s/issues/%d/comments", repo, number)},
-        cb = function(response)
-          local resp = json.parse(response)
-          for _, c in ipairs(resp) do
-            M.write_comment(bufnr, c)
-            comments_processed = comments_processed + 1
-          end
-        end
-      }
-    )
+  for _, c in ipairs(obj.comments.nodes) do
+    M.write_comment(bufnr, c)
   end
 
-  -- wait till all comments are fetched and processed
-  -- TODO: if we use the GraphQL api, we shouldnt need to wait here
-  local status =
-    vim.wait(
-    5000,
-    function()
-      return comments_processed == comments_count
-    end,
-    200
-  )
-
-  -- if issue.pull_request then
-  --   async_fetch_review_comments(bufnr, repo, number)
-  -- end
   async_fetch_taggable_users(bufnr, repo)
   async_fetch_issues(bufnr, repo)
 
@@ -729,7 +700,7 @@ function M.save_issue()
     post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
   elseif ft == "octo_reviewthread" then
     kind = "pulls"
-    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/.*/comment/(.*)")
+    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/.*/comment/(.*)")
     if not status then
       api.nvim_err_writeln("Cannot extract comment id from buffer name")
       return
@@ -743,7 +714,6 @@ function M.save_issue()
     if metadata.body ~= metadata.saved_body then
       if metadata.id == -1 then
         -- create new comment/reply
-        -- TODO: can we save the issue/pull and the comments at once if we use the GraphQL api?
         gh.run(
           {
             args = {
@@ -778,7 +748,6 @@ function M.save_issue()
         )
       else
         -- update comment/reply
-        -- TODO: can we save the issue/pull and the comments at once if we use the GraphQL api?
         gh.run(
           {
             args = {

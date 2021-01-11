@@ -410,6 +410,18 @@ local function gen_from_pr(max_number, max_head, max_status)
   end
 end
 
+local function open_pull(repo)
+  return function(prompt_bufnr)
+    local selection = actions.get_selected_entry(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    local tmp_table = vim.split(selection.value, "\t")
+    if vim.tbl_isempty(tmp_table) then
+      return
+    end
+    vim.cmd(string.format([[ lua require'octo.commands'.get_pull('%s', '%s') ]], repo, tmp_table[1]))
+  end
+end
+
 function M.pull_requests(repo, opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
@@ -468,7 +480,7 @@ function M.pull_requests(repo, opts)
       previewer = pr_previewer.new({repo = repo}),
       sorter = conf.file_sorter(opts),
       attach_mappings = function(_, map)
-        map("i", "<CR>", open_issue(repo))
+        map("i", "<CR>", open_pull(repo))
         map("i", "<c-o>", checkout_pr(repo))
         map("i", "<c-t>", open_in_browser("pr"))
         return true

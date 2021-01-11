@@ -3,7 +3,8 @@ local gh = require "octo.gh"
 local util = require "octo.util"
 local menu = require "octo.menu"
 local reviews = require "octo.reviews"
-local constants = require("octo.constants")
+local graphql = require "octo.graphql"
+local constants = require "octo.constants"
 local api = vim.api
 local format = string.format
 local json = {
@@ -34,7 +35,7 @@ local commands = {
   },
   pr = {
     edit = function(...)
-      M.get_issue(...)
+      M.get_pull(...)
     end,
     list = function(repo, ...)
       local rep, opts = M.process_varargs(repo, ...)
@@ -201,10 +202,13 @@ function M.add_comment()
   end
 
   local comment = {
-    created_at = vim.fn.strftime("%FT%TZ"),
-    user = {login = vim.g.octo_loggedin_user},
+    createdAt = vim.fn.strftime("%FT%TZ"),
+    author = {login = vim.g.octo_loggedin_user},
     body = " ",
-    reactions = {total_count = 0},
+    reactions = {
+      totalCount = 0,
+      nodes = {}
+    },
     id = -1
   }
   octo.write_comment(bufnr, comment)
@@ -261,25 +265,12 @@ function M.resolve_comment()
     return
   end
   local status, _, thread_id, comment_id =
-    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
+    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
   if not status then
     api.nvim_err_writeln("Cannot extract thread id from buffer name")
     return
   end
-  local query =
-    format(
-    [[
-      mutation ResolveReview {
-        resolveReviewThread(input: {threadId: "%s"}) {
-          thread {
-            isResolved
-          }
-        }
-      }
-    ]],
-    thread_id
-  )
-  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
+  local query = format(graphql.resolve_review_mutation, thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -314,25 +305,12 @@ function M.unresolve_comment()
     return
   end
   local status, _, thread_id, comment_id =
-    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/reviewthread/(.*)/comment/(.*)")
+    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
   if not status then
     api.nvim_err_writeln("Cannot extract thread id from buffer name")
     return
   end
-  local query =
-    format(
-    [[
-      mutation UnresolveReview {
-        unresolveReviewThread(input: {threadId: "%s"}) {
-          thread {
-            isResolved
-          }
-        }
-      }
-    ]],
-    thread_id
-  )
-  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
+  local query = format(graphql.unresolve_review_mutation, thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -419,7 +397,7 @@ function M.create_issue(repo)
         format("repos/%s/issues", repo)
       },
       cb = function(output)
-        octo.create_issue_buffer(json.parse(output), repo, true)
+        octo.create_buffer("issue", json.parse(output), repo, true)
         vim.fn.execute("normal! Gkkk")
         vim.fn.execute("startinsert")
       end
@@ -429,7 +407,12 @@ end
 
 function M.get_issue(...)
   local repo, number = M.get_repo_number_from_varargs(...)
-  vim.cmd(format("edit octo://%s/%s", repo, number))
+  vim.cmd(format("edit octo://%s/issue/%s", repo, number))
+end
+
+function M.get_pull(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+  vim.cmd(format("edit octo://%s/pull/%s", repo, number))
 end
 
 function M.issue_action(action, kind, value)
@@ -641,8 +624,8 @@ function M.show_pr_diff()
 end
 
 function M.pr_reviews()
-  local rep, number, _ = util.get_repo_number_pr()
-  if not rep then
+  local repo, number, _ = util.get_repo_number_pr()
+  if not repo then
     return
   end
 
@@ -651,55 +634,9 @@ function M.pr_reviews()
     return
   end
 
-  local owner = vim.split(rep, "/")[1]
-  local repo = vim.split(rep, "/")[2]
-  local query =
-    format(
-    [[
-    query($endCursor: String) {
-      repository(owner:"%s", name:"%s") {
-        pullRequest(number:%d){
-           reviewThreads(last:80) {
-              nodes{
-                id,
-                isResolved,
-                isOutdated,
-                path,
-                line,
-                resolvedBy { login },
-                originalLine,
-                startLine,
-                originalStartLine,
-                comments(first: 100, after: $endCursor) {
-                  nodes{
-                    id,
-                    body,
-                    author { login },
-                    authorAssociation,
-                    diffHunk,
-                    reactions(last:50) {
-                      totalCount,
-                      nodes{
-                        content
-                      }
-                    }
-                  }
-                  pageInfo {
-                    hasNextPage
-                    endCursor
-                  }
-                },
-              }
-          }
-        }
-      }
-    }
-  ]],
-    owner,
-    repo,
-    number
-  )
-  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.review_threads_query, owner, name, number)
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -708,7 +645,7 @@ function M.pr_reviews()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = json.parse(output)
-          reviews.populate_reviewthreads_qf(rep, number, resp.data.repository.pullRequest.reviewThreads.nodes)
+          reviews.populate_reviewthreads_qf(repo, number, resp.data.repository.pullRequest.reviewThreads.nodes)
         end
       end
     }
@@ -776,6 +713,7 @@ function M.reaction_action(action, reaction)
     cb_url = format("repos/%s/%s/comments/%d", repo, kind, comment.id)
     line = comment.reaction_line
     reactions = comment.reactions
+
     if action == "add" then
       url = format("repos/%s/%s/comments/%d/reactions", repo, kind, comment.id)
       args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}
@@ -799,8 +737,8 @@ function M.reaction_action(action, reaction)
   elseif vim.bo.ft == "octo_issue" then
     -- cursor not located on a comment, using the issue instead
     cb_url = format("repos/%s/issues/%d", repo, number)
-    line = api.nvim_buf_get_var(bufnr, "reaction_line")
-    reactions = api.nvim_buf_get_var(bufnr, "reactions")
+    reactions = api.nvim_buf_get_var(bufnr, "body_reactions")
+    line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
     if action == "add" then
       url = format("repos/%s/issues/%d/reactions", repo, number)
       args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}
@@ -835,19 +773,29 @@ function M.reaction_action(action, reaction)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          for k, v in pairs(reactions) do
-            if k == reaction then
-              if action == "add" then
-                reactions[k] = v + 1
-                reactions.total_count = reactions.total_count + 1
-              elseif action == "delete" then
-                reactions[k] = math.max(0, v - 1)
-                reactions.total_count = reactions.total_count - 1
-              end
-              break
-            end
+          reaction = string.upper(reaction)
+          if reaction == "+1" then
+            reaction = "THUMBS_UP"
+          elseif reaction == "-1" then
+            reaction = "THUMBS_DOWN"
           end
-          util.update_reactions_at_cursor(bufnr, cursor, reactions, line)
+          if action == "add" then
+            table.insert(reactions.nodes, {content = reaction})
+            reactions.totalCount = reactions.totalCount + 1
+          elseif action == "delete" then
+            for i, r in pairs(reactions.nodes) do
+              if r.content == reaction then
+                table.remove(reactions.nodes, i)
+                break
+              end
+            end
+            reactions.totalCount = reactions.totalCount - 1
+          end
+
+          -- update comment metadata with new reactions
+          util.update_reactions_at_cursor(bufnr, cursor, reactions) --, line)
+
+          -- refresh reactions
           octo.write_reactions(bufnr, reactions, line)
         end
       end

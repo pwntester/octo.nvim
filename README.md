@@ -5,8 +5,8 @@ Modified description or comments are highlighted in the signcolumn.
 ### Issue
 ![](https://i.imgur.com/ipbMFUs.png)
 
-### Pull Request
-![](https://i.imgur.com/rN4tSPP.png)
+### Pull Request (checks)
+![](https://i.imgur.com/xfE6yN2.png)
 
 ### Pull Request (review threads)
 ![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
@@ -29,7 +29,6 @@ Plug 'nvim-lua/popup.nvim'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 ```
-
 
 ## Commands
 
@@ -139,7 +138,3 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimDetailsLabel`   | `Title`      |
 | `OctoNvimMissingDetails` | `Comment`    |
 | `OctoNvimDetailsValue `  | `Identifier` |
-
-
-## Credits
-All `List` commands are taken from @windwp [Telescope extension](https://github.com/nvim-telescope/telescope-github.nvim) and adapted to edit issues.
