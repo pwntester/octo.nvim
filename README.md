@@ -8,6 +8,9 @@ Modified description or comments are highlighted in the signcolumn.
 ### Pull Request
 ![](https://i.imgur.com/rN4tSPP.png)
 
+### Pull Request (review threads)
+![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
+
 ## Installation
 
 Use your favourite plugin manager to install it. eg:
