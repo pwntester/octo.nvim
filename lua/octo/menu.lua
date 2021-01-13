@@ -7,15 +7,18 @@ local previewers = require "telescope.previewers"
 local conf = require "telescope.config".values
 local make_entry = require "telescope.make_entry"
 local entry_display = require "telescope.pickers.entry_display"
+local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
+local graphql = require "octo.graphql"
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
 local api = vim.api
 local bat_options = {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"}
 local json = {
-  parse = vim.fn.json_decode
+  parse = vim.fn.json_decode,
+  stringify = vim.fn.json_encode
 }
 
 local M = {}
@@ -43,6 +46,34 @@ local function parse_opts(opts, target)
     end
   end
   return table.concat(query, " ")
+end
+
+local function get_filter(opts, kind)
+  local filter = "{"
+  local allowed_values = {}
+  if kind == "issue" then
+    allowed_values = {"createdBy", "assignee", "mentioned", "labels", "milestone", "states"}
+  end
+
+  for _, value in pairs(allowed_values) do
+    if opts[value] then
+      local val
+      if #vim.split(opts[value], ",") > 1 then
+        -- list
+        val = vim.split(opts[value], ",")
+      else
+        -- string
+        val = opts[value]
+      end
+      val = json.stringify(val) 
+      val = string.gsub(val, "\"OPEN\"", "OPEN")
+      val = string.gsub(val, "\"CLOSED\"", "CLOSED")
+      filter = filter .. value .. ":" .. val .. ","
+    end
+  end
+
+  filter = filter .. "}"
+  return filter
 end
 
 local function open_in_browser(type, repo)
@@ -87,11 +118,8 @@ local function open_issue(repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local tmp_table = vim.split(selection.value, "\t")
-    if vim.tbl_isempty(tmp_table) then
-      return
-    end
-    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, tmp_table[1]))
+    local number = selection.value
+    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, number))
   end
 end
 
@@ -103,25 +131,27 @@ local issue_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        local tmp_table = vim.split(entry.value, "\t")
-        if vim.tbl_isempty(tmp_table) then
-          putils.job_maker(
-            {"echo", ""},
-            self.state.bufnr,
+        if self.state.bufname ~= entry.value then
+          local number = entry.issue.number
+          local owner = vim.split(opts.repo, "/")[1]
+          local name = vim.split(opts.repo, "/")[2]
+          local query = format(graphql.issue_query, owner, name, number)
+          gh.run(
             {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
-            }
-          )
-        else
-          putils.job_maker(
-            {"gh", "issue", "view", tmp_table[1], "-R", opts.repo},
-            self.state.bufnr,
-            {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
+              args = {"api", "graphql", "-f", format("query=%s", query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  local result = json.parse(output)
+                  local issue = result.data.repository.issue
+                  octo.write_title(self.state.bufnr, issue.title, 1)
+                  octo.write_details(self.state.bufnr, issue)
+                  octo.write_body(self.state.bufnr, issue)
+                  octo.write_state(self.state.bufnr, issue.state:upper())
+                  api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
+                end
+              end
             }
           )
         end
@@ -130,57 +160,50 @@ local issue_previewer =
   end
 )
 
-local function gen_from_issue(max_number, max_status, max_labels)
-  local displayer =
-    entry_display.create {
-    separator = " ",
-    items = {
-      {width = max_number},
-      {width = max_status},
-      {remaining = true},
-      {width = max_labels + 2}
-    }
-  }
+local function gen_from_issue(max_number)
 
   local make_display = function(entry)
     if not entry then
       return nil
     end
-    local labels_str
-    if util.is_blank(entry.labels) then
-      labels_str = ""
-    else
-      labels_str = format("(%s)", entry.labels)
-    end
-    return displayer {
-      {entry.value, "TelescopeResultsNumber"},
-      {entry.status, "TelescopeResultsFunction"},
-      {entry.msg},
-      {labels_str, "TelescopeResultsSpecialComment"}
+    local columns = {
+      {entry.issue.number .. " ", "TelescopeResultsNumber"},
+      {entry.issue.title .. " "}
     }
+
+    local items = {
+      {width = 1 + max_number},
+      {remaining = true},
+    }
+
+    local displayer =
+      entry_display.create {
+        separator = "",
+        items = items
+    }
+    return displayer(columns)
   end
 
-  return function(entry)
-    if not entry or vim.tbl_isempty(entry) then
+  return function(issue)
+    if not issue or vim.tbl_isempty(issue) then
       return nil
     end
 
     return {
-      value = entry.number,
-      ordinal = entry.number .. " " .. entry.title,
-      msg = entry.title,
+      value = issue.number,
+      ordinal = issue.number .. " " .. issue.title,
       display = make_display,
-      status = entry.status,
-      labels = entry.labels,
-      date = entry.date
+      issue = issue
     }
   end
 end
 
 function M.issues(repo, opts)
   opts = opts or {}
-  opts.limit = opts.limit or 100
-  local opts_query = parse_opts(opts, "issue")
+  -- TODO: limit
+  --opts.limit = opts.limit or 100
+  local filter = get_filter(opts, "issue")
+
   if not repo or repo == vim.NIL then
     repo = util.get_remote_name()
   end
@@ -188,59 +211,53 @@ function M.issues(repo, opts)
     api.nvim_err_writeln("Cannot find repo")
     return
   end
-  local cmd = format("gh issue list %s -R %s", opts_query, repo)
-  local results = vim.split(utils.get_os_command_output(cmd), "\n")
 
-  if #results == 0 or #results == 1 and results[1] == "" then
-    api.nvim_err_writeln(format("There are no matching issues in %s.", repo))
-    return
-  end
-
-  local issues = {}
-  local max_number = -1
-  local max_status = -1
-  local max_labels = -1
-  for _, result in ipairs(results) do
-    if util.is_blank(result) then
-      break
-    end
-    local parts = vim.split(result, "\t")
-    local issue = {}
-    issue.number = tostring(parts[1])
-    issue.status = parts[2]
-    issue.title = parts[3]
-    issue.labels = parts[4]
-    issue.date = parts[5]
-
-    if #issue.status > max_status then
-      max_status = #issue.status
-    end
-    if #issue.number > max_number then
-      max_number = #issue.number
-    end
-    if #issue.labels > max_labels then
-      max_labels = #issue.labels
-    end
-    table.insert(issues, issue)
-  end
-
-  pickers.new(
-    opts,
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.issues_query, owner, name, filter)
+  print("Fetching issues (this may take a while) ...")
+  gh.run(
     {
-      prompt_title = "Issues",
-      finder = finders.new_table {
-        results = issues,
-        entry_maker = gen_from_issue(max_number, max_status, max_labels)
-      },
-      sorter = conf.file_sorter(opts),
-      previewer = issue_previewer.new({repo = repo}),
-      attach_mappings = function(_, map)
-        map("i", "<CR>", open_issue(repo))
-        map("i", "<c-t>", open_in_browser("issue", repo))
-        return true
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          print(" ")
+          local resp = util.aggregate_pages(output, "data.repository.issues.nodes")
+          local issues = resp.data.repository.issues.nodes
+          if #issues == 0 then
+            api.nvim_err_writeln(format("There are no matching issues in %s.", repo))
+            return
+          end
+          local max_number = -1
+          for _, issue in ipairs(issues) do
+            if #tostring(issue.number) > max_number then
+              max_number = #tostring(issue.number)
+            end
+          end
+
+          pickers.new(
+            opts,
+            {
+              prompt_title = "Issues",
+              finder = finders.new_table {
+                results = issues,
+                entry_maker = gen_from_issue(max_number) --, max_state)
+              },
+              sorter = conf.file_sorter(opts),
+              previewer = issue_previewer.new({repo = repo}),
+              attach_mappings = function(_, map)
+                map("i", "<CR>", open_issue(repo))
+                map("i", "<c-t>", open_in_browser("issue", repo))
+                return true
+              end
+            }
+          ):find()
+        end
       end
     }
-  ):find()
+  )
 end
 
 --

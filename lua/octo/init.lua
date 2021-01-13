@@ -96,14 +96,13 @@ function M.write_title(bufnr, title, line)
   )
 end
 
-function M.write_state(bufnr)
+function M.write_state(bufnr, state, number)
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
 
   -- title virtual text
-  local state = api.nvim_buf_get_var(bufnr, "state"):upper()
   local title_vt = {
-    {tostring(api.nvim_buf_get_var(bufnr, "number")), "OctoNvimIssueId"},
+    {tostring(number), "OctoNvimIssueId"},
     {format(" [%s] ", state), format("OctoNvimIssue%s", state)}
   }
 
@@ -243,8 +242,8 @@ function M.write_details(bufnr, issue, update)
   local labels_vt = {
     {"Labels: ", "OctoNvimDetailsLabel"}
   }
-  if issue.labels and #issue.labels > 0 then
-    for _, label in ipairs(issue.labels) do
+  if #issue.labels.nodes > 0 then
+    for _, label in ipairs(issue.labels.nodes) do
       table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
       table.insert(labels_vt, {label.name, hl.create_highlight(label.color, {})})
       table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
@@ -473,7 +472,7 @@ function M.load_issue()
   local name = vim.split(repo, "/")[2]
   local query, key
   if type == "pull" then
-    query = format(graphql.pull_query, owner, name, number)
+    query = format(graphql.pull_request_query, owner, name, number)
     key = "pullRequest"
   elseif type == "issue" then
     query = format(graphql.issue_query, owner, name, number)
@@ -486,9 +485,8 @@ function M.load_issue()
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          local result = json.parse(output)
-          --print("DEBUG", vim.inspect(result.data.repository[key]))
-          M.create_buffer(type, result.data.repository[key], repo, false)
+          local resp = util.aggregate_pages(output, format("data.repository.%s.comments.nodes", key))
+          M.create_buffer(type, resp.data.repository[key], repo, false)
         end
       end
     }
@@ -502,12 +500,21 @@ end
 --   - The PR author
 --   - The authors of all the existing comments
 --   - The contributors of the repo
-local function async_fetch_taggable_users(bufnr, repo)
+local function async_fetch_taggable_users(bufnr, repo, participants)
   local users = api.nvim_buf_get_var(bufnr, "taggable_users") or {}
+
+  -- add participants
+  for _, p in pairs(participants) do
+    table.insert(users, p.login)
+  end
+
+  -- add comment authors
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
   for _, c in pairs(comments_metadata) do
     table.insert(users, c.author)
   end
+
+  -- add repo contributors
   api.nvim_buf_set_var(bufnr, "taggable_users", users)
   gh.run(
     {
@@ -599,7 +606,7 @@ function M.create_buffer(type, obj, repo, create)
   M.write_details(bufnr, obj)
 
   -- write issue/pr status
-  M.write_state(bufnr)
+  M.write_state(bufnr, state:upper(), number)
 
   -- write body
   M.write_body(bufnr, obj)
@@ -615,7 +622,7 @@ function M.create_buffer(type, obj, repo, create)
     M.write_comment(bufnr, c)
   end
 
-  async_fetch_taggable_users(bufnr, repo)
+  async_fetch_taggable_users(bufnr, repo, obj.participants.nodes)
   async_fetch_issues(bufnr, repo)
 
   -- show signs
@@ -734,7 +741,12 @@ function M.save_issue()
                     if c.id == -1 then
                       comments[i].saved_body = resp.body
                       comments[i].dirty = false
-                      comments[i].id = resp.id
+                      -- use v3 IDs
+                      if not tonumber(resp.id) then
+                        comments[i].id = util.graph2rest(resp.id)
+                      else
+                        comments[i].id = resp.id
+                      end
                       break
                     end
                   end

@@ -40,9 +40,11 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | open | |
 | | create | [repo] |
 | | edit | [repo] <number> |
-| | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_issue_list): `author`\|`assignee`\|`mention`\|`label`\|`milestone`\|`state`\|`limit`<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-t>`: Opens issue in web browser |
-| pr | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_pr_list):  `assignee`\|`label`\|`state`\|`base`\|`limit`<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-t>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
+| | list | [repo] [key=value]*<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-t>`: Opens issue in web browser |
+| pr | list | [repo] [key=value]<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-t>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
 | | edit | [repo] <number> |
+| | open | |
+| | close | |
 | | checkout | |
 | | commits | |
 | | files | |
@@ -76,6 +78,8 @@ Octo comment add
 Octo reaction add hooray
 Octo issue edit pwntester/octo.nvim 1
 Octo issue edit 1
+Octo issue list createdBy=pwntester
+Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 ```
 
 ## Usage

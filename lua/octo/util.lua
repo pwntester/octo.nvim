@@ -2,10 +2,17 @@ local constants = require "octo.constants"
 local date = require "octo.date"
 local popup = require "popup"
 local base64 = require "octo.base64"
+local gh = require "octo.gh"
+local graphql = require "octo.graphql"
 local format = string.format
 local api = vim.api
+local json = {
+  parse = vim.fn.json_decode,
+  stringify = vim.fn.json_encode
+}
 
 local M = {}
+local repo_id_cache = {}
 
 M.reaction_map = {
   ["THUMBS_UP"] = "👍",
@@ -259,6 +266,76 @@ function M.graph2rest(id)
   local decoded = base64.decode(id)
   local _, _, rest_id = string.find(decoded, "(%d+)$")
   return rest_id
+end
+
+function M.get_repo_id(repo)
+  if repo_id_cache[repo] then
+    return repo_id_cache[repo]
+  else
+    local owner = vim.split(repo, "/")[1]
+    local name = vim.split(repo, "/")[2]
+    local query = format(graphql.repository_id_query, owner, name)
+    local output = gh.run(
+      {
+        args = {"api", "graphql", "-f", format("query=%s", query)},
+        mode = "sync"
+      }
+    )
+    local resp = json.parse(output)
+    local id = resp.data.repository.id
+    repo_id_cache[repo] = id
+    return id
+  end
+end
+
+function M.aggregate_pages(text, aggregation_key)
+
+  -- aggregation key can be at any level (eg: comments)
+  -- take the first response and extend it with elements from the
+  -- subsequent responses
+
+  local responses = vim.split(text, "}{")
+  if #responses > 1 then
+
+    responses[1] = responses[1] .. "}"
+    for i=2,#responses-1 do
+      responses[i] = "{" .. responses[i] .. "}"
+    end
+    responses[#responses] = "{" .. responses[#responses]
+
+    local base_resp = json.parse(responses[1])
+    local base_page = M.get_nested_prop(base_resp, aggregation_key)
+    for i=2, #responses do
+      local paged_resp = json.parse(responses[i])
+      local page = M.get_nested_prop(paged_resp, aggregation_key)
+      vim.list_extend(base_page, page)
+    end
+    return base_resp
+  else
+    return json.parse(responses)
+  end
+end
+
+function table.slice(tbl, first, last, step)
+  local sliced = {}
+  for i = first or 1, last or #tbl, step or 1 do
+    sliced[#sliced+1] = tbl[i]
+  end
+  return sliced
+end
+
+function M.get_nested_prop(obj, prop)
+  while true do
+    local parts = vim.split(prop, "%.")
+    if #parts == 1 then
+      break
+    else
+      local part = parts[1]
+      local remaining = table.concat(table.slice(parts, 2, #parts), ".")
+      return M.get_nested_prop(obj[part], remaining)
+    end
+  end
+  return obj[prop]
 end
 
 return M

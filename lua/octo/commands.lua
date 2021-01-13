@@ -23,10 +23,10 @@ local commands = {
       M.get_issue(...)
     end,
     close = function()
-      M.change_issue_state("closed")
+      M.change_state("issue", "CLOSED")
     end,
     open = function()
-      M.change_issue_state("open")
+      M.change_state("issue", "OPEN")
     end,
     list = function(repo, ...)
       local rep, opts = M.process_varargs(repo, ...)
@@ -36,6 +36,12 @@ local commands = {
   pr = {
     edit = function(...)
       M.get_pull(...)
+    end,
+    close = function()
+      M.change_state("pull", "CLOSED")
+    end,
+    open = function()
+      M.change_state("pull", "OPEN")
     end,
     list = function(repo, ...)
       local rep, opts = M.process_varargs(repo, ...)
@@ -338,9 +344,9 @@ function M.unresolve_comment()
   )
 end
 
-function M.change_issue_state(state)
+function M.change_state(type, state)
   local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_number()
+  local repo, _ = util.get_repo_number()
   if not repo then
     return
   end
@@ -350,23 +356,36 @@ function M.change_issue_state(state)
     return
   end
 
+  local id = api.nvim_buf_get_var(bufnr, "iid")
+  local query
+  if type == "issue" then
+    query = format(graphql.update_issue_state_mutation, id, state)
+  elseif type == "pull" then
+    query = format(graphql.update_pull_request_state_mutation, id, state)
+  end
+
   gh.run(
     {
-      args = {
-        "api",
-        "-X",
-        "PATCH",
-        "-f",
-        format("state=%s", state),
-        format("repos/%s/issues/%s", repo, number)
-      },
-      cb = function(output)
-        local resp = json.parse(output)
-        if state == resp["state"] then
-          api.nvim_buf_set_var(bufnr, "state", resp["state"])
-          octo.write_state(bufnr)
-          octo.write_details(bufnr, resp, true)
-          print("Issue state changed to: " .. resp["state"])
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local new_state, obj
+          if type == "issue" then
+            obj = resp.data.updateIssue.issue
+            new_state = obj.state
+          elseif type == "pull" then
+            obj = resp.data.updatePullRequest.pullRequest
+            new_state = obj.state
+          end
+          if state == new_state then
+            api.nvim_buf_set_var(bufnr, "state", new_state)
+            octo.write_state(bufnr)
+            octo.write_details(bufnr, obj, true)
+            print("Issue state changed to: " .. new_state)
+          end
         end
       end
     }
@@ -381,25 +400,25 @@ function M.create_issue(repo)
     print("Cant find repo name")
     return
   end
+
   vim.fn.inputsave()
   local title = vim.fn.input("Enter title: ")
   vim.fn.inputrestore()
+
+  local repo_id = util.get_repo_id(repo)
+  local query = format(graphql.create_issue_mutation, repo_id, title, constants.NO_BODY_MSG)
   gh.run(
     {
-      args = {
-        "api",
-        "-X",
-        "POST",
-        "-f",
-        format("title=%s", title),
-        "-f",
-        format("body=%s", constants.NO_BODY_MSG),
-        format("repos/%s/issues", repo)
-      },
-      cb = function(output)
-        octo.create_buffer("issue", json.parse(output), repo, true)
-        vim.fn.execute("normal! Gkkk")
-        vim.fn.execute("startinsert")
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          octo.create_buffer("issue", resp.data.createIssue.issue, repo, true)
+          vim.fn.execute("normal! Gkkk")
+          vim.fn.execute("startinsert")
+        end
       end
     }
   )
@@ -639,11 +658,15 @@ function M.pr_reviews()
   local query = format(graphql.review_threads_query, owner, name, number)
   gh.run(
     {
-      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      --args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
+          -- TODO: aggregate comments
+          -- local resp = util.aggregate_pages(output, "data.repository.pullRequest.reviewThreads.nodes.comments.nodes")
+          -- for now, I will just remove pagination on this query since 100 comments in a single thread looks enough for most cases
           local resp = json.parse(output)
           reviews.populate_reviewthreads_qf(repo, number, resp.data.repository.pullRequest.reviewThreads.nodes)
         end
