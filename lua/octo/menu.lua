@@ -1,22 +1,27 @@
-local actions = require("telescope.actions")
-local finders = require("telescope.finders")
-local pickers = require("telescope.pickers")
-local utils = require("telescope.utils")
-local putils = require("telescope.previewers.utils")
-local previewers = require("telescope.previewers")
-local conf = require("telescope.config").values
-local make_entry = require("telescope.make_entry")
-local entry_display = require("telescope.pickers.entry_display")
+local actions = require "telescope.actions"
+local finders = require "telescope.finders"
+local pickers = require "telescope.pickers"
+local utils = require "telescope.utils"
+local putils = require "telescope.previewers.utils"
+local previewers = require "telescope.previewers"
+local conf = require "telescope.config".values
+local make_entry = require "telescope.make_entry"
+local entry_display = require "telescope.pickers.entry_display"
+local octo = require "octo"
 local gh = require "octo.gh"
-local util = require("octo.util")
+local util = require "octo.util"
+local graphql = require "octo.graphql"
 local format = string.format
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
 local api = vim.api
 local bat_options = {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"}
 local json = {
-  parse = vim.fn.json_decode
+  parse = vim.fn.json_decode,
+  stringify = vim.fn.json_encode
 }
+
+local M = {}
 
 local function parse_opts(opts, target)
   local query = {}
@@ -41,6 +46,35 @@ local function parse_opts(opts, target)
     end
   end
   return table.concat(query, " ")
+end
+
+local function get_filter(opts, kind)
+  local filter = ""
+  local allowed_values = {}
+  if kind == "issue" then
+    allowed_values = {"createdBy", "assignee", "mentioned", "labels", "milestone", "states"}
+  elseif kind == "pull_request" then
+    allowed_values = {"baseRefName", "headRefName", "labels", "states"}
+  end
+
+  for _, value in pairs(allowed_values) do
+    if opts[value] then
+      local val
+      if #vim.split(opts[value], ",") > 1 then
+        -- list
+        val = vim.split(opts[value], ",")
+      else
+        -- string
+        val = opts[value]
+      end
+      val = json.stringify(val)
+      val = string.gsub(val, '"OPEN"', "OPEN")
+      val = string.gsub(val, '"CLOSED"', "CLOSED")
+      filter = filter .. value .. ":" .. val .. ","
+    end
+  end
+
+  return filter
 end
 
 local function open_in_browser(type, repo)
@@ -85,11 +119,8 @@ local function open_issue(repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local tmp_table = vim.split(selection.value, "\t")
-    if vim.tbl_isempty(tmp_table) then
-      return
-    end
-    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, tmp_table[1]))
+    local number = selection.value
+    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, number))
   end
 end
 
@@ -101,25 +132,28 @@ local issue_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        local tmp_table = vim.split(entry.value, "\t")
-        if vim.tbl_isempty(tmp_table) then
-          putils.job_maker(
-            {"echo", ""},
-            self.state.bufnr,
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
+          local number = entry.issue.number
+          local owner = vim.split(opts.repo, "/")[1]
+          local name = vim.split(opts.repo, "/")[2]
+          local query = format(graphql.issue_query, owner, name, number)
+          gh.run(
             {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
-            }
-          )
-        else
-          putils.job_maker(
-            {"gh", "issue", "view", tmp_table[1], "-R", opts.repo},
-            self.state.bufnr,
-            {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
+              args = {"api", "graphql", "-f", format("query=%s", query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  local result = json.parse(output)
+                  local issue = result.data.repository.issue
+                  octo.write_title(self.state.bufnr, issue.title, 1)
+                  octo.write_details(self.state.bufnr, issue)
+                  octo.write_body(self.state.bufnr, issue)
+                  octo.write_state(self.state.bufnr, issue.state:upper(), number)
+                  octo.write_reactions(self.state.bufnr, issue.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
+                  api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
+                end
+              end
             }
           )
         end
@@ -128,64 +162,47 @@ local issue_previewer =
   end
 )
 
-local function gen_from_issue()
-  local displayer =
-    entry_display.create {
-    separator = " ",
-    items = {
-      {width = 6},
-      {width = 6},
-      {remaining = true},
-      {width = 20}
-    }
-  }
-
+local function gen_from_issue(max_number)
   local make_display = function(entry)
     if not entry then
       return nil
     end
-    local labels_str
-    if util.is_blank(entry.labels) then
-      labels_str = ""
-    else
-      labels_str = format("(%s)", entry.labels)
-    end
-    return displayer {
-      {entry.value, "TelescopeResultsNumber"},
-      {entry.status, "TelescopeResultsFunction"},
-      {entry.msg},
-      {labels_str, "TelescopeResultsSpecialComment"}
+
+    local columns = {
+      {entry.issue.number, "TelescopeResultsNumber"},
+      {entry.issue.title}
     }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {width = max_number},
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
   end
 
-  return function(entry)
-    if not entry or util.is_blank(entry) then
+  return function(issue)
+    if not issue or vim.tbl_isempty(issue) then
       return nil
     end
 
-    local parts = vim.split(entry, "\t")
-    local number = parts[1]
-    local status = parts[2]
-    local title = parts[3]
-    local labels = parts[4]
-    local date = parts[5]
-
     return {
-      value = number,
-      ordinal = number,
-      msg = title,
+      value = issue.number,
+      ordinal = issue.number .. " " .. issue.title,
       display = make_display,
-      status = status,
-      labels = labels,
-      date = date
+      issue = issue
     }
   end
 end
 
-local function issues(repo, opts)
+function M.issues(repo, opts)
   opts = opts or {}
-  opts.limit = opts.limit or 100
-  local opts_query = parse_opts(opts, "issue")
+  local filter = get_filter(opts, "issue")
+
   if not repo or repo == vim.NIL then
     repo = util.get_remote_name()
   end
@@ -193,31 +210,53 @@ local function issues(repo, opts)
     api.nvim_err_writeln("Cannot find repo")
     return
   end
-  local cmd = format("gh issue list %s -R %s", opts_query, repo)
-  local results = vim.split(utils.get_os_command_output(cmd), "\n")
 
-  if #results == 0 or #results == 1 and results[1] == "" then
-    api.nvim_err_writeln(format("There are no matching issues in %s.", repo))
-    return
-  end
-
-  pickers.new(
-    opts,
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.issues_query, owner, name, filter)
+  print("Fetching issues (this may take a while) ...")
+  gh.run(
     {
-      prompt_title = "Issues",
-      finder = finders.new_table {
-        results = results,
-        entry_maker = gen_from_issue()
-      },
-      sorter = conf.file_sorter(opts),
-      previewer = issue_previewer.new({repo = repo}),
-      attach_mappings = function(_, map)
-        map("i", "<CR>", open_issue(repo))
-        map("i", "<c-t>", open_in_browser("issue", repo))
-        return true
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          print(" ")
+          local resp = util.aggregate_pages(output, "data.repository.issues.nodes")
+          local issues = resp.data.repository.issues.nodes
+          if #issues == 0 then
+            api.nvim_err_writeln(format("There are no matching issues in %s.", repo))
+            return
+          end
+          local max_number = -1
+          for _, issue in ipairs(issues) do
+            if #tostring(issue.number) > max_number then
+              max_number = #tostring(issue.number)
+            end
+          end
+
+          pickers.new(
+            opts,
+            {
+              prompt_title = "Issues",
+              finder = finders.new_table {
+                results = issues,
+                entry_maker = gen_from_issue(max_number)
+              },
+              sorter = conf.file_sorter(opts),
+              previewer = issue_previewer.new({repo = repo}),
+              attach_mappings = function(_, map)
+                map("i", "<CR>", open_issue(repo))
+                map("i", "<c-t>", open_in_browser("issue", repo))
+                return true
+              end
+            }
+          ):find()
+        end
       end
     }
-  ):find()
+  )
 end
 
 --
@@ -260,7 +299,7 @@ local function open_gist(prompt_bufnr)
   end
 end
 
-local function gists(opts)
+function M.gists(opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
   local opts_query = parse_opts(opts, "gist")
@@ -290,7 +329,7 @@ end
 -- PULL REQUESTS
 --
 
-local function checkout_pr(repo)
+local function checkout_pull_request(repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
@@ -315,7 +354,7 @@ local function checkout_pr(repo)
   end
 end
 
-local pr_previewer =
+local pull_request_previewer =
   defaulter(
   function(opts)
     return previewers.new_buffer_previewer {
@@ -323,25 +362,33 @@ local pr_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        local tmp_table = vim.split(entry.value, "\t")
-        if vim.tbl_isempty(tmp_table) then
-          putils.job_maker(
-            {"echo", ""},
-            self.state.bufnr,
+        print(api.nvim_buf_line_count(self.state.bufnr))
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
+          local number = entry.pull_request.number
+          local owner = vim.split(opts.repo, "/")[1]
+          local name = vim.split(opts.repo, "/")[2]
+          local query = format(graphql.pull_request_query, owner, name, number)
+          gh.run(
             {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
-            }
-          )
-        else
-          putils.job_maker(
-            {"gh", "pr", "view", tmp_table[1], "-R", opts.repo},
-            self.state.bufnr,
-            {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
+              args = {"api", "graphql", "-f", format("query=%s", query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  local result = json.parse(output)
+                  local pull_request = result.data.repository.pullRequest
+                  octo.write_title(self.state.bufnr, pull_request.title, 1)
+                  octo.write_details(self.state.bufnr, pull_request)
+                  octo.write_body(self.state.bufnr, pull_request)
+                  octo.write_state(self.state.bufnr, pull_request.state:upper(), number)
+                  octo.write_reactions(
+                    self.state.bufnr,
+                    pull_request.reactions,
+                    api.nvim_buf_line_count(self.state.bufnr) - 1
+                  )
+                  api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
+                end
+              end
             }
           )
         end
@@ -350,86 +397,111 @@ local pr_previewer =
   end
 )
 
-local function gen_from_pr()
-  local displayer =
-    entry_display.create {
-    separator = " ",
-    items = {
-      {width = 6},
-      {width = 6},
-      {remaining = true},
-      {width = 20}
-    }
-  }
-
+local function gen_from_pull_request(max_number)
   local make_display = function(entry)
-    return displayer {
-      {entry.value, "TelescopeResultsNumber"},
-      {entry.status, "TelescopeResultsFunction"},
-      {entry.msg},
-      {entry.head, "TelescopeResultsSpecialComment"}
-    }
-  end
-
-  return function(entry)
-    if not entry or util.is_blank(entry) then
+    if not entry then
       return nil
     end
 
-    local parts = vim.split(entry, "\t")
-    local number = parts[1]
-    local title = parts[2]
-    local head = parts[3]
-    local status = parts[4]
+    local columns = {
+      {entry.pull_request.number, "TelescopeResultsNumber"},
+      {entry.pull_request.title}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {width = max_number},
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(pull_request)
+    if not pull_request or vim.tbl_isempty(pull_request) then
+      return nil
+    end
 
     return {
-      value = number,
-      ordinal = number,
-      msg = title,
+      value = pull_request.number,
+      ordinal = pull_request.number .. " " .. pull_request.title,
       display = make_display,
-      status = status,
-      head = head
+      pull_request = pull_request
     }
   end
 end
 
-local function pull_requests(repo, opts)
+local function open_pull_request(repo)
+  return function(prompt_bufnr)
+    local selection = actions.get_selected_entry(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    local number = selection.value
+    vim.cmd(string.format([[ lua require'octo.commands'.get_pull_request('%s', '%s') ]], repo, number))
+  end
+end
+
+function M.pull_requests(repo, opts)
   opts = opts or {}
-  opts.limit = opts.limit or 100
-  local opts_query = parse_opts(opts, "pr")
+  local filter = get_filter(opts, "pull_request")
+
   if not repo or repo == vim.NIL then
     repo = util.get_remote_name()
   end
   if not repo then
-    print("Cannot find repo")
-    return
-  end
-  local cmd = format("gh pr list %s -R %s", opts_query, repo)
-  local results = vim.split(utils.get_os_command_output(cmd), "\n")
-
-  if #results == 0 or #results == 1 and results[1] == "" then
-    api.nvim_err_writeln(format("There are no matching pull requests in %s.", repo))
+    api.nvim_err_writeln("Cannot find repo")
     return
   end
 
-  pickers.new(
-    opts,
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.pull_requests_query, owner, name, filter)
+  print("Fetching issues (this may take a while) ...")
+  gh.run(
     {
-      prompt_title = "Pull Requests",
-      finder = finders.new_table {
-        results = results,
-        entry_maker = gen_from_pr()
-      },
-      previewer = pr_previewer.new({repo = repo}),
-      sorter = conf.file_sorter(opts),
-      attach_mappings = function(_, map)
-        map("i", "<CR>", open_issue(repo))
-        map("i", "<c-o>", checkout_pr(repo))
-        map("i", "<c-t>", open_in_browser("pr"))
-        return true
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          print(" ")
+          local resp = util.aggregate_pages(output, "data.repository.pullRequests.nodes")
+          local pull_requests = resp.data.repository.pullRequests.nodes
+          if #pull_requests == 0 then
+            api.nvim_err_writeln(format("There are no matching pull requests in %s.", repo))
+            return
+          end
+          local max_number = -1
+          for _, issue in ipairs(pull_requests) do
+            if #tostring(issue.number) > max_number then
+              max_number = #tostring(issue.number)
+            end
+          end
+
+          pickers.new(
+            opts,
+            {
+              prompt_title = "Pull Requests",
+              finder = finders.new_table {
+                results = pull_requests,
+                entry_maker = gen_from_pull_request(max_number)
+              },
+              sorter = conf.file_sorter(opts),
+              previewer = pull_request_previewer.new({repo = repo}),
+              attach_mappings = function(_, map)
+                map("i", "<CR>", open_pull_request(repo))
+                map("i", "<c-o>", checkout_pull_request(repo))
+                map("i", "<c-t>", open_in_browser("pr", repo))
+                return true
+              end
+            }
+          ):find()
+        end
       end
     }
-  ):find()
+  )
 end
 
 --
@@ -478,7 +550,7 @@ local commit_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value then
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local lines = {}
           vim.list_extend(lines, {format("Commit: %s", entry.value)})
           vim.list_extend(lines, {format("Author: %s", entry.author)})
@@ -511,7 +583,7 @@ local commit_previewer =
   {}
 )
 
-local function commits()
+function M.commits()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
@@ -605,11 +677,9 @@ local changed_files_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value then
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local diff = entry.change.patch
-          local lines = {}
-          vim.list_extend(lines, vim.split(diff, "\n"))
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
           api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
         end
       end
@@ -618,58 +688,47 @@ local changed_files_previewer =
   {}
 )
 
-local function changed_files()
-  local repo, number = util.get_repo_number()
+function M.changed_files()
+  local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    local url = format("repos/%s/pulls/%d/files", repo, number)
-    gh.run(
-      {
-        args = {"api", url},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            local results = json.parse(output)
-            pickers.new(
-              {},
-              {
-                prompt_title = "PR Files Changed",
-                finder = finders.new_table {
-                  results = results,
-                  entry_maker = gen_from_git_changed_files()
-                },
-                sorter = conf.file_sorter({}),
-                previewer = changed_files_previewer.new({repo = repo, number = number}),
-                attach_mappings = function(prompt_bufnr)
-                  actions.goto_file_selection_edit:replace(
-                    function()
-                      actions.close(prompt_bufnr)
-                      local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
-                      api.nvim_set_current_buf(preview_bufnr)
-                      vim.cmd [[stopinsert]]
-                    end
-                  )
-                  return true
-                end
-              }
-            ):find()
-          end
+  local url = format("repos/%s/pulls/%d/files", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          pickers.new(
+            {},
+            {
+              prompt_title = "PR Files Changed",
+              finder = finders.new_table {
+                results = results,
+                entry_maker = gen_from_git_changed_files()
+              },
+              sorter = conf.file_sorter({}),
+              previewer = changed_files_previewer.new({repo = repo, number = number}),
+              attach_mappings = function(prompt_bufnr)
+                actions.goto_file_selection_edit:replace(
+                  function()
+                    actions.close(prompt_bufnr)
+                    local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
+                    api.nvim_set_current_buf(preview_bufnr)
+                    vim.cmd [[stopinsert]]
+                  end
+                )
+                return true
+              end
+            }
+          ):find()
         end
-      }
-    )
-  else
-    api.nvim_err_writeln("Not in PR buffer")
-  end
+      end
+    }
+  )
 end
 
-return {
-  issues = issues,
-  pull_requests = pull_requests,
-  gists = gists,
-  commits = commits,
-  changed_files = changed_files
-}
+return M

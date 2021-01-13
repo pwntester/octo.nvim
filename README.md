@@ -5,8 +5,11 @@ Modified description or comments are highlighted in the signcolumn.
 ### Issue
 ![](https://i.imgur.com/ipbMFUs.png)
 
-### Pull Request
-![](https://i.imgur.com/rN4tSPP.png)
+### Pull Request (checks)
+![](https://i.imgur.com/xfE6yN2.png)
+
+### Pull Request (review threads)
+![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
 
 ## Installation
 
@@ -27,7 +30,6 @@ Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 ```
 
-
 ## Commands
 
 There is only an `Octo <object> <action> [arguments]` command: 
@@ -38,9 +40,11 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | open | |
 | | create | [repo] |
 | | edit | [repo] <number> |
-| | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_issue_list): `author`\|`assignee`\|`mention`\|`label`\|`milestone`\|`state`\|`limit`<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-t>`: Opens issue in web browser |
-| pr | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_pr_list):  `assignee`\|`label`\|`state`\|`base`\|`limit`<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-t>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
+| | list | [repo] [key=value]*<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-t>`: Opens issue in web browser |
+| pr | list | [repo] [key=value]<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-t>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
 | | edit | [repo] <number> |
+| | open | |
+| | close | |
 | | checkout | |
 | | commits | |
 | | files | |
@@ -48,9 +52,12 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | merge | [commit\|rebase\|squash] [delete] |
 | | ready| |
 | | checks | |
+| | reviews | |
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-t>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |
+| | resolve | |
+| | unresolve | |
 | label | add | <label> |
 | | delete | <label> |
 | assignees| add | <assignee> |
@@ -71,6 +78,8 @@ Octo comment add
 Octo reaction add hooray
 Octo issue edit pwntester/octo.nvim 1
 Octo issue edit 1
+Octo issue list createdBy=pwntester
+Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 ```
 
 ## Usage
@@ -126,12 +135,10 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimIssueClosed`    | `ErrorMsg`   |
 | `OctoNvimEmpty`          | `Comment`    |
 | `OctoNvimFloat`          | `NormalNC`   |
-| `OctoNvimBubble1`        | `NormalFloat`|
-| `OctoNvimBubble2`        | `NormalFloat`|
+| `OctoNvimBubbleRed`      | `DiffDelete` |
+| `OctoNvimBubbleGreen`    | `DiffAdd`    |
+| `OctoNvimBubbleDelimiter`| `NormalFloat`|
+| `OctoNvimBubbleBody`     | `NormalFloat`|
 | `OctoNvimDetailsLabel`   | `Title`      |
-| `OctoNvimMissingDetails` | `Comment`    |                                                                                                              3 hi def 
+| `OctoNvimMissingDetails` | `Comment`    |
 | `OctoNvimDetailsValue `  | `Identifier` |
-
-
-## Credits
-All `List` commands are taken from @windwp [Telescope extension](https://github.com/nvim-telescope/telescope-github.nvim) and adapted to edit issues.

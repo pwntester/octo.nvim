@@ -1,8 +1,9 @@
-local gh = require("octo.gh")
-local signs = require("octo.signs")
-local hl = require("octo.highlights")
-local constants = require("octo.constants")
+local gh = require "octo.gh"
+local signs = require "octo.signs"
+local hl = require "octo.highlights"
+local constants = require "octo.constants"
 local util = require "octo.util"
+local graphql = require "octo.graphql"
 local vim = vim
 local api = vim.api
 local max = math.max
@@ -27,7 +28,7 @@ function M.check_login()
   )
 end
 
-local function write_block(lines, opts)
+function M.write_block(lines, opts)
   local bufnr = opts.bufnr or api.nvim_get_current_buf()
 
   if type(lines) == "string" then
@@ -81,7 +82,7 @@ local function write_block(lines, opts)
 end
 
 function M.write_title(bufnr, title, line)
-  local title_mark = write_block({title, ""}, {bufnr = bufnr, mark = true, line = line})
+  local title_mark = M.write_block({title, ""}, {bufnr = bufnr, mark = true, line = line})
   api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimIssueTitle", 0, 0, -1)
   api.nvim_buf_set_var(
     bufnr,
@@ -95,21 +96,20 @@ function M.write_title(bufnr, title, line)
   )
 end
 
-function M.write_state(bufnr)
+function M.write_state(bufnr, state, number)
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
 
   -- title virtual text
-  local state = api.nvim_buf_get_var(bufnr, "state"):upper()
   local title_vt = {
-    {tostring(api.nvim_buf_get_var(bufnr, "number")), "OctoNvimIssueId"},
+    {tostring(number), "OctoNvimIssueId"},
     {format(" [%s] ", state), format("OctoNvimIssue%s", state)}
   }
 
   -- PR virtual text
   local status, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
   if status and pr then
-    if pr.draft then
+    if pr.isDraft then
       table.insert(title_vt, {"[DRAFT] ", "OctoNvimIssueId"})
     end
     if pr.merged then
@@ -119,13 +119,13 @@ function M.write_state(bufnr)
   api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
-function M.write_description(bufnr, issue, line)
+function M.write_body(bufnr, issue, line)
   local body = issue.body
-  if vim.startswith(body, constants.NO_BODY_MSG) then
+  if vim.startswith(body, constants.NO_BODY_MSG) or util.is_blank(body) then
     body = " "
   end
   local description = string.gsub(body, "\r\n", "\n")
-  local desc_mark = write_block(description, {bufnr = bufnr, mark = true, trailing_lines = 3, line = line})
+  local desc_mark = M.write_block(description, {bufnr = bufnr, mark = true, trailing_lines = 3, line = line})
   api.nvim_buf_set_var(
     bufnr,
     "description",
@@ -139,22 +139,39 @@ function M.write_description(bufnr, issue, line)
 end
 
 function M.write_reactions(bufnr, reactions, line)
-  line = line or api.nvim_buf_line_count(bufnr) - 1
+  -- clear namespace and set vt
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
-  if reactions.total_count > 0 then
+
+  local reaction_map = {
+    ["THUMBS_UP"] = 0,
+    ["THUMBS_DOWN"] = 0,
+    ["LAUGH"] = 0,
+    ["HOORAY"] = 0,
+    ["CONFUSED"] = 0,
+    ["HEART"] = 0,
+    ["ROCKET"] = 0,
+    ["EYES"] = 0,
+    ["totalCount"] = reactions.totalCount
+  }
+  for _, reaction in ipairs(reactions.nodes) do
+    reaction_map[reaction.content] = reaction_map[reaction.content] + 1
+  end
+
+  if reaction_map.totalCount > 0 then
     local reactions_vt = {}
-    for reaction, count in pairs(reactions) do
-      local emoji = require "octo.util".reaction_map[reaction]
-      if emoji and count > 0 then
-        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
-        table.insert(reactions_vt, {emoji, "OctoNvimBubble2"})
-        table.insert(reactions_vt, {"", "OctoNvimBubble1"})
+    for reaction, count in pairs(reaction_map) do
+      local content = util.reaction_map[reaction]
+      if content and count > 0 then
+        table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
+        table.insert(reactions_vt, {content, "OctoNvimBubbleBody"})
+        table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
         table.insert(reactions_vt, {format(" %s ", count), "Normal"})
       end
     end
+
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt, {})
-    return line
   end
+  return line
 end
 
 function M.write_details(bufnr, issue, update)
@@ -166,14 +183,14 @@ function M.write_details(bufnr, issue, update)
   -- author
   local author_vt = {
     {"Created by: ", "OctoNvimDetailsLabel"},
-    {issue.user.login, "OctoNvimDetailsValue"}
+    {issue.author.login, "OctoNvimDetailsValue"}
   }
   table.insert(details, author_vt)
 
   -- created_at
   local created_at_vt = {
     {"Created at: ", "OctoNvimDetailsLabel"},
-    {util.format_date(issue.created_at), "OctoNvimDetailsValue"}
+    {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
   }
   table.insert(details, created_at_vt)
 
@@ -181,14 +198,14 @@ function M.write_details(bufnr, issue, update)
     -- closed_at
     local closed_at_vt = {
       {"Closed at: ", "OctoNvimDetailsLabel"},
-      {util.format_date(issue.closed_at), "OctoNvimDetailsValue"}
+      {util.format_date(issue.closedAt), "OctoNvimDetailsValue"}
     }
     table.insert(details, closed_at_vt)
   else
     -- updated_at
     local updated_at_vt = {
       {"Updated at: ", "OctoNvimDetailsLabel"},
-      {util.format_date(issue.updated_at), "OctoNvimDetailsValue"}
+      {util.format_date(issue.updatedAt), "OctoNvimDetailsValue"}
     }
     table.insert(details, updated_at_vt)
   end
@@ -225,8 +242,8 @@ function M.write_details(bufnr, issue, update)
   local labels_vt = {
     {"Labels: ", "OctoNvimDetailsLabel"}
   }
-  if issue.labels and #issue.labels > 0 then
-    for _, label in ipairs(issue.labels) do
+  if #issue.labels.nodes > 0 then
+    for _, label in ipairs(issue.labels.nodes) do
       table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
       table.insert(labels_vt, {label.name, hl.create_highlight(label.color, {})})
       table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
@@ -237,30 +254,19 @@ function M.write_details(bufnr, issue, update)
   end
   table.insert(details, labels_vt)
 
-  if issue.pull_request then
-    local url = issue.pull_request.url
-    local segments = vim.split(url, "/")
-    local owner = segments[5]
-    local repo = segments[6]
-    local pr_id = segments[8]
-    local response =
-      gh.run(
-      {
-        args = {"api", format("repos/%s/%s/pulls/%d", owner, repo, pr_id)},
-        mode = "sync"
-      }
-    )
-    local pr = json.parse(response)
-    api.nvim_buf_set_var(bufnr, "pr", pr)
-
+  -- for pulls add additional details
+  if issue.commits then
     -- reviewers
     local requested_reviewers_vt = {
       {"Reviewers: ", "OctoNvimDetailsLabel"}
     }
-    if pr.requested_reviewers and #pr.requested_reviewers > 0 then
-      for i, as in ipairs(pr.requested_reviewers) do
-        table.insert(requested_reviewers_vt, {as.login, "OctoNvimDetailsValue"})
-        if i ~= #pr.requested_reviewers then
+    if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
+      for i, reviewRequest in ipairs(issue.reviewRequests.nodes) do
+        table.insert(
+          requested_reviewers_vt,
+          {reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name, "OctoNvimDetailsValue"}
+        )
+        if i ~= issue.reviewRequests.totalCount then
           table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
         end
       end
@@ -270,10 +276,10 @@ function M.write_details(bufnr, issue, update)
     table.insert(details, requested_reviewers_vt)
 
     -- merged_by
-    if pr.merged then
+    if issue.merged then
       local merged_by_vt = {
         {"Merged by: ", "OctoNvimDetailsLabel"},
-        {pr.merged_by.login, "OctoNvimDetailsValue"}
+        {issue.mergedBy.login, "OctoNvimDetailsValue"}
       }
       table.insert(details, merged_by_vt)
     end
@@ -281,24 +287,24 @@ function M.write_details(bufnr, issue, update)
     -- from/into branches
     local branches_vt = {
       {"From: ", "OctoNvimDetailsLabel"},
-      {pr.head.label, "OctoNvimDetailsValue"},
+      {issue.headRefName, "OctoNvimDetailsValue"},
       {" Into: ", "OctoNvimDetailsLabel"},
-      {pr.base.label, "OctoNvimDetailsValue"}
+      {issue.baseRefName, "OctoNvimDetailsValue"}
     }
     table.insert(details, branches_vt)
 
     -- changes
-    local unit = (pr.additions + pr.deletions) / 4
-    local additions = math.floor(0.5 + pr.additions / unit)
-    local deletions = math.floor(0.5 + pr.deletions / unit)
+    local unit = (issue.additions + issue.deletions) / 4
+    local additions = math.floor(0.5 + issue.additions / unit)
+    local deletions = math.floor(0.5 + issue.deletions / unit)
     local changes_vt = {
       {"Commits: ", "OctoNvimDetailsLabel"},
-      {tostring(pr.commits), "OctoNvimDetailsValue"},
+      {tostring(issue.commits.totalCount), "OctoNvimDetailsValue"},
       {" Changed files: ", "OctoNvimDetailsLabel"},
-      {tostring(pr.changed_files), "OctoNvimDetailsValue"},
+      {tostring(issue.changedFiles), "OctoNvimDetailsValue"},
       {" (", "OctoNvimDetailsLabel"},
-      {format("+%d ", pr.additions), "DiffAdd"},
-      {format("-%d ", pr.deletions), "DiffDelete"}
+      {format("+%d ", issue.additions), "DiffAdd"},
+      {format("-%d ", issue.deletions), "DiffDelete"}
     }
     if additions > 0 then
       table.insert(changes_vt, {string.rep("■", additions), "DiffAdd"})
@@ -318,7 +324,7 @@ function M.write_details(bufnr, issue, update)
     table.insert(empty_lines, "")
   end
   if not update then
-    write_block(empty_lines, {bufnr = bufnr, mark = false, line = line })
+    M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = line})
   end
 
   -- print details as virtual text
@@ -331,34 +337,40 @@ end
 function M.write_comment(bufnr, comment, line)
   -- heading
   line = line or api.nvim_buf_line_count(bufnr) + 1
-  write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
+  M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
+
   local header_vt = {
-    {format("On %s ", util.format_date(comment.created_at)), "OctoNvimCommentHeading"},
-    {comment.user.login, "OctoNvimCommentUser"},
+    {format("On %s ", util.format_date(comment.createdAt)), "OctoNvimCommentHeading"},
+    {comment.author.login, "OctoNvimCommentUser"},
     {" commented", "OctoNvimCommentHeading"}
   }
   local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
 
   -- body
   line = line + 2
-  local comment_body = string.gsub(comment["body"], "\r\n", "\n")
-  if vim.startswith(comment_body, constants.NO_BODY_MSG) then
+  local comment_body = string.gsub(comment.body, "\r\n", "\n")
+  if vim.startswith(comment_body, constants.NO_BODY_MSG) or util.is_blank(comment_body) then
     comment_body = " "
   end
   local content = vim.split(comment_body, "\n", true)
   vim.list_extend(content, {"", "", ""})
-  local comment_mark = write_block(content, {bufnr = bufnr, mark = true, line = line})
+  local comment_mark = M.write_block(content, {bufnr = bufnr, mark = true, line = line})
 
   -- reactions
-  line = line + #content
-  local reaction_line = M.write_reactions(bufnr, comment.reactions, line - 2)
+  line = line + #content - 2
+  local reaction_line = M.write_reactions(bufnr, comment.reactions, line)
+
+  -- use v3 IDs
+  if not tonumber(comment.id) then
+    comment.id = util.graph2rest(comment.id)
+  end
 
   -- update metadata
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
   table.insert(
     comments_metadata,
     {
-      author = comment.user.login,
+      author = comment.author.name,
       id = comment.id,
       dirty = false,
       saved_body = comment_body,
@@ -372,24 +384,112 @@ function M.write_comment(bufnr, comment, line)
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 end
 
+function M.write_diff_hunk(bufnr, diff_hunk, start_line)
+  start_line = start_line or 1
+
+  -- clear virtual texts
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
+
+  local lines = vim.split(diff_hunk, "\n")
+
+  -- print #lines + 2 empty lines
+  local empty_lines = {}
+  local max_length = -1
+  for _, l in ipairs(lines) do
+    table.insert(empty_lines, "")
+    if #l > max_length then
+      max_length = #l
+    end
+  end
+  max_length = math.max(max_length, vim.fn.winwidth(0) - 8)
+  vim.list_extend(empty_lines, {"", "", ""})
+  M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
+
+  local vt_lines = {}
+  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
+  for _, line in ipairs(lines) do
+    if vim.startswith(line, "@@ ") then
+      local index = string.find(line, "@[^@]*$")
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {string.sub(line, 0, index), "DiffLine"},
+          {string.sub(line, index + 1), "DiffSubname"},
+          {string.rep(" ", 1 + max_length - #line)},
+          {"│"}
+        }
+      )
+    elseif vim.startswith(line, "+") then
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line, "DiffAdd"},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
+    elseif vim.startswith(line, "-") then
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line, "DiffDelete"},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
+    else
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
+    end
+  end
+  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
+
+  -- print diff_hunk as virtual text
+  local line = start_line - 1
+  for _, vt_line in ipairs(vt_lines) do
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
+    line = line + 1
+  end
+end
+
 function M.load_issue()
   local bufname = vim.fn.bufname()
-  local repo, number = string.match(bufname, "octo://(.+)/(%d+)")
-  if not repo or not number then
+  local repo, type, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  if not repo or not type or not number then
     api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
 
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query, key
+  if type == "pull" then
+    query = format(graphql.pull_request_query, owner, name, number)
+    key = "pullRequest"
+  elseif type == "issue" then
+    query = format(graphql.issue_query, owner, name, number)
+    key = "issue"
+  end
   gh.run(
     {
-      args = {"api", format("repos/%s/issues/%s", repo, number)},
-      cb = function(output)
-        local issue = json.parse(output)
-        if not issue.id and issue.message then
-          api.nvim_err_writeln(issue.message)
-          return
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = util.aggregate_pages(output, format("data.repository.%s.comments.nodes", key))
+          M.create_buffer(type, resp.data.repository[key], repo, false)
         end
-        M.create_issue_buffer(issue, repo, false)
       end
     }
   )
@@ -402,12 +502,21 @@ end
 --   - The PR author
 --   - The authors of all the existing comments
 --   - The contributors of the repo
-local function async_fetch_taggable_users(bufnr, repo)
+local function async_fetch_taggable_users(bufnr, repo, participants)
   local users = api.nvim_buf_get_var(bufnr, "taggable_users") or {}
+
+  -- add participants
+  for _, p in pairs(participants) do
+    table.insert(users, p.login)
+  end
+
+  -- add comment authors
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
   for _, c in pairs(comments_metadata) do
     table.insert(users, c.author)
   end
+
+  -- add repo contributors
   api.nvim_buf_set_var(bufnr, "taggable_users", users)
   gh.run(
     {
@@ -441,21 +550,21 @@ local function async_fetch_issues(bufnr, repo)
   )
 end
 
-function M.create_issue_buffer(issue, repo, create_buffer)
-  if not issue["id"] then
+function M.create_buffer(type, obj, repo, create)
+  if not obj.id then
     api.nvim_err_writeln(format("Cannot find issue in %s", repo))
     return
   end
 
-  local iid = issue["id"]
-  local number = issue["number"]
-  local state = issue["state"]
+  local iid = obj.id
+  local number = obj.number
+  local state = obj.state
 
   local bufnr
-  if create_buffer then
+  if create then
     bufnr = api.nvim_create_buf(true, false)
     api.nvim_set_current_buf(bufnr)
-    vim.cmd(format("file octo://%s/%d", repo, number))
+    vim.cmd(format("file octo://%s/%s/%d", repo, type, number))
   else
     bufnr = api.nvim_get_current_buf()
   end
@@ -474,211 +583,52 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   api.nvim_buf_set_var(bufnr, "number", number)
   api.nvim_buf_set_var(bufnr, "repo", repo)
   api.nvim_buf_set_var(bufnr, "state", state)
-  api.nvim_buf_set_var(bufnr, "labels", issue.labels)
-  api.nvim_buf_set_var(bufnr, "assignees", issue.assignees)
-  api.nvim_buf_set_var(bufnr, "milestone", issue.milestone)
-  api.nvim_buf_set_var(bufnr, "taggable_users", {issue.user.login})
+  api.nvim_buf_set_var(bufnr, "labels", obj.labels)
+  api.nvim_buf_set_var(bufnr, "assignees", obj.assignees)
+  api.nvim_buf_set_var(bufnr, "milestone", obj.milestone)
+  api.nvim_buf_set_var(bufnr, "taggable_users", {obj.author.login})
 
-  -- local mappings
-  local mapping_opts = {script = true, silent = true, noremap = true}
-
-  api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>gi",
-    [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", [[<cmd>lua require'octo.commands'.add_comment()<CR>]], mapping_opts)
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>cd",
-    [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>ic",
-    [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>io",
-    [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>il",
-    format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>po", [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pd", [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>pm", [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]], mapping_opts)
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>la",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'labels')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>ld",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'labels')<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>aa",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'assignees')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>ad",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'assignees')<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>va",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'requested_reviewers')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>vd",
-    [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'requested_reviewers')<CR>]],
-    mapping_opts
-  )
-
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rp",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rh",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>re",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>r+",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', '+1')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>r-",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', '-1')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rr",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'rocket')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rl",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'laugh')<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<space>rc",
-    [[<cmd>lua require'octo.commands'.reaction_action('add', 'confused')<CR>]],
-    mapping_opts
-  )
-
-  -- write title
-  M.write_title(bufnr, issue.title, 1)
-
-  -- write details in buffer
-  M.write_details(bufnr, issue)
-
-  -- write issue/pr status on line 1
-  M.write_state(bufnr)
-
-  -- write description
-  M.write_description(bufnr, issue)
-
-  -- write reactions
-  local reaction_line = M.write_reactions(bufnr, issue.reactions)
-  api.nvim_buf_set_var(bufnr, "reaction_line", reaction_line)
-  api.nvim_buf_set_var(bufnr, "reactions", issue.reactions)
-
-  -- write issue comments
-  api.nvim_buf_set_var(bufnr, "comments", {})
-  local comments_count = tonumber(issue["comments"])
-  local comments_processed = 0
-  if comments_count > 0 then
-    gh.run(
+  -- for pulls, store some additional info
+  if obj.commits then
+    api.nvim_buf_set_var(
+      bufnr,
+      "pr",
       {
-        args = {"api", format("repos/%s/issues/%d/comments", repo, number)},
-        cb = function(response)
-          local resp = json.parse(response)
-          for _, c in ipairs(resp) do
-            M.write_comment(bufnr, c)
-            comments_processed = comments_processed + 1
-          end
-        end
+        isDraft = obj.isDraft,
+        merged = obj.merged,
+        headRefName = obj.headRefName,
+        baseRepoName = obj.baseRepository.nameWithOwner
       }
     )
   end
 
-  local status =
-    vim.wait(
-    5000,
-    function()
-      return comments_processed == comments_count
-    end,
-    200
-  )
+  -- buffer mappings
+  M.apply_buffer_mappings(bufnr, type)
 
-  async_fetch_taggable_users(bufnr, repo)
+  -- write title
+  M.write_title(bufnr, obj.title, 1)
+
+  -- write details in buffer
+  M.write_details(bufnr, obj)
+
+  -- write issue/pr status
+  M.write_state(bufnr, state:upper(), number)
+
+  -- write body
+  M.write_body(bufnr, obj)
+
+  -- write body reactions
+  local reaction_line = M.write_reactions(bufnr, obj.reactions, api.nvim_buf_line_count(bufnr) - 1)
+  api.nvim_buf_set_var(bufnr, "body_reactions", obj.reactions)
+  api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
+
+  -- write issue comments
+  api.nvim_buf_set_var(bufnr, "comments", {})
+  for _, c in ipairs(obj.comments.nodes) do
+    M.write_comment(bufnr, c)
+  end
+
+  async_fetch_taggable_users(bufnr, repo, obj.participants.nodes)
   async_fetch_issues(bufnr, repo)
 
   -- show signs
@@ -697,77 +647,31 @@ function M.create_issue_buffer(issue, repo, create_buffer)
   vim.cmd [[ augroup END ]]
 end
 
-function M.save_issue(bufnr)
-  bufnr = bufnr or api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(bufnr)
-  if not vim.startswith(bufname, "octo://") then
-    return
-  end
-
-  -- number
-  local number = api.nvim_buf_get_var(bufnr, "number")
-
-  -- repo
-  local repo = api.nvim_buf_get_var(bufnr, "repo")
+function M.save_issue()
+  local bufnr = api.nvim_get_current_buf()
+  local repo, number = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
-    api.nvim_err_writeln("Buffer is not linked to a GitHub issue")
     return
   end
 
   -- collect comment metadata
   util.update_issue_metadata(bufnr)
 
-  -- title & description
-  local title_metadata = api.nvim_buf_get_var(bufnr, "title")
-  local desc_metadata = api.nvim_buf_get_var(bufnr, "description")
-  if title_metadata.dirty or desc_metadata.dirty then
-    -- trust but verify
-    if string.find(title_metadata["body"], "\n") then
-      api.nvim_err_writeln("Title can't contains new lines")
-      return
-    elseif title_metadata["body"] == "" then
-      api.nvim_err_writeln("Title can't be blank")
-      return
-    end
+  local ft = api.nvim_buf_get_option(bufnr, "filetype")
+  if ft == "octo_issue" then
+    -- title & description
+    local title_metadata = api.nvim_buf_get_var(bufnr, "title")
+    local desc_metadata = api.nvim_buf_get_var(bufnr, "description")
+    if title_metadata.dirty or desc_metadata.dirty then
+      -- trust but verify
+      if string.find(title_metadata.body, "\n") then
+        api.nvim_err_writeln("Title can't contains new lines")
+        return
+      elseif title_metadata.body == "" then
+        api.nvim_err_writeln("Title can't be blank")
+        return
+      end
 
-    gh.run(
-      {
-        args = {
-          "api",
-          "-X",
-          "PATCH",
-          "-f",
-          format("title=%s", title_metadata["body"]),
-          "-f",
-          format("body=%s", desc_metadata["body"]),
-          format("repos/%s/issues/%s", repo, number)
-        },
-        cb = function(output)
-          local resp = json.parse(output)
-
-          if title_metadata["body"] == resp["title"] then
-            title_metadata["saved_body"] = resp["title"]
-            title_metadata["dirty"] = false
-            api.nvim_buf_set_var(bufnr, "title", title_metadata)
-          end
-
-          if desc_metadata["body"] == resp["body"] then
-            desc_metadata["saved_body"] = resp["body"]
-            desc_metadata["dirty"] = false
-            api.nvim_buf_set_var(bufnr, "description", desc_metadata)
-          end
-
-          signs.render_signcolumn(bufnr)
-          print("Saved!")
-        end
-      }
-    )
-  end
-
-  -- comments
-  local comments = api.nvim_buf_get_var(bufnr, "comments")
-  for _, metadata in ipairs(comments) do
-    if metadata["body"] ~= metadata["saved_body"] then
       gh.run(
         {
           args = {
@@ -775,31 +679,325 @@ function M.save_issue(bufnr)
             "-X",
             "PATCH",
             "-f",
-            format("body=%s", metadata["body"]),
-            format("repos/%s/issues/comments/%s", repo, metadata["id"])
+            format("title=%s", title_metadata.body),
+            "-f",
+            format("body=%s", desc_metadata.body),
+            format("repos/%s/issues/%s", repo, number)
           },
           cb = function(output)
             local resp = json.parse(output)
-            if metadata["body"] == resp["body"] then
-              for i, c in ipairs(comments) do
-                if c["id"] == resp["id"] then
-                  comments[i]["saved_body"] = resp["body"]
-                  comments[i]["dirty"] = false
-                  break
-                end
-              end
-              api.nvim_buf_set_var(bufnr, "comments", comments)
-              signs.render_signcolumn(bufnr)
-              print("Saved!")
+
+            if title_metadata.body == resp.title then
+              title_metadata.saved_body = resp.title
+              title_metadata.dirty = false
+              api.nvim_buf_set_var(bufnr, "title", title_metadata)
             end
+
+            if desc_metadata.body == resp.body then
+              desc_metadata.saved_body = resp.body
+              desc_metadata.dirty = false
+              api.nvim_buf_set_var(bufnr, "description", desc_metadata)
+            end
+
+            signs.render_signcolumn(bufnr)
+            print("Saved!")
           end
         }
       )
     end
   end
 
+  local kind, post_url
+  if ft == "octo_issue" then
+    kind = "issues"
+    post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
+  elseif ft == "octo_reviewthread" then
+    kind = "pulls"
+    local status, _, comment_id =
+      string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/.*/comment/(.*)")
+    if not status then
+      api.nvim_err_writeln("Cannot extract comment id from buffer name")
+      return
+    end
+    post_url = format("/repos/%s/pulls/%d/comments/%s/replies", repo, number, comment_id)
+  end
+
+  -- comments
+  local comments = api.nvim_buf_get_var(bufnr, "comments")
+  for _, metadata in ipairs(comments) do
+    if metadata.body ~= metadata.saved_body then
+      if metadata.id == -1 then
+        -- create new comment/reply
+        gh.run(
+          {
+            args = {
+              "api",
+              "-X",
+              "POST",
+              "-f",
+              format("body=%s", metadata.body),
+              post_url
+            },
+            cb = function(output, stderr)
+              if stderr and not util.is_blank(stderr) then
+                api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = json.parse(output)
+                if metadata.body == resp.body then
+                  for i, c in ipairs(comments) do
+                    if c.id == -1 then
+                      comments[i].saved_body = resp.body
+                      comments[i].dirty = false
+                      -- use v3 IDs
+                      if not tonumber(resp.id) then
+                        comments[i].id = util.graph2rest(resp.id)
+                      else
+                        comments[i].id = resp.id
+                      end
+                      break
+                    end
+                  end
+                  api.nvim_buf_set_var(bufnr, "comments", comments)
+                  signs.render_signcolumn(bufnr)
+                  print("Saved!")
+                end
+              end
+            end
+          }
+        )
+      else
+        -- update comment/reply
+        gh.run(
+          {
+            args = {
+              "api",
+              "-X",
+              "PATCH",
+              "-f",
+              format("body=%s", metadata.body),
+              format("repos/%s/%s/comments/%d", repo, kind, metadata.id)
+            },
+            cb = function(output, stderr)
+              if stderr and not util.is_blank(stderr) then
+                api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = json.parse(output)
+                if metadata.body == resp.body then
+                  for i, c in ipairs(comments) do
+                    if c.id == resp.id then
+                      comments[i].saved_body = resp.body
+                      comments[i].dirty = false
+                      break
+                    end
+                  end
+                  api.nvim_buf_set_var(bufnr, "comments", comments)
+                  signs.render_signcolumn(bufnr)
+                  print("Saved!")
+                end
+              end
+            end
+          }
+        )
+      end
+    end
+  end
+
   -- reset modified option
   api.nvim_buf_set_option(bufnr, "modified", false)
+end
+
+function M.apply_buffer_mappings(bufnr, kind)
+  local mapping_opts = {script = true, silent = true, noremap = true}
+
+  if kind == "issue" then
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ic",
+      [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>io",
+      [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
+      mapping_opts
+    )
+
+    local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
+    if repo_ok then
+      api.nvim_buf_set_keymap(
+        bufnr,
+        "n",
+        "<space>il",
+        format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
+        mapping_opts
+      )
+    end
+  end
+
+  if kind == "pull" then
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>po",
+      [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>pd",
+      [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>pm",
+      [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>va",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'reviewers')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>vd",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'reviewers')<CR>]],
+      mapping_opts
+    )
+  end
+
+  if kind == "issue" or kind == "pull" then
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>la",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'labels')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ld",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'labels')<CR>]],
+      mapping_opts
+    )
+
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>aa",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'assignees')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ad",
+      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'assignees')<CR>]],
+      mapping_opts
+    )
+  end
+
+  if kind == "issue" or kind == "pull" or kind == "reviewthread" then
+    -- autocomplete
+    api.nvim_buf_set_keymap(bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
+    api.nvim_buf_set_keymap(bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
+
+    -- navigation
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>gi",
+      [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
+      mapping_opts
+    )
+
+    -- comments
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>ca",
+      [[<cmd>lua require'octo.commands'.add_comment()<CR>]],
+      mapping_opts
+    )
+
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>cd",
+      [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
+      mapping_opts
+    )
+
+    -- reactions
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rp",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rh",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>re",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>r+",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', '+1')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>r-",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', '-1')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rr",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'rocket')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rl",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'laugh')<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<space>rc",
+      [[<cmd>lua require'octo.commands'.reaction_action('add', 'confused')<CR>]],
+      mapping_opts
+    )
+  end
 end
 
 return M
