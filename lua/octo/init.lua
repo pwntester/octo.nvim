@@ -256,14 +256,16 @@ function M.write_details(bufnr, issue, update)
 
   -- for pulls add additional details
   if issue.commits then
-
     -- reviewers
     local requested_reviewers_vt = {
       {"Reviewers: ", "OctoNvimDetailsLabel"}
     }
     if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
       for i, reviewRequest in ipairs(issue.reviewRequests.nodes) do
-        table.insert(requested_reviewers_vt, {reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name, "OctoNvimDetailsValue"})
+        table.insert(
+          requested_reviewers_vt,
+          {reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name, "OctoNvimDetailsValue"}
+        )
         if i ~= issue.reviewRequests.totalCount then
           table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
         end
@@ -588,12 +590,16 @@ function M.create_buffer(type, obj, repo, create)
 
   -- for pulls, store some additional info
   if obj.commits then
-    api.nvim_buf_set_var(bufnr, "pr", {
-      isDraft = obj.isDraft,
-      merged = obj.merged,
-      headRefName = obj.headRefName,
-      baseRepoName = obj.baseRepository.nameWithOwner
-    })
+    api.nvim_buf_set_var(
+      bufnr,
+      "pr",
+      {
+        isDraft = obj.isDraft,
+        merged = obj.merged,
+        headRefName = obj.headRefName,
+        baseRepoName = obj.baseRepository.nameWithOwner
+      }
+    )
   end
 
   -- buffer mappings
@@ -707,7 +713,8 @@ function M.save_issue()
     post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
   elseif ft == "octo_reviewthread" then
     kind = "pulls"
-    local status, _, comment_id = string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/.*/comment/(.*)")
+    local status, _, comment_id =
+      string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/.*/comment/(.*)")
     if not status then
       api.nvim_err_writeln("Cannot extract comment id from buffer name")
       return

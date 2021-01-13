@@ -68,8 +68,8 @@ local function get_filter(opts, kind)
         val = opts[value]
       end
       val = json.stringify(val)
-      val = string.gsub(val, "\"OPEN\"", "OPEN")
-      val = string.gsub(val, "\"CLOSED\"", "CLOSED")
+      val = string.gsub(val, '"OPEN"', "OPEN")
+      val = string.gsub(val, '"CLOSED"', "CLOSED")
       filter = filter .. value .. ":" .. val .. ","
     end
   end
@@ -163,7 +163,6 @@ local issue_previewer =
 )
 
 local function gen_from_issue(max_number)
-
   local make_display = function(entry)
     if not entry then
       return nil
@@ -176,11 +175,11 @@ local function gen_from_issue(max_number)
 
     local displayer =
       entry_display.create {
-        separator = " ",
-        items = {
-          {width = max_number},
-          {remaining = true},
-        }
+      separator = " ",
+      items = {
+        {width = max_number},
+        {remaining = true}
+      }
     }
 
     return displayer(columns)
@@ -382,7 +381,11 @@ local pull_request_previewer =
                   octo.write_details(self.state.bufnr, pull_request)
                   octo.write_body(self.state.bufnr, pull_request)
                   octo.write_state(self.state.bufnr, pull_request.state:upper(), number)
-                  octo.write_reactions(self.state.bufnr, pull_request.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
+                  octo.write_reactions(
+                    self.state.bufnr,
+                    pull_request.reactions,
+                    api.nvim_buf_line_count(self.state.bufnr) - 1
+                  )
                   api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
                 end
               end
@@ -395,7 +398,6 @@ local pull_request_previewer =
 )
 
 local function gen_from_pull_request(max_number)
-
   local make_display = function(entry)
     if not entry then
       return nil

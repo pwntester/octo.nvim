@@ -1,7 +1,8 @@
 local M = {}
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
-M.resolve_review_mutation = [[
+M.resolve_review_mutation =
+  [[
   mutation ResolveReview {
     resolveReviewThread(input: {threadId: "%s"}) {
       thread {
@@ -12,7 +13,8 @@ M.resolve_review_mutation = [[
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
-M.unresolve_review_mutation = [[
+M.unresolve_review_mutation =
+  [[
   mutation UnresolveReview {
     unresolveReviewThread(input: {threadId: "%s"}) {
       thread {
@@ -23,7 +25,8 @@ M.unresolve_review_mutation = [[
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
-M.create_issue_mutation = [[
+M.create_issue_mutation =
+  [[
   mutation CreateIssue {
     createIssue(input: {repositoryId: "%s", title: "%s", body: "%s"}) {
       issue {
@@ -87,7 +90,8 @@ M.create_issue_mutation = [[
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
-M.update_issue_state_mutation = [[
+M.update_issue_state_mutation =
+  [[
   mutation UpdateIssue {
     updateIssue(input: {id: "%s", state: %s}) {
       issue {
@@ -151,7 +155,8 @@ M.update_issue_state_mutation = [[
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
-M.update_pull_request_state_mutation = [[
+M.update_pull_request_state_mutation =
+  [[
   mutation UpdatePullRequest {
     updatePullRequest(input: {pullRequestId: "%s", state: %s}) {
       pullRequest {
@@ -243,7 +248,8 @@ M.update_pull_request_state_mutation = [[
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
-M.review_threads_query = [[
+M.review_threads_query =
+  [[
 query($endCursor: String) {
   repository(owner:"%s", name:"%s") {
     pullRequest(number:%d) {
@@ -285,7 +291,8 @@ query($endCursor: String) {
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
-M.pull_request_query = [[
+M.pull_request_query =
+  [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequest(number: %d) {
@@ -381,7 +388,8 @@ query($endCursor: String) {
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
-M.issue_query = [[
+M.issue_query =
+  [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issue(number: %d) {
@@ -461,7 +469,8 @@ query {
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issueorder
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters
 -- filter eg: labels: ["help wanted", "bug"]
-M.issues_query = [[
+M.issues_query =
+  [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issues(first: 100, after: $endCursor, filterBy: {%s}) {
@@ -477,7 +486,8 @@ query($endCursor: String) {
   }
 }
 ]]
-M.pull_requests_query = [[
+M.pull_requests_query =
+  [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequests(first: 100, after: $endCursor, %s) {
