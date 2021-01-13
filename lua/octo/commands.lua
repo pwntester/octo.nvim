@@ -35,7 +35,7 @@ local commands = {
   },
   pr = {
     edit = function(...)
-      M.get_pull(...)
+      M.get_pull_request(...)
     end,
     close = function()
       M.change_state("pull", "CLOSED")
@@ -429,7 +429,7 @@ function M.get_issue(...)
   vim.cmd(format("edit octo://%s/issue/%s", repo, number))
 end
 
-function M.get_pull(...)
+function M.get_pull_request(...)
   local repo, number = M.get_repo_number_from_varargs(...)
   vim.cmd(format("edit octo://%s/pull/%s", repo, number))
 end

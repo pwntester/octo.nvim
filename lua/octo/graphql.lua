@@ -231,7 +231,7 @@ M.update_pull_request_state_mutation = [[
               ... on User {
                 login
               }
-              ... on User {
+              ... on Team {
                 name
               }
             }
@@ -464,8 +464,23 @@ query {
 M.issues_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
-    issues(first: 100, after: $endCursor, filterBy: %s) {
-      totalCount
+    issues(first: 100, after: $endCursor, filterBy: {%s}) {
+      nodes {
+        number
+        title
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+]]
+M.pull_requests_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+    pullRequests(first: 100, after: $endCursor, %s) {
       nodes {
         number
         title

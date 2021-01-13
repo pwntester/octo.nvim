@@ -49,10 +49,12 @@ local function parse_opts(opts, target)
 end
 
 local function get_filter(opts, kind)
-  local filter = "{"
+  local filter = ""
   local allowed_values = {}
   if kind == "issue" then
     allowed_values = {"createdBy", "assignee", "mentioned", "labels", "milestone", "states"}
+  elseif kind == "pull_request" then
+    allowed_values = {"baseRefName", "headRefName", "labels", "states"}
   end
 
   for _, value in pairs(allowed_values) do
@@ -65,14 +67,13 @@ local function get_filter(opts, kind)
         -- string
         val = opts[value]
       end
-      val = json.stringify(val) 
+      val = json.stringify(val)
       val = string.gsub(val, "\"OPEN\"", "OPEN")
       val = string.gsub(val, "\"CLOSED\"", "CLOSED")
       filter = filter .. value .. ":" .. val .. ","
     end
   end
 
-  filter = filter .. "}"
   return filter
 end
 
@@ -131,7 +132,7 @@ local issue_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value then
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local number = entry.issue.number
           local owner = vim.split(opts.repo, "/")[1]
           local name = vim.split(opts.repo, "/")[2]
@@ -148,7 +149,8 @@ local issue_previewer =
                   octo.write_title(self.state.bufnr, issue.title, 1)
                   octo.write_details(self.state.bufnr, issue)
                   octo.write_body(self.state.bufnr, issue)
-                  octo.write_state(self.state.bufnr, issue.state:upper())
+                  octo.write_state(self.state.bufnr, issue.state:upper(), number)
+                  octo.write_reactions(self.state.bufnr, issue.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
                   api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
                 end
               end
@@ -166,21 +168,21 @@ local function gen_from_issue(max_number)
     if not entry then
       return nil
     end
-    local columns = {
-      {entry.issue.number .. " ", "TelescopeResultsNumber"},
-      {entry.issue.title .. " "}
-    }
 
-    local items = {
-      {width = 1 + max_number},
-      {remaining = true},
+    local columns = {
+      {entry.issue.number, "TelescopeResultsNumber"},
+      {entry.issue.title}
     }
 
     local displayer =
       entry_display.create {
-        separator = "",
-        items = items
+        separator = " ",
+        items = {
+          {width = max_number},
+          {remaining = true},
+        }
     }
+
     return displayer(columns)
   end
 
@@ -200,8 +202,6 @@ end
 
 function M.issues(repo, opts)
   opts = opts or {}
-  -- TODO: limit
-  --opts.limit = opts.limit or 100
   local filter = get_filter(opts, "issue")
 
   if not repo or repo == vim.NIL then
@@ -243,7 +243,7 @@ function M.issues(repo, opts)
               prompt_title = "Issues",
               finder = finders.new_table {
                 results = issues,
-                entry_maker = gen_from_issue(max_number) --, max_state)
+                entry_maker = gen_from_issue(max_number)
               },
               sorter = conf.file_sorter(opts),
               previewer = issue_previewer.new({repo = repo}),
@@ -330,7 +330,7 @@ end
 -- PULL REQUESTS
 --
 
-local function checkout_pr(repo)
+local function checkout_pull_request(repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
@@ -355,7 +355,7 @@ local function checkout_pr(repo)
   end
 end
 
-local pr_previewer =
+local pull_request_previewer =
   defaulter(
   function(opts)
     return previewers.new_buffer_previewer {
@@ -363,25 +363,29 @@ local pr_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        local tmp_table = vim.split(entry.value, "\t")
-        if vim.tbl_isempty(tmp_table) then
-          putils.job_maker(
-            {"echo", ""},
-            self.state.bufnr,
+        print(api.nvim_buf_line_count(self.state.bufnr))
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
+          local number = entry.pull_request.number
+          local owner = vim.split(opts.repo, "/")[1]
+          local name = vim.split(opts.repo, "/")[2]
+          local query = format(graphql.pull_request_query, owner, name, number)
+          gh.run(
             {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
-            }
-          )
-        else
-          putils.job_maker(
-            {"gh", "pr", "view", tmp_table[1], "-R", opts.repo},
-            self.state.bufnr,
-            {
-              value = entry.value,
-              bufname = self.state.bufname,
-              callback = highlight_buffer
+              args = {"api", "graphql", "-f", format("query=%s", query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  local result = json.parse(output)
+                  local pull_request = result.data.repository.pullRequest
+                  octo.write_title(self.state.bufnr, pull_request.title, 1)
+                  octo.write_details(self.state.bufnr, pull_request)
+                  octo.write_body(self.state.bufnr, pull_request)
+                  octo.write_state(self.state.bufnr, pull_request.state:upper(), number)
+                  octo.write_reactions(self.state.bufnr, pull_request.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
+                  api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
+                end
+              end
             }
           )
         end
@@ -390,120 +394,112 @@ local pr_previewer =
   end
 )
 
-local function gen_from_pr(max_number, max_head, max_status)
-  local displayer =
-    entry_display.create {
-    separator = " ",
-    items = {
-      {width = max_number},
-      {width = max_status},
-      {remaining = true},
-      {width = max_head}
-    }
-  }
+local function gen_from_pull_request(max_number)
 
   local make_display = function(entry)
-    return displayer {
-      {entry.value, "TelescopeResultsNumber"},
-      {entry.status, "TelescopeResultsFunction"},
-      {entry.msg},
-      {entry.head, "TelescopeResultsSpecialComment"}
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.pull_request.number, "TelescopeResultsNumber"},
+      {entry.pull_request.title}
     }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {width = max_number},
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
   end
 
-  return function(entry)
-    if not entry or vim.tbl_isempty(entry) then
+  return function(pull_request)
+    if not pull_request or vim.tbl_isempty(pull_request) then
       return nil
     end
 
     return {
-      value = entry.number,
-      ordinal = entry.number .. " " .. entry.title,
-      msg = entry.title,
+      value = pull_request.number,
+      ordinal = pull_request.number .. " " .. pull_request.title,
       display = make_display,
-      status = entry.status,
-      head = entry.head
+      pull_request = pull_request
     }
   end
 end
 
-local function open_pull(repo)
+local function open_pull_request(repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local tmp_table = vim.split(selection.value, "\t")
-    if vim.tbl_isempty(tmp_table) then
-      return
-    end
-    vim.cmd(string.format([[ lua require'octo.commands'.get_pull('%s', '%s') ]], repo, tmp_table[1]))
+    local number = selection.value
+    vim.cmd(string.format([[ lua require'octo.commands'.get_pull_request('%s', '%s') ]], repo, number))
   end
 end
 
 function M.pull_requests(repo, opts)
   opts = opts or {}
-  opts.limit = opts.limit or 100
-  local opts_query = parse_opts(opts, "pr")
+  local filter = get_filter(opts, "pull_request")
+
   if not repo or repo == vim.NIL then
     repo = util.get_remote_name()
   end
   if not repo then
-    print("Cannot find repo")
-    return
-  end
-  local cmd = format("gh pr list %s -R %s", opts_query, repo)
-  local results = vim.split(utils.get_os_command_output(cmd), "\n")
-
-  if #results == 0 or #results == 1 and results[1] == "" then
-    api.nvim_err_writeln(format("There are no matching pull requests in %s.", repo))
+    api.nvim_err_writeln("Cannot find repo")
     return
   end
 
-  local max_number = -1
-  local max_head = -1
-  local max_status = -1
-  local pulls = {}
-  for _, result in ipairs(results) do
-    if util.is_blank(result) then
-      break
-    end
-    local parts = vim.split(result, "\t")
-    local pull = {}
-    pull.number = tostring(parts[1])
-    pull.title = parts[2]
-    pull.head = parts[3]
-    pull.status = parts[4]
-
-    if #pull.number > max_number then
-      max_number = #pull.number
-    end
-    if #pull.head > max_head then
-      max_head = #pull.head
-    end
-    if #pull.status > max_status then
-      max_status = #pull.status
-    end
-
-    table.insert(pulls, pull)
-  end
-
-  pickers.new(
-    opts,
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.pull_requests_query, owner, name, filter)
+  print("Fetching issues (this may take a while) ...")
+  gh.run(
     {
-      prompt_title = "Pull Requests",
-      finder = finders.new_table {
-        results = pulls,
-        entry_maker = gen_from_pr(max_number, max_head, max_status)
-      },
-      previewer = pr_previewer.new({repo = repo}),
-      sorter = conf.file_sorter(opts),
-      attach_mappings = function(_, map)
-        map("i", "<CR>", open_pull(repo))
-        map("i", "<c-o>", checkout_pr(repo))
-        map("i", "<c-t>", open_in_browser("pr"))
-        return true
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          print(" ")
+          local resp = util.aggregate_pages(output, "data.repository.pullRequests.nodes")
+          local pull_requests = resp.data.repository.pullRequests.nodes
+          if #pull_requests == 0 then
+            api.nvim_err_writeln(format("There are no matching pull requests in %s.", repo))
+            return
+          end
+          local max_number = -1
+          for _, issue in ipairs(pull_requests) do
+            if #tostring(issue.number) > max_number then
+              max_number = #tostring(issue.number)
+            end
+          end
+
+          pickers.new(
+            opts,
+            {
+              prompt_title = "Pull Requests",
+              finder = finders.new_table {
+                results = pull_requests,
+                entry_maker = gen_from_pull_request(max_number)
+              },
+              sorter = conf.file_sorter(opts),
+              previewer = pull_request_previewer.new({repo = repo}),
+              attach_mappings = function(_, map)
+                map("i", "<CR>", open_pull_request(repo))
+                map("i", "<c-o>", checkout_pull_request(repo))
+                map("i", "<c-t>", open_in_browser("pr", repo))
+                return true
+              end
+            }
+          ):find()
+        end
       end
     }
-  ):find()
+  )
 end
 
 --
@@ -552,7 +548,7 @@ local commit_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value then
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local lines = {}
           vim.list_extend(lines, {format("Commit: %s", entry.value)})
           vim.list_extend(lines, {format("Author: %s", entry.author)})
@@ -679,7 +675,7 @@ local changed_files_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value then
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local diff = entry.change.patch
           api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
           api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")

@@ -177,7 +177,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   elseif reviewthread_position == "qf" then
     api.nvim_set_current_win(qf_win)
   end
-  vim.cmd("vsplit %")
+  vim.cmd("rightbelow vsplit %")
   local comment_win = api.nvim_get_current_win()
   api.nvim_win_set_option(comment_win, "number", false)
   api.nvim_win_set_option(comment_win, "relativenumber", false)

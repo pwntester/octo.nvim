@@ -263,7 +263,7 @@ function M.write_details(bufnr, issue, update)
     }
     if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
       for i, reviewRequest in ipairs(issue.reviewRequests.nodes) do
-        table.insert(requested_reviewers_vt, {reviewRequest.login or reviewRequest.name, "OctoNvimDetailsValue"})
+        table.insert(requested_reviewers_vt, {reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name, "OctoNvimDetailsValue"})
         if i ~= issue.reviewRequests.totalCount then
           table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
         end
