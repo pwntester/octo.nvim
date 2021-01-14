@@ -435,7 +435,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
       table.insert(
         vt_lines,
         {
-          {tostring(position - #display_lines + i) .. " "},
+          {tostring(position - #display_lines + i) .. " ", "Comment"},
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffAdd"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
@@ -446,7 +446,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
       table.insert(
         vt_lines,
         {
-          {tostring(position - #display_lines + i) .. " "},
+          {tostring(position - #display_lines + i) .. " ", "Comment"},
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffDelete"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
@@ -457,7 +457,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
       table.insert(
         vt_lines,
         {
-          {tostring(position - #display_lines + i) .. " "},
+          {tostring(position - #display_lines + i) .. " ", "Comment"},
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffDelete"},
           {line, hlpos or "Normal"},
