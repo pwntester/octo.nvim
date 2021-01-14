@@ -424,7 +424,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
           {string.sub(line, 0, index), hlpos or "DiffLine"},
           {string.sub(line, index + 1), hlpos or "DiffSubname"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {"│", hlbar or "Normal"},
+          {" │", hlbar or "Normal"},
         }
       )
     elseif vim.startswith(line, "+") then
@@ -434,7 +434,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffAdd"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {"│", hlbar or "Normal"},
+          {" │", hlbar or "Normal"},
         }
       )
     elseif vim.startswith(line, "-") then
@@ -444,7 +444,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffDelete"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {"│", hlbar or "Normal"},
+          {" │", hlbar or "Normal"},
         }
       )
     else
@@ -455,7 +455,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
           {line, hlpos or "DiffDelete"},
           {line, hlpos or "Normal"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {"│", hlbar or "Normal"},
+          {" │", hlbar or "Normal"},
         }
       )
     end
