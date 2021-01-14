@@ -649,6 +649,7 @@ end
 
 function M.save_issue()
   local bufnr = api.nvim_get_current_buf()
+  local ft = api.nvim_buf_get_option(bufnr, "filetype")
   local repo, number = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
@@ -657,9 +658,8 @@ function M.save_issue()
   -- collect comment metadata
   util.update_issue_metadata(bufnr)
 
-  local ft = api.nvim_buf_get_option(bufnr, "filetype")
+  -- title & description
   if ft == "octo_issue" then
-    -- title & description
     local title_metadata = api.nvim_buf_get_var(bufnr, "title")
     local desc_metadata = api.nvim_buf_get_var(bufnr, "description")
     if title_metadata.dirty or desc_metadata.dirty then
@@ -707,6 +707,7 @@ function M.save_issue()
     end
   end
 
+  -- comments
   local kind, post_url
   if ft == "octo_issue" then
     kind = "issues"
@@ -722,7 +723,6 @@ function M.save_issue()
     post_url = format("/repos/%s/pulls/%d/comments/%s/replies", repo, number, comment_id)
   end
 
-  -- comments
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for _, metadata in ipairs(comments) do
     if metadata.body ~= metadata.saved_body then
@@ -743,17 +743,12 @@ function M.save_issue()
                 api.nvim_err_writeln(stderr)
               elseif output then
                 local resp = json.parse(output)
-                if metadata.body == resp.body then
+                if vim.fn.trim(metadata.body) == vim.fn.trim(resp.body) then
                   for i, c in ipairs(comments) do
-                    if c.id == -1 then
+                    if tonumber(c.id) == -1 then
+                      comments[i].id = resp.id
                       comments[i].saved_body = resp.body
                       comments[i].dirty = false
-                      -- use v3 IDs
-                      if not tonumber(resp.id) then
-                        comments[i].id = util.graph2rest(resp.id)
-                      else
-                        comments[i].id = resp.id
-                      end
                       break
                     end
                   end
@@ -782,9 +777,9 @@ function M.save_issue()
                 api.nvim_err_writeln(stderr)
               elseif output then
                 local resp = json.parse(output)
-                if metadata.body == resp.body then
+                if vim.fn.trim(metadata.body) == vim.fn.trim(resp.body) then
                   for i, c in ipairs(comments) do
-                    if c.id == resp.id then
+                    if tonumber(c.id) == tonumber(resp.id) then
                       comments[i].saved_body = resp.body
                       comments[i].dirty = false
                       break
