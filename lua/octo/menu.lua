@@ -735,13 +735,6 @@ end
 -- SEARCH
 ---
 
-function M.gen_from_gh(opts)
-  opts = opts or {}
-  return function(line)
-    print(line)
-  end
-end
-
 function M.issue_search(repo, opts)
   opts = opts or {}
 
@@ -762,9 +755,9 @@ function M.issue_search(repo, opts)
           return nil
         end
         prompt = util.escape_chars(prompt)
-        local filter = "created:>2019-04-01 " .. prompt
+        local filter = prompt
         local query = format(graphql.search_issues_query, repo, filter)
-        print(query)
+        --print(query)
         gh.run(
           {
             args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -773,7 +766,7 @@ function M.issue_search(repo, opts)
                 api.nvim_err_writeln(stderr)
               elseif output then
                 local resp = json.parse(output)
-                print(#resp.data.search.nodes)
+                --print(#resp.data.search.nodes)
                 for _, issue in ipairs(resp.data.search.nodes) do
                   process_result(gen_from_issue(4)(issue))
                 end
