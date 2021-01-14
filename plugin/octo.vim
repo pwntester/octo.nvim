@@ -10,6 +10,7 @@ execute('hi! OctoNvimBubbleDelimiter guifg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubbleBody guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubbleRed guifg='.g:octo_bubble_red.' guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubbleGreen guifg='.g:octo_bubble_green.' guibg='.g:octo_bubble_color)
+execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_bubble_color)
 
 function! s:command_complete(...)
   return luaeval('require("octo.commands").command_complete(_A)', a:000)

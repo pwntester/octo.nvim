@@ -75,53 +75,70 @@ function M.diff_changes_qf_entry()
 
   -- fugitive stores changed files in qf, and what to diff against in the qf context
   local qf = vim.fn.getqflist({context = 0, idx = 0})
-  if qf.idx and type(qf.context) == "table" and type(qf.context.items) == "table" then
-    local item = qf.context.items[qf.idx]
-    local diff = item.diff or {}
-    for i = #diff - 1, 0, -1 do
-      if i then
-        vim.cmd(format("leftabove vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
-      else
-        vim.cmd(format("rightbelow vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
-      end
-      vim.cmd [[normal! ]c]]
-
-      -- set `]q` and `[q` mappings to the diff entry buffer (base)
-      M.add_changes_qf_mappings()
+if qf.idx and type(qf.context) == "table" and type(qf.context.items) == "table" then
+  local item = qf.context.items[qf.idx]
+  local diff = item.diff or {}
+  for i = #diff - 1, 0, -1 do
+    if i then
+      vim.cmd(format("leftabove vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
+    else
+      vim.cmd(format("rightbelow vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
     end
+    vim.cmd [[normal! ]c]]
+
+    -- set `]q` and `[q` mappings to the diff entry buffer (base)
+    M.add_changes_qf_mappings()
   end
+end
 end
 
 function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   local items = {}
-  for _, thread in ipairs(reviewthreads) do
-    local comment = thread.comments.nodes[1]
-    local qf = vim.fn.getqflist({winid = 0})
-    local qf_width = vim.fn.winwidth(qf.winid) * 0.4
-    local mods = ""
-    if thread.isResolved then
-      mods = "RESOLVED "
+  local qf = vim.fn.getqflist({winid = 0})
+  local qf_width = vim.fn.winwidth(qf.winid) * 0.4
+
+  local process_threads = function(threads)
+    for _, thread in ipairs(threads) do
+      local comment = thread.comments.nodes[1]
+      local mods = ""
+      if thread.isResolved then
+        mods = "RESOLVED "
+      end
+      if thread.isOutdated then
+        mods = mods .. "OUTDATED "
+      end
+      local comment_id = util.graph2rest(comment.id)
+      table.insert(
+        items,
+        {
+          filename = thread.path,
+          lnum = thread.originalLine,
+          text = format(
+            "%s (%s) %s%s...",
+            comment.author.login,
+            string.lower(comment.authorAssociation),
+            mods,
+            string.sub(vim.split(comment.body, "\n")[1], 0, qf_width)
+          ),
+          pattern = format("%s/%s", thread.id, comment_id)
+        }
+      )
     end
-    if thread.isOutdated then
-      mods = mods .. "OUTDATED "
-    end
-    local comment_id = util.graph2rest(comment.id)
-    table.insert(
-      items,
-      {
-        filename = thread.path,
-        lnum = thread.originalLine,
-        text = format(
-          "%s (%s) %s%s...",
-          comment.author.login,
-          string.lower(comment.authorAssociation),
-          mods,
-          string.sub(vim.split(comment.body, "\n")[1], 0, qf_width)
-        ),
-        pattern = format("%s/%s", thread.id, comment_id)
-      }
-    )
   end
+
+  local resolved_threads = vim.tbl_filter(function(item)
+    return item.isResolved
+  end, reviewthreads)
+  local unresolved_threads = vim.tbl_filter(function(item)
+    return not item.isResolved
+  end, reviewthreads)
+
+  -- add the unresolved threads first
+  process_threads(unresolved_threads)
+
+  -- add the resolved threads later
+  -- TODO: add an option to not show them at all
+  process_threads(resolved_threads)
 
   if #items == 0 then
     api.nvim_err_writeln("No comments found")
@@ -146,7 +163,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
 
   -- highlight qf entries
   vim.cmd [[call matchadd("Comment", "\(.*\)")]]
-  vim.cmd [[call matchadd("OctoNvimCommentUser", "|\\s\\zs.*\\ze\(")]]
+  vim.cmd [[call matchadd("OctoNvimCommentUser", "|\\s\\zs[^(]+\\ze\(")]]
   vim.cmd [[call matchadd("OctoNvimBubbleRed", "OUTDATED")]]
   vim.cmd [[call matchadd("OctoNvimBubbleGreen", "RESOLVED")]]
   vim.cmd [[call matchadd("OctoNvimBubbleDelimiter", "")]]
@@ -255,7 +272,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     M.add_reviewthread_qf_mappings(repo, number, main_win)
     octo.apply_buffer_mappings(bufnr, "reviewthread")
 
-    -- get cached comment
+    -- get cached thread
     local reviewthread
     for _, thread in ipairs(reviewthreads) do
       if reviewthread_id == thread.id then
@@ -263,8 +280,12 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
       end
     end
 
+    -- write path
+    octo.write_title(bufnr, reviewthread.path, 1)
+
     -- write diff hunk
-    octo.write_diff_hunk(bufnr, reviewthread.comments.nodes[1].diffHunk)
+    local main_comment = reviewthread.comments.nodes[1]
+    octo.write_diff_hunk(bufnr, main_comment.diffHunk, 3, main_comment.originalPosition)
 
     -- write thread
     api.nvim_buf_set_var(bufnr, "comments", {})

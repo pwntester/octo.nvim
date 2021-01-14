@@ -256,9 +256,9 @@ function M.write_details(bufnr, issue, update)
 
   -- for pulls add additional details
   if issue.commits then
-    -- reviewers
+    -- Pending requested reviewers
     local requested_reviewers_vt = {
-      {"Reviewers: ", "OctoNvimDetailsLabel"}
+      {"Requested reviewers: ", "OctoNvimDetailsLabel"}
     }
     if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
       for i, reviewRequest in ipairs(issue.reviewRequests.nodes) do
@@ -346,6 +346,8 @@ function M.write_comment(bufnr, comment, line)
   }
   local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
 
+  -- TODO: if present, print `outdated` and `state`
+
   -- body
   line = line + 2
   local comment_body = string.gsub(comment.body, "\r\n", "\n")
@@ -384,7 +386,7 @@ function M.write_comment(bufnr, comment, line)
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 end
 
-function M.write_diff_hunk(bufnr, diff_hunk, start_line)
+function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
   start_line = start_line or 1
 
   -- clear virtual texts
@@ -407,47 +409,53 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
 
   local vt_lines = {}
   table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
-  for _, line in ipairs(lines) do
+  for i, line in ipairs(lines) do
+    local hlpos, hlbar = nil
+    if i > position - 3 then
+      --hlpos = "OctoNvimDiffHunkPosition"
+      hlbar = "OctoNvimIssueTitle"
+    end
     if vim.startswith(line, "@@ ") then
       local index = string.find(line, "@[^@]*$")
       table.insert(
         vt_lines,
         {
-          {"│ "},
-          {string.sub(line, 0, index), "DiffLine"},
-          {string.sub(line, index + 1), "DiffSubname"},
-          {string.rep(" ", 1 + max_length - #line)},
-          {"│"}
+          {"│ ", hlbar or "Normal"},
+          {string.sub(line, 0, index), hlpos or "DiffLine"},
+          {string.sub(line, index + 1), hlpos or "DiffSubname"},
+          {string.rep(" ", max_length - #line), hlpos or "Normal"},
+          {"│", hlbar or "Normal"},
         }
       )
     elseif vim.startswith(line, "+") then
       table.insert(
         vt_lines,
         {
-          {"│ "},
-          {line, "DiffAdd"},
-          {string.rep(" ", max_length - #line)},
-          {" │"}
+          {"│ ", hlbar or "Normal"},
+          {line, hlpos or "DiffAdd"},
+          {string.rep(" ", max_length - #line), hlpos or "Normal"},
+          {"│", hlbar or "Normal"},
         }
       )
     elseif vim.startswith(line, "-") then
       table.insert(
         vt_lines,
         {
-          {"│ "},
-          {line, "DiffDelete"},
-          {string.rep(" ", max_length - #line)},
-          {" │"}
+          {"│ ", hlbar or "Normal"},
+          {line, hlpos or "DiffDelete"},
+          {string.rep(" ", max_length - #line), hlpos or "Normal"},
+          {"│", hlbar or "Normal"},
         }
       )
     else
       table.insert(
         vt_lines,
         {
-          {"│ "},
-          {line},
-          {string.rep(" ", max_length - #line)},
-          {" │"}
+          {"│ ", hlbar or "Normal"},
+          {line, hlpos or "DiffDelete"},
+          {line, hlpos or "Normal"},
+          {string.rep(" ", max_length - #line), hlpos or "Normal"},
+          {"│", hlbar or "Normal"},
         }
       )
     end

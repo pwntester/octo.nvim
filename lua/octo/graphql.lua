@@ -259,8 +259,8 @@ query($endCursor: String) {
             isResolved
             isOutdated
             path
-            line
             resolvedBy { login }
+            line
             originalLine
             startLine
             originalStartLine
@@ -270,6 +270,10 @@ query($endCursor: String) {
                 body
                 author { login }
                 authorAssociation
+                originalPosition
+                position
+                state
+                outdated
                 diffHunk
                 reactions(last:20) {
                   totalCount
@@ -376,7 +380,7 @@ query($endCursor: String) {
             ... on User {
               login
             }
-            ... on User {
+            ... on Team {
               name
             }
           }
