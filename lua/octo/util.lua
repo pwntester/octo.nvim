@@ -337,4 +337,15 @@ function M.get_nested_prop(obj, prop)
   return obj[prop]
 end
 
+function M.escape_chars(string)
+  return string.gsub(string,  "[%(|%)|\\|%[|%]|%-|%{%}|%?|%+|%*]", {
+    ["\\"] = "\\\\", ["-"] = "\\-",
+    ["("] = "\\(", [")"] = "\\)",
+    ["["] = "\\[", ["]"] = "\\]",
+    ["{"] = "\\{", ["}"] = "\\}",
+    ["?"] = "\\?", ["+"] = "\\+",
+    ["*"] = "\\*",
+  })
+end
+
 return M

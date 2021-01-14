@@ -507,4 +507,32 @@ query($endCursor: String) {
   }
 }
 ]]
+
+M.search_pull_requests_query =
+  [[
+query {
+  search(query: "repo:%s is:pr %s", type: ISSUE, last: 100) {
+    nodes {
+      ... on PullRequest {
+        number
+        title
+      }
+    }
+  }
+}
+]]
+
+M.search_issues_query =
+  [[
+query {
+  search(query: "repo:%s is:issue %s", type: ISSUE, last: 100) {
+    nodes {
+      ... on Issue{
+        number
+        title
+      }
+    }
+  }
+}
+]]
 return M

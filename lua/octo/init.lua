@@ -394,43 +394,48 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
 
   local lines = vim.split(diff_hunk, "\n")
 
-  -- print #lines + 2 empty lines
+  local linenr_length = #tostring(position) + 1
+  local display_lines = {}
   local empty_lines = {}
   local max_length = -1
-  for _, l in ipairs(lines) do
+  for i=math.max(2, #lines - 3), #lines do
     table.insert(empty_lines, "")
-    if #l > max_length then
-      max_length = #l
+    if #lines[i] > max_length then
+      max_length = #lines[i]
     end
+    table.insert(display_lines, lines[i])
   end
-  max_length = math.max(max_length, vim.fn.winwidth(0) - 8)
+  -- TODO: support multi line comments
+  max_length = math.max(max_length + 1, vim.fn.winwidth(0) - 8)
   vim.list_extend(empty_lines, {"", "", ""})
   M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
 
   local vt_lines = {}
-  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
-  for i, line in ipairs(lines) do
+  table.insert(vt_lines, {{string.rep(" ", linenr_length) .. format("┌%s┐", string.rep("─", max_length + 2))}})
+  for i, line in ipairs(display_lines) do
     local hlpos, hlbar = nil
-    if i > position - 3 then
+    -- if i > position - 3 then
       --hlpos = "OctoNvimDiffHunkPosition"
-      hlbar = "OctoNvimIssueTitle"
-    end
-    if vim.startswith(line, "@@ ") then
-      local index = string.find(line, "@[^@]*$")
+      -- hlbar = "OctoNvimBubbleRed"
+    -- end
+    -- if vim.startswith(line, "@@ ") then
+    --   local index = string.find(line, "@[^@]*$")
+    --   table.insert(
+    --     vt_lines,
+    --     {
+    --       {"│ ", hlbar or "Normal"},
+    --       {string.sub(line, 0, index), hlpos or "DiffLine"},
+    --       {string.sub(line, index + 1), hlpos or "DiffSubname"},
+    --       {string.rep(" ", max_length - #line), hlpos or "Normal"},
+    --       {" │", hlbar or "Normal"},
+    --     }
+    --   )
+    -- else
+    if vim.startswith(line, "+") then
       table.insert(
         vt_lines,
         {
-          {"│ ", hlbar or "Normal"},
-          {string.sub(line, 0, index), hlpos or "DiffLine"},
-          {string.sub(line, index + 1), hlpos or "DiffSubname"},
-          {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {" │", hlbar or "Normal"},
-        }
-      )
-    elseif vim.startswith(line, "+") then
-      table.insert(
-        vt_lines,
-        {
+          {tostring(position - #display_lines + i) .. " "},
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffAdd"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
@@ -441,6 +446,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
       table.insert(
         vt_lines,
         {
+          {tostring(position - #display_lines + i) .. " "},
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffDelete"},
           {string.rep(" ", max_length - #line), hlpos or "Normal"},
@@ -451,6 +457,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
       table.insert(
         vt_lines,
         {
+          {tostring(position - #display_lines + i) .. " "},
           {"│ ", hlbar or "Normal"},
           {line, hlpos or "DiffDelete"},
           {line, hlpos or "Normal"},
@@ -460,7 +467,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
       )
     end
   end
-  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
+  table.insert(vt_lines, {{string.rep(" ", linenr_length) .. format("└%s┘", string.rep("─", max_length + 2))}})
 
   -- print diff_hunk as virtual text
   local line = start_line - 1

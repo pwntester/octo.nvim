@@ -150,7 +150,7 @@ local issue_previewer =
                   octo.write_details(self.state.bufnr, issue)
                   octo.write_body(self.state.bufnr, issue)
                   octo.write_state(self.state.bufnr, issue.state:upper(), number)
-                  octo.write_reactions(self.state.bufnr, issue.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
+                  --octo.write_reactions(self.state.bufnr, issue.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
                   api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
                 end
               end
@@ -729,6 +729,69 @@ function M.changed_files()
       end
     }
   )
+end
+
+---
+-- SEARCH
+---
+
+function M.gen_from_gh(opts)
+  opts = opts or {}
+  return function(line)
+    print(line)
+  end
+end
+
+function M.issue_search(repo, opts)
+  opts = opts or {}
+
+  if not repo or repo == vim.NIL then
+    repo = util.get_remote_name()
+  end
+  if not repo then
+    api.nvim_err_writeln("Cannot find repo")
+    return
+  end
+
+  pickers.new(
+    opts,
+    {
+      prompt_title = "Issue Search",
+      finder = function(prompt, process_result, process_complete)
+        if not prompt or prompt == "" then
+          return nil
+        end
+        prompt = util.escape_chars(prompt)
+        local filter = "created:>2019-04-01 " .. prompt
+        local query = format(graphql.search_issues_query, repo, filter)
+        print(query)
+        gh.run(
+          {
+            args = {"api", "graphql", "-f", format("query=%s", query)},
+            cb = function(output, stderr)
+              if stderr and not util.is_blank(stderr) then
+                api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = json.parse(output)
+                print(#resp.data.search.nodes)
+                for _, issue in ipairs(resp.data.search.nodes) do
+                  process_result(gen_from_issue(4)(issue))
+                end
+                process_complete()
+              end
+            end
+          }
+        )
+      end,
+      sorter = conf.generic_sorter(opts),
+      previewer = issue_previewer.new({repo = repo}),
+      attach_mappings = function(_, map)
+        map("i", "<CR>", open_issue(repo))
+        map("i", "<c-t>", open_in_browser("issue", repo))
+        return true
+      end
+    }
+  ):find()
 end
 
 return M

@@ -31,6 +31,10 @@ local commands = {
     list = function(repo, ...)
       local rep, opts = M.process_varargs(repo, ...)
       menu.issues(rep, opts)
+    end,
+    search = function(repo, ...)
+      local rep, opts = M.process_varargs(repo, ...)
+      menu.issue_search(rep, opts)
     end
   },
   pr = {
