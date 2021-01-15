@@ -112,9 +112,6 @@ function M.write_state(bufnr, state, number)
     if pr.isDraft then
       table.insert(title_vt, {"[DRAFT] ", "OctoNvimIssueId"})
     end
-    if pr.merged then
-      table.insert(title_vt, {"[MERGED]", "OctoNvimIssueId"})
-    end
   end
   api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
