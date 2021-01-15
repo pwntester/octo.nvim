@@ -103,8 +103,7 @@ local function open_issue(repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local number = selection.value
-    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, number))
+    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, selection.value))
   end
 end
 
@@ -116,7 +115,9 @@ local issue_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        local bufnr = self.state.bufnr
+        print("PREVIEW", bufnr)
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.issue.number
           local owner = vim.split(opts.repo, "/")[1]
           local name = vim.split(opts.repo, "/")[2]
@@ -127,15 +128,15 @@ local issue_previewer =
               cb = function(output, stderr)
                 if stderr and not util.is_blank(stderr) then
                   api.nvim_err_writeln(stderr)
-                elseif output then
+                elseif output and api.nvim_buf_is_valid(bufnr) then
                   local result = json.parse(output)
                   local issue = result.data.repository.issue
-                  octo.write_title(self.state.bufnr, issue.title, 1)
-                  octo.write_details(self.state.bufnr, issue)
-                  octo.write_body(self.state.bufnr, issue)
-                  octo.write_state(self.state.bufnr, issue.state:upper(), number)
-                  --octo.write_reactions(self.state.bufnr, issue.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
-                  api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
+                  octo.write_title(bufnr, issue.title, 1)
+                  octo.write_details(bufnr, issue)
+                  octo.write_body(bufnr, issue)
+                  octo.write_state(bufnr, issue.state:upper(), number)
+                  --octo.write_reactions(bufnr, issue.reactions, api.nvim_buf_line_count(bufnr) - 1)
+                  api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
                 end
               end
             }
@@ -228,7 +229,7 @@ function M.issues(repo, opts)
                 results = issues,
                 entry_maker = gen_from_issue(max_number)
               },
-              sorter = conf.file_sorter(opts),
+              sorter = conf.generic_sorter(opts),
               previewer = issue_previewer.new({repo = repo}),
               attach_mappings = function(_, map)
                 map("i", "<CR>", open_issue(repo))
@@ -299,7 +300,7 @@ function M.gists(opts)
         entry_maker = make_entry.gen_from_string(opts)
       },
       previewer = gist_previewer.new(opts),
-      sorter = conf.file_sorter(opts),
+      sorter = conf.generic_sorter(opts),
       attach_mappings = function(_, map)
         map("i", "<CR>", open_gist)
         map("i", "<c-t>", open_in_browser("gist"))
@@ -346,7 +347,8 @@ local pull_request_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        local bufnr = self.state.bufnr
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.pull_request.number
           local owner = vim.split(opts.repo, "/")[1]
           local name = vim.split(opts.repo, "/")[2]
@@ -357,19 +359,19 @@ local pull_request_previewer =
               cb = function(output, stderr)
                 if stderr and not util.is_blank(stderr) then
                   api.nvim_err_writeln(stderr)
-                elseif output then
+                elseif output and api.nvim_buf_is_valid(bufnr) then
                   local result = json.parse(output)
                   local pull_request = result.data.repository.pullRequest
-                  octo.write_title(self.state.bufnr, pull_request.title, 1)
-                  octo.write_details(self.state.bufnr, pull_request)
-                  octo.write_body(self.state.bufnr, pull_request)
-                  octo.write_state(self.state.bufnr, pull_request.state:upper(), number)
+                  octo.write_title(bufnr, pull_request.title, 1)
+                  octo.write_details(bufnr, pull_request)
+                  octo.write_body(bufnr, pull_request)
+                  octo.write_state(bufnr, pull_request.state:upper(), number)
                   octo.write_reactions(
-                    self.state.bufnr,
+                    bufnr,
                     pull_request.reactions,
-                    api.nvim_buf_line_count(self.state.bufnr) - 1
+                    api.nvim_buf_line_count(bufnr) - 1
                   )
-                  api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
+                  api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
                 end
               end
             }
@@ -421,8 +423,7 @@ local function open_pull_request(repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local number = selection.value
-    vim.cmd(string.format([[ lua require'octo.commands'.get_pull_request('%s', '%s') ]], repo, number))
+    vim.cmd(string.format([[ lua require'octo.commands'.get_pull_request('%s', '%s') ]], repo, selection.value))
   end
 end
 
@@ -471,7 +472,7 @@ function M.pull_requests(repo, opts)
                 results = pull_requests,
                 entry_maker = gen_from_pull_request(max_number)
               },
-              sorter = conf.file_sorter(opts),
+              sorter = conf.generic_sorter(opts),
               previewer = pull_request_previewer.new({repo = repo}),
               attach_mappings = function(_, map)
                 map("i", "<CR>", open_pull_request(repo))
@@ -588,7 +589,7 @@ function M.commits()
                 results = results,
                 entry_maker = gen_from_git_commits()
               },
-              sorter = conf.file_sorter({}),
+              sorter = conf.generic_sorter({}),
               previewer = commit_previewer.new({repo = repo}),
               attach_mappings = function(prompt_bufnr)
                 actions.goto_file_selection_edit:replace(
@@ -693,7 +694,7 @@ function M.changed_files()
                 results = results,
                 entry_maker = gen_from_git_changed_files()
               },
-              sorter = conf.file_sorter({}),
+              sorter = conf.generic_sorter({}),
               previewer = changed_files_previewer.new({repo = repo, number = number}),
               attach_mappings = function(prompt_bufnr)
                 actions.goto_file_selection_edit:replace(
