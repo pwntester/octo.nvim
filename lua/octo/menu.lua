@@ -362,7 +362,6 @@ local pull_request_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        print(api.nvim_buf_line_count(self.state.bufnr))
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local number = entry.pull_request.number
           local owner = vim.split(opts.repo, "/")[1]
