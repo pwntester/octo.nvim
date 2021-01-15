@@ -294,25 +294,27 @@ function M.aggregate_pages(text, aggregation_key)
   -- take the first response and extend it with elements from the
   -- subsequent responses
 
-  local responses = vim.split(text, "}{")
-  if #responses > 1 then
-    responses[1] = responses[1] .. "}"
-    for i = 2, #responses - 1 do
-      responses[i] = "{" .. responses[i] .. "}"
+  local responses = {}
+  while true do
+    local idx = string.find(text, "}{\"data\"")
+    if not idx then
+      table.insert(responses, json.parse(text))
+      break
     end
-    responses[#responses] = "{" .. responses[#responses]
+    local resp = string.sub(text, 0, idx)
+    table.insert(responses, json.parse(resp))
+    text = string.sub(text, idx + 1)
+  end
 
-    local base_resp = json.parse(responses[1])
+  local base_resp = responses[1]
+  if #responses > 1 then
     local base_page = M.get_nested_prop(base_resp, aggregation_key)
     for i = 2, #responses do
-      local paged_resp = json.parse(responses[i])
-      local page = M.get_nested_prop(paged_resp, aggregation_key)
-      vim.list_extend(base_page, page)
+      local extra_page = M.get_nested_prop(responses[i], aggregation_key)
+      vim.list_extend(base_page, extra_page)
     end
-    return base_resp
-  else
-    return json.parse(responses)
   end
+  return base_resp
 end
 
 function table.slice(tbl, first, last, step)
@@ -335,6 +337,17 @@ function M.get_nested_prop(obj, prop)
     end
   end
   return obj[prop]
+end
+
+function M.escape_chars(string)
+  return string.gsub(string,  "[%(|%)|\\|%[|%]|%-|%{%}|%?|%+|%*]", {
+    ["\\"] = "\\\\", ["-"] = "\\-",
+    ["("] = "\\(", [")"] = "\\)",
+    ["["] = "\\[", ["]"] = "\\]",
+    ["{"] = "\\{", ["}"] = "\\}",
+    ["?"] = "\\?", ["+"] = "\\+",
+    ["*"] = "\\*",
+  })
 end
 
 return M

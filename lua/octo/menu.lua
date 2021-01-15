@@ -95,22 +95,6 @@ local function open_in_browser(type, repo)
   end
 end
 
-local function highlight_buffer(bufnr, content)
-  if content and table.getn(content) > 1 then
-    for i = 1, #content do
-      local line = content[i]
-      if line == "--" then
-        break
-      end
-      local _, colon_start = line:find(":")
-      if colon_start then
-        vim.api.nvim_buf_add_highlight(bufnr, -1, "TelescopeResultsIdentifier", i - 1, 0, colon_start)
-        vim.api.nvim_buf_add_highlight(bufnr, -1, "TelescopeResultsComment", i - 1, colon_start + 1, -1)
-      end
-    end
-  end
-end
-
 --
 -- ISSUES
 --
@@ -150,7 +134,7 @@ local issue_previewer =
                   octo.write_details(self.state.bufnr, issue)
                   octo.write_body(self.state.bufnr, issue)
                   octo.write_state(self.state.bufnr, issue.state:upper(), number)
-                  octo.write_reactions(self.state.bufnr, issue.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
+                  --octo.write_reactions(self.state.bufnr, issue.reactions, api.nvim_buf_line_count(self.state.bufnr) - 1)
                   api.nvim_buf_set_option(self.state.bufnr, "filetype", "octo_issue")
                 end
               end
@@ -362,7 +346,6 @@ local pull_request_previewer =
         return entry.value
       end,
       define_preview = function(self, entry)
-        print(api.nvim_buf_line_count(self.state.bufnr))
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local number = entry.pull_request.number
           local owner = vim.split(opts.repo, "/")[1]
@@ -729,6 +712,144 @@ function M.changed_files()
       end
     }
   )
+end
+
+---
+-- SEARCH
+---
+
+function M.issue_search(repo, opts)
+  opts = opts or {}
+
+  if not repo or repo == vim.NIL then
+    repo = util.get_remote_name()
+  end
+  if not repo then
+    api.nvim_err_writeln("Cannot find repo")
+    return
+  end
+
+  local queue = {}
+  pickers.new(
+    opts,
+    {
+      prompt_title = "Issue Search",
+      finder = function(prompt, process_result, process_complete)
+        if not prompt or prompt == "" then
+          return nil
+        end
+        prompt = util.escape_chars(prompt)
+
+        -- skip requests for empty prompts
+        if util.is_blank(prompt) then
+          process_complete()
+          return
+        end
+
+        -- store prompt in request queue
+        table.insert(queue, prompt)
+
+        local query = format(graphql.search_issues_query, repo, prompt)
+        gh.run(
+          {
+            args = {"api", "graphql", "-f", format("query=%s", query)},
+            cb = function(output, stderr)
+
+              -- do not process response, if this is not the last request we sent
+              if prompt ~= queue[#queue] then
+                process_complete()
+                return
+              end
+
+              if stderr and not util.is_blank(stderr) then
+                api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = json.parse(output)
+                for _, issue in ipairs(resp.data.search.nodes) do
+                  process_result(gen_from_issue(4)(issue))
+                end
+                process_complete()
+              end
+            end
+          }
+        )
+      end,
+      sorter = conf.generic_sorter(opts),
+      previewer = issue_previewer.new({repo = repo}),
+      attach_mappings = function(_, map)
+        map("i", "<CR>", open_issue(repo))
+        map("i", "<c-t>", open_in_browser("issue", repo))
+        return true
+      end
+    }
+  ):find()
+end
+
+function M.pull_request_search(repo, opts)
+  opts = opts or {}
+
+  if not repo or repo == vim.NIL then
+    repo = util.get_remote_name()
+  end
+  if not repo then
+    api.nvim_err_writeln("Cannot find repo")
+    return
+  end
+
+  local queue = {}
+  pickers.new(
+    opts,
+    {
+      prompt_title = "PR Search",
+      finder = function(prompt, process_result, process_complete)
+        if not prompt or prompt == "" then
+          return nil
+        end
+        prompt = util.escape_chars(prompt)
+
+        -- skip requests for empty prompts
+        if util.is_blank(prompt) then
+          process_complete()
+          return
+        end
+
+        -- store prompt in request queue
+        table.insert(queue, prompt)
+
+        local query = format(graphql.search_pull_requests_query, repo, prompt)
+        gh.run(
+          {
+            args = {"api", "graphql", "-f", format("query=%s", query)},
+            cb = function(output, stderr)
+
+              -- do not process response, if this is not the last request we sent
+              if prompt ~= queue[#queue] then
+                process_complete()
+                return
+              end
+
+              if stderr and not util.is_blank(stderr) then
+                api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = json.parse(output)
+                for _, pull_request in ipairs(resp.data.search.nodes) do
+                  process_result(gen_from_pull_request(4)(pull_request))
+                end
+                process_complete()
+              end
+            end
+          }
+        )
+      end,
+      sorter = conf.generic_sorter(opts),
+      previewer = pull_request_previewer.new({repo = repo}),
+      attach_mappings = function(_, map)
+        map("i", "<CR>", open_pull_request(repo))
+        map("i", "<c-t>", open_in_browser("pr", repo))
+        return true
+      end
+    }
+  ):find()
 end
 
 return M
