@@ -745,6 +745,7 @@ function M.issue_search(repo, opts)
     return
   end
 
+  local queue = {}
   pickers.new(
     opts,
     {
@@ -754,18 +755,34 @@ function M.issue_search(repo, opts)
           return nil
         end
         prompt = util.escape_chars(prompt)
-        local filter = prompt
-        local query = format(graphql.search_issues_query, repo, filter)
-        --print(query)
+
+        -- skip requests for empty prompts
+        if util.is_blank(prompt) then
+          print("Ignoring empty prompt"..prompt)
+          process_complete()
+          return
+        end
+
+        -- store prompt in request queue
+        table.insert(queue, prompt)
+
+        local query = format(graphql.search_issues_query, repo, prompt)
         gh.run(
           {
             args = {"api", "graphql", "-f", format("query=%s", query)},
             cb = function(output, stderr)
+
+              -- do not process response, if this is not the last request we sent
+              if prompt ~= queue[#queue] then
+                print("Discarding "..prompt)
+                process_complete()
+                return
+              end
+
               if stderr and not util.is_blank(stderr) then
                 api.nvim_err_writeln(stderr)
               elseif output then
                 local resp = json.parse(output)
-                --print(#resp.data.search.nodes)
                 for _, issue in ipairs(resp.data.search.nodes) do
                   process_result(gen_from_issue(4)(issue))
                 end
