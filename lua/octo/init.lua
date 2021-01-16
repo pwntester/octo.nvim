@@ -383,7 +383,85 @@ function M.write_comment(bufnr, comment, line)
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 end
 
-function M.write_diff_hunk(bufnr, diff_hunk, start_line, position)
+function M.write_diff_hunk(bufnr, diff_hunk, start_line)
+  start_line = start_line or 1
+
+  -- clear virtual texts
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
+
+  local lines = vim.split(diff_hunk, "\n")
+
+  -- print #lines + 2 empty lines
+  local empty_lines = {}
+  local max_length = -1
+  for _, l in ipairs(lines) do
+    table.insert(empty_lines, "")
+    if #l > max_length then
+      max_length = #l
+    end
+  end
+  max_length = math.max(max_length, vim.fn.winwidth(0) - 8)
+  vim.list_extend(empty_lines, {"", "", ""})
+  M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
+
+  local vt_lines = {}
+  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
+  for _, line in ipairs(lines) do
+    if vim.startswith(line, "@@ ") then
+      local index = string.find(line, "@[^@]*$")
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {string.sub(line, 0, index), "DiffLine"},
+          {string.sub(line, index + 1), "DiffSubname"},
+          {string.rep(" ", 1 + max_length - #line)},
+          {"│"}
+        }
+      )
+    elseif vim.startswith(line, "+") then
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line, "DiffAdd"},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
+    elseif vim.startswith(line, "-") then
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line, "DiffDelete"},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
+    else
+      table.insert(
+        vt_lines,
+        {
+          {"│ "},
+          {line},
+          {string.rep(" ", max_length - #line)},
+          {" │"}
+        }
+      )
+    end
+  end
+  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
+
+  -- print diff_hunk as virtual text
+  local line = start_line - 1
+  for _, vt_line in ipairs(vt_lines) do
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
+    line = line + 1
+  end
+end
+
+function M.write_diff_hunk2(bufnr, diff_hunk, start_line, position)
   start_line = start_line or 1
 
   -- clear virtual texts
