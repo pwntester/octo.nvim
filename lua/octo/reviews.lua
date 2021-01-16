@@ -5,7 +5,6 @@ local format = string.format
 local api = vim.api
 
 -- TODO: save main window buffers for cleanup on <C-c>
--- TODO: make [c and ]c cycle on diff view
 
 local M = {}
 
@@ -285,6 +284,15 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 
     -- write diff hunk
     local main_comment = reviewthread.comments.nodes[1]
+    -- THREAD 32 32 30 30
+    -- POSITION 23 23
+
+    -- THREAD 35 32 33 30
+    -- POSITION 26 23
+
+    print("THREAD", reviewthread.line, reviewthread.originalLine, reviewthread.startLine, reviewthread.originalStartLine)
+    print("POSITION", main_comment.position, main_comment.originalPosition)
+
     octo.write_diff_hunk(bufnr, main_comment.diffHunk, 3, main_comment.originalPosition)
 
     -- write thread
