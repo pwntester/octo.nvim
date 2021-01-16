@@ -92,6 +92,23 @@ local function open(repo, what, command)
   end
 end
 
+local function open_preview_buffer(command)
+  return function(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
+    if command == 'edit' then
+      vim.cmd(string.format(":buffer %d", preview_bufnr))
+    elseif command == 'split' then
+      vim.cmd(string.format(":sbuffer %d", preview_bufnr))
+    elseif command == 'vsplit' then
+      vim.cmd(string.format(":vert sbuffer %d", preview_bufnr))
+    elseif command == 'tabedit' then
+      vim.cmd(string.format(":tab sb %d", preview_bufnr))
+    end
+    vim.cmd [[stopinsert]]
+  end
+end
+
 local function open_in_browser(type, repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
@@ -595,15 +612,11 @@ function M.commits()
               },
               sorter = conf.generic_sorter({}),
               previewer = commit_previewer.new({repo = repo}),
-              attach_mappings = function(prompt_bufnr)
-                actions.goto_file_selection_edit:replace(
-                  function()
-                    actions.close(prompt_bufnr)
-                    local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
-                    api.nvim_set_current_buf(preview_bufnr)
-                    vim.cmd [[stopinsert]]
-                  end
-                )
+              attach_mappings = function()
+                actions.goto_file_selection_edit:replace(open_preview_buffer("edit"))
+                actions.goto_file_selection_split:replace(open_preview_buffer("split"))
+                actions.goto_file_selection_vsplit:replace(open_preview_buffer("vsplit"))
+                actions.goto_file_selection_tabedit:replace(open_preview_buffer("tabedit"))
                 return true
               end
             }
@@ -700,15 +713,11 @@ function M.changed_files()
               },
               sorter = conf.generic_sorter({}),
               previewer = changed_files_previewer.new({repo = repo, number = number}),
-              attach_mappings = function(prompt_bufnr)
-                actions.goto_file_selection_edit:replace(
-                  function()
-                    actions.close(prompt_bufnr)
-                    local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
-                    api.nvim_set_current_buf(preview_bufnr)
-                    vim.cmd [[stopinsert]]
-                  end
-                )
+              attach_mappings = function()
+                actions.goto_file_selection_edit:replace(open_preview_buffer("edit"))
+                actions.goto_file_selection_split:replace(open_preview_buffer("split"))
+                actions.goto_file_selection_vsplit:replace(open_preview_buffer("vsplit"))
+                actions.goto_file_selection_tabedit:replace(open_preview_buffer("tabedit"))
                 return true
               end
             }
