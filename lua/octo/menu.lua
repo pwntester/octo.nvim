@@ -77,6 +77,21 @@ local function get_filter(opts, kind)
   return filter
 end
 
+local function open(repo, what, command)
+  return function(prompt_bufnr)
+    local selection = actions.get_selected_entry(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    if command == 'split' then
+      vim.cmd [[:sbuffer %]]
+    elseif command == 'vsplit' then
+      vim.cmd [[:vert sbuffer %]]
+    elseif command == 'tabedit' then
+      vim.cmd [[:tab sb %]]
+    end
+    vim.cmd(string.format([[ lua require'octo.commands'.get_%s('%s', '%s') ]], what, repo, selection.value))
+  end
+end
+
 local function open_in_browser(type, repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
@@ -99,14 +114,6 @@ end
 -- ISSUES
 --
 
-local function open_issue(repo)
-  return function(prompt_bufnr)
-    local selection = actions.get_selected_entry(prompt_bufnr)
-    actions.close(prompt_bufnr)
-    vim.cmd(string.format([[ lua require'octo.commands'.get_issue('%s', '%s') ]], repo, selection.value))
-  end
-end
-
 local issue_previewer =
   defaulter(
   function(opts)
@@ -116,7 +123,6 @@ local issue_previewer =
       end,
       define_preview = function(self, entry)
         local bufnr = self.state.bufnr
-        print("PREVIEW", bufnr)
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.issue.number
           local owner = vim.split(opts.repo, "/")[1]
@@ -232,8 +238,11 @@ function M.issues(repo, opts)
               sorter = conf.generic_sorter(opts),
               previewer = issue_previewer.new({repo = repo}),
               attach_mappings = function(_, map)
-                map("i", "<CR>", open_issue(repo))
-                map("i", "<c-t>", open_in_browser("issue", repo))
+                actions.goto_file_selection_edit:replace(open(repo, "issue", "edit"))
+                actions.goto_file_selection_split:replace(open(repo, "issue", "split"))
+                actions.goto_file_selection_vsplit:replace(open(repo, "issue", "vsplit"))
+                actions.goto_file_selection_tabedit:replace(open(repo, "issue", "tabedit"))
+                map("i", "<c-b>", open_in_browser("issue", repo))
                 return true
               end
             }
@@ -303,7 +312,7 @@ function M.gists(opts)
       sorter = conf.generic_sorter(opts),
       attach_mappings = function(_, map)
         map("i", "<CR>", open_gist)
-        map("i", "<c-t>", open_in_browser("gist"))
+        map("i", "<c-b>", open_in_browser("gist"))
         return true
       end
     }
@@ -419,14 +428,6 @@ local function gen_from_pull_request(max_number)
   end
 end
 
-local function open_pull_request(repo)
-  return function(prompt_bufnr)
-    local selection = actions.get_selected_entry(prompt_bufnr)
-    actions.close(prompt_bufnr)
-    vim.cmd(string.format([[ lua require'octo.commands'.get_pull_request('%s', '%s') ]], repo, selection.value))
-  end
-end
-
 function M.pull_requests(repo, opts)
   opts = opts or {}
   local filter = get_filter(opts, "pull_request")
@@ -475,9 +476,12 @@ function M.pull_requests(repo, opts)
               sorter = conf.generic_sorter(opts),
               previewer = pull_request_previewer.new({repo = repo}),
               attach_mappings = function(_, map)
-                map("i", "<CR>", open_pull_request(repo))
+                actions.goto_file_selection_edit:replace(open(repo, "pull_request", "edit"))
+                actions.goto_file_selection_split:replace(open(repo, "pull_request", "split"))
+                actions.goto_file_selection_vsplit:replace(open(repo, "pull_request", "vsplit"))
+                actions.goto_file_selection_tabedit:replace(open(repo, "pull_request", "tabedit"))
                 map("i", "<c-o>", checkout_pull_request(repo))
-                map("i", "<c-t>", open_in_browser("pr", repo))
+                map("i", "<c-b>", open_in_browser("pr", repo))
                 return true
               end
             }
@@ -778,8 +782,11 @@ function M.issue_search(repo, opts)
       sorter = conf.generic_sorter(opts),
       previewer = issue_previewer.new({repo = repo}),
       attach_mappings = function(_, map)
-        map("i", "<CR>", open_issue(repo))
-        map("i", "<c-t>", open_in_browser("issue", repo))
+        actions.goto_file_selection_edit:replace(open(repo, "issue", "edit"))
+        actions.goto_file_selection_split:replace(open(repo, "issue", "split"))
+        actions.goto_file_selection_vsplit:replace(open(repo, "issue", "vsplit"))
+        actions.goto_file_selection_tabedit:replace(open(repo, "issue", "tabedit"))
+        map("i", "<c-b>", open_in_browser("issue", repo))
         return true
       end
     }
@@ -845,8 +852,11 @@ function M.pull_request_search(repo, opts)
       sorter = conf.generic_sorter(opts),
       previewer = pull_request_previewer.new({repo = repo}),
       attach_mappings = function(_, map)
-        map("i", "<CR>", open_pull_request(repo))
-        map("i", "<c-t>", open_in_browser("pr", repo))
+        actions.goto_file_selection_edit:replace(open(repo, "pull_request", "edit"))
+        actions.goto_file_selection_split:replace(open(repo, "pull_request", "split"))
+        actions.goto_file_selection_vsplit:replace(open(repo, "pull_request", "vsplit"))
+        actions.goto_file_selection_tabedit:replace(open(repo, "pull_request", "tabedit"))
+        map("i", "<c-b>", open_in_browser("pr", repo))
         return true
       end
     }

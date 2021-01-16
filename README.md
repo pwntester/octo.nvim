@@ -40,9 +40,9 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | open | |
 | | create | [repo] |
 | | edit | [repo] <number> |
-| | list | [repo] [key=value]*<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-t>`: Opens issue in web browser |
+| | list | [repo] [key=value]*<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-b>`: Opens issue in web browser |
 | | search | |
-| pr | list | [repo] [key=value]<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-t>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
+| pr | list | [repo] [key=value]<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-b>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
 | | search | |
 | | edit | [repo] <number> |
 | | open | |
@@ -55,7 +55,7 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | ready| |
 | | checks | |
 | | reviews | |
-| gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-t>`: Opens Gist in web browser |
+| gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-b>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |
 | | resolve | |
