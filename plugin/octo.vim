@@ -88,6 +88,7 @@ endif
 
 " settings
 let g:octo_date_format = get(g:, 'octo_date_format', "%Y %b %d %I:%M %p %Z")
+let g:octo_default_remote = ["upstream", "origin"]
 "let g:octo_qf_height = 11
 
 let g:loaded_octo = 1

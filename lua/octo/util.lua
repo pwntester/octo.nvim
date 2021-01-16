@@ -29,20 +29,24 @@ function M.is_blank(s)
   return not (s ~= nil and s:match("%S") ~= nil)
 end
 
-function M.get_remote_name(remote)
-  remote = remote or "origin"
-  local cmd = format("git config --get remote.%s.url", remote)
-  local url = string.gsub(vim.fn.system(cmd), "%s+", "")
-  local owner, repo
-  if #vim.split(url, "://") == 2 then
-    owner = vim.split(url, "/")[#vim.split(url, "/") - 1]
-    repo = string.gsub(vim.split(url, "/")[#vim.split(url, "/")], ".git$", "")
-  elseif #vim.split(url, "@") == 2 then
-    local segment = vim.split(url, ":")[2]
-    owner = vim.split(segment, "/")[1]
-    repo = string.gsub(vim.split(segment, "/")[2], ".git$", "")
+function M.get_remote_name()
+  local candidates = vim.g.octo_default_remote
+  for _, candidate in ipairs(candidates) do
+    local cmd = format("git config --get remote.%s.url", candidate)
+    local url = string.gsub(vim.fn.system(cmd), "%s+", "")
+    if not M.is_blank(url) then
+      local owner, name 
+      if #vim.split(url, "://") == 2 then
+        owner = vim.split(url, "/")[#vim.split(url, "/") - 1]
+        name = string.gsub(vim.split(url, "/")[#vim.split(url, "/")], ".git$", "")
+      elseif #vim.split(url, "@") == 2 then
+        local segment = vim.split(url, ":")[2]
+        owner = vim.split(segment, "/")[1]
+        name = string.gsub(vim.split(segment, "/")[2], ".git$", "")
+      end
+      return format("%s/%s", owner, name)
+    end
   end
-  return format("%s/%s", owner, repo)
 end
 
 function M.in_pr_branch()

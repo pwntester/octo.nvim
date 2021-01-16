@@ -144,3 +144,9 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimDetailsLabel`   | `Title`      |
 | `OctoNvimMissingDetails` | `Comment`    |
 | `OctoNvimDetailsValue `  | `Identifier` |
+
+## Settings
+
+`g:octo_date_format`: Date format (default: "%Y %b %d %I:%M %p %Z")
+`g:octo_remote_order`: Order to resolve the remote for the current working directory (default: ["upstream", "origin"])
+`g:octo_qf_height`: Height of quickfix window
