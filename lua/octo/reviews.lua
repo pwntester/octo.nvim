@@ -1,11 +1,11 @@
 local octo = require "octo"
 local signs = require "octo.signs"
 local util = require "octo.util"
+local constants = require "octo.constants"
 local format = string.format
 local api = vim.api
 
 -- TODO: save main window buffers for cleanup on <C-c>
--- TODO: make [c and ]c cycle on diff view
 
 local M = {}
 
@@ -108,11 +108,15 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
         mods = mods .. "OUTDATED "
       end
       local comment_id = util.graph2rest(comment.id)
+      local lnum = thread.line
+      if not lnum or lnum == vim.NIL then
+        lnum = thread.originalLine
+      end
       table.insert(
         items,
         {
           filename = thread.path,
-          lnum = thread.originalLine,
+          lnum = lnum,
           text = format(
             "%s (%s) %s%s...",
             comment.author.login,
@@ -224,6 +228,7 @@ end
 function M.show_reviewthread_qf_entry(repo, number, main_win)
   -- set mappings for the main window buffer
   M.add_reviewthread_qf_mappings(repo, number, main_win)
+  local main_bufnr = api.nvim_get_current_buf()
 
   -- get comment details
   local qf = vim.fn.getqflist({idx = 0, items = 0})
@@ -242,13 +247,18 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     api.nvim_err_writeln("Cannot move cursor to line " .. row)
   end
 
-  -- place signs in main window buffer
-  local reviewthreads = api.nvim_win_get_var(main_win, "reviewthreads")
-  signs.place_reviewthread_signs(main_win, reviewthreads)
-
   -- jump to comment window
   local comment_win = api.nvim_win_get_var(main_win, "comment_win")
   api.nvim_set_current_win(comment_win)
+
+  -- get cached thread
+  local reviewthreads = api.nvim_win_get_var(main_win, "reviewthreads")
+  local reviewthread
+  for _, thread in ipairs(reviewthreads) do
+    if reviewthread_id == thread.id then
+      reviewthread = thread
+    end
+  end
 
   local bufnr =
     vim.fn.bufnr(format("octo://%s/pull/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id))
@@ -272,20 +282,12 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     M.add_reviewthread_qf_mappings(repo, number, main_win)
     octo.apply_buffer_mappings(bufnr, "reviewthread")
 
-    -- get cached thread
-    local reviewthread
-    for _, thread in ipairs(reviewthreads) do
-      if reviewthread_id == thread.id then
-        reviewthread = thread
-      end
-    end
-
     -- write path
     octo.write_title(bufnr, reviewthread.path, 1)
 
     -- write diff hunk
     local main_comment = reviewthread.comments.nodes[1]
-    octo.write_diff_hunk(bufnr, main_comment.diffHunk, 3, main_comment.originalPosition)
+    octo.write_diff_hunk(bufnr, main_comment.diffHunk, 3)
 
     -- write thread
     api.nvim_buf_set_var(bufnr, "comments", {})
@@ -293,6 +295,9 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
       octo.write_comment(bufnr, comment)
     end
   end
+
+  -- highlight commented lines
+  M.highlight_lines(main_bufnr, reviewthread.startLine, reviewthread.line)
 
   -- show signs
   signs.render_signcolumn(bufnr)
@@ -303,6 +308,17 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   vim.cmd [[ au TextChanged <buffer> lua require"octo.signs".render_signcolumn() ]]
   vim.cmd [[ au TextChangedI <buffer> lua require"octo.signs".render_signcolumn() ]]
   vim.cmd [[ augroup END ]]
+end
+
+function M.highlight_lines(bufnr, startLine, endLine)
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_HIGHLIGHT_NS, 0, -1)
+  signs.unplace(bufnr)
+  if not endLine then return end
+  startLine = startLine or endLine
+  for line=startLine, endLine do
+    api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line-1, 0, -1)
+    signs.place("comment", bufnr, line-1)
+  end
 end
 
 -- MAPPINGS

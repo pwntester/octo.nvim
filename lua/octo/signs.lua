@@ -7,7 +7,7 @@ local M = {}
 
 function M.setup()
   -- sign definitions
-  vim.cmd [[ sign define comment text=≡ ]]
+  vim.cmd [[ sign define comment text=➕ texthl=OctoNvimCommentLine linehl=OctoNvimCommentLine ]]
   vim.cmd [[ sign define clean_block_start text=┌ ]]
   vim.cmd [[ sign define clean_block_end text=└ ]]
   vim.cmd [[ sign define dirty_block_start text=┌ texthl=OctoNvimDirty ]]
@@ -108,15 +108,6 @@ function M.render_signcolumn(bufnr)
   -- reset modified option
   if not issue_dirty then
     api.nvim_buf_set_option(bufnr, "modified", false)
-  end
-end
-
-function M.place_reviewthread_signs(main_win, reviewthreads)
-  local bufnr = api.nvim_win_get_buf(main_win)
-  for _, thread in ipairs(reviewthreads) do
-    if thread.path == vim.fn.bufname(bufnr) then
-      M.place("comment", bufnr, thread.originalLine - 1)
-    end
   end
 end
 

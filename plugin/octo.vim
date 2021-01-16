@@ -11,6 +11,7 @@ execute('hi! OctoNvimBubbleBody guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubbleRed guifg='.g:octo_bubble_red.' guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubbleGreen guifg='.g:octo_bubble_green.' guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_bubble_color)
+execute('hi! link OctoNvimCommentLine TabLineSel')
 
 function! s:command_complete(...)
   return luaeval('require("octo.commands").command_complete(_A)', a:000)
@@ -92,3 +93,7 @@ let g:octo_default_remote = ["upstream", "origin"]
 "let g:octo_qf_height = 11
 
 let g:loaded_octo = 1
+
+
+" foo
+" bar
