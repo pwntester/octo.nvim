@@ -8,6 +8,7 @@ M.OCTO_REACTIONS_VT_NS = api.nvim_create_namespace("octo_reactions_vt")
 M.OCTO_DETAILS_VT_NS = api.nvim_create_namespace("octo_details_vt")
 M.OCTO_DIFFHUNKS_VT_NS = api.nvim_create_namespace("octo_diffhunks_vt")
 M.OCTO_EMPTY_MSG_VT_NS = api.nvim_create_namespace("octo_empty_msg_vt")
+M.OCTO_HIGHLIGHT_NS = api.nvim_create_namespace("octo_highlight")
 M.NO_BODY_MSG = "No description provided."
 
 return M

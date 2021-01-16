@@ -1,7 +1,3 @@
-TEST
-TEST
-TEST
-TEST
 # octo.nvim
 Plugin to work with GitHub issues and PRs from Neovim. Just edit the issue description/comments and save it with `:w`.
 Modified description or comments are highlighted in the signcolumn.
@@ -25,11 +21,6 @@ Plug 'pwntester/octo.nvim'
 
 ## Requirements
 
-BAR
-BAR
-BAR
-BAR
-BAR
 - Install [GitHub CLI](https://cli.github.com/)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
