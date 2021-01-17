@@ -1,8 +1,10 @@
 local octo = require "octo"
+local writers = require "octo.writers"
 local signs = require "octo.signs"
 local util = require "octo.util"
 local constants = require "octo.constants"
 local format = string.format
+local vim = vim
 local api = vim.api
 
 -- TODO: save main window buffers for cleanup on <C-c>
@@ -283,16 +285,16 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     octo.apply_buffer_mappings(bufnr, "reviewthread")
 
     -- write path
-    octo.write_title(bufnr, reviewthread.path, 1)
+    writers.write_title(bufnr, reviewthread.path, 1)
 
     -- write diff hunk
     local main_comment = reviewthread.comments.nodes[1]
-    octo.write_diff_hunk(bufnr, main_comment.diffHunk, 3)
+    writers.write_diff_hunk(bufnr, main_comment.diffHunk, 3)
 
     -- write thread
     api.nvim_buf_set_var(bufnr, "comments", {})
     for _, comment in ipairs(reviewthread.comments.nodes) do
-      octo.write_comment(bufnr, comment)
+      writers.write_comment(bufnr, comment)
     end
   end
 

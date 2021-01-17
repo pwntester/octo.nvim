@@ -7,12 +7,13 @@ local previewers = require "telescope.previewers"
 local conf = require "telescope.config".values
 local make_entry = require "telescope.make_entry"
 local entry_display = require "telescope.pickers.entry_display"
-local octo = require "octo"
+local writers = require "octo.writers"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
 local format = string.format
 local defaulter = utils.make_default_callable
+local vim = vim
 local flatten = vim.tbl_flatten
 local api = vim.api
 local bat_options = {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"}
@@ -154,11 +155,11 @@ local issue_previewer =
                 elseif output and api.nvim_buf_is_valid(bufnr) then
                   local result = json.parse(output)
                   local issue = result.data.repository.issue
-                  octo.write_title(bufnr, issue.title, 1)
-                  octo.write_details(bufnr, issue)
-                  octo.write_body(bufnr, issue)
-                  octo.write_state(bufnr, issue.state:upper(), number)
-                  --octo.write_reactions(bufnr, issue.reactions, api.nvim_buf_line_count(bufnr) - 1)
+                  writers.write_title(bufnr, issue.title, 1)
+                  writers.write_details(bufnr, issue)
+                  writers.write_body(bufnr, issue)
+                  writers.write_state(bufnr, issue.state:upper(), number)
+                  --writers.write_reactions(bufnr, issue.reactions, api.nvim_buf_line_count(bufnr) - 1)
                   api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
                 end
               end
@@ -388,11 +389,11 @@ local pull_request_previewer =
                 elseif output and api.nvim_buf_is_valid(bufnr) then
                   local result = json.parse(output)
                   local pull_request = result.data.repository.pullRequest
-                  octo.write_title(bufnr, pull_request.title, 1)
-                  octo.write_details(bufnr, pull_request)
-                  octo.write_body(bufnr, pull_request)
-                  octo.write_state(bufnr, pull_request.state:upper(), number)
-                  octo.write_reactions(
+                  writers.write_title(bufnr, pull_request.title, 1)
+                  writers.write_details(bufnr, pull_request)
+                  writers.write_body(bufnr, pull_request)
+                  writers.write_state(bufnr, pull_request.state:upper(), number)
+                  writers.write_reactions(
                     bufnr,
                     pull_request.reactions,
                     api.nvim_buf_line_count(bufnr) - 1
