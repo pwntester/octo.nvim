@@ -533,3 +533,4 @@ function M.write_diff_hunk2(bufnr, diff_hunk, start_line, position)
   end
 end
 
+return M
