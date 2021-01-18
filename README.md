@@ -28,6 +28,9 @@ Plug 'pwntester/octo.nvim'
 Plug 'nvim-lua/popup.nvim'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
+
+-- To use Telescope interface for octo pickers 
+lua require('telescope').load_extension('octo')
 ```
 
 ## Commands
