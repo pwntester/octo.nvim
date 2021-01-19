@@ -5,6 +5,8 @@ local menu = require "octo.menu"
 local reviews = require "octo.reviews"
 local graphql = require "octo.graphql"
 local constants = require "octo.constants"
+local writers = require "octo.writers"
+local vim = vim
 local api = vim.api
 local format = string.format
 local json = {
@@ -225,7 +227,7 @@ function M.add_comment()
     },
     id = -1
   }
-  octo.write_comment(bufnr, comment)
+  writers.write_comment(bufnr, comment)
   vim.fn.execute("normal! Gkkk")
   vim.fn.execute("startinsert")
 end
@@ -390,8 +392,8 @@ function M.change_state(type, state)
           end
           if state == new_state then
             api.nvim_buf_set_var(bufnr, "state", new_state)
-            octo.write_state(bufnr)
-            octo.write_details(bufnr, obj, true)
+            writers.write_state(bufnr)
+            writers.write_details(bufnr, obj, true)
             print("Issue state changed to: " .. new_state)
           end
         end
@@ -508,7 +510,7 @@ function M.issue_action(action, kind, value)
             {
               args = {"api", format("repos/%s/issues/%s", repo, number)},
               cb = function(output)
-                octo.write_details(bufnr, json.parse(output), true)
+                writers.write_details(bufnr, json.parse(output), true)
               end
             }
           )
@@ -550,7 +552,7 @@ function M.pr_ready_for_review()
       args = {"pr", "ready", tostring(number)},
       cb = function(output, stderr)
         print(output, stderr)
-        octo.write_state(bufnr)
+        writers.write_state(bufnr)
       end
     }
   )
@@ -637,7 +639,7 @@ function M.merge_pr(...)
       args = args,
       cb = function(output, stderr)
         print(output, stderr)
-        octo.write_state(bufnr)
+        writers.write_state(bufnr)
       end
     }
   )
@@ -845,7 +847,7 @@ function M.reaction_action(action, reaction)
           util.update_reactions_at_cursor(bufnr, cursor, reactions) --, line)
 
           -- refresh reactions
-          octo.write_reactions(bufnr, reactions, line)
+          writers.write_reactions(bufnr, reactions, line)
         end
       end
     }
