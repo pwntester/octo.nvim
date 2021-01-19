@@ -27,7 +27,7 @@ M.reaction_map = {
 }
 
 function M.is_blank(s)
-  return not (s ~= nil and s:match("%S") ~= nil)
+  return not (s ~= nil and string.match(s, "%S") ~= nil)
 end
 
 function M.get_remote_name()

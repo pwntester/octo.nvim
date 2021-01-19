@@ -24,31 +24,6 @@ local json = {
 
 local M = {}
 
-local function parse_opts(opts, target)
-  local query = {}
-  local tmp_table = {}
-  if target == "issue" then
-    tmp_table = {"author", "assigner", "mention", "label", "milestone", "state", "limit"}
-  elseif target == "pr" then
-    tmp_table = {"assigner", "label", "state", "base", "limit"}
-  elseif target == "gist" then
-    tmp_table = {"public", "secret"}
-    if opts.public then
-      opts.public = " "
-    end
-    if opts.secret then
-      opts.secret = " "
-    end
-  end
-
-  for _, value in pairs(tmp_table) do
-    if opts[value] then
-      table.insert(query, format("--%s %s", value, opts[value]))
-    end
-  end
-  return table.concat(query, " ")
-end
-
 local function get_filter(opts, kind)
   local filter = ""
   local allowed_values = {}
@@ -113,16 +88,13 @@ end
 local function open_in_browser(type, repo)
   return function(prompt_bufnr)
     local selection = actions.get_selected_entry(prompt_bufnr)
+    local number = selection.value
     actions.close(prompt_bufnr)
-    local tmp_table = vim.split(selection.value, "\t")
-    if vim.tbl_isempty(tmp_table) then
-      return
-    end
     local cmd
     if not repo or repo == "" then
-      cmd = format("gh %s view --web %s", type, tmp_table[1])
+      cmd = format("gh %s view --web %d", type, number)
     else
-      cmd = format("gh %s view --web %s -R %s", type, tmp_table[1], repo)
+      cmd = format("gh %s view --web %d -R %s", type, number, repo)
     end
     os.execute(cmd)
   end
@@ -305,25 +277,36 @@ local function open_gist(prompt_bufnr)
     return
   end
   local gist_id = tmp_table[1]
-  local text = utils.get_os_command_output("gh gist view " .. gist_id .. " -r")
-  if text and vim.api.nvim_buf_get_option(vim.api.nvim_get_current_buf(), "modifiable") then
-    vim.api.nvim_put(vim.split(text, "\n"), "b", true, true)
+  local gist = utils.get_os_command_output({"gh", "gist", "view",  gist_id, "-r"})
+  if gist and vim.api.nvim_buf_get_option(vim.api.nvim_get_current_buf(), "modifiable") then
+    api.nvim_put(gist, "b", true, true)
   end
 end
 
 function M.gists(opts)
   opts = opts or {}
   opts.limit = opts.limit or 100
-  local opts_query = parse_opts(opts, "gist")
-  local cmd = format("gh gist list %s", opts_query)
-  local results = vim.split(utils.get_os_command_output(cmd), "\n")
+  local cmd = {"gh", "gist", "list", "--limit", opts.limit}
+  if opts.public then
+    table.insert(cmd, "--public")
+  end
+  if opts.secret then
+    table.insert(cmd, "--secret")
+  end
+  local output = utils.get_os_command_output(cmd)
+  if not output or #output == 0 then
+    api.nvim_err_writeln("No gists found")
+    return
+  end
 
+  -- TODO: make a decent displayer
+ 
   pickers.new(
     opts,
     {
       prompt_title = "Gists",
       finder = finders.new_table {
-        results = results,
+        results = output,
         entry_maker = make_entry.gen_from_string(opts)
       },
       previewer = gist_previewer.new(opts),
