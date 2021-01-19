@@ -5,6 +5,7 @@ local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local format = string.format
+local vim = vim
 local api = vim.api
 local json = {
   parse = vim.fn.json_decode,
@@ -58,6 +59,10 @@ function M.in_pr_branch()
   if status and pr then
     local cmd = "git branch --show-current"
     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+    if string.find(local_branch, "/") then
+      -- for PRs submitter from master, local_branch will get something like other_repo/master
+      local_branch = vim.split(local_branch, "/")[2]
+    end
     local local_repo = M.get_remote_name()
     if pr.baseRepoName ~= local_repo then
       api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
