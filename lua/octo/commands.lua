@@ -718,6 +718,8 @@ function M.review_pr()
     return
   end
 
+  reviews.review_comments = {}
+
   -- get list of changed files
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
@@ -731,14 +733,19 @@ function M.review_pr()
           local changes = {}
           for _, result in ipairs(results) do
             local change = {
-              branch = pr.base.ref,
               filename = result.filename,
+              patch = result.patch,
               status = result.status,
               text = format("+%d -%d", result.additions, result.deletions)
             }
             table.insert(changes, change)
           end
-          reviews.populate_changes_qf(pr.base.ref, pr.head.ref, changes)
+          reviews.populate_changes_qf(changes, {
+            baseRefName = pr.baseRefName,
+            baseRefSHA = pr.baseRefSHA,
+            headRefName = pr.headRefName,
+            headRefSHA = pr.headRefSHA
+          })
         end
       end
     }

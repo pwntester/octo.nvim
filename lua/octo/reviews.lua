@@ -11,25 +11,27 @@ local api = vim.api
 
 local M = {}
 
+M.review_comments = {}
+
 local qf_height = vim.g.octo_qf_height or math.floor(vim.o.lines * 0.2)
 
-function M.populate_changes_qf(base, head, changes)
+function M.populate_changes_qf(changes, opts)
   -- open a new tab so we can easily clean all the windows mess
   if true then
     vim.cmd [[tabnew %]]
   end
 
   -- run the diff between head and base commits
-  vim.cmd(format("Git difftool --name-only %s..%s", base, head))
+  vim.cmd(format("Git difftool --name-only %s..%s", opts.baseRefName, opts.headRefName))
 
   local qf = vim.fn.getqflist({size = 0})
   if qf.size == 0 then
-    api.nvim_err_writeln(format("No changes found for pr %s", head))
+    api.nvim_err_writeln(format("No changes found for pr"))
     return
   end
 
   -- update qf with gh info (additions/deletions ...)
-  M.update_changes_qf(changes)
+  M.update_changes_qf(changes, opts)
 
   M.diff_changes_qf_entry()
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
@@ -39,16 +41,28 @@ function M.populate_changes_qf(base, head, changes)
   vim.cmd [[wincmd p]]
 end
 
-function M.update_changes_qf(changes)
+function M.update_changes_qf(changes, opts)
   local qf = vim.fn.getqflist({context = 0, items = 0})
+
+  -- update item's text
   local items = qf.items
   for _, item in ipairs(items) do
     for _, change in ipairs(changes) do
-      if item.module == format("%s:%s", change.branch, change.filename) then
-        item.text = change.text .. " " .. change.status
+      if item.module == format("%s:%s", opts.baseRefName, change.filename) then
+        item.pattern = change.text .. " " .. change.status
       end
     end
   end
+
+  -- update context wiht SHA info
+  qf.context.left_sha = opts.baseRefSHA
+  qf.context.right_sha = opts.headRefSHA
+
+  -- update context items with diff
+  for i, ctxitem in ipairs(qf.context.items) do
+    ctxitem.patch = changes[i].patch
+  end
+
   vim.fn.setqflist({}, "r", {context = qf.context, items = items})
 end
 
@@ -59,7 +73,7 @@ function M.clean_fugitive_buffers()
       local bufnr = api.nvim_win_get_buf(w)
       local bufname = api.nvim_buf_get_name(bufnr)
       if vim.startswith(bufname, "fugitive:") then
-        vim.cmd(format("bdelete %d", bufnr))
+        vim.cmd(format("bdelete! %d", bufnr))
       end
     end
   end
@@ -76,22 +90,118 @@ function M.diff_changes_qf_entry()
   M.add_changes_qf_mappings()
 
   -- fugitive stores changed files in qf, and what to diff against in the qf context
-  local qf = vim.fn.getqflist({context = 0, idx = 0})
-if qf.idx and type(qf.context) == "table" and type(qf.context.items) == "table" then
-  local item = qf.context.items[qf.idx]
-  local diff = item.diff or {}
-  for i = #diff - 1, 0, -1 do
-    if i then
-      vim.cmd(format("leftabove vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
-    else
-      vim.cmd(format("rightbelow vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
-    end
-    vim.cmd [[normal! ]c]]
+  local qf = vim.fn.getqflist({context = 0, idx = 0, items = 0, winid = 0})
+  if qf.idx and type(qf.context) == "table" and type(qf.context.items) == "table" then
+    local ctxitem = qf.context.items[qf.idx]
+    local left_sha = qf.context.left_sha
+    local right_sha = qf.context.right_sha
+    local diff = ctxitem.diff or {}
+    for i = #diff - 1, 0, -1 do
+      if i then
+        vim.cmd(format("leftabove vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
+      else
+        vim.cmd(format("rightbelow vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
+      end
 
-    -- set `]q` and `[q` mappings to the diff entry buffer (base)
-    M.add_changes_qf_mappings()
+      -- cursor should be located at LEFT split
+      local left_bufnr = api.nvim_get_current_buf()
+      local left_bufname = api.nvim_buf_get_name(left_bufnr)
+      M.add_changes_qf_mappings()
+
+      -- move to RIGHT split
+      vim.cmd [[wincmd l]]
+      local right_bufnr = api.nvim_get_current_buf()
+      local right_bufname = api.nvim_buf_get_name(right_bufnr)
+      M.add_changes_qf_mappings()
+
+      -- move to first chunk
+      vim.cmd [[normal! ]c]]
+
+      local valid_left_ranges = {}
+      local valid_right_ranges = {}
+      for _, line in ipairs(vim.split(ctxitem.patch, "\n")) do
+        if vim.startswith(line, "@@") then
+          local found, _, left_start, left_length, right_start, right_length = string.find(line, "@@%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
+          if found then
+            table.insert(valid_left_ranges, {tonumber(left_start), left_start + left_length - 1})
+            table.insert(valid_right_ranges, {tonumber(right_start), right_start + right_length - 1})
+          end
+        end
+      end
+
+      -- set diff info as buf vars
+      local left_props = {
+        side = "LEFT",
+        sha = left_sha,
+        qf_idx = qf.idx,
+        qf_winid = qf.winid,
+        ranges = valid_left_ranges,
+        bufname = left_bufname
+      }
+      local right_props = {
+        side = "RIGHT",
+        sha = right_sha,
+        qf_idx = qf.idx,
+        qf_winid = qf.winid,
+        ranges = valid_right_ranges,
+        bufname = right_bufname
+      }
+      api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", left_props)
+      api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", right_props)
+    end
   end
 end
+
+function M.add_review_comment(line1, line2)
+  local bufnr = api.nvim_get_current_buf()
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if status and props then
+
+    -- TODO: check we are in a valid range
+
+    -- create new buffer
+    local comment_bufnr = api.nvim_create_buf(false, true)
+    print(comment_bufnr)
+
+    -- move to qf win
+    api.nvim_set_current_win(props.qf_winid)
+
+    -- create new win and show comment bufnr
+    vim.cmd(format("rightbelow vert sbuffer %d", comment_bufnr))
+    vim.cmd [[startinsert]]
+
+    -- create new comment
+    local comment = {
+      side = props.side,
+      sha = props.sha,
+      qf_idx = props.idx,
+      qf_winid = props.winid,
+      comment_bufnr = comment_bufnr,
+      line1 = line1,
+      line2 = line2,
+      body = ""
+    }
+    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "fugitive://", ""), line1, line2)
+    M.review_comments[bufname] = comment
+    api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
+    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
+    api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
+    api.nvim_buf_set_name(comment_bufnr, bufname)
+  end
+end
+
+function M.save_review_comment()
+  local bufnr = api.nvim_get_current_buf()
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if status and props then
+    local bufname = api.nvim_buf_get_name(bufnr)
+    local comment = M.review_comments[bufname]
+    comment.body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+    M.review_comments[bufname] = comment
+
+    -- TODO: close win and delete buffer
+    --vim.cmd("bdelete! "..bufnr)
+  end
 end
 
 function M.populate_reviewthreads_qf(repo, number, reviewthreads)
@@ -132,12 +242,20 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
     end
   end
 
-  local resolved_threads = vim.tbl_filter(function(item)
-    return item.isResolved
-  end, reviewthreads)
-  local unresolved_threads = vim.tbl_filter(function(item)
-    return not item.isResolved
-  end, reviewthreads)
+  local resolved_threads =
+    vim.tbl_filter(
+    function(item)
+      return item.isResolved
+    end,
+    reviewthreads
+  )
+  local unresolved_threads =
+    vim.tbl_filter(
+    function(item)
+      return not item.isResolved
+    end,
+    reviewthreads
+  )
 
   -- add the unresolved threads first
   process_threads(unresolved_threads)
@@ -315,11 +433,13 @@ end
 function M.highlight_lines(bufnr, startLine, endLine)
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_HIGHLIGHT_NS, 0, -1)
   signs.unplace(bufnr)
-  if not endLine then return end
+  if not endLine then
+    return
+  end
   startLine = startLine or endLine
-  for line=startLine, endLine do
-    api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line-1, 0, -1)
-    signs.place("comment", bufnr, line-1)
+  for line = startLine, endLine do
+    api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line - 1, 0, -1)
+    signs.place("comment", bufnr, line - 1)
   end
 end
 

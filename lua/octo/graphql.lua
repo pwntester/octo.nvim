@@ -185,7 +185,9 @@ M.update_pull_request_state_mutation =
         }
         changedFiles
         headRefName
+        headRefOid
         baseRefName
+        baseRefOid
         baseRepository {
           nameWithOwner
         }
@@ -325,7 +327,9 @@ query($endCursor: String) {
       }
       changedFiles
       headRefName
+      headRefOid
       baseRefName
+      baseRefOid
       baseRepository {
         nameWithOwner
       }
