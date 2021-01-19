@@ -31,12 +31,12 @@ local commands = {
       M.change_state("issue", "OPEN")
     end,
     list = function(repo, ...)
-      local rep, opts = M.process_varargs(repo, ...)
-      menu.issues(rep, opts)
+      local opts = M.process_varargs(repo, ...)
+      menu.issues(opts)
     end,
     search = function(repo, ...)
-      local rep, opts = M.process_varargs(repo, ...)
-      menu.issue_search(rep, opts)
+      local opts = M.process_varargs(repo, ...)
+      menu.issue_search(opts)
     end
   },
   pr = {
@@ -50,8 +50,8 @@ local commands = {
       M.change_state("pull", "OPEN")
     end,
     list = function(repo, ...)
-      local rep, opts = M.process_varargs(repo, ...)
-      menu.pull_requests(rep, opts)
+      local opts = M.process_varargs(repo, ...)
+      menu.pull_requests(opts)
     end,
     checkout = function()
       M.checkout_pr()
@@ -78,8 +78,8 @@ local commands = {
       M.pr_reviews()
     end,
     search = function(repo, ...)
-      local rep, opts = M.process_varargs(repo, ...)
-      menu.pull_request_search(rep, opts)
+      local opts = M.process_varargs(repo, ...)
+      menu.pull_request_search(opts)
     end
   },
   review = {
@@ -191,7 +191,8 @@ function M.process_varargs(repo, ...)
     local kv = vim.split(args[i], "=")
     opts[kv[1]] = kv[2]
   end
-  return repo, opts
+  opts.repo = repo
+  return opts
 end
 
 function M.octo(object, action, ...)

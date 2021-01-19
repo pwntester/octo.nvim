@@ -208,20 +208,20 @@ local function gen_from_issue(max_number)
   end
 end
 
-function M.issues(repo, opts)
+function M.issues(opts)
   opts = opts or {}
   local filter = get_filter(opts, "issue")
 
-  if not repo or repo == vim.NIL then
-    repo = util.get_remote_name()
+  if not opts.repo or opts.repo == vim.NIL then
+    opts.repo = util.get_remote_name()
   end
-  if not repo then
+  if not opts.repo then
     api.nvim_err_writeln("Cannot find repo")
     return
   end
 
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner = vim.split(opts.repo, "/")[1]
+  local name = vim.split(opts.repo, "/")[2]
   local query = format(graphql.issues_query, owner, name, filter)
   print("Fetching issues (this may take a while) ...")
   gh.run(
@@ -235,7 +235,7 @@ function M.issues(repo, opts)
           local resp = util.aggregate_pages(output, "data.repository.issues.nodes")
           local issues = resp.data.repository.issues.nodes
           if #issues == 0 then
-            api.nvim_err_writeln(format("There are no matching issues in %s.", repo))
+            api.nvim_err_writeln(format("There are no matching issues in %s.", opts.repo))
             return
           end
           local max_number = -1
@@ -254,13 +254,13 @@ function M.issues(repo, opts)
                 entry_maker = gen_from_issue(max_number)
               },
               sorter = conf.generic_sorter(opts),
-              previewer = issue_previewer.new({repo = repo}),
+              previewer = issue_previewer.new(opts),
               attach_mappings = function(_, map)
-                actions.goto_file_selection_edit:replace(open(repo, "issue", "edit"))
-                actions.goto_file_selection_split:replace(open(repo, "issue", "split"))
-                actions.goto_file_selection_vsplit:replace(open(repo, "issue", "vsplit"))
-                actions.goto_file_selection_tabedit:replace(open(repo, "issue", "tabedit"))
-                map("i", "<c-b>", open_in_browser("issue", repo))
+                actions.goto_file_selection_edit:replace(open(opts.repo, "issue", "edit"))
+                actions.goto_file_selection_split:replace(open(opts.repo, "issue", "split"))
+                actions.goto_file_selection_vsplit:replace(open(opts.repo, "issue", "vsplit"))
+                actions.goto_file_selection_tabedit:replace(open(opts.repo, "issue", "tabedit"))
+                map("i", "<c-b>", open_in_browser("issue", opts.repo))
                 return true
               end
             }
@@ -446,20 +446,20 @@ local function gen_from_pull_request(max_number)
   end
 end
 
-function M.pull_requests(repo, opts)
+function M.pull_requests(opts)
   opts = opts or {}
   local filter = get_filter(opts, "pull_request")
 
-  if not repo or repo == vim.NIL then
-    repo = util.get_remote_name()
+  if not opts.repo or opts.repo == vim.NIL then
+    opts.repo = util.get_remote_name()
   end
-  if not repo then
+  if not opts.repo then
     api.nvim_err_writeln("Cannot find repo")
     return
   end
 
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner = vim.split(opts.repo, "/")[1]
+  local name = vim.split(opts.repo, "/")[2]
   local query = format(graphql.pull_requests_query, owner, name, filter)
   print("Fetching issues (this may take a while) ...")
   gh.run(
@@ -473,7 +473,7 @@ function M.pull_requests(repo, opts)
           local resp = util.aggregate_pages(output, "data.repository.pullRequests.nodes")
           local pull_requests = resp.data.repository.pullRequests.nodes
           if #pull_requests == 0 then
-            api.nvim_err_writeln(format("There are no matching pull requests in %s.", repo))
+            api.nvim_err_writeln(format("There are no matching pull requests in %s.", opts.repo))
             return
           end
           local max_number = -1
@@ -492,14 +492,14 @@ function M.pull_requests(repo, opts)
                 entry_maker = gen_from_pull_request(max_number)
               },
               sorter = conf.generic_sorter(opts),
-              previewer = pull_request_previewer.new({repo = repo}),
+              previewer = pull_request_previewer.new(opts),
               attach_mappings = function(_, map)
-                actions.goto_file_selection_edit:replace(open(repo, "pull_request", "edit"))
-                actions.goto_file_selection_split:replace(open(repo, "pull_request", "split"))
-                actions.goto_file_selection_vsplit:replace(open(repo, "pull_request", "vsplit"))
-                actions.goto_file_selection_tabedit:replace(open(repo, "pull_request", "tabedit"))
-                map("i", "<c-o>", checkout_pull_request(repo))
-                map("i", "<c-b>", open_in_browser("pr", repo))
+                actions.goto_file_selection_edit:replace(open(opts.repo, "pull_request", "edit"))
+                actions.goto_file_selection_split:replace(open(opts.repo, "pull_request", "split"))
+                actions.goto_file_selection_vsplit:replace(open(opts.repo, "pull_request", "vsplit"))
+                actions.goto_file_selection_tabedit:replace(open(opts.repo, "pull_request", "tabedit"))
+                map("i", "<c-o>", checkout_pull_request(opts.repo))
+                map("i", "<c-b>", open_in_browser("pr", opts.repo))
                 return true
               end
             }
@@ -733,13 +733,13 @@ end
 -- SEARCH
 ---
 
-function M.issue_search(repo, opts)
+function M.issue_search(opts)
   opts = opts or {}
 
-  if not repo or repo == vim.NIL then
-    repo = util.get_remote_name()
+  if not opts.repo or opts.repo == vim.NIL then
+    opts.repo = util.get_remote_name()
   end
-  if not repo then
+  if not opts.repo then
     api.nvim_err_writeln("Cannot find repo")
     return
   end
@@ -764,7 +764,7 @@ function M.issue_search(repo, opts)
         -- store prompt in request queue
         table.insert(queue, prompt)
 
-        local query = format(graphql.search_issues_query, repo, prompt)
+        local query = format(graphql.search_issues_query, opts.repo, prompt)
         gh.run(
           {
             args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -790,26 +790,26 @@ function M.issue_search(repo, opts)
         )
       end,
       sorter = conf.generic_sorter(opts),
-      previewer = issue_previewer.new({repo = repo}),
+      previewer = issue_previewer.new(opts),
       attach_mappings = function(_, map)
-        actions.goto_file_selection_edit:replace(open(repo, "issue", "edit"))
-        actions.goto_file_selection_split:replace(open(repo, "issue", "split"))
-        actions.goto_file_selection_vsplit:replace(open(repo, "issue", "vsplit"))
-        actions.goto_file_selection_tabedit:replace(open(repo, "issue", "tabedit"))
-        map("i", "<c-b>", open_in_browser("issue", repo))
+        actions.goto_file_selection_edit:replace(open(opts.repo, "issue", "edit"))
+        actions.goto_file_selection_split:replace(open(opts.repo, "issue", "split"))
+        actions.goto_file_selection_vsplit:replace(open(opts.repo, "issue", "vsplit"))
+        actions.goto_file_selection_tabedit:replace(open(opts.repo, "issue", "tabedit"))
+        map("i", "<c-b>", open_in_browser("issue", opts.repo))
         return true
       end
     }
   ):find()
 end
 
-function M.pull_request_search(repo, opts)
+function M.pull_request_search(opts)
   opts = opts or {}
 
-  if not repo or repo == vim.NIL then
-    repo = util.get_remote_name()
+  if not opts.repo or opts.repo == vim.NIL then
+    opts.repo = util.get_remote_name()
   end
-  if not repo then
+  if not opts.repo then
     api.nvim_err_writeln("Cannot find repo")
     return
   end
@@ -834,7 +834,7 @@ function M.pull_request_search(repo, opts)
         -- store prompt in request queue
         table.insert(queue, prompt)
 
-        local query = format(graphql.search_pull_requests_query, repo, prompt)
+        local query = format(graphql.search_pull_requests_query, opts.repo, prompt)
         gh.run(
           {
             args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -860,13 +860,13 @@ function M.pull_request_search(repo, opts)
         )
       end,
       sorter = conf.generic_sorter(opts),
-      previewer = pull_request_previewer.new({repo = repo}),
+      previewer = pull_request_previewer.new(opts),
       attach_mappings = function(_, map)
-        actions.goto_file_selection_edit:replace(open(repo, "pull_request", "edit"))
-        actions.goto_file_selection_split:replace(open(repo, "pull_request", "split"))
-        actions.goto_file_selection_vsplit:replace(open(repo, "pull_request", "vsplit"))
-        actions.goto_file_selection_tabedit:replace(open(repo, "pull_request", "tabedit"))
-        map("i", "<c-b>", open_in_browser("pr", repo))
+        actions.goto_file_selection_edit:replace(open(opts.repo, "pull_request", "edit"))
+        actions.goto_file_selection_split:replace(open(opts.repo, "pull_request", "split"))
+        actions.goto_file_selection_vsplit:replace(open(opts.repo, "pull_request", "vsplit"))
+        actions.goto_file_selection_tabedit:replace(open(opts.repo, "pull_request", "tabedit"))
+        map("i", "<c-b>", open_in_browser("pr", opts.repo))
         return true
       end
     }
