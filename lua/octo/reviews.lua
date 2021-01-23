@@ -3,11 +3,11 @@ local writers = require "octo.writers"
 local signs = require "octo.signs"
 local util = require "octo.util"
 local constants = require "octo.constants"
+local gh = require "octo.gh"
+local graphql = require "octo.graphql"
 local format = string.format
 local vim = vim
 local api = vim.api
-
--- TODO: save main window buffers for cleanup on <C-c>
 
 local M = {}
 
@@ -57,6 +57,8 @@ function M.update_changes_qf(changes, opts)
   -- update context wiht SHA info
   qf.context.left_sha = opts.baseRefSHA
   qf.context.right_sha = opts.headRefSHA
+
+  qf.context.pull_request_id = opts.pull_request_id
 
   -- update context items with diff
   for i, ctxitem in ipairs(qf.context.items) do
@@ -119,13 +121,15 @@ function M.diff_changes_qf_entry()
 
       local valid_left_ranges = {}
       local valid_right_ranges = {}
-      for _, line in ipairs(vim.split(ctxitem.patch, "\n")) do
-        if vim.startswith(line, "@@") then
-          local found, _, left_start, left_length, right_start, right_length = string.find(line, "@@%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
-          if found then
-            table.insert(valid_left_ranges, {tonumber(left_start), left_start + left_length - 1})
-            table.insert(valid_right_ranges, {tonumber(right_start), right_start + right_length - 1})
-          end
+      local valid_hunks = {}
+      local hunk_strings = vim.split(ctxitem.patch, "\n@@")
+      for _, hunk in ipairs(hunk_strings) do
+        local header = vim.split(hunk, "\n")[1]
+        local found, _, left_start, left_length, right_start, right_length = string.find(header, "@@%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
+        if found then
+          table.insert(valid_hunks, hunk)
+          table.insert(valid_left_ranges, {tonumber(left_start), left_start + left_length - 1})
+          table.insert(valid_right_ranges, {tonumber(right_start), right_start + right_length - 1})
         end
       end
 
@@ -133,17 +137,21 @@ function M.diff_changes_qf_entry()
       local left_props = {
         side = "LEFT",
         sha = left_sha,
+        hunks = valid_hunks,
         qf_idx = qf.idx,
         qf_winid = qf.winid,
         ranges = valid_left_ranges,
+        path = qf.items[qf.idx].module,
         bufname = left_bufname
       }
       local right_props = {
         side = "RIGHT",
         sha = right_sha,
+        hunks = valid_hunks,
         qf_idx = qf.idx,
         qf_winid = qf.winid,
         ranges = valid_right_ranges,
+        path = qf.items[qf.idx].module,
         bufname = right_bufname
       }
       api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", left_props)
@@ -157,36 +165,88 @@ function M.add_review_comment(line1, line2)
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
 
-    -- TODO: check we are in a valid range
+    -- check we are in a valid range
+    local diff_hunk
+    for i, range in ipairs(props.ranges) do
+      if range[1] <= line1 and range[2] >= line2 then
+        diff_hunk = props.hunks[i]
+        break
+      end
+    end
+    if not diff_hunk then
+      api.nvim_err_writeln("Cannot place comments outside diff hunks")
+      return
+    end
 
     -- create new buffer
     local comment_bufnr = api.nvim_create_buf(false, true)
-    print(comment_bufnr)
 
-    -- move to qf win
-    api.nvim_set_current_win(props.qf_winid)
+    -- check if there is a comment win already open
+    local _, comment_winid = pcall(api.nvim_win_get_var, props.qf_winid, "comment_winid")
+    if tonumber(comment_winid) and api.nvim_win_is_valid(comment_winid) then
+      -- move to comment win
+      api.nvim_win_set_buf(comment_winid, comment_bufnr)
+      api.nvim_set_current_win(comment_winid)
+    else
+      -- move to qf win
+      api.nvim_set_current_win(props.qf_winid)
 
-    -- create new win and show comment bufnr
-    vim.cmd(format("rightbelow vert sbuffer %d", comment_bufnr))
+      -- create new win and show comment bufnr
+      vim.cmd(format("rightbelow vert sbuffer %d", comment_bufnr))
+
+      -- store comment win id
+      comment_winid = api.nvim_get_current_win()
+      api.nvim_win_set_var(props.qf_winid, "comment_winid", comment_winid)
+    end
+
+    -- add mappings to comment buffer
+    M.add_changes_qf_mappings()
+
+    -- header
+    local header_vt = {
+      {format("%s", props.path), "OctoNvimDetailsValue"},
+      {" ["},
+      {format("%s", props.side), "OctoNvimDetailsLabel"},
+      {"] ("},
+      {format("%d,%d", line1, line2), "OctoNvimDetailsValue"},
+      {")"}
+    }
+    writers.write_block({"", "", ""}, {bufnr = comment_bufnr, mark = false, line = 1})
+    api.nvim_buf_set_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt, {})
+
+    -- change to insert mode
+    vim.cmd [[normal G]]
     vim.cmd [[startinsert]]
+
+    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "fugitive://", ""), line1, line2)
 
     -- create new comment
     local comment = {
+      key = bufname,
+      path = vim.split(props.path, ":")[2],
       side = props.side,
+      diff_hunk = diff_hunk,
       sha = props.sha,
-      qf_idx = props.idx,
-      qf_winid = props.winid,
+      qf_idx = props.qf_idx,
+      qf_winid = props.qf_winid,
       comment_bufnr = comment_bufnr,
+      comment_winid = comment_winid,
       line1 = line1,
       line2 = line2,
       body = ""
     }
-    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "fugitive://", ""), line1, line2)
+
+    -- add comment to list of pending comments
     M.review_comments[bufname] = comment
+
+    -- configure comment buffer
     api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
     api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
     api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
     api.nvim_buf_set_name(comment_bufnr, bufname)
+
+    -- highlight
+    M.highlight_lines(bufnr, line1, line2)
   end
 end
 
@@ -196,11 +256,10 @@ function M.save_review_comment()
   if status and props then
     local bufname = api.nvim_buf_get_name(bufnr)
     local comment = M.review_comments[bufname]
-    comment.body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+    local body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+    comment.body = vim.fn.trim(body)
     M.review_comments[bufname] = comment
-
-    -- TODO: close win and delete buffer
-    --vim.cmd("bdelete! "..bufnr)
+    api.nvim_buf_set_option(bufnr, "modified", false)
   end
 end
 
@@ -431,6 +490,8 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 end
 
 function M.highlight_lines(bufnr, startLine, endLine)
+
+  -- TODO: improve it
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_HIGHLIGHT_NS, 0, -1)
   signs.unplace(bufnr)
   if not endLine then
@@ -485,63 +546,6 @@ function M.add_reviewthread_qf_mappings(repo, number, main_win)
   vim.cmd [[wincmd p]]
 end
 
--- function M.get_file_comment_lines(repo, number, main_win)
---   local reviewthreads = api.nvim_win_get_var(main_win, "reviewthreads")
---   local bufnr = api.nvim_win_get_buf(main_win)
---   local pr_bufnr = vim.fn.bufnr(format("octo://%s/pull/%d", repo, number))
---   local comments = api.nvim_buf_get_var(pr_bufnr, "pr_comments")
---   local lines = {}
---   for _, c in ipairs(reviewthreads) do
---     local comment = comments[tostring(c.id)]
---     if comment and comment.path == vim.fn.bufname(bufnr) then
---       table.insert(lines, comment.original_line)
---     end
---   end
---   table.sort(
---     lines,
---     function(a, b)
---       return a < b
---     end
---   )
---   return lines
--- end
---
--- function M.next_file_comment(repo, number, main_win)
---   api.nvim_set_current_win(main_win)
---   local lines = M.get_file_comment_lines(repo, number, main_win)
---   local current_line = vim.fn.line(".")
---   local target_line = current_line
---   for _, l in ipairs(lines) do
---     if current_line < l then
---       target_line = l
---       break
---     end
---   end
---   -- cycle
---   if current_line >= lines[#lines] then
---     target_line = lines[1]
---   end
---   vim.cmd(tostring(target_line))
--- end
---
--- function M.prev_file_comment(repo, number, main_win)
---   api.nvim_set_current_win(main_win)
---   local lines = M.get_file_comment_lines(repo, number, main_win)
---   local current_line = vim.fn.line(".")
---   local target_line = current_line
---   for _, l in ipairs(vim.fn.reverse(lines)) do
---     if current_line > l then
---       target_line = l
---       break
---     end
---   end
---   -- cycle
---   if current_line <= lines[1] then
---     target_line = lines[#lines]
---   end
---   vim.cmd(tostring(target_line))
--- end
-
 function M.next_comment(repo, number, main_win)
   api.nvim_set_current_win(main_win)
   local qf = vim.fn.getqflist({idx = 0, size = 0})
@@ -564,10 +568,27 @@ function M.prev_comment(repo, number, main_win)
   M.show_reviewthread_qf_entry(repo, number, main_win)
 end
 
+function M.close_review_tab()
+
+  -- close fugitive buffers
+  M.clean_fugitive_buffers()
+
+  -- close review comment buffers
+  local tabpage = api.nvim_get_current_tabpage()
+  for _, w in ipairs(api.nvim_tabpage_list_wins(tabpage)) do
+    if api.nvim_win_is_valid(w) then
+      local bufnr = api.nvim_win_get_buf(w)
+      if api.nvim_buf_get_option(bufnr, "filetype") == "octo_reviewcomment" then
+        vim.cmd(format("bdelete! %d", bufnr))
+      end
+    end
+  end
+end
+
 function M.add_changes_qf_mappings()
   vim.cmd [[nnoremap <silent><buffer>]q :lua require'octo.reviews'.next_change()<CR>]]
   vim.cmd [[nnoremap <silent><buffer>[q :lua require'octo.reviews'.prev_change()<CR>]]
-  vim.cmd [[nnoremap <silent><buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.clean_fugitive_buffers()<CR>]]
+  vim.cmd [[nnoremap <silent><buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.close_review_tab()<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))
@@ -592,6 +613,47 @@ function M.prev_change()
     vim.cmd [[cprev]]
   end
   M.diff_changes_qf_entry()
+end
+
+function M.submit_review(event)
+
+  local bufnr = api.nvim_get_current_buf()
+  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local text = vim.fn.trim(table.concat(lines, "\n"))
+  -- TODO: escape double quotes
+
+  local comments = {}
+  for _, c in ipairs(vim.tbl_values(M.review_comments)) do
+    -- TODO: escape double quotes
+    if c.line1 == c.line2 then
+      table.insert(comments, format("{body:\"%s\", line:%d, path:\"%s\", side:%s}", c.body, c.line1, c.path, c.side))
+    else
+      table.insert(comments, format("{body:\"%s\", startLine:%d, line:%d, path:\"%s\", startSide:%s, side:%s}", c.body, c.line1, c.line2, c.path, c.side, c.side))
+    end
+  end
+  comments = table.concat(comments, ", ")
+
+  local qf = vim.fn.getqflist({context = 0})
+  local pull_request_id = qf.context.pull_request_id
+  local query = format(graphql.submit_review_mutation, pull_request_id, event, text, comments)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          print(output)
+        end
+        api.nvim_win_close(0, true)
+      end
+    }
+  )
+
+--"message": "Start line must precede the end line."
+--there is a line mismatch, comments are not exactly placed on the specified lines, at least for Left side
+--its like the left side lines are mapped to the right ones. so 721 and 723 on the lhs are mapped to 723 to 725 on the rhs. so placing a comment on 721-725 LEFT get the comment placed on 723-725 LEFT
+
 end
 
 return M

@@ -36,7 +36,7 @@ function M.get_remote_name()
     local cmd = format("git config --get remote.%s.url", candidate)
     local url = string.gsub(vim.fn.system(cmd), "%s+", "")
     if not M.is_blank(url) then
-      local owner, name 
+      local owner, name
       if #vim.split(url, "://") == 2 then
         owner = vim.split(url, "/")[#vim.split(url, "/") - 1]
         name = string.gsub(vim.split(url, "/")[#vim.split(url, "/")], ".git$", "")
@@ -240,16 +240,26 @@ function M.create_content_popup(lines)
   if vim.o.laststatus ~= 0 then
     line_count = line_count - 1
   end
+  local winnr, bufnr = M.create_popup(lines, {
+    line = (line_count - #lines) / 2,
+    col = (vim.o.columns - max_width) / 2,
+    height = #lines
+  })
+  return winnr, bufnr
+end
+
+function M.create_popup(content, opts)
   local winnr, _ =
     popup.create(
-    lines,
+    content,
     {
-      line = (line_count - #lines) / 2,
-      col = (vim.o.columns - max_width) / 2,
-      minwidth = 40,
+      line = opts.line,
+      col = opts.col,
+      minwidth = opts.width or 40,
+      minheight = opts.height or 20,
       border = {1, 1, 1, 1},
       borderchars = {"─", "│", "─", "│", "┌", "┐", "┘", "└"},
-      padding = {0, 1, 0, 1}
+      padding = {1, 1, 1, 1}
     }
   )
   local bufnr = api.nvim_win_get_buf(winnr)
@@ -305,7 +315,7 @@ function M.aggregate_pages(text, aggregation_key)
 
   local responses = {}
   while true do
-    local idx = string.find(text, "}{\"data\"")
+    local idx = string.find(text, '}{"data"')
     if not idx then
       table.insert(responses, json.parse(text))
       break
@@ -349,14 +359,23 @@ function M.get_nested_prop(obj, prop)
 end
 
 function M.escape_chars(string)
-  return string.gsub(string,  "[%(|%)|\\|%[|%]|%-|%{%}|%?|%+|%*]", {
-    ["\\"] = "\\\\", ["-"] = "\\-",
-    ["("] = "\\(", [")"] = "\\)",
-    ["["] = "\\[", ["]"] = "\\]",
-    ["{"] = "\\{", ["}"] = "\\}",
-    ["?"] = "\\?", ["+"] = "\\+",
-    ["*"] = "\\*",
-  })
+  return string.gsub(
+    string,
+    "[%(|%)|\\|%[|%]|%-|%{%}|%?|%+|%*]",
+    {
+      ["\\"] = "\\\\",
+      ["-"] = "\\-",
+      ["("] = "\\(",
+      [")"] = "\\)",
+      ["["] = "\\[",
+      ["]"] = "\\]",
+      ["{"] = "\\{",
+      ["}"] = "\\}",
+      ["?"] = "\\?",
+      ["+"] = "\\+",
+      ["*"] = "\\*"
+    }
+  )
 end
 
 return M

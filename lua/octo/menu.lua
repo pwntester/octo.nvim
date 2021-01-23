@@ -8,6 +8,7 @@ local conf = require "telescope.config".values
 local make_entry = require "telescope.make_entry"
 local entry_display = require "telescope.pickers.entry_display"
 local writers = require "octo.writers"
+local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
@@ -460,9 +461,9 @@ function M.pull_requests(opts)
             return
           end
           local max_number = -1
-          for _, issue in ipairs(pull_requests) do
-            if #tostring(issue.number) > max_number then
-              max_number = #tostring(issue.number)
+          for _, pull in ipairs(pull_requests) do
+            if #tostring(pull.number) > max_number then
+              max_number = #tostring(pull.number)
             end
           end
 
@@ -854,6 +855,292 @@ function M.pull_request_search(opts)
       end
     }
   ):find()
+end
+
+---
+-- REVIEW COMMENTS
+---
+local function gen_from_review_comment(linenr_length)
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.comment.path, "TelescopeResultsNumber"},
+      {entry.comment.side},
+      {entry.comment.line1},
+      {entry.comment.line2}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {remaining = true},
+        {width = 5},
+        {width = linenr_length},
+        {width = linenr_length}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(comment)
+    if not comment or vim.tbl_isempty(comment) then
+      return nil
+    end
+
+    return {
+      value = comment.key,
+      ordinal = comment.key,
+      display = make_display,
+      comment = comment
+    }
+  end
+end
+
+local review_comment_previewer =
+  defaulter(
+  function()
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
+      define_preview = function(self, entry)
+        local bufnr = self.state.bufnr
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
+          -- TODO: pretty print
+          writers.write_diff_hunk(bufnr, entry.comment.diff_hunk)
+          api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(entry.comment.body, "\n"))
+        end
+      end
+    }
+  end,
+  {}
+)
+
+function M.review_comments()
+  local comments = vim.tbl_values(reviews.review_comments)
+  local max_linenr_length = -1
+  for _, comment in ipairs(comments) do
+    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line1))
+    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line2))
+  end
+  pickers.new(
+    {},
+    {
+      prompt_title = "Review Comments",
+      finder = finders.new_table {
+        results = comments,
+        entry_maker = gen_from_review_comment(max_linenr_length)
+      },
+      sorter = conf.generic_sorter({}),
+      previewer = review_comment_previewer.new({}),
+      attach_mappings = function()
+        -- TODO: delete comment
+        actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+          local comment = actions.get_selected_entry(prompt_bufnr).comment
+          actions.close(prompt_bufnr)
+
+          -- select qf item
+		      vim.fn.setqflist({}, 'r', {idx = comment.qf_idx })
+          reviews.diff_changes_qf_entry()
+
+          -- move cursor to comment line
+          local wins = api.nvim_tabpage_list_wins(0)
+          local diff_winid = -1
+          for _, win in ipairs(wins) do
+            if comment.comment_bufnr == api.nvim_win_get_buf(win) then
+              diff_winid = win
+              break
+            end
+          end
+          if diff_winid > -1 then
+            api.nvim_win_set_cursor(diff_winid, {comment.line1, 1})
+          end
+
+          -- show comment win/buf
+          if comment.comment_winid and api.nvim_win_is_valid(comment.comment_winid) then
+            api.nvim_win_set_buf(comment.comment_winid, comment.comment_bufnr)
+            api.nvim_set_current_win(comment.comment_winid)
+          else
+            -- move to qf win
+            -- TODO: this seems to be failing. does qf winid change?
+            api.nvim_set_current_win(comment.qf_winid)
+
+            -- create new win and show comment bufnr
+            vim.cmd(format("rightbelow vert sbuffer %d", comment.comment_bufnr))
+          end
+        end)
+        return true
+      end
+    }
+  ):find()
+end
+
+---
+-- PROJECTS
+---
+local function gen_from_project()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.project.name}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(project)
+    if not project or vim.tbl_isempty(project) then
+      return nil
+    end
+
+    return {
+      value = project.id,
+      ordinal = project.id.. " " .. project.name,
+      display = make_display,
+      project = project
+    }
+  end
+end
+
+local function gen_from_project_column()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.column.name}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(column)
+    if not column or vim.tbl_isempty(column) then
+      return nil
+    end
+
+    return {
+      value = column.id,
+      ordinal = column.id.. " " .. column.name,
+      display = make_display,
+      column = column
+    }
+  end
+end
+
+function M.projects()
+  local opts = require('telescope.themes').get_dropdown({
+    results_height = 10;
+    width = 0.4;
+    prompt_title = '';
+    previewer = false;
+    borderchars = {
+      prompt = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
+      results = {' ', '▐', '▄', '▌', '▌', '▐', '▟', '▙' };
+      preview = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
+    };
+  })
+  local repo, _ = util.get_repo_number()
+  if not repo then
+    return
+  end
+  local status, iid = pcall(api.nvim_buf_get_var, 0, "iid")
+  if not status or not iid then
+    api.nvim_err_writeln("Cannot get issue/pr id")
+  end
+
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.projects_query, owner, name)
+  gh.run(
+    {
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local projects = resp.data.repository.projects.nodes
+          if #projects == 0 then
+            api.nvim_err_writeln(format("There are no matching projects for %s.", repo))
+            return
+          end
+
+          pickers.new(
+            opts,
+            {
+              prompt_title = "Projects",
+              finder = finders.new_table {
+                results = projects,
+                entry_maker = gen_from_project()
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                  local selection = actions.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  pickers.new(
+                    opts,
+                    {
+                      prompt_title = "Columns",
+                      finder = finders.new_table {
+                        results = selection.project.columns.nodes,
+                        entry_maker = gen_from_project_column()
+                      },
+                      sorter = conf.generic_sorter(opts),
+                      attach_mappings = function(_, _)
+                        actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                          actions.close(prompt_bufnr)
+                          local selection2 = actions.get_selected_entry(prompt_bufnr)
+                          print(iid, selection2.column.id)
+                          -- https://docs.github.com/en/graphql/reference/mutations#addprojectcard
+                          -- input
+                          ---- contentId (issue/pr id)
+                          ---- projectColumnId
+                          -- return
+                          ---- cardEdge
+                          ------ node
+                          -------- id
+                        end)
+                        return true
+                      end
+                    }
+                  ):find()
+
+                end)
+                return true
+              end
+            }
+          ):find()
+        end
+      end
+    }
+  )
 end
 
 return M

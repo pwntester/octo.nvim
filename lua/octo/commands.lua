@@ -85,7 +85,13 @@ local commands = {
   review = {
     start = function()
       M.review_pr()
-    end
+    end,
+    comments = function()
+      menu.review_comments()
+    end,
+    submit = function()
+      M.submit_review()
+    end,
   },
   gist = {
     list = function(...)
@@ -142,6 +148,11 @@ local commands = {
     end,
     delete = function(reaction)
       M.reaction_action("delete", reaction)
+    end
+  },
+  project = {
+    assign = function()
+      menu.projects()
     end
   }
 }
@@ -704,6 +715,31 @@ function M.pr_reviews()
   )
 end
 
+function M.submit_review()
+  local winnr, bufnr = util.create_popup({""}, {
+    line = 5,
+    col = 5,
+    width = math.floor(vim.o.columns * 0.9),
+    height = math.floor(vim.o.lines * 0.5)
+  })
+  api.nvim_set_current_win(winnr)
+
+  local help_vt = {
+    {"Press <c-a> to approve, <c-m> to comment or <c-r> to request changes", "OctoNvimDetailsValue"}
+  }
+  writers.write_block({"", "", ""}, {bufnr = bufnr, mark = false, line = 1})
+  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, help_vt, {})
+  local mapping_opts = {script = true, silent = true, noremap = true}
+  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", ":lua require'octo.reviews'.submit_review('APPROVE')<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.submit_review('COMMENT')<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-r>", ":lua require'octo.reviews'.submit_review('REQUEST_CHANGES')<CR>", mapping_opts)
+  vim.cmd [[normal G]]
+  vim.cmd [[startinsert]]
+end
+
 function M.review_pr()
   local repo, number, pr = util.get_repo_number_pr()
   if not repo then
@@ -741,6 +777,7 @@ function M.review_pr()
             table.insert(changes, change)
           end
           reviews.populate_changes_qf(changes, {
+            pull_request_id = pr.id,
             baseRefName = pr.baseRefName,
             baseRefSHA = pr.baseRefSHA,
             headRefName = pr.headRefName,
