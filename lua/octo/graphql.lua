@@ -674,4 +674,15 @@ M.move_project_card_mutation =
     }
   }
 ]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#deleteprojectcard
+M.delete_project_card_mutation =
+  [[
+  mutation DeleteProjectCard {
+    deleteProjectCard(input: {cardId: "%s"}) {
+      deletedCardId
+    }
+  }
+]]
+
 return M
