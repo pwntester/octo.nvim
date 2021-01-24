@@ -7,22 +7,36 @@ local previewers = require "telescope.previewers"
 local conf = require "telescope.config".values
 local make_entry = require "telescope.make_entry"
 local entry_display = require "telescope.pickers.entry_display"
+
 local writers = require "octo.writers"
+local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
+
 local format = string.format
 local defaulter = utils.make_default_callable
 local vim = vim
 local flatten = vim.tbl_flatten
 local api = vim.api
-local bat_options = {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"}
 local json = {
   parse = vim.fn.json_decode,
   stringify = vim.fn.json_encode
 }
 
 local M = {}
+
+local dropdown_opts = require('telescope.themes').get_dropdown({
+  results_height = 10;
+  width = 0.4;
+  prompt_title = '';
+  previewer = false;
+  borderchars = {
+    prompt = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
+    results = {' ', '▐', '▄', '▌', '▌', '▐', '▟', '▙' };
+    preview = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
+  };
+})
 
 local function get_filter(opts, kind)
   local filter = ""
@@ -220,7 +234,7 @@ function M.issues(opts)
           pickers.new(
             opts,
             {
-              prompt_title = "Issues",
+              prompt_prefix = "Issues >",
               finder = finders.new_table {
                 results = issues,
                 entry_maker = gen_from_issue(max_number)
@@ -258,7 +272,7 @@ local gist_previewer =
           end
           local result = {"gh", "gist", "view", tmp_table[1], "|"}
           if vim.fn.executable("bat") then
-            table.insert(result, bat_options)
+            table.insert(result, {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"})
           else
             table.insert(result, "less")
           end
@@ -304,7 +318,7 @@ function M.gists(opts)
   pickers.new(
     opts,
     {
-      prompt_title = "Gists",
+      prompt_prefix = "Gists >",
       finder = finders.new_table {
         results = output,
         entry_maker = make_entry.gen_from_string(opts)
@@ -460,16 +474,16 @@ function M.pull_requests(opts)
             return
           end
           local max_number = -1
-          for _, issue in ipairs(pull_requests) do
-            if #tostring(issue.number) > max_number then
-              max_number = #tostring(issue.number)
+          for _, pull in ipairs(pull_requests) do
+            if #tostring(pull.number) > max_number then
+              max_number = #tostring(pull.number)
             end
           end
 
           pickers.new(
             opts,
             {
-              prompt_title = "Pull Requests",
+              prompt_prefix = "Pull Requests >",
               finder = finders.new_table {
                 results = pull_requests,
                 entry_maker = gen_from_pull_request(max_number)
@@ -589,7 +603,7 @@ function M.commits()
           pickers.new(
             {},
             {
-              prompt_title = "PR Commits",
+              prompt_prefix = "PR Commits >",
               finder = finders.new_table {
                 results = results,
                 entry_maker = gen_from_git_commits()
@@ -690,7 +704,7 @@ function M.changed_files()
           pickers.new(
             {},
             {
-              prompt_title = "PR Files Changed",
+              prompt_prefix = "PR Files Changed >",
               finder = finders.new_table {
                 results = results,
                 entry_maker = gen_from_git_changed_files()
@@ -731,7 +745,7 @@ function M.issue_search(opts)
   pickers.new(
     opts,
     {
-      prompt_title = "Issue Search",
+      prompt_prefix = "Issue Search >",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -801,7 +815,7 @@ function M.pull_request_search(opts)
   pickers.new(
     opts,
     {
-      prompt_title = "PR Search",
+      prompt_prefix = "PR Search >",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -854,6 +868,346 @@ function M.pull_request_search(opts)
       end
     }
   ):find()
+end
+
+---
+-- REVIEW COMMENTS
+---
+local function gen_from_review_comment(linenr_length)
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.comment.path, "TelescopeResultsNumber"},
+      {entry.comment.side},
+      {entry.comment.line1},
+      {entry.comment.line2}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {remaining = true},
+        {width = 5},
+        {width = linenr_length},
+        {width = linenr_length}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(comment)
+    if not comment or vim.tbl_isempty(comment) then
+      return nil
+    end
+
+    return {
+      value = comment.key,
+      ordinal = comment.key,
+      display = make_display,
+      comment = comment
+    }
+  end
+end
+
+local review_comment_previewer =
+  defaulter(
+  function()
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
+      define_preview = function(self, entry)
+        local bufnr = self.state.bufnr
+        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
+          -- TODO: pretty print
+          writers.write_diff_hunk(bufnr, entry.comment.diff_hunk)
+          api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(entry.comment.body, "\n"))
+        end
+      end
+    }
+  end,
+  {}
+)
+
+function M.review_comments()
+  local comments = vim.tbl_values(reviews.review_comments)
+  local max_linenr_length = -1
+  for _, comment in ipairs(comments) do
+    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line1))
+    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line2))
+  end
+  pickers.new(
+    {},
+    {
+      prompt_prefix = "Review Comments >",
+      finder = finders.new_table {
+        results = comments,
+        entry_maker = gen_from_review_comment(max_linenr_length)
+      },
+      sorter = conf.generic_sorter({}),
+      previewer = review_comment_previewer.new({}),
+      attach_mappings = function()
+        -- TODO: delete comment
+        actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+          local comment = actions.get_selected_entry(prompt_bufnr).comment
+          actions.close(prompt_bufnr)
+
+          -- select qf item
+		      vim.fn.setqflist({}, 'r', {idx = comment.qf_idx })
+          reviews.diff_changes_qf_entry()
+
+          -- move cursor to comment line
+          local wins = api.nvim_tabpage_list_wins(0)
+          local diff_winid = -1
+          for _, win in ipairs(wins) do
+            if comment.comment_bufnr == api.nvim_win_get_buf(win) then
+              diff_winid = win
+              break
+            end
+          end
+          if diff_winid > -1 then
+            api.nvim_win_set_cursor(diff_winid, {comment.line1, 1})
+          end
+
+          -- show comment win/buf
+          if comment.comment_winid and api.nvim_win_is_valid(comment.comment_winid) then
+            api.nvim_win_set_buf(comment.comment_winid, comment.comment_bufnr)
+            api.nvim_set_current_win(comment.comment_winid)
+          else
+            -- move to qf win
+            -- TODO: this seems to be failing. does qf winid change?
+            api.nvim_set_current_win(comment.qf_winid)
+
+            -- create new win and show comment bufnr
+            vim.cmd(format("rightbelow vert sbuffer %d", comment.comment_bufnr))
+          end
+        end)
+        return true
+      end
+    }
+  ):find()
+end
+
+---
+-- PROJECTS
+---
+local function gen_from_project()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.project.name}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(project)
+    if not project or vim.tbl_isempty(project) then
+      return nil
+    end
+
+    return {
+      value = project.id,
+      ordinal = project.id.. " " .. project.name,
+      display = make_display,
+      project = project
+    }
+  end
+end
+
+local function gen_from_project_column()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.column.name}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(column)
+    if not column or vim.tbl_isempty(column) then
+      return nil
+    end
+
+    return {
+      value = column.id,
+      ordinal = column.id.. " " .. column.name,
+      display = make_display,
+      column = column
+    }
+  end
+end
+
+local function gen_from_project_card()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.card.column.name},
+      {format(" (%s)", entry.card.project.name), "OctoNvimDetailsValue"},
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {width = 5},
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(card)
+    if not card or vim.tbl_isempty(card) then
+      return nil
+    end
+
+    return {
+      value = card.id,
+      ordinal = card.project.name .. " " .. card.column.name,
+      display = make_display,
+      card = card
+    }
+  end
+end
+
+function M.select_project_card(cb)
+  local opts = vim.deepcopy(dropdown_opts)
+  local ok, cards = pcall(api.nvim_buf_get_var, 0, "cards")
+  if not ok or not cards or #cards.nodes == 0 then
+    api.nvim_err_writeln("Cant find any project cards")
+    return
+  end
+
+  if #cards.nodes == 1 then
+    cb(cards.nodes[1].id)
+  else
+    pickers.new(
+      opts,
+      {
+        prompt_prefix = "Choose card >",
+        finder = finders.new_table {
+          results = cards.nodes,
+          entry_maker = gen_from_project_card()
+        },
+        sorter = conf.generic_sorter(opts),
+        attach_mappings = function(_, _)
+          actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+            local source_card = actions.get_selected_entry(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            cb(source_card.card.id)
+          end)
+          return true
+        end
+      }
+    ):find()
+  end
+end
+
+function M.select_target_project_column(cb)
+  local opts = vim.deepcopy(dropdown_opts)
+
+  local repo = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+
+  local query = format(graphql.projects_query, owner, name, vim.g.octo_loggedin_user, owner)
+  gh.run(
+    {
+      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      cb = function(output)
+        if output then
+          local resp = json.parse(output)
+          local projects = {}
+          local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
+          local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
+          local org_projects = not resp.errors and resp.data.organization.projects.nodes or {}
+          vim.list_extend(projects, repo_projects)
+          vim.list_extend(projects, user_projects)
+          vim.list_extend(projects, org_projects)
+          if #projects == 0 then
+            api.nvim_err_writeln(format("There are no matching projects for %s.", repo))
+            return
+          end
+
+          pickers.new(
+            opts,
+            {
+              prompt_prefix = "Choose target project >",
+              finder = finders.new_table {
+                results = projects,
+                entry_maker = gen_from_project()
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                  local selected_project = actions.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  local opts2 = vim.deepcopy(dropdown_opts)
+                  pickers.new(
+                    opts2,
+                    {
+                      prompt_prefix = "Choose target column >",
+                      finder = finders.new_table {
+                        results = selected_project.project.columns.nodes,
+                        entry_maker = gen_from_project_column()
+                      },
+                      sorter = conf.generic_sorter(opts2),
+                      attach_mappings = function()
+                        actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                          actions.close(prompt_bufnr)
+                          local selected_column = actions.get_selected_entry(prompt_bufnr)
+                          cb(selected_column.column.id)
+                        end)
+                        return true
+                      end
+                    }
+                  ):find()
+                end)
+                return true
+              end
+            }
+          ):find()
+        end
+      end
+    }
+  )
 end
 
 return M

@@ -26,8 +26,8 @@ local function run(opts)
       on_exit = vim.schedule_wrap(
         function(j_self, _, _)
           if mode == "async" and opts.cb then
-            local output = table.concat(j_self:result())
-            local stderr = table.concat(j_self:stderr_result())
+            local output = table.concat(j_self:result(), "\n")
+            local stderr = table.concat(j_self:stderr_result(), "\n")
             opts.cb(output, stderr)
           end
         end
@@ -36,7 +36,7 @@ local function run(opts)
   )
   if mode == "sync" then
     job:sync()
-    return table.concat(job:result())
+    return table.concat(job:result(), "\n")
   else
     job:start()
   end

@@ -24,6 +24,19 @@ M.unresolve_review_mutation =
   }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
+M.submit_review_mutation =
+  [[
+  mutation AddPullRequestReview {
+    addPullRequestReview(input: {pullRequestId: "%s", event: %s, body: "%s", threads: [%s] }) {
+      pullRequestReview {
+        id
+        state
+      }
+    }
+  }
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue_mutation =
   [[
@@ -81,7 +94,7 @@ M.create_issue_mutation =
         }
         assignees(first: 20) {
           nodes {
-            id
+            login
           }
         }
       }
@@ -146,7 +159,7 @@ M.update_issue_state_mutation =
         }
         assignees(first: 20) {
           nodes {
-            id
+            login
           }
         }
       }
@@ -185,7 +198,9 @@ M.update_pull_request_state_mutation =
         }
         changedFiles
         headRefName
+        headRefOid
         baseRefName
+        baseRefOid
         baseRepository {
           nameWithOwner
         }
@@ -226,7 +241,7 @@ M.update_pull_request_state_mutation =
         }
         assignees(first: 20) {
           nodes {
-            id
+            login
           }
         }
         reviewRequests(first: 20) {
@@ -325,7 +340,9 @@ query($endCursor: String) {
       }
       changedFiles
       headRefName
+      headRefOid
       baseRefName
+      baseRefOid
       baseRepository {
         nameWithOwner
       }
@@ -340,6 +357,18 @@ query($endCursor: String) {
         totalCount
         nodes {
           content
+        }
+      }
+      projectCards(last: 20) {
+        nodes {
+          id
+          state
+          column {
+            name
+          }
+          project {
+            name
+          }
         }
       }
       comments(first: 100, after: $endCursor) {
@@ -362,6 +391,27 @@ query($endCursor: String) {
           endCursor
         }
       }
+      reviewDecision
+      reviews(last:100) {
+        nodes {
+          id
+          body
+          createdAt
+          reactions(last:20) {
+            totalCount
+            nodes {
+              content
+            }
+          }
+          author {
+            login
+          }
+          state
+          comments {
+            totalCount
+          }
+        }
+      }
       labels(first: 20) {
         nodes {
           color
@@ -370,7 +420,7 @@ query($endCursor: String) {
       }
       assignees(first: 20) {
         nodes {
-          id
+          login
         }
       }
       reviewRequests(first: 20) {
@@ -424,6 +474,18 @@ query($endCursor: String) {
           content
         }
       }
+      projectCards(last: 20) {
+        nodes {
+          id
+          state
+          column {
+            name
+          }
+          project {
+            name
+          }
+        }
+      }
       comments(first: 100, after: $endCursor) {
         nodes {
           id
@@ -452,7 +514,7 @@ query($endCursor: String) {
       }
       assignees(first: 20) {
         nodes {
-          id
+          login
         }
       }
     }
@@ -534,5 +596,82 @@ query {
     }
   }
 }
+]]
+
+-- https://docs.github.com/en/graphql/reference/objects#project
+M.projects_query =
+[[
+query {
+  repository(owner: "%s", name: "%s") {
+    projects(first: 100) {
+      nodes {
+        id 
+        name
+        columns(first:100) {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+  user(login: "%s") {
+    projects(first: 100) {
+      nodes {
+        id 
+        name
+        columns(first:100) {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+  organization(login: "%s") {
+    projects(first: 100) {
+      nodes {
+        id 
+        name
+        columns(first:100) {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addprojectcard
+M.add_project_card_mutation =
+  [[
+  mutation AddProjectCard {
+    addProjectCard(input: {contentId: "%s", projectColumnId: "%s"}) {
+      cardEdge {
+        node {
+          id 
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#moveprojectcard
+M.move_project_card_mutation =
+  [[
+  mutation MoveProjectCard {
+    moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
+      cardEdge {
+        node {
+          id 
+        }
+      }
+    }
+  }
 ]]
 return M

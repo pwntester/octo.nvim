@@ -192,10 +192,10 @@ function M.write_details(bufnr, issue, update)
   local assignees_vt = {
     {"Assignees: ", "OctoNvimDetailsLabel"}
   }
-  if issue.assignees and #issue.assignees > 0 then
-    for i, as in ipairs(issue.assignees) do
+  if issue.assignees and #issue.assignees.nodes > 0 then
+    for i, as in ipairs(issue.assignees.nodes) do
       table.insert(assignees_vt, {as.login, "OctoNvimDetailsValue"})
-      if i ~= #issue.assignees then
+      if i ~= #issue.assignees.nodes then
         table.insert(assignees_vt, {", ", "OctoNvimDetailsLabel"})
       end
     end
@@ -203,6 +203,22 @@ function M.write_details(bufnr, issue, update)
     table.insert(assignees_vt, {"No one assigned ", "OctoNvimMissingDetails"})
   end
   table.insert(details, assignees_vt)
+
+  -- projects
+  if issue.projectCards and #issue.projectCards.nodes > 0 then
+    local projects_vt = {
+      {"Projects: ", "OctoNvimDetailsLabel"}
+    }
+    local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
+    local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
+    for _, card in ipairs(issue.projectCards.nodes) do
+      table.insert(projects_vt, {card.column.name, })
+      table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
+      table.insert(projects_vt, {card.project.name})
+      table.insert(projects_vt, {")", "OctoNvimDetailsLabel"})
+    end
+    table.insert(details, projects_vt)
+  end
 
   -- milestones
   local ms = issue.milestone
@@ -232,7 +248,7 @@ function M.write_details(bufnr, issue, update)
   end
   table.insert(details, labels_vt)
 
-  -- for pulls add additional details
+  -- for pull requests add additional details
   if issue.commits then
     -- Pending requested reviewers
     local requested_reviewers_vt = {
@@ -270,6 +286,15 @@ function M.write_details(bufnr, issue, update)
       {issue.baseRefName, "OctoNvimDetailsValue"}
     }
     table.insert(details, branches_vt)
+
+    -- review decision
+    if issue.reviewDecision and issue.reviewDecision ~= vim.NIL then
+      local decision_vt = {
+        {"Review decision: ", "OctoNvimDetailsLabel"},
+        {issue.reviewDecision, "OctoNvimDetailsValue"}
+      }
+      table.insert(details, decision_vt)
+    end
 
     -- changes
     local unit = (issue.additions + issue.deletions) / 4
@@ -320,11 +345,16 @@ function M.write_comment(bufnr, comment, line)
   local header_vt = {
     {format("On %s ", util.format_date(comment.createdAt)), "OctoNvimCommentHeading"},
     {comment.author.login, "OctoNvimCommentUser"},
-    {" commented", "OctoNvimCommentHeading"}
   }
-  local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
+  if comment.comments and comment.state then
+    table.insert(header_vt, {" added a ", "OctoNvimCommentHeading"})
+    table.insert(header_vt, {comment.state, "OctoNvimCommentValue"})
+    table.insert(header_vt, {format(" review (%d comments)", comment.comments.totalCount), "OctoNvimCommentHeading"})
+  else
+    table.insert(header_vt, {" commented", "OctoNvimCommentHeading"})
+  end
 
-  -- TODO: if present, print `outdated` and `state`
+  local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
 
   -- body
   line = line + 2

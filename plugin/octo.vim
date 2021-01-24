@@ -19,7 +19,8 @@ endfunction
 
 " commands
 if executable('gh')
-  command! -complete=customlist,s:command_complete -nargs=* Octo :lua require'octo.commands'.octo(<f-args>)
+  command! -complete=customlist,s:command_complete -nargs=* Octo :lua require"octo.commands".octo(<f-args>)
+  command! -range -nargs=? OctoReviewComment :lua require"octo.reviews".add_review_comment(<line1>, <line2>)
 else
   echo 'Cannot find `gh` command.'
 endif
@@ -76,6 +77,7 @@ au Filetype octo_issue call octo#configure_win()
 au BufLeave * if &ft == 'octo_issue' | call octo#restore_win() | endif 
 au BufReadCmd octo://* lua require'octo'.load_issue()
 au BufWriteCmd octo://* lua require'octo'.save_issue()
+au BufWriteCmd octo_comment://* lua require'octo.reviews'.save_review_comment()
 augroup END
 
 " sign definitions

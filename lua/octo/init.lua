@@ -4,6 +4,7 @@ local constants = require "octo.constants"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
+local date = require "octo.date"
 local vim = vim
 local api = vim.api
 local format = string.format
@@ -150,21 +151,8 @@ function M.create_buffer(type, obj, repo, create)
   api.nvim_buf_set_var(bufnr, "labels", obj.labels)
   api.nvim_buf_set_var(bufnr, "assignees", obj.assignees)
   api.nvim_buf_set_var(bufnr, "milestone", obj.milestone)
+  api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
   api.nvim_buf_set_var(bufnr, "taggable_users", {obj.author.login})
-
-  -- for pulls, store some additional info
-  if obj.commits then
-    api.nvim_buf_set_var(
-      bufnr,
-      "pr",
-      {
-        isDraft = obj.isDraft,
-        merged = obj.merged,
-        headRefName = obj.headRefName,
-        baseRepoName = obj.baseRepository.nameWithOwner
-      }
-    )
-  end
 
   -- buffer mappings
   M.apply_buffer_mappings(bufnr, type)
@@ -186,9 +174,41 @@ function M.create_buffer(type, obj, repo, create)
   api.nvim_buf_set_var(bufnr, "body_reactions", obj.reactions)
   api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 
-  -- write issue comments
+  -- collect comments
   api.nvim_buf_set_var(bufnr, "comments", {})
-  for _, c in ipairs(obj.comments.nodes) do
+  local comments = obj.comments.nodes
+
+  if obj.commits then
+
+    -- collect review comments
+    if obj.reviews then
+      vim.list_extend(comments, obj.reviews.nodes)
+    end
+
+    -- for pulls, store some additional info
+    api.nvim_buf_set_var(
+      bufnr,
+      "pr",
+      {
+        id = obj.id,
+        isDraft = obj.isDraft,
+        merged = obj.merged,
+        headRefName = obj.headRefName,
+        headRefSHA = obj.headRefOid,
+        baseRefName = obj.baseRefName,
+        baseRefSHA = obj.baseRefOid,
+        baseRepoName = obj.baseRepository.nameWithOwner
+      }
+    )
+  end
+
+  -- sort comments
+  table.sort(comments, function (c1, c2)
+    return date(c1.createdAt) < date(c2.createdAt)
+  end)
+
+  -- write comments
+  for _, c in ipairs(comments) do
     writers.write_comment(bufnr, c)
   end
 
