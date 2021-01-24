@@ -359,6 +359,18 @@ query($endCursor: String) {
           content
         }
       }
+      projectCards(last: 20) {
+        nodes {
+          id
+          state
+          column {
+            name
+          }
+          project {
+            name
+          }
+        }
+      }
       comments(first: 100, after: $endCursor) {
         nodes {
           id
@@ -464,6 +476,7 @@ query($endCursor: String) {
       }
       projectCards(last: 20) {
         nodes {
+          id
           state
           column {
             name
@@ -603,7 +616,62 @@ query {
       }
     }
   }
+  user(login: "%s") {
+    projects(first: 100) {
+      nodes {
+        id 
+        name
+        columns(first:100) {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+  organization(login: "%s") {
+    projects(first: 100) {
+      nodes {
+        id 
+        name
+        columns(first:100) {
+          nodes {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
 }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/mutations#addprojectcard
+M.add_project_card_mutation =
+  [[
+  mutation AddProjectCard {
+    addProjectCard(input: {contentId: "%s", projectColumnId: "%s"}) {
+      cardEdge {
+        node {
+          id 
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#moveprojectcard
+M.move_project_card_mutation =
+  [[
+  mutation MoveProjectCard {
+    moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
+      cardEdge {
+        node {
+          id 
+        }
+      }
+    }
+  }
+]]
 return M

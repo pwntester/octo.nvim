@@ -205,19 +205,17 @@ function M.write_details(bufnr, issue, update)
   table.insert(details, assignees_vt)
 
   -- projects
-  if #issue.projectCards.nodes > 0 then
+  if issue.projectCards and #issue.projectCards.nodes > 0 then
     local projects_vt = {
       {"Projects: ", "OctoNvimDetailsLabel"}
     }
     local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
     local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
-    print(project_color, column_color)
     for _, card in ipairs(issue.projectCards.nodes) do
-      table.insert(projects_vt, {"", hl.create_highlight(project_color, {mode = "foreground"})})
-      table.insert(projects_vt, {card.project.name.." ", hl.create_highlight(project_color, {})})
-      table.insert(projects_vt, {" "..card.column.name, hl.create_highlight(column_color, {})})
-      table.insert(projects_vt, {"", hl.create_highlight(column_color, {mode = "foreground"})})
-      table.insert(projects_vt, {" ", "OctoNvimDetailsLabel"})
+      table.insert(projects_vt, {card.column.name, })
+      table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
+      table.insert(projects_vt, {card.project.name})
+      table.insert(projects_vt, {")", "OctoNvimDetailsLabel"})
     end
     table.insert(details, projects_vt)
   end

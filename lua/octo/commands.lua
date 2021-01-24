@@ -150,9 +150,12 @@ local commands = {
       M.reaction_action("delete", reaction)
     end
   },
-  project = {
-    assign = function()
-      menu.projects()
+  card = {
+    add = function()
+      M.add_project_card()
+    end,
+    move = function()
+      M.move_project_card()
     end
   }
 }
@@ -930,6 +933,133 @@ function M.command_complete(args)
     end
     return get_options(vim.tbl_keys(o))
   end
+end
+
+function M.add_project_card()
+  local bufnr = api.nvim_get_current_buf()
+  local repo, number = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
+  if not iid_ok or not iid then
+    api.nvim_err_writeln("Cannot get issue/pr id")
+  end
+
+  local add_card = function(column_id)
+    local owner = vim.split(repo, "/")[1]
+    local name = vim.split(repo, "/")[2]
+    local query = format(graphql.add_project_card_mutation, iid, column_id)
+
+    -- add new card
+    gh.run(
+      {
+        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local query3, kind
+            if string.match(api.nvim_buf_get_name(bufnr), "octo://.*/pull/") then
+              kind = "pull_request"
+              query3 = format(graphql.pull_request_query, owner, name, number)
+            elseif string.match(api.nvim_buf_get_name(bufnr), "octo://.*/issue/") then
+              kind = "issue"
+              query3 = format(graphql.issue_query, owner, name, number)
+            end
+
+            -- refresh issue/pr details
+            gh.run(
+              {
+                args = {"api", "graphql", "-f", format("query=%s", query3)},
+                cb = function(output, stderr)
+                  if stderr and not util.is_blank(stderr) then
+                    api.nvim_err_writeln(stderr)
+                  elseif output then
+                    local result = json.parse(output)
+                    if kind == "issue" then
+                      local issue = result.data.repository.issue
+                      writers.write_details(bufnr, issue, true)
+                    elseif kind == "pull_request" then
+                      local pull_request = result.data.repository.pullRequest
+                      writers.write_details(bufnr, pull_request, true)
+                    end
+                  end
+                end
+              }
+            )
+          end
+        end
+      }
+    )
+  end
+
+  menu.select_target_project_column(add_card)
+end
+
+function M.move_project_card()
+  local bufnr = api.nvim_get_current_buf()
+
+  local repo, number = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
+  if not iid_ok or not iid then
+    api.nvim_err_writeln("Cannot get issue/pr id")
+  end
+
+  menu.select_project_card(function(source_card)
+    menu.select_target_project_column(function(target_column)
+      local owner = vim.split(repo, "/")[1]
+      local name = vim.split(repo, "/")[2]
+      local query = format(graphql.move_project_card_mutation, source_card, target_column)
+
+      -- move new card
+      gh.run(
+        {
+          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              local query2, kind
+              if string.match(api.nvim_buf_get_name(bufnr), "octo://.*/pull/") then
+                kind = "pull_request"
+                query2 = format(graphql.pull_request_query, owner, name, number)
+              elseif string.match(api.nvim_buf_get_name(bufnr), "octo://.*/issue/") then
+                kind = "issue"
+                query2 = format(graphql.issue_query, owner, name, number)
+              end
+
+              -- refresh issue/pr details
+              gh.run(
+                {
+                  args = {"api", "graphql", "-f", format("query=%s", query2)},
+                  cb = function(output, stderr)
+                    if stderr and not util.is_blank(stderr) then
+                      api.nvim_err_writeln(stderr)
+                    elseif output then
+                      local result = json.parse(output)
+                      if kind == "issue" then
+                        local issue = result.data.repository.issue
+                        writers.write_details(bufnr, issue, true)
+                      elseif kind == "pull_request" then
+                        local pull_request = result.data.repository.pullRequest
+                        writers.write_details(bufnr, pull_request, true)
+                      end
+                    end
+                  end
+                }
+              )
+            end
+          end
+        }
+      )
+    end)
+  end)
 end
 
 return M

@@ -151,6 +151,7 @@ function M.create_buffer(type, obj, repo, create)
   api.nvim_buf_set_var(bufnr, "labels", obj.labels)
   api.nvim_buf_set_var(bufnr, "assignees", obj.assignees)
   api.nvim_buf_set_var(bufnr, "milestone", obj.milestone)
+  api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
   api.nvim_buf_set_var(bufnr, "taggable_users", {obj.author.login})
 
   -- buffer mappings
