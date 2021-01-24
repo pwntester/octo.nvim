@@ -71,6 +71,9 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | delete | <reviewer> |
 | reaction | add | <+1\|-1\|eyes\|laugh\|confused\|rocket\|hooray>|
 | | delete | <+1\|-1\|eyes\|laugh\|confused\|rocket\|hooray>|
+| card | add | |
+| | delete | |
+| | move | |
 
 * If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
