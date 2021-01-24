@@ -42,7 +42,7 @@ local function get_filter(opts, kind)
   local filter = ""
   local allowed_values = {}
   if kind == "issue" then
-    allowed_values = {"createdBy", "assignee", "mentioned", "labels", "milestone", "states"}
+    allowed_values = {"since", "createdBy", "assignee", "mentioned", "labels", "milestone", "states"}
   elseif kind == "pull_request" then
     allowed_values = {"baseRefName", "headRefName", "labels", "states"}
   end
