@@ -579,4 +579,48 @@ function M.apply_buffer_mappings(bufnr, kind)
   end
 end
 
+function M.reload_issue(bufnr, cb)
+  local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
+  if not number_ok then
+    api.nvim_err_writeln("Missing octo metadata")
+    return
+  end
+  local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
+  if not repo_ok then
+    api.nvim_err_writeln("Missing octo metadata")
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local kind, query
+  if string.match(api.nvim_buf_get_name(bufnr), "octo://.*/pull/") then
+    kind = "pull_request"
+    query = format(graphql.pull_request_query, owner, name, number)
+  elseif string.match(api.nvim_buf_get_name(bufnr), "octo://.*/issue/") then
+    kind = "issue"
+    query = format(graphql.issue_query, owner, name, number)
+  end
+
+  -- refresh issue/pr
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local result = json.parse(output)
+          if kind == "issue" then
+            local issue = result.data.repository.issue
+            cb(issue)
+          elseif kind == "pull_request" then
+            local pull_request = result.data.repository.pullRequest
+            cb(pull_request)
+          end
+        end
+      end
+    }
+  )
+end
+
 return M
