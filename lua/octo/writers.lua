@@ -306,16 +306,16 @@ function M.write_details(bufnr, issue, update)
       {" Changed files: ", "OctoNvimDetailsLabel"},
       {tostring(issue.changedFiles), "OctoNvimDetailsValue"},
       {" (", "OctoNvimDetailsLabel"},
-      {format("+%d ", issue.additions), "DiffAdd"},
-      {format("-%d ", issue.deletions), "DiffDelete"}
+      {format("+%d ", issue.additions), "OctoNvimPullAdditions"},
+      {format("-%d ", issue.deletions), "OctoNvimPullDeletions"}
     }
     if additions > 0 then
-      table.insert(changes_vt, {string.rep("■", additions), "DiffAdd"})
+      table.insert(changes_vt, {string.rep("■", additions), "OctoNvimPullAdditions"})
     end
     if deletions > 0 then
-      table.insert(changes_vt, {string.rep("■", deletions), "DiffDelete"})
+      table.insert(changes_vt, {string.rep("■", deletions), "OctoNvimPullDeletions"})
     end
-    table.insert(changes_vt, {"■", "DiffChange"})
+    table.insert(changes_vt, {"■", "OctiNvimPullModifications"})
     table.insert(changes_vt, {")", "OctoNvimDetailsLabel"})
     table.insert(details, changes_vt)
   end
@@ -463,97 +463,6 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
     end
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
-
-  -- print diff_hunk as virtual text
-  local line = start_line - 1
-  for _, vt_line in ipairs(vt_lines) do
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
-    line = line + 1
-  end
-end
-
-function M.write_diff_hunk2(bufnr, diff_hunk, start_line, position)
-  start_line = start_line or 1
-
-  -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
-
-  local lines = vim.split(diff_hunk, "\n")
-
-  local linenr_length = #tostring(position) + 1
-  local display_lines = {}
-  local empty_lines = {}
-  local max_length = -1
-  for i=math.max(2, #lines - 3), #lines do
-    table.insert(empty_lines, "")
-    if #lines[i] > max_length then
-      max_length = #lines[i]
-    end
-    table.insert(display_lines, lines[i])
-  end
-  -- TODO: support multi line comments
-  max_length = math.max(max_length + 1, vim.fn.winwidth(0) - 8)
-  vim.list_extend(empty_lines, {"", "", ""})
-  M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
-
-  local vt_lines = {}
-  table.insert(vt_lines, {{string.rep(" ", linenr_length) .. format("┌%s┐", string.rep("─", max_length + 2))}})
-  for i, line in ipairs(display_lines) do
-    local hlpos, hlbar = nil
-    -- if i > position - 3 then
-      --hlpos = "OctoNvimDiffHunkPosition"
-      -- hlbar = "OctoNvimBubbleRed"
-    -- end
-    -- if vim.startswith(line, "@@ ") then
-    --   local index = string.find(line, "@[^@]*$")
-    --   table.insert(
-    --     vt_lines,
-    --     {
-    --       {"│ ", hlbar or "Normal"},
-    --       {string.sub(line, 0, index), hlpos or "DiffLine"},
-    --       {string.sub(line, index + 1), hlpos or "DiffSubname"},
-    --       {string.rep(" ", max_length - #line), hlpos or "Normal"},
-    --       {" │", hlbar or "Normal"},
-    --     }
-    --   )
-    -- else
-    if vim.startswith(line, "+") then
-      table.insert(
-        vt_lines,
-        {
-          {tostring(position - #display_lines + i) .. " ", "Comment"},
-          {"│ ", hlbar or "Normal"},
-          {line, hlpos or "DiffAdd"},
-          {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {" │", hlbar or "Normal"},
-        }
-      )
-    elseif vim.startswith(line, "-") then
-      table.insert(
-        vt_lines,
-        {
-          {tostring(position - #display_lines + i) .. " ", "Comment"},
-          {"│ ", hlbar or "Normal"},
-          {line, hlpos or "DiffDelete"},
-          {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {" │", hlbar or "Normal"},
-        }
-      )
-    else
-      table.insert(
-        vt_lines,
-        {
-          {tostring(position - #display_lines + i) .. " ", "Comment"},
-          {"│ ", hlbar or "Normal"},
-          {line, hlpos or "DiffDelete"},
-          {line, hlpos or "Normal"},
-          {string.rep(" ", max_length - #line), hlpos or "Normal"},
-          {" │", hlbar or "Normal"},
-        }
-      )
-    end
-  end
-  table.insert(vt_lines, {{string.rep(" ", linenr_length) .. format("└%s┘", string.rep("─", max_length + 2))}})
 
   -- print diff_hunk as virtual text
   local line = start_line - 1

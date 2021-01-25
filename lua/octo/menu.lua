@@ -646,8 +646,8 @@ local function gen_from_git_changed_files()
     return displayer {
       {entry.value:sub(1, 7), "TelescopeResultsNumber"},
       {entry.change.status, "OctoNvimDetailsLabel"},
-      {format("+%d", entry.change.additions), "DiffAdd"},
-      {format("-%d", entry.change.deletions), "DiffDelete"},
+      {format("+%d", entry.change.additions), "OctoNvimPullAdditions"},
+      {format("-%d", entry.change.deletions), "OctoNvimPullDeletions"},
       vim.split(entry.msg, "\n")[1]
     }
   end

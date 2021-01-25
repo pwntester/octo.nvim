@@ -132,27 +132,34 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 ## Highlight groups
 
-| Name                     | Default      |
-| ---                      | ---          |
-| `OctoNvimDirty`          | `ErrorMsg`   |
-| `OctoNvimCommentHeading` | `PreProc`    |
-| `OctoNvimCommentUser`    | `Underlined` |
-| `OctoNvimIssueTitle`     | `PreProc`    |
-| `OctoNvimIssueId`        | `Question`   |
-| `OctoNvimIssueOpen`      | `MoreMsg`    |
-| `OctoNvimIssueClosed`    | `ErrorMsg`   |
-| `OctoNvimEmpty`          | `Comment`    |
-| `OctoNvimFloat`          | `NormalNC`   |
-| `OctoNvimBubbleRed`      | `DiffDelete` |
-| `OctoNvimBubbleGreen`    | `DiffAdd`    |
-| `OctoNvimBubbleDelimiter`| `NormalFloat`|
-| `OctoNvimBubbleBody`     | `NormalFloat`|
-| `OctoNvimDetailsLabel`   | `Title`      |
-| `OctoNvimMissingDetails` | `Comment`    |
-| `OctoNvimDetailsValue `  | `Identifier` |
+| Name                        | Default          |
+| ---                         | ---              |
+| `OctoNvimDirty`             | `ErrorMsg`       |
+| `OctoNvimCommentHeading`    | `PreProc`        |
+| `OctoNvimCommentUser`       | `Underlined`     |
+| `OctoNvimIssueTitle`        | `PreProc`        |
+| `OctoNvimIssueId`           | `Question`       |
+| `OctoNvimIssueOpen`         | `MoreMsg`        |
+| `OctoNvimIssueClosed`       | `ErrorMsg`       |
+| `OctoNvimEmpty`             | `Comment`        |
+| `OctoNvimFloat`             | `NormalNC`       |
+| `OctoNvimBubbleRed`         | `DiffDelete`.fg  |
+| `OctoNvimBubbleGreen`       | `DiffAdd`.fg     |
+| `OctoNvimBubbleDelimiter`   | `NormalFloat`.bg |
+| `OctoNvimBubbleBody`        | `NormalFloat`.bg |
+| `OctoNvimDetailsLabel`      | `Title`          |
+| `OctoNvimMissingDetails`    | `Comment`        |
+| `OctoNvimDetailsValue `     | `Identifier`     |
+| `OctoNvimDiffHunkPosition`  | `NormalFloat`.bg |
+| `OctoNvimCommentLine`       | `TabLineSel`     |
+| `OctoNvimPassingTest`       | `DiffAdd`        |
+| `OctoNvimFailingTest`       | `DiffDelete`     |
+| `OctoNvimPullAdditions`     | `DiffAdd`        |
+| `OctoNvimPullDeletions`     | `DiffDelete`     |
+| `OctoNvimPullModifications` | `DiffChange`     |
 
 ## Settings
 
-`g:octo_date_format`: Date format (default: "%Y %b %d %I:%M %p %Z")
-`g:octo_remote_order`: Order to resolve the remote for the current working directory (default: ["upstream", "origin"])
-`g:octo_qf_height`: Height of quickfix window
+- `g:octo_date_format`: Date format (default: "%Y %b %d %I:%M %p %Z")
+- `g:octo_remote_order`: Order to resolve the remote for the current working directory (default: ["upstream", "origin"])
+- `g:octo_qf_height`: Absolute height of quickfix window (defaults to 20% relative)

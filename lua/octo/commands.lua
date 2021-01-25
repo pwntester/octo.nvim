@@ -612,9 +612,9 @@ function M.pr_checks()
           local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
           for i, l in ipairs(buf_lines) do
             if #vim.split(l, "pass") > 1 then
-              api.nvim_buf_add_highlight(bufnr, -1, "DiffAdd", i - 1, 0, -1)
+              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimPassingTest", i - 1, 0, -1)
             elseif #vim.split(l, "fail") > 1 then
-              api.nvim_buf_add_highlight(bufnr, -1, "DiffDelete", i - 1, 0, -1)
+              api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimFailingTest", i - 1, 0, -1)
             end
           end
         end

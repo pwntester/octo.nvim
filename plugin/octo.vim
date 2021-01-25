@@ -12,6 +12,11 @@ execute('hi! OctoNvimBubbleRed guifg='.g:octo_bubble_red.' guibg='.g:octo_bubble
 execute('hi! OctoNvimBubbleGreen guifg='.g:octo_bubble_green.' guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_bubble_color)
 execute('hi! link OctoNvimCommentLine TabLineSel')
+execute('hi! link OctoNvimPassingTest DiffAdd')
+execute('hi! link OctoNvimFailingTest DiffDelete')
+execute('hi! link OctoNvimPullAdditions DiffAdd')
+execute('hi! link OctoNvimPullDeletions DiffDelete')
+execute('hi! link OctoNvimPullModifications DiffChange')
 
 function! s:command_complete(...)
   return luaeval('require("octo.commands").command_complete(_A)', a:000)
