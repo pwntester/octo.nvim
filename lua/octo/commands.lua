@@ -125,11 +125,11 @@ local commands = {
     end
   },
   label = {
-    add = function(value)
-      M.issue_action("add", "labels", value)
+    add = function()
+      M.add_label()
     end,
-    delete = function(value)
-      M.issue_action("delete", "labels", value)
+    delete = function()
+      M.delete_label()
     end
   },
   assignee = {
@@ -271,6 +271,7 @@ function M.delete_comment()
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
     local kind = util.get_buffer_kind(bufnr)
+    -- TODO: graphql
     gh.run(
       {
         args = {
@@ -475,6 +476,7 @@ function M.issue_action(action, kind, value)
     return
   end
 
+  -- validate
   vim.validate {
     action = {
       action,
@@ -486,9 +488,9 @@ function M.issue_action(action, kind, value)
     kind = {
       kind,
       function(a)
-        return vim.tbl_contains({"assignees", "labels", "reviewers"}, a)
+        return vim.tbl_contains({"assignees", "reviewers"}, a)
       end,
-      "assignees, labels or reviewers"
+      "assignees or reviewers"
     }
   }
 
@@ -504,9 +506,7 @@ function M.issue_action(action, kind, value)
   end
 
   local url = format("repos/%s/%s/%d/%s", repo, endpoint, number, kind)
-  if kind == "labels" and action == "delete" then
-    url = format("%s/%s", url, value)
-  elseif kind == "reviewers" then
+  if kind == "reviewers" then
     url = format("repos/%s/%s/%d/requested_reviewers", repo, endpoint, number)
   end
 
@@ -517,6 +517,7 @@ function M.issue_action(action, kind, value)
     method = "DELETE"
   end
 
+  -- TODO: Octo issue/pr open
   -- TODO: use graphql
   -- gh does not allow array parameters at the moment
   -- workaround: https://github.com/cli/cli/issues/1484
@@ -673,6 +674,7 @@ function M.show_pr_diff()
     return
   end
   local url = format("/repos/%s/pulls/%s", repo, number)
+  -- TODO: graphql
   gh.run(
     {
       args = {"api", url},
@@ -766,6 +768,7 @@ function M.review_pr()
 
   reviews.review_comments = {}
 
+  -- TODO: graphql
   -- get list of changed files
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
@@ -825,6 +828,7 @@ function M.reaction_action(action, reaction)
       args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}
     elseif action == "delete" then
       -- get list of reactions for issue comment and filter by user login and reaction
+      -- TODO: graphql
       local output =
         gh.run(
         {
@@ -851,6 +855,7 @@ function M.reaction_action(action, reaction)
     elseif action == "delete" then
       -- get list of reactions for issue comment and filter by user login and reaction
       local output =
+        -- TODO: graphql
         gh.run(
         {
           mode = "sync",
@@ -872,6 +877,7 @@ function M.reaction_action(action, reaction)
   end
 
   -- add/delete reaction
+  -- TODO: graphql
   gh.run(
     {
       args = args,
@@ -1051,6 +1057,72 @@ function M.reload(bufnr)
     return
   end
   octo.load_buffer(bufnr)
+end
+
+function M.add_label()
+  local bufnr = api.nvim_get_current_buf()
+  local repo = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
+  if not iid_ok or not iid then
+    api.nvim_err_writeln("Cannot get issue/pr id")
+  end
+
+  menu.select_label(function(label_id)
+
+    local query = format(graphql.add_labels_mutation, iid, label_id)
+    gh.run(
+      {
+        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            -- refresh issue/pr details
+            octo.load(bufnr, function(obj)
+              writers.write_details(bufnr, obj, true)
+            end)
+          end
+        end
+      }
+    )
+  end)
+end
+
+function M.delete_label()
+  local bufnr = api.nvim_get_current_buf()
+  local repo = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
+  if not iid_ok or not iid then
+    api.nvim_err_writeln("Cannot get issue/pr id")
+  end
+
+  menu.select_assigned_label(function(label_id)
+
+    local query = format(graphql.remove_labels_mutation, iid, label_id)
+    gh.run(
+      {
+        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            -- refresh issue/pr details
+            octo.load(bufnr, function(obj)
+              writers.write_details(bufnr, obj, true)
+            end)
+          end
+        end
+      }
+    )
+  end)
 end
 
 return M

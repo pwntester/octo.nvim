@@ -13,6 +13,7 @@ local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
+local hl = require "octo.highlights"
 
 local format = string.format
 local defaulter = utils.make_default_callable
@@ -591,6 +592,7 @@ function M.commits()
   if not repo then
     return
   end
+  -- TODO: graphql
   local url = format("repos/%s/pulls/%d/commits", repo, number)
   gh.run(
     {
@@ -692,6 +694,7 @@ function M.changed_files()
   if not repo then
     return
   end
+  -- TODO: graphql
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
     {
@@ -980,7 +983,6 @@ function M.review_comments()
             api.nvim_set_current_win(comment.comment_winid)
           else
             -- move to qf win
-            -- TODO: this seems to be failing. does qf winid change?
             api.nvim_set_current_win(comment.qf_winid)
 
             -- create new win and show comment bufnr
@@ -1199,6 +1201,142 @@ function M.select_target_project_column(cb)
                       end
                     }
                   ):find()
+                end)
+                return true
+              end
+            }
+          ):find()
+        end
+      end
+    }
+  )
+end
+
+local function gen_from_label()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {"", hl.create_highlight(entry.label.color, {mode = "foreground"})},
+      {entry.label.name, hl.create_highlight(entry.label.color, {})},
+      {"", hl.create_highlight(entry.label.color, {mode = "foreground"})}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = "",
+      items = {
+        {width = 1},
+        {remaining = true},
+        {width = 1}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(label)
+    if not label or vim.tbl_isempty(label) then
+      return nil
+    end
+
+    return {
+      value = label.id,
+      ordinal = label.name,
+      display = make_display,
+      label = label
+    }
+  end
+end
+
+function M.select_label(cb)
+  local opts = vim.deepcopy(dropdown_opts)
+  local repo = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.labels_query, owner, name)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local labels = resp.data.repository.labels.nodes
+          pickers.new(
+            opts,
+            {
+              prompt_prefix = "Choose label >",
+              finder = finders.new_table {
+                results = labels,
+                entry_maker = gen_from_label()
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                  local selected_label = actions.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  cb(selected_label.label.id)
+                end)
+                return true
+              end
+            }
+          ):find()
+        end
+      end
+    }
+  )
+end
+
+function M.select_assigned_label(cb)
+  local opts = vim.deepcopy(dropdown_opts)
+  local repo, number = util.get_repo_number()
+  if not repo then
+    return
+  end
+  local bufnr = api.nvim_get_current_buf()
+  local bufname = vim.fn.bufname(bufnr)
+  local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query, key
+  if type == "issue" then
+    query = format(graphql.issue_labels_query, owner, name, number)
+    key = "issue"
+  elseif type == "pull" then
+    query = format(graphql.pull_request_labels_query, owner, name, number)
+    key = "pullRequest"
+  end
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local labels = resp.data.repository[key].labels.nodes
+          pickers.new(
+            opts,
+            {
+              prompt_prefix = "Choose label >",
+              finder = finders.new_table {
+                results = labels,
+                entry_maker = gen_from_label()
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                  local selected_label = actions.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  cb(selected_label.label.id)
                 end)
                 return true
               end

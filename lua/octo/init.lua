@@ -274,6 +274,7 @@ function M.save_buffer()
         return
       end
 
+      -- TODO: graphql
       gh.run(
         {
           args = {
@@ -330,6 +331,7 @@ function M.save_buffer()
     if metadata.body ~= metadata.saved_body then
       if metadata.id == -1 then
         -- create new comment/reply
+        -- TODO: graphql
         gh.run(
           {
             args = {

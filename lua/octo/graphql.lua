@@ -600,12 +600,12 @@ query {
 
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query =
-[[
+  [[
 query {
   repository(owner: "%s", name: "%s") {
     projects(first: 100) {
       nodes {
-        id 
+        id
         name
         columns(first:100) {
           nodes {
@@ -619,7 +619,7 @@ query {
   user(login: "%s") {
     projects(first: 100) {
       nodes {
-        id 
+        id
         name
         columns(first:100) {
           nodes {
@@ -633,7 +633,7 @@ query {
   organization(login: "%s") {
     projects(first: 100) {
       nodes {
-        id 
+        id
         name
         columns(first:100) {
           nodes {
@@ -654,7 +654,7 @@ M.add_project_card_mutation =
     addProjectCard(input: {contentId: "%s", projectColumnId: "%s"}) {
       cardEdge {
         node {
-          id 
+          id
         }
       }
     }
@@ -668,7 +668,7 @@ M.move_project_card_mutation =
     moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
       cardEdge {
         node {
-          id 
+          id
         }
       }
     }
@@ -681,6 +681,177 @@ M.delete_project_card_mutation =
   mutation DeleteProjectCard {
     deleteProjectCard(input: {cardId: "%s"}) {
       deletedCardId
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
+M.add_labels_mutation =
+  [[
+  mutation AddLabelsToLabelable {
+    addLabelsToLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+      labelable {
+        ... on Issue {
+          id
+        }
+        ... on PullRequest {
+          id
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
+M.remove_labels_mutation =
+  [[
+  mutation RemoveLabelsFromLabelable {
+    removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+      labelable {
+        ... on Issue {
+          id
+        }
+        ... on PullRequest {
+          id
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/objects#label
+M.labels_query =
+  [[
+  query {
+    repository(owner: "%s", name: "%s") {
+      labels(first: 100) {
+        nodes {
+          id
+          name
+          color
+        }
+      }
+    }
+  }
+]]
+
+M.issue_labels_query =
+  [[
+  query {
+    repository(owner: "%s", name: "%s") {
+      issue(number: %d) {
+        labels(first: 100) {
+          nodes {
+            id
+            name
+            color
+          }
+        }
+      }
+    }
+  }
+]]
+
+M.pull_request_labels_query =
+  [[
+  query {
+    repository(owner: "%s", name: "%s") {
+      pullRequest(number: %d) {
+        labels(first: 100) {
+          nodes {
+            id
+            name
+            color
+          }
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#createlabel
+-- requires application/vnd.github.bane-preview+json
+M.create_label_mutation =
+  [[
+  mutation CreateLabel {
+    createLabel(input: {repositoryId: "%s", name: "%s", description: "%s", color: "%s") {
+      label {
+        id
+        name
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
+M.add_assignees_mutation =
+  [[
+  mutation AddAssigneesToAssignable {
+    addAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: [%s]}) {
+      assignable {
+        ... on Issue {
+          id
+        }
+        ... on PullRequest {
+          id
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#removeassigneestoassignable
+M.remove_assignees_mutation =
+  [[
+  mutation RemoveAssigneesToAssignable {
+    removeAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: [%s]}) {
+      assignable {
+        ... on Issue {
+          id
+        }
+        ... on PullRequest {
+          id
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#requestreviews
+-- for teams use `teamIds`
+M.request_reviews_mutation =
+  [[
+  mutation RequestReviews {
+    requestReviews(input: {pullRequestId: "%s", userIds: [%s]}) {
+      pullRequest {
+        id
+      }
+      requestedReviewersEdge {
+        node {
+          login
+        }
+      }
+    }
+  }
+]]
+
+--
+M.find_user_id_query = [[
+  query FindUserID {
+    user(login: "pwntester") {
+      id
+    }
+  }
+]]
+
+--
+M.find_team_id_query =
+  [[
+  query FindTeamID {
+    organization(login: "github") {
+      team(slug: "codeql-java") {
+        id
+      }
     }
   }
 ]]
