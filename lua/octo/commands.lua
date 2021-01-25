@@ -37,6 +37,9 @@ local commands = {
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
       menu.issue_search(opts)
+    end,
+    reload = function()
+      M.reload()
     end
   },
   pr = {
@@ -80,6 +83,9 @@ local commands = {
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
       menu.pull_request_search(opts)
+    end,
+    reload = function()
+      M.reload()
     end
   },
   review = {
@@ -511,6 +517,7 @@ function M.issue_action(action, kind, value)
     method = "DELETE"
   end
 
+  -- TODO: use graphql
   -- gh does not allow array parameters at the moment
   -- workaround: https://github.com/cli/cli/issues/1484
   local cmd = format([[ jq -n '{"%s":["%s"]}' | gh api -X %s %s --input - ]], kind, value, method, url)
@@ -524,14 +531,11 @@ function M.issue_action(action, kind, value)
           if jself:stderr_result() and not vim.tbl_isempty(jself:stderr_result()) then
             api.nvim_err_writeln(vim.inspect(jself:stderr_result()))
           end
-          gh.run(
-            {
-              args = {"api", format("repos/%s/issues/%s", repo, number)},
-              cb = function(output)
-                writers.write_details(bufnr, json.parse(output), true)
-              end
-            }
-          )
+
+          -- refresh issue/pr details
+          octo.load(bufnr, function(obj)
+            writers.write_details(bufnr, obj, true)
+          end)
         end
       )
     }
@@ -963,8 +967,9 @@ function M.add_project_card()
             api.nvim_err_writeln(stderr)
           elseif output then
             -- refresh issue/pr details
-            octo.reload_issue(bufnr, function(obj)
+            octo.load(bufnr, function(obj)
               writers.write_details(bufnr, obj, true)
+              -- TODO: repopulate "cards" buf var
             end)
           end
         end
@@ -994,8 +999,9 @@ function M.delete_project_card()
             api.nvim_err_writeln(stderr)
           elseif output then
             -- refresh issue/pr details
-            octo.reload_issue(bufnr, function(obj)
+            octo.load(bufnr, function(obj)
               writers.write_details(bufnr, obj, true)
+              -- TODO: repopulate "cards" buf var
             end)
           end
         end
@@ -1026,8 +1032,9 @@ function M.move_project_card()
               api.nvim_err_writeln(stderr)
             elseif output then
               -- refresh issue/pr details
-              octo.reload_issue(bufnr, function(obj)
+              octo.load(bufnr, function(obj)
                 writers.write_details(bufnr, obj, true)
+                -- TODO: repopulate "cards" buf var
               end)
             end
           end
@@ -1035,6 +1042,15 @@ function M.move_project_card()
       )
     end)
   end)
+end
+
+function M.reload(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  local repo = util.get_repo_number()
+  if not repo then
+    return
+  end
+  octo.load_buffer(bufnr)
 end
 
 return M

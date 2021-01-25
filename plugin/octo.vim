@@ -80,8 +80,8 @@ augroup octo_autocmds
 au!
 au Filetype octo_issue call octo#configure_win()
 au BufLeave * if &ft == 'octo_issue' | call octo#restore_win() | endif 
-au BufReadCmd octo://* lua require'octo'.load_issue()
-au BufWriteCmd octo://* lua require'octo'.save_issue()
+au BufReadCmd octo://* lua require'octo'.load_buffer()
+au BufWriteCmd octo://* lua require'octo'.save_buffer()
 au BufWriteCmd octo_comment://* lua require'octo.reviews'.save_review_comment()
 augroup END
 

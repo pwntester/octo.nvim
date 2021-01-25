@@ -27,14 +27,28 @@ function M.check_login()
   )
 end
 
-function M.load_issue()
-  local bufname = vim.fn.bufname()
+function M.load_buffer(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  local bufname = vim.fn.bufname(bufnr)
   local repo, type, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
   if not repo or not type or not number then
     api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
 
+  M.load(bufnr, function(obj)
+    M.create_buffer(type, obj, repo, false)
+  end)
+end
+
+
+function M.load(bufnr, cb)
+  local bufname = vim.fn.bufname(bufnr)
+  local repo, type, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  if not repo or not type or not number then
+    api.nvim_err_writeln("Incorrect buffer: " .. bufname)
+    return
+  end
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
   local query, key
@@ -53,7 +67,8 @@ function M.load_issue()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = util.aggregate_pages(output, format("data.repository.%s.comments.nodes", key))
-          M.create_buffer(type, resp.data.repository[key], repo, false)
+          local obj = resp.data.repository[key]
+            cb(obj)
         end
       end
     }
@@ -133,6 +148,9 @@ function M.create_buffer(type, obj, repo, create)
   else
     bufnr = api.nvim_get_current_buf()
   end
+
+  -- clear buffer
+  api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
   -- delete extmarks
   for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, constants.OCTO_EM_NS, 0, -1, {})) do
@@ -231,7 +249,7 @@ function M.create_buffer(type, obj, repo, create)
   vim.cmd [[ augroup END ]]
 end
 
-function M.save_issue()
+function M.save_buffer()
   local bufnr = api.nvim_get_current_buf()
   local ft = api.nvim_buf_get_option(bufnr, "filetype")
   local repo, number = util.get_repo_number({"octo_issue", "octo_reviewthread"})
@@ -577,50 +595,6 @@ function M.apply_buffer_mappings(bufnr, kind)
       mapping_opts
     )
   end
-end
-
-function M.reload_issue(bufnr, cb)
-  local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
-  if not number_ok then
-    api.nvim_err_writeln("Missing octo metadata")
-    return
-  end
-  local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
-  if not repo_ok then
-    api.nvim_err_writeln("Missing octo metadata")
-    return
-  end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-  local kind, query
-  if string.match(api.nvim_buf_get_name(bufnr), "octo://.*/pull/") then
-    kind = "pull_request"
-    query = format(graphql.pull_request_query, owner, name, number)
-  elseif string.match(api.nvim_buf_get_name(bufnr), "octo://.*/issue/") then
-    kind = "issue"
-    query = format(graphql.issue_query, owner, name, number)
-  end
-
-  -- refresh issue/pr
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local result = json.parse(output)
-          if kind == "issue" then
-            local issue = result.data.repository.issue
-            cb(issue)
-          elseif kind == "pull_request" then
-            local pull_request = result.data.repository.pullRequest
-            cb(pull_request)
-          end
-        end
-      end
-    }
-  )
 end
 
 return M
