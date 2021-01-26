@@ -106,13 +106,7 @@ local function open_in_browser(type, repo)
     local selection = actions.get_selected_entry(prompt_bufnr)
     local number = selection.value
     actions.close(prompt_bufnr)
-    local cmd
-    if not repo or repo == "" then
-      cmd = format("gh %s view --web %d", type, number)
-    else
-      cmd = format("gh %s view --web %d -R %s", type, number, repo)
-    end
-    os.execute(cmd)
+    util.open_in_browser(type, repo, number)
   end
 end
 

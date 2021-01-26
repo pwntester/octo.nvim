@@ -27,7 +27,7 @@ local commands = {
     close = function()
       M.change_state("issue", "CLOSED")
     end,
-    open = function()
+    reopen = function()
       M.change_state("issue", "OPEN")
     end,
     list = function(repo, ...)
@@ -40,6 +40,13 @@ local commands = {
     end,
     reload = function()
       M.reload()
+    end,
+    browser = function()
+      local repo, number = util.get_repo_number({"octo_issue"})
+      if not repo then
+        return
+      end
+      util.open_in_browser("issue", repo, number)
     end
   },
   pr = {
@@ -86,6 +93,13 @@ local commands = {
     end,
     reload = function()
       M.reload()
+    end,
+    browser = function()
+      local repo, number = util.get_repo_number({"octo_issue"})
+      if not repo then
+        return
+      end
+      util.open_in_browser("issue", repo, number)
     end
   },
   review = {
@@ -381,7 +395,7 @@ end
 
 function M.change_state(type, state)
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number()
+  local repo, _ = util.get_repo_number({"octo_issue"})
   if not repo then
     return
   end
@@ -517,7 +531,6 @@ function M.issue_action(action, kind, value)
     method = "DELETE"
   end
 
-  -- TODO: Octo issue/pr open in browser
   -- TODO: use graphql
   -- gh does not allow array parameters at the moment
   -- workaround: https://github.com/cli/cli/issues/1484
@@ -915,6 +928,7 @@ function M.reaction_action(action, reaction)
   )
 end
 
+-- TODO: remove?
 function M.issue_interactive_action(action, kind)
   vim.fn.inputsave()
   local value = vim.fn.input("Enter name: ")

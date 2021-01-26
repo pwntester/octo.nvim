@@ -40,11 +40,13 @@ There is only an `Octo <object> <action> [arguments]` command:
 | Object | Action | Arguments|
 |---|---|---|
 | issue | close | |
-| | open | |
+| | reopen | |
 | | create | [repo] |
 | | edit | [repo] <number> |
 | | list | [repo] [key=value]*<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-b>`: Opens issue in web browser |
 | | search | |
+| | reload | |
+| | browser | |
 | pr | list | [repo] [key=value]<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-b>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
 | | search | |
 | | edit | [repo] <number> |
@@ -58,6 +60,8 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | ready| |
 | | checks | |
 | | reviews | |
+| | reload | |
+| | browser | |
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-b>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |

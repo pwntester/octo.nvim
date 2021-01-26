@@ -371,4 +371,14 @@ function M.escape_chars(string)
   )
 end
 
+function M.open_in_browser(type, repo, number)
+  local cmd
+  if not repo or repo == "" then
+    cmd = format("gh %s view --web %d", type, number)
+  else
+    cmd = format("gh %s view --web %d -R %s", type, number, repo)
+  end
+  os.execute(cmd)
+end
+
 return M
