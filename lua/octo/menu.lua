@@ -2,23 +2,17 @@ local actions = require "telescope.actions"
 local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local utils = require "telescope.utils"
-local putils = require "telescope.previewers.utils"
-local previewers = require "telescope.previewers"
 local conf = require "telescope.config".values
 local sorters = require "telescope.sorters"
 local make_entry = require "telescope.make_entry"
-
-local writers = require "octo.writers"
+local previewers = require "octo.previewers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
 local entry_maker = require "octo.entry_maker"
-
 local format = string.format
-local defaulter = utils.make_default_callable
 local vim = vim
-local flatten = vim.tbl_flatten
 local api = vim.api
 local json = {
   parse = vim.fn.json_decode,
@@ -112,46 +106,6 @@ end
 --
 -- ISSUES
 --
-
-local issue_previewer =
-  defaulter(
-  function(opts)
-    return previewers.new_buffer_previewer {
-      get_buffer_by_name = function(_, entry)
-        return entry.value
-      end,
-      define_preview = function(self, entry)
-        local bufnr = self.state.bufnr
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
-          local number = entry.issue.number
-          local owner = vim.split(opts.repo, "/")[1]
-          local name = vim.split(opts.repo, "/")[2]
-          local query = format(graphql.issue_query, owner, name, number)
-          gh.run(
-            {
-              args = {"api", "graphql", "-f", format("query=%s", query)},
-              cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
-                elseif output and api.nvim_buf_is_valid(bufnr) then
-                  local result = json.parse(output)
-                  local issue = result.data.repository.issue
-                  writers.write_title(bufnr, issue.title, 1)
-                  writers.write_details(bufnr, issue)
-                  writers.write_body(bufnr, issue)
-                  writers.write_state(bufnr, issue.state:upper(), number)
-                  --writers.write_reactions(bufnr, issue.reactions, api.nvim_buf_line_count(bufnr) - 1)
-                  api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
-                end
-              end
-            }
-          )
-        end
-      end
-    }
-  end
-)
-
 function M.issues(opts)
   opts = opts or {}
   local filter = get_filter(opts, "issue")
@@ -198,7 +152,7 @@ function M.issues(opts)
                 entry_maker = entry_maker.gen_from_issue(max_number)
               },
               sorter = conf.generic_sorter(opts),
-              previewer = issue_previewer.new(opts),
+              previewer = previewers.issue.new(opts),
               attach_mappings = function(_, map)
                 actions.goto_file_selection_edit:replace(open(opts.repo, "issue", "edit"))
                 actions.goto_file_selection_split:replace(open(opts.repo, "issue", "split"))
@@ -218,29 +172,6 @@ end
 --
 -- GISTS
 --
-
-local gist_previewer =
-  defaulter(
-  function(opts)
-    return previewers.new_termopen_previewer {
-      get_command = opts.get_command or function(entry)
-          local tmp_table = vim.split(entry.value, "\t")
-          if vim.tbl_isempty(tmp_table) then
-            return {"echo", ""}
-          end
-          local result = {"gh", "gist", "view", tmp_table[1], "|"}
-          if vim.fn.executable("bat") then
-            table.insert(result, {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"})
-          else
-            table.insert(result, "less")
-          end
-          return flatten(result)
-        end
-    }
-  end,
-  {}
-)
-
 local function open_gist(prompt_bufnr)
   local selection = actions.get_selected_entry(prompt_bufnr)
   actions.close(prompt_bufnr)
@@ -281,7 +212,7 @@ function M.gists(opts)
         results = output,
         entry_maker = make_entry.gen_from_string(opts)
       },
-      previewer = gist_previewer.new(opts),
+      previewer = previewers.gist.new(opts),
       sorter = conf.generic_sorter(opts),
       attach_mappings = function(_, map)
         map("i", "<CR>", open_gist)
@@ -320,49 +251,6 @@ local function checkout_pull_request(repo)
     )
   end
 end
-
-local pull_request_previewer =
-  defaulter(
-  function(opts)
-    return previewers.new_buffer_previewer {
-      get_buffer_by_name = function(_, entry)
-        return entry.value
-      end,
-      define_preview = function(self, entry)
-        local bufnr = self.state.bufnr
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
-          local number = entry.pull_request.number
-          local owner = vim.split(opts.repo, "/")[1]
-          local name = vim.split(opts.repo, "/")[2]
-          local query = format(graphql.pull_request_query, owner, name, number)
-          gh.run(
-            {
-              args = {"api", "graphql", "-f", format("query=%s", query)},
-              cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
-                elseif output and api.nvim_buf_is_valid(bufnr) then
-                  local result = json.parse(output)
-                  local pull_request = result.data.repository.pullRequest
-                  writers.write_title(bufnr, pull_request.title, 1)
-                  writers.write_details(bufnr, pull_request)
-                  writers.write_body(bufnr, pull_request)
-                  writers.write_state(bufnr, pull_request.state:upper(), number)
-                  writers.write_reactions(
-                    bufnr,
-                    pull_request.reactions,
-                    api.nvim_buf_line_count(bufnr) - 1
-                  )
-                  api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
-                end
-              end
-            }
-          )
-        end
-      end
-    }
-  end
-)
 
 function M.pull_requests(opts)
   opts = opts or {}
@@ -410,7 +298,7 @@ function M.pull_requests(opts)
                 entry_maker = entry_maker.gen_from_pull_request(max_number)
               },
               sorter = conf.generic_sorter(opts),
-              previewer = pull_request_previewer.new(opts),
+              previewer = previewers.pull_request.new(opts),
               attach_mappings = function(_, map)
                 actions.goto_file_selection_edit:replace(open(opts.repo, "pull_request", "edit"))
                 actions.goto_file_selection_split:replace(open(opts.repo, "pull_request", "split"))
@@ -431,49 +319,6 @@ end
 --
 -- COMMITS
 --
-
-local commit_previewer =
-  defaulter(
-  function(opts)
-    return previewers.new_buffer_previewer {
-      keep_last_buf = true,
-      get_buffer_by_name = function(_, entry)
-        return entry.value
-      end,
-      define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
-          local lines = {}
-          vim.list_extend(lines, {format("Commit: %s", entry.value)})
-          vim.list_extend(lines, {format("Author: %s", entry.author)})
-          vim.list_extend(lines, {format("Date: %s", entry.date)})
-          vim.list_extend(lines, {""})
-          vim.list_extend(lines, vim.split(entry.msg, "\n"))
-          vim.list_extend(lines, {""})
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
-
-          local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
-          putils.job_maker(
-            {"gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff"},
-            self.state.bufnr,
-            {
-              value = entry.value,
-              bufname = self.state.bufname,
-              mode = "append",
-              callback = function(bufnr, _)
-                api.nvim_buf_set_option(bufnr, "filetype", "diff")
-                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
-                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
-                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
-              end
-            }
-          )
-        end
-      end
-    }
-  end,
-  {}
-)
-
 function M.commits()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
@@ -498,7 +343,7 @@ function M.commits()
                 entry_maker = entry_maker.gen_from_git_commits()
               },
               sorter = conf.generic_sorter({}),
-              previewer = commit_previewer.new({repo = repo}),
+              previewer = previewers.commit.new({repo = repo}),
               attach_mappings = function()
                 actions.goto_file_selection_edit:replace(open_preview_buffer("edit"))
                 actions.goto_file_selection_split:replace(open_preview_buffer("split"))
@@ -517,27 +362,6 @@ end
 --
 -- FILES
 --
-
-local changed_files_previewer =
-  defaulter(
-  function()
-    return previewers.new_buffer_previewer {
-      keep_last_buf = true,
-      get_buffer_by_name = function(_, entry)
-        return entry.value
-      end,
-      define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
-          local diff = entry.change.patch
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
-          api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
-        end
-      end
-    }
-  end,
-  {}
-)
-
 function M.changed_files()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
@@ -562,7 +386,7 @@ function M.changed_files()
                 entry_maker = entry_maker.gen_from_git_changed_files()
               },
               sorter = conf.generic_sorter({}),
-              previewer = changed_files_previewer.new({repo = repo, number = number}),
+              previewer = previewers.changed_files.new({repo = repo, number = number}),
               attach_mappings = function()
                 actions.goto_file_selection_edit:replace(open_preview_buffer("edit"))
                 actions.goto_file_selection_split:replace(open_preview_buffer("split"))
@@ -649,7 +473,7 @@ function M.issue_search(opts)
         end, 500)
       end,
       sorter = conf.generic_sorter(opts),
-      previewer = issue_previewer.new(opts),
+      previewer = previewers.issue.new(opts),
       attach_mappings = function(_, map)
         actions.goto_file_selection_edit:replace(open(opts.repo, "issue", "edit"))
         actions.goto_file_selection_split:replace(open(opts.repo, "issue", "split"))
@@ -729,7 +553,7 @@ function M.pull_request_search(opts)
         end, 500)
       end,
       sorter = conf.generic_sorter(opts),
-      previewer = pull_request_previewer.new(opts),
+      previewer = previewers.pull_request.new(opts),
       attach_mappings = function(_, map)
         actions.goto_file_selection_edit:replace(open(opts.repo, "pull_request", "edit"))
         actions.goto_file_selection_split:replace(open(opts.repo, "pull_request", "split"))
@@ -745,26 +569,6 @@ end
 ---
 -- REVIEW COMMENTS
 ---
-local review_comment_previewer =
-  defaulter(
-  function()
-    return previewers.new_buffer_previewer {
-      get_buffer_by_name = function(_, entry)
-        return entry.value
-      end,
-      define_preview = function(self, entry)
-        local bufnr = self.state.bufnr
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
-          -- TODO: pretty print
-          writers.write_diff_hunk(bufnr, entry.comment.diff_hunk)
-          api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(entry.comment.body, "\n"))
-        end
-      end
-    }
-  end,
-  {}
-)
-
 function M.review_comments()
   local comments = vim.tbl_values(reviews.review_comments)
   local max_linenr_length = -1
@@ -781,9 +585,11 @@ function M.review_comments()
         entry_maker = entry_maker.gen_from_review_comment(max_linenr_length)
       },
       sorter = conf.generic_sorter({}),
-      previewer = review_comment_previewer.new({}),
+      previewer = previewers.review_comment.new({}),
       attach_mappings = function()
+
         -- TODO: delete comment
+
         actions.goto_file_selection_edit:replace(function(prompt_bufnr)
           local comment = actions.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)
@@ -933,6 +739,9 @@ function M.select_target_project_column(cb)
   )
 end
 
+--
+-- LABELS
+--
 function M.select_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local repo = util.get_repo_number()
@@ -1030,6 +839,9 @@ function M.select_assigned_label(cb)
   )
 end
 
+--
+-- ASSIGNEES
+--
 function M.select_user(cb)
   local opts = vim.deepcopy(dropdown_opts)
   opts.results_height = 35;
@@ -1165,6 +977,9 @@ function M.select_user(cb)
   ):find()
 end
 
+--
+-- ASSIGNEES
+--
 function M.select_assignee(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local repo, number = util.get_repo_number()
