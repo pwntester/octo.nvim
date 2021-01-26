@@ -7,14 +7,13 @@ local previewers = require "telescope.previewers"
 local conf = require "telescope.config".values
 local sorters = require "telescope.sorters"
 local make_entry = require "telescope.make_entry"
-local entry_display = require "telescope.pickers.entry_display"
 
 local writers = require "octo.writers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
-local hl = require "octo.highlights"
+local entry_maker = require "octo.entry_maker"
 
 local format = string.format
 local defaulter = utils.make_default_callable
@@ -153,43 +152,6 @@ local issue_previewer =
   end
 )
 
-local function gen_from_issue(max_number)
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.issue.number, "TelescopeResultsNumber"},
-      {entry.issue.title}
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = " ",
-      items = {
-        {width = max_number},
-        {remaining = true}
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(issue)
-    if not issue or vim.tbl_isempty(issue) then
-      return nil
-    end
-
-    return {
-      value = issue.number,
-      ordinal = issue.number .. " " .. issue.title,
-      display = make_display,
-      issue = issue
-    }
-  end
-end
-
 function M.issues(opts)
   opts = opts or {}
   local filter = get_filter(opts, "issue")
@@ -233,7 +195,7 @@ function M.issues(opts)
               prompt_prefix = "Issues >",
               finder = finders.new_table {
                 results = issues,
-                entry_maker = gen_from_issue(max_number)
+                entry_maker = entry_maker.gen_from_issue(max_number)
               },
               sorter = conf.generic_sorter(opts),
               previewer = issue_previewer.new(opts),
@@ -402,43 +364,6 @@ local pull_request_previewer =
   end
 )
 
-local function gen_from_pull_request(max_number)
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.pull_request.number, "TelescopeResultsNumber"},
-      {entry.pull_request.title}
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = " ",
-      items = {
-        {width = max_number},
-        {remaining = true}
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(pull_request)
-    if not pull_request or vim.tbl_isempty(pull_request) then
-      return nil
-    end
-
-    return {
-      value = pull_request.number,
-      ordinal = pull_request.number .. " " .. pull_request.title,
-      display = make_display,
-      pull_request = pull_request
-    }
-  end
-end
-
 function M.pull_requests(opts)
   opts = opts or {}
   local filter = get_filter(opts, "pull_request")
@@ -482,7 +407,7 @@ function M.pull_requests(opts)
               prompt_prefix = "Pull Requests >",
               finder = finders.new_table {
                 results = pull_requests,
-                entry_maker = gen_from_pull_request(max_number)
+                entry_maker = entry_maker.gen_from_pull_request(max_number)
               },
               sorter = conf.generic_sorter(opts),
               previewer = pull_request_previewer.new(opts),
@@ -506,39 +431,6 @@ end
 --
 -- COMMITS
 --
-
-local function gen_from_git_commits()
-  local displayer =
-    entry_display.create {
-    separator = " ",
-    items = {
-      {width = 8},
-      {remaining = true}
-    }
-  }
-
-  local make_display = function(entry)
-    return displayer {
-      {entry.value:sub(1, 7), "TelescopeResultsNumber"},
-      vim.split(entry.msg, "\n")[1]
-    }
-  end
-
-  return function(entry)
-    if not entry then
-      return nil
-    end
-
-    return {
-      value = entry.sha,
-      ordinal = entry.sha .. " " .. entry.commit.message,
-      msg = entry.commit.message,
-      display = make_display,
-      author = format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
-      date = entry.commit.author.date
-    }
-  end
-end
 
 local commit_previewer =
   defaulter(
@@ -603,7 +495,7 @@ function M.commits()
               prompt_prefix = "PR Commits >",
               finder = finders.new_table {
                 results = results,
-                entry_maker = gen_from_git_commits()
+                entry_maker = entry_maker.gen_from_git_commits()
               },
               sorter = conf.generic_sorter({}),
               previewer = commit_previewer.new({repo = repo}),
@@ -625,44 +517,6 @@ end
 --
 -- FILES
 --
-
-local function gen_from_git_changed_files()
-  local displayer =
-    entry_display.create {
-    separator = " ",
-    items = {
-      {width = 8},
-      {width = string.len("modified")},
-      {width = 5},
-      {width = 5},
-      {remaining = true}
-    }
-  }
-
-  local make_display = function(entry)
-    return displayer {
-      {entry.value:sub(1, 7), "TelescopeResultsNumber"},
-      {entry.change.status, "OctoNvimDetailsLabel"},
-      {format("+%d", entry.change.additions), "OctoNvimPullAdditions"},
-      {format("-%d", entry.change.deletions), "OctoNvimPullDeletions"},
-      vim.split(entry.msg, "\n")[1]
-    }
-  end
-
-  return function(entry)
-    if not entry then
-      return nil
-    end
-
-    return {
-      value = entry.sha,
-      ordinal = entry.sha .. " " .. entry.filename,
-      msg = entry.filename,
-      display = make_display,
-      change = entry
-    }
-  end
-end
 
 local changed_files_previewer =
   defaulter(
@@ -705,7 +559,7 @@ function M.changed_files()
               prompt_prefix = "PR Files Changed >",
               finder = finders.new_table {
                 results = results,
-                entry_maker = gen_from_git_changed_files()
+                entry_maker = entry_maker.gen_from_git_changed_files()
               },
               sorter = conf.generic_sorter({}),
               previewer = changed_files_previewer.new({repo = repo, number = number}),
@@ -785,7 +639,7 @@ function M.issue_search(opts)
                 elseif output then
                   local resp = json.parse(output)
                   for _, issue in ipairs(resp.data.search.nodes) do
-                    process_result(gen_from_issue(6)(issue))
+                    process_result(entry_maker.gen_from_issue(6)(issue))
                   end
                   process_complete()
                 end
@@ -865,7 +719,7 @@ function M.pull_request_search(opts)
                 elseif output then
                   local resp = json.parse(output)
                   for _, pull_request in ipairs(resp.data.search.nodes) do
-                    process_result(gen_from_pull_request(6)(pull_request))
+                    process_result(entry_maker.gen_from_pull_request(6)(pull_request))
                   end
                   process_complete()
                 end
@@ -891,47 +745,6 @@ end
 ---
 -- REVIEW COMMENTS
 ---
-local function gen_from_review_comment(linenr_length)
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.comment.path, "TelescopeResultsNumber"},
-      {entry.comment.side},
-      {entry.comment.line1},
-      {entry.comment.line2}
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = " ",
-      items = {
-        {remaining = true},
-        {width = 5},
-        {width = linenr_length},
-        {width = linenr_length}
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(comment)
-    if not comment or vim.tbl_isempty(comment) then
-      return nil
-    end
-
-    return {
-      value = comment.key,
-      ordinal = comment.key,
-      display = make_display,
-      comment = comment
-    }
-  end
-end
-
 local review_comment_previewer =
   defaulter(
   function()
@@ -965,7 +778,7 @@ function M.review_comments()
       prompt_prefix = "Review Comments >",
       finder = finders.new_table {
         results = comments,
-        entry_maker = gen_from_review_comment(max_linenr_length)
+        entry_maker = entry_maker.gen_from_review_comment(max_linenr_length)
       },
       sorter = conf.generic_sorter({}),
       previewer = review_comment_previewer.new({}),
@@ -1013,113 +826,6 @@ end
 ---
 -- PROJECTS
 ---
-local function gen_from_project()
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.project.name}
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = " ",
-      items = {
-        {remaining = true}
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(project)
-    if not project or vim.tbl_isempty(project) then
-      return nil
-    end
-
-    return {
-      value = project.id,
-      ordinal = project.id.. " " .. project.name,
-      display = make_display,
-      project = project
-    }
-  end
-end
-
-local function gen_from_project_column()
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.column.name}
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = " ",
-      items = {
-        {remaining = true}
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(column)
-    if not column or vim.tbl_isempty(column) then
-      return nil
-    end
-
-    return {
-      value = column.id,
-      ordinal = column.id.. " " .. column.name,
-      display = make_display,
-      column = column
-    }
-  end
-end
-
-local function gen_from_project_card()
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.card.column.name},
-      {format(" (%s)", entry.card.project.name), "OctoNvimDetailsValue"},
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = " ",
-      items = {
-        {width = 5},
-        {remaining = true}
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(card)
-    if not card or vim.tbl_isempty(card) then
-      return nil
-    end
-
-    return {
-      value = card.id,
-      ordinal = card.project.name .. " " .. card.column.name,
-      display = make_display,
-      card = card
-    }
-  end
-end
-
 function M.select_project_card(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local ok, cards = pcall(api.nvim_buf_get_var, 0, "cards")
@@ -1137,7 +843,7 @@ function M.select_project_card(cb)
         prompt_prefix = "Choose card >",
         finder = finders.new_table {
           results = cards.nodes,
-          entry_maker = gen_from_project_card()
+          entry_maker = entry_maker.gen_from_project_card()
         },
         sorter = conf.generic_sorter(opts),
         attach_mappings = function(_, _)
@@ -1189,7 +895,7 @@ function M.select_target_project_column(cb)
               prompt_prefix = "Choose target project >",
               finder = finders.new_table {
                 results = projects,
-                entry_maker = gen_from_project()
+                entry_maker = entry_maker.gen_from_project()
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
@@ -1203,7 +909,7 @@ function M.select_target_project_column(cb)
                       prompt_prefix = "Choose target column >",
                       finder = finders.new_table {
                         results = selected_project.project.columns.nodes,
-                        entry_maker = gen_from_project_column()
+                        entry_maker = entry_maker.gen_from_project_column()
                       },
                       sorter = conf.generic_sorter(opts2),
                       attach_mappings = function()
@@ -1225,45 +931,6 @@ function M.select_target_project_column(cb)
       end
     }
   )
-end
-
-local function gen_from_label()
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {"", hl.create_highlight(entry.label.color, {mode = "foreground"})},
-      {entry.label.name, hl.create_highlight(entry.label.color, {})},
-      {"", hl.create_highlight(entry.label.color, {mode = "foreground"})}
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = "",
-      items = {
-        {width = 1},
-        {remaining = true},
-        {width = 1}
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(label)
-    if not label or vim.tbl_isempty(label) then
-      return nil
-    end
-
-    return {
-      value = label.id,
-      ordinal = label.name,
-      display = make_display,
-      label = label
-    }
-  end
 end
 
 function M.select_label(cb)
@@ -1291,7 +958,7 @@ function M.select_label(cb)
               prompt_prefix = "Choose label >",
               finder = finders.new_table {
                 results = labels,
-                entry_maker = gen_from_label()
+                entry_maker = entry_maker.gen_from_label()
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
@@ -1344,7 +1011,7 @@ function M.select_assigned_label(cb)
               prompt_prefix = "Choose label >",
               finder = finders.new_table {
                 results = labels,
-                entry_maker = gen_from_label()
+                entry_maker = entry_maker.gen_from_label()
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
@@ -1361,41 +1028,6 @@ function M.select_assigned_label(cb)
       end
     }
   )
-end
-
-local function gen_from_team()
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.team.name},
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = "",
-      items = {
-        {remaining = true},
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(team)
-    if not team or vim.tbl_isempty(team) then
-      return nil
-    end
-
-    return {
-      value = team.id,
-      ordinal = team.name,
-      display = make_display,
-      team = team
-    }
-  end
 end
 
 function M.select_user(cb)
@@ -1512,7 +1144,7 @@ function M.select_user(cb)
                 prompt_prefix = "Choose team >",
                 finder = finders.new_table {
                   results = selected_user.teams,
-                  entry_maker = gen_from_team()
+                  entry_maker = entry_maker.gen_from_team()
                 },
                 sorter = conf.generic_sorter(opts),
                 attach_mappings = function(_, _)
@@ -1531,41 +1163,6 @@ function M.select_user(cb)
       end
     }
   ):find()
-end
-
-local function gen_from_user()
-  local make_display = function(entry)
-    if not entry then
-      return nil
-    end
-
-    local columns = {
-      {entry.user.login}
-    }
-
-    local displayer =
-      entry_display.create {
-      separator = "",
-      items = {
-        {remaining = true},
-      }
-    }
-
-    return displayer(columns)
-  end
-
-  return function(user)
-    if not user or vim.tbl_isempty(user) then
-      return nil
-    end
-
-    return {
-      value = user.id,
-      ordinal = user.login,
-      display = make_display,
-      user = user
-    }
-  end
 end
 
 function M.select_assignee(cb)
@@ -1602,7 +1199,7 @@ function M.select_assignee(cb)
               prompt_prefix = "Choose assignee >",
               finder = finders.new_table {
                 results = assignees,
-                entry_maker = gen_from_user()
+                entry_maker = entry_maker.gen_from_user()
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
