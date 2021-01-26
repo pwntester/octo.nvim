@@ -1533,4 +1533,92 @@ function M.select_user(cb)
   ):find()
 end
 
+local function gen_from_user()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.user.login}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = "",
+      items = {
+        {remaining = true},
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(user)
+    if not user or vim.tbl_isempty(user) then
+      return nil
+    end
+
+    return {
+      value = user.id,
+      ordinal = user.login,
+      display = make_display,
+      user = user
+    }
+  end
+end
+
+function M.select_assignee(cb)
+  local opts = vim.deepcopy(dropdown_opts)
+  local repo, number = util.get_repo_number()
+  if not repo then
+    return
+  end
+  local bufnr = api.nvim_get_current_buf()
+  local bufname = vim.fn.bufname(bufnr)
+  local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query, key
+  if type == "issue" then
+    query = format(graphql.issue_assignees_query, owner, name, number)
+    key = "issue"
+  elseif type == "pull" then
+    query = format(graphql.pull_request_assignees_query, owner, name, number)
+    key = "pullRequest"
+  end
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local assignees = resp.data.repository[key].assignees.nodes
+          pickers.new(
+            opts,
+            {
+              prompt_prefix = "Choose assignee >",
+              finder = finders.new_table {
+                results = assignees,
+                entry_maker = gen_from_user()
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                  local selected_assignee = actions.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  cb(selected_assignee.user.id)
+                end)
+                return true
+              end
+            }
+          ):find()
+        end
+      end
+    }
+  )
+end
+
 return M

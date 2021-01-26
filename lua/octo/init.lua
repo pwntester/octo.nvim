@@ -464,14 +464,14 @@ function M.apply_buffer_mappings(bufnr, kind)
       bufnr,
       "n",
       "<space>va",
-      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'reviewers')<CR>]],
+      [[<cmd>lua require'octo.commands'.add_user('reviewer')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>vd",
-      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'reviewers')<CR>]],
+      [[<cmd>lua require'octo.commands'.remove_user('reviewer')<CR>]],
       mapping_opts
     )
   end
@@ -481,14 +481,14 @@ function M.apply_buffer_mappings(bufnr, kind)
       bufnr,
       "n",
       "<space>la",
-      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'labels')<CR>]],
+      [[<cmd>lua require'octo.commands'.add_label()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>ld",
-      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'labels')<CR>]],
+      [[<cmd>lua require'octo.commands'.delete_label()<CR>]],
       mapping_opts
     )
 
@@ -496,14 +496,14 @@ function M.apply_buffer_mappings(bufnr, kind)
       bufnr,
       "n",
       "<space>aa",
-      [[<cmd>lua require'octo.commands'.issue_interactive_action('add', 'assignees')<CR>]],
+      [[<cmd>lua require'octo.commands'.add_user('assignee')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>ad",
-      [[<cmd>lua require'octo.commands'.issue_interactive_action('delete', 'assignees')<CR>]],
+      [[<cmd>lua require'octo.commands'.remove_user('assignee')<CR>]],
       mapping_opts
     )
   end

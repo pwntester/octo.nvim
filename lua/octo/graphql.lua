@@ -3,7 +3,7 @@ local M = {}
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
 M.resolve_review_mutation =
   [[
-  mutation ResolveReview {
+  mutation {
     resolveReviewThread(input: {threadId: "%s"}) {
       thread {
         isResolved
@@ -15,7 +15,7 @@ M.resolve_review_mutation =
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
 M.unresolve_review_mutation =
   [[
-  mutation UnresolveReview {
+  mutation {
     unresolveReviewThread(input: {threadId: "%s"}) {
       thread {
         isResolved
@@ -27,7 +27,7 @@ M.unresolve_review_mutation =
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.submit_review_mutation =
   [[
-  mutation AddPullRequestReview {
+  mutation {
     addPullRequestReview(input: {pullRequestId: "%s", event: %s, body: "%s", threads: [%s] }) {
       pullRequestReview {
         id
@@ -40,7 +40,7 @@ M.submit_review_mutation =
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue_mutation =
   [[
-  mutation CreateIssue {
+  mutation {
     createIssue(input: {repositoryId: "%s", title: "%s", body: "%s"}) {
       issue {
         id
@@ -94,6 +94,7 @@ M.create_issue_mutation =
         }
         assignees(first: 20) {
           nodes {
+            id
             login
           }
         }
@@ -105,7 +106,7 @@ M.create_issue_mutation =
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation =
   [[
-  mutation UpdateIssue {
+  mutation {
     updateIssue(input: {id: "%s", state: %s}) {
       issue {
         id
@@ -159,6 +160,7 @@ M.update_issue_state_mutation =
         }
         assignees(first: 20) {
           nodes {
+            id
             login
           }
         }
@@ -170,7 +172,7 @@ M.update_issue_state_mutation =
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_state_mutation =
   [[
-  mutation UpdatePullRequest {
+  mutation {
     updatePullRequest(input: {pullRequestId: "%s", state: %s}) {
       pullRequest {
         id
@@ -241,6 +243,7 @@ M.update_pull_request_state_mutation =
         }
         assignees(first: 20) {
           nodes {
+            id
             login
           }
         }
@@ -420,6 +423,7 @@ query($endCursor: String) {
       }
       assignees(first: 20) {
         nodes {
+          id
           login
         }
       }
@@ -514,6 +518,7 @@ query($endCursor: String) {
       }
       assignees(first: 20) {
         nodes {
+          id
           login
         }
       }
@@ -650,7 +655,7 @@ query {
 -- https://docs.github.com/en/graphql/reference/mutations#addprojectcard
 M.add_project_card_mutation =
   [[
-  mutation AddProjectCard {
+  mutation {
     addProjectCard(input: {contentId: "%s", projectColumnId: "%s"}) {
       cardEdge {
         node {
@@ -664,7 +669,7 @@ M.add_project_card_mutation =
 -- https://docs.github.com/en/graphql/reference/mutations#moveprojectcard
 M.move_project_card_mutation =
   [[
-  mutation MoveProjectCard {
+  mutation {
     moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
       cardEdge {
         node {
@@ -678,7 +683,7 @@ M.move_project_card_mutation =
 -- https://docs.github.com/en/graphql/reference/mutations#deleteprojectcard
 M.delete_project_card_mutation =
   [[
-  mutation DeleteProjectCard {
+  mutation {
     deleteProjectCard(input: {cardId: "%s"}) {
       deletedCardId
     }
@@ -688,7 +693,7 @@ M.delete_project_card_mutation =
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation =
   [[
-  mutation AddLabelsToLabelable {
+  mutation {
     addLabelsToLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
       labelable {
         ... on Issue {
@@ -705,7 +710,7 @@ M.add_labels_mutation =
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.remove_labels_mutation =
   [[
-  mutation RemoveLabelsFromLabelable {
+  mutation {
     removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
       labelable {
         ... on Issue {
@@ -773,7 +778,7 @@ M.pull_request_labels_query =
 -- requires application/vnd.github.bane-preview+json
 M.create_label_mutation =
   [[
-  mutation CreateLabel {
+  mutation {
     createLabel(input: {repositoryId: "%s", name: "%s", description: "%s", color: "%s") {
       label {
         id
@@ -783,10 +788,42 @@ M.create_label_mutation =
   }
 ]]
 
+M.issue_assignees_query =
+  [[
+  query {
+    repository(owner: "%s", name: "%s") {
+      issue(number: %d) {
+        assignees(first: 100) {
+          nodes {
+            id
+            login
+          }
+        }
+      }
+    }
+  }
+]]
+
+M.pull_request_assignees_query =
+  [[
+  query {
+    repository(owner: "%s", name: "%s") {
+      pullRequest(number: %d) {
+        assignees(first: 100) {
+          nodes {
+            id
+            login
+          }
+        }
+      }
+    }
+  }
+]]
+
 -- https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
 M.add_assignees_mutation =
   [[
-  mutation AddAssigneesToAssignable {
+  mutation {
     addAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: ["%s"]}) {
       assignable {
         ... on Issue {
@@ -803,8 +840,8 @@ M.add_assignees_mutation =
 -- https://docs.github.com/en/graphql/reference/mutations#removeassigneestoassignable
 M.remove_assignees_mutation =
   [[
-  mutation RemoveAssigneesToAssignable {
-    removeAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: [%s]}) {
+  mutation {
+    removeAssigneesFromAssignable(input: {assignableId: "%s", assigneeIds: ["%s"]}) {
       assignable {
         ... on Issue {
           id
@@ -821,7 +858,7 @@ M.remove_assignees_mutation =
 -- for teams use `teamIds`
 M.request_reviews_mutation =
   [[
-  mutation RequestReviews {
+  mutation {
     requestReviews(input: {pullRequestId: "%s", userIds: ["%s"]}) {
       pullRequest {
         id

@@ -151,15 +151,12 @@ local commands = {
       M.add_user("assignee")
     end,
     delete = function()
-      M.remove_user("assignee")
+      M.remove_assignee()
     end
   },
   reviewer = {
     add = function()
       M.add_user("reviewer")
-    end,
-    delete = function()
-      M.remove_user("reviewer")
     end
   },
   reaction = {
@@ -483,80 +480,6 @@ function M.get_pull_request(...)
   vim.cmd(format("edit octo://%s/pull/%s", repo, number))
 end
 
-function M.issue_action(action, kind, value)
-  local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_number()
-  if not repo then
-    return
-  end
-
-  -- validate
-  vim.validate {
-    action = {
-      action,
-      function(a)
-        return vim.tbl_contains({"add", "delete"}, a)
-      end,
-      "add or delete"
-    },
-    kind = {
-      kind,
-      function(a)
-        return vim.tbl_contains({"assignees", "reviewers"}, a)
-      end,
-      "assignees or reviewers"
-    }
-  }
-
-  local endpoint
-  if kind == "reviewers" then
-    local _, _, pr = util.get_repo_number_pr()
-    if not pr then
-      return
-    end
-    endpoint = "pulls"
-  else
-    endpoint = "issues"
-  end
-
-  local url = format("repos/%s/%s/%d/%s", repo, endpoint, number, kind)
-  if kind == "reviewers" then
-    url = format("repos/%s/%s/%d/requested_reviewers", repo, endpoint, number)
-  end
-
-  local method
-  if action == "add" then
-    method = "POST"
-  elseif action == "delete" then
-    method = "DELETE"
-  end
-
-  -- TODO: use graphql
-  -- gh does not allow array parameters at the moment
-  -- workaround: https://github.com/cli/cli/issues/1484
-  local cmd = format([[ jq -n '{"%s":["%s"]}' | gh api -X %s %s --input - ]], kind, value, method, url)
-  local job =
-    Job:new(
-    {
-      command = "sh",
-      args = {"-c", cmd},
-      on_exit = vim.schedule_wrap(
-        function(jself, _, _)
-          if jself:stderr_result() and not vim.tbl_isempty(jself:stderr_result()) then
-            api.nvim_err_writeln(vim.inspect(jself:stderr_result()))
-          end
-
-          -- refresh issue/pr details
-          octo.load(bufnr, function(obj)
-            writers.write_details(bufnr, obj, true)
-          end)
-        end
-      )
-    }
-  )
-  job:start()
-end
-
 function M.checkout_pr()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
@@ -729,7 +652,7 @@ function M.pr_reviews()
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          -- TODO: aggregate comments
+          -- aggregate comments
           -- local resp = util.aggregate_pages(output, "data.repository.pullRequest.reviewThreads.nodes.comments.nodes")
           -- for now, I will just remove pagination on this query since 100 comments in a single thread looks enough for most cases
           local resp = json.parse(output)
@@ -928,14 +851,6 @@ function M.reaction_action(action, reaction)
   )
 end
 
--- TODO: remove?
-function M.issue_interactive_action(action, kind)
-  vim.fn.inputsave()
-  local value = vim.fn.input("Enter name: ")
-  vim.fn.inputrestore()
-  M.issue_action(action, kind, value)
-end
-
 function M.command_complete(args)
   local command_keys = vim.tbl_keys(commands)
   local argLead, cmdLine, _ = unpack(args)
@@ -989,7 +904,7 @@ function M.add_project_card()
             -- refresh issue/pr details
             octo.load(bufnr, function(obj)
               writers.write_details(bufnr, obj, true)
-              -- TODO: repopulate "cards" buf var
+              api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
             end)
           end
         end
@@ -1021,7 +936,7 @@ function M.delete_project_card()
             -- refresh issue/pr details
             octo.load(bufnr, function(obj)
               writers.write_details(bufnr, obj, true)
-              -- TODO: repopulate "cards" buf var
+              api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
             end)
           end
         end
@@ -1054,7 +969,7 @@ function M.move_project_card()
               -- refresh issue/pr details
               octo.load(bufnr, function(obj)
                 writers.write_details(bufnr, obj, true)
-                -- TODO: repopulate "cards" buf var
+                api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
               end)
             end
           end
@@ -1176,8 +1091,36 @@ function M.add_user(subject)
   end)
 end
 
-function M.remove_user(subject)
-  -- TODO: implement
+function M.remove_assignee()
+  local bufnr = api.nvim_get_current_buf()
+  local repo = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
+  if not iid_ok or not iid then
+    api.nvim_err_writeln("Cannot get issue/pr id")
+  end
+
+  menu.select_assignee(function(user_id)
+    local query = format(graphql.remove_assignees_mutation, iid, user_id)
+    gh.run(
+      {
+        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            -- refresh issue/pr details
+            octo.load(bufnr, function(obj)
+              writers.write_details(bufnr, obj, true)
+            end)
+          end
+        end
+      }
+    )
+  end)
 end
 
 return M
