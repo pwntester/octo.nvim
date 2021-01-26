@@ -9,22 +9,27 @@ function M.issue_complete(findstart, base)
     -- findstart
     local line = api.nvim_get_current_line()
     local pos = vim.fn.col(".")
-    local i, j = 0, 0
+
+    local start, finish = 0, 0
     while true do
-      i, j = string.find(line, "#(%d*)", i + 1)
-      if i == nil then
-        i, j = 0, 0
-        i, j = string.find(line, "@(%w*)", i + 1)
-        if i == nil then
-          break
-        end
-      end
-      if pos > i and pos <= j + 1 then
-        -- I think subtracting 1 is necessary to include the first character
-        -- since lua is 1 indexed
-        return i - 1
+      start, finish = string.find(line, "#(%d*)", start + 1)
+      if start and pos > start and pos <= finish + 1 then
+        return start - 1
+      elseif not start then
+        break
       end
     end
+
+    start, finish = 0, 0
+    while true do
+      start, finish = string.find(line, "@(%w*)", start + 1)
+      if start and pos > start and pos <= finish + 1 then
+        return start - 1
+      elseif not start then
+        break
+      end
+    end
+
     return -2
   elseif findstart == 0 then
     local entries = {}
