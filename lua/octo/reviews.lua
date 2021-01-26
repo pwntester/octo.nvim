@@ -619,16 +619,14 @@ function M.submit_review(event)
 
   local bufnr = api.nvim_get_current_buf()
   local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local text = vim.fn.trim(table.concat(lines, "\n"))
-  -- TODO: escape double quotes
+  local text = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
 
   local comments = {}
   for _, c in ipairs(vim.tbl_values(M.review_comments)) do
-    -- TODO: escape double quotes
     if c.line1 == c.line2 then
-      table.insert(comments, format("{body:\"%s\", line:%d, path:\"%s\", side:%s}", c.body, c.line1, c.path, c.side))
+      table.insert(comments, format("{body:\"%s\", line:%d, path:\"%s\", side:%s}", util.escape_chars(c.body), c.line1, c.path, c.side))
     else
-      table.insert(comments, format("{body:\"%s\", startLine:%d, line:%d, path:\"%s\", startSide:%s, side:%s}", c.body, c.line1, c.line2, c.path, c.side, c.side))
+      table.insert(comments, format("{body:\"%s\", startLine:%d, line:%d, path:\"%s\", startSide:%s, side:%s}", util.escape_chars(c.body), c.line1, c.line2, c.path, c.side, c.side))
     end
   end
   comments = table.concat(comments, ", ")

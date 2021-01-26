@@ -133,19 +133,19 @@ local commands = {
     end
   },
   assignee = {
-    add = function(value)
-      M.issue_action("add", "assignees", value)
+    add = function()
+      M.add_user("assignee")
     end,
-    delete = function(value)
-      M.issue_action("delete", "assignees", value)
+    delete = function()
+      M.remove_user("assignee")
     end
   },
   reviewer = {
-    add = function(value)
-      M.issue_action("add", "reviewers", value)
+    add = function()
+      M.add_user("reviewer")
     end,
-    delete = function(value)
-      M.issue_action("delete", "reviewers", value)
+    delete = function()
+      M.remove_user("reviewer")
     end
   },
   reaction = {
@@ -517,7 +517,7 @@ function M.issue_action(action, kind, value)
     method = "DELETE"
   end
 
-  -- TODO: Octo issue/pr open
+  -- TODO: Octo issue/pr open in browser
   -- TODO: use graphql
   -- gh does not allow array parameters at the moment
   -- workaround: https://github.com/cli/cli/issues/1484
@@ -1123,6 +1123,47 @@ function M.delete_label()
       }
     )
   end)
+end
+
+function M.add_user(subject)
+  local bufnr = api.nvim_get_current_buf()
+  local repo = util.get_repo_number()
+  if not repo then
+    return
+  end
+
+  local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
+  if not iid_ok or not iid then
+    api.nvim_err_writeln("Cannot get issue/pr id")
+  end
+
+  menu.select_user(function(user_id)
+    local query
+    if subject == "assignee" then
+      query = format(graphql.add_assignees_mutation, iid, user_id)
+    elseif subject == "reviewer" then
+      query = format(graphql.request_reviews_mutation, iid, user_id)
+    end
+    gh.run(
+      {
+        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            -- refresh issue/pr details
+            octo.load(bufnr, function(obj)
+              writers.write_details(bufnr, obj, true)
+            end)
+          end
+        end
+      }
+    )
+  end)
+end
+
+function M.remove_user(subject)
+  -- TODO: implement
 end
 
 return M

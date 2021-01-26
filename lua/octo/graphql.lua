@@ -570,12 +570,12 @@ query($endCursor: String) {
 }
 ]]
 
-M.search_pull_requests_query =
+M.search_issues_query =
   [[
 query {
-  search(query: "repo:%s is:pr %s", type: ISSUE, last: 100) {
+  search(query: "repo:%s is:issue %s", type: ISSUE, last: 100) {
     nodes {
-      ... on PullRequest {
+      ... on Issue{
         number
         title
       }
@@ -584,12 +584,12 @@ query {
 }
 ]]
 
-M.search_issues_query =
+M.search_pull_requests_query =
   [[
 query {
-  search(query: "repo:%s is:issue %s", type: ISSUE, last: 100) {
+  search(query: "repo:%s is:pr %s", type: ISSUE, last: 100) {
     nodes {
-      ... on Issue{
+      ... on PullRequest {
         number
         title
       }
@@ -787,7 +787,7 @@ M.create_label_mutation =
 M.add_assignees_mutation =
   [[
   mutation AddAssigneesToAssignable {
-    addAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: [%s]}) {
+    addAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: ["%s"]}) {
       assignable {
         ... on Issue {
           id
@@ -822,38 +822,41 @@ M.remove_assignees_mutation =
 M.request_reviews_mutation =
   [[
   mutation RequestReviews {
-    requestReviews(input: {pullRequestId: "%s", userIds: [%s]}) {
+    requestReviews(input: {pullRequestId: "%s", userIds: ["%s"]}) {
       pullRequest {
         id
       }
-      requestedReviewersEdge {
-        node {
-          login
+    }
+  }
+]]
+
+M.user_query =
+  [[
+query($endCursor: String) {
+  search(query: "%s", type: USER, first: 100) {
+    nodes {
+      ... on User {
+        id 
+        login
+      }
+      ... on Organization {
+        id 
+        login
+        teams(first:100, after: $endCursor) {
+          totalCount
+          nodes {
+            id 
+            name
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }
     }
   }
-]]
-
---
-M.find_user_id_query = [[
-  query FindUserID {
-    user(login: "pwntester") {
-      id
-    }
-  }
-]]
-
---
-M.find_team_id_query =
-  [[
-  query FindTeamID {
-    organization(login: "github") {
-      team(slug: "codeql-java") {
-        id
-      }
-    }
-  }
+}
 ]]
 
 return M

@@ -308,11 +308,7 @@ function M.get_repo_id(repo)
   end
 end
 
-function M.aggregate_pages(text, aggregation_key)
-  -- aggregation key can be at any level (eg: comments)
-  -- take the first response and extend it with elements from the
-  -- subsequent responses
-
+function M.get_pages(text)
   local responses = {}
   while true do
     local idx = string.find(text, '}{"data"')
@@ -324,7 +320,14 @@ function M.aggregate_pages(text, aggregation_key)
     table.insert(responses, json.parse(resp))
     text = string.sub(text, idx + 1)
   end
+  return responses
+end
 
+function M.aggregate_pages(text, aggregation_key)
+  -- aggregation key can be at any level (eg: comments)
+  -- take the first response and extend it with elements from the
+  -- subsequent responses
+  local responses = M.get_pages(text)
   local base_resp = responses[1]
   if #responses > 1 then
     local base_page = M.get_nested_prop(base_resp, aggregation_key)
@@ -361,19 +364,9 @@ end
 function M.escape_chars(string)
   return string.gsub(
     string,
-    "[%(|%)|\\|%[|%]|%-|%{%}|%?|%+|%*]",
+    '["]',
     {
-      ["\\"] = "\\\\",
-      ["-"] = "\\-",
-      ["("] = "\\(",
-      [")"] = "\\)",
-      ["["] = "\\[",
-      ["]"] = "\\]",
-      ["{"] = "\\{",
-      ["}"] = "\\}",
-      ["?"] = "\\?",
-      ["+"] = "\\+",
-      ["*"] = "\\*"
+      ['"'] = '\\"',
     }
   )
 end
