@@ -81,9 +81,12 @@ There is only an `Octo <object> <action> [arguments]` command:
 
 * If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
+If no command is passed, the argument to `Octo` is treated as a URL from where an issue or pr repo and number are extracted
+
 Examples:
 
 ```
+Octo https://github.com/pwntester/octo.nvim/issues/12
 Octo issue create
 Octo issue create pwntester/octo.nvim
 Octo comment add
