@@ -232,8 +232,10 @@ end
 function M.octo(object, action, ...)
   local o = commands[object]
   if not o then
-    print("Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(commands)))
-    return
+    if not M.parse_url(object) then
+      print("Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(commands)))
+      return
+    end
   else
     local a = o[action]
     if not a then
@@ -243,6 +245,24 @@ function M.octo(object, action, ...)
       a(...)
     end
   end
+end
+
+function M.parse_url(url)
+  local i, j, repo, number = string.find(url, "https://github.com/(.*)/issues/(%d+)")
+  local type
+  if not i then
+    i, j, repo, number = string.find(url, "https://github.com/(.*)/pull/(%d+)")
+    if i then
+      type = "pull"
+    end
+  else
+    type = "issue"
+  end
+  if repo and number then
+    if "issue" == type then M.get_issue(repo, number); return true end
+    if "pull" == type then M.get_pull_request(repo, number); return true end
+  end
+  return false
 end
 
 function M.add_comment()
