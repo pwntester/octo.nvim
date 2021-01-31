@@ -9,7 +9,6 @@ local vim = vim
 local api = vim.api
 local json = {
   parse = vim.fn.json_decode,
-  stringify = vim.fn.json_encode
 }
 
 local M = {}

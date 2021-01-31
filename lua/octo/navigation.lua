@@ -1,4 +1,5 @@
 local api = vim.api
+local commands = require "octo.commands"
 
 local M = {}
 
@@ -25,14 +26,14 @@ function M.go_to_issue()
   if res and #res == 1 then
     local repo = api.nvim_buf_get_var(0, "repo")
     local number = res[1]
-    get_issue(repo, number)
+    commands.get_issue(repo, number)
     return
   else
     res = is_cursor_in_pattern("https://github.com/([^/]+)/([^/]+)/([^/]+)/(%d+).*")
     if res and #res == 4 then
       local repo = string.format("%s/%s", res[1], res[2])
       local number = res[4]
-      get_issue(repo, number)
+      commands.get_issue(repo, number)
       return
     end
   end

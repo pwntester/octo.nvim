@@ -12,7 +12,6 @@ local format = string.format
 local json = {
   parse = vim.fn.json_decode
 }
-local Job = require("plenary.job")
 
 local M = {}
 
