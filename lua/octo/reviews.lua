@@ -21,6 +21,9 @@ function M.populate_changes_qf(changes, opts)
     vim.cmd [[tabnew %]]
   end
 
+  print("debug1", vim.inspect(changes))
+  print("debug2", vim.inspect(opts))
+
   -- run the diff between head and base commits
   vim.cmd(format("Git difftool --name-only %s..%s", opts.baseRefName, opts.headRefName))
 
