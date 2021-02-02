@@ -733,18 +733,15 @@ function M.review_pr()
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          print("debug - raw response", output)
           local results = json.parse(output)
           local changes = {}
           for _, result in ipairs(results) do
-            print("result", vim.inspect(result))
             local change = {
               filename = result.filename,
               patch = result.patch,
               status = result.status,
               text = format("+%d -%d", result.additions, result.deletions)
             }
-            print("change", vim.inspect(result))
             table.insert(changes, change)
           end
           reviews.populate_changes_qf(changes, {

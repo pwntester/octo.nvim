@@ -21,9 +21,6 @@ function M.populate_changes_qf(changes, opts)
     vim.cmd [[tabnew %]]
   end
 
-  print("debug1", vim.inspect(changes))
-  print("debug2", vim.inspect(opts))
-
   -- run the diff between head and base commits
   vim.cmd(format("Git difftool --name-only %s..%s", opts.baseRefName, opts.headRefName))
 
@@ -49,7 +46,6 @@ function M.update_changes_qf(changes, opts)
 
   -- update item's text
   local items = qf.items
-  print("items1", vim.inspect(items))
   for _, item in ipairs(items) do
     for _, change in ipairs(changes) do
       if item.module == format("%s:%s", opts.baseRefName, change.filename) then
@@ -69,7 +65,6 @@ function M.update_changes_qf(changes, opts)
     ctxitem.patch = changes[i].patch
   end
 
-  print("items2", vim.inspect(items))
   vim.fn.setqflist({}, "r", {context = qf.context, items = items})
 end
 
@@ -91,6 +86,8 @@ function M.diff_changes_qf_entry()
   M.clean_fugitive_buffers()
 
   -- select qf entry
+  local qf = vim.fn.getqflist({context = 0, items = 0})
+  print(vim.inspect(qf))
   vim.cmd [[cc]]
 
   -- set `]q` and `[q` mappings to the qf entry buffer (head)
