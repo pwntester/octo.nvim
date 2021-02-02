@@ -86,8 +86,7 @@ function M.diff_changes_qf_entry()
   M.clean_fugitive_buffers()
 
   -- select qf entry
-  local qf = vim.fn.getqflist({context = 0, items = 0})
-  print(vim.inspect(qf))
+  print(vim.inspect(vim.fn.getqflist({all=0})))
   vim.cmd [[cc]]
 
   -- set `]q` and `[q` mappings to the qf entry buffer (head)
