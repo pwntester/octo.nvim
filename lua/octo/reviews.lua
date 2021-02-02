@@ -49,6 +49,7 @@ function M.update_changes_qf(changes, opts)
 
   -- update item's text
   local items = qf.items
+  print("items1", vim.inspect(items))
   for _, item in ipairs(items) do
     for _, change in ipairs(changes) do
       if item.module == format("%s:%s", opts.baseRefName, change.filename) then
@@ -68,6 +69,7 @@ function M.update_changes_qf(changes, opts)
     ctxitem.patch = changes[i].patch
   end
 
+  print("items2", vim.inspect(items))
   vim.fn.setqflist({}, "r", {context = qf.context, items = items})
 end
 
