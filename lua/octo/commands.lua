@@ -411,7 +411,7 @@ end
 
 function M.change_state(type, state)
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_issue"})
+  local repo, number = util.get_repo_number({"octo_issue"})
   if not repo then
     return
   end
@@ -447,7 +447,7 @@ function M.change_state(type, state)
           end
           if state == new_state then
             api.nvim_buf_set_var(bufnr, "state", new_state)
-            writers.write_state(bufnr)
+            writers.write_state(bufnr, new_state:upper(), number)
             writers.write_details(bufnr, obj, true)
             print("Issue state changed to: " .. new_state)
           end

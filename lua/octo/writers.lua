@@ -78,6 +78,10 @@ function M.write_title(bufnr, title, line)
 end
 
 function M.write_state(bufnr, state, number)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  state = state or api.nvim_buf_get_var(bufnr, "state")
+  number = number or api.nvim_buf_get_var(bufnr, "number")
+
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
 
