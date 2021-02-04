@@ -31,7 +31,7 @@ function M.populate_changes_qf(changes, opts)
   end
 
   -- update qf with gh info (additions/deletions ...)
-  --M.update_changes_qf(changes, opts)
+  M.update_changes_qf(changes, opts)
 
   M.diff_changes_qf_entry()
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
@@ -45,19 +45,18 @@ function M.update_changes_qf(changes, opts)
   local qf = vim.fn.getqflist({context = 0, items = 0})
 
   -- update item's text
-  local items = qf.items
+  --[[ local items = qf.items
   for _, item in ipairs(items) do
     for _, change in ipairs(changes) do
       if item.module == format("%s:%s", opts.baseRefName, change.filename) then
         item.pattern = change.text .. " " .. change.status
       end
     end
-  end
+  end ]]
 
   -- update context wiht SHA info
   qf.context.left_sha = opts.baseRefSHA
   qf.context.right_sha = opts.headRefSHA
-
   qf.context.pull_request_id = opts.pull_request_id
 
   -- update context items with diff
@@ -65,7 +64,8 @@ function M.update_changes_qf(changes, opts)
     ctxitem.patch = changes[i].patch
   end
 
-  vim.fn.setqflist({}, "r", {context = qf.context, items = items})
+  -- for now, update context but keep same items
+  vim.fn.setqflist({}, "r", {context = qf.context, items = qf.items})
 end
 
 function M.clean_fugitive_buffers()
