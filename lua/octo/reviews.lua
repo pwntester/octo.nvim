@@ -61,6 +61,7 @@ function M.update_changes_qf(changes, opts)
 
   -- update context items with diff
   for i, ctxitem in ipairs(qf.context.items) do
+    print(i, vim.inspect(changes[i]), vim.inspect(ctxitem))
     ctxitem.patch = changes[i].patch
   end
 

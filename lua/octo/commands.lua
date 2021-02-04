@@ -744,6 +744,7 @@ function M.review_pr()
             }
             table.insert(changes, change)
           end
+            print(vim.inspect(changes))
           reviews.populate_changes_qf(changes, {
             pull_request_id = pr.id,
             baseRefName = pr.baseRefName,
