@@ -31,7 +31,7 @@ function M.populate_changes_qf(changes, opts)
   end
 
   -- update qf with gh info (additions/deletions ...)
-  M.update_changes_qf(changes, opts)
+  --M.update_changes_qf(changes, opts)
 
   M.diff_changes_qf_entry()
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
