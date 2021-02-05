@@ -25,7 +25,7 @@ function M.populate_changes_qf(changes, opts)
   vim.cmd(format("Git difftool --name-only %s..%s", opts.baseRefName, opts.headRefName))
 
   print("origin/"..opts.headRefName, opts.headRefSHA)
-  print("local/"..opts.headRefName, vim.fn.system("git rev-parse origin/master"))
+  print("local/"..opts.headRefName, vim.fn.system("git rev-parse origin/"..opts.headRefName))
 
   local qf = vim.fn.getqflist({size = 0})
   if qf.size == 0 then
