@@ -22,7 +22,7 @@ function M.populate_changes_qf(changes, opts)
   end
 
   -- run the diff between head and base commits
-  vim.cmd(format("Git difftool --name-only %s..%s", opts.baseRefName, opts.headRefName))
+  vim.cmd(format("Git difftool --name-only %s...%s", opts.baseRefName, opts.headRefName))
 
   print("origin/"..opts.headRefName, opts.headRefSHA)
   print("local/"..opts.headRefName, vim.fn.system("git rev-parse origin/"..opts.headRefName))
@@ -54,8 +54,9 @@ function M.update_changes_qf(changes, opts)
   local items = qf.items
   for _, item in ipairs(items) do
     for _, change in ipairs(changes) do
-      if item.module == format("%s:%s", opts.baseRefName, change.filename) then
-        item.pattern = change.text .. " " .. change.status
+      if item.module == format("%s:%s", opts.headRefName, change.filename) then
+        item.pattern = change.status
+        item.text = change.stats
       end
     end
   end
@@ -71,7 +72,7 @@ function M.update_changes_qf(changes, opts)
   end
 
   -- for now, update context but keep same items
-  vim.fn.setqflist({}, "r", {context = qf.context, items = qf.items})
+  vim.fn.setqflist({}, "r", {context = qf.context, items = items})
 end
 
 function M.clean_fugitive_buffers()
@@ -123,7 +124,7 @@ function M.diff_changes_qf_entry()
       M.add_changes_qf_mappings()
 
       -- move to first chunk
-      vim.cmd [[normal! ]c]]
+      vim.cmd [[normal! gg]c]]
 
       local valid_left_ranges = {}
       local valid_right_ranges = {}
