@@ -71,7 +71,6 @@ function M.update_changes_qf(changes, opts)
     ctxitem.patch = changes[i].patch
   end
 
-  -- for now, update context but keep same items
   vim.fn.setqflist({}, "r", {context = qf.context, items = items})
 end
 
