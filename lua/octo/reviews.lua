@@ -26,7 +26,10 @@ function M.populate_changes_qf(changes, opts)
 
   local qf = vim.fn.getqflist({size = 0})
   if qf.size == 0 then
-    api.nvim_err_writeln(format("No changes found for pr"))
+    api.nvim_err_writeln("No changes found for pr")
+    return
+  elseif qf.size ~= #changes then
+    api.nvim_err_writeln(format("Your local branch (%d changed files) is out of sync with the remote one (%d changed files)", qf.size, #changes))
     return
   end
 
@@ -45,14 +48,14 @@ function M.update_changes_qf(changes, opts)
   local qf = vim.fn.getqflist({context = 0, items = 0})
 
   -- update item's text
-  --[[ local items = qf.items
+  local items = qf.items
   for _, item in ipairs(items) do
     for _, change in ipairs(changes) do
       if item.module == format("%s:%s", opts.baseRefName, change.filename) then
         item.pattern = change.text .. " " .. change.status
       end
     end
-  end ]]
+  end
 
   -- update context wiht SHA info
   qf.context.left_sha = opts.baseRefSHA
@@ -61,7 +64,6 @@ function M.update_changes_qf(changes, opts)
 
   -- update context items with diff
   for i, ctxitem in ipairs(qf.context.items) do
-    print(i, vim.inspect(changes[i]), vim.inspect(ctxitem))
     ctxitem.patch = changes[i].patch
   end
 
@@ -87,7 +89,6 @@ function M.diff_changes_qf_entry()
   M.clean_fugitive_buffers()
 
   -- select qf entry
-  print(vim.inspect(vim.fn.getqflist({all=0})))
   vim.cmd [[cc]]
 
   -- set `]q` and `[q` mappings to the qf entry buffer (head)
