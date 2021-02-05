@@ -740,7 +740,7 @@ function M.review_pr()
               filename = result.filename,
               patch = result.patch,
               status = result.status,
-              text = format("+%d -%d", result.additions, result.deletions)
+              stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
             }
             table.insert(changes, change)
           end
