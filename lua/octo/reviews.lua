@@ -164,6 +164,10 @@ function M.diff_changes_qf_entry()
 end
 
 function M.add_review_comment(line1, line2)
+  if line1 == nil and line2 == nil then
+    line1 = api.nvim_buf_get_mark(0, "<")[1]
+    line2 = api.nvim_buf_get_mark(0, ">")[1]
+  end
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
@@ -588,10 +592,44 @@ function M.close_review_tab()
   end
 end
 
-function M.add_changes_qf_mappings()
-  vim.cmd [[nnoremap <silent><buffer>]q :lua require'octo.reviews'.next_change()<CR>]]
-  vim.cmd [[nnoremap <silent><buffer>[q :lua require'octo.reviews'.prev_change()<CR>]]
-  vim.cmd [[nnoremap <silent><buffer><C-c> :tabclose <BAR> :lua require'octo.reviews'.close_review_tab()<CR>]]
+function M.add_changes_qf_mappings(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  local mapping_opts = {script = true, silent = true, noremap = true}
+  api.nvim_buf_set_keymap(
+    bufnr
+    "n",
+    "]q",
+    [[<cmd>lua require'octo.reviews'.next_change()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr
+    "n",
+    "[q",
+    [[<cmd>lua require'octo.reviews'.prev_change()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr
+    "n",
+    "<C-c>",
+    [[:tabclose <BAR><cmd>lua require'octo.reviews'.close_review_tab()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr
+    "n",
+    "<space>ca",
+    [[<cmd>lua require'octo.reviews'.add_review_comment()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr
+    "v",
+    "<space>ca",
+    [[<cmd>lua require'octo.reviews'.add_review_comment()<CR>]],
+    mapping_opts
+  )
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))
