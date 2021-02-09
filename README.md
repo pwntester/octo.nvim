@@ -100,6 +100,18 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 ## Usage
 Just edit the issue title, description or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
 
+## PR review
+- Change to the directory containing the repo/PR you want to review
+- Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
+- If not already in the PR branch, checkout the PR (`Octo pr checkout`)
+- Start a review (`Octo review start`)
+- Add comments with `:OctoReviewComment` on single or multiplelines
+- A new split will open. Enter the comment and save it (`:w`). Optionally close the split
+- Add as many comments as needed
+- Review comments with `Octo review comments`
+- When ready submit the review with `Octo review submit`
+- A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press <C-m> to submit a comment, <C-a> to approve it or <C-r> to request changes
+
 ## Completion
 - Issue/PR id completion (#)
 - User completion (@)
