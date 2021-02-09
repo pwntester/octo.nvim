@@ -98,16 +98,18 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 ```
 
 ## Usage
-
 Just edit the issue title, description or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
 
 ## Completion
-
 - Issue/PR id completion (#)
 - User completion (@)
 
-## In-issue mappings
 
+## Mappings
+`<Plug>(OctoOpenURLAtCursor)`: Open URL at cursor with Octo
+
+
+## In-issue mappings
 | Mapping     | Description                           |
 | ---         | ---                                   |
 | `<space>gi` | navigate to a local repo issue        |

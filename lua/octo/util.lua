@@ -380,4 +380,14 @@ function M.open_in_browser(type, repo, number)
   os.execute(cmd)
 end
 
+function M.open_url_at_cursor()
+  local uri = vim.fn.matchstr(vim.fn.getline("."), "[a-z]*:\\/\\/[^ >,;()]*")
+  print(uri)
+  if uri then 
+    require"octo.commands".parse_url(uri)
+  else
+    api.nvim_err_writeln("No URI found in line.")
+  end
+end
+
 return M
