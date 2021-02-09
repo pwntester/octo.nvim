@@ -8,9 +8,6 @@ Modified description or comments are highlighted in the signcolumn.
 ### Pull Request (checks)
 ![](https://i.imgur.com/xfE6yN2.png)
 
-### Pull Request (review threads)
-![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
-
 ## Installation
 
 Use your favourite plugin manager to install it. eg:
@@ -101,16 +98,28 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 Just edit the issue title, description or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
 
 ## PR review
-- Change to the directory containing the repo/PR you want to review
+- Change to the directory containing the repo/PR
 - Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
-- If not already in the PR branch, checkout the PR (`Octo pr checkout`)
-- Start a review (`Octo review start`)
-- Add comments with `:OctoReviewComment` on single or multiplelines
+- If not already in the PR branch, checkout the PR with `Octo pr checkout`
+- Start a review with `Octo review start`
+- Add comments with `:OctoReviewComment` on single or multiple lines
 - A new split will open. Enter the comment and save it (`:w`). Optionally close the split
 - Add as many comments as needed
 - Review comments with `Octo review comments`
 - When ready submit the review with `Octo review submit`
-- A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press <C-m> to submit a comment, <C-a> to approve it or <C-r> to request changes
+- A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
+
+## Viewing PR Reviews
+![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
+
+- Change to the directory containing the repo/PR
+- Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
+- If not already in the PR branch, checkout the PR with `Octo pr checkout`
+- Open review threads view with `Octo pr reviews`
+- Quickfix will be populated with changed files 
+- Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
+- Jump between comments with `]c` and `[c`
+- You can reply to a comment, delete them, add/remove reactions, etc. as if you where in an Octo issue buffer
 
 ## Completion
 - Issue/PR id completion (#)
