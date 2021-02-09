@@ -44,42 +44,12 @@ function! octo#issue_complete(findstart, base) abort
   return luaeval("require'octo.completion'.issue_complete(_A[1], _A[2])", [a:findstart, a:base])
 endfunction
 
-" window configuration
-let s:no = nvim_win_get_option(0,'number')
-let s:rno = nvim_win_get_option(0,'relativenumber')
-let s:clo = nvim_win_get_option(0,'cursorline')
-let s:sco = nvim_win_get_option(0,'signcolumn')
-let s:wo = nvim_win_get_option(0,'wrap')
-
-function! octo#configure_win() abort
-  let s:no = nvim_win_get_option(0,'number')
-  let s:rno = nvim_win_get_option(0,'relativenumber')
-  let s:clo = nvim_win_get_option(0,'cursorline')
-  let s:sco = nvim_win_get_option(0,'signcolumn')
-  let s:wo = nvim_win_get_option(0,'wrap')
-
-  call nvim_win_set_option(0,'number', v:false)
-  call nvim_win_set_option(0,'relativenumber', v:false)
-  call nvim_win_set_option(0,'cursorline', v:false)
-  call nvim_win_set_option(0,'signcolumn', 'yes')
-  call nvim_win_set_option(0,'wrap', v:true)
-  
-  setlocal omnifunc=octo#issue_complete
-endfunction
-
-function! octo#restore_win() abort
-  call nvim_win_set_option(0,'number', s:no)
-  call nvim_win_set_option(0,'relativenumber', s:rno)
-  call nvim_win_set_option(0,'cursorline', s:clo)
-  call nvim_win_set_option(0,'signcolumn', s:sco)
-  call nvim_win_set_option(0,'wrap', s:wo)
-endfunction
-
 " autocommands
 augroup octo_autocmds
 au!
-au Filetype octo_issue call octo#configure_win()
-au BufLeave * if &ft == 'octo_issue' | call octo#restore_win() | endif 
+au BufEnter octo://* setlocal omnifunc=octo#issue_complete
+au BufEnter octo://* lua require"octo".set_octo_win_opts()
+au BufLeave octo://* lua require"octo".restore_win_opts()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
 au BufWriteCmd octo_comment://* lua require'octo.reviews'.save_review_comment()
@@ -93,6 +63,9 @@ if !exists("g:octo_loggedin_user")
   let g:octo_loggedin_user = v:null
   lua require'octo'.check_login()
 endif
+
+" mappings
+nnoremap <Plug>(OctoOpenURLAtCursor) <cmd>lua require'octo.util'.open_url_at_cursor()<CR>
 
 " settings
 let g:octo_date_format = get(g:, 'octo_date_format', "%Y %b %d %I:%M %p %Z")

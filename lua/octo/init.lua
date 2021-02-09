@@ -598,4 +598,49 @@ function M.apply_buffer_mappings(bufnr, kind)
   end
 end
 
+M.win_opts = {}
+
+function M.restore_win_opts()
+  -- called when leaving an octo buffer to restore the win opts used outside octo
+  local win_id = api.nvim_get_current_win()
+  if vim.tbl_contains(vim.tbl_keys(M.win_opts), win_id) then
+    vim.wo[win_id].number = M.win_opts[win_id].number
+    vim.wo[win_id].relativenumber = M.win_opts[win_id].relativenumber
+    vim.wo[win_id].cursorline = M.win_opts[win_id].cursorline
+    vim.wo[win_id].signcolumn = M.win_opts[win_id].signcolumn
+    vim.wo[win_id].foldcolumn = M.win_opts[win_id].foldcolumn
+    vim.wo[win_id].wrap = M.win_opts[win_id].wrap
+  end
+end
+
+function M.set_octo_win_opts()
+  -- called when entering an octo buffer
+  M.save_win_opts()
+
+  local win_id = api.nvim_get_current_win()
+  if vim.tbl_contains(vim.tbl_keys(M.win_opts), win_id) then
+    vim.wo[win_id].number = false
+    vim.wo[win_id].relativenumber = false
+    vim.wo[win_id].cursorline = false
+    vim.wo[win_id].signcolumn = "yes"
+    vim.wo[win_id].foldcolumn = "1"
+    vim.wo[win_id].wrap = true
+  end
+end
+
+function M.save_win_opts()
+  -- called when entering an octo buffer for the first time in a given window
+  local win_id = api.nvim_get_current_win()
+  if not vim.tbl_contains(vim.tbl_keys(M.win_opts), win_id) then
+    M.win_opts[win_id] = {
+      number = vim.wo[win_id].number,
+      relativenumber = vim.wo[win_id].relativenumber,
+      cursorline = vim.wo[win_id].cursorline,
+      signcolumn = vim.wo[win_id].signcolumn,
+      foldcolumn = vim.wo[win_id].foldcolumn,
+      wrap = vim.wo[win_id].wrap,
+    }
+  end
+end
+
 return M

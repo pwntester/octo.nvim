@@ -140,7 +140,6 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `<space>rr` | add :rocket: reaction                 |
 
 ## Highlight groups
-
 | Name                        | Default          |
 | ---                         | ---              |
 | `OctoNvimDirty`             | `ErrorMsg`       |
