@@ -104,12 +104,21 @@ Just edit the issue title, description or comments as a regular buffer and use `
 - Start a review with `Octo review start`
 - Add comments with `:OctoReviewComment` on single or multiple lines
 - A new split will open. Enter the comment and save it (`:w`). Optionally close the split
+
+![](https://i.imgur.com/l9z4tpg.png)
+
 - Add as many comments as needed
 - Review comments with `Octo review comments`
+
+![](https://i.imgur.com/2DKPZq9.png)
+
 - When ready submit the review with `Octo review submit`
 - A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
 
+![](https://i.imgur.com/aRHqIhg.png)
+
 ## Viewing PR Reviews
+
 ![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
 
 - Change to the directory containing the repo/PR
