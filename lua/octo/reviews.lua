@@ -651,10 +651,6 @@ function M.submit_review(event)
     }
   )
 
---"message": "Start line must precede the end line."
---there is a line mismatch, comments are not exactly placed on the specified lines, at least for Left side
---its like the left side lines are mapped to the right ones. so 721 and 723 on the lhs are mapped to 723 to 725 on the rhs. so placing a comment on 721-725 LEFT get the comment placed on 723-725 LEFT
-
 end
 
 return M

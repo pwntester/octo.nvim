@@ -15,6 +15,7 @@ local json = {
 
 local M = {}
 
+-- supported commands
 local commands = {
   issue = {
     create = function(repo)
