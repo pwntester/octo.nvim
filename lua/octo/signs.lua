@@ -7,7 +7,7 @@ local M = {}
 
 function M.setup()
   -- sign definitions
-  vim.cmd [[ sign define comment text=➕ texthl=OctoNvimCommentLine linehl=OctoNvimCommentLine ]]
+  vim.cmd [[ sign define comment text=❯ texthl=OctoNvimCommentLine linehl=OctoNvimCommentLine ]]
   vim.cmd [[ sign define clean_block_start text=┌ ]]
   vim.cmd [[ sign define clean_block_end text=└ ]]
   vim.cmd [[ sign define dirty_block_start text=┌ texthl=OctoNvimDirty ]]

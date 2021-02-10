@@ -29,7 +29,13 @@ function M.populate_changes_qf(changes, opts)
     api.nvim_err_writeln("No changes found for pr")
     return
   elseif qf.size ~= #changes then
-    api.nvim_err_writeln(format("Your local branch (%d changed files) is out of sync with the remote one (%d changed files)", qf.size, #changes))
+    api.nvim_err_writeln(
+      format(
+        "Your local branch (%d changed files) is out of sync with the remote one (%d changed files)",
+        qf.size,
+        #changes
+      )
+    )
     return
   end
 
@@ -128,7 +134,8 @@ function M.diff_changes_qf_entry()
       local hunk_strings = vim.split(ctxitem.patch, "\n@@")
       for _, hunk in ipairs(hunk_strings) do
         local header = vim.split(hunk, "\n")[1]
-        local found, _, left_start, left_length, right_start, right_length = string.find(header, "@@%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
+        local found, _, left_start, left_length, right_start, right_length =
+          string.find(header, "@@%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
         if found then
           table.insert(valid_hunks, hunk)
           table.insert(valid_left_ranges, {tonumber(left_start), left_start + left_length - 1})
@@ -163,15 +170,20 @@ function M.diff_changes_qf_entry()
   end
 end
 
-function M.add_review_comment(line1, line2)
-  if line1 == nil and line2 == nil then
-    line1 = api.nvim_buf_get_mark(0, "<")[1]
-    line2 = api.nvim_buf_get_mark(0, ">")[1]
+function M.add_review_comment()
+  local line1, line2
+  if vim.fn.getpos("'<")[2] == vim.fn.getcurpos()[2] then
+    line1 = vim.fn.getpos("'<")[2]
+    line2 = vim.fn.getpos("'>")[2]
+  else
+    line1 = vim.fn.getcurpos()[2]
+    line2 = vim.fn.getcurpos()[2]
   end
+  print(line1, line2)
+
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
-
     -- check we are in a valid range
     local diff_hunk
     for i, range in ipairs(props.ranges) do
@@ -186,7 +198,13 @@ function M.add_review_comment(line1, line2)
     end
 
     -- create new buffer
-    local comment_bufnr = api.nvim_create_buf(false, true)
+    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "fugitive://", ""), line1, line2)
+    local comment_bufnr
+    if vim.fn.bufnr(bufname) > -1 then
+      comment_bufnr = vim.fn.bufnr(bufname)
+    else
+      comment_bufnr = api.nvim_create_buf(false, true)
+    end
 
     -- check if there is a comment win already open
     local _, comment_winid = pcall(api.nvim_win_get_var, props.qf_winid, "comment_winid")
@@ -225,8 +243,6 @@ function M.add_review_comment(line1, line2)
     vim.cmd [[normal G]]
     vim.cmd [[startinsert]]
 
-    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "fugitive://", ""), line1, line2)
-
     -- create new comment
     local comment = {
       key = bufname,
@@ -238,6 +254,7 @@ function M.add_review_comment(line1, line2)
       qf_winid = props.qf_winid,
       comment_bufnr = comment_bufnr,
       comment_winid = comment_winid,
+      fugitive_bufnr = bufnr,
       line1 = line1,
       line2 = line2,
       body = ""
@@ -251,9 +268,6 @@ function M.add_review_comment(line1, line2)
     api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
     api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
     api.nvim_buf_set_name(comment_bufnr, bufname)
-
-    -- highlight
-    M.highlight_lines(bufnr, line1, line2)
   end
 end
 
@@ -267,6 +281,9 @@ function M.save_review_comment()
     comment.body = vim.fn.trim(body)
     M.review_comments[bufname] = comment
     api.nvim_buf_set_option(bufnr, "modified", false)
+
+    -- highlight commented lines
+    M.highlight_lines(comment.fugitive_bufnr, comment.line1, comment.line2)
   end
 end
 
@@ -483,6 +500,8 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   end
 
   -- highlight commented lines
+  api.nvim_buf_clear_namespace(main_bufnr, constants.OCTO_HIGHLIGHT_NS, 0, -1)
+  signs.unplace(main_bufnr)
   M.highlight_lines(main_bufnr, reviewthread.startLine, reviewthread.line)
 
   -- show signs
@@ -497,14 +516,6 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 end
 
 function M.highlight_lines(bufnr, startLine, endLine)
-
-  -- TODO: improve it
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_HIGHLIGHT_NS, 0, -1)
-  signs.unplace(bufnr)
-  if not endLine then
-    return
-  end
-  startLine = startLine or endLine
   for line = startLine, endLine do
     api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line - 1, 0, -1)
     signs.place("comment", bufnr, line - 1)
@@ -513,22 +524,6 @@ end
 
 -- MAPPINGS
 function M.add_reviewthread_qf_mappings(repo, number, main_win)
-  -- vim.cmd(
-  --   format(
-  --     "nnoremap <silent><buffer>]c :lua require'octo.reviews'.next_file_comment('%s', %d, %d)<CR>",
-  --     repo,
-  --     number,
-  --     main_win
-  --   )
-  -- )
-  -- vim.cmd(
-  --   format(
-  --     "nnoremap <silent><buffer>[c :lua require'octo.reviews'.prev_file_comment('%s', %d, %d)<CR>",
-  --     repo,
-  --     number,
-  --     main_win
-  --   )
-  -- )
   vim.cmd(
     format(
       "nnoremap <silent><buffer>]q :lua require'octo.reviews'.next_comment('%s', %d, %d)<CR>",
@@ -576,6 +571,7 @@ function M.prev_comment(repo, number, main_win)
 end
 
 function M.close_review_tab()
+  vim.cmd [[tabclose]]
 
   -- close fugitive buffers
   M.clean_fugitive_buffers()
@@ -594,42 +590,14 @@ end
 
 function M.add_changes_qf_mappings(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
-  local mapping_opts = {script = true, silent = true, noremap = true}
-  api.nvim_buf_set_keymap(
-    bufnr
-    "n",
-    "]q",
-    [[<cmd>lua require'octo.reviews'.next_change()<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr
-    "n",
-    "[q",
-    [[<cmd>lua require'octo.reviews'.prev_change()<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr
-    "n",
-    "<C-c>",
-    [[:tabclose <BAR><cmd>lua require'octo.reviews'.close_review_tab()<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr
-    "n",
-    "<space>ca",
-    [[<cmd>lua require'octo.reviews'.add_review_comment()<CR>]],
-    mapping_opts
-  )
-  api.nvim_buf_set_keymap(
-    bufnr
-    "v",
-    "<space>ca",
-    [[<cmd>lua require'octo.reviews'.add_review_comment()<CR>]],
-    mapping_opts
-  )
+  local mapping_opts = {silent = true, noremap = true}
+  api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "[q", [[<cmd>lua require'octo.reviews'.prev_change()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]], mapping_opts)
+  --api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", "[[:OctoAddReviewComment<CR>]]", mapping_opts)
+  --api.nvim_buf_set_keymap(bufnr, "v", "<C-a>", "[[:OctoAddReviewComment<CR>]]", mapping_opts)
+  vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
+  vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))
@@ -657,7 +625,6 @@ function M.prev_change()
 end
 
 function M.submit_review(event)
-
   local bufnr = api.nvim_get_current_buf()
   local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local text = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
@@ -665,9 +632,23 @@ function M.submit_review(event)
   local comments = {}
   for _, c in ipairs(vim.tbl_values(M.review_comments)) do
     if c.line1 == c.line2 then
-      table.insert(comments, format("{body:\"%s\", line:%d, path:\"%s\", side:%s}", util.escape_chars(c.body), c.line1, c.path, c.side))
+      table.insert(
+        comments,
+        format('{body:"%s", line:%d, path:"%s", side:%s}', util.escape_chars(c.body), c.line1, c.path, c.side)
+      )
     else
-      table.insert(comments, format("{body:\"%s\", startLine:%d, line:%d, path:\"%s\", startSide:%s, side:%s}", util.escape_chars(c.body), c.line1, c.line2, c.path, c.side, c.side))
+      table.insert(
+        comments,
+        format(
+          '{body:"%s", startLine:%d, line:%d, path:"%s", startSide:%s, side:%s}',
+          util.escape_chars(c.body),
+          c.line1,
+          c.line2,
+          c.path,
+          c.side,
+          c.side
+        )
+      )
     end
   end
   comments = table.concat(comments, ", ")
@@ -688,7 +669,6 @@ function M.submit_review(event)
       end
     }
   )
-
 end
 
 return M
