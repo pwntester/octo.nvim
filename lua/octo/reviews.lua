@@ -179,7 +179,7 @@ function M.add_review_comment(isSuggestion)
     line1 = vim.fn.getcurpos()[2]
     line2 = vim.fn.getcurpos()[2]
   end
-
+  print(isSuggestion, line1, line2)
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
@@ -600,10 +600,10 @@ function M.add_changes_qf_mappings(bufnr)
   api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "[q", [[<cmd>lua require'octo.reviews'.prev_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", "[[:OctoAddReviewComment<CR>]]", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "v", "<space>ca", "[[:OctoAddReviewComment<CR>]]", mapping_opts)
-  -- vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
-  -- vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
+  -- api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", "[[:OctoAddReviewComment<CR>]]", {noremap = true})
+  -- api.nvim_buf_set_keymap(bufnr, "v", "<space>ca", "[[:OctoAddReviewComment<CR>]]", {noremap = true})
+  vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
+  vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))
