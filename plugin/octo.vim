@@ -25,7 +25,8 @@ endfunction
 " commands
 if executable('gh')
   command! -complete=customlist,s:command_complete -nargs=* Octo lua require"octo.commands".octo(<f-args>)
-  command! -range OctoAddReviewComment lua require"octo.reviews".add_review_comment()
+  command! -range OctoAddReviewComment lua require"octo.reviews".add_review_comment(false)
+  command! -range OctoAddReviewSuggestion lua require"octo.reviews".add_review_comment(true)
 else
   echo 'Cannot find `gh` command.'
 endif
