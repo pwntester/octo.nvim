@@ -103,6 +103,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 - If not already in the PR branch, checkout the PR with `Octo pr checkout`
 - Start a review with `Octo review start`
 - Add comments with `<space>ca` or `:OctoAddReviewComment` on single or multiple lines
+- Add suggestions with `<space>sa` or `:OctoAddReviewSuggestion` on single or multiple lines
 - A new split will open. Enter the comment and save it (`:w`). Optionally close the split
 
 ![](https://i.imgur.com/l9z4tpg.png)

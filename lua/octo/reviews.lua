@@ -131,11 +131,11 @@ function M.diff_changes_qf_entry()
       local valid_left_ranges = {}
       local valid_right_ranges = {}
       local valid_hunks = {}
-      local hunk_strings = vim.split(ctxitem.patch, "\n@@")
+      local hunk_strings = vim.split(ctxitem.patch:gsub("^@@", ""), "\n@@")
       for _, hunk in ipairs(hunk_strings) do
         local header = vim.split(hunk, "\n")[1]
         local found, _, left_start, left_length, right_start, right_length =
-          string.find(header, "@@%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
+          string.find(header, "^%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
         if found then
           table.insert(valid_hunks, hunk)
           table.insert(valid_left_ranges, {tonumber(left_start), left_start + left_length - 1})
@@ -152,7 +152,8 @@ function M.diff_changes_qf_entry()
         qf_winid = qf.winid,
         ranges = valid_left_ranges,
         path = qf.items[qf.idx].module,
-        bufname = left_bufname
+        bufname = left_bufname,
+        fugitive_bufnr = left_bufnr
       }
       local right_props = {
         side = "RIGHT",
@@ -162,7 +163,8 @@ function M.diff_changes_qf_entry()
         qf_winid = qf.winid,
         ranges = valid_right_ranges,
         path = qf.items[qf.idx].module,
-        bufname = right_bufname
+        bufname = right_bufname,
+        fugitive_bufnr = right_bufnr
       }
       api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", left_props)
       api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", right_props)
@@ -170,7 +172,7 @@ function M.diff_changes_qf_entry()
   end
 end
 
-function M.add_review_comment()
+function M.add_review_comment(isSuggestion)
   local line1, line2
   if vim.fn.getpos("'<")[2] == vim.fn.getcurpos()[2] then
     line1 = vim.fn.getpos("'<")[2]
@@ -179,8 +181,6 @@ function M.add_review_comment()
     line1 = vim.fn.getcurpos()[2]
     line2 = vim.fn.getcurpos()[2]
   end
-  print(line1, line2)
-
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
@@ -202,6 +202,7 @@ function M.add_review_comment()
     local comment_bufnr
     if vim.fn.bufnr(bufname) > -1 then
       comment_bufnr = vim.fn.bufnr(bufname)
+      api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, {})
     else
       comment_bufnr = api.nvim_create_buf(false, true)
     end
@@ -236,8 +237,17 @@ function M.add_review_comment()
       {format("%d,%d", line1, line2), "OctoNvimDetailsValue"},
       {")"}
     }
-    writers.write_block({"", "", ""}, {bufnr = comment_bufnr, mark = false, line = 1})
+    writers.write_block({"", ""}, {bufnr = comment_bufnr, mark = false, line = 1})
     api.nvim_buf_set_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt, {})
+
+    if isSuggestion then
+      local lines = api.nvim_buf_get_lines(props.fugitive_bufnr, line1-1, line2, false)
+      writers.write_block({"```suggestion"}, {bufnr = comment_bufnr, mark = false})
+      writers.write_block(lines, {bufnr = comment_bufnr, mark = false})
+      writers.write_block({"```"}, {bufnr = comment_bufnr, mark = false})
+    else
+      writers.write_block({""}, {bufnr = comment_bufnr, mark = false})
+    end
 
     -- change to insert mode
     vim.cmd [[normal G]]
@@ -268,6 +278,7 @@ function M.add_review_comment()
     api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
     api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
     api.nvim_buf_set_name(comment_bufnr, bufname)
+    api.nvim_buf_set_option(comment_bufnr, "modified", false)
   end
 end
 
@@ -594,10 +605,12 @@ function M.add_changes_qf_mappings(bufnr)
   api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "[q", [[<cmd>lua require'octo.reviews'.prev_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]], mapping_opts)
-  --api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", "[[:OctoAddReviewComment<CR>]]", mapping_opts)
-  --api.nvim_buf_set_keymap(bufnr, "v", "<C-a>", "[[:OctoAddReviewComment<CR>]]", mapping_opts)
+  -- api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", "[[:OctoAddReviewComment<CR>]]", {noremap = true})
+  -- api.nvim_buf_set_keymap(bufnr, "v", "<space>ca", "[[:OctoAddReviewComment<CR>]]", {noremap = true})
   vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
   vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
+  vim.cmd [[nnoremap <space>sa :OctoAddReviewSuggestion<CR>]]
+  vim.cmd [[vnoremap <space>sa :OctoAddReviewSuggestion<CR>]]
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))
@@ -663,12 +676,14 @@ function M.submit_review(event)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          print(output)
+          print("Submitted!")
         end
-        api.nvim_win_close(0, true)
+        --api.nvim_win_close(0, true)
       end
     }
   )
+
+  M.close_review_tab()
 end
 
 return M
