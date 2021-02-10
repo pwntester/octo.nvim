@@ -11,7 +11,7 @@ execute('hi! OctoNvimBubbleBody guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubbleRed guifg='.g:octo_bubble_red.' guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimBubbleGreen guifg='.g:octo_bubble_green.' guibg='.g:octo_bubble_color)
 execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_bubble_color)
-execute('hi! link OctoNvimCommentLine TabLineSel')
+execute('hi! link OctoNvimCommentLine Visual')
 execute('hi! link OctoNvimPassingTest DiffAdd')
 execute('hi! link OctoNvimFailingTest DiffDelete')
 execute('hi! link OctoNvimPullAdditions DiffAdd')
@@ -24,8 +24,8 @@ endfunction
 
 " commands
 if executable('gh')
-  command! -complete=customlist,s:command_complete -nargs=* Octo :lua require"octo.commands".octo(<f-args>)
-  command! -range -nargs=? OctoReviewComment :lua require"octo.reviews".add_review_comment(<line1>, <line2>)
+  command! -complete=customlist,s:command_complete -nargs=* Octo lua require"octo.commands".octo(<f-args>)
+  command! -range OctoAddReviewComment lua require"octo.reviews".add_review_comment()
 else
   echo 'Cannot find `gh` command.'
 endif
