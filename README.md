@@ -169,6 +169,8 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `<space>r+` | add :+1: reaction                     |
 | `<space>r-` | add :-1: reaction                     |
 | `<space>rr` | add :rocket: reaction                 |
+| `<C-o>`     | open issue/pull in browser            |
+
 
 ## Highlight groups
 | Name                        | Default          |

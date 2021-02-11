@@ -370,13 +370,13 @@ function M.escape_chars(string)
   )
 end
 
-function M.open_in_browser(type, repo, number)
-  local cmd
-  if not repo or repo == "" then
-    cmd = format("gh %s view --web %d", type, number)
-  else
-    cmd = format("gh %s view --web %d -R %s", type, number, repo)
-  end
+function M.open_in_browser()
+  local repo, number = M.get_repo_number()
+  local bufname = vim.fn.bufname()
+  local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  if type == "pull" then type = "pr" end
+  local cmd = format("gh %s view --web -R %s %d", type, repo, number)
+  print(cmd)
   os.execute(cmd)
 end
 

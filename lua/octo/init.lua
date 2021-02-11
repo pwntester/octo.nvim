@@ -405,7 +405,7 @@ function M.save_buffer()
 end
 
 function M.apply_buffer_mappings(bufnr, kind)
-  local mapping_opts = {script = true, silent = true, noremap = true}
+  local mapping_opts = {silent = true, noremap = true}
 
   if kind == "issue" then
     api.nvim_buf_set_keymap(
@@ -476,6 +476,13 @@ function M.apply_buffer_mappings(bufnr, kind)
   end
 
   if kind == "issue" or kind == "pull" then
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<c-o>",
+      [[<cmd>lua require'octo.util'.open_in_browser()<CR>]],
+      mapping_opts
+    )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",

@@ -42,11 +42,7 @@ local commands = {
       M.reload()
     end,
     browser = function()
-      local repo, number = util.get_repo_number({"octo_issue"})
-      if not repo then
-        return
-      end
-      util.open_in_browser("issue", repo, number)
+      util.open_in_browser()
     end
   },
   pr = {
@@ -95,11 +91,7 @@ local commands = {
       M.reload()
     end,
     browser = function()
-      local repo, number = util.get_repo_number({"octo_issue"})
-      if not repo then
-        return
-      end
-      util.open_in_browser("issue", repo, number)
+      util.open_in_browser()
     end
   },
   review = {
