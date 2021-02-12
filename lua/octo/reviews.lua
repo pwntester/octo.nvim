@@ -290,6 +290,10 @@ function M.save_review_comment()
     local comment = M.review_comments[bufname]
     local body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
     comment.body = vim.fn.trim(body)
+    if util.is_blank(comment.body) then
+      -- ignore empty comments
+      return
+    end
     M.review_comments[bufname] = comment
     api.nvim_buf_set_option(bufnr, "modified", false)
 
