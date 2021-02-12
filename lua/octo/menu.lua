@@ -377,6 +377,7 @@ function M.changed_files()
           api.nvim_err_writeln(stderr)
         elseif output then
           local results = json.parse(output)
+          print(vim.inspect(results))
           pickers.new(
             {},
             {
