@@ -531,9 +531,11 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 end
 
 function M.highlight_lines(bufnr, startLine, endLine)
-  for line = startLine, endLine do
-    api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line - 1, 0, -1)
-    signs.place("comment", bufnr, line - 1)
+  if startLine then
+    for line = startLine, endLine do
+      api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line - 1, 0, -1)
+      signs.place("comment", bufnr, line - 1)
+    end
   end
 end
 
