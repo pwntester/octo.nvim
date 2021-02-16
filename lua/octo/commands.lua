@@ -493,6 +493,9 @@ function M.get_pull_request(...)
 end
 
 function M.checkout_pr()
+  if not util.in_pr_repo() then
+    return
+  end
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return

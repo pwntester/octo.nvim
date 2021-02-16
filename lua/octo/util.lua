@@ -49,6 +49,24 @@ function M.get_remote_name()
   end
 end
 
+function M.in_pr_repo()
+  local bufname = api.nvim_buf_get_name(0)
+  if not vim.startswith(bufname, "octo://") then
+    return
+  end
+  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+  if status and pr then
+    local local_repo = M.get_remote_name()
+    if pr.baseRepoName ~= local_repo then
+      api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
+      return false
+    else
+      return true
+    end
+  end
+  return false
+end
+
 function M.in_pr_branch()
   local bufname = api.nvim_buf_get_name(0)
   if not vim.startswith(bufname, "octo://") then
@@ -56,7 +74,9 @@ function M.in_pr_branch()
   end
   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
   if status and pr then
-    local cmd = "git branch --show-current"
+    -- only works with Git 2.22 and above
+    -- local cmd = "git branch --show-current"
+    local cmd = "git rev-parse --abbrev-ref HEAD"
     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
     if string.find(local_branch, "/") then
       -- for PRs submitter from master, local_branch will get something like other_repo/master
@@ -67,6 +87,7 @@ function M.in_pr_branch()
       api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
       return false
     elseif pr.headRefName ~= local_branch then
+      -- TODO: suggest to checkout the branch
       api.nvim_err_writeln(format("Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
       return false
     end
