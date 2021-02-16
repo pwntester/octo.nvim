@@ -74,7 +74,9 @@ function M.in_pr_branch()
   end
   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
   if status and pr then
-    local cmd = "git branch --show-current"
+    -- only works with Git 2.22 and above
+    -- local cmd = "git branch --show-current"
+    local cmd = "git rev-parse --abbrev-ref HEAD"
     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
     if string.find(local_branch, "/") then
       -- for PRs submitter from master, local_branch will get something like other_repo/master
