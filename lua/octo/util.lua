@@ -52,6 +52,7 @@ end
 function M.in_pr_repo()
   local bufname = api.nvim_buf_get_name(0)
   if not vim.startswith(bufname, "octo://") then
+    api.nvim_err_writeln("Not in Octo buffer")
     return
   end
   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
@@ -63,6 +64,9 @@ function M.in_pr_repo()
     else
       return true
     end
+  else
+    api.nvim_err_writeln("Not in Octo PR buffer")
+    return
   end
   return false
 end
@@ -78,8 +82,8 @@ function M.in_pr_branch()
     -- local cmd = "git branch --show-current"
     local cmd = "git rev-parse --abbrev-ref HEAD"
     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
-    if string.find(local_branch, "/") then
-      -- for PRs submitter from master, local_branch will get something like other_repo/master
+    if local_branch == format("%s/%s", pr.headRepoName, pr.headRefName) then
+      -- for PRs submitted from master, local_branch will get something like other_repo/master
       local_branch = vim.split(local_branch, "/")[2]
     end
     local local_repo = M.get_remote_name()
