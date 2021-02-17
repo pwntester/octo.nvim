@@ -1,4 +1,5 @@
 local actions = require "telescope.actions"
+local action_state = require "telescope.actions.state"
 local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local utils = require "telescope.utils"
@@ -64,7 +65,7 @@ end
 
 local function open(repo, what, command)
   return function(prompt_bufnr)
-    local selection = actions.get_selected_entry(prompt_bufnr)
+    local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
     if command == 'split' then
       vim.cmd [[:sbuffer %]]
@@ -96,7 +97,7 @@ end
 
 local function open_in_browser(type, repo)
   return function(prompt_bufnr)
-    local selection = actions.get_selected_entry(prompt_bufnr)
+    local selection = action_state.get_selected_entry(prompt_bufnr)
     local number = selection.value
     actions.close(prompt_bufnr)
     util.open_in_browser(type, repo, number)
@@ -154,10 +155,10 @@ function M.issues(opts)
               sorter = conf.generic_sorter(opts),
               previewer = previewers.issue.new(opts),
               attach_mappings = function(_, map)
-                actions.goto_file_selection_edit:replace(open(opts.repo, "issue", "edit"))
-                actions.goto_file_selection_split:replace(open(opts.repo, "issue", "split"))
-                actions.goto_file_selection_vsplit:replace(open(opts.repo, "issue", "vsplit"))
-                actions.goto_file_selection_tabedit:replace(open(opts.repo, "issue", "tabedit"))
+                actions.select_default:replace(open(opts.repo, "issue", "edit"))
+                actions.select_horizontal:replace(open(opts.repo, "issue", "split"))
+                actions.select_vertical:replace(open(opts.repo, "issue", "vsplit"))
+                actions.select_tab:replace(open(opts.repo, "issue", "tabedit"))
                 map("i", "<c-b>", open_in_browser("issue", opts.repo))
                 return true
               end
@@ -173,7 +174,7 @@ end
 -- GISTS
 --
 local function open_gist(prompt_bufnr)
-  local selection = actions.get_selected_entry(prompt_bufnr)
+  local selection = action_state.get_selected_entry(prompt_bufnr)
   actions.close(prompt_bufnr)
   local tmp_table = vim.split(selection.value, "\t")
   if vim.tbl_isempty(tmp_table) then
@@ -229,7 +230,7 @@ end
 
 local function checkout_pull_request(repo)
   return function(prompt_bufnr)
-    local selection = actions.get_selected_entry(prompt_bufnr)
+    local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
     local tmp_table = vim.split(selection.value, "\t")
     if vim.tbl_isempty(tmp_table) then
@@ -300,10 +301,10 @@ function M.pull_requests(opts)
               sorter = conf.generic_sorter(opts),
               previewer = previewers.pull_request.new(opts),
               attach_mappings = function(_, map)
-                actions.goto_file_selection_edit:replace(open(opts.repo, "pull_request", "edit"))
-                actions.goto_file_selection_split:replace(open(opts.repo, "pull_request", "split"))
-                actions.goto_file_selection_vsplit:replace(open(opts.repo, "pull_request", "vsplit"))
-                actions.goto_file_selection_tabedit:replace(open(opts.repo, "pull_request", "tabedit"))
+                actions.select_default:replace(open(opts.repo, "pull_request", "edit"))
+                actions.select_horizontal:replace(open(opts.repo, "pull_request", "split"))
+                actions.select_vertical:replace(open(opts.repo, "pull_request", "vsplit"))
+                actions.select_tab:replace(open(opts.repo, "pull_request", "tabedit"))
                 map("i", "<c-o>", checkout_pull_request(opts.repo))
                 map("i", "<c-b>", open_in_browser("pr", opts.repo))
                 return true
@@ -345,10 +346,10 @@ function M.commits()
               sorter = conf.generic_sorter({}),
               previewer = previewers.commit.new({repo = repo}),
               attach_mappings = function()
-                actions.goto_file_selection_edit:replace(open_preview_buffer("edit"))
-                actions.goto_file_selection_split:replace(open_preview_buffer("split"))
-                actions.goto_file_selection_vsplit:replace(open_preview_buffer("vsplit"))
-                actions.goto_file_selection_tabedit:replace(open_preview_buffer("tabedit"))
+                actions.select_default:replace(open_preview_buffer("edit"))
+                actions.select_horizontal:replace(open_preview_buffer("split"))
+                actions.select_vertical:replace(open_preview_buffer("vsplit"))
+                actions.select_tab:replace(open_preview_buffer("tabedit"))
                 return true
               end
             }
@@ -388,10 +389,10 @@ function M.changed_files()
               sorter = conf.generic_sorter({}),
               previewer = previewers.changed_files.new({repo = repo, number = number}),
               attach_mappings = function()
-                actions.goto_file_selection_edit:replace(open_preview_buffer("edit"))
-                actions.goto_file_selection_split:replace(open_preview_buffer("split"))
-                actions.goto_file_selection_vsplit:replace(open_preview_buffer("vsplit"))
-                actions.goto_file_selection_tabedit:replace(open_preview_buffer("tabedit"))
+                actions.select_default:replace(open_preview_buffer("edit"))
+                actions.select_horizontal:replace(open_preview_buffer("split"))
+                actions.select_vertical:replace(open_preview_buffer("vsplit"))
+                actions.select_tab:replace(open_preview_buffer("tabedit"))
                 return true
               end
             }
@@ -475,10 +476,10 @@ function M.issue_search(opts)
       sorter = conf.generic_sorter(opts),
       previewer = previewers.issue.new(opts),
       attach_mappings = function(_, map)
-        actions.goto_file_selection_edit:replace(open(opts.repo, "issue", "edit"))
-        actions.goto_file_selection_split:replace(open(opts.repo, "issue", "split"))
-        actions.goto_file_selection_vsplit:replace(open(opts.repo, "issue", "vsplit"))
-        actions.goto_file_selection_tabedit:replace(open(opts.repo, "issue", "tabedit"))
+        actions.select_default:replace(open(opts.repo, "issue", "edit"))
+        actions.select_horizontal:replace(open(opts.repo, "issue", "split"))
+        actions.select_vertical:replace(open(opts.repo, "issue", "vsplit"))
+        actions.select_tab:replace(open(opts.repo, "issue", "tabedit"))
         map("i", "<c-b>", open_in_browser("issue", opts.repo))
         return true
       end
@@ -555,10 +556,10 @@ function M.pull_request_search(opts)
       sorter = conf.generic_sorter(opts),
       previewer = previewers.pull_request.new(opts),
       attach_mappings = function(_, map)
-        actions.goto_file_selection_edit:replace(open(opts.repo, "pull_request", "edit"))
-        actions.goto_file_selection_split:replace(open(opts.repo, "pull_request", "split"))
-        actions.goto_file_selection_vsplit:replace(open(opts.repo, "pull_request", "vsplit"))
-        actions.goto_file_selection_tabedit:replace(open(opts.repo, "pull_request", "tabedit"))
+        actions.select_default:replace(open(opts.repo, "pull_request", "edit"))
+        actions.select_horizontal:replace(open(opts.repo, "pull_request", "split"))
+        actions.select_vertical:replace(open(opts.repo, "pull_request", "vsplit"))
+        actions.select_tab:replace(open(opts.repo, "pull_request", "tabedit"))
         map("i", "<c-b>", open_in_browser("pr", opts.repo))
         return true
       end
@@ -590,8 +591,8 @@ function M.review_comments()
 
         -- TODO: delete comment
 
-        actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-          local comment = actions.get_selected_entry(prompt_bufnr).comment
+        actions.select_default:replace(function(prompt_bufnr)
+          local comment = action_state.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)
 
           -- select qf item
@@ -653,8 +654,8 @@ function M.select_project_card(cb)
         },
         sorter = conf.generic_sorter(opts),
         attach_mappings = function(_, _)
-          actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-            local source_card = actions.get_selected_entry(prompt_bufnr)
+          actions.select_default:replace(function(prompt_bufnr)
+            local source_card = action_state.get_selected_entry(prompt_bufnr)
             actions.close(prompt_bufnr)
             cb(source_card.card.id)
           end)
@@ -705,8 +706,8 @@ function M.select_target_project_column(cb)
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
-                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-                  local selected_project = actions.get_selected_entry(prompt_bufnr)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_project = action_state.get_selected_entry(prompt_bufnr)
                   actions.close(prompt_bufnr)
                   local opts2 = vim.deepcopy(dropdown_opts)
                   pickers.new(
@@ -719,9 +720,9 @@ function M.select_target_project_column(cb)
                       },
                       sorter = conf.generic_sorter(opts2),
                       attach_mappings = function()
-                        actions.goto_file_selection_edit:replace(function(prompt_bufnr)
+                        actions.select_default:replace(function(prompt_bufnr)
                           actions.close(prompt_bufnr)
-                          local selected_column = actions.get_selected_entry(prompt_bufnr)
+                          local selected_column = action_state.get_selected_entry(prompt_bufnr)
                           cb(selected_column.column.id)
                         end)
                         return true
@@ -771,8 +772,8 @@ function M.select_label(cb)
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
-                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-                  local selected_label = actions.get_selected_entry(prompt_bufnr)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_label = action_state.get_selected_entry(prompt_bufnr)
                   actions.close(prompt_bufnr)
                   cb(selected_label.label.id)
                 end)
@@ -824,8 +825,8 @@ function M.select_assigned_label(cb)
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
-                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-                  local selected_label = actions.get_selected_entry(prompt_bufnr)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_label = action_state.get_selected_entry(prompt_bufnr)
                   actions.close(prompt_bufnr)
                   cb(selected_label.label.id)
                 end)
@@ -942,8 +943,8 @@ function M.select_user(cb)
       end,
       sorter = sorters.get_fuzzy_file(opts),
       attach_mappings = function()
-        actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-          local selected_user = actions.get_selected_entry(prompt_bufnr)
+        actions.select_default:replace(function(prompt_bufnr)
+          local selected_user = action_state.get_selected_entry(prompt_bufnr)
           actions.close(prompt_bufnr)
           if not selected_user.teams then
             -- user
@@ -960,8 +961,8 @@ function M.select_user(cb)
                 },
                 sorter = conf.generic_sorter(opts),
                 attach_mappings = function(_, _)
-                  actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-                    local selected_team = actions.get_selected_entry(prompt_bufnr)
+                  actions.select_default:replace(function(prompt_bufnr)
+                    local selected_team = action_state.get_selected_entry(prompt_bufnr)
                     actions.close(prompt_bufnr)
                     cb(selected_team.team.id)
                   end)
@@ -1018,8 +1019,8 @@ function M.select_assignee(cb)
               },
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, _)
-                actions.goto_file_selection_edit:replace(function(prompt_bufnr)
-                  local selected_assignee = actions.get_selected_entry(prompt_bufnr)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
                   actions.close(prompt_bufnr)
                   cb(selected_assignee.user.id)
                 end)
