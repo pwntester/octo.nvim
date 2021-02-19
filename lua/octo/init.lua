@@ -433,9 +433,7 @@ function M.apply_buffer_mappings(bufnr, kind)
         mapping_opts
       )
     end
-  end
-
-  if kind == "pull" then
+  elseif kind == "pull" then
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
@@ -476,6 +474,13 @@ function M.apply_buffer_mappings(bufnr, kind)
   end
 
   if kind == "issue" or kind == "pull" then
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "<c-r>",
+      [[<cmd>lua require'octo.commands'.reload()<CR>]],
+      mapping_opts
+    )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
