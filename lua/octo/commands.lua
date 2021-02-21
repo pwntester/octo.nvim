@@ -96,7 +96,7 @@ local commands = {
   },
   review = {
     start = function()
-      M.review_pr()
+      M.start_review()
     end,
     comments = function()
       menu.review_comments()
@@ -703,24 +703,14 @@ function M.submit_review()
   vim.cmd [[startinsert]]
 end
 
-function M.review_pr()
+function M.start_review()
   local repo, number, pr = util.get_repo_number_pr()
   if not repo then
-    return
-  end
-  if not vim.fn.exists("*fugitive#repo") then
-    print("vim-fugitive required")
-    return
-  end
-  -- make sure CWD is in PR repo and branch
-  if not util.in_pr_branch() then
     return
   end
 
   reviews.review_comments = {}
 
-  -- TODO: graphql
-  -- get list of changed files
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
     {
@@ -733,7 +723,7 @@ function M.review_pr()
           local changes = {}
           for _, result in ipairs(results) do
             local change = {
-              filename = result.filename,
+              path = result.filename,
               patch = result.patch,
               status = result.status,
               stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
@@ -741,6 +731,8 @@ function M.review_pr()
             table.insert(changes, change)
           end
           reviews.populate_changes_qf(changes, {
+            pull_request_repo = repo,
+            pull_request_numer = number,
             pull_request_id = pr.id,
             baseRefName = pr.baseRefName,
             baseRefSHA = pr.baseRefSHA,

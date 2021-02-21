@@ -172,8 +172,10 @@ M.changed_files =
       define_preview = function(self, entry)
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local diff = entry.change.patch
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
-          api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          if diff then
+            api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
+            api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          end
         end
       end
     }

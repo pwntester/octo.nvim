@@ -8,167 +8,192 @@ local graphql = require "octo.graphql"
 local format = string.format
 local vim = vim
 local api = vim.api
+local json = {
+  parse = vim.fn.json_decode
+}
 
 local M = {}
 
 M.review_comments = {}
+M.review_files = {}
 
 local qf_height = vim.g.octo_qf_height or math.floor(vim.o.lines * 0.2)
 
 function M.populate_changes_qf(changes, opts)
   -- open a new tab so we can easily clean all the windows mess
-  if true then
-    vim.cmd [[tabnew %]]
+  vim.cmd [[tabnew %]]
+
+  -- populate qf
+  local context = {}
+  local items = {}
+  local ctxitems = {}
+  for _, change in ipairs(changes) do
+    local item = {
+      module = change.path,
+      text = change.stats,
+      pattern = change.status
+    }
+    table.insert(items, item)
+
+    local ctxitem = {
+      patch = change.patch
+    }
+    table.insert(ctxitems, ctxitem)
   end
 
-  -- run the diff between head and base commits
-  vim.cmd(format("Git difftool --name-only %s...%s", opts.baseRefName, opts.headRefName))
+  -- create qf with context wiht SHA info
+  context.left_sha = opts.baseRefSHA
+  context.right_sha = opts.headRefSHA
+  context.pull_request_id = opts.pull_request_id
+  context.pull_request_repo = opts.pull_request_repo
+  context.pull_request_number = opts.pull_request_number
+  context.items = ctxitems
 
-  local qf = vim.fn.getqflist({size = 0})
-  if qf.size == 0 then
-    api.nvim_err_writeln("No changes found for pr")
-    return
-  elseif qf.size ~= #changes then
-    api.nvim_err_writeln(
-      format(
-        "Your local branch (%d changed files) is out of sync with the remote one (%d changed files)",
-        qf.size,
-        #changes
-      )
-    )
-    return
-  end
-
-  -- update qf with gh info (additions/deletions ...)
-  M.update_changes_qf(changes, opts)
+  vim.fn.setqflist({}, "r", {context = context, items = items})
 
   M.diff_changes_qf_entry()
+
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
   -- there's probably a better way to map this without changing the window
   vim.cmd(format("%dcopen", qf_height))
   vim.cmd [[nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
+  M.add_changes_qf_mappings()
   vim.cmd [[wincmd p]]
 end
 
-function M.update_changes_qf(changes, opts)
-  local qf = vim.fn.getqflist({context = 0, items = 0})
-
-  -- update item's text
-  local items = qf.items
-  for _, item in ipairs(items) do
-    for _, change in ipairs(changes) do
-      if item.module == format("%s:%s", opts.headRefName, change.filename) then
-        item.pattern = change.status
-        item.text = change.stats
-      end
-    end
-  end
-
-  -- update context wiht SHA info
-  qf.context.left_sha = opts.baseRefSHA
-  qf.context.right_sha = opts.headRefSHA
-  qf.context.pull_request_id = opts.pull_request_id
-
-  -- update context items with diff
-  for i, ctxitem in ipairs(qf.context.items) do
-    ctxitem.patch = changes[i].patch
-  end
-
-  vim.fn.setqflist({}, "r", {context = qf.context, items = items})
-end
-
-function M.clean_fugitive_buffers()
-  local tabpage = api.nvim_get_current_tabpage()
-  for _, w in ipairs(api.nvim_tabpage_list_wins(tabpage)) do
-    if api.nvim_win_is_valid(w) then
-      local bufnr = api.nvim_win_get_buf(w)
-      local bufname = api.nvim_buf_get_name(bufnr)
-      if vim.startswith(bufname, "fugitive:") then
-        vim.cmd(format("bdelete! %d", bufnr))
-      end
-    end
-  end
-end
-
 function M.diff_changes_qf_entry()
-  -- cleanup buffers
-  M.clean_fugitive_buffers()
+  -- cleanup content buffers and windows
+  vim.cmd [[cclose]]
+  vim.cmd [[only]]
+
+  -- local main_win = M.get_main_win()
+  local main_win = api.nvim_get_current_win()
 
   -- select qf entry
+  vim.cmd(format("%dcopen", qf_height))
+  vim.cmd [[nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
+  M.add_changes_qf_mappings()
   vim.cmd [[cc]]
 
-  -- set `]q` and `[q` mappings to the qf entry buffer (head)
-  M.add_changes_qf_mappings()
-
-  -- fugitive stores changed files in qf, and what to diff against in the qf context
   local qf = vim.fn.getqflist({context = 0, idx = 0, items = 0, winid = 0})
-  if qf.idx and type(qf.context) == "table" and type(qf.context.items) == "table" then
+  if qf.idx then
     local ctxitem = qf.context.items[qf.idx]
     local left_sha = qf.context.left_sha
     local right_sha = qf.context.right_sha
-    local diff = ctxitem.diff or {}
-    for i = #diff - 1, 0, -1 do
-      if i then
-        vim.cmd(format("leftabove vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
-      else
-        vim.cmd(format("rightbelow vert diffsplit %s", vim.fn.fnameescape(diff[i + 1].filename)))
+    local path = qf.items[qf.idx].module
+    local owner = vim.split(qf.context.pull_request_repo, "/")[1]
+    local name = vim.split(qf.context.pull_request_repo, "/")[2]
+
+    local left_lines, right_lines
+    if M.review_files[path] then
+      left_lines = M.review_files[path].left_lines
+      right_lines = M.review_files[path].right_lines
+    else
+      local query = format(graphql.diff_file_content_query, owner, name, left_sha, path, owner, name, right_sha, path)
+      local output = gh.run(
+        {
+          mode = "sync",
+          args = {"api", "graphql", "-f", format("query=%s", query)},
+        }
+      )
+      local resp = json.parse(output)
+      local left_resp = resp.data.left.object
+      left_lines = {""}
+      if left_resp and left_resp ~= vim.NIL then
+        left_lines = vim.split(resp.data.left.object.text, "\n")
       end
-
-      -- cursor should be located at LEFT split
-      local left_bufnr = api.nvim_get_current_buf()
-      local left_bufname = api.nvim_buf_get_name(left_bufnr)
-      M.add_changes_qf_mappings()
-
-      -- move to RIGHT split
-      vim.cmd [[wincmd l]]
-      local right_bufnr = api.nvim_get_current_buf()
-      local right_bufname = api.nvim_buf_get_name(right_bufnr)
-      M.add_changes_qf_mappings()
-
-      -- move to first chunk
-      vim.cmd [[normal! gg]c]]
-
-      local valid_left_ranges = {}
-      local valid_right_ranges = {}
-      local valid_hunks = {}
-      local hunk_strings = vim.split(ctxitem.patch:gsub("^@@", ""), "\n@@")
-      for _, hunk in ipairs(hunk_strings) do
-        local header = vim.split(hunk, "\n")[1]
-        local found, _, left_start, left_length, right_start, right_length =
-          string.find(header, "^%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
-        if found then
-          table.insert(valid_hunks, hunk)
-          table.insert(valid_left_ranges, {tonumber(left_start), left_start + left_length - 1})
-          table.insert(valid_right_ranges, {tonumber(right_start), right_start + right_length - 1})
-        end
+      local right_resp = resp.data.right.object
+      right_lines = {""}
+      if right_resp and right_resp ~= vim.NIL then
+        right_lines = vim.split(resp.data.right.object.text, "\n")
       end
-
-      -- set diff info as buf vars
-      local left_props = {
-        side = "LEFT",
-        sha = left_sha,
-        hunks = valid_hunks,
-        qf_idx = qf.idx,
-        qf_winid = qf.winid,
-        ranges = valid_left_ranges,
-        path = qf.items[qf.idx].module,
-        bufname = left_bufname,
-        fugitive_bufnr = left_bufnr
+      M.review_files[path] = {
+        right_lines = right_lines,
+        left_lines = left_lines,
       }
-      local right_props = {
-        side = "RIGHT",
-        sha = right_sha,
-        hunks = valid_hunks,
-        qf_idx = qf.idx,
-        qf_winid = qf.winid,
-        ranges = valid_right_ranges,
-        path = qf.items[qf.idx].module,
-        bufname = right_bufname,
-        fugitive_bufnr = right_bufnr
-      }
-      api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", left_props)
-      api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", right_props)
     end
+
+    -- prepare left buffer
+    local left_bufname = format("octo://%s/%s/file/%s/%s", owner, name, left_sha:sub(0,7), path)
+    local left_bufnr = vim.fn.bufnr(left_bufname)
+    if left_bufnr == -1 then
+      left_bufnr = api.nvim_create_buf(false, true)
+      api.nvim_buf_set_name(left_bufnr, left_bufname)
+      api.nvim_buf_set_lines(left_bufnr, 0, -1, false, left_lines)
+      api.nvim_buf_set_option(left_bufnr, "modifiable", false)
+    end
+
+    -- prepare right buffer
+    local right_bufname = format("octo://%s/%s/file/%s/%s", owner, name, right_sha:sub(0,8), path)
+    local right_bufnr = vim.fn.bufnr(right_bufname)
+    if right_bufnr == -1 then
+      right_bufnr = api.nvim_create_buf(false, true)
+      api.nvim_buf_set_name(right_bufnr, right_bufname)
+      api.nvim_buf_set_lines(right_bufnr, 0, -1, false, right_lines)
+      api.nvim_buf_set_option(right_bufnr, "modifiable", false)
+    end
+
+    -- configure right win
+    api.nvim_set_current_win(main_win)
+    api.nvim_win_set_buf(main_win, right_bufnr)
+    api.nvim_win_set_option(main_win, "number", true)
+    api.nvim_win_set_option(main_win, "wrap", true)
+    M.add_changes_qf_mappings()
+    vim.cmd('filetype detect')
+    vim.cmd [[diffthis]]
+
+    -- configure left win
+    vim.cmd(format("vert sbuffer %d", left_bufnr))
+    api.nvim_win_set_option(0, "number", true)
+    api.nvim_win_set_option(0, "wrap", true)
+    M.add_changes_qf_mappings()
+    vim.cmd('filetype detect')
+    vim.cmd [[diffthis]]
+
+    -- move to first chunk
+    vim.cmd [[normal! gg]c]]
+
+    -- calculate valid ranges
+    local valid_left_ranges = {}
+    local valid_right_ranges = {}
+    local valid_hunks = {}
+    local hunk_strings = vim.split(ctxitem.patch:gsub("^@@", ""), "\n@@")
+    for _, hunk in ipairs(hunk_strings) do
+      local header = vim.split(hunk, "\n")[1]
+      local found, _, left_start, left_length, right_start, right_length =
+        string.find(header, "^%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
+      if found then
+        table.insert(valid_hunks, hunk)
+        table.insert(valid_left_ranges, {tonumber(left_start), left_start + left_length - 1})
+        table.insert(valid_right_ranges, {tonumber(right_start), right_start + right_length - 1})
+      end
+    end
+
+    -- set diff info as buf vars
+    local left_props = {
+      side = "LEFT",
+      sha = left_sha,
+      qf_idx = qf.idx,
+      qf_winid = qf.winid,
+      path = qf.items[qf.idx].module,
+      bufname = left_bufname,
+      fugitive_bufnr = left_bufnr,
+      hunks = valid_hunks,
+      ranges = valid_left_ranges,
+    }
+    local right_props = {
+      side = "RIGHT",
+      sha = right_sha,
+      qf_idx = qf.idx,
+      qf_winid = qf.winid,
+      path = qf.items[qf.idx].module,
+      bufname = right_bufname,
+      fugitive_bufnr = right_bufnr,
+      hunks = valid_hunks,
+      ranges = valid_right_ranges,
+    }
+    api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", left_props)
+    api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", right_props)
   end
 end
 
@@ -604,7 +629,7 @@ function M.close_review_tab()
   vim.cmd [[tabclose]]
 
   -- close fugitive buffers
-  M.clean_fugitive_buffers()
+  --M.clean_fugitive_buffers()
 
   -- close review comment buffers
   local tabpage = api.nvim_get_current_tabpage()
@@ -624,8 +649,6 @@ function M.add_changes_qf_mappings(bufnr)
   api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "[q", [[<cmd>lua require'octo.reviews'.prev_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]], mapping_opts)
-  -- api.nvim_buf_set_keymap(bufnr, "n", "<space>ca", "[[:OctoAddReviewComment<CR>]]", {noremap = true})
-  -- api.nvim_buf_set_keymap(bufnr, "v", "<space>ca", "[[:OctoAddReviewComment<CR>]]", {noremap = true})
   vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
   vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
   vim.cmd [[nnoremap <space>sa :OctoAddReviewSuggestion<CR>]]
