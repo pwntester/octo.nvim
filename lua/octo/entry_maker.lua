@@ -116,8 +116,8 @@ function M.gen_from_git_changed_files()
     entry_display.create {
     separator = " ",
     items = {
-      --{width = 8},
-      --{width = string.len("modified")},
+      {width = 8},
+      {width = string.len("modified")},
       {width = 5},
       {width = 5},
       {remaining = true}
@@ -126,11 +126,11 @@ function M.gen_from_git_changed_files()
 
   local make_display = function(entry)
     return displayer {
-      --{entry.value:sub(1, 7), "TelescopeResultsNumber"},
-      --{entry.change.status, "OctoNvimDetailsLabel"},
+      {entry.value:sub(1, 7), "TelescopeResultsNumber"},
+      {entry.change.status, "OctoNvimDetailsLabel"},
       {format("+%d", entry.change.additions), "OctoNvimPullAdditions"},
       {format("-%d", entry.change.deletions), "OctoNvimPullDeletions"},
-      vim.split(entry.change.path, "\n")[1]
+      vim.split(entry.msg, "\n")[1]
     }
   end
 
@@ -140,9 +140,9 @@ function M.gen_from_git_changed_files()
     end
 
     return {
-      value = entry.path,
-      ordinal = entry.path,
-      msg = entry.path,
+      value = entry.sha,
+      ordinal = entry.sha .. " " .. entry.filename,
+      msg = entry.filename,
       display = make_display,
       change = entry
     }

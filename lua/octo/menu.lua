@@ -368,26 +368,21 @@ function M.changed_files()
   if not repo then
     return
   end
-
-  -- get list of changed files
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-  local query = format(graphql.changed_files_query, owner, name, number)
+  local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
     {
-      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      args = {"api", url},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
           local results = json.parse(output)
-          local files = results.data.repository.pullRequest.files.nodes
           pickers.new(
             {},
             {
               prompt_prefix = "PR Files Changed >",
               finder = finders.new_table {
-                results = files,
+                results = results,
                 entry_maker = entry_maker.gen_from_git_changed_files()
               },
               sorter = conf.generic_sorter({}),
