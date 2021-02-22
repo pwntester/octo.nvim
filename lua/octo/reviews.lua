@@ -19,6 +19,10 @@ M.review_files = {}
 
 local qf_height = vim.g.octo_qf_height or math.floor(vim.o.lines * 0.2)
 
+---
+--- Changes
+---
+
 function M.populate_changes_qf(changes, opts)
   -- open a new tab so we can easily clean all the windows mess
   vim.cmd [[tabnew %]]
@@ -325,37 +329,48 @@ function M.save_review_comment()
   end
 end
 
+---
+--- Review threads
+---
+
 function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   local items = {}
+  local ctxitems = {}
   local qf = vim.fn.getqflist({winid = 0})
   local qf_width = vim.fn.winwidth(qf.winid) * 0.4
 
   local process_threads = function(threads)
     for _, thread in ipairs(threads) do
-      local comment = thread.comments.nodes[1]
-      local mods = ""
+      local first_comment = thread.comments.nodes[1]
+      local mods = {}
       if thread.isResolved then
-        mods = "RESOLVED "
+        table.insert(mods, "RESOLVED")
       end
       if thread.isOutdated then
-        mods = mods .. "OUTDATED "
+        table.insert(mods, "OUTDATED")
       end
-      local comment_id = util.graph2rest(comment.id)
+      local comment_id = util.graph2rest(first_comment.id)
       local lnum = thread.line
       if not lnum or lnum == vim.NIL then
         lnum = thread.originalLine
       end
       table.insert(
+        ctxitems,
+        {
+          commit = first_comment.commit.oid
+        }
+      )
+      table.insert(
         items,
         {
-          filename = thread.path,
+          module = thread.path,
           lnum = lnum,
           text = format(
             "%s (%s) %s%s...",
-            comment.author.login,
-            string.lower(comment.authorAssociation),
-            mods,
-            string.sub(vim.split(comment.body, "\n")[1], 0, qf_width)
+            first_comment.author.login,
+            string.lower(first_comment.authorAssociation),
+            table.concat(mods, " "),
+            string.sub(vim.split(first_comment.body, "\n")[1], 0, qf_width)
           ),
           pattern = format("%s/%s", thread.id, comment_id)
         }
@@ -396,12 +411,13 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   end
 
   -- populate qf
-  vim.fn.setqflist(items)
+  vim.fn.setqflist({}, "r", {context = {items = ctxitems} , items = items})
 
   -- new tab to hold the main, qf and comment windows
   if true then
     vim.cmd(format("tabnew %s", items[1].filename))
   end
+
   local main_win = api.nvim_get_current_win()
 
   -- save review comments in main window var
@@ -453,7 +469,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   -- jump to main window and select qf entry
   api.nvim_set_current_win(main_win)
   api.nvim_win_set_var(main_win, "comment_win", comment_win)
-  vim.cmd [[cc]]
+  --vim.cmd [[cc]]
 
   -- show comment for first element in qf
   M.show_reviewthread_qf_entry(repo, number, main_win)
@@ -477,10 +493,41 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   -- select qf entry
   vim.cmd [[cc]]
 
-  -- get comment details
-  local qf = vim.fn.getqflist({idx = 0, items = 0})
+  local qf = vim.fn.getqflist({context = 0, idx = 0, items = 0, winid = 0})
+
   local idx = qf.idx or 0
   local items = qf.items or {}
+  local context = qf.context or {}
+  local path = qf.items[idx].module
+  local sha = context.items[idx].commit
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+print(sha)
+  local query = format(graphql.file_content_query, owner, name, sha, path)
+  local output = gh.run(
+    {
+      mode = "sync",
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+    }
+  )
+  local resp = json.parse(output)
+  local blob = resp.data.repository.object
+  local lines = {""}
+  if blob and blob ~= vim.NIL then
+    lines = vim.split(resp.data.repository.object.text, "\n")
+  end
+
+  -- prepare content buffer
+  local bufname = format("octo://%s/%s/pull/%d/file/%s/%s", owner, name, number, sha:sub(0,7), path)
+  local bufnr = vim.fn.bufnr(bufname)
+  if bufnr == -1 then
+    bufnr = api.nvim_create_buf(false, true)
+    api.nvim_buf_set_name(bufnr, bufname)
+    api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+    api.nvim_buf_set_option(bufnr, "modifiable", false)
+  end
+
+  -- get comment details
   local selected_item = items[idx]
   local ids = selected_item.pattern
   local reviewthread_id = vim.split(ids, "/")[1]
@@ -488,6 +535,8 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 
   -- jump to main win
   api.nvim_set_current_win(main_win)
+  api.nvim_win_set_buf(main_win, bufnr)
+  vim.cmd [[filetype detect]]
 
   -- set mappings for the main window buffer
   M.add_reviewthread_qf_mappings(repo, number, main_win)
@@ -520,43 +569,43 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   local comment_win = api.nvim_win_get_var(main_win, "comment_win")
   api.nvim_set_current_win(comment_win)
 
-  local bufname = format("octo://%s/pull/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id)
-  local bufnr = vim.fn.bufnr(bufname)
-  if bufnr > -1 then
+  local comment_bufname = format("octo://%s/pull/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id)
+  local comment_bufnr = vim.fn.bufnr(comment_bufname)
+  if comment_bufnr > -1 then
     -- show existing comment buffer
-    api.nvim_win_set_buf(comment_win, bufnr)
+    api.nvim_win_set_buf(comment_win, comment_bufnr)
   else
     -- create new comment buffer
-    bufnr = api.nvim_create_buf(false, true)
-    api.nvim_buf_set_var(bufnr, "repo", repo)
-    api.nvim_buf_set_var(bufnr, "number", number)
-    api.nvim_buf_set_option(bufnr, "filetype", "octo_reviewthread")
-    api.nvim_buf_set_option(bufnr, "buftype", "acwrite")
-    api.nvim_buf_set_name(bufnr, bufname)
-    api.nvim_win_set_buf(comment_win, bufnr)
+    comment_bufnr = api.nvim_create_buf(false, true)
+    api.nvim_buf_set_var(comment_bufnr, "repo", repo)
+    api.nvim_buf_set_var(comment_bufnr, "number", number)
+    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewthread")
+    api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
+    api.nvim_buf_set_name(comment_bufnr, comment_bufname)
+    api.nvim_win_set_buf(comment_win, comment_bufnr)
 
     -- add mappings to the comment window buffer
     M.add_reviewthread_qf_mappings(repo, number, main_win)
-    octo.apply_buffer_mappings(bufnr, "reviewthread")
+    octo.apply_buffer_mappings(comment_bufnr, "reviewthread")
 
     -- write path
-    writers.write_title(bufnr, reviewthread.path, 1)
+    writers.write_title(comment_bufnr, reviewthread.path, 1)
 
     -- write diff hunk
     local main_comment = reviewthread.comments.nodes[1]
-    writers.write_diff_hunk(bufnr, main_comment.diffHunk, 3)
+    writers.write_diff_hunk(comment_bufnr, main_comment.diffHunk, 3)
 
     -- write thread
-    api.nvim_buf_set_var(bufnr, "comments", {})
+    api.nvim_buf_set_var(comment_bufnr, "comments", {})
     for _, comment in ipairs(reviewthread.comments.nodes) do
-      writers.write_comment(bufnr, comment)
+      writers.write_comment(comment_bufnr, comment)
     end
   end
 
   vim.cmd [[normal! G]]
 
   -- show comment buffer signs
-  signs.render_signcolumn(bufnr)
+  signs.render_signcolumn(comment_bufnr)
 
   -- autocmds
   vim.cmd [[ augroup octo_reviewthread_autocmds ]]

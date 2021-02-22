@@ -65,7 +65,7 @@ local commands = {
     commits = function()
       menu.commits()
     end,
-    files = function()
+    changes = function()
       menu.changed_files()
     end,
     diff = function()
@@ -79,9 +79,6 @@ local commands = {
     end,
     ready = function()
       M.pr_ready_for_review()
-    end,
-    reviews = function()
-      M.pr_reviews()
     end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
@@ -103,6 +100,9 @@ local commands = {
     end,
     submit = function()
       M.submit_review()
+    end,
+    view = function()
+      M.view_reviews()
     end,
   },
   gist = {
@@ -645,31 +645,21 @@ function M.show_pr_diff()
   )
 end
 
-function M.pr_reviews()
+function M.view_reviews()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-
-  -- make sure CWD is in PR repo and branch
-  if not util.in_pr_branch() then
-    return
-  end
-
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
   local query = format(graphql.review_threads_query, owner, name, number)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
-      --args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          -- aggregate comments
-          -- local resp = util.aggregate_pages(output, "data.repository.pullRequest.reviewThreads.nodes.comments.nodes")
-          -- for now, I will just remove pagination on this query since 100 comments in a single thread looks enough for most cases
           local resp = json.parse(output)
           reviews.populate_reviewthreads_qf(repo, number, resp.data.repository.pullRequest.reviewThreads.nodes)
         end

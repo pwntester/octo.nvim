@@ -286,6 +286,9 @@ query($endCursor: String) {
               nodes{
                 id
                 body
+                commit {
+                  oid
+                }
                 author { login }
                 authorAssociation
                 originalPosition
@@ -928,6 +931,19 @@ query {
     }
   }
   right: repository(owner: "%s", name: "%s") {
+    object(expression: "%s:%s") {
+      ... on Blob {
+        text
+      }
+    }
+  }
+}
+]]
+
+M.file_content_query =
+  [[
+query {
+  repository(owner: "%s", name: "%s") {
     object(expression: "%s:%s") {
       ... on Blob {
         text
