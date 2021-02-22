@@ -700,7 +700,7 @@ function M.submit_review()
   api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.submit_review('COMMENT')<CR>", mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-r>", ":lua require'octo.reviews'.submit_review('REQUEST_CHANGES')<CR>", mapping_opts)
   vim.cmd [[normal G]]
-  vim.cmd [[startinsert]]
+  --vim.cmd [[startinsert]]
 end
 
 function M.start_review()
@@ -710,6 +710,7 @@ function M.start_review()
   end
 
   reviews.review_comments = {}
+  reviews.review_files = {}
 
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(

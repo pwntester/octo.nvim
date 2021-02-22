@@ -177,7 +177,7 @@ function M.diff_changes_qf_entry()
       qf_winid = qf.winid,
       path = qf.items[qf.idx].module,
       bufname = left_bufname,
-      fugitive_bufnr = left_bufnr,
+      content_bufnr = left_bufnr,
       hunks = valid_hunks,
       ranges = valid_left_ranges,
     }
@@ -188,7 +188,7 @@ function M.diff_changes_qf_entry()
       qf_winid = qf.winid,
       path = qf.items[qf.idx].module,
       bufname = right_bufname,
-      fugitive_bufnr = right_bufnr,
+      content_bufnr = right_bufnr,
       hunks = valid_hunks,
       ranges = valid_right_ranges,
     }
@@ -223,7 +223,7 @@ function M.add_review_comment(isSuggestion)
     end
 
     -- create new buffer
-    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "fugitive://", ""), line1, line2)
+    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "octo://", ""), line1, line2)
     local comment_bufnr
     if vim.fn.bufnr(bufname) > -1 then
       comment_bufnr = vim.fn.bufnr(bufname)
@@ -266,7 +266,7 @@ function M.add_review_comment(isSuggestion)
     api.nvim_buf_set_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt, {})
 
     if isSuggestion then
-      local lines = api.nvim_buf_get_lines(props.fugitive_bufnr, line1-1, line2, false)
+      local lines = api.nvim_buf_get_lines(props.content_bufnr, line1-1, line2, false)
       writers.write_block({"```suggestion"}, {bufnr = comment_bufnr, mark = false})
       writers.write_block(lines, {bufnr = comment_bufnr, mark = false})
       writers.write_block({"```"}, {bufnr = comment_bufnr, mark = false})
@@ -289,7 +289,7 @@ function M.add_review_comment(isSuggestion)
       qf_winid = props.qf_winid,
       comment_bufnr = comment_bufnr,
       comment_winid = comment_winid,
-      fugitive_bufnr = bufnr,
+      content_bufnr = bufnr,
       line1 = line1,
       line2 = line2,
       body = ""
@@ -323,7 +323,7 @@ function M.save_review_comment()
     api.nvim_buf_set_option(bufnr, "modified", false)
 
     -- highlight commented lines
-    M.highlight_lines(comment.fugitive_bufnr, comment.line1, comment.line2)
+    M.highlight_lines(comment.content_bufnr, comment.line1, comment.line2)
   end
 end
 
