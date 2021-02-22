@@ -733,7 +733,7 @@ function M.start_review()
           end
           reviews.populate_changes_qf(changes, {
             pull_request_repo = repo,
-            pull_request_numer = number,
+            pull_request_number = number,
             pull_request_id = pr.id,
             baseRefName = pr.baseRefName,
             baseRefSHA = pr.baseRefSHA,

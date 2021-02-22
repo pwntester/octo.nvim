@@ -60,14 +60,20 @@ function! octo#issue_complete(findstart, base) abort
 endfunction
 
 " autocommands
+function s:configure_octo_buffer() abort
+  if match(bufname(), "octo://.\\+/.\\+/pull/\\d\\+/file/") == -1
+    setlocal omnifunc=octo#issue_complete
+    setlocal nonumber norelativenumber nocursorline wrap
+    setlocal foldcolumn=1
+    setlocal signcolumn=yes
+  end
+endfunction
+
 augroup octo_autocmds
 au!
-au BufEnter octo://* setlocal omnifunc=octo#issue_complete
-"au BufEnter octo://* lua require"octo".set_octo_win_opts()
-"au BufLeave octo://* lua require"octo".restore_win_opts()
+au BufEnter octo://* call s:configure_octo_buffer()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
-au BufWriteCmd octo_comment://* lua require'octo.reviews'.save_review_comment()
 augroup END
 
 " sign definitions

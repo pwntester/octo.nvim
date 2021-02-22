@@ -114,7 +114,7 @@ function M.diff_changes_qf_entry()
     end
 
     -- prepare left buffer
-    local left_bufname = format("octo://%s/%s/file/%s/%s", owner, name, left_sha:sub(0,7), path)
+    local left_bufname = format("octo://%s/%s/pull/%d/file/%s/%s", owner, name, qf.context.pull_request_number, left_sha:sub(0,7), path)
     local left_bufnr = vim.fn.bufnr(left_bufname)
     if left_bufnr == -1 then
       left_bufnr = api.nvim_create_buf(false, true)
@@ -124,7 +124,7 @@ function M.diff_changes_qf_entry()
     end
 
     -- prepare right buffer
-    local right_bufname = format("octo://%s/%s/file/%s/%s", owner, name, right_sha:sub(0,8), path)
+    local right_bufname = format("octo://%s/%s/pull/%d/file/%s/%s", owner, name, qf.context.pull_request_number, right_sha:sub(0,7), path)
     local right_bufnr = vim.fn.bufnr(right_bufname)
     if right_bufnr == -1 then
       right_bufnr = api.nvim_create_buf(false, true)
@@ -136,18 +136,16 @@ function M.diff_changes_qf_entry()
     -- configure right win
     api.nvim_set_current_win(main_win)
     api.nvim_win_set_buf(main_win, right_bufnr)
-    api.nvim_win_set_option(main_win, "number", true)
-    api.nvim_win_set_option(main_win, "wrap", true)
     M.add_changes_qf_mappings()
-    vim.cmd('filetype detect')
+    vim.cmd [[filetype detect]]
+    vim.cmd [[doau BufEnter]]
     vim.cmd [[diffthis]]
 
     -- configure left win
     vim.cmd(format("leftabove vert sbuffer %d", left_bufnr))
-    api.nvim_win_set_option(0, "number", true)
-    api.nvim_win_set_option(0, "wrap", true)
     M.add_changes_qf_mappings()
-    vim.cmd('filetype detect')
+    vim.cmd [[filetype detect]]
+    vim.cmd [[doau BufEnter]]
     vim.cmd [[diffthis]]
 
     -- move to first chunk
@@ -223,7 +221,7 @@ function M.add_review_comment(isSuggestion)
     end
 
     -- create new buffer
-    local bufname = format("octo_comment://%s.%d.%d", string.gsub(props.bufname, "octo://", ""), line1, line2)
+    local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), line1, line2)
     local comment_bufnr
     if vim.fn.bufnr(bufname) > -1 then
       comment_bufnr = vim.fn.bufnr(bufname)
