@@ -64,7 +64,7 @@ end
 function M.diff_changes_qf_entry()
   -- cleanup content buffers and windows
   vim.cmd [[cclose]]
-  vim.cmd [[only]]
+  vim.cmd [[silent! only]]
 
   -- local main_win = M.get_main_win()
   local main_win = api.nvim_get_current_win()
@@ -143,7 +143,7 @@ function M.diff_changes_qf_entry()
     vim.cmd [[diffthis]]
 
     -- configure left win
-    vim.cmd(format("vert sbuffer %d", left_bufnr))
+    vim.cmd(format("leftabove vert sbuffer %d", left_bufnr))
     api.nvim_win_set_option(0, "number", true)
     api.nvim_win_set_option(0, "wrap", true)
     M.add_changes_qf_mappings()
@@ -281,7 +281,7 @@ function M.add_review_comment(isSuggestion)
     -- create new comment
     local comment = {
       key = bufname,
-      path = vim.split(props.path, ":")[2],
+      path =props.path,
       side = props.side,
       diff_hunk = diff_hunk,
       sha = props.sha,
@@ -626,7 +626,7 @@ function M.prev_comment(repo, number, main_win)
 end
 
 function M.close_review_tab()
-  vim.cmd [[tabclose]]
+  vim.cmd [[silent! tabclose]]
 
   -- close fugitive buffers
   --M.clean_fugitive_buffers()
