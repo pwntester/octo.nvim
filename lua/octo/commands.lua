@@ -101,8 +101,8 @@ local commands = {
     submit = function()
       M.submit_review()
     end,
-    view = function()
-      M.view_reviews()
+    threads = function()
+      M.review_threads()
     end,
   },
   gist = {
@@ -645,7 +645,7 @@ function M.show_pr_diff()
   )
 end
 
-function M.view_reviews()
+function M.review_threads()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return

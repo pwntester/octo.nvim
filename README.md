@@ -74,10 +74,10 @@ There is only an `Octo <object> <action> [arguments]` command:
 | card | add | |
 | | delete | |
 | | move | |
-| review| start| |
-| | comments| |
-| | submit| |
-| | view| |
+| review| start| Start a new review |
+| | comments| View in-progress review comments |
+| | submit| Submit the review |
+| | threads | View other people review threads (comment+replies)|
 
 * If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
