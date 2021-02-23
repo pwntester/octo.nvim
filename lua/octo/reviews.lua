@@ -106,6 +106,7 @@ function M.diff_changes_qf_entry()
     left_bufnr = api.nvim_create_buf(false, true)
     api.nvim_buf_set_name(left_bufnr, left_bufname)
     api.nvim_buf_set_lines(left_bufnr, 0, -1, false, {"Loading ..."})
+    api.nvim_buf_set_option(left_bufnr, "modifiable", false)
   end
   api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", {
     side = "LEFT",
@@ -126,6 +127,7 @@ function M.diff_changes_qf_entry()
     right_bufnr = api.nvim_create_buf(false, true)
     api.nvim_buf_set_name(right_bufnr, right_bufname)
     api.nvim_buf_set_lines(right_bufnr, 0, -1, false, {"Loading ..."})
+    api.nvim_buf_set_option(right_bufnr, "modifiable", false)
   end
   api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", {
     side = "RIGHT",
@@ -157,6 +159,7 @@ function M.diff_changes_qf_entry()
     -- load left content
     util.get_file_contents(repo, left_sha, path, function(lines)
       M.review_files[path].left_lines = lines
+      api.nvim_buf_set_option(left_bufnr, "modifiable", true)
       api.nvim_buf_set_lines(left_bufnr, 0, -1, false, lines)
       api.nvim_buf_set_option(left_bufnr, "modifiable", false)
 
@@ -170,6 +173,7 @@ function M.diff_changes_qf_entry()
     -- load right content
     util.get_file_contents(repo, right_sha, path, function(lines)
       M.review_files[path].right_lines = lines
+      api.nvim_buf_set_option(right_bufnr, "modifiable", true)
       api.nvim_buf_set_lines(right_bufnr, 0, -1, false, lines)
       api.nvim_buf_set_option(right_bufnr, "modifiable", false)
 
