@@ -368,7 +368,6 @@ function M.changed_files()
   if not repo then
     return
   end
-  -- TODO: graphql
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
     {
@@ -586,7 +585,7 @@ function M.review_comments()
       previewer = previewers.review_comment.new({}),
       attach_mappings = function()
 
-        -- TODO: delete comment
+        -- TODO: add action to delete comment
 
         actions.select_default:replace(function(prompt_bufnr)
           local comment = action_state.get_selected_entry(prompt_bufnr).comment

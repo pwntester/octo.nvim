@@ -15,7 +15,7 @@ hi def link OctoNvimCommentHeading PreProc
 hi def link OctoNvimCommentUser String 
 hi def link OctoNvimIssueOpen MoreMsg
 hi def link OctoNvimIssueClosed ErrorMsg
-hi def link OctoNvimIssueMerged DiffAdd
+hi def link OctoNvimIssueMerged Keyword
 hi def link OctoNvimIssueId Question
 hi def link OctoNvimIssueTitle PreProc
 hi def link OctoNvimEmpty Comment

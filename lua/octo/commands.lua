@@ -65,7 +65,7 @@ local commands = {
     commits = function()
       menu.commits()
     end,
-    files = function()
+    changes = function()
       menu.changed_files()
     end,
     diff = function()
@@ -80,9 +80,6 @@ local commands = {
     ready = function()
       M.pr_ready_for_review()
     end,
-    reviews = function()
-      M.pr_reviews()
-    end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
       menu.pull_request_search(opts)
@@ -96,13 +93,16 @@ local commands = {
   },
   review = {
     start = function()
-      M.review_pr()
+      M.start_review()
     end,
     comments = function()
       menu.review_comments()
     end,
     submit = function()
       M.submit_review()
+    end,
+    threads = function()
+      M.review_threads()
     end,
   },
   gist = {
@@ -645,31 +645,21 @@ function M.show_pr_diff()
   )
 end
 
-function M.pr_reviews()
+function M.review_threads()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
     return
   end
-
-  -- make sure CWD is in PR repo and branch
-  if not util.in_pr_branch() then
-    return
-  end
-
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
   local query = format(graphql.review_threads_query, owner, name, number)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
-      --args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          -- aggregate comments
-          -- local resp = util.aggregate_pages(output, "data.repository.pullRequest.reviewThreads.nodes.comments.nodes")
-          -- for now, I will just remove pagination on this query since 100 comments in a single thread looks enough for most cases
           local resp = json.parse(output)
           reviews.populate_reviewthreads_qf(repo, number, resp.data.repository.pullRequest.reviewThreads.nodes)
         end
@@ -700,27 +690,18 @@ function M.submit_review()
   api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.submit_review('COMMENT')<CR>", mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-r>", ":lua require'octo.reviews'.submit_review('REQUEST_CHANGES')<CR>", mapping_opts)
   vim.cmd [[normal G]]
-  vim.cmd [[startinsert]]
+  --vim.cmd [[startinsert]]
 end
 
-function M.review_pr()
+function M.start_review()
   local repo, number, pr = util.get_repo_number_pr()
   if not repo then
     return
   end
-  if not vim.fn.exists("*fugitive#repo") then
-    print("vim-fugitive required")
-    return
-  end
-  -- make sure CWD is in PR repo and branch
-  if not util.in_pr_branch() then
-    return
-  end
 
   reviews.review_comments = {}
+  reviews.review_files = {}
 
-  -- TODO: graphql
-  -- get list of changed files
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
     {
@@ -733,7 +714,7 @@ function M.review_pr()
           local changes = {}
           for _, result in ipairs(results) do
             local change = {
-              filename = result.filename,
+              path = result.filename,
               patch = result.patch,
               status = result.status,
               stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
@@ -741,10 +722,10 @@ function M.review_pr()
             table.insert(changes, change)
           end
           reviews.populate_changes_qf(changes, {
+            pull_request_repo = repo,
+            pull_request_number = number,
             pull_request_id = pr.id,
-            baseRefName = pr.baseRefName,
             baseRefSHA = pr.baseRefSHA,
-            headRefName = pr.headRefName,
             headRefSHA = pr.headRefSHA
           })
         end

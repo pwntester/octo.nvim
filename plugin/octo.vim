@@ -3,21 +3,33 @@ if exists('g:loaded_octo')
 endif
 
 " colors
-let g:octo_bubble_color = synIDattr(synIDtrans(hlID("NormalFloat")), "bg#")
-let g:octo_bubble_green = synIDattr(synIDtrans(hlID("DiffAdd")), "fg#")
-let g:octo_bubble_red = synIDattr(synIDtrans(hlID("DiffDelete")), "fg#")
-if get(g:, 'octo_bubble_color', '') != '' && get(g:, 'octo_bubble_green', '') != '' && get(g:, 'octo_bubble_red', '') != ''
-  execute('hi! OctoNvimBubbleDelimiter guifg='.g:octo_bubble_color)
-  execute('hi! OctoNvimBubbleBody guibg='.g:octo_bubble_color)
-  execute('hi! OctoNvimBubbleRed guifg='.g:octo_bubble_red.' guibg='.g:octo_bubble_color)
-  execute('hi! OctoNvimBubbleGreen guifg='.g:octo_bubble_green.' guibg='.g:octo_bubble_color)
-  execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_bubble_color)
+let g:octo_color_bubble_bg = synIDattr(synIDtrans(hlID("NormalFloat")), "bg#")
+let g:octo_color_green = synIDattr(synIDtrans(hlID("DiffAdd")), "fg#")
+let g:octo_color_blue = synIDattr(synIDtrans(hlID("DiffChange")), "fg#")
+let g:octo_color_red = synIDattr(synIDtrans(hlID("DiffDelete")), "fg#")
+
+if get(g:, 'octo_color_bubble_bg', '') != '' && get(g:, 'octo_color_green', '') != '' && get(g:, 'octo_color_red', '') != ''
+
+  " Bubble colors
+  execute('hi! OctoNvimBubbleDelimiter guifg='.g:octo_color_bubble_bg)
+  execute('hi! OctoNvimBubbleBody guibg='.g:octo_color_bubble_bg)
+  execute('hi! OctoNvimBubbleRed guifg='.g:octo_color_red.' guibg='.g:octo_color_bubble_bg)
+  execute('hi! OctoNvimBubbleGreen guifg='.g:octo_color_green.' guibg='.g:octo_color_bubble_bg)
+
+  " Hunks
+  execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_color_bubble_bg)
+
+  " Commented lines
   execute('hi! link OctoNvimCommentLine Visual')
-  execute('hi! link OctoNvimPassingTest DiffAdd')
-  execute('hi! link OctoNvimFailingTest DiffDelete')
-  execute('hi! link OctoNvimPullAdditions DiffAdd')
-  execute('hi! link OctoNvimPullDeletions DiffDelete')
-  execute('hi! link OctoNvimPullModifications DiffChange')
+
+  " Tests
+  execute('hi! OctoNvimPassingTest guifg='.g:octo_color_green)
+  execute('hi! OctoNvimFailingTest guifg='.g:octo_color_red)
+
+  " PR changes
+  execute('hi! OctoNvimPullAdditions guifg='.g:octo_color_green)
+  execute('hi! OctoNvimPullDeletions guifg='.g:octo_color_red)
+  execute('hi! OctoNvimPullModifications guifg='.g:octo_color_blue)
 endif
 
 function! s:command_complete(...)
@@ -48,14 +60,20 @@ function! octo#issue_complete(findstart, base) abort
 endfunction
 
 " autocommands
+function s:configure_octo_buffer() abort
+  if match(bufname(), "octo://.\\+/.\\+/pull/\\d\\+/file/") == -1
+    setlocal omnifunc=octo#issue_complete
+    setlocal nonumber norelativenumber nocursorline wrap
+    setlocal foldcolumn=1
+    setlocal signcolumn=yes
+  end
+endfunction
+
 augroup octo_autocmds
 au!
-au BufEnter octo://* setlocal omnifunc=octo#issue_complete
-au BufEnter octo://* lua require"octo".set_octo_win_opts()
-au BufLeave octo://* lua require"octo".restore_win_opts()
+au BufEnter octo://* call s:configure_octo_buffer()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
-au BufWriteCmd octo_comment://* lua require'octo.reviews'.save_review_comment()
 augroup END
 
 " sign definitions

@@ -286,6 +286,9 @@ query($endCursor: String) {
               nodes{
                 id
                 body
+                commit {
+                  oid
+                }
                 author { login }
                 authorAssociation
                 originalPosition
@@ -873,16 +876,16 @@ query($endCursor: String) {
   search(query: "%s", type: USER, first: 100) {
     nodes {
       ... on User {
-        id 
+        id
         login
       }
       ... on Organization {
-        id 
+        id
         login
         teams(first:100, after: $endCursor) {
           totalCount
           nodes {
-            id 
+            id
             name
           }
           pageInfo {
@@ -890,6 +893,40 @@ query($endCursor: String) {
             endCursor
           }
         }
+      }
+    }
+  }
+}
+]]
+
+M.changed_files_query =
+  [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+    pullRequest(number: %d) {
+      files(first:100, after: $endCursor) {
+        nodes {
+          additions
+          deletions
+          path
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+}
+]]
+
+M.file_content_query =
+  [[
+query {
+  repository(owner: "%s", name: "%s") {
+    object(expression: "%s:%s") {
+      ... on Blob {
+        text
       }
     }
   }
