@@ -439,4 +439,15 @@ function M.get_file_contents(repo, commit, path, cb)
    )
 end
 
+function M.set_timeout(delay, callback, ...)
+  local timer = vim.loop.new_timer()
+  local args = {...}
+  vim.loop.timer_start(timer, delay, 0, function ()
+    vim.loop.timer_stop(timer)
+    vim.loop.close(timer)
+    callback(unpack(args))
+  end)
+  return timer
+end
+
 return M

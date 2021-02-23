@@ -9,6 +9,7 @@ local format = string.format
 local vim = vim
 local api = vim.api
 
+
 local M = {}
 
 M.review_comments = {}
@@ -25,7 +26,13 @@ function M.populate_changes_qf(changes, opts)
   vim.cmd [[tabnew %]]
 
   -- populate qf
-  local context = {}
+  local context = {
+    left_sha = opts.baseRefSHA,
+    right_sha = opts.headRefSHA,
+    pull_request_id = opts.pull_request_id,
+    pull_request_repo = opts.pull_request_repo,
+    pull_request_number = opts.pull_request_number
+  }
   local items = {}
   local ctxitems = {}
   for _, change in ipairs(changes) do
@@ -40,14 +47,18 @@ function M.populate_changes_qf(changes, opts)
       patch = change.patch
     }
     table.insert(ctxitems, ctxitem)
-  end
 
-  -- create qf with context wiht SHA info
-  context.left_sha = opts.baseRefSHA
-  context.right_sha = opts.headRefSHA
-  context.pull_request_id = opts.pull_request_id
-  context.pull_request_repo = opts.pull_request_repo
-  context.pull_request_number = opts.pull_request_number
+    -- prefetch changed files
+    util.set_timeout(5000, vim.schedule_wrap(function()
+      M.review_files[change.path] = {}
+      util.get_file_contents(opts.pull_request_repo, opts.baseRefSHA, change.path, function(lines)
+        M.review_files[change.path].left_lines = lines
+      end)
+      util.get_file_contents(opts.pull_request_repo, opts.headRefSHA, change.path, function(lines)
+        M.review_files[change.path].right_lines = lines
+      end)
+    end))
+  end
   context.items = ctxitems
 
   vim.fn.setqflist({}, "r", {context = context, items = items})
@@ -149,39 +160,41 @@ function M.diff_changes_qf_entry()
   local left_win = api.nvim_get_current_win()
   M.add_changes_qf_mappings()
 
+  local write_diff_lines = function(lines, side)
+    local bufnr, winnr
+    if side == "right" then
+      bufnr = right_bufnr
+      winnr = right_win
+      M.review_files[path].right_lines = lines
+    elseif side == "left" then
+      bufnr = left_bufnr
+      winnr = left_win
+      M.review_files[path].left_lines = lines
+    end
+    api.nvim_buf_set_option(bufnr, "modifiable", true)
+    api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+    api.nvim_buf_set_option(bufnr, "modifiable", false)
+    api.nvim_set_current_win(winnr)
+    vim.cmd [[filetype detect]]
+    vim.cmd [[doau BufEnter]]
+    vim.cmd [[diffthis]]
+    vim.cmd [[normal! gg]c]]
+  end
+
   -- load diff buffer contents
-  if M.review_files[path] then
-    api.nvim_buf_set_lines(right_bufnr, 0, -1, false, M.review_files[path].right_lines)
-    api.nvim_buf_set_lines(left_bufnr, 0, -1, false, M.review_files[path].left_lines)
+  if M.review_files[path] and M.review_files[path].right_lines and M.review_files[path].left_lines then
+    write_diff_lines(M.review_files[path].right_lines, "right")
+    write_diff_lines(M.review_files[path].left_lines, "left")
   else
     M.review_files[path] = {}
-
     -- load left content
     util.get_file_contents(repo, left_sha, path, function(lines)
-      M.review_files[path].left_lines = lines
-      api.nvim_buf_set_option(left_bufnr, "modifiable", true)
-      api.nvim_buf_set_lines(left_bufnr, 0, -1, false, lines)
-      api.nvim_buf_set_option(left_bufnr, "modifiable", false)
-
-      api.nvim_set_current_win(left_win)
-      vim.cmd [[filetype detect]]
-      vim.cmd [[doau BufEnter]]
-      vim.cmd [[diffthis]]
-      vim.cmd [[normal! gg]c]]
+      write_diff_lines(lines, "left")
     end)
 
     -- load right content
     util.get_file_contents(repo, right_sha, path, function(lines)
-      M.review_files[path].right_lines = lines
-      api.nvim_buf_set_option(right_bufnr, "modifiable", true)
-      api.nvim_buf_set_lines(right_bufnr, 0, -1, false, lines)
-      api.nvim_buf_set_option(right_bufnr, "modifiable", false)
-
-      api.nvim_set_current_win(right_win)
-      vim.cmd [[filetype detect]]
-      vim.cmd [[doau BufEnter]]
-      vim.cmd [[diffthis]]
-      vim.cmd [[normal! gg]c]]
+      write_diff_lines(lines, "right")
     end)
   end
 end
