@@ -1,5 +1,6 @@
 local actions = require "telescope.actions"
 local action_state = require "telescope.actions.state"
+local action_set = require "telescope.actions.set"
 local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local utils = require "telescope.utils"
@@ -67,11 +68,13 @@ local function open(repo, what, command)
   return function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    if command == 'split' then
+    if command == 'default' then
+      vim.cmd [[:buffer %]]
+    elseif command == 'horizontal' then
       vim.cmd [[:sbuffer %]]
-    elseif command == 'vsplit' then
+    elseif command == 'vertical' then
       vim.cmd [[:vert sbuffer %]]
-    elseif command == 'tabedit' then
+    elseif command == 'tab' then
       vim.cmd [[:tab sb %]]
     end
     vim.cmd(string.format([[ lua require'octo.commands'.get_%s('%s', '%s') ]], what, repo, selection.value))
@@ -155,10 +158,9 @@ function M.issues(opts)
               sorter = conf.generic_sorter(opts),
               previewer = previewers.issue.new(opts),
               attach_mappings = function(_, map)
-                actions.select_default:replace(open(opts.repo, "issue", "edit"))
-                actions.select_horizontal:replace(open(opts.repo, "issue", "split"))
-                actions.select_vertical:replace(open(opts.repo, "issue", "vsplit"))
-                actions.select_tab:replace(open(opts.repo, "issue", "tabedit"))
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open(opts.repo, "issue", type)(prompt_bufnr)
+                end)
                 map("i", "<c-b>", open_in_browser("issue", opts.repo))
                 return true
               end
@@ -301,10 +303,9 @@ function M.pull_requests(opts)
               sorter = conf.generic_sorter(opts),
               previewer = previewers.pull_request.new(opts),
               attach_mappings = function(_, map)
-                actions.select_default:replace(open(opts.repo, "pull_request", "edit"))
-                actions.select_horizontal:replace(open(opts.repo, "pull_request", "split"))
-                actions.select_vertical:replace(open(opts.repo, "pull_request", "vsplit"))
-                actions.select_tab:replace(open(opts.repo, "pull_request", "tabedit"))
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open(opts.repo, "pull_request", type)(prompt_bufnr)
+                end)
                 map("i", "<c-o>", checkout_pull_request(opts.repo))
                 map("i", "<c-b>", open_in_browser("pr", opts.repo))
                 return true
@@ -346,10 +347,9 @@ function M.commits()
               sorter = conf.generic_sorter({}),
               previewer = previewers.commit.new({repo = repo}),
               attach_mappings = function()
-                actions.select_default:replace(open_preview_buffer("edit"))
-                actions.select_horizontal:replace(open_preview_buffer("split"))
-                actions.select_vertical:replace(open_preview_buffer("vsplit"))
-                actions.select_tab:replace(open_preview_buffer("tabedit"))
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open_preview_buffer(type)(prompt_bufnr)
+                end)
                 return true
               end
             }
@@ -389,10 +389,9 @@ function M.changed_files()
               sorter = conf.generic_sorter({}),
               previewer = previewers.changed_files.new({repo = repo, number = number}),
               attach_mappings = function()
-                actions.select_default:replace(open_preview_buffer("edit"))
-                actions.select_horizontal:replace(open_preview_buffer("split"))
-                actions.select_vertical:replace(open_preview_buffer("vsplit"))
-                actions.select_tab:replace(open_preview_buffer("tabedit"))
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open_preview_buffer(type)(prompt_bufnr)
+                end)
                 return true
               end
             }
@@ -476,10 +475,9 @@ function M.issue_search(opts)
       sorter = conf.generic_sorter(opts),
       previewer = previewers.issue.new(opts),
       attach_mappings = function(_, map)
-        actions.select_default:replace(open(opts.repo, "issue", "edit"))
-        actions.select_horizontal:replace(open(opts.repo, "issue", "split"))
-        actions.select_vertical:replace(open(opts.repo, "issue", "vsplit"))
-        actions.select_tab:replace(open(opts.repo, "issue", "tabedit"))
+        action_set.select:replace(function(prompt_bufnr, type)
+          open(opts.repo, "issue", type)(prompt_bufnr)
+        end)
         map("i", "<c-b>", open_in_browser("issue", opts.repo))
         return true
       end
@@ -556,10 +554,9 @@ function M.pull_request_search(opts)
       sorter = conf.generic_sorter(opts),
       previewer = previewers.pull_request.new(opts),
       attach_mappings = function(_, map)
-        actions.select_default:replace(open(opts.repo, "pull_request", "edit"))
-        actions.select_horizontal:replace(open(opts.repo, "pull_request", "split"))
-        actions.select_vertical:replace(open(opts.repo, "pull_request", "vsplit"))
-        actions.select_tab:replace(open(opts.repo, "pull_request", "tabedit"))
+        action_set.select:replace(function(prompt_bufnr, type)
+          open(opts.repo, "pull_request", type)(prompt_bufnr)
+        end)
         map("i", "<c-b>", open_in_browser("pr", opts.repo))
         return true
       end
