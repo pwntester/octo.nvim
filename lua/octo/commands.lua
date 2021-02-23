@@ -725,9 +725,7 @@ function M.start_review()
             pull_request_repo = repo,
             pull_request_number = number,
             pull_request_id = pr.id,
-            baseRefName = pr.baseRefName,
             baseRefSHA = pr.baseRefSHA,
-            headRefName = pr.headRefName,
             headRefSHA = pr.headRefSHA
           })
         end

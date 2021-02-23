@@ -8,9 +8,6 @@ local graphql = require "octo.graphql"
 local format = string.format
 local vim = vim
 local api = vim.api
-local json = {
-  parse = vim.fn.json_decode
-}
 
 local M = {}
 
