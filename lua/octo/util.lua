@@ -415,4 +415,28 @@ function M.open_url_at_cursor()
   end
 end
 
+function M.get_file_contents(repo, commit, path, cb)
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = format(graphql.file_content_query, owner, name, commit, path)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not M.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local blob = resp.data.repository.object
+          local lines = {}
+          if blob and blob ~= vim.NIL then
+            lines = vim.split(blob.text, "\n")
+          end
+          cb(lines)
+        end
+      end
+    }
+   )
+end
+
 return M

@@ -920,26 +920,6 @@ query($endCursor: String) {
 }
 ]]
 
-M.diff_file_content_query =
-  [[
-query {
-  left: repository(owner: "%s", name: "%s") {
-    object(expression: "%s:%s") {
-      ... on Blob {
-        text
-      }
-    }
-  }
-  right: repository(owner: "%s", name: "%s") {
-    object(expression: "%s:%s") {
-      ... on Blob {
-        text
-      }
-    }
-  }
-}
-]]
-
 M.file_content_query =
   [[
 query {
