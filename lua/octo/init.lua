@@ -199,17 +199,11 @@ function M.create_buffer(type, obj, repo, create)
   api.nvim_buf_set_var(bufnr, "body_reactions", obj.reactions)
   api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 
-  -- collect comments
+  -- initialize comments metadata
   api.nvim_buf_set_var(bufnr, "comments", {})
-  local comments = obj.comments.nodes
 
+  -- PRs
   if obj.commits then
-
-    -- collect review comments
-    if obj.reviews then
-      vim.list_extend(comments, obj.reviews.nodes)
-    end
-
     -- for pulls, store some additional info
     api.nvim_buf_set_var(
       bufnr,
@@ -227,14 +221,52 @@ function M.create_buffer(type, obj, repo, create)
     )
   end
 
-  -- sort comments
-  table.sort(comments, function (c1, c2)
-    return date(c1.createdAt) < date(c2.createdAt)
+  -- collect items
+  local items = {}
+
+  --- 1) comments
+  for _, comment in ipairs(obj.comments.nodes) do
+    table.insert(items, {
+       createdAt = comment.createdAt,
+       type = "comment",
+       item = comment
+    })
+  end
+
+  --- 2) collect reviews
+  if obj.reviews then
+    for _, review in ipairs(obj.reviews.nodes) do
+      table.insert(items, {
+        createdAt = review.createdAt,
+        type = "review",
+        item = review
+      })
+    end
+  end
+
+  -- sort items
+  table.sort(items, function (i1, i2)
+    return date(i1.createdAt) < date(i2.createdAt)
   end)
 
-  -- write comments
-  for _, c in ipairs(comments) do
-    writers.write_comment(bufnr, c)
+  -- write items
+  for _, item in ipairs(items) do
+    if item.type == "comment" then
+
+      -- write the comment
+      writers.write_comment(bufnr, item.item)
+    elseif item.type == "review" then
+
+      -- write top-level comment
+      writers.write_comment(bufnr, item.item)
+
+      for _, comment in ipairs(item.item.comments.nodes) do
+        if comment.replyTo == vim.NIL then
+          writers.write_diff_hunk(bufnr, comment.diffHunk)
+        end
+        writers.write_comment(bufnr, comment)
+      end
+    end
   end
 
   async_fetch_taggable_users(bufnr, repo, obj.participants.nodes)

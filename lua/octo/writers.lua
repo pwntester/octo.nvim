@@ -407,7 +407,7 @@ function M.write_comment(bufnr, comment, line)
 end
 
 function M.write_diff_hunk(bufnr, diff_hunk, start_line)
-  start_line = start_line or 1
+  start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
