@@ -413,8 +413,31 @@ query($endCursor: String) {
             login
           }
           state
-          comments {
+          comments(last:100) {
             totalCount
+            nodes{
+              id
+              replyTo {
+                id
+              }
+              body
+              commit {
+                oid
+              }
+              author { login }
+              authorAssociation
+              originalPosition
+              position
+              state
+              outdated
+              diffHunk
+              reactions(last:20) {
+                totalCount
+                nodes{
+                  content
+                }
+              }
+            }
           }
         }
       }
