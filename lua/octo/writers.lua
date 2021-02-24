@@ -342,6 +342,7 @@ function M.write_details(bufnr, issue, update)
 end
 
 function M.write_comment(bufnr, comment, line)
+
   -- heading
   line = line or api.nvim_buf_line_count(bufnr) + 1
   M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
@@ -360,8 +361,10 @@ function M.write_comment(bufnr, comment, line)
 
   local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
 
+  local fold_start_line = line + 2
+
   -- body
-  line = line + 2
+  line = fold_start_line
   local comment_body = string.gsub(comment.body, "\r\n", "\n")
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or util.is_blank(comment_body) then
     comment_body = " "
@@ -396,6 +399,11 @@ function M.write_comment(bufnr, comment, line)
     }
   )
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
+
+  -- add fold
+  vim.cmd(format("%d,%dfold", fold_start_line - 1, line))
+  vim.cmd(format("%d,%dfoldopen!", fold_start_line - 1, line))
+
 end
 
 function M.write_diff_hunk(bufnr, diff_hunk, start_line)
