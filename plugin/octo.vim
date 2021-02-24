@@ -79,6 +79,9 @@ augroup END
 " sign definitions
 lua require'octo.signs'.setup()
 
+" folds
+lua require'octo.folds'
+
 " logged-in user
 if !exists("g:octo_loggedin_user")
   let g:octo_loggedin_user = v:null

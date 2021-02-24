@@ -148,6 +148,8 @@ function M.create_buffer(type, obj, repo, create)
     bufnr = api.nvim_get_current_buf()
   end
 
+  api.nvim_set_current_buf(bufnr)
+
   -- clear buffer
   api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
@@ -159,6 +161,12 @@ function M.create_buffer(type, obj, repo, create)
   -- configure buffer
   api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
   api.nvim_buf_set_option(bufnr, "buftype", "acwrite")
+  vim.cmd [[setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀]]
+  vim.cmd [[setlocal foldtext=v:lua.OctoFoldText()]]
+  vim.cmd [[setlocal foldmethod=manual]]
+  vim.cmd [[setlocal foldenable]]
+  vim.cmd [[setlocal foldcolumn=1]]
+  vim.cmd [[setlocal foldlevelstart=99]]
 
   -- register issue
   api.nvim_buf_set_var(bufnr, "iid", iid)
