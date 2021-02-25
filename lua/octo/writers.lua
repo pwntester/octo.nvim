@@ -345,6 +345,7 @@ function M.write_comment(bufnr, comment, line)
 
   -- heading
   line = line or api.nvim_buf_line_count(bufnr) + 1
+  local start_line = line
   M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
 
   local header_vt = {
@@ -354,17 +355,15 @@ function M.write_comment(bufnr, comment, line)
   if comment.comments and comment.state then
     table.insert(header_vt, {" added a ", "OctoNvimCommentHeading"})
     table.insert(header_vt, {comment.state, "OctoNvimCommentValue"})
-    table.insert(header_vt, {format(" review (%d comments)", comment.comments.totalCount), "OctoNvimCommentHeading"})
+    table.insert(header_vt, {format(" review (%d threads)", comment.comments.totalCount), "OctoNvimCommentHeading"})
   else
     table.insert(header_vt, {" commented", "OctoNvimCommentHeading"})
   end
 
   local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
 
-  local fold_start_line = line + 2
-
   -- body
-  line = fold_start_line
+  line = line + 2
   local comment_body = string.gsub(comment.body, "\r\n", "\n")
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or util.is_blank(comment_body) then
     comment_body = " "
@@ -400,10 +399,7 @@ function M.write_comment(bufnr, comment, line)
   )
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 
-  -- add fold
-  vim.cmd(format("%d,%dfold", fold_start_line - 1, line))
-  vim.cmd(format("%d,%dfoldopen!", fold_start_line - 1, line))
-
+  return start_line, line
 end
 
 function M.write_diff_hunk(bufnr, diff_hunk, start_line)
@@ -482,6 +478,8 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
     line = line + 1
   end
+
+  return start_line, line
 end
 
 return M

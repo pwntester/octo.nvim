@@ -271,44 +271,46 @@ M.review_threads_query =
 query($endCursor: String) {
   repository(owner:"%s", name:"%s") {
     pullRequest(number:%d) {
-        reviewThreads(last:80) {
-          nodes {
-            id
-            isResolved
-            isOutdated
-            path
-            resolvedBy { login }
-            line
-            originalLine
-            startLine
-            originalStartLine
-            comments(first: 100, after: $endCursor) {
-              nodes{
-                id
-                body
-                commit {
-                  oid
-                }
-                author { login }
-                authorAssociation
-                originalPosition
-                position
-                state
-                outdated
-                diffHunk
-                reactions(last:20) {
-                  totalCount
-                  nodes{
-                    content
-                  }
-                }
+      reviewThreads(last:80) {
+        nodes {
+          id
+          isResolved
+          isOutdated
+          path
+          resolvedBy { login }
+          line
+          originalLine
+          startLine
+          originalStartLine
+          comments(first: 100, after: $endCursor) {
+            nodes{
+              id
+              body
+              createdAt
+              commit {
+                oid
               }
-              pageInfo {
-                hasNextPage
-                endCursor
+              replyTo { id }
+              author { login }
+              authorAssociation
+              originalPosition
+              position
+              state
+              outdated
+              diffHunk
+              reactions(last:20) {
+                totalCount
+                nodes{
+                  content
+                }
               }
             }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
+        }
       }
     }
   }
@@ -398,6 +400,43 @@ query($endCursor: String) {
         }
       }
       reviewDecision
+      reviewThreads(last:100) {
+        nodes {
+          id
+          isResolved
+          isOutdated
+          path
+          resolvedBy { login }
+          line
+          originalLine
+          startLine
+          originalStartLine
+          comments(first: 100) {
+            nodes{
+              id
+              body
+              createdAt
+              replyTo { id }
+              commit {
+                oid
+              }
+              author { login }
+              authorAssociation
+              originalPosition
+              position
+              state
+              outdated
+              diffHunk
+              reactions(last:20) {
+                totalCount
+                nodes{
+                  content
+                }
+              }
+            }
+          }
+        }
+      }
       reviews(last:100) {
         nodes {
           id

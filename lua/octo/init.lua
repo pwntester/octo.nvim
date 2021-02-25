@@ -5,6 +5,7 @@ local util = require "octo.util"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local date = require "octo.date"
+local folds = require "octo.folds"
 local vim = vim
 local api = vim.api
 local format = string.format
@@ -244,6 +245,17 @@ function M.create_buffer(type, obj, repo, create)
     end
   end
 
+  -- --- 3) collect reviewThreads
+  -- if obj.reviewThreads then
+  --   for _, reviewThread in ipairs(obj.reviewThreads.nodes) do
+  --     table.insert(items, {
+  --       createdAt = reviewThread.comments.nodes[1].createdAt,
+  --       type = "reviewThread",
+  --       item = reviewThread
+  --     })
+  --   end
+  -- end
+
   -- sort items
   table.sort(items, function (i1, i2)
     return date(i1.createdAt) < date(i2.createdAt)
@@ -252,20 +264,44 @@ function M.create_buffer(type, obj, repo, create)
   -- write items
   for _, item in ipairs(items) do
     if item.type == "comment" then
-
       -- write the comment
-      writers.write_comment(bufnr, item.item)
+      local start_line, end_line = writers.write_comment(bufnr, item.item)
+      folds.create(start_line+1, end_line, true)
+
     elseif item.type == "review" then
 
-      -- write top-level comment
-      writers.write_comment(bufnr, item.item)
-
+      -- A review can have 0+ threads
+      local threads = {}
       for _, comment in ipairs(item.item.comments.nodes) do
-        if comment.replyTo == vim.NIL then
-          writers.write_diff_hunk(bufnr, comment.diffHunk)
+        for _, reviewThread in ipairs(obj.reviewThreads.nodes) do
+          if comment.id == reviewThread.comments.nodes[1].id then
+            -- found a thread for the current review
+            table.insert(threads, reviewThread)
+          end
         end
-        writers.write_comment(bufnr, comment)
       end
+
+      if #threads > 0 then
+        -- print review header and top level comment
+        writers.write_comment(bufnr, item.item)
+
+        -- print each of the threads
+        for _, thread in ipairs(threads) do
+          for _,comment in ipairs(thread.comments.nodes) do
+            if comment.replyTo == vim.NIL then
+              writers.write_diff_hunk(bufnr, comment.diffHunk)
+            end
+            writers.write_comment(bufnr, comment)
+          end
+        end
+      end
+
+      -- interesting PullRequestReviewComment fields:
+      -- isMinimized: Returns whether or not a comment has been minimized.
+      -- minimizedReason: Returns why the comment was minimized.
+      -- state: Identifies the state of the comment.
+      -- originalPosition: The original line index in the diff to which the comment applies.
+      -- position: The line index in the diff to which the comment applies.
     end
   end
 
