@@ -140,17 +140,18 @@ function M.write_reactions(bufnr, reactions, line)
   end
 
   if reaction_map.totalCount > 0 then
-    local reactions_vt = {}
+    local reactions_vt
     for reaction, count in pairs(reaction_map) do
       local content = util.reaction_map[reaction]
       if content and count > 0 then
-        table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
-        table.insert(reactions_vt, {content, "OctoNvimBubbleBody"})
-        table.insert(reactions_vt, {"", "OctoNvimBubbleDelimiter"})
-        table.insert(reactions_vt, {format(" %s ", count), "Normal"})
+        reactions_vt = {
+          {"", "OctoNvimBubbleDelimiter"},
+          {content, "OctoNvimBubbleBody"},
+          {"", "OctoNvimBubbleDelimiter"},
+          {format(" %s ", count), "Normal"}
+        }
       end
     end
-
     api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt, {})
   end
   return line
@@ -336,7 +337,8 @@ function M.write_details(bufnr, issue, update)
 
   -- print details as virtual text
   for _, d in ipairs(details) do
-    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, d, {})
+    --api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, d, {})
+    api.nvim_buf_set_extmark(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, 0, { virt_text=d, virt_text_pos='overlay'})
     line = line + 1
   end
 end
@@ -348,19 +350,33 @@ function M.write_comment(bufnr, comment, line)
   local start_line = line
   M.write_block({"", ""}, {bufnr = bufnr, mark = false, line = line})
 
-  local header_vt = {
-    {format("On %s ", util.format_date(comment.createdAt)), "OctoNvimCommentHeading"},
-    {comment.author.login, "OctoNvimCommentUser"},
-  }
+  local header_vt
   if comment.comments and comment.state then
-    table.insert(header_vt, {" added a ", "OctoNvimCommentHeading"})
-    table.insert(header_vt, {comment.state, "OctoNvimCommentValue"})
-    table.insert(header_vt, {format(" review (%d threads)", comment.comments.totalCount), "OctoNvimCommentHeading"})
+    -- Review comments
+    header_vt = {
+      {"REVIEW: ", "OctoNvimMissingDetails"},
+      {comment.author.login.." ", "OctoNvimCommentUser"},
+      {comment.state:lower().." ", "OctoNvimDetailsValue"},
+      {"(", "OctoNvimCommentHeading"},
+      {util.format_date(comment.createdAt), "OctoNvimMissingDetails"},
+      {")", "OctoNvimCommentHeading"}
+    }
   else
-    table.insert(header_vt, {" commented", "OctoNvimCommentHeading"})
+    -- Issue comments
+    header_vt = {
+      {format("On %s ", util.format_date(comment.createdAt)), "OctoNvimCommentHeading"},
+      {comment.author.login, "OctoNvimCommentUser"},
+      {" commented", "OctoNvimCommentHeading"}
+    }
   end
+  --local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
+  local comment_vt_ns = api.nvim_create_namespace("")
+  api.nvim_buf_set_extmark(bufnr, comment_vt_ns, line - 1, 0, { virt_text=header_vt, virt_text_pos='overlay'})
 
-  local comment_vt_ns = api.nvim_buf_set_virtual_text(bufnr, 0, line - 1, header_vt, {})
+  if comment.comments and comment.state and util.is_blank(comment.body) then
+    -- do not render empty review comments
+    return start_line, start_line+1
+  end
 
   -- body
   line = line + 2
@@ -496,7 +512,7 @@ function M.write_commented_lines(bufnr, diff_hunk, side, start_pos, end_pos, sta
 
   -- print end_pos - start_pos + 2 empty lines
   local empty_lines = {}
-  for _=1,(end_pos-start_pos+2) do
+  for _=1,(end_pos-start_pos+4) do
     table.insert(empty_lines, "")
   end
   local diff_directive = lines[1]
@@ -511,39 +527,39 @@ function M.write_commented_lines(bufnr, diff_hunk, side, start_pos, end_pos, sta
       table.insert(side_lines, line)
     end
   end
-
   local max_length = -1
   for _, line in ipairs(side_lines) do
     max_length = math.max(max_length, #line)
   end
   max_length = math.min(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn) + 1
 
-  vim.list_extend(empty_lines, {"", ""})
   M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
 
   local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
   local offset = side == "RIGHT" and right_offset or left_offset
   local final_lines = {unpack(side_lines, start_pos - offset + 1, end_pos - offset + 1)}
   local vt_lines = {}
-  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
-  for _, line in ipairs(final_lines) do
-    local hl_line, vt_line, fill
+  local max_lnum = math.max(#tostring(start_pos), #tostring(end_pos))
+  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_lnum + max_length + 2))}})
+  for i, line in ipairs(final_lines) do
     local stripped_line = line:gsub("^.", "")
-    if vim.startswith(line, "+") then
-      hl_line = "DiffAdd"
-    elseif vim.startswith(line, "-") then
-      hl_line = "DiffDelete"
-    end
+    local hl_line = side == "RIGHT" and "DiffAdd" or "DiffDelete"
+    local vt_line = {stripped_line, hl_line}
+    local fill
     if #stripped_line == 0 or not hl_line then
-      vt_line = {stripped_line}
       fill = string.rep(" ", max_length - #stripped_line - 1)
     else
-      vt_line = {stripped_line, hl_line}
       fill = string.rep(" ", max_length - #stripped_line)
     end
-    table.insert( vt_lines, { {"│ "}, vt_line, {fill}, {" │"} })
+    table.insert( vt_lines, {
+      {"│"},
+      {" "..tostring(i + start_pos - 1).." ", "DiffChange"},
+      vt_line,
+      {fill, hl_line},
+      {"│"}
+    })
   end
-  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
+  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_lnum + max_length + 2))}})
 
   -- print diff_hunk as virtual text
   local line = start_line - 1
@@ -553,6 +569,29 @@ function M.write_commented_lines(bufnr, diff_hunk, side, start_pos, end_pos, sta
   end
 
   return start_line, line
+end
+
+function M.write_review_thread_header(bufnr, opts)
+  local line = api.nvim_buf_line_count(bufnr) - 1
+  local header_vt = {
+    {"[", "OctoNvimMissingDetails"},
+    {opts.path.." ", "OctoNvimDetailsLabel"},
+    {tostring(opts.start_line)..":"..tostring(opts.end_line), "OctoNvimDetailsValue"},
+    {"]", "OctoNvimMissingDetails"},
+  }
+  if opts.isOutdated then
+    table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})
+    table.insert(header_vt, {"outdated", "OctoNvimBubbleRed"})
+    table.insert(header_vt, {" ", "OctoNvimBubbleDelimiter"})
+  end
+  if opts.isResolved then
+    table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})
+    table.insert(header_vt, {"resolved", "OctoNvimBubbleGreen"})
+    table.insert(header_vt, {" ", "OctoNvimBubbleDelimiter"})
+  end
+  M.write_block({""}, {bufnr = bufnr, mark = false })
+  --api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line + 1, header_vt, {})
+  api.nvim_buf_set_extmark(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, 0, { virt_text=header_vt, virt_text_pos='overlay'})
 end
 
 return M

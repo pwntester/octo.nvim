@@ -572,12 +572,18 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     M.add_reviewthread_qf_mappings(repo, number, main_win)
     octo.apply_buffer_mappings(comment_bufnr, "reviewthread")
 
-    -- write path
-    writers.write_title(comment_bufnr, reviewthread.path, 1)
-
     -- write diff hunk
     local main_comment = reviewthread.comments.nodes[1]
-    writers.write_diff_hunk(comment_bufnr, main_comment.diffHunk, 3)
+    local start_line = reviewthread.originalStartLine ~= vim.NIL and reviewthread.originalStartLine or reviewthread.originalLine
+    local end_line = reviewthread.originalLine
+    writers.write_review_thread_header(comment_bufnr, {
+      path = reviewthread.path,
+      start_line = start_line,
+      end_line = end_line,
+      isOutdated = reviewthread.isOutdated,
+      isResolved = reviewthread.isResolved
+    })
+    writers.write_commented_lines(comment_bufnr, main_comment.diffHunk, reviewthread.diffSide, start_line, end_line)
 
     -- write thread
     api.nvim_buf_set_var(comment_bufnr, "comments", {})
