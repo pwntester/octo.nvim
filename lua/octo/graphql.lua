@@ -283,6 +283,7 @@ query($endCursor: String) {
           originalLine
           startLine
           originalStartLine
+          diffSide
           comments(first: 100, after: $endCursor) {
             nodes{
               id
@@ -294,9 +295,6 @@ query($endCursor: String) {
               replyTo { id }
               author { login }
               authorAssociation
-              originalPosition
-              position
-              state
               outdated
               diffHunk
               reactions(last:20) {
@@ -413,6 +411,7 @@ query($endCursor: String) {
           originalLine
           startLine
           originalStartLine
+          diffSide
           comments(first: 100) {
             nodes{
               id
@@ -424,9 +423,6 @@ query($endCursor: String) {
               }
               author { login }
               authorAssociation
-              originalPosition
-              position
-              state
               outdated
               diffHunk
               reactions(last:20) {

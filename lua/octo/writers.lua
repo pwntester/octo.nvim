@@ -402,7 +402,7 @@ function M.write_comment(bufnr, comment, line)
   return start_line, line
 end
 
-function M.write_diff_hunk(bufnr, diff_hunk, start_line)
+function M.write_diff_hunk(bufnr, diff_hunk, start_line, marker)
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
@@ -425,13 +425,15 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
 
   local vt_lines = {}
   table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
-  for _, line in ipairs(lines) do
+  for i, line in ipairs(lines) do
+
+    local arrow = i == marker and ">" or " "
     if vim.startswith(line, "@@ ") then
       local index = string.find(line, "@[^@]*$")
       table.insert(
         vt_lines,
         {
-          {"│ "},
+          {"│"..arrow},
           {string.sub(line, 0, index), "DiffLine"},
           {string.sub(line, index + 1), "DiffSubname"},
           {string.rep(" ", 1 + max_length - #line)},
@@ -442,7 +444,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
       table.insert(
         vt_lines,
         {
-          {"│ "},
+          {"│"..arrow},
           {line, "DiffAdd"},
           {string.rep(" ", max_length - #line)},
           {" │"}
@@ -452,7 +454,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
       table.insert(
         vt_lines,
         {
-          {"│ "},
+          {"│"..arrow},
           {line, "DiffDelete"},
           {string.rep(" ", max_length - #line)},
           {" │"}
@@ -462,13 +464,84 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
       table.insert(
         vt_lines,
         {
-          {"│ "},
+          {"│"..arrow},
           {line},
           {string.rep(" ", max_length - #line)},
           {" │"}
         }
       )
     end
+  end
+  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
+
+  -- print diff_hunk as virtual text
+  local line = start_line - 1
+  for _, vt_line in ipairs(vt_lines) do
+    api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line, {})
+    line = line + 1
+  end
+
+  return start_line, line
+end
+
+function M.write_commented_lines(bufnr, diff_hunk, side, start_pos, end_pos, start_line)
+  start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
+
+  start_pos = start_pos ~= vim.NIL and start_pos or end_pos
+
+  -- clear virtual texts
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
+
+  local lines = vim.split(diff_hunk, "\n")
+
+  -- print end_pos - start_pos + 2 empty lines
+  local empty_lines = {}
+  for _=1,(end_pos-start_pos+2) do
+    table.insert(empty_lines, "")
+  end
+  local diff_directive = lines[1]
+  local side_lines = {}
+  for i=2,#lines do
+    local line = lines[i]
+    if vim.startswith(line, "+") and side == "RIGHT" then
+      table.insert(side_lines, line)
+    elseif vim.startswith(line, "-") and side == "LEFT" then
+      table.insert(side_lines, line)
+    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
+      table.insert(side_lines, line)
+    end
+  end
+
+  local max_length = -1
+  for _, line in ipairs(side_lines) do
+    max_length = math.max(max_length, #line)
+  end
+  max_length = math.min(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn) + 1
+
+  vim.list_extend(empty_lines, {"", ""})
+  M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
+
+  local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
+  local offset = side == "RIGHT" and right_offset or left_offset
+  local final_lines = {unpack(side_lines, start_pos - offset + 1, end_pos - offset + 1)}
+  local vt_lines = {}
+  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
+  for _, line in ipairs(final_lines) do
+    local hl_line, vt_line, fill
+    local stripped_line = line:gsub("^.", "")
+    if vim.startswith(line, "+") then
+      hl_line = "DiffAdd"
+    elseif vim.startswith(line, "-") then
+      hl_line = "DiffDelete"
+    end
+    if #stripped_line == 0 or not hl_line then
+      vt_line = {stripped_line}
+      fill = string.rep(" ", max_length - #stripped_line - 1)
+    else
+      vt_line = {stripped_line, hl_line}
+      fill = string.rep(" ", max_length - #stripped_line)
+    end
+    table.insert( vt_lines, { {"│ "}, vt_line, {fill}, {" │"} })
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
 

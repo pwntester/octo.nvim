@@ -280,16 +280,16 @@ function M.create_buffer(type, obj, repo, create)
           for _,comment in ipairs(thread.comments.nodes) do
             if comment.replyTo == vim.NIL then
               -- TODO: prettify and use virtual text
-              local header = format("%s (outdated:%s) (collapsed:%s) (resolved:%s) (lines:%s-%s)", thread.path, thread.isOutdated, thread.isCollapsed, thread.isResolved, thread.startLine, thread.line)
+              local header = format("%s (outdated:%s) (collapsed:%s) (resolved:%s) (lines:%s-%s %s)", thread.path, thread.isOutdated, thread.isCollapsed, thread.isResolved, thread.originalStartLine, thread.originalLine, thread.diffSide)
               writers.write_block({header}, {bufnr = bufnr, mark = false })
-              thread_start, thread_end = writers.write_diff_hunk(bufnr, comment.diffHunk)
+              thread_start, thread_end = writers.write_commented_lines(bufnr, comment.diffHunk, thread.diffSide, thread.originalStartLine, thread.originalLine)
             end
             local comment_start, comment_end = writers.write_comment(bufnr, comment)
             folds.create(comment_start+1, comment_end, true)
             thread_end = comment_end
             review_end = comment_end
           end
-          folds.create(thread_start-1, thread_end, thread.isCollapsed)
+          folds.create(thread_start-1, thread_end, not thread.isCollapsed)
         end
         folds.create(review_start+1, review_end, true)
       end
