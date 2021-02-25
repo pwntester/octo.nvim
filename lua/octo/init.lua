@@ -166,7 +166,7 @@ function M.create_buffer(type, obj, repo, create)
   vim.cmd [[setlocal foldtext=v:lua.OctoFoldText()]]
   vim.cmd [[setlocal foldmethod=manual]]
   vim.cmd [[setlocal foldenable]]
-  vim.cmd [[setlocal foldcolumn=1]]
+  vim.cmd [[setlocal foldcolumn=3]]
   vim.cmd [[setlocal foldlevelstart=99]]
 
   -- register issue
@@ -245,17 +245,6 @@ function M.create_buffer(type, obj, repo, create)
     end
   end
 
-  -- --- 3) collect reviewThreads
-  -- if obj.reviewThreads then
-  --   for _, reviewThread in ipairs(obj.reviewThreads.nodes) do
-  --     table.insert(items, {
-  --       createdAt = reviewThread.comments.nodes[1].createdAt,
-  --       type = "reviewThread",
-  --       item = reviewThread
-  --     })
-  --   end
-  -- end
-
   -- sort items
   table.sort(items, function (i1, i2)
     return date(i1.createdAt) < date(i2.createdAt)
@@ -283,17 +272,26 @@ function M.create_buffer(type, obj, repo, create)
 
       if #threads > 0 then
         -- print review header and top level comment
-        writers.write_comment(bufnr, item.item)
+        local review_start, review_end = writers.write_comment(bufnr, item.item)
 
         -- print each of the threads
         for _, thread in ipairs(threads) do
+          local thread_start, thread_end
           for _,comment in ipairs(thread.comments.nodes) do
             if comment.replyTo == vim.NIL then
-              writers.write_diff_hunk(bufnr, comment.diffHunk)
+              -- TODO: prettify and use virtual text
+              local header = format("%s (outdated:%s) (collapsed:%s) (resolved:%s) (lines:%s-%s)", thread.path, thread.isOutdated, thread.isCollapsed, thread.isResolved, thread.startLine, thread.line)
+              writers.write_block({header}, {bufnr = bufnr, mark = false })
+              thread_start, thread_end = writers.write_diff_hunk(bufnr, comment.diffHunk)
             end
-            writers.write_comment(bufnr, comment)
+            local comment_start, comment_end = writers.write_comment(bufnr, comment)
+            folds.create(comment_start+1, comment_end, true)
+            thread_end = comment_end
+            review_end = comment_end
           end
+          folds.create(thread_start-1, thread_end, thread.isCollapsed)
         end
+        folds.create(review_start+1, review_end, true)
       end
 
       -- interesting PullRequestReviewComment fields:

@@ -64,8 +64,14 @@ function s:configure_octo_buffer() abort
   if match(bufname(), "octo://.\\+/.\\+/pull/\\d\\+/file/") == -1
     setlocal omnifunc=octo#issue_complete
     setlocal nonumber norelativenumber nocursorline wrap
-    setlocal foldcolumn=1
+    setlocal foldcolumn=3
     setlocal signcolumn=yes
+    setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀
+    setlocal foldtext=v:lua.OctoFoldText()
+    setlocal foldmethod=manual
+    setlocal foldenable
+    setlocal foldcolumn=3
+    setlocal foldlevelstart=99
   end
 endfunction
 

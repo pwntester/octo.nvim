@@ -275,6 +275,7 @@ query($endCursor: String) {
         nodes {
           id
           isResolved
+          isCollapsed
           isOutdated
           path
           resolvedBy { login }
@@ -404,6 +405,7 @@ query($endCursor: String) {
         nodes {
           id
           isResolved
+          isCollapsed
           isOutdated
           path
           resolvedBy { login }

@@ -419,7 +419,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line)
       max_length = #l
     end
   end
-  max_length = math.max(max_length, vim.fn.winwidth(0) - 8)
+  max_length = math.max(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn)
   vim.list_extend(empty_lines, {"", "", ""})
   M.write_block(empty_lines, {bufnr = bufnr, mark = false, line = start_line})
 
