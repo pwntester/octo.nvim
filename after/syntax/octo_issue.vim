@@ -24,6 +24,12 @@ hi def link OctoNvimDetailsLabel Title
 hi def link OctoNvimMissingDetails Comment
 hi def link OctoNvimDetailsValue Identifier
 
+call matchadd('Conceal', ':heart:', 10, -1, {'conceal':'❤️'})
+call matchadd('Conceal', ':+1:', 10, -1, {'conceal':'👍'})
+call matchadd('Conceal', ':see_no_evil:', 10, -1, {'conceal':'🙈'})
+call matchadd('Conceal', ':laughing:', 10, -1, {'conceal':'😆'})
+call matchadd('Conceal', ':thinking:', 10, -1, {'conceal':'🤔'})
+
 " restore current syntax value
 if exists('old_syntax')
   let b:current_syntax = old_syntax
