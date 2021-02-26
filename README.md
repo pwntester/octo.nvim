@@ -61,8 +61,8 @@ There is only an `Octo <object> <action> [arguments]` command:
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-b>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |
-| | resolve | |
-| | unresolve | |
+| thread | resolve| Mark a review thread as resolved |
+| | unresolve | Mark a review thread as unresolved |
 | label | add | <label> |
 | | delete | <label> |
 | assignees| add | <assignee> |
