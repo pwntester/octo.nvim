@@ -1,24 +1,66 @@
 local M = {}
 
+-- https://docs.github.com/en/graphql/reference/mutations#addreaction
+M.add_reaction_mutation =
+  [[
+  mutation {
+    addReaction(input: {subjectId: "%s", content: %s}) {
+      subject {
+        reactionGroups {
+          content
+          users {
+            totalCount
+          }
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#removereaction
+M.remove_reaction_mutation =
+  [[
+  mutation {
+    removeReaction(input: {subjectId: "%s", content: %s}) {
+      subject {
+        reactionGroups {
+          content
+          users {
+            totalCount
+          }
+        }
+      }
+    }
+  }
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
-M.resolve_review_mutation =
+M.resolve_review_thread_mutation =
   [[
   mutation {
     resolveReviewThread(input: {threadId: "%s"}) {
       thread {
+        originalStartLine
+        originalLine
+        isOutdated
         isResolved
+        path
       }
     }
   }
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
-M.unresolve_review_mutation =
+M.unresolve_review_thread_mutation =
   [[
   mutation {
     unresolveReviewThread(input: {threadId: "%s"}) {
       thread {
+        originalStartLine
+        originalLine
+        isOutdated
         isResolved
+        path
       }
     }
   }
@@ -37,6 +79,120 @@ M.submit_review_mutation =
   }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/mutations#addcomment
+M.add_issue_comment_mutation =
+[[
+  mutation {
+    addComment(input: {subjectId: "%s", body: "%s"}) {
+      commentEdge {
+        node {
+          id
+          body
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#updateissuecomment
+M.update_issue_comment_mutation =
+[[
+  mutation {
+    updateIssueComment(input: {id: "%s", body: "%s"}) {
+      issueComment {
+        id
+        body
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreviewcomment
+M.update_pull_request_review_comment_mutation =
+[[
+  mutation {
+    updatePullRequestReviewComment(input: {pullRequestReviewCommentId: "%s", body: "%s"}) {
+      pullRequestReviewComment {
+        id
+        body
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
+M.update_pull_request_review_mutation =
+[[
+  mutation {
+    updatePullRequestReview(input: {pullRequestReviewId: "%s", body: "%s"}) {
+      pullRequestReview {
+        id
+        body
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
+-- M.add_pull_request_review_comment_mutation =
+-- [[
+--   mutation {
+--     addPullRequestReviewComment(input: {inReplyTo: "%s", body: "%s"}) {
+--       comment{
+--         id
+--         body
+--       }
+--     }
+--   }
+-- ]]
+
+-- M.add_pull_request_review_comment_mutation =
+-- [[
+--   mutation {
+--     addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: "%s", body: "%s"}) {
+--       comment{
+--         id
+--         body
+--       }
+--     }
+--   }
+-- ]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#deleteissuecomment
+M.delete_issue_comment_mutation =
+  [[
+  mutation {
+    deleteIssueComment(input: {id: "%s"}) {
+      clientMutationId
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#deletepullrequestreviewcomment
+M.delete_pull_request_review_comment_mutation =
+  [[
+  mutation {
+    deletePullRequestReviewComment(input: {id: "%s"}) {
+      clientMutationId
+    }
+  }
+]]
+
+-- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
+M.update_issue_mutation =
+  [[
+  mutation {
+    updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
+      issue {
+        id
+        number
+        state
+        title
+        body
+      }
+    }
+  }
+]]
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue_mutation =
   [[
@@ -64,10 +220,10 @@ M.create_issue_mutation =
             login
           }
         }
-        reactions(last: 20) {
-          totalCount
-          nodes {
-            content
+        reactionGroups {
+          content
+          users {
+            totalCount
           }
         }
         comments(first: 100) {
@@ -75,10 +231,10 @@ M.create_issue_mutation =
             id
             body
             createdAt
-            reactions(last:20) {
-              totalCount
-              nodes {
-                content
+            reactionGroups {
+              content
+              users {
+                totalCount
               }
             }
             author {
@@ -98,6 +254,22 @@ M.create_issue_mutation =
             login
           }
         }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
+M.update_issue_mutation =
+  [[
+  mutation {
+    updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
+      issue {
+        id
+        number
+        state
+        title
+        body
       }
     }
   }
@@ -130,10 +302,10 @@ M.update_issue_state_mutation =
             login
           }
         }
-        reactions(last: 20) {
-          totalCount
-          nodes {
-            content
+        reactionGroups {
+          content
+          users {
+            totalCount
           }
         }
         comments(first: 100) {
@@ -141,10 +313,10 @@ M.update_issue_state_mutation =
             id
             body
             createdAt
-            reactions(last:20) {
-              totalCount
-              nodes {
-                content
+            reactionGroups {
+              content
+              users {
+                totalCount
               }
             }
             author {
@@ -164,6 +336,22 @@ M.update_issue_state_mutation =
             login
           }
         }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
+M.update_pull_request_mutation =
+  [[
+  mutation {
+    updatePullRequest(input: {pullRequestId: "%s", title: "%s", body: "%s"}) {
+      pullRequest {
+        id
+        number
+        state
+        title
+        body
       }
     }
   }
@@ -213,10 +401,10 @@ M.update_pull_request_state_mutation =
         author {
           login
         }
-        reactions(last: 20) {
-          totalCount
-          nodes {
-            content
+        reactionGroups {
+          content
+          users {
+            totalCount
           }
         }
         comments(first: 100) {
@@ -224,10 +412,10 @@ M.update_pull_request_state_mutation =
             id
             body
             createdAt
-            reactions(last:20) {
-              totalCount
-              nodes {
-                content
+            reactionGroups {
+              content
+              users {
+                totalCount
               }
             }
             author {
@@ -297,10 +485,10 @@ query($endCursor: String) {
               authorAssociation
               outdated
               diffHunk
-              reactions(last:20) {
-                totalCount
-                nodes{
-                  content
+              reactionGroups {
+                content
+                users {
+                  totalCount
                 }
               }
             }
@@ -360,10 +548,10 @@ query($endCursor: String) {
       author {
         login
       }
-      reactions(last: 20) {
-        totalCount
-        nodes {
-          content
+      reactionGroups {
+        content
+        users {
+          totalCount
         }
       }
       projectCards(last: 20) {
@@ -383,10 +571,10 @@ query($endCursor: String) {
           id
           body
           createdAt
-          reactions(last:20) {
-            totalCount
-            nodes {
-              content
+          reactionGroups {
+            content
+            users {
+              totalCount
             }
           }
           author {
@@ -425,10 +613,10 @@ query($endCursor: String) {
               authorAssociation
               outdated
               diffHunk
-              reactions(last:20) {
-                totalCount
-                nodes{
-                  content
+              reactionGroups {
+                content
+                users {
+                  totalCount
                 }
               }
             }
@@ -440,10 +628,10 @@ query($endCursor: String) {
           id
           body
           createdAt
-          reactions(last:20) {
-            totalCount
-            nodes {
-              content
+          reactionGroups {
+            content
+            users {
+              totalCount
             }
           }
           author {
@@ -468,10 +656,10 @@ query($endCursor: String) {
               state
               outdated
               diffHunk
-              reactions(last:20) {
-                totalCount
-                nodes{
-                  content
+              reactionGroups {
+                content
+                users {
+                  totalCount
                 }
               }
             }
@@ -535,10 +723,10 @@ query($endCursor: String) {
           login
         }
       }
-      reactions(last: 20) {
-        totalCount
-        nodes {
-          content
+      reactionGroups {
+        content
+        users {
+          totalCount
         }
       }
       projectCards(last: 20) {
@@ -558,10 +746,10 @@ query($endCursor: String) {
           id
           body
           createdAt
-          reactions(last:20) {
-            totalCount
-            nodes {
-              content
+          reactionGroups {
+            content
+            users {
+              totalCount
             }
           }
           author {

@@ -264,16 +264,16 @@ function M.add_review_comment(isSuggestion)
       {format("%d,%d", line1, line2), "OctoNvimDetailsValue"},
       {")"}
     }
-    writers.write_block({"", ""}, {bufnr = comment_bufnr, mark = false, line = 1})
+    writers.write_block({"", ""}, {bufnr = comment_bufnr, line = 1})
     api.nvim_buf_set_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt, {})
 
     if isSuggestion then
       local lines = api.nvim_buf_get_lines(props.content_bufnr, line1-1, line2, false)
-      writers.write_block({"```suggestion"}, {bufnr = comment_bufnr, mark = false})
-      writers.write_block(lines, {bufnr = comment_bufnr, mark = false})
-      writers.write_block({"```"}, {bufnr = comment_bufnr, mark = false})
+      writers.write_block({"```suggestion"}, {bufnr = comment_bufnr })
+      writers.write_block(lines, {bufnr = comment_bufnr })
+      writers.write_block({"```"}, {bufnr = comment_bufnr })
     else
-      writers.write_block({""}, {bufnr = comment_bufnr, mark = false})
+      writers.write_block({""}, {bufnr = comment_bufnr })
     end
 
     -- change to insert mode
@@ -530,6 +530,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   M.add_reviewthread_qf_mappings(repo, number, main_win)
 
   util.get_file_contents(repo, commit, path, function(lines)
+    api.nvim_buf_set_option(content_bufnr, "modifiable", true)
     api.nvim_buf_set_lines(content_bufnr, 0, -1, false, lines)
     api.nvim_buf_set_option(content_bufnr, "modifiable", false)
     api.nvim_set_current_win(main_win)
@@ -588,11 +589,9 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     -- write thread
     api.nvim_buf_set_var(comment_bufnr, "comments", {})
     for _, comment in ipairs(reviewthread.comments.nodes) do
-      writers.write_comment(comment_bufnr, comment)
+      writers.write_comment(comment_bufnr, comment, "PullRequestReviewComment")
     end
   end
-
-  vim.cmd [[normal! G]]
 
   -- show comment buffer signs
   signs.render_signcolumn(comment_bufnr)

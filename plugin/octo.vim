@@ -72,6 +72,7 @@ function s:configure_octo_buffer() abort
     setlocal foldenable
     setlocal foldcolumn=3
     setlocal foldlevelstart=99
+    setlocal conceallevel=2
   end
 endfunction
 

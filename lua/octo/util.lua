@@ -222,13 +222,28 @@ function M.get_comment_at_cursor(bufnr, cursor)
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
-      return {comment, start_line, end_line}
+      return comment, start_line, end_line
     end
   end
   return nil
 end
 
-function M.update_reactions_at_cursor(bufnr, cursor, reactions) --, reaction_line)
+function M.get_thread_at_cursor(bufnr, cursor)
+  local thread_map = api.nvim_buf_get_var(bufnr, "reviewThreadMap")
+  local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
+  for _, mark in ipairs(marks) do
+    local thread_id = thread_map[tostring(mark[1])].thread_id
+    local start_line = mark[2]
+    local end_line = mark[4]["end_row"]
+    if start_line <= cursor[1] and end_line >= cursor[1] then
+      return thread_id, start_line, end_line
+    end
+  end
+  return nil
+end
+
+
+function M.update_reactions_at_cursor(bufnr, cursor, reaction_groups)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for i, comment in ipairs(comments) do
     local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details = true})
@@ -236,9 +251,7 @@ function M.update_reactions_at_cursor(bufnr, cursor, reactions) --, reaction_lin
     local end_line = mark[3]["end_row"] + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
       --  cursor located in the body of a comment
-      comments[i].reactions = reactions
-      --print("DIFF", comments[i].reaction_line, reaction_line)
-      --comments[i].reaction_line = reaction_line
+      comments[i].reaction_groups = reaction_groups
       api.nvim_buf_set_var(bufnr, "comments", comments)
       return
     end
@@ -246,7 +259,6 @@ function M.update_reactions_at_cursor(bufnr, cursor, reactions) --, reaction_lin
 
   -- cursor not located at any comment, so updating issue
   api.nvim_buf_set_var(bufnr, "body_reactions", reactions)
-  --api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 end
 
 function M.format_date(date_string)
