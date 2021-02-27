@@ -105,7 +105,7 @@ M.pull_request =
                   writers.write_state(bufnr, pull_request.state:upper(), number)
                   writers.write_reactions(
                     bufnr,
-                    pull_request.reactions,
+                    pull_request.reactionGroups,
                     api.nvim_buf_line_count(bufnr) - 1
                   )
                   api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
