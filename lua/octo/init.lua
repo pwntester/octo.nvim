@@ -66,7 +66,7 @@ function M.load(bufnr, cb)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = util.aggregate_pages(output, format("data.repository.%s.comments.nodes", key))
+          local resp = util.aggregate_pages(output, format("data.repository.%s.timelineItems.nodes", key))
           local obj = resp.data.repository[key]
             cb(obj)
         end
@@ -223,48 +223,20 @@ function M.create_buffer(type, obj, repo, create)
     )
   end
 
-  -- collect items
-  local items = {}
-
-  --- 1) comments
-  for _, comment in ipairs(obj.comments.nodes) do
-    table.insert(items, {
-       createdAt = comment.createdAt,
-       type = "comment",
-       item = comment
-    })
-  end
-
-  --- 2) collect reviews
-  if obj.reviews then
-    for _, review in ipairs(obj.reviews.nodes) do
-      table.insert(items, {
-        createdAt = review.createdAt,
-        type = "review",
-        item = review
-      })
-    end
-  end
-
-  -- sort items
-  table.sort(items, function (i1, i2)
-    return date(i1.createdAt) < date(i2.createdAt)
-  end)
-
-  -- write items
+  -- write timeline items
   local review_thread_map = {}
 
-  for _, item in ipairs(items) do
-    if item.type == "comment" then
+  for _, item in ipairs(obj.timelineItems.nodes) do
+    if item.__typename == "IssueComment" then
       -- write the comment
-      local start_line, end_line = writers.write_comment(bufnr, item.item, "IssueComment")
+      local start_line, end_line = writers.write_comment(bufnr, item, "IssueComment")
       folds.create(start_line+1, end_line, true)
 
-    elseif item.type == "review" then
+    elseif item.__typename == "PullRequestReview" then
 
       -- A review can have 0+ threads
       local threads = {}
-      for _, comment in ipairs(item.item.comments.nodes) do
+      for _, comment in ipairs(item.comments.nodes) do
         for _, reviewThread in ipairs(obj.reviewThreads.nodes) do
           if comment.id == reviewThread.comments.nodes[1].id then
             -- found a thread for the current review
@@ -274,7 +246,7 @@ function M.create_buffer(type, obj, repo, create)
       end
 
       -- skip reviews with no threads and empty body
-      if #threads == 0 and util.is_blank(item.item.body) then
+      if #threads == 0 and util.is_blank(item.body) then
         goto continue
       end
 
@@ -284,7 +256,7 @@ function M.create_buffer(type, obj, repo, create)
       -- local max_length = vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn
       -- local header_vt = {{format("┌%s┐", string.rep("─", max_length + 2))}}
       -- api.nvim_buf_set_extmark(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, 0, { virt_text=header_vt, virt_text_pos='overlay'})
-      local review_start, review_end = writers.write_comment(bufnr, item.item, "PullRequestReview")
+      local review_start, review_end = writers.write_comment(bufnr, item, "PullRequestReview")
 
       if #threads > 0 then
         -- print each of the threads

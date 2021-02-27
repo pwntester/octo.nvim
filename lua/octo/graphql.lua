@@ -566,24 +566,106 @@ query($endCursor: String) {
           }
         }
       }
-      comments(first: 100, after: $endCursor) {
-        nodes {
-          id
-          body
-          createdAt
-          reactionGroups {
-            content
-            users {
-              totalCount
-            }
-          }
-          author {
-            login
-          }
-        }
+      timelineItems(first: 100, after: $endCursor) {
         pageInfo {
           hasNextPage
           endCursor
+        }
+        nodes {
+          __typename
+          ... on AssignedEvent {
+            assignee {
+              ... on User {
+                login
+              }
+            }
+            createdAt
+          }
+          ... on PullRequestCommit {
+            commit {
+              committedDate
+              abbreviatedOid
+              changedFiles
+              additions
+              deletions
+              committer {
+                user {
+                  login
+                }
+              }
+            }          
+          }
+          ... on MergedEvent {
+            createdAt
+            actor {
+              login
+            }
+            commit {
+              abbreviatedOid
+            }
+            mergeRefName
+          }
+          ... on ClosedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on IssueComment {
+            id
+            body
+            createdAt
+            reactionGroups {
+              content
+              users {
+                totalCount
+              }
+            }
+            author {
+              login
+            }
+          }
+          ... on PullRequestReview {
+            id
+            body
+            createdAt
+            reactionGroups {
+              content
+              users {
+                totalCount
+              }
+            }
+            author {
+              login
+            }
+            state
+            comments(last:100) {
+              totalCount
+              nodes{
+                id
+                replyTo {
+                  id
+                }
+                body
+                commit {
+                  oid
+                }
+                author { login }
+                authorAssociation
+                originalPosition
+                position
+                state
+                outdated
+                diffHunk
+                reactionGroups {
+                  content
+                  users {
+                    totalCount
+                  }
+                }
+              }
+            }
+          }
         }
       }
       reviewDecision
@@ -611,49 +693,6 @@ query($endCursor: String) {
               }
               author { login }
               authorAssociation
-              outdated
-              diffHunk
-              reactionGroups {
-                content
-                users {
-                  totalCount
-                }
-              }
-            }
-          }
-        }
-      }
-      reviews(last:100) {
-        nodes {
-          id
-          body
-          createdAt
-          reactionGroups {
-            content
-            users {
-              totalCount
-            }
-          }
-          author {
-            login
-          }
-          state
-          comments(last:100) {
-            totalCount
-            nodes{
-              id
-              replyTo {
-                id
-              }
-              body
-              commit {
-                oid
-              }
-              author { login }
-              authorAssociation
-              originalPosition
-              position
-              state
               outdated
               diffHunk
               reactionGroups {
@@ -741,24 +780,41 @@ query($endCursor: String) {
           }
         }
       }
-      comments(first: 100, after: $endCursor) {
-        nodes {
-          id
-          body
-          createdAt
-          reactionGroups {
-            content
-            users {
-              totalCount
-            }
-          }
-          author {
-            login
-          }
-        }
+      timelineItems(first: 100, after: $endCursor) {
         pageInfo {
           hasNextPage
           endCursor
+        }
+        nodes {
+          __typename
+          ... on IssueComment {
+            id
+            body
+            createdAt
+            reactionGroups {
+              content
+              users {
+                totalCount
+              }
+            }
+            author {
+              login
+            }
+          }
+          ... on ClosedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on AssignedEvent {
+            assignee {
+              ... on User {
+                login
+              }
+            }
+            createdAt
+          }
         }
       }
       labels(first: 20) {
