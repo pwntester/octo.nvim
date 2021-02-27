@@ -265,7 +265,7 @@ function M.add_review_comment(isSuggestion)
       {")"}
     }
     writers.write_block({"", ""}, {bufnr = comment_bufnr, line = 1})
-    writers.write_virtual_texxt(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt)
+    writers.write_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt)
 
     if isSuggestion then
       local lines = api.nvim_buf_get_lines(props.content_bufnr, line1-1, line2, false)
