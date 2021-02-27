@@ -234,6 +234,7 @@ function M.get_thread_at_cursor(bufnr, cursor)
     local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
     for _, mark in ipairs(marks) do
       local info = thread_map[tostring(mark[1])]
+      if not info then goto continue end
       local thread_id = info.thread_id
       local first_comment_id = info.first_comment_id
       local start_line = mark[2]
@@ -241,6 +242,7 @@ function M.get_thread_at_cursor(bufnr, cursor)
       if start_line <= cursor[1] and end_line >= cursor[1] then
         return thread_id, start_line, end_line, first_comment_id
       end
+      ::continue::
     end
   elseif vim.bo[bufnr].ft == "octo_reviewthread" then
     local bufname = api.nvim_buf_get_name(bufnr) 
