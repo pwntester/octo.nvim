@@ -405,6 +405,7 @@ function M.write_comment(bufnr, comment, kind, line)
       reaction_line = reaction_line,
       reaction_groups = comment.reactionGroups,
       kind = kind,
+      first_comment_id = comment.first_comment_id,
     }
   )
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)

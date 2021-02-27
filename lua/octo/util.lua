@@ -229,15 +229,24 @@ function M.get_comment_at_cursor(bufnr, cursor)
 end
 
 function M.get_thread_at_cursor(bufnr, cursor)
-  local thread_map = api.nvim_buf_get_var(bufnr, "reviewThreadMap")
-  local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
-  for _, mark in ipairs(marks) do
-    local thread_id = thread_map[tostring(mark[1])].thread_id
-    local start_line = mark[2]
-    local end_line = mark[4]["end_row"]
-    if start_line <= cursor[1] and end_line >= cursor[1] then
-      return thread_id, start_line, end_line
+  if vim.bo[bufnr].ft == "octo_issue" then
+    local thread_map = api.nvim_buf_get_var(bufnr, "reviewThreadMap")
+    local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
+    for _, mark in ipairs(marks) do
+      local info = thread_map[tostring(mark[1])]
+      local thread_id = info.thread_id
+      local first_comment_id = info.first_comment_id
+      local start_line = mark[2]
+      local end_line = mark[4]["end_row"]
+      if start_line <= cursor[1] and end_line >= cursor[1] then
+        return thread_id, start_line, end_line, first_comment_id
+      end
     end
+  elseif vim.bo[bufnr].ft == "octo_reviewthread" then
+    local bufname = api.nvim_buf_get_name(bufnr) 
+    local thread_id, first_comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
+    local end_line = api.nvim_buf_line_count(bufnr) - 1
+    return thread_id, 1, end_line, first_comment_id
   end
   return nil
 end

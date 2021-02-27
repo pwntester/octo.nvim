@@ -267,14 +267,14 @@ end
 
 function M.add_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_number({"octo_issue", "octo_reviewthread"})
+  local repo = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
 
-  local kind, reply_to
+  local kind
   local cursor = api.nvim_win_get_cursor(0)
-  local thread_id, _, thread_end_line = util.get_thread_at_cursor(bufnr, cursor)
+  local thread_id, _, thread_end_line, first_comment_id = util.get_thread_at_cursor(bufnr, cursor)
   if thread_id then
     kind = "PullRequestReviewComment"
   else
@@ -285,7 +285,7 @@ function M.add_comment()
     createdAt = vim.fn.strftime("%FT%TZ"),
     author = {login = vim.g.octo_loggedin_user},
     body = " ",
-    kind = kind,
+    first_comment_id = first_comment_id,
     id = -1,
     reactionGroups = {
       {
@@ -338,12 +338,12 @@ function M.add_comment()
       }
     }
   }
-  if kind == "IssueComment" then
+  if kind == "IssueComment" or vim.bo.ft == "octo_reviewthread" then
     -- just place it at the bottom
     writers.write_comment(bufnr, comment, kind)
     vim.fn.execute("normal! Gkkk")
     vim.fn.execute("startinsert")
-  else
+  elseif kind == "PullRequestReviewComment" and vim.bo.ft == "octo_issue" then
     api.nvim_buf_set_lines(bufnr, thread_end_line+1, thread_end_line+1, false, {"x", "x", "x", "x", "x", "x"})
     writers.write_comment(bufnr, comment, kind, thread_end_line+2)
     vim.fn.execute(":"..thread_end_line + 4)
