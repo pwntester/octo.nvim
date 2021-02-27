@@ -797,7 +797,7 @@ function M.submit_review()
     {"Press <c-a> to approve, <c-m> to comment or <c-r> to request changes", "OctoNvimDetailsValue"}
   }
   writers.write_block({"", "", ""}, {bufnr = bufnr, mark = false, line = 1})
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, help_vt, {})
+  writers.write_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, help_vt)
   local mapping_opts = {script = true, silent = true, noremap = true}
   api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)

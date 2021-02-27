@@ -1,4 +1,5 @@
 local util = require("octo.util")
+local writers = require("octo.writers")
 local constants = require("octo.constants")
 local format = string.format
 local api = vim.api
@@ -84,7 +85,7 @@ function M.render_signcolumn(bufnr)
     -- description virtual text
     if util.is_blank(desc["body"]) then
       local desc_vt = {{constants.NO_BODY_MSG, "OctoNvimEmpty"}}
-      api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, start_line, desc_vt, {})
+      writers.write_virtual_text(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, start_line, desc_vt)
     end
   end
 
@@ -101,7 +102,7 @@ function M.render_signcolumn(bufnr)
     -- comment virtual text
     if util.is_blank(c["body"]) then
       local comment_vt = {{constants.NO_BODY_MSG, "OctoNvimEmpty"}}
-      api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, start_line, comment_vt, {})
+      writers.write_virtual_text(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, start_line, comment_vt)
     end
   end
 

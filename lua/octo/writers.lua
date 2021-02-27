@@ -99,7 +99,7 @@ function M.write_state(bufnr, state, number)
       table.insert(title_vt, {"[DRAFT] ", "OctoNvimIssueId"})
     end
   end
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
+  M.write_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt)
 end
 
 function M.write_body(bufnr, issue, line)
@@ -137,7 +137,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
     end
   end
 
-  api.nvim_buf_set_extmark(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, 0, { virt_text=reactions_vt, virt_text_pos='overlay'})
+  M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
   return line
 end
 
@@ -321,7 +321,7 @@ function M.write_details(bufnr, issue, update)
 
   -- print details as virtual text
   for _, d in ipairs(details) do
-    api.nvim_buf_set_extmark(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, 0, { virt_text=d, virt_text_pos='overlay'})
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, d)
     line = line + 1
   end
 end
@@ -369,7 +369,7 @@ function M.write_comment(bufnr, comment, kind, line)
     }
   end
   local comment_vt_ns = api.nvim_create_namespace("")
-  api.nvim_buf_set_extmark(bufnr, comment_vt_ns, line - 1, 0, { virt_text=header_vt, virt_text_pos='overlay'})
+  M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
 
   if kind == "PullRequestReview" and util.is_blank(comment.body) then
     -- do not render empty review comments
@@ -488,7 +488,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, marker)
   -- print diff_hunk as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
-    api.nvim_buf_set_extmark(bufnr, constants.OCTO_DETAILS_VT_NS, line, 0, { virt_text=vt_line, virt_text_pos='overlay'})
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
     line = line + 1
   end
 
@@ -553,7 +553,7 @@ function M.write_commented_lines(bufnr, diff_hunk, side, start_pos, end_pos, sta
   -- print diff_hunk as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
-    api.nvim_buf_set_extmark(bufnr, constants.OCTO_DETAILS_VT_NS, line, 0, { virt_text=vt_line, virt_text_pos='overlay'})
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
     line = line + 1
   end
 
@@ -584,7 +584,12 @@ function M.write_review_thread_header(bufnr, opts, line)
     table.insert(header_vt, {" ", "OctoNvimBubbleDelimiter"})
   end
   M.write_block({""}, {bufnr = bufnr})
-  api.nvim_buf_set_extmark(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, 0, { virt_text=header_vt, virt_text_pos='overlay'})
+  M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
+end
+
+function M.write_virtual_text(bufnr, ns, line, chunks)
+  --api.nvim_buf_set_extmark(bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
+  api.nvim_buf_set_virtual_text(bufnr, ns, line, chunks, {})
 end
 
 return M
