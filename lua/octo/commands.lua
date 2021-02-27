@@ -344,9 +344,9 @@ function M.add_comment()
     vim.fn.execute("normal! Gkkk")
     vim.fn.execute("startinsert")
   elseif kind == "PullRequestReviewComment" and vim.bo.ft == "octo_issue" then
-    api.nvim_buf_set_lines(bufnr, thread_end_line+1, thread_end_line+1, false, {"x", "x", "x", "x", "x", "x"})
-    writers.write_comment(bufnr, comment, kind, thread_end_line+2)
-    vim.fn.execute(":"..thread_end_line + 4)
+    api.nvim_buf_set_lines(bufnr, thread_end_line + 1, thread_end_line + 1, false, {"x", "x", "x", "x", "x", "x"})
+    writers.write_comment(bufnr, comment, kind, thread_end_line + 2)
+    vim.fn.execute(":" .. thread_end_line + 4)
     vim.fn.execute("startinsert")
   end
 end
@@ -429,13 +429,17 @@ function M.resolve_comment()
               -- review thread header
               local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
               local end_line = thread.originalLine
-              writers.write_review_thread_header(bufnr, {
-                path = thread.path,
-                start_line = start_line,
-                end_line = end_line,
-                isOutdated = thread.isOutdated,
-                isResolved = thread.isResolved,
-              }, thread_line - 2)
+              writers.write_review_thread_header(
+                bufnr,
+                {
+                  path = thread.path,
+                  start_line = start_line,
+                  end_line = end_line,
+                  isOutdated = thread.isOutdated,
+                  isResolved = thread.isResolved
+                },
+                thread_line - 2
+              )
               vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
             elseif vim.bo.ft == "octo_reviewthread" then
               local pattern = format("%s/%s", thread_id, comment_id)
@@ -487,13 +491,17 @@ function M.unresolve_comment()
               -- review thread header
               local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
               local end_line = thread.originalLine
-              writers.write_review_thread_header(bufnr, {
-                path = thread.path,
-                start_line = start_line,
-                end_line = end_line,
-                isOutdated = thread.isOutdated,
-                isResolved = thread.isResolved,
-              }, thread_line - 2)
+              writers.write_review_thread_header(
+                bufnr,
+                {
+                  path = thread.path,
+                  start_line = start_line,
+                  end_line = end_line,
+                  isOutdated = thread.isOutdated,
+                  isResolved = thread.isResolved
+                },
+                thread_line - 2
+              )
             elseif vim.bo.ft == "octo_reviewthread" then
               local pattern = format("%s/%s", thread_id, comment_id)
               print(pattern)
