@@ -178,14 +178,16 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | Name                        | Default          |
 | ---                         | ---              |
 | `OctoNvimDirty`             | `ErrorMsg`       |
-| `OctoNvimCommentHeading`    | `PreProc`        |
-| `OctoNvimCommentUser`       | `Underlined`     |
+| `OctoNvimUser`              | `String`     |
 | `OctoNvimIssueTitle`        | `PreProc`        |
 | `OctoNvimIssueId`           | `Question`       |
 | `OctoNvimIssueOpen`         | `MoreMsg`        |
 | `OctoNvimIssueClosed`       | `ErrorMsg`       |
 | `OctoNvimEmpty`             | `Comment`        |
 | `OctoNvimFloat`             | `NormalNC`       |
+| `OctoNvimDate`              | `Comment`       |
+| `OctoNvimSymbol`            | `Comment`       |
+| `OctoNvimTimelineItemHeading`| `Comment`       |
 | `OctoNvimBubbleRed`         | `DiffDelete`.fg  |
 | `OctoNvimBubbleGreen`       | `DiffAdd`.fg     |
 | `OctoNvimBubbleDelimiter`   | `NormalFloat`.bg |

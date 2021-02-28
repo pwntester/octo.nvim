@@ -198,8 +198,8 @@ function M.write_details(bufnr, issue, update)
     local projects_vt = {
       {"Projects: ", "OctoNvimDetailsLabel"}
     }
-    local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
-    local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
+    --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
+    --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
     for _, card in ipairs(issue.projectCards.nodes) do
       table.insert(projects_vt, {card.column.name, })
       table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
@@ -342,30 +342,30 @@ function M.write_comment(bufnr, comment, kind, line)
   if kind == "PullRequestReview" then
     -- Review top-level comments
     header_vt = {
-      {"REVIEW: ", "OctoNvimMissingDetails"},
-      {comment.author.login.." ", "OctoNvimCommentUser"},
+      {"REVIEW: ", "OctoNvimTimelineItemHeading"},
+      {comment.author.login.." ", "OctoNvimUser"},
       {comment.state:lower().." ", "OctoNvimDetailsValue"},
-      {"(", "OctoNvimCommentHeading"},
-      {util.format_date(comment.createdAt), "OctoNvimMissingDetails"},
-      {")", "OctoNvimCommentHeading"}
+      {"(", "OctoNvimSymbol"},
+      {util.format_date(comment.createdAt), "OctoNvimDate"},
+      {")", "OctoNvimSymbol"}
     }
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
     header_vt = {
-      {"THREAD COMMENT: ", "OctoNvimMissingDetails"},
-      {comment.author.login.." ", "OctoNvimCommentUser"},
-      {"(", "OctoNvimCommentHeading"},
-      {util.format_date(comment.createdAt), "OctoNvimMissingDetails"},
-      {")", "OctoNvimCommentHeading"}
+      {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"},
+      {comment.author.login.." ", "OctoNvimUser"},
+      {"(", "OctoNvimSymbol"},
+      {util.format_date(comment.createdAt), "OctoNvimDate"},
+      {")", "OctoNvimSymbol"}
     }
   elseif kind == "IssueComment" then
     -- Issue comments
     header_vt = {
-      {"COMMENT: ", "OctoNvimMissingDetails"},
-      {comment.author.login.." ", "OctoNvimCommentUser"},
-      {"(", "OctoNvimCommentHeading"},
-      {util.format_date(comment.createdAt), "OctoNvimMissingDetails"},
-      {")", "OctoNvimCommentHeading"}
+      {"COMMENT: ", "OctoNvimTimelineItemHeading"},
+      {comment.author.login.." ", "OctoNvimUser"},
+      {"(", "OctoNvimSymbol"},
+      {util.format_date(comment.createdAt), "OctoNvimDate"},
+      {")", "OctoNvimSymbol"}
     }
   end
   local comment_vt_ns = api.nvim_create_namespace("")
@@ -567,11 +567,11 @@ function M.write_review_thread_header(bufnr, opts, line)
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, line + 2)
 
   local header_vt = {
-    {"THREAD: ", "OctoNvimMissingDetails"},
-    {"[", "OctoNvimMissingDetails"},
+    {"THREAD: ", "OctoNvimTimelineItemHeading"},
+    {"[", "OctoNvimSymbol"},
     {opts.path.." ", "OctoNvimDetailsLabel"},
     {tostring(opts.start_line)..":"..tostring(opts.end_line), "OctoNvimDetailsValue"},
-    {"]", "OctoNvimMissingDetails"},
+    {"]", "OctoNvimSymbol"},
   }
   if opts.isOutdated then
     table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})
