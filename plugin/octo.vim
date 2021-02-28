@@ -85,7 +85,15 @@ au BufWriteCmd octo://* lua require'octo'.save_buffer()
 augroup END
 
 " sign definitions
-lua require'octo.signs'.setup()
+sign define octo_comment text=❯ texthl=OctoNvimCommentLine linehl=OctoNvimCommentLine 
+sign define octo_clean_block_start text=┌ 
+sign define octo_clean_block_end text=└ 
+sign define octo_dirty_block_start text=┌ texthl=OctoNvimDirty 
+sign define octo_dirty_block_end text=└ texthl=OctoNvimDirty 
+sign define octo_dirty_block_middle text=│ texthl=OctoNvimDirty 
+sign define octo_clean_block_middle text=│ 
+sign define octo_clean_line text=[ 
+sign define octo_dirty_line text=[ texthl=OctoNvimDirty 
 
 " folds
 lua require'octo.folds'

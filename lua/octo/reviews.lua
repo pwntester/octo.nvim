@@ -611,8 +611,8 @@ function M.highlight_lines(bufnr, startLine, endLine)
   if not endLine then return end
   startLine = startLine or endLine
   for line = startLine, endLine do
-    api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line - 1, 0, -1)
-    signs.place("comment", bufnr, line - 1)
+    --api.nvim_buf_add_highlight(bufnr, constants.OCTO_HIGHLIGHT_NS, "OctoNvimCommentLine", line - 1, 0, -1)
+    signs.place("octo_comment", bufnr, line - 1)
   end
 end
 
