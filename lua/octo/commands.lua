@@ -800,6 +800,7 @@ function M.submit_review()
     }
   )
   api.nvim_set_current_win(winnr)
+  api.nvim_buf_set_option(bufnr, "syntax", "markdown")
 
   local help_vt = {
     {"Press <c-a> to approve, <c-m> to comment or <c-r> to request changes", "OctoNvimDetailsValue"}

@@ -4,12 +4,6 @@ if exists('b:current_syntax')
   unlet b:current_syntax
 endif
 
-syntax include @markdown syntax/markdown.vim
-unlet b:current_syntax
-
-syntax region issue_comment matchgroup=OctoNvimCommentDelimiters start=/commented:\n\n/ keepend end=/\n\n\n/ contains=@markdown
-syntax region issue_comment matchgroup=OctoNvimCommentDelimiters start=/\n\n/ keepend end=/\n\n\nOn/ contains=@markdown
-
 hi def link OctoNvimDirty ErrorMsg
 hi def link OctoNvimCommentHeading PreProc
 hi def link OctoNvimCommentUser String 

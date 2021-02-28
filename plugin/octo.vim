@@ -73,6 +73,7 @@ function s:configure_octo_buffer() abort
     setlocal foldcolumn=3
     setlocal foldlevelstart=99
     setlocal conceallevel=2
+    setlocal syntax=markdown
   end
 endfunction
 

@@ -169,6 +169,7 @@ function M.create_buffer(type, obj, repo, create)
   vim.cmd [[setlocal foldcolumn=3]]
   vim.cmd [[setlocal foldlevelstart=99]]
   vim.cmd [[setlocal conceallevel=2]]
+  vim.cmd [[setlocal syntax=markdown]]
 
   -- register issue
   api.nvim_buf_set_var(bufnr, "iid", iid)

@@ -232,6 +232,7 @@ function M.add_review_comment(isSuggestion)
       api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, {})
     else
       comment_bufnr = api.nvim_create_buf(false, true)
+      api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
     end
 
     -- check if there is a comment win already open
@@ -303,6 +304,7 @@ function M.add_review_comment(isSuggestion)
     -- configure comment buffer
     api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
     api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
+    api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
     api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
     api.nvim_buf_set_name(comment_bufnr, bufname)
     api.nvim_buf_set_option(comment_bufnr, "modified", false)
@@ -564,6 +566,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     comment_bufnr = api.nvim_create_buf(false, true)
     api.nvim_buf_set_var(comment_bufnr, "repo", repo)
     api.nvim_buf_set_var(comment_bufnr, "number", number)
+    api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
     api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewthread")
     api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
     api.nvim_buf_set_name(comment_bufnr, comment_bufname)
