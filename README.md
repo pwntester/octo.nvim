@@ -202,6 +202,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimPullAdditions`     | `DiffAdd`        |
 | `OctoNvimPullDeletions`     | `DiffDelete`     |
 | `OctoNvimPullModifications` | `DiffChange`     |
+| `OctoNvimEditable`          | `NormalFloat`.bg|
 
 ## Settings
 
