@@ -30,6 +30,9 @@ if get(g:, 'octo_color_bubble_bg', '') != '' && get(g:, 'octo_color_green', '') 
   execute('hi! OctoNvimPullAdditions guifg='.g:octo_color_green)
   execute('hi! OctoNvimPullDeletions guifg='.g:octo_color_red)
   execute('hi! OctoNvimPullModifications guifg='.g:octo_color_blue)
+
+  " Editable regions
+  execute('hi! OctoNvimEditable guibg='.g:octo_color_bubble_bg)
 endif
 
 function! s:command_complete(...)
@@ -64,8 +67,16 @@ function s:configure_octo_buffer() abort
   if match(bufname(), "octo://.\\+/.\\+/pull/\\d\\+/file/") == -1
     setlocal omnifunc=octo#issue_complete
     setlocal nonumber norelativenumber nocursorline wrap
-    setlocal foldcolumn=1
+    setlocal foldcolumn=3
     setlocal signcolumn=yes
+    setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀
+    setlocal foldtext=v:lua.OctoFoldText()
+    setlocal foldmethod=manual
+    setlocal foldenable
+    setlocal foldcolumn=3
+    setlocal foldlevelstart=99
+    setlocal conceallevel=2
+    setlocal syntax=markdown
   end
 endfunction
 
@@ -77,7 +88,15 @@ au BufWriteCmd octo://* lua require'octo'.save_buffer()
 augroup END
 
 " sign definitions
-lua require'octo.signs'.setup()
+sign define octo_comment text=❯ texthl=OctoNvimCommentLine linehl=OctoNvimCommentLine 
+sign define octo_clean_block_start text=┌ linehl=OctoNvimEditable
+sign define octo_clean_block_end text=└ linehl=OctoNvimEditable
+sign define octo_dirty_block_start text=┌ texthl=OctoNvimDirty linehl=OctoNvimEditable
+sign define octo_dirty_block_end text=└ texthl=OctoNvimDirty linehl=OctoNvimEditable
+sign define octo_dirty_block_middle text=│ texthl=OctoNvimDirty linehl=OctoNvimEditable
+sign define octo_clean_block_middle text=│ linehl=OctoNvimEditable
+sign define octo_clean_line text=[ linehl=OctoNvimEditable
+sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable
 
 " folds
 lua require'octo.folds'

@@ -103,7 +103,7 @@ local commands = {
     end,
     threads = function()
       M.review_threads()
-    end,
+    end
   },
   gist = {
     list = function(...)
@@ -116,18 +116,20 @@ local commands = {
       menu.gists(opts)
     end
   },
+  thread = {
+    resolve = function()
+      M.resolve_comment()
+    end,
+    unresolve = function()
+      M.unresolve_comment()
+    end
+  },
   comment = {
     add = function()
       M.add_comment()
     end,
     delete = function()
       M.delete_comment()
-    end,
-    resolve = function()
-      M.resolve_comment()
-    end,
-    unresolve = function()
-      M.unresolve_comment()
     end
   },
   label = {
@@ -251,32 +253,102 @@ function M.parse_url(url)
     type = "issue"
   end
   if repo and number then
-    if "issue" == type then M.get_issue(repo, number); return true end
-    if "pull" == type then M.get_pull_request(repo, number); return true end
+    if "issue" == type then
+      M.get_issue(repo, number)
+      return true
+    end
+    if "pull" == type then
+      M.get_pull_request(repo, number)
+      return true
+    end
   end
   return false
 end
 
 function M.add_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
+  local repo = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
+  end
+
+  local kind
+  local cursor = api.nvim_win_get_cursor(0)
+  local thread_id, _, thread_end_line, first_comment_id = util.get_thread_at_cursor(bufnr, cursor)
+  if thread_id then
+    kind = "PullRequestReviewComment"
+  else
+    kind = "IssueComment"
   end
 
   local comment = {
     createdAt = vim.fn.strftime("%FT%TZ"),
     author = {login = vim.g.octo_loggedin_user},
     body = " ",
-    reactions = {
-      totalCount = 0,
-      nodes = {}
-    },
-    id = -1
+    first_comment_id = first_comment_id,
+    id = -1,
+    reactionGroups = {
+      {
+        content = "THUMBS_UP",
+        users = {
+          totalCount = 0
+        }
+      },
+      {
+        content = "THUMBS_DOWN",
+        users = {
+          totalCount = 0
+        }
+      },
+      {
+        content = "LAUGH",
+        users = {
+          totalCount = 0
+        }
+      },
+      {
+        content = "HOORAY",
+        users = {
+          totalCount = 0
+        }
+      },
+      {
+        content = "CONFUSED",
+        users = {
+          totalCount = 0
+        }
+      },
+      {
+        content = "HEART",
+        users = {
+          totalCount = 0
+        }
+      },
+      {
+        content = "ROCKET",
+        users = {
+          totalCount = 0
+        }
+      },
+      {
+        content = "EYES",
+        users = {
+          totalCount = 0
+        }
+      }
+    }
   }
-  writers.write_comment(bufnr, comment)
-  vim.fn.execute("normal! Gkkk")
-  vim.fn.execute("startinsert")
+  if kind == "IssueComment" or vim.bo.ft == "octo_reviewthread" then
+    -- just place it at the bottom
+    writers.write_comment(bufnr, comment, kind)
+    vim.fn.execute("normal! Gkkk")
+    vim.fn.execute("startinsert")
+  elseif kind == "PullRequestReviewComment" and vim.bo.ft == "octo_issue" then
+    api.nvim_buf_set_lines(bufnr, thread_end_line + 1, thread_end_line + 1, false, {"x", "x", "x", "x", "x", "x"})
+    writers.write_comment(bufnr, comment, kind, thread_end_line + 2)
+    vim.fn.execute(":" .. thread_end_line + 4)
+    vim.fn.execute("startinsert")
+  end
 end
 
 function M.delete_comment()
@@ -286,24 +358,28 @@ function M.delete_comment()
     return
   end
   local cursor = api.nvim_win_get_cursor(0)
-  local comment, start_line, end_line = unpack(util.get_comment_at_cursor(bufnr, cursor))
+  local comment, start_line, end_line = util.get_comment_at_cursor(bufnr, cursor)
   if not comment then
     print("The cursor does not seem to be located at any comment")
     return
   end
+  local query
+  if comment.kind == "IssueComment" then
+    query = graphql("delete_issue_comment_mutation", comment.id)
+  elseif comment.kind == "PullRequestReviewComment" then
+    query = graphql("delete_pull_request_review_comment_mutation", comment.id)
+  elseif comment.kind == "PullRequestReview" then
+    -- Review top level comments cannot be deleted here
+    return
+  end
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
-    local kind = util.get_buffer_kind(bufnr)
-    -- TODO: graphql
     gh.run(
       {
-        args = {
-          "api",
-          "-X",
-          "DELETE",
-          format("repos/%s/%s/comments/%s", repo, kind, comment.id)
-        },
+        args = {"api", "graphql", "-f", format("query=%s", query)},
         cb = function(_)
+          -- TODO: deleting the last review thread comment, it deletes the whole thread
+          -- so diff hunk should not be showed any more
           api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
           api.nvim_buf_clear_namespace(bufnr, comment.namespace, 0, -1)
           api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
@@ -324,17 +400,21 @@ end
 
 function M.resolve_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_reviewthread"})
+  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
-  local status, _, thread_id, comment_id =
-    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
-  if not status then
-    api.nvim_err_writeln("Cannot extract thread id from buffer name")
-    return
+
+  local thread_id, thread_line, comment_id
+  if vim.bo.ft == "octo_issue" then
+    local cursor = api.nvim_win_get_cursor(0)
+    thread_id, thread_line = util.get_thread_at_cursor(bufnr, cursor)
+  elseif vim.bo.ft == "octo_reviewthread" then
+    local bufname = api.nvim_buf_get_name(bufnr)
+    thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
   end
-  local query = format(graphql.resolve_review_mutation, thread_id)
+
+  local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -343,18 +423,36 @@ function M.resolve_comment()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = json.parse(output)
-          if resp.data.resolveReviewThread.thread.isResolved then
-            local pattern = format("%s/%s", thread_id, comment_id)
-            local qf = vim.fn.getqflist({items = 0})
-            local items = qf.items
-            for _, item in ipairs(items) do
-              if item.pattern == pattern then
-                item.text = string.gsub(item.text, "%) ", ") RESOLVED ", 1)
-                break
+          local thread = resp.data.resolveReviewThread.thread
+          if thread.isResolved then
+            if vim.bo.ft == "octo_issue" then
+              -- review thread header
+              local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+              local end_line = thread.originalLine
+              writers.write_review_thread_header(
+                bufnr,
+                {
+                  path = thread.path,
+                  start_line = start_line,
+                  end_line = end_line,
+                  isOutdated = thread.isOutdated,
+                  isResolved = thread.isResolved
+                },
+                thread_line - 2
+              )
+              vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
+            elseif vim.bo.ft == "octo_reviewthread" then
+              local pattern = format("%s/%s", thread_id, comment_id)
+              local qf = vim.fn.getqflist({items = 0})
+              local items = qf.items
+              for _, item in ipairs(items) do
+                if item.pattern == pattern then
+                  item.text = string.gsub(item.text, "%) ", ") RESOLVED ", 1)
+                  break
+                end
               end
+              vim.fn.setqflist({}, "r", {items = items})
             end
-            vim.fn.setqflist({}, "r", {items = items})
-            print("RESOLVED!")
           end
         end
       end
@@ -364,17 +462,21 @@ end
 
 function M.unresolve_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_reviewthread"})
+  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
-  local status, _, thread_id, comment_id =
-    string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
-  if not status then
-    api.nvim_err_writeln("Cannot extract thread id from buffer name")
-    return
+
+  local thread_id, thread_line, comment_id
+  if vim.bo.ft == "octo_issue" then
+    local cursor = api.nvim_win_get_cursor(0)
+    thread_id, thread_line = util.get_thread_at_cursor(bufnr, cursor)
+  elseif vim.bo.ft == "octo_reviewthread" then
+    local bufname = api.nvim_buf_get_name(bufnr)
+    thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
   end
-  local query = format(graphql.unresolve_review_mutation, thread_id)
+
+  local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -383,18 +485,37 @@ function M.unresolve_comment()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = json.parse(output)
-          if not resp.data.unresolveReviewThread.thread.isResolved then
-            local pattern = format("%s/%s", thread_id, comment_id)
-            local qf = vim.fn.getqflist({items = 0})
-            local items = qf.items
-            for _, item in ipairs(items) do
-              if item.pattern == pattern then
-                item.text = string.gsub(item.text, "RESOLVED ", "")
-                break
+          local thread = resp.data.unresolveReviewThread.thread
+          if not thread.isResolved then
+            if vim.bo.ft == "octo_issue" then
+              -- review thread header
+              local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+              local end_line = thread.originalLine
+              writers.write_review_thread_header(
+                bufnr,
+                {
+                  path = thread.path,
+                  start_line = start_line,
+                  end_line = end_line,
+                  isOutdated = thread.isOutdated,
+                  isResolved = thread.isResolved
+                },
+                thread_line - 2
+              )
+            elseif vim.bo.ft == "octo_reviewthread" then
+              local pattern = format("%s/%s", thread_id, comment_id)
+              print(pattern)
+              local qf = vim.fn.getqflist({items = 0})
+              local items = qf.items
+              for _, item in ipairs(items) do
+                if item.pattern == pattern then
+                  print("found")
+                  item.text = string.gsub(item.text, "RESOLVED ", "")
+                  break
+                end
               end
+              vim.fn.setqflist({}, "r", {items = items})
             end
-            vim.fn.setqflist({}, "r", {items = items})
-            print("UNRESOLVED!")
           end
         end
       end
@@ -417,9 +538,9 @@ function M.change_state(type, state)
   local id = api.nvim_buf_get_var(bufnr, "iid")
   local query
   if type == "issue" then
-    query = format(graphql.update_issue_state_mutation, id, state)
+    query = graphql("update_issue_state_mutation", id, state)
   elseif type == "pull" then
-    query = format(graphql.update_pull_request_state_mutation, id, state)
+    query = graphql("update_pull_request_state_mutation", id, state)
   end
 
   gh.run(
@@ -464,7 +585,7 @@ function M.create_issue(repo)
   vim.fn.inputrestore()
 
   local repo_id = util.get_repo_id(repo)
-  local query = format(graphql.create_issue_mutation, repo_id, title, constants.NO_BODY_MSG)
+  local query = graphql("create_issue_mutation", repo_id, title, constants.NO_BODY_MSG)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -564,7 +685,7 @@ function M.pr_checks()
             end
             table.insert(lines, table.concat(line, "  "))
           end
-          local _, bufnr = util.create_content_popup(lines)
+          local _, bufnr = util.create_popup({content=lines})
           local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
           for i, l in ipairs(buf_lines) do
             if #vim.split(l, "pass") > 1 then
@@ -625,7 +746,6 @@ function M.show_pr_diff()
     return
   end
   local url = format("/repos/%s/pulls/%s", repo, number)
-  -- TODO: graphql
   gh.run(
     {
       args = {"api", url},
@@ -652,7 +772,7 @@ function M.review_threads()
   end
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
-  local query = format(graphql.review_threads_query, owner, name, number)
+  local query = graphql("review_threads_query", owner, name, number)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -669,26 +789,26 @@ function M.review_threads()
 end
 
 function M.submit_review()
-  local winnr, bufnr = util.create_popup({""}, {
-    line = 5,
-    col = 5,
-    width = math.floor(vim.o.columns * 0.9),
-    height = math.floor(vim.o.lines * 0.5)
+  local winid, bufnr = util.create_popup({
+    header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
   })
-  api.nvim_set_current_win(winnr)
+  api.nvim_set_current_win(winid)
+  api.nvim_buf_set_option(bufnr, "syntax", "markdown")
 
-  local help_vt = {
-    {"Press <c-a> to approve, <c-m> to comment or <c-r> to request changes", "OctoNvimDetailsValue"}
-  }
-  writers.write_block({"", "", ""}, {bufnr = bufnr, mark = false, line = 1})
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, help_vt, {})
   local mapping_opts = {script = true, silent = true, noremap = true}
-  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "i", "<CR>", "<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", ":lua require'octo.reviews'.submit_review('APPROVE')<CR>", mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.submit_review('COMMENT')<CR>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-r>", ":lua require'octo.reviews'.submit_review('REQUEST_CHANGES')<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<C-r>",
+    ":lua require'octo.reviews'.submit_review('REQUEST_CHANGES')<CR>",
+    mapping_opts
+  )
   vim.cmd [[normal G]]
   --vim.cmd [[startinsert]]
 end
@@ -721,13 +841,16 @@ function M.start_review()
             }
             table.insert(changes, change)
           end
-          reviews.populate_changes_qf(changes, {
-            pull_request_repo = repo,
-            pull_request_number = number,
-            pull_request_id = pr.id,
-            baseRefSHA = pr.baseRefSHA,
-            headRefSHA = pr.headRefSHA
-          })
+          reviews.populate_changes_qf(
+            changes,
+            {
+              pull_request_repo = repo,
+              pull_request_number = number,
+              pull_request_id = pr.id,
+              baseRefSHA = pr.baseRefSHA,
+              headRefSHA = pr.headRefSHA
+            }
+          )
         end
       end
     }
@@ -737,7 +860,14 @@ end
 function M.reaction_action(action, reaction)
   local bufnr = api.nvim_get_current_buf()
 
-  local repo, number = util.get_repo_number({"octo_issue", "octo_reviewthread"})
+  reaction = reaction:upper()
+  if reaction == "+1" then
+    reaction = "THUMBS_UP"
+  elseif reaction == "-1" then
+    reaction = "THUMBS_DOWN"
+  end
+
+  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
@@ -745,102 +875,51 @@ function M.reaction_action(action, reaction)
   local cursor = api.nvim_win_get_cursor(0)
   local comment = util.get_comment_at_cursor(bufnr, cursor)
 
-  local url, args, line, cb_url, reactions
+  local query, reaction_line, reaction_groups
 
   if comment then
     -- found a comment at cursor
-    local kind = util.get_buffer_kind(bufnr)
-    comment = comment[1]
-    cb_url = format("repos/%s/%s/comments/%d", repo, kind, comment.id)
-    line = comment.reaction_line
-    reactions = comment.reactions
+    reaction_groups = comment.reaction_groups
+    reaction_line = comment.reaction_line
 
     if action == "add" then
-      url = format("repos/%s/%s/comments/%d/reactions", repo, kind, comment.id)
-      args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}
+      query = graphql("add_reaction_mutation", comment.id, reaction)
     elseif action == "delete" then
-      -- get list of reactions for issue comment and filter by user login and reaction
-      -- TODO: graphql
-      local output =
-        gh.run(
-        {
-          mode = "sync",
-          args = {"api", format("repos/%s/%s/comments/%d/reactions", repo, kind, comment.id)}
-        }
-      )
-      for _, r in ipairs(json.parse(output)) do
-        if r.user.login == vim.g.octo_loggedin_user and reaction == r.content then
-          url = format("repos/%s/%s/comments/%d/reactions/%d", repo, kind, comment.id, r.id)
-          args = {"api", "-X", "DELETE", url}
-          break
-        end
-      end
+      query = graphql("remove_reaction_mutation", comment.id, reaction)
     end
   elseif vim.bo.ft == "octo_issue" then
     -- cursor not located on a comment, using the issue instead
-    cb_url = format("repos/%s/issues/%d", repo, number)
     reactions = api.nvim_buf_get_var(bufnr, "body_reactions")
-    line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
+    reaction_line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
+
+    local id = api.nvim_buf_get_var(bufnr, "iid")
     if action == "add" then
-      url = format("repos/%s/issues/%d/reactions", repo, number)
-      args = {"api", "-X", "POST", "-f", format("content=%s", reaction), url}
+      query = graphql("add_reaction_mutation", id, reaction)
     elseif action == "delete" then
-      -- get list of reactions for issue comment and filter by user login and reaction
-      local output =
-        -- TODO: graphql
-        gh.run(
-        {
-          mode = "sync",
-          args = {"api", format("repos/%s/issues/%d/reactions", repo, number)}
-        }
-      )
-      for _, r in ipairs(json.parse(output)) do
-        if r.user.login == vim.g.octo_loggedin_user and reaction == r.content then
-          url = format("repos/%s/issues/%d/reactions/%d", repo, number, r.id)
-          args = {"api", "-X", "DELETE", url}
-          break
-        end
-      end
+      query = graphql("remove_reaction_mutation", id, reaction)
     end
   end
 
-  if not args or not cb_url then
-    return
-  end
-
   -- add/delete reaction
-  -- TODO: graphql
   gh.run(
     {
-      args = args,
+      args = {"api", "graphql", "-f", format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          reaction = string.upper(reaction)
-          if reaction == "+1" then
-            reaction = "THUMBS_UP"
-          elseif reaction == "-1" then
-            reaction = "THUMBS_DOWN"
-          end
+          local resp = json.parse(output)
           if action == "add" then
-            table.insert(reactions.nodes, {content = reaction})
-            reactions.totalCount = reactions.totalCount + 1
+            reaction_groups = resp.data.addReaction.subject.reactionGroups
           elseif action == "delete" then
-            for i, r in pairs(reactions.nodes) do
-              if r.content == reaction then
-                table.remove(reactions.nodes, i)
-                break
-              end
-            end
-            reactions.totalCount = reactions.totalCount - 1
+            reaction_groups = resp.data.removeReaction.subject.reactionGroups
           end
 
           -- update comment metadata with new reactions
-          util.update_reactions_at_cursor(bufnr, cursor, reactions) --, line)
+          util.update_reactions_at_cursor(bufnr, cursor, reaction_groups)
 
           -- refresh reactions
-          writers.write_reactions(bufnr, reactions, line)
+          writers.write_reactions(bufnr, reaction_groups, reaction_line)
         end
       end
     }
@@ -886,28 +965,31 @@ function M.add_project_card()
   end
 
   -- show column selection menu
-  menu.select_target_project_column(function(column_id)
-
-    -- add new card
-    local query = format(graphql.add_project_card_mutation, iid, column_id)
-    gh.run(
-      {
-        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            -- refresh issue/pr details
-            octo.load(bufnr, function(obj)
-              writers.write_details(bufnr, obj, true)
-              api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
-            end)
+  menu.select_target_project_column(
+    function(column_id)
+      -- add new card
+      local query = graphql("add_project_card_mutation", iid, column_id)
+      gh.run(
+        {
+          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              -- refresh issue/pr details
+              octo.load(
+                bufnr,
+                function(obj)
+                  writers.write_details(bufnr, obj, true)
+                  api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
+                end
+              )
+            end
           end
-        end
-      }
-    )
-  end)
-
+        }
+      )
+    end
+  )
 end
 
 function M.delete_project_card()
@@ -918,27 +1000,31 @@ function M.delete_project_card()
   end
 
   -- show card selection menu
-  menu.select_project_card(function(card)
-
-    -- delete card
-    local query = format(graphql.delete_project_card_mutation, card)
-    gh.run(
-      {
-        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            -- refresh issue/pr details
-            octo.load(bufnr, function(obj)
-              writers.write_details(bufnr, obj, true)
-              api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
-            end)
+  menu.select_project_card(
+    function(card)
+      -- delete card
+      local query = graphql("delete_project_card_mutation", card)
+      gh.run(
+        {
+          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              -- refresh issue/pr details
+              octo.load(
+                bufnr,
+                function(obj)
+                  writers.write_details(bufnr, obj, true)
+                  api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
+                end
+              )
+            end
           end
-        end
-      }
-    )
-  end)
+        }
+      )
+    end
+  )
 end
 
 function M.move_project_card()
@@ -948,31 +1034,36 @@ function M.move_project_card()
     return
   end
 
-  menu.select_project_card(function(source_card)
-
-    -- show project column selection menu
-    menu.select_target_project_column(function(target_column)
-
-      -- move card to selected column
-      local query = format(graphql.move_project_card_mutation, source_card, target_column)
-      gh.run(
-        {
-          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
-          cb = function(output, stderr)
-            if stderr and not util.is_blank(stderr) then
-              api.nvim_err_writeln(stderr)
-            elseif output then
-              -- refresh issue/pr details
-              octo.load(bufnr, function(obj)
-                writers.write_details(bufnr, obj, true)
-                api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
-              end)
-            end
-          end
-        }
+  menu.select_project_card(
+    function(source_card)
+      -- show project column selection menu
+      menu.select_target_project_column(
+        function(target_column)
+          -- move card to selected column
+          local query = graphql("move_project_card_mutation", source_card, target_column)
+          gh.run(
+            {
+              args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  -- refresh issue/pr details
+                  octo.load(
+                    bufnr,
+                    function(obj)
+                      writers.write_details(bufnr, obj, true)
+                      api.nvim_buf_set_var(bufnr, "cards", obj.projectCards)
+                    end
+                  )
+                end
+              end
+            }
+          )
+        end
       )
-    end)
-  end)
+    end
+  )
 end
 
 function M.reload(bufnr)
@@ -996,25 +1087,29 @@ function M.add_label()
     api.nvim_err_writeln("Cannot get issue/pr id")
   end
 
-  menu.select_label(function(label_id)
-
-    local query = format(graphql.add_labels_mutation, iid, label_id)
-    gh.run(
-      {
-        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            -- refresh issue/pr details
-            octo.load(bufnr, function(obj)
-              writers.write_details(bufnr, obj, true)
-            end)
+  menu.select_label(
+    function(label_id)
+      local query = graphql("add_labels_mutation", iid, label_id)
+      gh.run(
+        {
+          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              -- refresh issue/pr details
+              octo.load(
+                bufnr,
+                function(obj)
+                  writers.write_details(bufnr, obj, true)
+                end
+              )
+            end
           end
-        end
-      }
-    )
-  end)
+        }
+      )
+    end
+  )
 end
 
 function M.delete_label()
@@ -1029,25 +1124,29 @@ function M.delete_label()
     api.nvim_err_writeln("Cannot get issue/pr id")
   end
 
-  menu.select_assigned_label(function(label_id)
-
-    local query = format(graphql.remove_labels_mutation, iid, label_id)
-    gh.run(
-      {
-        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            -- refresh issue/pr details
-            octo.load(bufnr, function(obj)
-              writers.write_details(bufnr, obj, true)
-            end)
+  menu.select_assigned_label(
+    function(label_id)
+      local query = graphql("remove_labels_mutation", iid, label_id)
+      gh.run(
+        {
+          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              -- refresh issue/pr details
+              octo.load(
+                bufnr,
+                function(obj)
+                  writers.write_details(bufnr, obj, true)
+                end
+              )
+            end
           end
-        end
-      }
-    )
-  end)
+        }
+      )
+    end
+  )
 end
 
 function M.add_user(subject)
@@ -1062,29 +1161,34 @@ function M.add_user(subject)
     api.nvim_err_writeln("Cannot get issue/pr id")
   end
 
-  menu.select_user(function(user_id)
-    local query
-    if subject == "assignee" then
-      query = format(graphql.add_assignees_mutation, iid, user_id)
-    elseif subject == "reviewer" then
-      query = format(graphql.request_reviews_mutation, iid, user_id)
-    end
-    gh.run(
-      {
-        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            -- refresh issue/pr details
-            octo.load(bufnr, function(obj)
-              writers.write_details(bufnr, obj, true)
-            end)
+  menu.select_user(
+    function(user_id)
+      local query
+      if subject == "assignee" then
+        query = graphql("add_assignees_mutation", iid, user_id)
+      elseif subject == "reviewer" then
+        query = graphql("request_reviews_mutation", iid, user_id)
+      end
+      gh.run(
+        {
+          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              -- refresh issue/pr details
+              octo.load(
+                bufnr,
+                function(obj)
+                  writers.write_details(bufnr, obj, true)
+                end
+              )
+            end
           end
-        end
-      }
-    )
-  end)
+        }
+      )
+    end
+  )
 end
 
 function M.remove_assignee()
@@ -1099,24 +1203,29 @@ function M.remove_assignee()
     api.nvim_err_writeln("Cannot get issue/pr id")
   end
 
-  menu.select_assignee(function(user_id)
-    local query = format(graphql.remove_assignees_mutation, iid, user_id)
-    gh.run(
-      {
-        args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
-            api.nvim_err_writeln(stderr)
-          elseif output then
-            -- refresh issue/pr details
-            octo.load(bufnr, function(obj)
-              writers.write_details(bufnr, obj, true)
-            end)
+  menu.select_assignee(
+    function(user_id)
+      local query = graphql("remove_assignees_mutation", iid, user_id)
+      gh.run(
+        {
+          args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              -- refresh issue/pr details
+              octo.load(
+                bufnr,
+                function(obj)
+                  writers.write_details(bufnr, obj, true)
+                end
+              )
+            end
           end
-        end
-      }
-    )
-  end)
+        }
+      )
+    end
+  )
 end
 
 return M

@@ -8,7 +8,7 @@ local format = string.format
 local vim = vim
 local api = vim.api
 local json = {
-  parse = vim.fn.json_decode,
+  parse = vim.fn.json_decode
 }
 
 local M = {}
@@ -187,8 +187,7 @@ function M.update_issue_metadata(bufnr)
       -- description has been removed
       -- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
       api.nvim_buf_set_lines(bufnr, start_line, start_line + 1, false, {" ", ""})
-      local winnr = api.nvim_get_current_win()
-      api.nvim_win_set_cursor(winnr, {start_line + 1, 0})
+      api.nvim_win_set_cursor(0, {start_line + 1, 0})
     end
     M.update_metadata(metadata, start_line, end_line, text)
     api.nvim_buf_set_var(bufnr, "description", metadata)
@@ -205,8 +204,7 @@ function M.update_issue_metadata(bufnr)
       -- comment has been removed
       -- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
       api.nvim_buf_set_lines(bufnr, start_line, start_line + 1, false, {" ", ""})
-      local winnr = api.nvim_get_current_win()
-      api.nvim_win_set_cursor(winnr, {start_line + 1, 0})
+      api.nvim_win_set_cursor(0, {start_line + 1, 0})
     end
 
     M.update_metadata(metadata, start_line, end_line, text)
@@ -222,13 +220,40 @@ function M.get_comment_at_cursor(bufnr, cursor)
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
-      return {comment, start_line, end_line}
+      return comment, start_line, end_line
     end
   end
   return nil
 end
 
-function M.update_reactions_at_cursor(bufnr, cursor, reactions) --, reaction_line)
+function M.get_thread_at_cursor(bufnr, cursor)
+  if vim.bo[bufnr].ft == "octo_issue" then
+    local thread_map = api.nvim_buf_get_var(bufnr, "reviewThreadMap")
+    local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
+    for _, mark in ipairs(marks) do
+      local info = thread_map[tostring(mark[1])]
+      if not info then
+        goto continue
+      end
+      local thread_id = info.thread_id
+      local first_comment_id = info.first_comment_id
+      local start_line = mark[2]
+      local end_line = mark[4]["end_row"]
+      if start_line <= cursor[1] and end_line >= cursor[1] then
+        return thread_id, start_line, end_line, first_comment_id
+      end
+      ::continue::
+    end
+  elseif vim.bo[bufnr].ft == "octo_reviewthread" then
+    local bufname = api.nvim_buf_get_name(bufnr)
+    local thread_id, first_comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
+    local end_line = api.nvim_buf_line_count(bufnr) - 1
+    return thread_id, 1, end_line, first_comment_id
+  end
+  return nil
+end
+
+function M.update_reactions_at_cursor(bufnr, cursor, reaction_groups)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for i, comment in ipairs(comments) do
     local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details = true})
@@ -236,9 +261,7 @@ function M.update_reactions_at_cursor(bufnr, cursor, reactions) --, reaction_lin
     local end_line = mark[3]["end_row"] + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
       --  cursor located in the body of a comment
-      comments[i].reactions = reactions
-      --print("DIFF", comments[i].reaction_line, reaction_line)
-      --comments[i].reaction_line = reaction_line
+      comments[i].reaction_groups = reaction_groups
       api.nvim_buf_set_var(bufnr, "comments", comments)
       return
     end
@@ -246,7 +269,6 @@ function M.update_reactions_at_cursor(bufnr, cursor, reactions) --, reaction_lin
 
   -- cursor not located at any comment, so updating issue
   api.nvim_buf_set_var(bufnr, "body_reactions", reactions)
-  --api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 end
 
 function M.format_date(date_string)
@@ -254,44 +276,117 @@ function M.format_date(date_string)
   return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
 end
 
-function M.create_content_popup(lines)
-  local max_line = -1
-  for _, line in ipairs(lines) do
-    max_line = math.max(#line, max_line)
-  end
-  local line_count = vim.o.lines - vim.o.cmdheight
-  local max_width = math.min(vim.o.columns * 0.9, max_line)
-  if vim.o.laststatus ~= 0 then
-    line_count = line_count - 1
-  end
-  local winnr, bufnr = M.create_popup(lines, {
-    line = (line_count - #lines) / 2,
-    col = (vim.o.columns - max_width) / 2,
-    height = #lines
-  })
-  return winnr, bufnr
-end
+function M.create_popup(opts)
+  opts = opts or {}
+  opts.x_percent = opts.x_percent or 0.6
+  opts.y_percent = opts.y_percent or 0.4
 
-function M.create_popup(content, opts)
-  local winnr, _ =
+  -- calculate vim height
+  local vim_height = vim.o.lines - vim.o.cmdheight
+  if vim.o.laststatus ~= 0 then
+    vim_height = vim_height - 1
+  end
+
+  -- calculate vim width
+  local vim_width = vim.o.columns
+
+  -- calculate longest line in lines
+  local max_line = -1
+  if opts.content then
+    for _, line in ipairs(opts.content) do
+      max_line = math.max(#line, max_line)
+    end
+  end
+
+  -- calculate window height/width
+  local width, height
+  if max_line > 0 then
+    -- pre-defined content
+    width = math.min(vim_width * 0.9, max_line)
+    if opts.header then
+      height = math.min(vim_height, 2 + #opts.content)
+    else
+      height = math.min(vim_height, #opts.content)
+    end
+  else
+    width = math.floor(vim_width * opts.x_percent)
+    height = math.floor(vim_height * opts.y_percent)
+  end
+
+  -- calculate offsets
+  local x_offset = (vim_width - width) / 2
+  local y_offset = (vim_height - height) / 2
+  local header_winid
+  local header_win_opts = {border = {}}
+  if opts.header then
+    header_winid, header_win_opts =
+      popup.create(
+      {opts.header},
+      {
+        moved = "non-existant",
+        line =y_offset,
+        col = x_offset,
+        minwidth = width,
+        maxheight = 2,
+        border = {1, 1, 0, 1},
+        borderchars = {"─", "│", "", "│", "┌", "┐", "┤", "├"},
+        padding = {0, 0, 0, 0}
+      }
+    )
+    vim.cmd("set eventignore+=WinClosed,WinLeave")
+    local header_bufnr = api.nvim_win_get_buf(header_winid)
+    api.nvim_buf_set_option(header_bufnr, "modifiable", false)
+  end
+  local winid =
     popup.create(
-    content,
+    opts.content or {},
     {
-      line = opts.line,
-      col = opts.col,
-      minwidth = opts.width or 40,
-      minheight = opts.height or 20,
+      moved = "non-existant",
+      line = opts.header and y_offset+2 or y_offset,
+      col = x_offset,
+      minwidth = width,
+      minheight = height,
       border = {1, 1, 1, 1},
-      borderchars = {"─", "│", "─", "│", "┌", "┐", "┘", "└"},
-      padding = {1, 1, 1, 1}
+      borderchars = opts.header and {"─", "│", "─", "│", "├", "┤", "┘", "└"} or {"─", "│", "─", "│", "┌", "┐", "┘", "└"},
+      padding = {0, 0, 0, 0}
     }
   )
-  local bufnr = api.nvim_win_get_buf(winnr)
+  local bufnr = api.nvim_win_get_buf(winid)
+  if header_winid then
+    vim.cmd(string.format(
+      "autocmd BufLeave,BufDelete <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d, %d, %d)",
+      bufnr,
+      header_winid,
+      header_win_opts.border.win_id,
+      winid))
+    vim.cmd(string.format(
+      "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d, %d, %d)",
+      bufnr,
+      header_winid,
+      header_win_opts.border.win_id,
+      winid))
+  else
+    vim.cmd(string.format(
+      "autocmd BufLeave,BufDelete <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d)",
+      bufnr,
+      winid))
+    vim.cmd(string.format(
+      "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d)",
+      bufnr,
+      winid))
+  end
   local mapping_opts = {script = true, silent = true, noremap = true}
-  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
-  return winnr, bufnr
+  api.nvim_buf_set_keymap(bufnr, "n", "q", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
+
+  return winid, bufnr
+end
+
+function M.try_close_wins(...)
+  for _, win_id in ipairs({...}) do
+    pcall(vim.api.nvim_win_close, win_id, true)
+  end
 end
 
 function M.get_buffer_kind(bufnr)
@@ -317,7 +412,7 @@ function M.get_repo_id(repo)
   else
     local owner = vim.split(repo, "/")[1]
     local name = vim.split(repo, "/")[2]
-    local query = format(graphql.repository_id_query, owner, name)
+    local query = graphql("repository_id_query", owner, name)
     local output =
       gh.run(
       {
@@ -390,7 +485,7 @@ function M.escape_chars(string)
     string,
     '["]',
     {
-      ['"'] = '\\"',
+      ['"'] = '\\"'
     }
   )
 end
@@ -399,7 +494,9 @@ function M.open_in_browser()
   local repo, number = M.get_repo_number()
   local bufname = vim.fn.bufname()
   local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  if type == "pull" then type = "pr" end
+  if type == "pull" then
+    type = "pr"
+  end
   local cmd = format("gh %s view --web -R %s %d", type, repo, number)
   print(cmd)
   os.execute(cmd)
@@ -408,8 +505,8 @@ end
 function M.open_url_at_cursor()
   local uri = vim.fn.matchstr(vim.fn.getline("."), "[a-z]*:\\/\\/[^ >,;()]*")
   print(uri)
-  if uri then 
-    require"octo.commands".parse_url(uri)
+  if uri then
+    require "octo.commands".parse_url(uri)
   else
     api.nvim_err_writeln("No URI found in line.")
   end
@@ -418,7 +515,7 @@ end
 function M.get_file_contents(repo, commit, path, cb)
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
-  local query = format(graphql.file_content_query, owner, name, commit, path)
+  local query = graphql("file_content_query", owner, name, commit, path)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -436,18 +533,34 @@ function M.get_file_contents(repo, commit, path, cb)
         end
       end
     }
-   )
+  )
 end
 
 function M.set_timeout(delay, callback, ...)
   local timer = vim.loop.new_timer()
   local args = {...}
-  vim.loop.timer_start(timer, delay, 0, function ()
-    vim.loop.timer_stop(timer)
-    vim.loop.close(timer)
-    callback(unpack(args))
-  end)
+  vim.loop.timer_start(
+    timer,
+    delay,
+    0,
+    function()
+      vim.loop.timer_stop(timer)
+      vim.loop.close(timer)
+      callback(unpack(args))
+    end
+  )
   return timer
+end
+
+function M.getwin4buf(bufnr)
+  local tabpage = api.nvim_get_current_tabpage()
+  local wins = api.nvim_tabpage_list_wins(tabpage)
+  for _, w in ipairs(wins) do
+    if bufnr == api.nvim_win_get_buf(w) then
+      return w
+    end
+  end
+  return -1
 end
 
 return M

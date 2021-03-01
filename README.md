@@ -61,8 +61,8 @@ There is only an `Octo <object> <action> [arguments]` command:
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-b>`: Opens Gist in web browser |
 | comment | add | |
 | | delete | |
-| | resolve | |
-| | unresolve | |
+| thread | resolve| Mark a review thread as resolved |
+| | unresolve | Mark a review thread as unresolved |
 | label | add | <label> |
 | | delete | <label> |
 | assignees| add | <assignee> |
@@ -178,14 +178,16 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | Name                        | Default          |
 | ---                         | ---              |
 | `OctoNvimDirty`             | `ErrorMsg`       |
-| `OctoNvimCommentHeading`    | `PreProc`        |
-| `OctoNvimCommentUser`       | `Underlined`     |
+| `OctoNvimUser`              | `String`     |
 | `OctoNvimIssueTitle`        | `PreProc`        |
 | `OctoNvimIssueId`           | `Question`       |
 | `OctoNvimIssueOpen`         | `MoreMsg`        |
 | `OctoNvimIssueClosed`       | `ErrorMsg`       |
 | `OctoNvimEmpty`             | `Comment`        |
 | `OctoNvimFloat`             | `NormalNC`       |
+| `OctoNvimDate`              | `Comment`       |
+| `OctoNvimSymbol`            | `Comment`       |
+| `OctoNvimTimelineItemHeading`| `Comment`       |
 | `OctoNvimBubbleRed`         | `DiffDelete`.fg  |
 | `OctoNvimBubbleGreen`       | `DiffAdd`.fg     |
 | `OctoNvimBubbleDelimiter`   | `NormalFloat`.bg |
@@ -200,6 +202,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimPullAdditions`     | `DiffAdd`        |
 | `OctoNvimPullDeletions`     | `DiffDelete`     |
 | `OctoNvimPullModifications` | `DiffChange`     |
+| `OctoNvimEditable`          | `NormalFloat`.bg|
 
 ## Settings
 

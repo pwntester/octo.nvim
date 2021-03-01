@@ -5,6 +5,7 @@ local util = require "octo.util"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local date = require "octo.date"
+local folds = require "octo.folds"
 local vim = vim
 local api = vim.api
 local format = string.format
@@ -52,10 +53,10 @@ function M.load(bufnr, cb)
   local name = vim.split(repo, "/")[2]
   local query, key
   if type == "pull" then
-    query = format(graphql.pull_request_query, owner, name, number)
+    query = graphql("pull_request_query", owner, name, number)
     key = "pullRequest"
   elseif type == "issue" then
-    query = format(graphql.issue_query, owner, name, number)
+    query = graphql("issue_query", owner, name, number)
     key = "issue"
   end
   gh.run(
@@ -65,7 +66,7 @@ function M.load(bufnr, cb)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = util.aggregate_pages(output, format("data.repository.%s.comments.nodes", key))
+          local resp = util.aggregate_pages(output, format("data.repository.%s.timelineItems.nodes", key))
           local obj = resp.data.repository[key]
             cb(obj)
         end
@@ -165,8 +166,10 @@ function M.create_buffer(type, obj, repo, create)
   vim.cmd [[setlocal foldtext=v:lua.OctoFoldText()]]
   vim.cmd [[setlocal foldmethod=manual]]
   vim.cmd [[setlocal foldenable]]
-  vim.cmd [[setlocal foldcolumn=1]]
+  vim.cmd [[setlocal foldcolumn=3]]
   vim.cmd [[setlocal foldlevelstart=99]]
+  vim.cmd [[setlocal conceallevel=2]]
+  vim.cmd [[setlocal syntax=markdown]]
 
   -- register issue
   api.nvim_buf_set_var(bufnr, "iid", iid)
@@ -195,21 +198,15 @@ function M.create_buffer(type, obj, repo, create)
   writers.write_body(bufnr, obj)
 
   -- write body reactions
-  local reaction_line = writers.write_reactions(bufnr, obj.reactions, api.nvim_buf_line_count(bufnr) - 1)
+  local reaction_line = writers.write_reactions(bufnr, obj.reactionGroups, api.nvim_buf_line_count(bufnr) - 1)
   api.nvim_buf_set_var(bufnr, "body_reactions", obj.reactions)
   api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 
-  -- collect comments
+  -- initialize comments metadata
   api.nvim_buf_set_var(bufnr, "comments", {})
-  local comments = obj.comments.nodes
 
+  -- PRs
   if obj.commits then
-
-    -- collect review comments
-    if obj.reviews then
-      vim.list_extend(comments, obj.reviews.nodes)
-    end
-
     -- for pulls, store some additional info
     api.nvim_buf_set_var(
       bufnr,
@@ -227,15 +224,92 @@ function M.create_buffer(type, obj, repo, create)
     )
   end
 
-  -- sort comments
-  table.sort(comments, function (c1, c2)
-    return date(c1.createdAt) < date(c2.createdAt)
-  end)
+  -- write timeline items
+  local review_thread_map = {}
 
-  -- write comments
-  for _, c in ipairs(comments) do
-    writers.write_comment(bufnr, c)
+  for _, item in ipairs(obj.timelineItems.nodes) do
+    if item.__typename == "IssueComment" then
+      -- write the comment
+      local start_line, end_line = writers.write_comment(bufnr, item, "IssueComment")
+      folds.create(start_line+1, end_line, true)
+
+    elseif item.__typename == "PullRequestReview" then
+
+      -- A review can have 0+ threads
+      local threads = {}
+      for _, comment in ipairs(item.comments.nodes) do
+        for _, reviewThread in ipairs(obj.reviewThreads.nodes) do
+          if comment.id == reviewThread.comments.nodes[1].id then
+            -- found a thread for the current review
+            table.insert(threads, reviewThread)
+          end
+        end
+      end
+
+      -- skip reviews with no threads and empty body
+      if #threads == 0 and util.is_blank(item.body) then
+        goto continue
+      end
+
+      -- print review header and top level comment
+      -- local line = api.nvim_buf_line_count(bufnr) - 1
+      -- writers.write_block({"", ""}, {bufnr = bufnr, line = line})
+      -- local max_length = vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn
+      -- local header_vt = {{format("┌%s┐", string.rep("─", max_length + 2))}}
+      -- api.nvim_buf_set_extmark(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, 0, { virt_text=header_vt, virt_text_pos='overlay'})
+      local review_start, review_end = writers.write_comment(bufnr, item, "PullRequestReview")
+
+      if #threads > 0 then
+        -- print each of the threads
+        for _, thread in ipairs(threads) do
+          local thread_start, thread_end
+          for _,comment in ipairs(thread.comments.nodes) do
+            if comment.replyTo == vim.NIL then
+
+              -- review thread header
+              local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+              local end_line = thread.originalLine
+              writers.write_review_thread_header(bufnr, {
+                path = thread.path,
+                start_line = start_line,
+                end_line = end_line,
+                isOutdated = thread.isOutdated,
+                isResolved = thread.isResolved,
+              })
+
+              -- write diff lines
+              thread_start, thread_end = writers.write_commented_lines(bufnr, comment.diffHunk, thread.diffSide, start_line, end_line)
+            end
+            local comment_start, comment_end = writers.write_comment(bufnr, comment, "PullRequestReviewComment")
+            folds.create(comment_start+1, comment_end, true)
+            thread_end = comment_end
+            review_end = comment_end
+          end
+          folds.create(thread_start-1, thread_end, not thread.isCollapsed)
+
+          -- mark the thread region
+          local thread_mark_id = api.nvim_buf_set_extmark(
+            bufnr,
+            constants.OCTO_THREAD_NS,
+            thread_start - 1,
+            0,
+            {
+              end_line = thread_end,
+              end_col = 0
+            }
+          )
+          -- store it as a buffer var to be able to find a thread_id given the cursor position
+          review_thread_map[tostring(thread_mark_id)] = {
+            thread_id = thread.id,
+            first_comment_id = thread.comments.nodes[1].id
+          }
+        end
+        folds.create(review_start+1, review_end, true)
+      end
+    end
+    ::continue::
   end
+  api.nvim_buf_set_var(bufnr, "reviewThreadMap", review_thread_map)
 
   async_fetch_taggable_users(bufnr, repo, obj.participants.nodes)
   async_fetch_issues(bufnr, repo)
@@ -271,6 +345,15 @@ function M.save_buffer()
     return
   end
 
+  local issue_kind
+  if string.match(api.nvim_buf_get_name(bufnr), "octo://.*/pull/.*") then
+    issue_kind = "pull"
+  elseif string.match(api.nvim_buf_get_name(bufnr), "octo://.*/issue/.*") then
+    issue_kind = "issue"
+  else
+    return
+  end
+
   -- collect comment metadata
   util.update_issue_metadata(bufnr)
 
@@ -278,6 +361,7 @@ function M.save_buffer()
   if ft == "octo_issue" then
     local title_metadata = api.nvim_buf_get_var(bufnr, "title")
     local desc_metadata = api.nvim_buf_get_var(bufnr, "description")
+    local id = api.nvim_buf_get_var(bufnr, "iid")
     if title_metadata.dirty or desc_metadata.dirty then
       -- trust but verify
       if string.find(title_metadata.body, "\n") then
@@ -288,30 +372,31 @@ function M.save_buffer()
         return
       end
 
-      -- TODO: graphql
+      local query
+      if issue_kind == "issue" then
+        query = graphql("update_issue_mutation", id, title_metadata.body, desc_metadata.body)
+      elseif issue_kind == "pull" then
+        query = graphql("update_pull_request_mutation", id, title_metadata.body, desc_metadata.body)
+      end
       gh.run(
         {
-          args = {
-            "api",
-            "-X",
-            "PATCH",
-            "-f",
-            format("title=%s", title_metadata.body),
-            "-f",
-            format("body=%s", desc_metadata.body),
-            format("repos/%s/issues/%s", repo, number)
-          },
+          args = {"api", "graphql", "-f", format("query=%s", query)},
           cb = function(output)
             local resp = json.parse(output)
-
-            if title_metadata.body == resp.title then
-              title_metadata.saved_body = resp.title
+            local obj
+            if issue_kind == "pull" then
+              obj = resp.data.updatePullRequest.pullRequest
+            elseif issue_kind == "issue" then
+              obj = resp.data.updateIssue.issue
+            end
+            if title_metadata.body == obj.title then
+              title_metadata.saved_body = obj.title
               title_metadata.dirty = false
               api.nvim_buf_set_var(bufnr, "title", title_metadata)
             end
 
-            if desc_metadata.body == resp.body then
-              desc_metadata.saved_body = resp.body
+            if desc_metadata.body == obj.body then
+              desc_metadata.saved_body = obj.body
               desc_metadata.dirty = false
               api.nvim_buf_set_var(bufnr, "description", desc_metadata)
             end
@@ -325,28 +410,47 @@ function M.save_buffer()
   end
 
   -- comments
-  local kind, post_url
-  if ft == "octo_issue" then
-    kind = "issues"
-    post_url = format("repos/%s/%s/%d/comments", repo, kind, number)
-  elseif ft == "octo_reviewthread" then
-    kind = "pulls"
-    local status, _, comment_id =
-      string.find(api.nvim_buf_get_name(bufnr), "octo://.*/pull/%d+/reviewthread/.*/comment/(.*)")
-    if not status then
-      api.nvim_err_writeln("Cannot extract comment id from buffer name")
-      return
-    end
-    post_url = format("/repos/%s/pulls/%d/comments/%s/replies", repo, number, comment_id)
-  end
-
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for _, metadata in ipairs(comments) do
     if metadata.body ~= metadata.saved_body then
       if metadata.id == -1 then
-        -- create new comment/reply
-        -- TODO: graphql
-        gh.run(
+        if metadata.kind == "IssueComment" then
+          -- create new comment
+          local id = api.nvim_buf_get_var(bufnr, "iid")
+          local add_query = graphql("add_issue_comment_mutation", id, metadata.body)
+          gh.run(
+            {
+              args = {"api", "graphql", "-f", format("query=%s", add_query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  local resp = json.parse(output)
+                  local resp_body = resp.data.addComment.commentEdge.node.body
+                  local resp_id = resp.data.addComment.commentEdge.node.id
+                  if vim.fn.trim(metadata.body) == vim.fn.trim(resp_body) then
+                    for i, c in ipairs(comments) do
+                      if tonumber(c.id) == -1 then
+                        comments[i].id = resp_id
+                        comments[i].saved_body = resp_body
+                        comments[i].dirty = false
+                        break
+                      end
+                    end
+                    api.nvim_buf_set_var(bufnr, "comments", comments)
+                    signs.render_signcolumn(bufnr)
+                  end
+                end
+              end
+            }
+          )
+        elseif metadata.kind == "PullRequestReviewComment" then
+          -- create new thread reply
+          local cid = metadata.first_comment_id
+          if vim.bo.ft == "octo_issue" then
+            cid = util.graph2rest(metadata.first_comment_id)
+          end
+          gh.run(
           {
             args = {
               "api",
@@ -354,7 +458,7 @@ function M.save_buffer()
               "POST",
               "-f",
               format("body=%s", metadata.body),
-              post_url
+              format("/repos/%s/pulls/%d/comments/%s/replies", repo, number, cid)
             },
             cb = function(output, stderr)
               if stderr and not util.is_blank(stderr) then
@@ -372,40 +476,54 @@ function M.save_buffer()
                   end
                   api.nvim_buf_set_var(bufnr, "comments", comments)
                   signs.render_signcolumn(bufnr)
-                  print("Saved!")
                 end
               end
             end
           }
         )
+        elseif metadata.kind == "PullRequestReview" then
+          -- Review top level comments cannot be created here
+          return
+        end
       else
         -- update comment/reply
+        local update_query
+        if metadata.kind == "IssueComment" then
+          update_query = graphql("update_issue_comment_mutation", metadata.id, metadata.body)
+        elseif metadata.kind == "PullRequestReviewComment" then
+          update_query = graphql("update_pull_request_review_comment_mutation", metadata.id, metadata.body)
+        elseif metadata.kind == "PullRequestReview" then
+          update_query = graphql("update_pull_request_review_mutation", metadata.id, metadata.body)
+        end
         gh.run(
           {
-            args = {
-              "api",
-              "-X",
-              "PATCH",
-              "-f",
-              format("body=%s", metadata.body),
-              format("repos/%s/%s/comments/%d", repo, kind, metadata.id)
-            },
+            args = {"api", "graphql", "-f", format("query=%s", update_query)},
             cb = function(output, stderr)
               if stderr and not util.is_blank(stderr) then
                 api.nvim_err_writeln(stderr)
               elseif output then
                 local resp = json.parse(output)
-                if vim.fn.trim(metadata.body) == vim.fn.trim(resp.body) then
+                local resp_body, resp_id
+                if metadata.kind == "IssueComment" then
+                  resp_body = resp.data.updateIssueComment.issueComment.body
+                  resp_id = resp.data.updateIssueComment.issueComment.id
+                elseif metadata.kind == "PullRequestReviewComment" then
+                  resp_body = resp.data.updatePullRequestReviewComment.pullRequestReviewComment.body
+                  resp_id = resp.data.updatePullRequestReviewComment.pullRequestReviewComment.id
+                elseif metadata.kind == "PullRequestReview" then
+                  resp_body = resp.data.updatePullRequestReview.pullRequestReview.body
+                  resp_id = resp.data.updatePullRequestReview.pullRequestReview.id
+                end
+                if vim.fn.trim(metadata.body) == vim.fn.trim(resp_body) then
                   for i, c in ipairs(comments) do
-                    if tonumber(c.id) == tonumber(resp.id) then
-                      comments[i].saved_body = resp.body
+                    if c.id == resp_id then
+                      comments[i].saved_body = resp_body
                       comments[i].dirty = false
                       break
                     end
                   end
                   api.nvim_buf_set_var(bufnr, "comments", comments)
                   signs.render_signcolumn(bufnr)
-                  print("Saved!")
                 end
               end
             end

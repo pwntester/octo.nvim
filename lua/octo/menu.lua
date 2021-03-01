@@ -124,7 +124,7 @@ function M.issues(opts)
 
   local owner = vim.split(opts.repo, "/")[1]
   local name = vim.split(opts.repo, "/")[2]
-  local query = format(graphql.issues_query, owner, name, filter)
+  local query = graphql("issues_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
@@ -269,7 +269,7 @@ function M.pull_requests(opts)
 
   local owner = vim.split(opts.repo, "/")[1]
   local name = vim.split(opts.repo, "/")[2]
-  local query = format(graphql.pull_requests_query, owner, name, filter)
+  local query = graphql("pull_requests_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
@@ -425,7 +425,7 @@ function M.issue_search(opts)
         if not prompt or prompt == "" then
           return nil
         end
-        prompt = util.escape_chars(prompt)
+        prompt = prompt
 
         -- skip requests for empty prompts
         if util.is_blank(prompt) then
@@ -445,7 +445,7 @@ function M.issue_search(opts)
             return
           end
 
-          local query = format(graphql.search_issues_query, opts.repo, prompt)
+          local query = graphql("search_issues_query", opts.repo, prompt)
           gh.run(
             {
               args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -504,7 +504,7 @@ function M.pull_request_search(opts)
         if not prompt or prompt == "" then
           return nil
         end
-        prompt = util.escape_chars(prompt)
+        prompt = prompt
 
         -- skip requests for empty prompts
         if util.is_blank(prompt) then
@@ -524,7 +524,7 @@ function M.pull_request_search(opts)
             return
           end
 
-          local query = format(graphql.search_pull_requests_query, opts.repo, prompt)
+          local query = graphql("search_pull_requests_query", opts.repo, prompt)
           gh.run(
             {
               args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -569,16 +569,20 @@ end
 function M.review_comments()
   local comments = vim.tbl_values(reviews.review_comments)
   local max_linenr_length = -1
+  local filtered_comments = {}
   for _, comment in ipairs(comments) do
     max_linenr_length = math.max(max_linenr_length, #tostring(comment.line1))
     max_linenr_length = math.max(max_linenr_length, #tostring(comment.line2))
+    if not util.is_blank(vim.fn.trim(comment.body)) then
+      table.insert(filtered_comments, comment)
+    end
   end
   pickers.new(
     {},
     {
       prompt_prefix = "Review Comments >",
       finder = finders.new_table {
-        results = comments,
+        results = filtered_comments,
         entry_maker = entry_maker.gen_from_review_comment(max_linenr_length)
       },
       sorter = conf.generic_sorter({}),
@@ -606,18 +610,6 @@ function M.review_comments()
           end
           if diff_winid > -1 then
             api.nvim_win_set_cursor(diff_winid, {comment.line1, 1})
-          end
-
-          -- show comment win/buf
-          if comment.comment_winid and api.nvim_win_is_valid(comment.comment_winid) then
-            api.nvim_win_set_buf(comment.comment_winid, comment.comment_bufnr)
-            api.nvim_set_current_win(comment.comment_winid)
-          else
-            -- move to qf win
-            api.nvim_set_current_win(comment.qf_winid)
-
-            -- create new win and show comment bufnr
-            vim.cmd(format("rightbelow vert sbuffer %d", comment.comment_bufnr))
           end
         end)
         return true
@@ -673,7 +665,7 @@ function M.select_target_project_column(cb)
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
 
-  local query = format(graphql.projects_query, owner, name, vim.g.octo_loggedin_user, owner)
+  local query = graphql("projects_query", owner, name, vim.g.octo_loggedin_user, owner)
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -748,7 +740,7 @@ function M.select_label(cb)
 
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
-  local query = format(graphql.labels_query, owner, name)
+  local query = graphql("labels_query", owner, name)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -796,10 +788,10 @@ function M.select_assigned_label(cb)
   local name = vim.split(repo, "/")[2]
   local query, key
   if type == "issue" then
-    query = format(graphql.issue_labels_query, owner, name, number)
+    query = graphql("issue_labels_query", owner, name, number)
     key = "issue"
   elseif type == "pull" then
-    query = format(graphql.pull_request_labels_query, owner, name, number)
+    query = graphql("pull_request_labels_query", owner, name, number)
     key = "pullRequest"
   end
   gh.run(
@@ -852,7 +844,7 @@ function M.select_user(cb)
         if not prompt or prompt == "" then
           return nil
         end
-        prompt = "repos:>10 " .. util.escape_chars(prompt)
+        prompt = "repos:>10 " .. prompt
 
         -- skip requests for empty prompts
         if util.is_blank(prompt) then
@@ -872,7 +864,7 @@ function M.select_user(cb)
             return
           end
 
-          local query = format(graphql.user_query, prompt, prompt)
+          local query = graphql("user_query", prompt, prompt)
           gh.run(
             {
               args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -990,10 +982,10 @@ function M.select_assignee(cb)
   local name = vim.split(repo, "/")[2]
   local query, key
   if type == "issue" then
-    query = format(graphql.issue_assignees_query, owner, name, number)
+    query = graphql("issue_assignees_query", owner, name, number)
     key = "issue"
   elseif type == "pull" then
-    query = format(graphql.pull_request_assignees_query, owner, name, number)
+    query = graphql("pull_request_assignees_query", owner, name, number)
     key = "pullRequest"
   end
   gh.run(
