@@ -124,7 +124,7 @@ function M.issues(opts)
 
   local owner = vim.split(opts.repo, "/")[1]
   local name = vim.split(opts.repo, "/")[2]
-  local query = graphql("issues_query", owner, name, filter)
+  local query = graphql("issues_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
@@ -269,7 +269,7 @@ function M.pull_requests(opts)
 
   local owner = vim.split(opts.repo, "/")[1]
   local name = vim.split(opts.repo, "/")[2]
-  local query = graphql("pull_requests_query", owner, name, filter)
+  local query = graphql("pull_requests_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
@@ -425,7 +425,7 @@ function M.issue_search(opts)
         if not prompt or prompt == "" then
           return nil
         end
-        prompt = util.escape_chars(prompt)
+        prompt = prompt
 
         -- skip requests for empty prompts
         if util.is_blank(prompt) then
@@ -504,7 +504,7 @@ function M.pull_request_search(opts)
         if not prompt or prompt == "" then
           return nil
         end
-        prompt = util.escape_chars(prompt)
+        prompt = prompt
 
         -- skip requests for empty prompts
         if util.is_blank(prompt) then
@@ -852,7 +852,7 @@ function M.select_user(cb)
         if not prompt or prompt == "" then
           return nil
         end
-        prompt = "repos:>10 " .. util.escape_chars(prompt)
+        prompt = "repos:>10 " .. prompt
 
         -- skip requests for empty prompts
         if util.is_blank(prompt) then

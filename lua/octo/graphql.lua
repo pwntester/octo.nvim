@@ -1249,9 +1249,16 @@ local function escape_chars(string)
 end
 
 return function(query, ...)
+  local opts = { escape = true }
+  for _, v in ipairs{...} do
+    if type(v) == "table" then
+      opts = v
+      break
+    end
+  end
   local escaped = {}
   for _, v in ipairs{...} do
-    if type(v) == "string" then
+    if type(v) == "string" and opts.escape then
       local encoded = escape_chars(v)
       table.insert(escaped, encoded)
     else
