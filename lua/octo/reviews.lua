@@ -236,10 +236,8 @@ function M.add_review_comment(isSuggestion)
 
     local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), line1, line2)
     api.nvim_buf_set_name(comment_bufnr, bufname)
-    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
     api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
     api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
-    api.nvim_buf_set_option(comment_bufnr, "modified", false)
     api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
     api.nvim_win_set_var(props.qf_winid, "comment_winid", comment_winid)
 
@@ -249,6 +247,7 @@ function M.add_review_comment(isSuggestion)
       vim.list_extend(suggestion, lines)
       table.insert(suggestion, "```")
       api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, suggestion)
+      api.nvim_buf_set_option(comment_bufnr, "modified", false)
     end
 
     -- change to insert mode
@@ -709,11 +708,9 @@ function M.submit_review(event)
         elseif output then
           print("Submitted!")
         end
-        --api.nvim_win_close(0, true)
       end
     }
   )
-
   M.close_review_tab()
 end
 
