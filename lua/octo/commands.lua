@@ -365,9 +365,9 @@ function M.delete_comment()
   end
   local query
   if comment.kind == "IssueComment" then
-    query = format(graphql.delete_issue_comment_mutation, comment.id)
+    query = graphql("delete_issue_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReviewComment" then
-    query = format(graphql.delete_pull_request_review_comment_mutation, comment.id)
+    query = graphql("delete_pull_request_review_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
@@ -414,7 +414,7 @@ function M.resolve_comment()
     thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
   end
 
-  local query = format(graphql.resolve_review_thread_mutation, thread_id)
+  local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -476,7 +476,7 @@ function M.unresolve_comment()
     thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
   end
 
-  local query = format(graphql.unresolve_review_thread_mutation, thread_id)
+  local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -538,9 +538,9 @@ function M.change_state(type, state)
   local id = api.nvim_buf_get_var(bufnr, "iid")
   local query
   if type == "issue" then
-    query = format(graphql.update_issue_state_mutation, id, state)
+    query = graphql("update_issue_state_mutation", id, state)
   elseif type == "pull" then
-    query = format(graphql.update_pull_request_state_mutation, id, state)
+    query = graphql("update_pull_request_state_mutation", id, state)
   end
 
   gh.run(
@@ -585,7 +585,7 @@ function M.create_issue(repo)
   vim.fn.inputrestore()
 
   local repo_id = util.get_repo_id(repo)
-  local query = format(graphql.create_issue_mutation, repo_id, title, constants.NO_BODY_MSG)
+  local query = graphql("create_issue_mutation", repo_id, title, constants.NO_BODY_MSG)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -772,7 +772,7 @@ function M.review_threads()
   end
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
-  local query = format(graphql.review_threads_query, owner, name, number)
+  local query = graphql("review_threads_query", owner, name, number)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -895,9 +895,9 @@ function M.reaction_action(action, reaction)
     reaction_line = comment.reaction_line
 
     if action == "add" then
-      query = format(graphql.add_reaction_mutation, comment.id, reaction)
+      query = graphql("add_reaction_mutation", comment.id, reaction)
     elseif action == "delete" then
-      query = format(graphql.remove_reaction_mutation, comment.id, reaction)
+      query = graphql("remove_reaction_mutation", comment.id, reaction)
     end
   elseif vim.bo.ft == "octo_issue" then
     -- cursor not located on a comment, using the issue instead
@@ -906,9 +906,9 @@ function M.reaction_action(action, reaction)
 
     local id = api.nvim_buf_get_var(bufnr, "iid")
     if action == "add" then
-      query = format(graphql.add_reaction_mutation, id, reaction)
+      query = graphql("add_reaction_mutation", id, reaction)
     elseif action == "delete" then
-      query = format(graphql.remove_reaction_mutation, id, reaction)
+      query = graphql("remove_reaction_mutation", id, reaction)
     end
   end
 
@@ -980,7 +980,7 @@ function M.add_project_card()
   menu.select_target_project_column(
     function(column_id)
       -- add new card
-      local query = format(graphql.add_project_card_mutation, iid, column_id)
+      local query = graphql("add_project_card_mutation", iid, column_id)
       gh.run(
         {
           args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -1015,7 +1015,7 @@ function M.delete_project_card()
   menu.select_project_card(
     function(card)
       -- delete card
-      local query = format(graphql.delete_project_card_mutation, card)
+      local query = graphql("delete_project_card_mutation", card)
       gh.run(
         {
           args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -1052,7 +1052,7 @@ function M.move_project_card()
       menu.select_target_project_column(
         function(target_column)
           -- move card to selected column
-          local query = format(graphql.move_project_card_mutation, source_card, target_column)
+          local query = graphql("move_project_card_mutation", source_card, target_column)
           gh.run(
             {
               args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -1101,7 +1101,7 @@ function M.add_label()
 
   menu.select_label(
     function(label_id)
-      local query = format(graphql.add_labels_mutation, iid, label_id)
+      local query = graphql("add_labels_mutation", iid, label_id)
       gh.run(
         {
           args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -1138,7 +1138,7 @@ function M.delete_label()
 
   menu.select_assigned_label(
     function(label_id)
-      local query = format(graphql.remove_labels_mutation, iid, label_id)
+      local query = graphql("remove_labels_mutation", iid, label_id)
       gh.run(
         {
           args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
@@ -1177,9 +1177,9 @@ function M.add_user(subject)
     function(user_id)
       local query
       if subject == "assignee" then
-        query = format(graphql.add_assignees_mutation, iid, user_id)
+        query = graphql("add_assignees_mutation", iid, user_id)
       elseif subject == "reviewer" then
-        query = format(graphql.request_reviews_mutation, iid, user_id)
+        query = graphql("request_reviews_mutation", iid, user_id)
       end
       gh.run(
         {
@@ -1217,7 +1217,7 @@ function M.remove_assignee()
 
   menu.select_assignee(
     function(user_id)
-      local query = format(graphql.remove_assignees_mutation, iid, user_id)
+      local query = graphql("remove_assignees_mutation", iid, user_id)
       gh.run(
         {
           args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},

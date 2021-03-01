@@ -752,7 +752,7 @@ function M.submit_review(event)
 
   local qf = vim.fn.getqflist({context = 0})
   local pull_request_id = qf.context.pull_request_id
-  local query = format(graphql.submit_review_mutation, pull_request_id, event, text, comments)
+  local query = graphql("submit_review_mutation", pull_request_id, event, text, comments)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},

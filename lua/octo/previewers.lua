@@ -28,7 +28,7 @@ M.issue =
           local number = entry.issue.number
           local owner = vim.split(opts.repo, "/")[1]
           local name = vim.split(opts.repo, "/")[2]
-          local query = format(graphql.issue_query, owner, name, number)
+          local query = graphql("issue_query", owner, name, number)
           gh.run(
             {
               args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -89,7 +89,7 @@ M.pull_request =
           local number = entry.pull_request.number
           local owner = vim.split(opts.repo, "/")[1]
           local name = vim.split(opts.repo, "/")[2]
-          local query = format(graphql.pull_request_query, owner, name, number)
+          local query = graphql("pull_request_query", owner, name, number)
           gh.run(
             {
               args = {"api", "graphql", "-f", format("query=%s", query)},

@@ -340,7 +340,7 @@ function M.get_repo_id(repo)
   else
     local owner = vim.split(repo, "/")[1]
     local name = vim.split(repo, "/")[2]
-    local query = format(graphql.repository_id_query, owner, name)
+    local query = graphql("repository_id_query", owner, name)
     local output =
       gh.run(
       {
@@ -441,7 +441,7 @@ end
 function M.get_file_contents(repo, commit, path, cb)
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
-  local query = format(graphql.file_content_query, owner, name, commit, path)
+  local query = graphql("file_content_query", owner, name, commit, path)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},

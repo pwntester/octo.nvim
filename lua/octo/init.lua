@@ -53,10 +53,10 @@ function M.load(bufnr, cb)
   local name = vim.split(repo, "/")[2]
   local query, key
   if type == "pull" then
-    query = format(graphql.pull_request_query, owner, name, number)
+    query = graphql("pull_request_query", owner, name, number)
     key = "pullRequest"
   elseif type == "issue" then
-    query = format(graphql.issue_query, owner, name, number)
+    query = graphql("issue_query", owner, name, number)
     key = "issue"
   end
   gh.run(
@@ -374,9 +374,9 @@ function M.save_buffer()
 
       local query
       if issue_kind == "issue" then
-        query = format(graphql.update_issue_mutation, id, title_metadata.body, desc_metadata.body)
+        query = graphql("update_issue_mutation", id, title_metadata.body, desc_metadata.body)
       elseif issue_kind == "pull" then
-        query = format(graphql.update_pull_request_mutation, id, title_metadata.body, desc_metadata.body)
+        query = graphql("update_pull_request_mutation", id, title_metadata.body, desc_metadata.body)
       end
       gh.run(
         {
@@ -417,7 +417,7 @@ function M.save_buffer()
         if metadata.kind == "IssueComment" then
           -- create new comment
           local id = api.nvim_buf_get_var(bufnr, "iid")
-          local add_query = format(graphql.add_issue_comment_mutation, id, metadata.body)
+          local add_query = graphql("add_issue_comment_mutation", id, metadata.body)
           gh.run(
             {
               args = {"api", "graphql", "-f", format("query=%s", add_query)},
@@ -489,11 +489,11 @@ function M.save_buffer()
         -- update comment/reply
         local update_query
         if metadata.kind == "IssueComment" then
-          update_query = format(graphql.update_issue_comment_mutation, metadata.id, metadata.body)
+          update_query = graphql("update_issue_comment_mutation", metadata.id, metadata.body)
         elseif metadata.kind == "PullRequestReviewComment" then
-          update_query = format(graphql.update_pull_request_review_comment_mutation, metadata.id, metadata.body)
+          update_query = graphql("update_pull_request_review_comment_mutation", metadata.id, metadata.body)
         elseif metadata.kind == "PullRequestReview" then
-          update_query = format(graphql.update_pull_request_review_mutation, metadata.id, metadata.body)
+          update_query = graphql("update_pull_request_review_mutation", metadata.id, metadata.body)
         end
         gh.run(
           {

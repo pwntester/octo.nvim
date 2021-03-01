@@ -1237,4 +1237,27 @@ query {
 }
 ]]
 
-return M
+local function escape_chars(string)
+  local escaped, _ = string.gsub(
+    string,
+    '["]',
+    {
+      ['"'] = '\\"',
+    }
+  )
+  return escaped
+end
+
+return function(query, ...)
+  local escaped = {}
+  for _, v in ipairs{...} do
+    if type(v) == "string" then
+      local encoded = escape_chars(v)
+      table.insert(escaped, encoded)
+    else
+      table.insert(escaped, v)
+    end
+  end
+  return string.format(M[query], unpack(escaped))
+end
+
