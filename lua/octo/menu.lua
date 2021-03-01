@@ -569,16 +569,20 @@ end
 function M.review_comments()
   local comments = vim.tbl_values(reviews.review_comments)
   local max_linenr_length = -1
+  local filtered_comments = {}
   for _, comment in ipairs(comments) do
     max_linenr_length = math.max(max_linenr_length, #tostring(comment.line1))
     max_linenr_length = math.max(max_linenr_length, #tostring(comment.line2))
+    if not util.is_blank(vim.fn.trim(comment.body)) then
+      table.insert(filtered_comments, comment)
+    end
   end
   pickers.new(
     {},
     {
       prompt_prefix = "Review Comments >",
       finder = finders.new_table {
-        results = comments,
+        results = filtered_comments,
         entry_maker = entry_maker.gen_from_review_comment(max_linenr_length)
       },
       sorter = conf.generic_sorter({}),
@@ -606,18 +610,6 @@ function M.review_comments()
           end
           if diff_winid > -1 then
             api.nvim_win_set_cursor(diff_winid, {comment.line1, 1})
-          end
-
-          -- show comment win/buf
-          if comment.comment_winid and api.nvim_win_is_valid(comment.comment_winid) then
-            api.nvim_win_set_buf(comment.comment_winid, comment.comment_bufnr)
-            api.nvim_set_current_win(comment.comment_winid)
-          else
-            -- move to qf win
-            api.nvim_set_current_win(comment.qf_winid)
-
-            -- create new win and show comment bufnr
-            vim.cmd(format("rightbelow vert sbuffer %d", comment.comment_bufnr))
           end
         end)
         return true

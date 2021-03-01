@@ -685,7 +685,7 @@ function M.pr_checks()
             end
             table.insert(lines, table.concat(line, "  "))
           end
-          local _, bufnr = util.create_content_popup(lines)
+          local _, bufnr = util.create_popup({content=lines})
           local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
           for i, l in ipairs(buf_lines) do
             if #vim.split(l, "pass") > 1 then
@@ -789,29 +789,17 @@ function M.review_threads()
 end
 
 function M.submit_review()
-  local winnr, bufnr =
-    util.create_popup(
-    {""},
-    {
-      line = 5,
-      col = 5,
-      width = math.floor(vim.o.columns * 0.9),
-      height = math.floor(vim.o.lines * 0.5)
-    }
-  )
-  api.nvim_set_current_win(winnr)
+  local winid, bufnr = util.create_popup({
+    header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
+  })
+  api.nvim_set_current_win(winid)
   api.nvim_buf_set_option(bufnr, "syntax", "markdown")
 
-  local help_vt = {
-    {"Press <c-a> to approve, <c-m> to comment or <c-r> to request changes", "OctoNvimDetailsValue"}
-  }
-  writers.write_block({"", "", ""}, {bufnr = bufnr, mark = false, line = 1})
-  writers.write_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, help_vt)
   local mapping_opts = {script = true, silent = true, noremap = true}
   api.nvim_buf_set_keymap(bufnr, "i", "<CR>", "<CR>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winnr), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", ":lua require'octo.reviews'.submit_review('APPROVE')<CR>", mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.submit_review('COMMENT')<CR>", mapping_opts)
   api.nvim_buf_set_keymap(

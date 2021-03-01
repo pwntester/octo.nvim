@@ -157,7 +157,7 @@ function M.diff_changes_qf_entry()
   api.nvim_win_set_buf(right_win, right_bufnr)
   M.add_changes_qf_mappings()
   vim.cmd(format("leftabove vert sbuffer %d", left_bufnr))
-  local left_win = api.nvim_get_current_win()
+  local left_win = util.getwin4buf(left_bufnr)
   M.add_changes_qf_mappings()
 
   local write_diff_lines = function(lines, side)
@@ -227,57 +227,28 @@ function M.add_review_comment(isSuggestion)
       return
     end
 
-    -- create new buffer
+    -- create comment window and buffer
+    local comment_winid, comment_bufnr = util.create_popup({
+      header = format("Comment for %s (from %d to %d) [%s]", props.path, line1, line2, props.side)
+    })
+    api.nvim_set_current_win(comment_winid)
+    api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
+
     local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), line1, line2)
-    local comment_bufnr
-    if vim.fn.bufnr(bufname) > -1 then
-      comment_bufnr = vim.fn.bufnr(bufname)
-      api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, {})
-    else
-      comment_bufnr = api.nvim_create_buf(false, true)
-      api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
-    end
-
-    -- check if there is a comment win already open
-    local _, comment_winid = pcall(api.nvim_win_get_var, props.qf_winid, "comment_winid")
-    if tonumber(comment_winid) and api.nvim_win_is_valid(comment_winid) then
-      -- move to comment win
-      api.nvim_win_set_buf(comment_winid, comment_bufnr)
-      api.nvim_set_current_win(comment_winid)
-    else
-      -- move to qf win
-      api.nvim_set_current_win(props.qf_winid)
-
-      -- create new win and show comment bufnr
-      vim.cmd(format("rightbelow vert sbuffer %d", comment_bufnr))
-
-      -- store comment win id
-      comment_winid = api.nvim_get_current_win()
-      api.nvim_win_set_var(props.qf_winid, "comment_winid", comment_winid)
-    end
-
-    -- add mappings to comment buffer
-    M.add_changes_qf_mappings()
-
-    -- header
-    -- local header_vt = {
-    --   {format("%s", props.path), "OctoNvimDetailsValue"},
-    --   {" ["},
-    --   {format("%s", props.side), "OctoNvimDetailsLabel"},
-    --   {"] ("},
-    --   {format("%d,%d", line1, line2), "OctoNvimDetailsValue"},
-    --   {")"}
-    -- }
-    -- writers.write_block({"", ""}, {bufnr = comment_bufnr, line = 1})
-    -- writers.write_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt)
+    api.nvim_buf_set_name(comment_bufnr, bufname)
+    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
+    api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
+    api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
+    api.nvim_buf_set_option(comment_bufnr, "modified", false)
+    api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
+    api.nvim_win_set_var(props.qf_winid, "comment_winid", comment_winid)
 
     if isSuggestion then
       local lines = api.nvim_buf_get_lines(props.content_bufnr, line1-1, line2, false)
-      writers.write_block({"```suggestion"}, {bufnr = comment_bufnr, line=1 })
-      writers.write_block(lines, {bufnr = comment_bufnr })
-      writers.write_block({"```"}, {bufnr = comment_bufnr })
-    -- else
-    --   writers.write_block({""}, {bufnr = comment_bufnr })
+      local suggestion = {"```suggestion"}
+      vim.list_extend(suggestion, lines)
+      table.insert(suggestion, "```")
+      api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, suggestion)
     end
 
     -- change to insert mode
@@ -303,14 +274,6 @@ function M.add_review_comment(isSuggestion)
 
     -- add comment to list of pending comments
     M.review_comments[bufname] = comment
-
-    -- configure comment buffer
-    api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
-    api.nvim_buf_set_option(comment_bufnr, "filetype", "octo_reviewcomment")
-    api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
-    api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
-    api.nvim_buf_set_name(comment_bufnr, bufname)
-    api.nvim_buf_set_option(comment_bufnr, "modified", false)
   end
 end
 
@@ -322,15 +285,11 @@ function M.save_review_comment()
     local comment = M.review_comments[bufname]
     local body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
     comment.body = vim.fn.trim(body)
-    if util.is_blank(comment.body) then
-      -- ignore empty comments
-      return
-    end
     M.review_comments[bufname] = comment
-    api.nvim_buf_set_option(bufnr, "modified", false)
-
-    -- highlight commented lines
-    M.highlight_lines(comment.content_bufnr, comment.line1, comment.line2)
+    if not util.is_blank(comment.body) then
+      -- highlight commented lines
+      M.highlight_lines(comment.content_bufnr, comment.line1, comment.line2)
+    end
   end
 end
 
@@ -430,7 +389,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
 
   -- open qf
   vim.cmd(format("%dcopen", qf_height))
-  local qf_win = api.nvim_get_current_win()
+  local qf_win = vim.fn.getqflist({winid = 0}).winid
 
   -- highlight qf entries
   vim.cmd [[call matchadd("Comment", "\(.*\)")]]
@@ -669,20 +628,6 @@ end
 
 function M.close_review_tab()
   vim.cmd [[silent! tabclose]]
-
-  -- close fugitive buffers
-  --M.clean_fugitive_buffers()
-
-  -- close review comment buffers
-  local tabpage = api.nvim_get_current_tabpage()
-  for _, w in ipairs(api.nvim_tabpage_list_wins(tabpage)) do
-    if api.nvim_win_is_valid(w) then
-      local bufnr = api.nvim_win_get_buf(w)
-      if api.nvim_buf_get_option(bufnr, "filetype") == "octo_reviewcomment" then
-        vim.cmd(format("bdelete! %d", bufnr))
-      end
-    end
-  end
 end
 
 function M.add_changes_qf_mappings(bufnr)
@@ -728,6 +673,7 @@ function M.submit_review(event)
 
   local comments = {}
   for _, c in ipairs(vim.tbl_values(M.review_comments)) do
+    if util.is_blank(vim.fn.trim(c.body)) then goto continue end
     if c.line1 == c.line2 then
       table.insert(
         comments,
@@ -747,6 +693,7 @@ function M.submit_review(event)
         )
       )
     end
+    ::continue::
   end
   comments = table.concat(comments, ", ")
 
