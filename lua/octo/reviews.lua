@@ -200,6 +200,7 @@ function M.diff_changes_qf_entry()
 end
 
 function M.add_review_comment(isSuggestion)
+  -- get visual selected line range
   local line1, line2
   if vim.fn.getpos("'<")[2] == vim.fn.getcurpos()[2] then
     line1 = vim.fn.getpos("'<")[2]
@@ -208,6 +209,8 @@ function M.add_review_comment(isSuggestion)
     line1 = vim.fn.getcurpos()[2]
     line2 = vim.fn.getcurpos()[2]
   end
+
+  -- check we are in an octo diff buffer
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
@@ -257,24 +260,24 @@ function M.add_review_comment(isSuggestion)
     M.add_changes_qf_mappings()
 
     -- header
-    local header_vt = {
-      {format("%s", props.path), "OctoNvimDetailsValue"},
-      {" ["},
-      {format("%s", props.side), "OctoNvimDetailsLabel"},
-      {"] ("},
-      {format("%d,%d", line1, line2), "OctoNvimDetailsValue"},
-      {")"}
-    }
-    writers.write_block({"", ""}, {bufnr = comment_bufnr, line = 1})
-    writers.write_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt)
+    -- local header_vt = {
+    --   {format("%s", props.path), "OctoNvimDetailsValue"},
+    --   {" ["},
+    --   {format("%s", props.side), "OctoNvimDetailsLabel"},
+    --   {"] ("},
+    --   {format("%d,%d", line1, line2), "OctoNvimDetailsValue"},
+    --   {")"}
+    -- }
+    -- writers.write_block({"", ""}, {bufnr = comment_bufnr, line = 1})
+    -- writers.write_virtual_text(comment_bufnr, constants.OCTO_TITLE_VT_NS, 0, header_vt)
 
     if isSuggestion then
       local lines = api.nvim_buf_get_lines(props.content_bufnr, line1-1, line2, false)
-      writers.write_block({"```suggestion"}, {bufnr = comment_bufnr })
+      writers.write_block({"```suggestion"}, {bufnr = comment_bufnr, line=1 })
       writers.write_block(lines, {bufnr = comment_bufnr })
       writers.write_block({"```"}, {bufnr = comment_bufnr })
-    else
-      writers.write_block({""}, {bufnr = comment_bufnr })
+    -- else
+    --   writers.write_block({""}, {bufnr = comment_bufnr })
     end
 
     -- change to insert mode
