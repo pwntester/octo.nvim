@@ -4,7 +4,6 @@ local constants = require "octo.constants"
 local util = require "octo.util"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
-local date = require "octo.date"
 local folds = require "octo.folds"
 local vim = vim
 local api = vim.api
