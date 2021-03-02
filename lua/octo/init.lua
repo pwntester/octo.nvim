@@ -344,7 +344,7 @@ function M.check_editable()
     end
   end
   vim.cmd [[call feedkeys("\<esc>")]]
-  print("Cannot make changes, 'modifiable' is off")
+  print("Cannot make changes to non-editable regions")
 end
 
 function M.save_buffer()
