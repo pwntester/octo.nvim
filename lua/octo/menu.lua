@@ -77,7 +77,7 @@ local function open(repo, what, command)
     elseif command == 'tab' then
       vim.cmd [[:tab sb %]]
     end
-    vim.cmd(string.format([[ lua require'octo.commands'.get_%s('%s', '%s') ]], what, repo, selection.value))
+    vim.cmd(string.format([[ lua require'octo.util'.get_%s('%s', '%s') ]], what, repo, selection.value))
   end
 end
 
