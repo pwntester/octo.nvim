@@ -326,25 +326,52 @@ function M.create_buffer(type, obj, repo, create)
   vim.cmd [[ au! * <buffer> ]]
   vim.cmd [[ au TextChanged <buffer> lua require"octo.signs".render_signcolumn() ]]
   vim.cmd [[ au TextChangedI <buffer> lua require"octo.signs".render_signcolumn() ]]
-  vim.cmd [[ au InsertEnter <buffer> lua require"octo".check_editable() ]]
+  vim.cmd [[ au InsertEnter <buffer> lua require"octo".enter_insert() ]]
+  vim.cmd [[ au InsertLeave <buffer> lua require"octo".leave_insert() ]]
   vim.cmd [[ augroup END ]]
 end
 
-function M.check_editable()
+function M.enter_insert()
   local cursor = api.nvim_win_get_cursor(0)
+  local bufnr = api.nvim_get_current_buf()
 
   -- proccess comment extmarked regions
-  local marks = api.nvim_buf_get_extmarks(0, constants.OCTO_COMMENT_NS, 0, -1, {details = true})
+  local exit = true
+  local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_COMMENT_NS, 0, -1, {details = true})
   for _, mark in ipairs(marks) do
     local start_line = mark[2]
     local end_line = mark[4]["end_row"]
     if cursor[1] == 1 or -- title
-       (start_line+1 < cursor[1] and end_line > cursor[1]) then
-      return
+      (start_line+1 < cursor[1] and end_line > cursor[1]) then
+      exit = false
+      break
     end
   end
-  vim.cmd [[call feedkeys("\<esc>")]]
-  print("Cannot make changes to non-editable regions")
+  if exit then
+    vim.cmd [[call feedkeys("\<esc>")]]
+    print("Cannot make changes to non-editable regions")
+  end
+
+  -- format text
+  local comment, start_line = util.get_comment_at_cursor(bufnr, cursor)
+  if comment then
+    local lines = vim.split(comment.body, "\n")
+    api.nvim_buf_set_lines(bufnr, start_line, start_line + #lines, false, lines)
+  end
+end
+
+function M.leave_insert()
+  local cursor = api.nvim_win_get_cursor(0)
+  local bufnr = api.nvim_get_current_buf()
+  local comment, start_line = util.get_comment_at_cursor(bufnr, cursor)
+  if comment then
+    local lines = vim.split(comment.body, "\n")
+    local alt_lines = {}
+    for _, line in ipairs(lines) do
+      table.insert(alt_lines, "⠀⠀⠀⠀".. line) -- "⠀" (U+2800)
+    end
+    api.nvim_buf_set_lines(bufnr, start_line, start_line + #alt_lines, false, alt_lines)
+  end
 end
 
 function M.save_buffer()
