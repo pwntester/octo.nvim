@@ -22,7 +22,7 @@ local commands = {
       M.create_issue(repo)
     end,
     edit = function(...)
-      M.get_issue(...)
+      util.get_issue(...)
     end,
     close = function()
       M.change_state("issue", "CLOSED")
@@ -47,7 +47,7 @@ local commands = {
   },
   pr = {
     edit = function(...)
-      M.get_pull_request(...)
+      util.get_pull_request(...)
     end,
     close = function()
       M.change_state("pull", "CLOSED")
@@ -174,37 +174,6 @@ local commands = {
   }
 }
 
-function table.pack(...)
-  return {n = select("#", ...), ...}
-end
-
-function M.get_repo_number_from_varargs(...)
-  local repo, number
-  local args = table.pack(...)
-  if args.n == 0 then
-    print("Missing arguments")
-    return
-  elseif args.n == 1 then
-    repo = util.get_remote_name()
-    number = tonumber(args[1])
-  elseif args.n == 2 then
-    repo = args[1]
-    number = tonumber(args[2])
-  else
-    print("Unexpected arguments")
-    return
-  end
-  if not repo then
-    print("Cant find repo name")
-    return
-  end
-  if not number then
-    print("Missing issue/pr number")
-    return
-  end
-  return repo, number
-end
-
 function M.process_varargs(repo, ...)
   local args = table.pack(...)
   if not repo then
@@ -226,7 +195,12 @@ end
 function M.octo(object, action, ...)
   local o = commands[object]
   if not o then
-    if not M.parse_url(object) then
+    local repo, number, kind = util.parse_url(object)
+    if repo and number and kind == "issue" then
+      util.get_issue(repo, number)
+    elseif repo and number and kind == "pull" then
+      util.get_pull_request(repo, number)
+    else
       print("Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(commands)))
       return
     end
@@ -239,30 +213,6 @@ function M.octo(object, action, ...)
       a(...)
     end
   end
-end
-
-function M.parse_url(url)
-  local i, j, repo, number = string.find(url, "https://github.com/(.*)/issues/(%d+)")
-  local type
-  if not i then
-    i, j, repo, number = string.find(url, "https://github.com/(.*)/pull/(%d+)")
-    if i then
-      type = "pull"
-    end
-  else
-    type = "issue"
-  end
-  if repo and number then
-    if "issue" == type then
-      M.get_issue(repo, number)
-      return true
-    end
-    if "pull" == type then
-      M.get_pull_request(repo, number)
-      return true
-    end
-  end
-  return false
 end
 
 function M.add_comment()
@@ -601,16 +551,6 @@ function M.create_issue(repo)
       end
     }
   )
-end
-
-function M.get_issue(...)
-  local repo, number = M.get_repo_number_from_varargs(...)
-  vim.cmd(format("edit octo://%s/issue/%s", repo, number))
-end
-
-function M.get_pull_request(...)
-  local repo, number = M.get_repo_number_from_varargs(...)
-  vim.cmd(format("edit octo://%s/pull/%s", repo, number))
 end
 
 function M.checkout_pr()

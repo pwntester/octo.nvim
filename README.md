@@ -138,7 +138,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 
 ## Mappings
-`<Plug>(OctoOpenURLAtCursor)`: Open URL at cursor with Octo
+`<Plug>(OctoOpenIssueAtCursor)`: Open issue/pr at cursor with Octo
 
 
 ## In-issue mappings

@@ -108,7 +108,7 @@ if !exists("g:octo_loggedin_user")
 endif
 
 " mappings
-nnoremap <Plug>(OctoOpenURLAtCursor) <cmd>lua require'octo.util'.open_url_at_cursor()<CR>
+nnoremap <Plug>(OctoOpenIssueAtCursor) <cmd>lua require'octo.util'.open_issue_at_cursor()<CR>
 
 " settings
 let g:octo_date_format = get(g:, 'octo_date_format', "%Y %b %d %I:%M %p %Z")

@@ -25,6 +25,18 @@ M.reaction_map = {
   ["EYES"] = "👀"
 }
 
+function table.slice(tbl, first, last, step)
+  local sliced = {}
+  for i = first or 1, last or #tbl, step or 1 do
+    sliced[#sliced + 1] = tbl[i]
+  end
+  return sliced
+end
+
+function table.pack(...)
+  return {n = select("#", ...), ...}
+end
+
 function M.is_blank(s)
   return not (s ~= nil and string.match(s, "%S") ~= nil)
 end
@@ -458,14 +470,6 @@ function M.aggregate_pages(text, aggregation_key)
   return base_resp
 end
 
-function table.slice(tbl, first, last, step)
-  local sliced = {}
-  for i = first or 1, last or #tbl, step or 1 do
-    sliced[#sliced + 1] = tbl[i]
-  end
-  return sliced
-end
-
 function M.get_nested_prop(obj, prop)
   while true do
     local parts = vim.split(prop, "%.")
@@ -502,13 +506,71 @@ function M.open_in_browser()
   os.execute(cmd)
 end
 
-function M.open_url_at_cursor()
-  local uri = vim.fn.matchstr(vim.fn.getline("."), "[a-z]*:\\/\\/[^ >,;()]*")
-  print(uri)
-  if uri then
-    require "octo.commands".parse_url(uri)
+function M.get_repo_number_from_varargs(...)
+  local repo, number
+  local args = table.pack(...)
+  if args.n == 0 then
+    print("Missing arguments")
+    return
+  elseif args.n == 1 then
+    repo = M.get_remote_name()
+    number = tonumber(args[1])
+  elseif args.n == 2 then
+    repo = args[1]
+    number = tonumber(args[2])
   else
-    api.nvim_err_writeln("No URI found in line.")
+    print("Unexpected arguments")
+    return
+  end
+  if not repo then
+    print("Cant find repo name")
+    return
+  end
+  if not number then
+    print("Missing issue/pr number")
+    return
+  end
+  return repo, number
+end
+
+function M.get_issue(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+  vim.cmd(format("edit octo://%s/issue/%s", repo, number))
+end
+
+function M.get_pull_request(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+  vim.cmd(format("edit octo://%s/pull/%s", repo, number))
+end
+
+function M.parse_url(url)
+  local repo, kind, number = string.match(url, "https://github.com/([^/]+/[^/]+)/([^/]+)/(%d+)")
+  if repo and number and kind == "issues" then
+    return repo, number, "issue"
+  elseif repo and number and kind == "pull" then
+    return repo, number, kind
+  end
+end
+
+function M.open_issue_at_cursor()
+  local current_line = vim.fn.getline(".")
+  local url_pattern = "[a-z]+://[^ >,;()]+"
+  local issue_pattern = "([^ /]+/[^ #]+)#(%d+)"
+  local repo, number, kind
+  local uri = current_line:match(url_pattern)
+  if uri then
+    repo, number, kind = M.parse_url(uri)
+  else
+    repo, number = current_line:match(issue_pattern)
+    if not repo or not number then
+      api.nvim_err_writeln("No URI found in line.")
+      return
+    end
+  end
+  if repo and number and (kind == "issue" or not kind) then
+    M.get_issue(repo, number)
+  elseif repo and number and kind == "pull" then
+    M.get_pull_request(repo, number)
   end
 end
 
