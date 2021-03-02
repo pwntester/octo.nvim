@@ -154,8 +154,8 @@ function M.create_buffer(type, obj, repo, create)
   api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
   -- delete extmarks
-  for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, constants.OCTO_EM_NS, 0, -1, {})) do
-    api.nvim_buf_del_extmark(bufnr, constants.OCTO_EM_NS, m[1])
+  for _, m in ipairs(api.nvim_buf_get_extmarks(bufnr, constants.OCTO_COMMENT_NS, 0, -1, {})) do
+    api.nvim_buf_del_extmark(bufnr, constants.OCTO_COMMENT_NS, m[1])
   end
 
   -- configure buffer
@@ -326,7 +326,25 @@ function M.create_buffer(type, obj, repo, create)
   vim.cmd [[ au! * <buffer> ]]
   vim.cmd [[ au TextChanged <buffer> lua require"octo.signs".render_signcolumn() ]]
   vim.cmd [[ au TextChangedI <buffer> lua require"octo.signs".render_signcolumn() ]]
+  vim.cmd [[ au InsertEnter <buffer> lua require"octo".check_editable() ]]
   vim.cmd [[ augroup END ]]
+end
+
+function M.check_editable()
+  local cursor = api.nvim_win_get_cursor(0)
+
+  -- proccess comment extmarked regions
+  local marks = api.nvim_buf_get_extmarks(0, constants.OCTO_COMMENT_NS, 0, -1, {details = true})
+  for _, mark in ipairs(marks) do
+    local start_line = mark[2]
+    local end_line = mark[4]["end_row"]
+    if cursor[1] == 1 or -- title
+       (start_line+1 < cursor[1] and end_line > cursor[1]) then
+      return
+    end
+  end
+  vim.cmd [[call feedkeys("\<esc>")]]
+  print("Cannot make changes, 'modifiable' is off")
 end
 
 function M.save_buffer()

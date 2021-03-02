@@ -52,7 +52,7 @@ function M.write_block(lines, opts)
 
     return api.nvim_buf_set_extmark(
       bufnr,
-      constants.OCTO_EM_NS,
+      constants.OCTO_COMMENT_NS,
       max(0, start_line - 1 - 1),
       0,
       {

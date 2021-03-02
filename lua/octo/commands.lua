@@ -333,7 +333,7 @@ function M.delete_comment()
           api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
           api.nvim_buf_clear_namespace(bufnr, comment.namespace, 0, -1)
           api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
-          api.nvim_buf_del_extmark(bufnr, constants.OCTO_EM_NS, comment.extmark)
+          api.nvim_buf_del_extmark(bufnr, constants.OCTO_COMMENT_NS, comment.extmark)
           local comments = api.nvim_buf_get_var(bufnr, "comments")
           local updated = {}
           for _, c in ipairs(comments) do

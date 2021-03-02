@@ -186,14 +186,14 @@ function M.update_issue_metadata(bufnr)
   if ft == "octo_issue" then
     -- title
     metadata = api.nvim_buf_get_var(bufnr, "title")
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, metadata.extmark, {details = true})
+    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
     start_line, end_line, text = M.get_extmark_region(bufnr, mark)
     M.update_metadata(metadata, start_line, end_line, text)
     api.nvim_buf_set_var(bufnr, "title", metadata)
 
     -- description
     metadata = api.nvim_buf_get_var(bufnr, "description")
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, metadata.extmark, {details = true})
+    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
     start_line, end_line, text = M.get_extmark_region(bufnr, mark)
     if text == "" then
       -- description has been removed
@@ -209,7 +209,7 @@ function M.update_issue_metadata(bufnr)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for i, m in ipairs(comments) do
     metadata = m
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, metadata.extmark, {details = true})
+    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
     start_line, end_line, text = M.get_extmark_region(bufnr, mark)
 
     if text == "" then
@@ -228,7 +228,7 @@ end
 function M.get_comment_at_cursor(bufnr, cursor)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for _, comment in ipairs(comments) do
-    local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details = true})
+    local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
@@ -268,7 +268,7 @@ end
 function M.update_reactions_at_cursor(bufnr, cursor, reaction_groups)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for i, comment in ipairs(comments) do
-    local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_EM_NS, comment.extmark, {details = true})
+    local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
