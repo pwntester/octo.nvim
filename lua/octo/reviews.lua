@@ -290,6 +290,11 @@ function M.save_review_comment()
       M.highlight_lines(comment.content_bufnr, comment.line1, comment.line2)
     end
   end
+  util.set_timeout(100, function()
+    vim.schedule(function()
+      api.nvim_buf_delete(bufnr, {force=true})
+    end)
+  end)
 end
 
 ---

@@ -345,7 +345,9 @@ function M.create_popup(opts)
         padding = {0, 0, 0, 0}
       }
     )
-    vim.cmd("set eventignore+=WinClosed,WinLeave")
+    api.nvim_buf_call(header_win_opts.border.bufnr, function()
+      vim.cmd("setlocal eventignore+=WinClosed,WinLeave")
+    end)
     local header_bufnr = api.nvim_win_get_buf(header_winid)
     api.nvim_buf_set_option(header_bufnr, "modifiable", false)
   end
@@ -368,24 +370,24 @@ function M.create_popup(opts)
     vim.cmd(string.format(
       "autocmd BufLeave,BufDelete <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d, %d, %d)",
       bufnr,
+      winid,
       header_winid,
-      header_win_opts.border.win_id,
-      winid))
-    vim.cmd(string.format(
-      "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d, %d, %d)",
-      bufnr,
-      header_winid,
-      header_win_opts.border.win_id,
-      winid))
+      header_win_opts.border.win_id))
+    -- vim.cmd(string.format(
+    --   "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d, %d, %d)",
+    --   bufnr,
+    --   header_winid,
+    --   header_win_opts.border.win_id,
+    --   winid))
   else
     vim.cmd(string.format(
       "autocmd BufLeave,BufDelete <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d)",
       bufnr,
       winid))
-    vim.cmd(string.format(
-      "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d)",
-      bufnr,
-      winid))
+    -- vim.cmd(string.format(
+    --   "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d)",
+    --   bufnr,
+    --   winid))
   end
   local mapping_opts = {script = true, silent = true, noremap = true}
   api.nvim_buf_set_keymap(bufnr, "n", "q", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
