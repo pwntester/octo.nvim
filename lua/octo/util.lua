@@ -519,8 +519,8 @@ end
 
 function M.get_bubble_highlight_chunks(content, highlight_group, margin_width)
   local margin = string.rep(" ", margin_width or 0)
-  local left_delimiter = margin .. ""
-  local right_delimiter = "" .. margin
+  local left_delimiter = margin .. (vim.g.octo_bubble_delimiter_left or "")
+  local right_delimiter = (vim.g.octo_bubble_delimiter_right or "") .. margin
   local delimiter_highlight_group = highlight_group .. "Delimiter"
   local delimiter_foreground = get_highlight_group_attribute(highlight_group, "background")
 
