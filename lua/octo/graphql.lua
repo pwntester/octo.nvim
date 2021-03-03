@@ -240,6 +240,7 @@ M.create_issue_mutation =
             author {
               login
             }
+            viewerDidAuthor
           }
         }
         labels(first: 20) {
@@ -322,6 +323,7 @@ M.update_issue_state_mutation =
             author {
               login
             }
+            viewerDidAuthor
           }
         }
         labels(first: 20) {
@@ -421,6 +423,7 @@ M.update_pull_request_state_mutation =
             author {
               login
             }
+            viewerDidAuthor
           }
         }
         labels(first: 20) {
@@ -483,6 +486,7 @@ query($endCursor: String) {
               replyTo { id }
               author { login }
               authorAssociation
+              viewerDidAuthor
               outdated
               diffHunk
               reactionGroups {
@@ -624,6 +628,7 @@ query($endCursor: String) {
             author {
               login
             }
+            viewerDidAuthor
           }
           ... on PullRequestReview {
             id
@@ -638,6 +643,7 @@ query($endCursor: String) {
             author {
               login
             }
+            viewerDidAuthor
             state
             comments(last:100) {
               totalCount
@@ -652,6 +658,7 @@ query($endCursor: String) {
                 }
                 author { login }
                 authorAssociation
+                viewerDidAuthor
                 originalPosition
                 position
                 state
@@ -693,6 +700,7 @@ query($endCursor: String) {
               }
               author { login }
               authorAssociation
+              viewerDidAuthor
               outdated
               diffHunk
               reactionGroups {
@@ -757,6 +765,7 @@ query($endCursor: String) {
       author {
         login
       }
+      viewerDidAuthor
       participants(first:10) {
         nodes {
           login
@@ -800,6 +809,7 @@ query($endCursor: String) {
             author {
               login
             }
+            viewerDidAuthor
           }
           ... on ClosedEvent {
             createdAt
