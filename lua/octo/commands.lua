@@ -406,7 +406,7 @@ function M.resolve_comment()
               local items = qf.items
               for _, item in ipairs(items) do
                 if item.pattern == pattern then
-                  item.text = string.gsub(item.text, "%) ", ") RESOLVED ", 1)
+                  item.text = string.gsub(item.text, "%) ", ") RESOLVED ", 1)
                   break
                 end
               end
@@ -468,7 +468,7 @@ function M.unresolve_comment()
               for _, item in ipairs(items) do
                 if item.pattern == pattern then
                   print("found")
-                  item.text = string.gsub(item.text, "RESOLVED ", "")
+                  item.text = string.gsub(item.text, "RESOLVED", "")
                   break
                 end
               end

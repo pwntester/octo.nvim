@@ -448,10 +448,10 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
       local first_comment = thread.comments.nodes[1]
       local mods = {}
       if thread.isResolved then
-        table.insert(mods, "RESOLVED")
+        table.insert(mods, "RESOLVED")
       end
       if thread.isOutdated then
-        table.insert(mods, "OUTDATED")
+        table.insert(mods, "OUTDATED")
       end
       local comment_id = util.graph2rest(first_comment.id)
       local lnum = thread.line
@@ -536,8 +536,6 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   vim.cmd [[call matchadd("OctoNvimUser", "|\\s\\zs[^(]+\\ze\(")]]
   vim.cmd [[call matchadd("OctoNvimBubbleRed", "OUTDATED")]]
   vim.cmd [[call matchadd("OctoNvimBubbleGreen", "RESOLVED")]]
-  vim.cmd [[call matchadd("OctoNvimBubbleDelimiter", "")]]
-  vim.cmd [[call matchadd("OctoNvimBubbleDelimiter", "")]]
 
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
   -- there's probably a better way to map this without changing the window
