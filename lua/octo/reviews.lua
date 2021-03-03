@@ -8,12 +8,16 @@ local graphql = require "octo.graphql"
 local format = string.format
 local vim = vim
 local api = vim.api
+local json = {
+  parse = vim.fn.json_decode
+}
 
 
 local M = {}
 
 M.review_comments = {}
 M.review_files = {}
+M.review_id = -1
 
 local qf_height = vim.g.octo_qf_height or math.floor(vim.o.lines * 0.2)
 
@@ -280,15 +284,42 @@ function M.save_review_comment()
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
+
+    -- extract comment body
     local bufname = api.nvim_buf_get_name(bufnr)
     local comment = M.review_comments[bufname]
     local body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
     comment.body = vim.fn.trim(body)
+
+    -- update comment table
     M.review_comments[bufname] = comment
+
+    -- apply highlights
     if not util.is_blank(comment.body) then
       -- highlight commented lines
       M.highlight_lines(comment.content_bufnr, comment.line1, comment.line2)
     end
+
+    -- sync comment with GitHub
+    local query
+    if comment.line1 == comment.line2 then
+      query = graphql("add_pull_request_review_thread_mutation", M.review_id, util.escape_chars(comment.body), comment.path, comment.side, comment.line1 )
+    else
+      query = graphql("add_pull_request_review_multiline_thread_mutation", M.review_id, util.escape_chars(comment.body), comment.path, comment.side, comment.side, comment.line1, comment.line2)
+    end
+    gh.run(
+      {
+        args = {"api", "graphql", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local resp = json.parse(output)
+            print(resp.data.addPullRequestReviewThread.thread.id)
+          end
+        end
+      }
+    )
   end
   util.set_timeout(100, function()
     vim.schedule(function()
@@ -673,8 +704,9 @@ end
 function M.submit_review(event)
   local bufnr = api.nvim_get_current_buf()
   local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local text = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
+  local body = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
 
+  --[[
   local comments = {}
   for _, c in ipairs(vim.tbl_values(M.review_comments)) do
     if util.is_blank(vim.fn.trim(c.body)) then goto continue end
@@ -703,7 +735,8 @@ function M.submit_review(event)
 
   local qf = vim.fn.getqflist({context = 0})
   local pull_request_id = qf.context.pull_request_id
-  local query = graphql("submit_review_mutation", pull_request_id, event, text, comments, {escape = false})
+  ]]--
+  local query = graphql("submit_pull_request_review_mutation", M.review_id, event, body, {escape = false})
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},

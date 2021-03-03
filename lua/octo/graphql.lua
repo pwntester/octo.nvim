@@ -67,16 +67,49 @@ M.unresolve_review_thread_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
-M.submit_review_mutation =
+M.start_review_mutation =
   [[
   mutation {
-    addPullRequestReview(input: {pullRequestId: "%s", event: %s, body: "%s", threads: [%s] }) {
+    addPullRequestReview(input: {pullRequestId: "%s"}) {
       pullRequestReview {
         id
         state
       }
     }
   }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
+M.submit_pull_request_review_mutation =
+  [[
+  mutation {
+    submitPullRequestReview(input: {pullRequestReviewId: "%s", event: %s, body: "%s"}) {
+      pullRequestReview {
+        id
+        state
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
+M.add_pull_request_review_thread_mutation =
+[[
+mutation { 
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) { 
+    thread {id}
+  }
+}
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
+M.add_pull_request_review_multiline_thread_mutation =
+[[
+mutation { 
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) { 
+    thread {id}
+  }
+}
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
@@ -688,6 +721,7 @@ query($endCursor: String) {
               body
               createdAt
               replyTo { id }
+              state
               commit {
                 oid
               }

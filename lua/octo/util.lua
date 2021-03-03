@@ -390,8 +390,8 @@ function M.create_popup(opts)
     --   winid))
   end
   local mapping_opts = {script = true, silent = true, noremap = true}
-  api.nvim_buf_set_keymap(bufnr, "n", "q", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
+  -- api.nvim_buf_set_keymap(bufnr, "n", "q", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
+  -- api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
 
   return winid, bufnr

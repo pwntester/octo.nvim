@@ -729,6 +729,11 @@ function M.review_threads()
 end
 
 function M.submit_review()
+  if reviews.review_id < 0 then
+    api.nvim_err_writeln("No review in progress")
+    return
+  end
+
   local winid, bufnr = util.create_popup({
     header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
   })
@@ -759,42 +764,61 @@ function M.start_review()
     return
   end
 
+  reviews.review_id = -1
   reviews.review_comments = {}
   reviews.review_files = {}
 
-  local url = format("repos/%s/pulls/%d/files", repo, number)
+  -- start new review
+  local query = graphql("start_review_mutation", pr.id)
   gh.run(
     {
-      args = {"api", url},
+      args = {"api", "graphql", "-f", format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          local results = json.parse(output)
-          local changes = {}
-          for _, result in ipairs(results) do
-            local change = {
-              path = result.filename,
-              patch = result.patch,
-              status = result.status,
-              stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
-            }
-            table.insert(changes, change)
-          end
-          reviews.populate_changes_qf(
-            changes,
+          local resp = json.parse(output)
+          reviews.review_id = resp.data.addPullRequestReview.pullRequestReview.id
+
+          -- get changed files
+          local url = format("repos/%s/pulls/%d/files", repo, number)
+          gh.run(
             {
-              pull_request_repo = repo,
-              pull_request_number = number,
-              pull_request_id = pr.id,
-              baseRefSHA = pr.baseRefSHA,
-              headRefSHA = pr.headRefSHA
+              args = {"api", url},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  local results = json.parse(output)
+                  local changes = {}
+                  for _, result in ipairs(results) do
+                    local change = {
+                      path = result.filename,
+                      patch = result.patch,
+                      status = result.status,
+                      stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
+                    }
+                    table.insert(changes, change)
+                  end
+                  reviews.populate_changes_qf(
+                    changes,
+                    {
+                      pull_request_repo = repo,
+                      pull_request_number = number,
+                      pull_request_id = pr.id,
+                      baseRefSHA = pr.baseRefSHA,
+                      headRefSHA = pr.headRefSHA
+                    }
+                  )
+                end
+              end
             }
           )
         end
       end
     }
   )
+
 end
 
 function M.reaction_action(action, reaction)
