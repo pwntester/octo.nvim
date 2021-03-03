@@ -19,6 +19,7 @@ hi def link OctoNvimDate Comment
 hi def link OctoNvimDetailsLabel Title 
 hi def link OctoNvimDetailsValue Identifier
 hi def link OctoNvimMissingDetails Comment
+hi def link OctoNvimOwned PmenuSel
 
 call matchadd('Conceal', ':heart:', 10, -1, {'conceal':'❤️'})
 call matchadd('Conceal', ':+1:', 10, -1, {'conceal':'👍'})

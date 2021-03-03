@@ -3,6 +3,7 @@ local api = vim.api
 local M = {}
 
 M.OCTO_COMMENT_NS = api.nvim_create_namespace("octo_marks")
+M.OCTO_HEADER_NS = api.nvim_create_namespace("octo_header_marks")
 M.OCTO_TITLE_VT_NS = api.nvim_create_namespace("octo_title_vt")
 M.OCTO_REACTIONS_VT_NS = api.nvim_create_namespace("octo_reactions_vt")
 M.OCTO_DETAILS_VT_NS = api.nvim_create_namespace("octo_details_vt")

@@ -180,7 +180,7 @@ function M.update_metadata(metadata, start_line, end_line, text)
 end
 
 function M.update_issue_metadata(bufnr)
-  local mark, text, start_line, end_line, metadata
+  local header_mark, body_mark, text, header_line, start_line, end_line, metadata
 
   local ft = api.nvim_buf_get_option(bufnr, "filetype")
   if ft == "octo_issue" then
@@ -209,8 +209,10 @@ function M.update_issue_metadata(bufnr)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for i, m in ipairs(comments) do
     metadata = m
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
-    start_line, end_line, text = M.get_extmark_region(bufnr, mark)
+    header_mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_HEADER_NS, metadata.header_mark, {details = true})
+    body_mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
+    header_line = header_mark[1]
+    start_line, end_line, text = M.get_extmark_region(bufnr, body_mark)
 
     if text == "" then
       -- comment has been removed
@@ -220,6 +222,7 @@ function M.update_issue_metadata(bufnr)
     end
 
     M.update_metadata(metadata, start_line, end_line, text)
+    metadata["header_line"] = header_line
     comments[i] = metadata
   end
   api.nvim_buf_set_var(bufnr, "comments", comments)

@@ -97,6 +97,7 @@ sign define octo_dirty_block_middle text=│ texthl=OctoNvimDirty linehl=OctoNvi
 sign define octo_clean_block_middle text=│ linehl=OctoNvimEditable
 sign define octo_clean_line text=[ linehl=OctoNvimEditable
 sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable
+sign define octo_owned linehl=OctoNvimOwned
 
 " folds
 lua require'octo.folds'

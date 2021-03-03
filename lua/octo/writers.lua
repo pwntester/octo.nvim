@@ -370,6 +370,7 @@ function M.write_comment(bufnr, comment, kind, line)
   end
   local comment_vt_ns = api.nvim_create_namespace("")
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
+  local header_mark = api.nvim_buf_set_extmark(bufnr, constants.OCTO_HEADER_NS, line - 1, 0, { end_line = line })
 
   if kind == "PullRequestReview" and util.is_blank(comment.body) then
     -- do not render empty review comments
@@ -400,12 +401,14 @@ function M.write_comment(bufnr, comment, kind, line)
       dirty = false,
       saved_body = comment_body,
       body = comment_body,
+      header_mark = header_mark,
       extmark = comment_mark,
       namespace = comment_vt_ns,
       reaction_line = reaction_line,
       reaction_groups = comment.reactionGroups,
       kind = kind,
       first_comment_id = comment.first_comment_id,
+      owned = comment.viewerDidAuthor,
     }
   )
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)

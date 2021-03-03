@@ -86,6 +86,10 @@ function M.render_signcolumn(bufnr)
     end_line = c["end_line"]
     M.place_signs(bufnr, start_line, end_line, c.dirty)
 
+    if c.owned then
+      M.place("octo_owned", bufnr, c.header_line)
+    end
+
     -- comment virtual text
     if util.is_blank(c["body"]) then
       local comment_vt = {{constants.NO_BODY_MSG, "OctoNvimEmpty"}}
