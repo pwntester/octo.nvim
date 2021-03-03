@@ -146,10 +146,11 @@ function M.write_details(bufnr, issue, update)
   local details = {}
 
   -- author
-  local author_vt = {
-    {"Created by: ", "OctoNvimDetailsLabel"},
-    {issue.author.login, "OctoNvimDetailsValue"}
-  }
+  local author_vt = {{"Created by: ", "OctoNvimDetailsLabel"}}
+  local author_highlight = issue.viewerDidAuthor and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
+  local author_bubble = util.get_bubble_highlight_chunks(issue.author.login, author_highlight)
+
+  vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
 
   -- created_at

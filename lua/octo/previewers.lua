@@ -5,6 +5,7 @@ local writers = require "octo.writers"
 local graphql = require "octo.graphql"
 local util = require "octo.util"
 local gh = require "octo.gh"
+local constants = require "octo.constants"
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
 local format = string.format
@@ -36,6 +37,7 @@ M.issue =
                 if stderr and not util.is_blank(stderr) then
                   api.nvim_err_writeln(stderr)
                 elseif output and api.nvim_buf_is_valid(bufnr) then
+                  api.nvim_set_hl_ns(constants.OCTO_HIGHLIGHT_NS)
                   local result = json.parse(output)
                   local issue = result.data.repository.issue
                   writers.write_title(bufnr, issue.title, 1)
@@ -97,6 +99,7 @@ M.pull_request =
                 if stderr and not util.is_blank(stderr) then
                   api.nvim_err_writeln(stderr)
                 elseif output and api.nvim_buf_is_valid(bufnr) then
+                  api.nvim_set_hl_ns(constants.OCTO_HIGHLIGHT_NS)
                   local result = json.parse(output)
                   local pull_request = result.data.repository.pullRequest
                   writers.write_title(bufnr, pull_request.title, 1)
