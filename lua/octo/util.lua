@@ -512,4 +512,24 @@ function M.getwin4buf(bufnr)
   return -1
 end
 
+local function get_highlight_group_attribute(highlight_group, attribute_name)
+  local highlight_definition = api.nvim_get_hl_by_name(highlight_group, true)
+  return highlight_definition[attribute_name] or ""
+end
+
+function M.get_bubble_highlight_chunks(content, highlight_group)
+  local delimiter_highlight_group = highlight_group .. "Delimiter"
+  local delimiter_foreground = get_highlight_group_attribute(highlight_group, "background")
+
+  api.nvim_set_hl(constants.OCTO_HIGHLIGHT_NS, delimiter_highlight_group, {
+    foreground = delimiter_foreground
+  })
+  
+  return {
+    { "", delimiter_highlight_group },
+    { content, highlight_group },
+    { "", delimiter_highlight_group },
+  }
+end
+
 return M

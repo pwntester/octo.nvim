@@ -128,12 +128,10 @@ function M.write_reactions(bufnr, reaction_groups, line)
   local reactions_vt = {}
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
-      vim.list_extend(reactions_vt, {
-        {"", "OctoNvimBubbleDelimiter"},
-        {util.reaction_map[group.content], "OctoNvimBubbleBody"},
-        {"", "OctoNvimBubbleDelimiter"},
-        {format(" %s ", group.users.totalCount), "Normal"}
-      })
+      local content = util.reaction_map[group.content]
+
+      vim.list_extend(reactions_vt, util.get_bubble_highlight_chunks(content, "OctoNvimBubble"))
+      vim.list_extend(reactions_vt, {{ format(" %s ", group.users.totalCount), "Normal" }})
     end
   end
 
@@ -575,14 +573,10 @@ function M.write_review_thread_header(bufnr, opts, line)
     {"] ", "OctoNvimSymbol"},
   }
   if opts.isOutdated then
-    table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})
-    table.insert(header_vt, {"outdated", "OctoNvimBubbleRed"})
-    table.insert(header_vt, {" ", "OctoNvimBubbleDelimiter"})
+    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("outdated", "OctoNvimBubbleRed"))
   end
   if opts.isResolved then
-    table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})
-    table.insert(header_vt, {"resolved", "OctoNvimBubbleGreen"})
-    table.insert(header_vt, {" ", "OctoNvimBubbleDelimiter"})
+    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("resolved", "OctoNvimBubbleGreen"))
   end
   M.write_block({""}, {bufnr = bufnr})
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
