@@ -103,7 +103,10 @@ local commands = {
     end,
     threads = function()
       M.review_threads()
-    end
+    end,
+    resume = function()
+      M.resume_review()
+    end,
   },
   gist = {
     list = function(...)
@@ -758,6 +761,32 @@ function M.submit_review()
   --vim.cmd [[startinsert]]
 end
 
+function M.resume_review()
+  local repo, number, pr = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+
+  -- start new review
+  local query = graphql("pending_review_query", owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          reviews.review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
+          M.initiate_review(repo, number, pr)
+        end
+      end
+    }
+  )
+end
+
 function M.start_review()
   local repo, number, pr = util.get_repo_number_pr()
   if not repo then
@@ -779,46 +808,48 @@ function M.start_review()
         elseif output then
           local resp = json.parse(output)
           reviews.review_id = resp.data.addPullRequestReview.pullRequestReview.id
+          M.initiate_review(repo, number, pr)
+        end
+      end
+    }
+  )
+end
 
-          -- get changed files
-          local url = format("repos/%s/pulls/%d/files", repo, number)
-          gh.run(
+function M.initiate_review(repo, number, pr)
+  -- get changed files
+  local url = format("repos/%s/pulls/%d/files", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          local changes = {}
+          for _, result in ipairs(results) do
+            local change = {
+              path = result.filename,
+              patch = result.patch,
+              status = result.status,
+              stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
+            }
+            table.insert(changes, change)
+          end
+          reviews.populate_changes_qf(
+            changes,
             {
-              args = {"api", url},
-              cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
-                elseif output then
-                  local results = json.parse(output)
-                  local changes = {}
-                  for _, result in ipairs(results) do
-                    local change = {
-                      path = result.filename,
-                      patch = result.patch,
-                      status = result.status,
-                      stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
-                    }
-                    table.insert(changes, change)
-                  end
-                  reviews.populate_changes_qf(
-                    changes,
-                    {
-                      pull_request_repo = repo,
-                      pull_request_number = number,
-                      pull_request_id = pr.id,
-                      baseRefSHA = pr.baseRefSHA,
-                      headRefSHA = pr.headRefSHA
-                    }
-                  )
-                end
-              end
+              pull_request_repo = repo,
+              pull_request_number = number,
+              pull_request_id = pr.id,
+              baseRefSHA = pr.baseRefSHA,
+              headRefSHA = pr.headRefSHA
             }
           )
         end
       end
     }
   )
-
 end
 
 function M.reaction_action(action, reaction)

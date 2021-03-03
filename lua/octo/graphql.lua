@@ -51,6 +51,20 @@ M.resolve_review_thread_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
+M.pending_review_query =
+  [[
+query { 
+  repository(owner:"%s", name:"%s") {
+    pullRequest (number: %d){
+      reviews(first:1, states:PENDING) {
+        nodes {id}
+      }
+    }
+  }
+}
+]]
+
+-- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
 M.unresolve_review_thread_mutation =
   [[
   mutation {
