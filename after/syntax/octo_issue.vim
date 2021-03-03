@@ -19,6 +19,16 @@ hi def link OctoNvimDate Comment
 hi def link OctoNvimDetailsLabel Title 
 hi def link OctoNvimDetailsValue Identifier
 hi def link OctoNvimMissingDetails Comment
+hi def link OctoNvimCommentLine Visual
+hi def link OctoNvimEditable NormalFloat
+hi def link OctoNvimBubbleBody NormalFloat
+hi def OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
+hi def OctoNvimBubbleRed guifg=#ffffff guibg=#f85149
+hi def OctoNvimPassingTest guifg=#238636
+hi def OctoNvimFailingTest guifg=#f85149
+hi def OctoNvimPullAdditions guifg=#2ea043
+hi def OctoNvimPullDeletions guifg=#da3633
+hi def OctoNvimPullModifications guifg=#58A6FF
 
 call matchadd('Conceal', ':heart:', 10, -1, {'conceal':'❤️'})
 call matchadd('Conceal', ':+1:', 10, -1, {'conceal':'👍'})

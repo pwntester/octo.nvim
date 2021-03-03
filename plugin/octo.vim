@@ -2,39 +2,6 @@ if exists('g:loaded_octo')
   finish
 endif
 
-" colors
-let g:octo_color_bubble_bg = synIDattr(synIDtrans(hlID("NormalFloat")), "bg#")
-let g:octo_color_green = synIDattr(synIDtrans(hlID("DiffAdd")), "fg#")
-let g:octo_color_blue = synIDattr(synIDtrans(hlID("DiffChange")), "fg#")
-let g:octo_color_red = synIDattr(synIDtrans(hlID("DiffDelete")), "fg#")
-
-if get(g:, 'octo_color_bubble_bg', '') != '' && get(g:, 'octo_color_green', '') != '' && get(g:, 'octo_color_red', '') != ''
-
-  " Bubble colors
-  execute('hi! OctoNvimBubbleDelimiter guifg='.g:octo_color_bubble_bg)
-  execute('hi! OctoNvimBubbleBody guibg='.g:octo_color_bubble_bg)
-  execute('hi! OctoNvimBubbleRed guifg='.g:octo_color_red.' guibg='.g:octo_color_bubble_bg)
-  execute('hi! OctoNvimBubbleGreen guifg='.g:octo_color_green.' guibg='.g:octo_color_bubble_bg)
-
-  " Hunks
-  execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_color_bubble_bg)
-
-  " Commented lines
-  execute('hi! link OctoNvimCommentLine Visual')
-
-  " Tests
-  execute('hi! OctoNvimPassingTest guifg='.g:octo_color_green)
-  execute('hi! OctoNvimFailingTest guifg='.g:octo_color_red)
-
-  " PR changes
-  execute('hi! OctoNvimPullAdditions guifg='.g:octo_color_green)
-  execute('hi! OctoNvimPullDeletions guifg='.g:octo_color_red)
-  execute('hi! OctoNvimPullModifications guifg='.g:octo_color_blue)
-
-  " Editable regions
-  execute('hi! OctoNvimEditable guibg='.g:octo_color_bubble_bg)
-endif
-
 function! s:command_complete(...)
   return luaeval('require("octo.commands").command_complete(_A)', a:000)
 endfunction
