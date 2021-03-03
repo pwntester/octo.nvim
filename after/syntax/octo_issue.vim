@@ -5,7 +5,6 @@ if exists('b:current_syntax')
 endif
 
 hi def link OctoNvimDirty ErrorMsg
-hi def link OctoNvimUser String 
 hi def link OctoNvimIssueOpen MoreMsg
 hi def link OctoNvimIssueClosed ErrorMsg
 hi def link OctoNvimIssueMerged Keyword
@@ -21,7 +20,8 @@ hi def link OctoNvimDetailsValue Identifier
 hi def link OctoNvimMissingDetails Comment
 hi def link OctoNvimCommentLine Visual
 hi def link OctoNvimEditable NormalFloat
-hi def link OctoNvimBubbleBody NormalFloat
+hi def link OctoNvimBubble NormalFloat
+hi def OctoNvimBubbleAuthor guifg=#000000 guibg=#58A6FF
 hi def OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
 hi def OctoNvimBubbleRed guifg=#ffffff guibg=#f85149
 hi def OctoNvimPassingTest guifg=#238636

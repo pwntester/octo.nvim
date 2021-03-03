@@ -336,36 +336,33 @@ function M.write_comment(bufnr, comment, kind, line)
   local start_line = line
   M.write_block({"", ""}, {bufnr = bufnr, line = line})
 
-  local header_vt
+  local header_vt = {}
+  local author_highlight = comment.viewerDidAuthor and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
+  local author_bubble = util.get_bubble_highlight_chunks(comment.author.login, author_highlight, 1)
+
   if kind == "PullRequestReview" then
     -- Review top-level comments
-    header_vt = {
-      {"REVIEW: ", "OctoNvimTimelineItemHeading"},
-      {comment.author.login.." ", "OctoNvimUser"},
-      {"["..comment.state:lower().."] ", "OctoNvimDetailsValue"},
-      {"(", "OctoNvimSymbol"},
-      {util.format_date(comment.createdAt), "OctoNvimDate"},
-      {")", "OctoNvimSymbol"}
-    }
+    table.insert(header_vt, {"REVIEW:", "OctoNvimTimelineItemHeading"})
+    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
+    table.insert(header_vt, {")", "OctoNvimSymbol"})
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
-    header_vt = {
-      {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"},
-      {comment.author.login.." ", "OctoNvimUser"},
-      {"["..comment.state:lower().."] ", "OctoNvimDetailsValue"},
-      {"(", "OctoNvimSymbol"},
-      {util.format_date(comment.createdAt), "OctoNvimDate"},
-      {")", "OctoNvimSymbol"}
-    }
+    table.insert(header_vt, {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"})
+    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
+    table.insert(header_vt, {")", "OctoNvimSymbol"})
   elseif kind == "IssueComment" then
     -- Issue comments
-    header_vt = {
-      {"COMMENT: ", "OctoNvimTimelineItemHeading"},
-      {comment.author.login.." ", "OctoNvimUser"},
-      {"(", "OctoNvimSymbol"},
-      {util.format_date(comment.createdAt), "OctoNvimDate"},
-      {")", "OctoNvimSymbol"}
-    }
+    table.insert(header_vt, {"COMMENT: ", "OctoNvimTimelineItemHeading"})
+    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
+    table.insert(header_vt, {")", "OctoNvimSymbol"})
   end
   local comment_vt_ns = api.nvim_create_namespace("")
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
