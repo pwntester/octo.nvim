@@ -573,10 +573,10 @@ function M.write_review_thread_header(bufnr, opts, line)
     {"] ", "OctoNvimSymbol"},
   }
   if opts.isOutdated then
-    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("outdated", "OctoNvimBubbleRed"))
+    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("outdated", "OctoNvimBubbleRed", 1))
   end
   if opts.isResolved then
-    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("resolved", "OctoNvimBubbleGreen"))
+    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("resolved", "OctoNvimBubbleGreen", 1))
   end
   M.write_block({""}, {bufnr = bufnr})
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)

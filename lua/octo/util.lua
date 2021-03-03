@@ -517,7 +517,10 @@ local function get_highlight_group_attribute(highlight_group, attribute_name)
   return highlight_definition[attribute_name] or ""
 end
 
-function M.get_bubble_highlight_chunks(content, highlight_group)
+function M.get_bubble_highlight_chunks(content, highlight_group, margin_width)
+  local margin = string.rep(" ", margin_width or 0)
+  local left_delimiter = margin .. ""
+  local right_delimiter = "" .. margin
   local delimiter_highlight_group = highlight_group .. "Delimiter"
   local delimiter_foreground = get_highlight_group_attribute(highlight_group, "background")
 
@@ -526,9 +529,9 @@ function M.get_bubble_highlight_chunks(content, highlight_group)
   })
   
   return {
-    { "", delimiter_highlight_group },
+    { left_delimiter, delimiter_highlight_group },
     { content, highlight_group },
-    { "", delimiter_highlight_group },
+    { right_delimiter, delimiter_highlight_group },
   }
 end
 
