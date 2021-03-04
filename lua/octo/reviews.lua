@@ -77,7 +77,7 @@ function M.populate_changes_qf(changes, opts)
   vim.cmd [[wincmd p]]
 end
 
-function M.diff_changes_qf_entry()
+function M.diff_changes_qf_entry(target)
   -- cleanup content buffers and windows
   vim.cmd [[cclose]]
   vim.cmd [[silent! only]]
@@ -189,16 +189,37 @@ function M.diff_changes_qf_entry()
   if M.review_files[path] and M.review_files[path].right_lines and M.review_files[path].left_lines then
     write_diff_lines(M.review_files[path].right_lines, "right")
     write_diff_lines(M.review_files[path].left_lines, "left")
+
+    -- move cursor to comment if necessary
+    if target and target.diffSide == "RIGHT" then
+      api.nvim_set_current_win(right_win)
+      api.nvim_win_set_cursor(right_win, {target.line, 1})
+    elseif target and target.diffSide == "LEFT" then
+      api.nvim_set_current_win(left_win)
+      api.nvim_win_set_cursor(left_win, {target.line, 1})
+    end
   else
     M.review_files[path] = {}
     -- load left content
     util.get_file_contents(repo, left_sha, path, function(lines)
       write_diff_lines(lines, "left")
+
+      -- move cursor to comment if necessary
+      if target and target.diffSide == "LEFT" then
+        api.nvim_set_current_win(left_win)
+        api.nvim_win_set_cursor(left_win, {target.line, 1})
+      end
     end)
 
     -- load right content
     util.get_file_contents(repo, right_sha, path, function(lines)
       write_diff_lines(lines, "right")
+
+      -- move cursor to comment if necessary
+      if target and target.diffSide == "RIGHT" then
+        api.nvim_set_current_win(right_win)
+        api.nvim_win_set_cursor(right_win, {target.line, 1})
+      end
     end)
   end
 end
@@ -521,6 +542,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 
     -- go to comment line
     local row = (selected_item.lnum) or 1
+    api.nvim_set_current_win(main_win)
     local ok = pcall(api.nvim_win_set_cursor, main_win, {row, 1})
     if not ok then
       api.nvim_err_writeln("Cannot move cursor to line " .. row)

@@ -601,7 +601,7 @@ function M.review_comments()
           actions.close(prompt_bufnr)
 
           local qf = vim.fn.getqflist({items = 0})
-          local idx, entry
+          local idx 
           for i, item in ipairs(qf.items) do
             if comment.path == item.module then
               idx = i
@@ -610,24 +610,14 @@ function M.review_comments()
             end
           end
 
-          print(idx, entry.module)
           if idx then
             -- select qf item
             vim.fn.setqflist({}, 'r', {idx = idx })
-            reviews.diff_changes_qf_entry()
-
-            -- move cursor to comment line
-            -- local wins = api.nvim_tabpage_list_wins(0)
-            -- local diff_winid = -1
-            -- for _, win in ipairs(wins) do
-            --   if comment.comment_bufnr == api.nvim_win_get_buf(win) then
-            --     diff_winid = win
-            --     break
-            --   end
-            -- end
-            -- if diff_winid > -1 then
-            --   api.nvim_win_set_cursor(diff_winid, {comment.line1, 1})
-            -- end
+            reviews.diff_changes_qf_entry({
+              diffSide = comment.diffSide,
+              startLine = comment.startLine,
+              line = comment.line,
+            })
           end
         end)
         return true
