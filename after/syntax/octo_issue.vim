@@ -4,31 +4,31 @@ if exists('b:current_syntax')
   unlet b:current_syntax
 endif
 
-hi def link OctoNvimDirty ErrorMsg
-hi def link OctoNvimIssueOpen MoreMsg
-hi def link OctoNvimIssueClosed ErrorMsg
-hi def link OctoNvimIssueMerged Keyword
-hi def link OctoNvimIssueId Question
-hi def link OctoNvimIssueTitle PreProc
-hi def link OctoNvimEmpty Comment
-hi def link OctoNvimFloat NormalFloat
-hi def link OctoNvimTimelineItemHeading Comment
-hi def link OctoNvimSymbol Comment
-hi def link OctoNvimDate Comment
-hi def link OctoNvimDetailsLabel Title 
-hi def link OctoNvimDetailsValue Identifier
-hi def link OctoNvimMissingDetails Comment
-hi def link OctoNvimCommentLine Visual
-hi def link OctoNvimEditable NormalFloat
-hi def link OctoNvimBubble NormalFloat
-hi def OctoNvimBubbleAuthor guifg=#000000 guibg=#58A6FF
-hi def OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
-hi def OctoNvimBubbleRed guifg=#ffffff guibg=#f85149
-hi def OctoNvimPassingTest guifg=#238636
-hi def OctoNvimFailingTest guifg=#f85149
-hi def OctoNvimPullAdditions guifg=#2ea043
-hi def OctoNvimPullDeletions guifg=#da3633
-hi def OctoNvimPullModifications guifg=#58A6FF
+highlight default link OctoNvimDirty ErrorMsg
+highlight default link OctoNvimIssueOpen MoreMsg
+highlight default link OctoNvimIssueClosed ErrorMsg
+highlight default link OctoNvimIssueMerged Keyword
+highlight default link OctoNvimIssueId Question
+highlight default link OctoNvimIssueTitle PreProc
+highlight default link OctoNvimEmpty Comment
+highlight default link OctoNvimFloat NormalFloat
+highlight default link OctoNvimTimelineItemHeading Comment
+highlight default link OctoNvimSymbol Comment
+highlight default link OctoNvimDate Comment
+highlight default link OctoNvimDetailsLabel Title 
+highlight default link OctoNvimDetailsValue Identifier
+highlight default link OctoNvimMissingDetails Comment
+highlight default link OctoNvimCommentLine Visual
+highlight default link OctoNvimEditable NormalFloat
+highlight default link OctoNvimBubble NormalFloat
+highlight default OctoNvimBubbleAuthor guifg=#000000 guibg=#58A6FF
+highlight default OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
+highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#f85149
+highlight default OctoNvimPassingTest guifg=#238636
+highlight default OctoNvimFailingTest guifg=#f85149
+highlight default OctoNvimPullAdditions guifg=#2ea043
+highlight default OctoNvimPullDeletions guifg=#da3633
+highlight default OctoNvimPullModifications guifg=#58A6FF
 
 call matchadd('Conceal', ':heart:', 10, -1, {'conceal':'❤️'})
 call matchadd('Conceal', ':+1:', 10, -1, {'conceal':'👍'})

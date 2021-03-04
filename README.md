@@ -181,34 +181,35 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 
 ## Highlight groups
-| Name                        | Default          |
-| ---                         | ---              |
-| `OctoNvimDirty`             | `ErrorMsg`       |
-| `OctoNvimUser`              | `String`     |
-| `OctoNvimIssueTitle`        | `PreProc`        |
-| `OctoNvimIssueId`           | `Question`       |
-| `OctoNvimIssueOpen`         | `MoreMsg`        |
-| `OctoNvimIssueClosed`       | `ErrorMsg`       |
-| `OctoNvimEmpty`             | `Comment`        |
-| `OctoNvimFloat`             | `NormalNC`       |
-| `OctoNvimDate`              | `Comment`       |
-| `OctoNvimSymbol`            | `Comment`       |
-| `OctoNvimTimelineItemHeading`| `Comment`       |
-| `OctoNvimBubbleRed`         | `DiffDelete`.fg  |
-| `OctoNvimBubbleGreen`       | `DiffAdd`.fg     |
-| `OctoNvimBubbleDelimiter`   | `NormalFloat`.bg |
-| `OctoNvimBubbleBody`        | `NormalFloat`.bg |
-| `OctoNvimDetailsLabel`      | `Title`          |
-| `OctoNvimMissingDetails`    | `Comment`        |
-| `OctoNvimDetailsValue `     | `Identifier`     |
-| `OctoNvimDiffHunkPosition`  | `NormalFloat`.bg |
-| `OctoNvimCommentLine`       | `TabLineSel`     |
-| `OctoNvimPassingTest`       | `DiffAdd`        |
-| `OctoNvimFailingTest`       | `DiffDelete`     |
-| `OctoNvimPullAdditions`     | `DiffAdd`        |
-| `OctoNvimPullDeletions`     | `DiffDelete`     |
-| `OctoNvimPullModifications` | `DiffChange`     |
-| `OctoNvimEditable`          | `NormalFloat`.bg|
+| Name                         | Default       |
+| ---                          | ---           |
+| `OctoNvimDirty`              | `ErrorMsg`    |
+| `OctoNvimIssueTitle`         | `PreProc`     |
+| `OctoNvimIssueId`            | `Question`    |
+| `OctoNvimIssueOpen`          | `MoreMsg`     |
+| `OctoNvimIssueClosed`        | `ErrorMsg`    |
+| `OctoNvimEmpty`              | `Comment`     |
+| `OctoNvimFloat`              | `NormalNC`    |
+| `OctoNvimDate`               | `Comment`     |
+| `OctoNvimSymbol`             | `Comment`     |
+| `OctoNvimTimelineItemHeading`| `Comment`     |
+| `OctoNvimDetailsLabel`       | `Title`       |
+| `OctoNvimMissingDetails`     | `Comment`     |
+| `OctoNvimDetailsValue `      | `Identifier`  |
+| `OctoNvimDiffHunkPosition`   | `NormalFloat` |
+| `OctoNvimCommentLine`        | `TabLineSel`  |
+| `OctoNvimEditable`           | `NormalFloat` |
+| `OctoNvimBubble`             | `NormalFloat` |
+| `OctoNvimBubbleAuthor`       | GitHub color  |
+| `OctoNvimBubbleGreen`        | GitHub color  | 
+| `OctoNvimBubbleRed`          | GitHub color  |
+| `OctoNvimPassingTest`        | GitHub color  |
+| `OctoNvimFailingTest`        | GitHub color  |
+| `OctoNvimPullAdditions`      | GitHub color  |
+| `OctoNvimPullDeletions`      | GitHub color  |
+| `OctoNvimPullModifications`  | GitHub color  |
+
+The term `GitHub color` refers to the colors used in the WebUI.
 
 ## Settings
 
