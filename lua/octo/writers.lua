@@ -152,8 +152,10 @@ function M.write_details(bufnr, issue, update)
 
   -- author
   local author_vt = {{"Created by: ", "OctoNvimDetailsLabel"}}
-  local author_highlight = issue.viewerDidAuthor and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
-  local author_bubble = util.get_bubble_highlight_chunks(issue.author.login, author_highlight)
+  local author_bubble = util.get_user_bubble_highlight_chunks(
+    issue.author.login,
+    issue.viewerDidAuthor
+  )
 
   vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
@@ -343,10 +345,9 @@ function M.write_comment(bufnr, comment, kind, line)
   M.write_block({"", ""}, {bufnr = bufnr, line = line})
 
   local header_vt = {}
-  local author_highlight = comment.viewerDidAuthor and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
-  local author_bubble = util.get_bubble_highlight_chunks(
+  local author_bubble = util.get_user_bubble_highlight_chunks(
     comment.author.login,
-    author_highlight,
+    comment.viewerDidAuthor,
     { margin_width = 1 }
   )
 

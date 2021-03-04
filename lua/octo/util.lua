@@ -538,4 +538,10 @@ function M.get_bubble_highlight_chunks(content, highlight_group, options)
   }
 end
 
+function M.get_user_bubble_highlight_chunks(name, is_author, bubble_options)
+  local highlight = is_author and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
+  local content = " " .. name
+  return M.get_bubble_highlight_chunks(content, highlight, bubble_options)
+end
+
 return M
