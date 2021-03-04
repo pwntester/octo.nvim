@@ -12,6 +12,7 @@ function M.place(name, bufnr, line)
 end
 
 function M.unplace(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
   pcall(vim.fn.sign_unplace, "octo_ns", {buffer = bufnr})
 end
 
@@ -27,6 +28,25 @@ function M.place_signs(bufnr, start_line, end_line, is_dirty)
   if start_line + 1 < end_line then
     for j = start_line + 1, end_line - 1, 1 do
       M.place(format("octo_%s_block_middle", dirty_mod), bufnr, j)
+    end
+  end
+end
+
+function M.place_coment_signs()
+  local bufnr = api.nvim_get_current_buf()
+  M.unplace(bufnr)
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if status and props then
+    local bufname_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
+    local review_comments = require"octo.reviews".review_comments
+    local comment_keys = vim.tbl_keys(review_comments)
+    for _, comment_key in ipairs(comment_keys) do
+      if vim.startswith(comment_key, bufname_prefix) then
+        local comment = review_comments[comment_key]
+          for line = comment.startLine, comment.line do
+            M.place("octo_comment", bufnr, line - 1)
+          end
+      end
     end
   end
 end
