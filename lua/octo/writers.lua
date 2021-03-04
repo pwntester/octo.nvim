@@ -126,15 +126,17 @@ function M.write_reactions(bufnr, reaction_groups, line)
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
   local reactions_vt = {}
-  local content, highlight
+  local content, highlight, bubble
 
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
       content = util.reaction_map[group.content]
       highlight = group.viewerHasReacted and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
-
-      vim.list_extend(reactions_vt, util.get_bubble_highlight_chunks(content, highlight))
-      vim.list_extend(reactions_vt, {{ format(" %s ", group.users.totalCount), "Normal" }})
+      bubble = util.get_bubble_highlight_chunks(content, highlight, { padding_width = 1 })
+      count = format(" %s ", group.users.totalCount)
+  
+      vim.list_extend(reactions_vt, bubble)
+      table.insert(reactions_vt, { count, "Normal" })
     end
   end
 
@@ -342,7 +344,11 @@ function M.write_comment(bufnr, comment, kind, line)
 
   local header_vt = {}
   local author_highlight = comment.viewerDidAuthor and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
-  local author_bubble = util.get_bubble_highlight_chunks(comment.author.login, author_highlight, 1)
+  local author_bubble = util.get_bubble_highlight_chunks(
+    comment.author.login,
+    author_highlight,
+    { margin_width = 1 }
+  )
 
   if kind == "PullRequestReview" then
     -- Review top-level comments
@@ -574,11 +580,23 @@ function M.write_review_thread_header(bufnr, opts, line)
     {"] ", "OctoNvimSymbol"},
   }
   if opts.isOutdated then
-    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("outdated", "OctoNvimBubbleRed", 1))
+    local outdated_bubble = util.get_bubble_highlight_chunks(
+      "outdated",
+      "OctoNvimBubbleRed",
+      { margin_width = 1 }
+    )
+    vim.list_extend(header_vt, outdated_bubble)
   end
+
   if opts.isResolved then
-    vim.list_extend(header_vt, util.get_bubble_highlight_chunks("resolved", "OctoNvimBubbleGreen", 1))
+    local resolved_bubble = util.get_bubble_highlight_chunks(
+      "resolved",
+      "OctoNvimBubbleGreen",
+      { margin_width = 1 }
+    )
+    vim.list_extend(header_vt, resolved_bubble)
   end
+
   M.write_block({""}, {bufnr = bufnr})
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
 end

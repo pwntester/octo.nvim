@@ -517,12 +517,15 @@ local function get_highlight_group_attribute(highlight_group, attribute_name)
   return highlight_definition[attribute_name] or ""
 end
 
-function M.get_bubble_highlight_chunks(content, highlight_group, margin_width)
-  local margin = string.rep(" ", margin_width or 0)
+function M.get_bubble_highlight_chunks(content, highlight_group, options)
+  local options = options or {}
+  local margin = string.rep(" ", options.margin_width or 0)
+  local padding = string.rep(" ", options.padding_width or 0)
   local left_delimiter = margin .. (vim.g.octo_bubble_delimiter_left or "")
   local right_delimiter = (vim.g.octo_bubble_delimiter_right or "") .. margin
   local delimiter_highlight_group = highlight_group .. "Delimiter"
   local delimiter_foreground = get_highlight_group_attribute(highlight_group, "background")
+  local body = padding .. content .. padding
 
   api.nvim_set_hl(constants.OCTO_HIGHLIGHT_NS, delimiter_highlight_group, {
     foreground = delimiter_foreground
@@ -530,7 +533,7 @@ function M.get_bubble_highlight_chunks(content, highlight_group, margin_width)
   
   return {
     { left_delimiter, delimiter_highlight_group },
-    { content, highlight_group },
+    { body, highlight_group },
     { right_delimiter, delimiter_highlight_group },
   }
 end
