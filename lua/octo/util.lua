@@ -3,6 +3,7 @@ local date = require "octo.date"
 local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
+local hl = require "octo.highlights"
 local format = string.format
 local vim = vim
 local api = vim.api
@@ -542,6 +543,11 @@ function M.get_user_bubble_highlight_chunks(name, is_author, bubble_options)
   local highlight = is_author and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
   local content = " " .. name
   return M.get_bubble_highlight_chunks(content, highlight, bubble_options)
+end
+
+function M.get_label_bubble_highlight_chunks(name, color, bubble_options)
+  local highlight = hl.create_highlight(color)
+  return M.get_bubble_highlight_chunks(name, highlight, bubble_options)
 end
 
 return M

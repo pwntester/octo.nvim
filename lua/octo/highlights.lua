@@ -25,6 +25,7 @@ local function color_is_bright(r, g, b)
 end
 
 function M.create_highlight(rgb_hex, options)
+  local options = options or {}
   local mode = options.mode or "background"
   rgb_hex = rgb_hex:lower()
   local cache_key = table.concat({HIGHLIGHT_MODE_NAMES[mode], rgb_hex}, "_")

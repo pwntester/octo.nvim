@@ -1,4 +1,3 @@
-local hl = require "octo.highlights"
 local constants = require "octo.constants"
 local util = require "octo.util"
 local vim = vim
@@ -231,12 +230,15 @@ function M.write_details(bufnr, issue, update)
   local labels_vt = {
     {"Labels: ", "OctoNvimDetailsLabel"}
   }
+
   if #issue.labels.nodes > 0 then
     for _, label in ipairs(issue.labels.nodes) do
-      table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
-      table.insert(labels_vt, {label.name, hl.create_highlight(label.color, {})})
-      table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
-      table.insert(labels_vt, {" ", "OctoNvimDetailsLabel"})
+      local label_bubble = util.get_label_bubble_highlight_chunks(
+        label.name,
+        label.color,
+        { margin_width = 1 }
+      )
+      vim.list_extend(labels_vt, label_bubble)
     end
   else
     table.insert(labels_vt, {"None yet", "OctoNvimMissingDetails"})
