@@ -75,9 +75,11 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | delete | |
 | | move | |
 | review| start| Start a new review |
-| | comments| View in-progress review comments |
 | | submit| Submit the review |
-| | threads | View other people review threads (comment+replies)|
+| | resume| Edit a pending review for current PR |
+| | discard| Deletes a pending review for current PR if any |
+| | comments| View pending review comments |
+| | threads | View all review threads (comment+replies)|
 
 * If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

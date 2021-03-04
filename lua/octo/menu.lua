@@ -567,15 +567,23 @@ end
 -- REVIEW COMMENTS
 ---
 function M.review_comments()
+  if reviews.review_id == -1 then
+    api.nvim_err_writeln("No review in progress")
+    return
+  end
   local comments = vim.tbl_values(reviews.review_comments)
   local max_linenr_length = -1
   local filtered_comments = {}
   for _, comment in ipairs(comments) do
-    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line1))
-    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line2))
+    max_linenr_length = math.max(max_linenr_length, #tostring(comment.startLine))
+    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line))
     if not util.is_blank(vim.fn.trim(comment.body)) then
       table.insert(filtered_comments, comment)
     end
+  end
+  if #filtered_comments == 0 then
+    api.nvim_err_writeln("No pending comments found")
+    return
   end
   pickers.new(
     {},
@@ -588,28 +596,38 @@ function M.review_comments()
       sorter = conf.generic_sorter({}),
       previewer = previewers.review_comment.new({}),
       attach_mappings = function()
-
-        -- TODO: add action to delete comment
-
         actions.select_default:replace(function(prompt_bufnr)
           local comment = action_state.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)
 
-          -- select qf item
-		      vim.fn.setqflist({}, 'r', {idx = comment.qf_idx })
-          reviews.diff_changes_qf_entry()
-
-          -- move cursor to comment line
-          local wins = api.nvim_tabpage_list_wins(0)
-          local diff_winid = -1
-          for _, win in ipairs(wins) do
-            if comment.comment_bufnr == api.nvim_win_get_buf(win) then
-              diff_winid = win
+          local qf = vim.fn.getqflist({items = 0})
+          local idx, entry
+          for i, item in ipairs(qf.items) do
+            if comment.path == item.module then
+              idx = i
+              entry = item
               break
             end
           end
-          if diff_winid > -1 then
-            api.nvim_win_set_cursor(diff_winid, {comment.line1, 1})
+
+          print(idx, entry.module)
+          if idx then
+            -- select qf item
+            vim.fn.setqflist({}, 'r', {idx = idx })
+            reviews.diff_changes_qf_entry()
+
+            -- move cursor to comment line
+            -- local wins = api.nvim_tabpage_list_wins(0)
+            -- local diff_winid = -1
+            -- for _, win in ipairs(wins) do
+            --   if comment.comment_bufnr == api.nvim_win_get_buf(win) then
+            --     diff_winid = win
+            --     break
+            --   end
+            -- end
+            -- if diff_winid > -1 then
+            --   api.nvim_win_set_cursor(diff_winid, {comment.line1, 1})
+            -- end
           end
         end)
         return true

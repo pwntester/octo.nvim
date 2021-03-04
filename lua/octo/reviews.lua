@@ -257,26 +257,6 @@ function M.add_review_comment(isSuggestion)
     -- change to insert mode
     vim.cmd [[normal G]]
     vim.cmd [[startinsert]]
-
-    -- create new comment
-    local comment = {
-      key = bufname,
-      path =props.path,
-      side = props.side,
-      diff_hunk = diff_hunk,
-      sha = props.sha,
-      qf_idx = props.qf_idx,
-      qf_winid = props.qf_winid,
-      comment_bufnr = comment_bufnr,
-      comment_winid = comment_winid,
-      content_bufnr = bufnr,
-      line1 = line1,
-      line2 = line2,
-      body = ""
-    }
-
-    -- add comment to list of pending comments
-    M.review_comments[bufname] = comment
   end
 end
 
@@ -284,28 +264,17 @@ function M.save_review_comment()
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
-
     -- extract comment body
     local bufname = api.nvim_buf_get_name(bufnr)
-    local comment = M.review_comments[bufname]
     local body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
-    comment.body = vim.fn.trim(body)
-
-    -- update comment table
-    M.review_comments[bufname] = comment
-
-    -- apply highlights
-    if not util.is_blank(comment.body) then
-      -- highlight commented lines
-      M.highlight_lines(comment.content_bufnr, comment.line1, comment.line2)
-    end
+    local startLine, line = string.match(bufname, ".*:(%d+)%.(%d+)$")
 
     -- sync comment with GitHub
     local query
-    if comment.line1 == comment.line2 then
-      query = graphql("add_pull_request_review_thread_mutation", M.review_id, util.escape_chars(comment.body), comment.path, comment.side, comment.line1 )
+    if startLine == line then
+      query = graphql("add_pull_request_review_thread_mutation", M.review_id, util.escape_chars(body), props.path, props.side, line )
     else
-      query = graphql("add_pull_request_review_multiline_thread_mutation", M.review_id, util.escape_chars(comment.body), comment.path, comment.side, comment.side, comment.line1, comment.line2)
+      query = graphql("add_pull_request_review_multiline_thread_mutation", M.review_id, util.escape_chars(body), props.path, props.side, props.side, startLine, line)
     end
     gh.run(
       {
@@ -315,7 +284,22 @@ function M.save_review_comment()
             api.nvim_err_writeln(stderr)
           elseif output then
             local resp = json.parse(output)
-            print(resp.data.addPullRequestReviewThread.thread.id)
+            local thread = resp.data.addPullRequestReviewThread.thread
+            if thread.startLine == vim.NIL then
+              thread.startLine = thread.line
+              thread.startDiffSide = thread.diffSide
+            end
+            -- update comment table
+            M.review_comments[bufname] = {
+              path = thread.path,
+              startDiffSide = thread.startDiffSide,
+              diffSide = thread.diffSide,
+              diffHunk = thread.comments.nodes[1].diffHunk,
+              commit = thread.comments.nodes[1].commit.abbreviatedOid,
+              startLine = thread.startLine,
+              line = thread.line,
+              body = thread.comments.nodes[1].body
+            }
           end
         end
       }
@@ -705,37 +689,6 @@ function M.submit_review(event)
   local bufnr = api.nvim_get_current_buf()
   local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local body = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
-
-  --[[
-  local comments = {}
-  for _, c in ipairs(vim.tbl_values(M.review_comments)) do
-    if util.is_blank(vim.fn.trim(c.body)) then goto continue end
-    if c.line1 == c.line2 then
-      table.insert(
-        comments,
-        format('{body:"%s", line:%d, path:"%s", side:%s}', util.escape_chars(c.body), c.line1, c.path, c.side)
-      )
-    else
-      table.insert(
-        comments,
-        format(
-          '{body:"%s", startLine:%d, line:%d, path:"%s", startSide:%s, side:%s}',
-          util.escape_chars(c.body),
-          c.line1,
-          c.line2,
-          c.path,
-          c.side,
-          c.side
-        )
-      )
-    end
-    ::continue::
-  end
-  comments = table.concat(comments, ", ")
-
-  local qf = vim.fn.getqflist({context = 0})
-  local pull_request_id = qf.context.pull_request_id
-  ]]--
   local query = graphql("submit_pull_request_review_mutation", M.review_id, event, body, {escape = false})
   gh.run(
     {
