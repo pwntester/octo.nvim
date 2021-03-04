@@ -433,7 +433,7 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
 
   -- highlight qf entries
   vim.cmd [[call matchadd("Comment", "\(.*\)")]]
-  vim.cmd [[call matchadd("OctoNvimCommentUser", "|\\s\\zs[^(]+\\ze\(")]]
+  vim.cmd [[call matchadd("OctoNvimUser", "|\\s\\zs[^(]+\\ze\(")]]
   vim.cmd [[call matchadd("OctoNvimBubbleRed", "OUTDATED")]]
   vim.cmd [[call matchadd("OctoNvimBubbleGreen", "RESOLVED")]]
   vim.cmd [[call matchadd("OctoNvimBubbleDelimiter", "")]]

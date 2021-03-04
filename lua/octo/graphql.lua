@@ -588,6 +588,7 @@ query($endCursor: String) {
               id
               body
               createdAt
+              state
               commit {
                 oid
               }
