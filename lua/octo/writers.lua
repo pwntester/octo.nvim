@@ -1,5 +1,6 @@
 local constants = require "octo.constants"
 local util = require "octo.util"
+local bubbles = require "octo.ui.bubbles"
 local vim = vim
 local api = vim.api
 local max = math.max
@@ -131,7 +132,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
     if group.users.totalCount > 0 then
       content = util.reaction_map[group.content]
       highlight = group.viewerHasReacted and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
-      bubble = util.get_bubble_highlight_chunks(content, highlight, { padding_width = 1 })
+      bubble = bubbles.make_bubble(content, highlight, { padding_width = 1 })
       count = format(" %s ", group.users.totalCount)
   
       vim.list_extend(reactions_vt, bubble)
@@ -151,7 +152,7 @@ function M.write_details(bufnr, issue, update)
 
   -- author
   local author_vt = {{"Created by: ", "OctoNvimDetailsLabel"}}
-  local author_bubble = util.get_user_bubble_highlight_chunks(
+  local author_bubble = bubbles.make_user_bubble(
     issue.author.login,
     issue.viewerDidAuthor
   )
@@ -233,7 +234,7 @@ function M.write_details(bufnr, issue, update)
 
   if #issue.labels.nodes > 0 then
     for _, label in ipairs(issue.labels.nodes) do
-      local label_bubble = util.get_label_bubble_highlight_chunks(
+      local label_bubble = bubbles.make_label_bubble(
         label.name,
         label.color,
         { margin_width = 1 }
@@ -347,7 +348,7 @@ function M.write_comment(bufnr, comment, kind, line)
   M.write_block({"", ""}, {bufnr = bufnr, line = line})
 
   local header_vt = {}
-  local author_bubble = util.get_user_bubble_highlight_chunks(
+  local author_bubble = bubbles.make_user_bubble(
     comment.author.login,
     comment.viewerDidAuthor,
     { margin_width = 1 }
@@ -583,7 +584,7 @@ function M.write_review_thread_header(bufnr, opts, line)
     {"] ", "OctoNvimSymbol"},
   }
   if opts.isOutdated then
-    local outdated_bubble = util.get_bubble_highlight_chunks(
+    local outdated_bubble = bubbles.make_bubble(
       "outdated",
       "OctoNvimBubbleRed",
       { margin_width = 1 }
@@ -592,7 +593,7 @@ function M.write_review_thread_header(bufnr, opts, line)
   end
 
   if opts.isResolved then
-    local resolved_bubble = util.get_bubble_highlight_chunks(
+    local resolved_bubble = bubbles.make_bubble(
       "resolved",
       "OctoNvimBubbleGreen",
       { margin_width = 1 }

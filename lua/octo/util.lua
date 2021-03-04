@@ -3,7 +3,6 @@ local date = require "octo.date"
 local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
-local hl = require "octo.highlights"
 local format = string.format
 local vim = vim
 local api = vim.api
@@ -511,43 +510,6 @@ function M.getwin4buf(bufnr)
     end
   end
   return -1
-end
-
-local function get_highlight_group_attribute(highlight_group, attribute_name)
-  local highlight_definition = api.nvim_get_hl_by_name(highlight_group, true)
-  return highlight_definition[attribute_name] or ""
-end
-
-function M.get_bubble_highlight_chunks(content, highlight_group, options)
-  local options = options or {}
-  local margin = string.rep(" ", options.margin_width or 0)
-  local padding = string.rep(" ", options.padding_width or 0)
-  local left_delimiter = margin .. (vim.g.octo_bubble_delimiter_left or "")
-  local right_delimiter = (vim.g.octo_bubble_delimiter_right or "") .. margin
-  local delimiter_highlight_group = highlight_group .. "Delimiter"
-  local delimiter_foreground = get_highlight_group_attribute(highlight_group, "background")
-  local body = padding .. content .. padding
-
-  api.nvim_set_hl(constants.OCTO_HIGHLIGHT_NS, delimiter_highlight_group, {
-    foreground = delimiter_foreground
-  })
-  
-  return {
-    { left_delimiter, delimiter_highlight_group },
-    { body, highlight_group },
-    { right_delimiter, delimiter_highlight_group },
-  }
-end
-
-function M.get_user_bubble_highlight_chunks(name, is_author, bubble_options)
-  local highlight = is_author and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
-  local content = " " .. name
-  return M.get_bubble_highlight_chunks(content, highlight, bubble_options)
-end
-
-function M.get_label_bubble_highlight_chunks(name, color, bubble_options)
-  local highlight = hl.create_highlight(color)
-  return M.get_bubble_highlight_chunks(name, highlight, bubble_options)
 end
 
 return M
