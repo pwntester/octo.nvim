@@ -601,7 +601,7 @@ function M.review_comments()
           actions.close(prompt_bufnr)
 
           local qf = vim.fn.getqflist({items = 0})
-          local idx 
+          local idx
           for i, item in ipairs(qf.items) do
             if comment.path == item.module then
               idx = i
