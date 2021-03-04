@@ -126,11 +126,14 @@ function M.write_reactions(bufnr, reaction_groups, line)
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
   local reactions_vt = {}
+  local content, highlight
+
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
-      local content = util.reaction_map[group.content]
+      content = util.reaction_map[group.content]
+      highlight = group.viewerHasReacted and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
 
-      vim.list_extend(reactions_vt, util.get_bubble_highlight_chunks(content, "OctoNvimBubble"))
+      vim.list_extend(reactions_vt, util.get_bubble_highlight_chunks(content, highlight))
       vim.list_extend(reactions_vt, {{ format(" %s ", group.users.totalCount), "Normal" }})
     end
   end
