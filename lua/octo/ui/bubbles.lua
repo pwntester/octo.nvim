@@ -37,8 +37,8 @@ local function make_bubble(content, highlight_group, options)
   }
 end
 
-local function make_user_bubble(name, is_author, options)
-  local highlight = is_author and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
+local function make_user_bubble(name, is_viewer, options)
+  local highlight = is_viewer and "OctoNvimBubbleViewer" or "OctoNvimBubble"
   local content = " " .. name
   return make_bubble(content, highlight, options)
 end

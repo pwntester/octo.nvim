@@ -87,7 +87,7 @@ highlight default link OctoNvimMissingDetails Comment
 highlight default link OctoNvimCommentLine Visual
 highlight default link OctoNvimEditable NormalFloat
 highlight default link OctoNvimBubble NormalFloat
-highlight default OctoNvimBubbleAuthor guifg=#000000 guibg=#58A6FF
+highlight default OctoNvimBubbleViewer guifg=#000000 guibg=#58A6FF
 highlight default OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
 highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#f85149
 highlight default OctoNvimPassingTest guifg=#238636

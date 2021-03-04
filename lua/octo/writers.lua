@@ -131,7 +131,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
       content = util.reaction_map[group.content]
-      highlight = group.viewerHasReacted and "OctoNvimBubbleAuthor" or "OctoNvimBubble"
+      highlight = group.viewerHasReacted and "OctoNvimBubbleViewer" or "OctoNvimBubble"
       bubble = bubbles.make_bubble(content, highlight, { padding_width = 1 })
       count = format(" %s ", group.users.totalCount)
   

@@ -200,7 +200,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimCommentLine`        | `TabLineSel`  |
 | `OctoNvimEditable`           | `NormalFloat` |
 | `OctoNvimBubble`             | `NormalFloat` |
-| `OctoNvimBubbleAuthor`       | GitHub color  |
+| `OctoNvimBubbleViewer`       | GitHub color  |
 | `OctoNvimBubbleGreen`        | GitHub color  | 
 | `OctoNvimBubbleRed`          | GitHub color  |
 | `OctoNvimPassingTest`        | GitHub color  |
@@ -210,6 +210,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimPullModifications`  | GitHub color  |
 
 The term `GitHub color` refers to the colors used in the WebUI.
+The `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
 
 ## Settings
 
