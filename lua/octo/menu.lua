@@ -595,9 +595,44 @@ function M.review_comments()
       },
       sorter = conf.generic_sorter({}),
       previewer = previewers.review_comment.new({}),
-      attach_mappings = function()
-        -- TODO: add delete comment
-        -- TODO: update comment
+      attach_mappings = function(_, map)
+        -- update comment mapping
+        map("i", "<c-e>", function(prompt_bufnr)
+          local comment = action_state.get_selected_entry(prompt_bufnr).comment
+          actions.close(prompt_bufnr)
+          local qf = vim.fn.getqflist({context = 0})
+          local repo = qf.context.pull_request_repo
+          local number = qf.context.pull_request_number
+          local _, comment_bufnr = util.create_popup({
+            header = format("Comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, comment.diffSide)
+          })
+          local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.commit, comment.path, comment.startLine, comment.line)
+          api.nvim_buf_set_name(comment_bufnr, bufname)
+          api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
+          api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
+          api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", {
+            id = comment.id
+          })
+          api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.body, "\n"))
+        end)
+        -- delete comment mapping
+        map("i", "<c-d>", function(prompt_bufnr)
+          local comment = action_state.get_selected_entry(prompt_bufnr).comment
+          actions.close(prompt_bufnr)
+          local qf = vim.fn.getqflist({context = 0})
+          local repo = qf.context.pull_request_repo
+          local number = qf.context.pull_request_number
+          local query = graphql("delete_pull_request_review_comment_mutation", comment.id)
+          gh.run(
+            {
+              args = {"api", "graphql", "-f", format("query=%s", query)},
+              cb = function(_)
+                local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.commit, comment.path, comment.startLine, comment.line)
+                reviews.review_comments[bufname] = nil
+              end
+            }
+          )
+        end)
         actions.select_default:replace(function(prompt_bufnr)
           local comment = action_state.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)

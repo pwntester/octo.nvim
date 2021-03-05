@@ -291,7 +291,6 @@ function M.edit_review_comment()
   local comment_key_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
   local review_comments = M.review_comments
   local comment_keys = vim.tbl_keys(review_comments)
-  local found = false
   for _, comment_key in ipairs(comment_keys) do
     local startLine, line = string.match(comment_key, comment_key_prefix.."(%d+).(%d+)$")
     if startLine and line then
@@ -304,7 +303,6 @@ function M.edit_review_comment()
     local cursor = api.nvim_win_get_cursor(0)
     if startLine <= cursor[1] and line >= cursor[1] then
       local comment = review_comments[comment_key]
-      print(vim.inspect(comment))
 
       -- create comment window and buffer
       local _, comment_bufnr = util.create_popup({
