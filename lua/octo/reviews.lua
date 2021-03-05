@@ -2,7 +2,6 @@ local octo = require "octo"
 local writers = require "octo.writers"
 local signs = require "octo.signs"
 local util = require "octo.util"
-local constants = require "octo.constants"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local format = string.format

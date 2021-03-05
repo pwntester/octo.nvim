@@ -251,7 +251,9 @@ M.delete_pull_request_review_comment_mutation =
   [[
   mutation {
     deletePullRequestReviewComment(input: {id: "%s"}) {
-      clientMutationId
+      pullRequestReview {
+        id
+      }
     }
   }
 ]]
