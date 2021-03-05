@@ -136,7 +136,10 @@ local commands = {
     end,
     delete = function()
       M.delete_comment()
-    end
+    end,
+    edit = function()
+      reviews.edit_review_comment()
+    end,
   },
   label = {
     add = function()
@@ -842,6 +845,7 @@ function M.resume_review()
               end
               local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, thread.comments.nodes[1].commit.abbreviatedOid, thread.path, thread.startLine, thread.line)
               reviews.review_comments[bufname] = {
+                id = thread.comments.nodes[1].id,
                 path = thread.path,
                 startDiffSide = thread.startDiffSide,
                 diffSide = thread.diffSide,

@@ -596,6 +596,8 @@ function M.review_comments()
       sorter = conf.generic_sorter({}),
       previewer = previewers.review_comment.new({}),
       attach_mappings = function()
+        -- TODO: add delete comment
+        -- TODO: update comment
         actions.select_default:replace(function(prompt_bufnr)
           local comment = action_state.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)
@@ -605,7 +607,6 @@ function M.review_comments()
           for i, item in ipairs(qf.items) do
             if comment.path == item.module then
               idx = i
-              entry = item
               break
             end
           end

@@ -116,6 +116,7 @@ mutation {
       startLine
       comments(first:1) {
         nodes {
+          id
           body
           diffHunk
           commit { abbreviatedOid }
@@ -142,6 +143,7 @@ mutation {
       startLine
       comments(first:1) {
         nodes {
+          id
           body
           diffHunk
           commit { abbreviatedOid }
@@ -549,6 +551,7 @@ query {
           startLine
           comments(first:1) {
             nodes {
+              id
               body
               diffHunk
               commit { abbreviatedOid }
