@@ -253,7 +253,7 @@ function M.add_review_comment(isSuggestion)
 
     -- create comment window and buffer
     local comment_winid, comment_bufnr = util.create_popup({
-      header = format("Comment for %s (from %d to %d) [%s]", props.path, line1, line2, props.side)
+      header = format("Add comment for %s (from %d to %d) [%s]", props.path, line1, line2, props.side)
     })
 
     local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), line1, line2)
@@ -306,7 +306,7 @@ function M.edit_review_comment()
 
       -- create comment window and buffer
       local _, comment_bufnr = util.create_popup({
-        header = format("Comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, props.side)
+        header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, props.side)
       })
 
       local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), comment.startLine, comment.line)

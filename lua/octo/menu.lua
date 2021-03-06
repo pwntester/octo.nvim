@@ -604,7 +604,7 @@ function M.review_comments()
           local repo = qf.context.pull_request_repo
           local number = qf.context.pull_request_number
           local _, comment_bufnr = util.create_popup({
-            header = format("Comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, comment.diffSide)
+            header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, comment.diffSide)
           })
           local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.commit, comment.path, comment.startLine, comment.line)
           api.nvim_buf_set_name(comment_bufnr, bufname)
