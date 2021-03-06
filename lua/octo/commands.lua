@@ -923,8 +923,8 @@ function M.initiate_review(repo, number, pr)
               pull_request_repo = repo,
               pull_request_number = number,
               pull_request_id = pr.id,
-              baseRefSHA = pr.baseRefSHA,
-              headRefSHA = pr.headRefSHA
+              baseRefOid = pr.baseRefOid,
+              headRefOid = pr.headRefOid
             }
           )
         end

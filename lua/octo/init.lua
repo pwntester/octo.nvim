@@ -215,9 +215,9 @@ function M.create_buffer(type, obj, repo, create)
         isDraft = obj.isDraft,
         merged = obj.merged,
         headRefName = obj.headRefName,
-        headRefSHA = obj.headRefOid,
+        headRefOid = obj.headRefOid,
         baseRefName = obj.baseRefName,
-        baseRefSHA = obj.baseRefOid,
+        baseRefOid = obj.baseRefOid,
         baseRepoName = obj.baseRepository.nameWithOwner
       }
     )

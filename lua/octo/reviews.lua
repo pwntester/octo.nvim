@@ -30,8 +30,8 @@ function M.populate_changes_qf(changes, opts)
 
   -- populate qf
   local context = {
-    left_sha = opts.baseRefSHA,
-    right_sha = opts.headRefSHA,
+    left_commit = opts.baseRefOid,
+    right_commit = opts.headRefOid,
     pull_request_id = opts.pull_request_id,
     pull_request_repo = opts.pull_request_repo,
     pull_request_number = opts.pull_request_number
@@ -54,10 +54,10 @@ function M.populate_changes_qf(changes, opts)
     -- prefetch changed files
     util.set_timeout(5000, vim.schedule_wrap(function()
       M.review_files[change.path] = {}
-      util.get_file_contents(opts.pull_request_repo, opts.baseRefSHA, change.path, function(lines)
+      util.get_file_contents(opts.pull_request_repo, opts.baseRefOid, change.path, function(lines)
         M.review_files[change.path].left_lines = lines
       end)
-      util.get_file_contents(opts.pull_request_repo, opts.headRefSHA, change.path, function(lines)
+      util.get_file_contents(opts.pull_request_repo, opts.headRefOid, change.path, function(lines)
         M.review_files[change.path].right_lines = lines
       end)
     end))
@@ -91,8 +91,8 @@ function M.diff_changes_qf_entry(target)
 
   local qf = vim.fn.getqflist({context = 0, idx = 0, items = 0, winid = 0})
   local ctxitem = qf.context.items[qf.idx]
-  local left_sha = qf.context.left_sha
-  local right_sha = qf.context.right_sha
+  local left_commit = qf.context.left_commit
+  local right_commit = qf.context.right_commit
   local path = qf.items[qf.idx].module
   local repo = qf.context.pull_request_repo
   local number = qf.context.pull_request_number
@@ -114,7 +114,7 @@ function M.diff_changes_qf_entry(target)
   end
 
   -- prepare left buffer
-  local left_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, left_sha:sub(0,7), path)
+  local left_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, left_commit:sub(0,7), path)
   local left_bufnr = vim.fn.bufnr(left_bufname)
   if left_bufnr == -1 then
     left_bufnr = api.nvim_create_buf(false, true)
@@ -123,8 +123,8 @@ function M.diff_changes_qf_entry(target)
     api.nvim_buf_set_option(left_bufnr, "modifiable", false)
   end
   api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", {
-    side = "LEFT",
-    sha = left_sha,
+    diffSide = "LEFT",
+    commit = left_commit,
     qf_idx = qf.idx,
     qf_winid = qf.winid,
     path = path,
@@ -135,7 +135,7 @@ function M.diff_changes_qf_entry(target)
   })
 
   -- prepare right buffer
-  local right_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, right_sha:sub(0,7), path)
+  local right_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, right_commit:sub(0,7), path)
   local right_bufnr = vim.fn.bufnr(right_bufname)
   if right_bufnr == -1 then
     right_bufnr = api.nvim_create_buf(false, true)
@@ -144,8 +144,8 @@ function M.diff_changes_qf_entry(target)
     api.nvim_buf_set_option(right_bufnr, "modifiable", false)
   end
   api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", {
-    side = "RIGHT",
-    sha = right_sha,
+    diffSide = "RIGHT",
+    commit = right_commit,
     qf_idx = qf.idx,
     qf_winid = qf.winid,
     path = qf.items[qf.idx].module,
@@ -200,7 +200,7 @@ function M.diff_changes_qf_entry(target)
   else
     M.review_files[path] = {}
     -- load left content
-    util.get_file_contents(repo, left_sha, path, function(lines)
+    util.get_file_contents(repo, left_commit, path, function(lines)
       write_diff_lines(lines, "left")
 
       -- move cursor to comment if necessary
@@ -211,7 +211,7 @@ function M.diff_changes_qf_entry(target)
     end)
 
     -- load right content
-    util.get_file_contents(repo, right_sha, path, function(lines)
+    util.get_file_contents(repo, right_commit, path, function(lines)
       write_diff_lines(lines, "right")
 
       -- move cursor to comment if necessary
@@ -253,7 +253,7 @@ function M.add_review_comment(isSuggestion)
 
     -- create comment window and buffer
     local comment_winid, comment_bufnr = util.create_popup({
-      header = format("Add comment for %s (from %d to %d) [%s]", props.path, line1, line2, props.side)
+      header = format("Add comment for %s (from %d to %d) [%s]", props.path, line1, line2, props.diffSide)
     })
 
     local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), line1, line2)
@@ -306,7 +306,7 @@ function M.edit_review_comment()
 
       -- create comment window and buffer
       local _, comment_bufnr = util.create_popup({
-        header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, props.side)
+        header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, props.diffSide)
       })
 
       local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), comment.startLine, comment.line)
@@ -344,9 +344,9 @@ function M.save_review_comment()
       -- create new comment with GitHub
       op = "create"
       if startLine == line then
-        query = graphql("add_pull_request_review_thread_mutation", M.review_id, body, props.path, props.side, line )
+        query = graphql("add_pull_request_review_thread_mutation", M.review_id, body, props.path, props.diffSide, line )
       else
-        query = graphql("add_pull_request_review_multiline_thread_mutation", M.review_id, body, props.path, props.side, props.side, startLine, line)
+        query = graphql("add_pull_request_review_multiline_thread_mutation", M.review_id, body, props.path, props.diffSide, props.diffSide, startLine, line)
       end
     end
     gh.run(
