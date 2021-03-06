@@ -633,7 +633,10 @@ function M.pr_checks()
             end
             table.insert(lines, table.concat(line, "  "))
           end
-          local _, bufnr = util.create_popup({content=lines})
+          local _, bufnr = util.create_popup({
+            header = "Checks",
+            content=lines
+          })
           local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
           for i, l in ipairs(buf_lines) do
             if #vim.split(l, "pass") > 1 then
