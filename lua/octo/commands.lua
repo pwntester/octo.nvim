@@ -103,6 +103,12 @@ local commands = {
     end,
     threads = function()
       M.review_threads()
+    end,
+    resume = function()
+      M.resume_review()
+    end,
+    discard = function()
+      M.discard_review()
     end
   },
   gist = {
@@ -130,7 +136,10 @@ local commands = {
     end,
     delete = function()
       M.delete_comment()
-    end
+    end,
+    edit = function()
+      reviews.edit_review_comment()
+    end,
   },
   label = {
     add = function()
@@ -454,7 +463,6 @@ function M.unresolve_comment()
               )
             elseif vim.bo.ft == "octo_reviewthread" then
               local pattern = format("%s/%s", thread_id, comment_id)
-              print(pattern)
               local qf = vim.fn.getqflist({items = 0})
               local items = qf.items
               for _, item in ipairs(items) do
@@ -625,7 +633,10 @@ function M.pr_checks()
             end
             table.insert(lines, table.concat(line, "  "))
           end
-          local _, bufnr = util.create_popup({content=lines})
+          local _, bufnr = util.create_popup({
+            header = "Checks",
+            content=lines
+          })
           local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
           for i, l in ipairs(buf_lines) do
             if #vim.split(l, "pass") > 1 then
@@ -729,6 +740,11 @@ function M.review_threads()
 end
 
 function M.submit_review()
+  if reviews.review_id == -1 then
+    api.nvim_err_writeln("No review in progress")
+    return
+  end
+
   local winid, bufnr = util.create_popup({
     header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
   })
@@ -753,15 +769,135 @@ function M.submit_review()
   --vim.cmd [[startinsert]]
 end
 
+function M.discard_review()
+  local repo, number = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+
+  local query = graphql("pending_review_threads_query", owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+            api.nvim_err_writeln("No pending reviews found")
+            return
+          end
+          local review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
+
+          local delete_query = graphql("delete_pull_request_review_mutation", review_id)
+          gh.run(
+            {
+              args = {"api", "graphql", "-f", format("query=%s", delete_query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  reviews.review_id = -1
+                  reviews.comments = {}
+                  reviews.files= {}
+                  print("Pending review discarded")
+                end
+              end
+            }
+          )
+        end
+      end
+    }
+  )
+end
+
+function M.resume_review()
+  local repo, number, pr = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+
+  -- start new review
+  local query = graphql("pending_review_threads_query", owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+            api.nvim_err_writeln("No pending reviews found")
+            return
+          end
+          reviews.review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
+
+          local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+          for _, thread in ipairs(threads) do
+            local review_id = thread.comments.nodes[1].pullRequestReview.id
+            if review_id == reviews.review_id then
+              if thread.startLine == vim.NIL then
+                thread.startLine = thread.line
+                thread.startDiffSide = thread.diffSide
+              end
+              local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, thread.comments.nodes[1].commit.abbreviatedOid, thread.path, thread.startLine, thread.line)
+              reviews.review_comments[bufname] = {
+                id = thread.comments.nodes[1].id,
+                path = thread.path,
+                startDiffSide = thread.startDiffSide,
+                diffSide = thread.diffSide,
+                diffHunk = thread.comments.nodes[1].diffHunk,
+                commit = thread.comments.nodes[1].commit.abbreviatedOid,
+                startLine = thread.startLine,
+                line = thread.line,
+                body = thread.comments.nodes[1].body
+              }
+            end
+          end
+
+          M.initiate_review(repo, number, pr)
+        end
+      end
+    }
+  )
+end
+
 function M.start_review()
   local repo, number, pr = util.get_repo_number_pr()
   if not repo then
     return
   end
 
+  reviews.review_id = -1
   reviews.review_comments = {}
   reviews.review_files = {}
 
+  -- start new review
+  local query = graphql("start_review_mutation", pr.id)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          reviews.review_id = resp.data.addPullRequestReview.pullRequestReview.id
+          M.initiate_review(repo, number, pr)
+        end
+      end
+    }
+  )
+end
+
+function M.initiate_review(repo, number, pr)
+  -- get changed files
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
     {
@@ -787,8 +923,8 @@ function M.start_review()
               pull_request_repo = repo,
               pull_request_number = number,
               pull_request_id = pr.id,
-              baseRefSHA = pr.baseRefSHA,
-              headRefSHA = pr.headRefSHA
+              baseRefOid = pr.baseRefOid,
+              headRefOid = pr.headRefOid
             }
           )
         end

@@ -344,7 +344,7 @@ function M.write_comment(bufnr, comment, kind, line)
     header_vt = {
       {"REVIEW: ", "OctoNvimTimelineItemHeading"},
       {comment.author.login.." ", "OctoNvimUser"},
-      {comment.state:lower().." ", "OctoNvimDetailsValue"},
+      {"["..comment.state:lower().."] ", "OctoNvimDetailsValue"},
       {"(", "OctoNvimSymbol"},
       {util.format_date(comment.createdAt), "OctoNvimDate"},
       {")", "OctoNvimSymbol"}
@@ -354,6 +354,7 @@ function M.write_comment(bufnr, comment, kind, line)
     header_vt = {
       {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"},
       {comment.author.login.." ", "OctoNvimUser"},
+      {"["..comment.state:lower().."] ", "OctoNvimDetailsValue"},
       {"(", "OctoNvimSymbol"},
       {util.format_date(comment.createdAt), "OctoNvimDate"},
       {")", "OctoNvimSymbol"}
@@ -571,7 +572,7 @@ function M.write_review_thread_header(bufnr, opts, line)
     {"[", "OctoNvimSymbol"},
     {opts.path.." ", "OctoNvimDetailsLabel"},
     {tostring(opts.start_line)..":"..tostring(opts.end_line), "OctoNvimDetailsValue"},
-    {"]", "OctoNvimSymbol"},
+    {"] ", "OctoNvimSymbol"},
   }
   if opts.isOutdated then
     table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})

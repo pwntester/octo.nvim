@@ -157,9 +157,9 @@ function M.gen_from_review_comment(linenr_length)
 
     local columns = {
       {entry.comment.path, "TelescopeResultsNumber"},
-      {entry.comment.side},
-      {entry.comment.line1},
-      {entry.comment.line2}
+      {entry.comment.diffSide},
+      {entry.comment.startLine},
+      {entry.comment.line}
     }
 
     local displayer =
@@ -182,8 +182,8 @@ function M.gen_from_review_comment(linenr_length)
     end
 
     return {
-      value = comment.key,
-      ordinal = comment.key,
+      value = comment.path..":"..comment.startLine..":"..comment.line,
+      ordinal = comment.path..":"..comment.startLine..":"..comment.line,
       display = make_display,
       comment = comment
     }

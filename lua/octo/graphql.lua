@@ -67,16 +67,94 @@ M.unresolve_review_thread_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
-M.submit_review_mutation =
+M.start_review_mutation =
   [[
   mutation {
-    addPullRequestReview(input: {pullRequestId: "%s", event: %s, body: "%s", threads: [%s] }) {
+    addPullRequestReview(input: {pullRequestId: "%s"}) {
       pullRequestReview {
         id
         state
       }
     }
   }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
+M.submit_pull_request_review_mutation =
+  [[
+  mutation {
+    submitPullRequestReview(input: {pullRequestReviewId: "%s", event: %s, body: "%s"}) {
+      pullRequestReview {
+        id
+        state
+      }
+    }
+  }
+]]
+
+M.delete_pull_request_review_mutation =
+[[
+mutation { 
+  deletePullRequestReview(input: {pullRequestReviewId: "%s"}) { 
+    pullRequestReview {
+      id
+    }
+  }
+}
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
+M.add_pull_request_review_thread_mutation =
+[[
+mutation { 
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) { 
+    thread {
+      path
+      diffSide
+      startDiffSide
+      line
+      startLine
+      comments(first:1) {
+        nodes {
+          id
+          body
+          diffHunk
+          commit { abbreviatedOid }
+          pullRequestReview {
+            id
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
+M.add_pull_request_review_multiline_thread_mutation =
+[[
+mutation { 
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) { 
+    thread {
+      path
+      diffSide
+      startDiffSide
+      line
+      startLine
+      comments(first:1) {
+        nodes {
+          id
+          body
+          diffHunk
+          commit { abbreviatedOid }
+          pullRequestReview {
+            id
+          }
+        }
+      }
+    }
+  }
+}
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
@@ -173,7 +251,9 @@ M.delete_pull_request_review_comment_mutation =
   [[
   mutation {
     deletePullRequestReviewComment(input: {id: "%s"}) {
-      clientMutationId
+      pullRequestReview {
+        id
+      }
     }
   }
 ]]
@@ -453,6 +533,42 @@ M.update_pull_request_state_mutation =
   }
 ]]
 
+-- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
+M.pending_review_threads_query =
+[[
+query { 
+  repository(owner:"%s", name:"%s") {
+    pullRequest (number: %d){
+      reviews(first:1, states:PENDING) {
+        nodes {
+          id
+        }
+      }
+      reviewThreads(last:50) {
+        nodes {	
+          path
+          diffSide
+          startDiffSide
+          line
+          startLine
+          comments(first:1) {
+            nodes {
+              id
+              body
+              diffHunk
+              commit { abbreviatedOid }
+              pullRequestReview {
+                id
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads_query =
   [[
@@ -477,6 +593,7 @@ query($endCursor: String) {
               id
               body
               createdAt
+              state
               commit {
                 oid
               }
@@ -688,6 +805,7 @@ query($endCursor: String) {
               body
               createdAt
               replyTo { id }
+              state
               commit {
                 oid
               }

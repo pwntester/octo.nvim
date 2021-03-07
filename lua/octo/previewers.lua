@@ -194,7 +194,7 @@ M.review_comment =
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
           -- TODO: pretty print
-          writers.write_diff_hunk(bufnr, entry.comment.diff_hunk)
+          writers.write_diff_hunk(bufnr, entry.comment.diffHunk)
           api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(entry.comment.body, "\n"))
         end
       end

@@ -64,6 +64,7 @@ endfunction
 
 " autocommands
 function s:configure_octo_buffer() abort
+  " issue/pr/comment buffers
   if match(bufname(), "octo://.\\+/.\\+/pull/\\d\\+/file/") == -1
     setlocal omnifunc=octo#issue_complete
     setlocal nonumber norelativenumber nocursorline wrap
@@ -77,6 +78,9 @@ function s:configure_octo_buffer() abort
     setlocal foldlevelstart=99
     setlocal conceallevel=2
     setlocal syntax=markdown
+  " file diff buffers
+  else
+    lua require"octo.signs".place_coment_signs()
   end
 endfunction
 
