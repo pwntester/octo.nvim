@@ -343,7 +343,8 @@ function M.check_editable()
       return
     end
   end
-  vim.cmd [[call feedkeys("\<esc>")]]
+  local key = api.nvim_replace_termcodes("<esc>", true, false, true)
+  api.nvim_feedkeys(key, "m", true)
   print("Cannot make changes to non-editable regions")
 end
 
