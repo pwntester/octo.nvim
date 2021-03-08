@@ -181,36 +181,40 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 
 ## Highlight groups
-| Name                         | Default       |
-| ---                          | ---           |
-| `OctoNvimDirty`              | `ErrorMsg`    |
-| `OctoNvimIssueTitle`         | `PreProc`     |
-| `OctoNvimIssueId`            | `Question`    |
-| `OctoNvimIssueOpen`          | `MoreMsg`     |
-| `OctoNvimIssueClosed`        | `ErrorMsg`    |
-| `OctoNvimEmpty`              | `Comment`     |
-| `OctoNvimFloat`              | `NormalNC`    |
-| `OctoNvimDate`               | `Comment`     |
-| `OctoNvimSymbol`             | `Comment`     |
-| `OctoNvimTimelineItemHeading`| `Comment`     |
-| `OctoNvimDetailsLabel`       | `Title`       |
-| `OctoNvimMissingDetails`     | `Comment`     |
-| `OctoNvimDetailsValue `      | `Identifier`  |
-| `OctoNvimDiffHunkPosition`   | `NormalFloat` |
-| `OctoNvimCommentLine`        | `TabLineSel`  |
-| `OctoNvimEditable`           | `NormalFloat` |
-| `OctoNvimBubble`             | `NormalFloat` |
-| `OctoNvimBubbleViewer`       | GitHub color  |
-| `OctoNvimBubbleGreen`        | GitHub color  | 
-| `OctoNvimBubbleRed`          | GitHub color  |
-| `OctoNvimPassingTest`        | GitHub color  |
-| `OctoNvimFailingTest`        | GitHub color  |
-| `OctoNvimPullAdditions`      | GitHub color  |
-| `OctoNvimPullDeletions`      | GitHub color  |
-| `OctoNvimPullModifications`  | GitHub color  |
+| Name                         | Default          |
+| ---                          | ---              |
+| `OctoNvimDirty`              | `ErrorMsg`       |
+| `OctoNvimIssueTitle`         | `PreProc`        |
+| `OctoNvimIssueId`            | `Question`       |
+| `OctoNvimIssueOpen`          | `MoreMsg`        |
+| `OctoNvimIssueClosed`        | `ErrorMsg`       |
+| `OctoNvimEmpty`              | `Comment`        |
+| `OctoNvimFloat`              | `NormalNC`       |
+| `OctoNvimDate`               | `Comment`        |
+| `OctoNvimSymbol`             | `Comment`        |
+| `OctoNvimTimelineItemHeading`| `Comment`        |
+| `OctoNvimDetailsLabel`       | `Title`          |
+| `OctoNvimMissingDetails`     | `Comment`        |
+| `OctoNvimDetailsValue `      | `Identifier`     |
+| `OctoNvimDiffHunkPosition`   | `NormalFloat`    |
+| `OctoNvimCommentLine`        | `TabLineSel`     |
+| `OctoNvimEditable`           | `NormalFloat`    |
+| `OctoNvimViewer`             | GitHub color     |
+| `OctoNvimBubble`             | `NormalFloat`    |
+| `OctoNvimBubbleGreen`        | GitHub color     |  
+| `OctoNvimBubbleRed`          | GitHub color     |
+| `OctoNvimUser`               | `OctoNvimBubble` |
+| `OctoNvimUserViewer`         | `OctoNvimViewer` |
+| `OctoNvimReaction`           | `OctoNvimBubble` |
+| `OctoNvimReactionViewer`     | `OctoNvimViewer` |
+| `OctoNvimPassingTest`        | GitHub color     |
+| `OctoNvimFailingTest`        | GitHub color     |
+| `OctoNvimPullAdditions`      | GitHub color     |
+| `OctoNvimPullDeletions`      | GitHub color     |
+| `OctoNvimPullModifications`  | GitHub color     |
 
 The term `GitHub color` refers to the colors used in the WebUI.
-The `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
+The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
 
 ## Settings
 
@@ -220,3 +224,4 @@ The `viewer` means the user of the plugin or more precisely the user authenticat
 - `g:octo_bubble_delimiter_left`: Left (unicode) character to draw a bubble for labels etc. (default: "")
 - `g:octo_bubble_delimiter_right`: Right (unicode) character to draw a bubble for labels etc. (default: "")
 - `g:octo_icon_user`: Icon used to signal user names (default: "")
+- `g:octo_icon_reaction_viewer_hint`: Icon as alternative or to complement the highlighting of reactions by the viewer himself (default: "")

@@ -38,9 +38,16 @@ local function make_bubble(content, highlight_group, options)
 end
 
 local function make_user_bubble(name, is_viewer, options)
-  local highlight = is_viewer and "OctoNvimBubbleViewer" or "OctoNvimBubble"
+  local highlight = is_viewer and "OctoNvimUserViewer" or "OctoNvimUser"
   local icon = vim.g.octo_icon_user or ""
   local content = icon .. " " .. name
+  return make_bubble(content, highlight, options)
+end
+
+local function make_reaction_bubble(icon, includes_viewer, options)
+  local highlight = includes_viewer and "OctoNvimReactionViewer" or "OctoNvimReaction"
+  local hint_for_viewer = includes_viewer and (vim.g.octo_icon_reaction_viewer_hint or "") or ""
+  local content = icon .. hint_for_viewer
   return make_bubble(content, highlight, options)
 end
 
@@ -52,5 +59,6 @@ end
 return {
   make_bubble = make_bubble,
   make_user_bubble = make_user_bubble,
+  make_reaction_bubble = make_reaction_bubble,
   make_label_bubble = make_label_bubble,
 }
