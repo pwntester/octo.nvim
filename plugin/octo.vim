@@ -80,7 +80,7 @@ function s:configure_octo_buffer() abort
     setlocal syntax=markdown
   " file diff buffers
   else
-    lua require"octo.signs".place_coment_signs()
+    lua require"octo.reviews".place_comment_signs()
   end
 endfunction
 
@@ -89,6 +89,7 @@ au!
 au BufEnter octo://* call s:configure_octo_buffer()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
+au CursorHold octo://* lua require'octo.reviews'.show_comment()
 augroup END
 
 " sign definitions

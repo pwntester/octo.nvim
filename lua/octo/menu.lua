@@ -566,95 +566,43 @@ end
 ---
 -- REVIEW COMMENTS
 ---
-function M.review_comments()
-  if reviews.review_id == -1 then
-    api.nvim_err_writeln("No review in progress")
-    return
-  end
-  local comments = vim.tbl_values(reviews.review_comments)
+function M.pending_comments(comments)
   local max_linenr_length = -1
-  local filtered_comments = {}
   for _, comment in ipairs(comments) do
     max_linenr_length = math.max(max_linenr_length, #tostring(comment.startLine))
     max_linenr_length = math.max(max_linenr_length, #tostring(comment.line))
-    if not util.is_blank(vim.fn.trim(comment.body)) then
-      table.insert(filtered_comments, comment)
-    end
-  end
-  if #filtered_comments == 0 then
-    api.nvim_err_writeln("No pending comments found")
-    return
   end
   pickers.new(
     {},
     {
       prompt_prefix = "Review Comments >",
       finder = finders.new_table {
-        results = filtered_comments,
+        results = comments,
         entry_maker = entry_maker.gen_from_review_comment(max_linenr_length)
       },
       sorter = conf.generic_sorter({}),
       previewer = previewers.review_comment.new({}),
       attach_mappings = function(_, map)
+
         -- update comment mapping
         map("i", "<c-e>", function(prompt_bufnr)
           local comment = action_state.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)
-          local qf = vim.fn.getqflist({context = 0})
-          local repo = qf.context.pull_request_repo
-          local number = qf.context.pull_request_number
-          local _, comment_bufnr = util.create_popup({
-            header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, comment.diffSide)
-          })
-          local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.commit, comment.path, comment.startLine, comment.line)
-          api.nvim_buf_set_name(comment_bufnr, bufname)
-          api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
-          api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
-          api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", {
-            id = comment.id
-          })
-          api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.body, "\n"))
+          reviews.update_pending_review_comment(comment)
         end)
+
         -- delete comment mapping
         map("i", "<c-d>", function(prompt_bufnr)
           local comment = action_state.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)
-          local qf = vim.fn.getqflist({context = 0})
-          local repo = qf.context.pull_request_repo
-          local number = qf.context.pull_request_number
-          local query = graphql("delete_pull_request_review_comment_mutation", comment.id)
-          gh.run(
-            {
-              args = {"api", "graphql", "-f", format("query=%s", query)},
-              cb = function(_)
-                local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.commit, comment.path, comment.startLine, comment.line)
-                reviews.review_comments[bufname] = nil
-              end
-            }
-          )
+          reviews.delete_pending_review_comment(comment)
         end)
+
+        -- jump to comment
         actions.select_default:replace(function(prompt_bufnr)
           local comment = action_state.get_selected_entry(prompt_bufnr).comment
           actions.close(prompt_bufnr)
-
-          local qf = vim.fn.getqflist({items = 0})
-          local idx
-          for i, item in ipairs(qf.items) do
-            if comment.path == item.module then
-              idx = i
-              break
-            end
-          end
-
-          if idx then
-            -- select qf item
-            vim.fn.setqflist({}, 'r', {idx = idx })
-            reviews.diff_changes_qf_entry({
-              diffSide = comment.diffSide,
-              startLine = comment.startLine,
-              line = comment.line,
-            })
-          end
+          reviews.jump_to_pending_review_comment(comment)
         end)
         return true
       end

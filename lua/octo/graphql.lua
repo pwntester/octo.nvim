@@ -120,6 +120,10 @@ mutation {
           body
           diffHunk
           commit { abbreviatedOid }
+          author {login}
+          authorAssociation
+          viewerDidAuthor
+          state
           pullRequestReview {
             id
           }
@@ -147,6 +151,10 @@ mutation {
           body
           diffHunk
           commit { abbreviatedOid }
+          author {login}
+          authorAssociation
+          viewerDidAuthor
+          state
           pullRequestReview {
             id
           }
@@ -533,7 +541,7 @@ M.update_pull_request_state_mutation =
   }
 ]]
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
+-- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query =
 [[
 query { 
@@ -557,6 +565,10 @@ query {
               body
               diffHunk
               commit { abbreviatedOid }
+              author {login}
+              authorAssociation
+              viewerDidAuthor
+              state
               pullRequestReview {
                 id
               }

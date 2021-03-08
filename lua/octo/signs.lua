@@ -32,25 +32,6 @@ function M.place_signs(bufnr, start_line, end_line, is_dirty)
   end
 end
 
-function M.place_coment_signs()
-  local bufnr = api.nvim_get_current_buf()
-  M.unplace(bufnr)
-  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
-  if status and props then
-    local bufname_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
-    local review_comments = require"octo.reviews".review_comments
-    local comment_keys = vim.tbl_keys(review_comments)
-    for _, comment_key in ipairs(comment_keys) do
-      if vim.startswith(comment_key, bufname_prefix) then
-        local comment = review_comments[comment_key]
-          for line = comment.startLine, comment.line do
-            M.place("octo_comment", bufnr, line - 1)
-          end
-      end
-    end
-  end
-end
-
 function M.render_signcolumn(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
   local ft = api.nvim_buf_get_option(bufnr, "filetype")

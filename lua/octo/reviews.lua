@@ -11,12 +11,11 @@ local json = {
   parse = vim.fn.json_decode
 }
 
-
 local M = {}
 
-M.review_comments = {}
-M.review_files = {}
-M.review_id = -1
+local _review_comments = {}
+local _review_files = {}
+local _review_id = -1
 
 local qf_height = vim.g.octo_qf_height or math.floor(vim.o.lines * 0.2)
 
@@ -53,12 +52,12 @@ function M.populate_changes_qf(changes, opts)
 
     -- prefetch changed files
     util.set_timeout(5000, vim.schedule_wrap(function()
-      M.review_files[change.path] = {}
+      _review_files[change.path] = {}
       util.get_file_contents(opts.pull_request_repo, opts.baseRefOid, change.path, function(lines)
-        M.review_files[change.path].left_lines = lines
+        _review_files[change.path].left_lines = lines
       end)
       util.get_file_contents(opts.pull_request_repo, opts.headRefOid, change.path, function(lines)
-        M.review_files[change.path].right_lines = lines
+        _review_files[change.path].right_lines = lines
       end)
     end))
   end
@@ -114,7 +113,7 @@ function M.diff_changes_qf_entry(target)
   end
 
   -- prepare left buffer
-  local left_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, left_commit:sub(0,7), path)
+  local left_bufname = format("octo://%s/pull/%d/file/LEFT/%s", repo, number, path)
   local left_bufnr = vim.fn.bufnr(left_bufname)
   if left_bufnr == -1 then
     left_bufnr = api.nvim_create_buf(false, true)
@@ -132,10 +131,11 @@ function M.diff_changes_qf_entry(target)
     content_bufnr = left_bufnr,
     hunks = valid_hunks,
     ranges = valid_left_ranges,
+    alt_win = right_win
   })
 
   -- prepare right buffer
-  local right_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, right_commit:sub(0,7), path)
+  local right_bufname = format("octo://%s/pull/%d/file/RIGHT/%s", repo, number, path)
   local right_bufnr = vim.fn.bufnr(right_bufname)
   if right_bufnr == -1 then
     right_bufnr = api.nvim_create_buf(false, true)
@@ -143,6 +143,15 @@ function M.diff_changes_qf_entry(target)
     api.nvim_buf_set_lines(right_bufnr, 0, -1, false, {"Loading ..."})
     api.nvim_buf_set_option(right_bufnr, "modifiable", false)
   end
+
+  -- configure window layout and mappings
+  api.nvim_set_current_win(right_win)
+  api.nvim_win_set_buf(right_win, right_bufnr)
+  M.add_changes_qf_mappings()
+  vim.cmd(format("leftabove vert sbuffer %d", left_bufnr))
+  local left_win = util.getwin4buf(left_bufnr)
+  M.add_changes_qf_mappings()
+
   api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", {
     diffSide = "RIGHT",
     commit = right_commit,
@@ -153,26 +162,19 @@ function M.diff_changes_qf_entry(target)
     content_bufnr = right_bufnr,
     hunks = valid_hunks,
     ranges = valid_right_ranges,
+    alt_win = left_win
   })
-
-  -- configure window layout and mappings
-  api.nvim_set_current_win(right_win)
-  api.nvim_win_set_buf(right_win, right_bufnr)
-  M.add_changes_qf_mappings()
-  vim.cmd(format("leftabove vert sbuffer %d", left_bufnr))
-  local left_win = util.getwin4buf(left_bufnr)
-  M.add_changes_qf_mappings()
 
   local write_diff_lines = function(lines, side)
     local bufnr, winnr
     if side == "right" then
       bufnr = right_bufnr
       winnr = right_win
-      M.review_files[path].right_lines = lines
+      _review_files[path].right_lines = lines
     elseif side == "left" then
       bufnr = left_bufnr
       winnr = left_win
-      M.review_files[path].left_lines = lines
+      _review_files[path].left_lines = lines
     end
     api.nvim_buf_set_option(bufnr, "modifiable", true)
     api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
@@ -185,9 +187,9 @@ function M.diff_changes_qf_entry(target)
   end
 
   -- load diff buffer contents
-  if M.review_files[path] and M.review_files[path].right_lines and M.review_files[path].left_lines then
-    write_diff_lines(M.review_files[path].right_lines, "right")
-    write_diff_lines(M.review_files[path].left_lines, "left")
+  if _review_files[path] and _review_files[path].right_lines and _review_files[path].left_lines then
+    write_diff_lines(_review_files[path].right_lines, "right")
+    write_diff_lines(_review_files[path].left_lines, "left")
 
     -- move cursor to comment if necessary
     if target and target.diffSide == "RIGHT" then
@@ -198,7 +200,7 @@ function M.diff_changes_qf_entry(target)
       api.nvim_win_set_cursor(left_win, {target.line, 1})
     end
   else
-    M.review_files[path] = {}
+    _review_files[path] = {}
     -- load left content
     util.get_file_contents(repo, left_commit, path, function(lines)
       write_diff_lines(lines, "left")
@@ -289,8 +291,7 @@ function M.edit_review_comment()
   end
 
   local comment_key_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
-  local review_comments = M.review_comments
-  local comment_keys = vim.tbl_keys(review_comments)
+  local comment_keys = vim.tbl_keys(_review_comments)
   for _, comment_key in ipairs(comment_keys) do
     local startLine, line = string.match(comment_key, comment_key_prefix.."(%d+).(%d+)$")
     if startLine and line then
@@ -302,7 +303,7 @@ function M.edit_review_comment()
 
     local cursor = api.nvim_win_get_cursor(0)
     if startLine <= cursor[1] and line >= cursor[1] then
-      local comment = review_comments[comment_key]
+      local comment = _review_comments[comment_key]
 
       -- create comment window and buffer
       local _, comment_bufnr = util.create_popup({
@@ -344,9 +345,9 @@ function M.save_review_comment()
       -- create new comment with GitHub
       op = "create"
       if startLine == line then
-        query = graphql("add_pull_request_review_thread_mutation", M.review_id, body, props.path, props.diffSide, line )
+        query = graphql("add_pull_request_review_thread_mutation", _review_id, body, props.path, props.diffSide, line )
       else
-        query = graphql("add_pull_request_review_multiline_thread_mutation", M.review_id, body, props.path, props.diffSide, props.diffSide, startLine, line)
+        query = graphql("add_pull_request_review_multiline_thread_mutation", _review_id, body, props.path, props.diffSide, props.diffSide, startLine, line)
       end
     end
     gh.run(
@@ -366,23 +367,28 @@ function M.save_review_comment()
               end
 
               -- add new comment
-              M.review_comments[bufname] = {
+              local first_comment = thread.comments.nodes[1]
+              _review_comments[bufname] = {
                 id = thread.comments.nodes[1].id,
                 path = thread.path,
                 startDiffSide = thread.startDiffSide,
                 diffSide = thread.diffSide,
-                diffHunk = thread.comments.nodes[1].diffHunk,
-                commit = thread.comments.nodes[1].commit.abbreviatedOid,
+                diffHunk = first_comment.diffHunk,
+                commit = first_comment.commit.abbreviatedOid,
                 startLine = thread.startLine,
                 line = thread.line,
-                body = thread.comments.nodes[1].body
+                body = first_comment.body,
+                author = first_comment.author,
+                authorAssociation = first_comment.authorAssociation,
+                viewerDidAuthor = first_comment.viewerDidAuthor,
+                state = first_comment.state
               }
             elseif op == "update" then
 
               -- update existing comment
-              local comment = M.review_comments[bufname]
+              local comment = _review_comments[bufname]
               comment.body = resp.data.updatePullRequestReviewComment.pullRequestReviewComment.body
-              M.review_comments[bufname] = comment
+              _review_comments[bufname] = comment
             end
           end
         end
@@ -401,6 +407,29 @@ end
 ---
 --- Review threads
 ---
+
+function M.review_threads()
+  local repo, number, _ = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = graphql("review_threads_query", owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          M.populate_reviewthreads_qf(repo, number, resp.data.repository.pullRequest.reviewThreads.nodes)
+        end
+      end
+    }
+  )
+end
 
 function M.populate_reviewthreads_qf(repo, number, reviewthreads)
   local items = {}
@@ -577,16 +606,16 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
   local comment_id = vim.split(ids, "/")[2]
 
   -- get cached thread
-  local reviewthreads = api.nvim_win_get_var(main_win, "reviewthreads")
-  local reviewthread
-  for _, thread in ipairs(reviewthreads) do
-    if reviewthread_id == thread.id then
-      reviewthread = thread
+  local threads = api.nvim_win_get_var(main_win, "reviewthreads")
+  local thread
+  for _, t in ipairs(threads) do
+    if reviewthread_id == t.id then
+      thread = t
     end
   end
 
   -- prepare content buffer
-  local content_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, commit:sub(0,7), path)
+  local content_bufname = format("octo://%s/pull/%d/file/%s/%s", repo, number, thread.diffSide, path)
   local content_bufnr = vim.fn.bufnr(content_bufname)
   if content_bufnr == -1 then
     content_bufnr = api.nvim_create_buf(false, true)
@@ -617,7 +646,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 
     -- highlight commented lines
     signs.unplace(content_bufnr)
-    M.highlight_lines(content_bufnr, reviewthread.startLine, reviewthread.line)
+    M.highlight_lines(content_bufnr, thread.startLine, thread.line)
 
   end)
 
@@ -644,21 +673,21 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
     octo.apply_buffer_mappings(comment_bufnr, "reviewthread")
 
     -- write diff hunk
-    local main_comment = reviewthread.comments.nodes[1]
-    local start_line = reviewthread.originalStartLine ~= vim.NIL and reviewthread.originalStartLine or reviewthread.originalLine
-    local end_line = reviewthread.originalLine
+    local main_comment = thread.comments.nodes[1]
+    local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+    local end_line = thread.originalLine
     writers.write_review_thread_header(comment_bufnr, {
-      path = reviewthread.path,
+      path = thread.path,
       start_line = start_line,
       end_line = end_line,
-      isOutdated = reviewthread.isOutdated,
-      isResolved = reviewthread.isResolved
+      isOutdated = thread.isOutdated,
+      isResolved = thread.isResolved
     })
-    writers.write_commented_lines(comment_bufnr, main_comment.diffHunk, reviewthread.diffSide, start_line, end_line)
+    writers.write_commented_lines(comment_bufnr, main_comment.diffHunk, thread.diffSide, start_line, end_line)
 
     -- write thread
     api.nvim_buf_set_var(comment_bufnr, "comments", {})
-    for _, comment in ipairs(reviewthread.comments.nodes) do
+    for _, comment in ipairs(thread.comments.nodes) do
       writers.write_comment(comment_bufnr, comment, "PullRequestReviewComment")
     end
   end
@@ -770,11 +799,18 @@ function M.prev_change()
   M.diff_changes_qf_entry()
 end
 
-function M.submit_review(event)
-  local bufnr = api.nvim_get_current_buf()
-  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local body = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
-  local query = graphql("submit_pull_request_review_mutation", M.review_id, event, body, {escape = false})
+function M.start_review()
+  local repo, number, pr = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+
+  _review_id = -1
+  _review_comments = {}
+  _review_files = {}
+
+  -- start new review
+  local query = graphql("start_review_mutation", pr.id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -782,12 +818,370 @@ function M.submit_review(event)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         elseif output then
-          print("Submitted!")
+          local resp = json.parse(output)
+          _review_id = resp.data.addPullRequestReview.pullRequestReview.id
+          M.initiate_review(repo, number, pr)
+        end
+      end
+    }
+  )
+end
+
+function M.initiate_review(repo, number, pr)
+  -- get changed files
+  local url = format("repos/%s/pulls/%d/files", repo, number)
+  gh.run(
+    {
+      args = {"api", url},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local results = json.parse(output)
+          local changes = {}
+          for _, result in ipairs(results) do
+            local change = {
+              path = result.filename,
+              patch = result.patch,
+              status = result.status,
+              stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
+            }
+            table.insert(changes, change)
+          end
+          M.populate_changes_qf(
+            changes,
+            {
+              pull_request_repo = repo,
+              pull_request_number = number,
+              pull_request_id = pr.id,
+              baseRefOid = pr.baseRefOid,
+              headRefOid = pr.headRefOid
+            }
+          )
+        end
+      end
+    }
+  )
+end
+
+function M.resume_review()
+  local repo, number, pr = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+
+  -- start new review
+  local query = graphql("pending_review_threads_query", owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+            api.nvim_err_writeln("No pending reviews found")
+            return
+          end
+          _review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
+
+          local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+          for _, thread in ipairs(threads) do
+            local review_id = thread.comments.nodes[1].pullRequestReview.id
+            if review_id == _review_id then
+              if thread.startLine == vim.NIL then
+                thread.startLine = thread.line
+                thread.startDiffSide = thread.diffSide
+              end
+              local first_comment = thread.comments.nodes[1]
+              local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, thread.diffSide, thread.path, thread.startLine, thread.line)
+              _review_comments[bufname] = {
+                id = first_comment.id,
+                path = thread.path,
+                startDiffSide = thread.startDiffSide,
+                diffSide = thread.diffSide,
+                diffHunk = first_comment.diffHunk,
+                commit = first_comment.commit.abbreviatedOid,
+                startLine = thread.startLine,
+                line = thread.line,
+                body = first_comment.body,
+                author = first_comment.author,
+                authorAssociation = first_comment.authorAssociation,
+                viewerDidAuthor = first_comment.viewerDidAuthor,
+                state = first_comment.state
+              }
+            end
+          end
+
+          M.initiate_review(repo, number, pr)
+        end
+      end
+    }
+  )
+end
+
+function M.discard_review()
+  local repo, number = util.get_repo_number_pr()
+  if not repo then
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+
+  local query = graphql("pending_review_threads_query", owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+            api.nvim_err_writeln("No pending reviews found")
+            return
+          end
+          local review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
+          local delete_query = graphql("delete_pull_request_review_mutation", review_id)
+          gh.run(
+            {
+              args = {"api", "graphql", "-f", format("query=%s", delete_query)},
+              cb = function(output, stderr)
+                if stderr and not util.is_blank(stderr) then
+                  api.nvim_err_writeln(stderr)
+                elseif output then
+                  _review_id = -1
+                  M.comments = {}
+                  M.files= {}
+                  print("[Octo] Pending review discarded")
+                end
+              end
+            }
+          )
+        end
+      end
+    }
+  )
+end
+
+function M.delete_pending_review_comment(comment)
+  local qf = vim.fn.getqflist({context = 0})
+  local repo = qf.context.pull_request_repo
+  local number = qf.context.pull_request_number
+  local query = graphql("delete_pull_request_review_comment_mutation", comment.id)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(_)
+        local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.diffSide, comment.path, comment.startLine, comment.line)
+        _review_comments[bufname] = nil
+      end
+    }
+  )
+end
+
+function M.jump_to_pending_review_comment(comment)
+  local qf = vim.fn.getqflist({items = 0})
+  local idx
+  for i, item in ipairs(qf.items) do
+    if comment.path == item.module then
+      idx = i
+      break
+    end
+  end
+  if idx then
+    -- select qf item
+    vim.fn.setqflist({}, 'r', {idx = idx })
+    M.diff_changes_qf_entry({
+      diffSide = comment.diffSide,
+      startLine = comment.startLine,
+      line = comment.line,
+    })
+  end
+end
+
+function M.update_pending_review_comment(comment)
+  local qf = vim.fn.getqflist({context = 0})
+  local repo = qf.context.pull_request_repo
+  local number = qf.context.pull_request_number
+  local _, comment_bufnr = util.create_popup({
+    header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, comment.diffSide)
+  })
+  local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.diffSide, comment.path, comment.startLine, comment.line)
+  api.nvim_buf_set_name(comment_bufnr, bufname)
+  api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
+  api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
+  api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", {
+    id = comment.id
+  })
+  api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.body, "\n"))
+end
+
+function M.submit_review()
+  if _review_id == -1 then
+    api.nvim_err_writeln("No review in progress")
+    return
+  end
+
+  local winid, bufnr = util.create_popup({
+    header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
+  })
+  api.nvim_set_current_win(winid)
+  api.nvim_buf_set_option(bufnr, "syntax", "markdown")
+
+  local mapping_opts = {script = true, silent = true, noremap = true}
+  api.nvim_buf_set_keymap(bufnr, "i", "<CR>", "<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", ":lua require'octo.reviews'.do_submit_review('APPROVE')<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.do_submit_review('COMMENT')<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<C-r>",
+    ":lua require'octo.reviews'.do_submit_review('REQUEST_CHANGES')<CR>",
+    mapping_opts
+  )
+  vim.cmd [[normal G]]
+  --vim.cmd [[startinsert]]
+end
+
+function M.do_submit_review(event)
+  local bufnr = api.nvim_get_current_buf()
+  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local body = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
+  local query = graphql("submit_pull_request_review_mutation", _review_id, event, body, {escape = false})
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          print("[Octo] Review was submitted successfully!")
         end
       end
     }
   )
   M.close_review_tab()
+end
+
+function M.show_pending_comments()
+  if _review_id == -1 then
+    api.nvim_err_writeln("No review in progress")
+    return
+  end
+  local comments = vim.tbl_values(_review_comments)
+  local filtered_comments = {}
+  for _, comment in ipairs(comments) do
+    if not util.is_blank(vim.fn.trim(comment.body)) then
+      table.insert(filtered_comments, comment)
+    end
+  end
+  if #filtered_comments == 0 then
+    api.nvim_err_writeln("No pending comments found")
+    return
+  else
+    require"octo.menu".pending_comments(filtered_comments)
+  end
+end
+
+function M.show_comment()
+  local bufnr = api.nvim_get_current_buf()
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if not status or not props then
+    return
+  end
+
+  local comment_key_prefix = string.gsub(props.bufname, "/file/", "/comment/")..":"
+  local comment_keys = vim.tbl_keys(_review_comments)
+  for _, comment_key in ipairs(comment_keys) do
+    local comment = _review_comments[comment_key]
+    local startLine, line = string.match(comment_key, comment_key_prefix.."(%d+).(%d+)$")
+    if startLine and line then
+      startLine = tonumber(startLine)
+      line = tonumber(line)
+    else
+      goto continue
+    end
+
+    local cursor = api.nvim_win_get_cursor(0)
+    if startLine <= cursor[1] and line >= cursor[1] then
+      local alt_win = props.alt_win
+      local vertical_offset = vim.fn.line(".") - vim.fn.line("w0")
+      local win_width = vim.fn.winwidth(alt_win)
+      local horizontal_offset = math.floor(win_width / 4)
+      local header = {format(" %s %s[%s] [%s]", comment.author.login, comment.viewerDidAuthor and "[Author] " or " ", comment.authorAssociation, comment.state)}
+      local body = vim.list_extend(header, vim.split(comment.body, "\n"))
+      local height = math.min(2 + #body, vim.fn.winheight(alt_win))
+      local padding = 1
+
+      local preview_bufnr = api.nvim_create_buf(false, true)
+      api.nvim_buf_set_lines(preview_bufnr, 0, -1, false, body)
+      local preview_width = win_width - 2 - (padding * 2) - horizontal_offset
+      local preview_col = comment.diffSide == "LEFT" and (padding + 1) or (padding + 1 + horizontal_offset)
+      local preview_winid = api.nvim_open_win(preview_bufnr, false, {
+        relative = "win",
+        win = alt_win,
+        row = vertical_offset + 1,
+        col = preview_col,
+        width = preview_width,
+        height = height - 2
+      })
+      api.nvim_win_set_option(preview_winid, "foldcolumn", "0")
+      api.nvim_win_set_option(preview_winid, "signcolumn", "no")
+      api.nvim_win_set_option(preview_winid, "number", false)
+      api.nvim_win_set_option(preview_winid, "relativenumber", false)
+      vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, preview_winid)
+
+      local border = {}
+      local border_width = win_width - horizontal_offset
+      local border_col = comment.diffSide == "LEFT" and 0 or horizontal_offset
+      table.insert(border, format("┌%s┐", string.rep("─", border_width-2)))
+      for _=1, height-2 do
+        table.insert(border, format("│%s│", string.rep(" ", border_width-2)))
+      end
+      table.insert(border, format("└%s┘", string.rep("─", border_width-2)))
+      local border_bufnr = api.nvim_create_buf(false, true)
+      api.nvim_buf_set_lines(border_bufnr, 0, -1, false, border)
+      local border_winid = api.nvim_open_win(border_bufnr, false, {
+        relative = "win",
+        win = alt_win,
+        row = vertical_offset,
+        col = border_col,
+        width = border_width,
+        height = height
+      })
+      api.nvim_win_set_option(border_winid, "foldcolumn", "0")
+      api.nvim_win_set_option(border_winid, "signcolumn", "no")
+      api.nvim_win_set_option(border_winid, "number", false)
+      api.nvim_win_set_option(border_winid, "relativenumber", false)
+      vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, border_winid)
+    end
+    ::continue::
+  end
+end
+
+function M.place_comment_signs()
+  local bufnr = api.nvim_get_current_buf()
+  signs.unplace(bufnr)
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if status and props then
+    local bufname_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
+    local comment_keys = vim.tbl_keys(_review_comments)
+    for _, comment_key in ipairs(comment_keys) do
+      if vim.startswith(comment_key, bufname_prefix) then
+        local comment = _review_comments[comment_key]
+          for line = comment.startLine, comment.line do
+            signs.place("octo_comment", bufnr, line - 1)
+          end
+      end
+    end
+  end
 end
 
 return M

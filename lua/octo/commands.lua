@@ -93,22 +93,22 @@ local commands = {
   },
   review = {
     start = function()
-      M.start_review()
+      reviews.start_review()
     end,
     comments = function()
-      menu.review_comments()
+      reviews.show_pending_comments()
     end,
     submit = function()
-      M.submit_review()
+      reviews.submit_review()
     end,
     threads = function()
-      M.review_threads()
+      reviews.review_threads()
     end,
     resume = function()
-      M.resume_review()
+      reviews.resume_review()
     end,
     discard = function()
-      M.discard_review()
+      reviews.discard_review()
     end
   },
   gist = {
@@ -710,223 +710,6 @@ function M.show_pr_diff()
           api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
           api.nvim_set_current_buf(bufnr)
           api.nvim_buf_set_option(bufnr, "filetype", "diff")
-        end
-      end
-    }
-  )
-end
-
-function M.review_threads()
-  local repo, number, _ = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-  local query = graphql("review_threads_query", owner, name, number)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = json.parse(output)
-          reviews.populate_reviewthreads_qf(repo, number, resp.data.repository.pullRequest.reviewThreads.nodes)
-        end
-      end
-    }
-  )
-end
-
-function M.submit_review()
-  if reviews.review_id == -1 then
-    api.nvim_err_writeln("No review in progress")
-    return
-  end
-
-  local winid, bufnr = util.create_popup({
-    header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
-  })
-  api.nvim_set_current_win(winid)
-  api.nvim_buf_set_option(bufnr, "syntax", "markdown")
-
-  local mapping_opts = {script = true, silent = true, noremap = true}
-  api.nvim_buf_set_keymap(bufnr, "i", "<CR>", "<CR>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", ":lua require'octo.reviews'.submit_review('APPROVE')<CR>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.submit_review('COMMENT')<CR>", mapping_opts)
-  api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<C-r>",
-    ":lua require'octo.reviews'.submit_review('REQUEST_CHANGES')<CR>",
-    mapping_opts
-  )
-  vim.cmd [[normal G]]
-  --vim.cmd [[startinsert]]
-end
-
-function M.discard_review()
-  local repo, number = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-
-  local query = graphql("pending_review_threads_query", owner, name, number)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = json.parse(output)
-          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-            api.nvim_err_writeln("No pending reviews found")
-            return
-          end
-          local review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
-
-          local delete_query = graphql("delete_pull_request_review_mutation", review_id)
-          gh.run(
-            {
-              args = {"api", "graphql", "-f", format("query=%s", delete_query)},
-              cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
-                elseif output then
-                  reviews.review_id = -1
-                  reviews.comments = {}
-                  reviews.files= {}
-                  print("Pending review discarded")
-                end
-              end
-            }
-          )
-        end
-      end
-    }
-  )
-end
-
-function M.resume_review()
-  local repo, number, pr = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-
-  -- start new review
-  local query = graphql("pending_review_threads_query", owner, name, number)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = json.parse(output)
-          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-            api.nvim_err_writeln("No pending reviews found")
-            return
-          end
-          reviews.review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
-
-          local threads = resp.data.repository.pullRequest.reviewThreads.nodes
-          for _, thread in ipairs(threads) do
-            local review_id = thread.comments.nodes[1].pullRequestReview.id
-            if review_id == reviews.review_id then
-              if thread.startLine == vim.NIL then
-                thread.startLine = thread.line
-                thread.startDiffSide = thread.diffSide
-              end
-              local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, thread.comments.nodes[1].commit.abbreviatedOid, thread.path, thread.startLine, thread.line)
-              reviews.review_comments[bufname] = {
-                id = thread.comments.nodes[1].id,
-                path = thread.path,
-                startDiffSide = thread.startDiffSide,
-                diffSide = thread.diffSide,
-                diffHunk = thread.comments.nodes[1].diffHunk,
-                commit = thread.comments.nodes[1].commit.abbreviatedOid,
-                startLine = thread.startLine,
-                line = thread.line,
-                body = thread.comments.nodes[1].body
-              }
-            end
-          end
-
-          M.initiate_review(repo, number, pr)
-        end
-      end
-    }
-  )
-end
-
-function M.start_review()
-  local repo, number, pr = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
-
-  reviews.review_id = -1
-  reviews.review_comments = {}
-  reviews.review_files = {}
-
-  -- start new review
-  local query = graphql("start_review_mutation", pr.id)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = json.parse(output)
-          reviews.review_id = resp.data.addPullRequestReview.pullRequestReview.id
-          M.initiate_review(repo, number, pr)
-        end
-      end
-    }
-  )
-end
-
-function M.initiate_review(repo, number, pr)
-  -- get changed files
-  local url = format("repos/%s/pulls/%d/files", repo, number)
-  gh.run(
-    {
-      args = {"api", url},
-      cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
-        elseif output then
-          local results = json.parse(output)
-          local changes = {}
-          for _, result in ipairs(results) do
-            local change = {
-              path = result.filename,
-              patch = result.patch,
-              status = result.status,
-              stats = format("+%d -%d ~%d", result.additions, result.deletions, result.changes)
-            }
-            table.insert(changes, change)
-          end
-          reviews.populate_changes_qf(
-            changes,
-            {
-              pull_request_repo = repo,
-              pull_request_number = number,
-              pull_request_id = pr.id,
-              baseRefOid = pr.baseRefOid,
-              headRefOid = pr.headRefOid
-            }
-          )
         end
       end
     }
