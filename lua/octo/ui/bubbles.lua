@@ -2,7 +2,7 @@ local vim = vim
 local api = vim.api
 
 local constants = require "octo.constants"
-local hl = require "octo.highlights"
+local highlights = require "octo.highlights"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
 -- Sometimes they are also called Chips in WebUI framworks. After all they wrap
@@ -19,16 +19,14 @@ local function make_bubble(content, highlight_group, options)
   local options = options or {}
   local margin = string.rep(" ", options.margin_width or 0)
   local padding = string.rep(" ", options.padding_width or 0)
+  local body = padding .. content .. padding
   local left_delimiter = margin .. (vim.g.octo_bubble_delimiter_left or "")
   local right_delimiter = (vim.g.octo_bubble_delimiter_right or "") .. margin
-  local delimiter_highlight_group = highlight_group .. "Delimiter"
-  local delimiter_foreground = get_highlight_group_attribute(highlight_group, "background")
-  local body = padding .. content .. padding
-
-  -- TODO: make use of the highlight module, but incompatible color formatting schemes
-  api.nvim_set_hl(constants.OCTO_HIGHLIGHT_NS, delimiter_highlight_group, {
-    foreground = delimiter_foreground
-  })
+  local delimiter_color = highlights.get_background_color_of_highlight_group(highlight_group)
+  local delimiter_highlight_group = highlights.create_highlight(
+    delimiter_color,
+    { mode = "foreground" }
+  )
   
   return {
     { left_delimiter, delimiter_highlight_group },
@@ -52,7 +50,7 @@ local function make_reaction_bubble(icon, includes_viewer, options)
 end
 
 local function make_label_bubble(name, color, options)
-  local highlight = hl.create_highlight(color)
+  local highlight = highlights.create_highlight(color)
   return make_bubble(name, highlight, options)
 end
 

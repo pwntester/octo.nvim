@@ -149,7 +149,6 @@ function M.create_buffer(type, obj, repo, create)
   end
 
   api.nvim_set_current_buf(bufnr)
-  api.nvim_set_hl_ns(constants.OCTO_HIGHLIGHT_NS)
 
   -- clear buffer
   api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
