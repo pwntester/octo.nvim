@@ -14,11 +14,22 @@ local json = {
 
 local M = {}
 
+-- holds the comments for the current pending review
 local _review_comments = {}
-local _review_files = {}
+-- holds the id of the current pending review
 local _review_id = -1
+-- holds a cache of the changed files contents for the current pending review
+local _review_files = {}
 
-local qf_height = vim.g.octo_qf_height or math.floor(vim.o.lines * 0.2)
+-- sets the height of the quickfix window
+local qf_height = math.floor(vim.o.lines * 0.2)
+if vim.g.octo_qf_height then
+  if vim.g.octo_qf_height > 0 and vim.g.octo_qf_height < 1 then
+    qf_height = math.floor(vim.o.lines * vim.g.octo_qf_height)
+  elseif vim.g.octo_qf_height > 1 then
+    qf_height = vim.g.octo_qf_height
+  end
+end
 
 ---
 --- Changes
