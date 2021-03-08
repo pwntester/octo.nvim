@@ -266,10 +266,11 @@ function M.write_details(bufnr, issue, update)
 
     -- merged_by
     if issue.merged then
-      local merged_by_vt = {
-        {"Merged by: ", "OctoNvimDetailsLabel"},
-        {issue.mergedBy.login, "OctoNvimDetailsValue"}
-      }
+      local merged_by_vt = {{"Merged by: ", "OctoNvimDetailsLabel"}}
+      local name = issue.mergedBy.login or issue.mergedBy.name
+      local is_viewer = issue.mergedBy.isViewer or false
+      local user_bubble = bubbles.make_user_bubble(name, is_viewer)
+      vim.list_extend(merged_by_vt, user_bubble)
       table.insert(details, merged_by_vt)
     end
 

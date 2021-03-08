@@ -666,7 +666,16 @@ query($endCursor: String) {
       url
       merged
       mergedBy {
-        login
+        ... on User {
+          login
+          isViewer
+        }
+        ... on Bot {
+          login
+        }
+        ... on Organization {
+          name
+        }
       }
       participants(first:10) {
         nodes {
