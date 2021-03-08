@@ -157,6 +157,7 @@ function M.gen_from_review_comment(linenr_length)
 
     local columns = {
       {entry.comment.path, "TelescopeResultsNumber"},
+      {entry.comment.commit},
       {entry.comment.diffSide},
       {entry.comment.startLine},
       {entry.comment.line}
@@ -167,6 +168,7 @@ function M.gen_from_review_comment(linenr_length)
       separator = " ",
       items = {
         {remaining = true},
+        {width = 7},
         {width = 5},
         {width = linenr_length},
         {width = linenr_length}
