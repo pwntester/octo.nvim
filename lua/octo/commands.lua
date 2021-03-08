@@ -633,7 +633,7 @@ function M.pr_checks()
             end
             table.insert(lines, table.concat(line, "  "))
           end
-          local _, bufnr = util.create_popup({
+          local _, bufnr = util.create_centered_float({
             header = "Checks",
             content=lines
           })

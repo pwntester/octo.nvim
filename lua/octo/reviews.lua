@@ -4,6 +4,7 @@ local signs = require "octo.signs"
 local util = require "octo.util"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
+local window = require "octo.window"
 local format = string.format
 local vim = vim
 local api = vim.api
@@ -254,7 +255,7 @@ function M.add_review_comment(isSuggestion)
     end
 
     -- create comment window and buffer
-    local comment_winid, comment_bufnr = util.create_popup({
+    local comment_winid, comment_bufnr = window.create_centered_float({
       header = format("Add comment for %s (from %d to %d) [%s]", props.path, line1, line2, props.diffSide)
     })
 
@@ -306,7 +307,7 @@ function M.edit_review_comment()
       local comment = _review_comments[comment_key]
 
       -- create comment window and buffer
-      local _, comment_bufnr = util.create_popup({
+      local _, comment_bufnr = window.create_centered_float({
         header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, props.diffSide)
       })
 
@@ -1007,7 +1008,7 @@ function M.update_pending_review_comment(comment)
   local qf = vim.fn.getqflist({context = 0})
   local repo = qf.context.pull_request_repo
   local number = qf.context.pull_request_number
-  local _, comment_bufnr = util.create_popup({
+  local _, comment_bufnr = window.create_centered_float({
     header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, comment.diffSide)
   })
   local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.diffSide, comment.path, comment.startLine, comment.line)
@@ -1026,7 +1027,7 @@ function M.submit_review()
     return
   end
 
-  local winid, bufnr = util.create_popup({
+  local winid, bufnr = window.create_centered_float({
     header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
   })
   api.nvim_set_current_win(winid)
@@ -1111,56 +1112,7 @@ function M.show_comment()
 
     local cursor = api.nvim_win_get_cursor(0)
     if startLine <= cursor[1] and line >= cursor[1] then
-      local alt_win = props.alt_win
-      local vertical_offset = vim.fn.line(".") - vim.fn.line("w0")
-      local win_width = vim.fn.winwidth(alt_win)
-      local horizontal_offset = math.floor(win_width / 4)
-      local header = {format(" %s %s[%s] [%s]", comment.author.login, comment.viewerDidAuthor and "[Author] " or " ", comment.authorAssociation, comment.state)}
-      local body = vim.list_extend(header, vim.split(comment.body, "\n"))
-      local height = math.min(2 + #body, vim.fn.winheight(alt_win))
-      local padding = 1
-
-      local preview_bufnr = api.nvim_create_buf(false, true)
-      api.nvim_buf_set_lines(preview_bufnr, 0, -1, false, body)
-      local preview_width = win_width - 2 - (padding * 2) - horizontal_offset
-      local preview_col = comment.diffSide == "LEFT" and (padding + 1) or (padding + 1 + horizontal_offset)
-      local preview_winid = api.nvim_open_win(preview_bufnr, false, {
-        relative = "win",
-        win = alt_win,
-        row = vertical_offset + 1,
-        col = preview_col,
-        width = preview_width,
-        height = height - 2
-      })
-      api.nvim_win_set_option(preview_winid, "foldcolumn", "0")
-      api.nvim_win_set_option(preview_winid, "signcolumn", "no")
-      api.nvim_win_set_option(preview_winid, "number", false)
-      api.nvim_win_set_option(preview_winid, "relativenumber", false)
-      vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, preview_winid)
-
-      local border = {}
-      local border_width = win_width - horizontal_offset
-      local border_col = comment.diffSide == "LEFT" and 0 or horizontal_offset
-      table.insert(border, format("┌%s┐", string.rep("─", border_width-2)))
-      for _=1, height-2 do
-        table.insert(border, format("│%s│", string.rep(" ", border_width-2)))
-      end
-      table.insert(border, format("└%s┘", string.rep("─", border_width-2)))
-      local border_bufnr = api.nvim_create_buf(false, true)
-      api.nvim_buf_set_lines(border_bufnr, 0, -1, false, border)
-      local border_winid = api.nvim_open_win(border_bufnr, false, {
-        relative = "win",
-        win = alt_win,
-        row = vertical_offset,
-        col = border_col,
-        width = border_width,
-        height = height
-      })
-      api.nvim_win_set_option(border_winid, "foldcolumn", "0")
-      api.nvim_win_set_option(border_winid, "signcolumn", "no")
-      api.nvim_win_set_option(border_winid, "number", false)
-      api.nvim_win_set_option(border_winid, "relativenumber", false)
-      vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, border_winid)
+      window.create_comment_popup(props.alt_win, comment)
     end
     ::continue::
   end

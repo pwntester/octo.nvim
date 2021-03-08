@@ -1,6 +1,5 @@
 local constants = require "octo.constants"
 local date = require "octo.date"
-local popup = require "popup"
 local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
@@ -286,121 +285,6 @@ end
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
-end
-
-function M.create_popup(opts)
-  opts = opts or {}
-  opts.x_percent = opts.x_percent or 0.6
-  opts.y_percent = opts.y_percent or 0.4
-
-  -- calculate vim height
-  local vim_height = vim.o.lines - vim.o.cmdheight
-  if vim.o.laststatus ~= 0 then
-    vim_height = vim_height - 1
-  end
-
-  -- calculate vim width
-  local vim_width = vim.o.columns
-
-  -- calculate longest line in lines
-  local max_line = -1
-  if opts.content then
-    for _, line in ipairs(opts.content) do
-      max_line = math.max(#line, max_line)
-    end
-  end
-
-  -- calculate window height/width
-  local width, height
-  if max_line > 0 then
-    -- pre-defined content
-    width = math.min(vim_width * 0.9, max_line)
-    if opts.header then
-      height = math.min(vim_height, 2 + #opts.content)
-    else
-      height = math.min(vim_height, #opts.content)
-    end
-  else
-    width = math.floor(vim_width * opts.x_percent)
-    height = math.floor(vim_height * opts.y_percent)
-  end
-
-  -- calculate offsets
-  local x_offset = (vim_width - width) / 2
-  local y_offset = (vim_height - height) / 2
-  local header_winid
-  local header_win_opts = {border = {}}
-  if opts.header then
-    header_winid, header_win_opts =
-      popup.create(
-      {opts.header},
-      {
-        moved = "non-existant",
-        line =y_offset,
-        col = x_offset,
-        minwidth = width,
-        maxheight = 2,
-        border = {1, 1, 0, 1},
-        borderchars = {"─", "│", "", "│", "┌", "┐", "┤", "├"},
-        padding = {0, 0, 0, 0}
-      }
-    )
-    api.nvim_buf_call(header_win_opts.border.bufnr, function()
-      vim.cmd("setlocal eventignore+=WinClosed,WinLeave")
-    end)
-    local header_bufnr = api.nvim_win_get_buf(header_winid)
-    api.nvim_buf_set_option(header_bufnr, "modifiable", false)
-  end
-  local winid =
-    popup.create(
-    opts.content or {},
-    {
-      moved = "non-existant",
-      line = opts.header and y_offset+2 or y_offset,
-      col = x_offset,
-      minwidth = width,
-      minheight = height,
-      border = {1, 1, 1, 1},
-      borderchars = opts.header and {"─", "│", "─", "│", "├", "┤", "┘", "└"} or {"─", "│", "─", "│", "┌", "┐", "┘", "└"},
-      padding = {0, 0, 0, 0}
-    }
-  )
-  local bufnr = api.nvim_win_get_buf(winid)
-  if header_winid then
-    vim.cmd(string.format(
-      "autocmd BufLeave,BufDelete <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d, %d, %d)",
-      bufnr,
-      winid,
-      header_winid,
-      header_win_opts.border.win_id))
-    -- vim.cmd(string.format(
-    --   "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d, %d, %d)",
-    --   bufnr,
-    --   header_winid,
-    --   header_win_opts.border.win_id,
-    --   winid))
-  else
-    vim.cmd(string.format(
-      "autocmd BufLeave,BufDelete <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d)",
-      bufnr,
-      winid))
-    -- vim.cmd(string.format(
-    --   "autocmd WinClosed,WinLeave <buffer=%d> ++nested ++once :lua require('octo.util').try_close_wins(%d)",
-    --   bufnr,
-    --   winid))
-  end
-  local mapping_opts = {script = true, silent = true, noremap = true}
-  -- api.nvim_buf_set_keymap(bufnr, "n", "q", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
-  -- api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format("<cmd>lua require'octo.util'.try_close_wins(%d)<CR>", winid), mapping_opts)
-
-  return winid, bufnr
-end
-
-function M.try_close_wins(...)
-  for _, win_id in ipairs({...}) do
-    pcall(vim.api.nvim_win_close, win_id, true)
-  end
 end
 
 function M.get_buffer_kind(bufnr)
