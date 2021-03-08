@@ -39,7 +39,8 @@ end
 
 local function make_user_bubble(name, is_viewer, options)
   local highlight = is_viewer and "OctoNvimBubbleViewer" or "OctoNvimBubble"
-  local content = " " .. name
+  local icon = vim.g.octo_icon_user or ""
+  local content = icon .. " " .. name
   return make_bubble(content, highlight, options)
 end
 

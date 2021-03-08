@@ -219,3 +219,4 @@ The `viewer` means the user of the plugin or more precisely the user authenticat
 - `g:octo_qf_height`: Percent (when 0 < value < 1) or absolute (when value > 1) height of quickfix window (defaults to 20% relative)
 - `g:octo_bubble_delimiter_left`: Left (unicode) character to draw a bubble for labels etc. (default: "")
 - `g:octo_bubble_delimiter_right`: Right (unicode) character to draw a bubble for labels etc. (default: "")
+- `g:octo_icon_user`: Icon used to signal user names (default: "")
