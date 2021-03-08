@@ -168,9 +168,7 @@ function M.create_popup(opts)
     opts.height = 10
   end
 
-  local popup_bufnr = api.nvim_create_buf(false, true)
-  api.nvim_buf_set_lines(popup_bufnr, 0, -1, false, opts.content)
-  local popup_winid = api.nvim_open_win(popup_bufnr, false, {
+  local popup_winid = api.nvim_open_win(opts.bufnr, false, {
     relative = "cursor",
     anchor = "NW",
     row = 2,
@@ -206,11 +204,5 @@ function M.create_popup(opts)
   api.nvim_win_set_option(border_winid, "relativenumber", false)
   vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, border_winid)
 end
-
-M.create_popup({
-  content = {"foo", "bar"},
-  width = 40,
-  height = 10
-})
 
 return M
