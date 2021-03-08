@@ -345,6 +345,7 @@ M.create_issue_mutation =
           nodes {
             id
             login
+            isViewer
           }
         }
       }
@@ -430,6 +431,7 @@ M.update_issue_state_mutation =
           nodes {
             id
             login
+            isViewer
           }
         }
       }
@@ -532,6 +534,7 @@ M.update_pull_request_state_mutation =
           nodes {
             id
             login
+            isViewer
           }
         }
         reviewRequests(first: 20) {
@@ -868,6 +871,7 @@ query($endCursor: String) {
         nodes {
           id
           login
+          isViewer
         }
       }
       reviewRequests(first: 20) {
@@ -984,6 +988,7 @@ query($endCursor: String) {
         nodes {
           id
           login
+          isViewer
         }
       }
     }
@@ -1261,6 +1266,7 @@ M.issue_assignees_query =
           nodes {
             id
             login
+            isViewer
           }
         }
       }
@@ -1277,6 +1283,7 @@ M.pull_request_assignees_query =
           nodes {
             id
             login
+            isViewer
           }
         }
       }

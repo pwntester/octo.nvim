@@ -187,11 +187,9 @@ function M.write_details(bufnr, issue, update)
     {"Assignees: ", "OctoNvimDetailsLabel"}
   }
   if issue.assignees and #issue.assignees.nodes > 0 then
-    for i, as in ipairs(issue.assignees.nodes) do
-      table.insert(assignees_vt, {as.login, "OctoNvimDetailsValue"})
-      if i ~= #issue.assignees.nodes then
-        table.insert(assignees_vt, {", ", "OctoNvimDetailsLabel"})
-      end
+    for _, assignee in ipairs(issue.assignees.nodes) do
+      local user_bubble = bubbles.make_user_bubble(assignee.login, assignee.isViewer, { margin_width = 1 })
+      vim.list_extend(assignees_vt, user_bubble)
     end
   else
     table.insert(assignees_vt, {"No one assigned ", "OctoNvimMissingDetails"})
