@@ -790,4 +790,22 @@ function M.submit_review(event)
   M.close_review_tab()
 end
 
+function M.place_comment_signs()
+  local bufnr = api.nvim_get_current_buf()
+  signs.unplace(bufnr)
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if status and props then
+    local bufname_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
+    local comment_keys = vim.tbl_keys(_review_comments)
+    for _, comment_key in ipairs(comment_keys) do
+      if vim.startswith(comment_key, bufname_prefix) then
+        local comment = _review_comments[comment_key]
+          for line = comment.startLine, comment.line do
+            signs.place("octo_comment", bufnr, line - 1)
+          end
+      end
+    end
+  end
+end
+
 return M

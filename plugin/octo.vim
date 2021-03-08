@@ -80,7 +80,7 @@ function s:configure_octo_buffer() abort
     setlocal syntax=markdown
   " file diff buffers
   else
-    lua require"octo.signs".place_coment_signs()
+    lua require"octo.reviews".place_comment_signs()
   end
 endfunction
 
