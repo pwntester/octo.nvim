@@ -543,6 +543,7 @@ M.update_pull_request_state_mutation =
             requestedReviewer {
               ... on User {
                 login
+                isViewer
               }
               ... on Team {
                 name
@@ -889,6 +890,7 @@ query($endCursor: String) {
           requestedReviewer {
             ... on User {
               login
+              isViewer
             }
             ... on Team {
               name

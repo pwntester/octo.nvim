@@ -250,14 +250,11 @@ function M.write_details(bufnr, issue, update)
       {"Requested reviewers: ", "OctoNvimDetailsLabel"}
     }
     if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
-      for i, reviewRequest in ipairs(issue.reviewRequests.nodes) do
-        table.insert(
-          requested_reviewers_vt,
-          {reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name, "OctoNvimDetailsValue"}
-        )
-        if i ~= issue.reviewRequests.totalCount then
-          table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
-        end
+      for _, reviewRequest in ipairs(issue.reviewRequests.nodes) do
+        local name = reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name
+        local is_viewer = reviewRequest.requestedReviewer.login or false 
+        local user_bubble = bubbles.make_user_bubble(name, is_viewer, { margin_width = 1 })
+        vim.list_extend(requested_reviewers_vt, user_bubble)
       end
     else
       table.insert(requested_reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
