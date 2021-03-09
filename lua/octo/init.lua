@@ -6,6 +6,7 @@ local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local folds = require "octo.folds"
 local window = require "octo.window"
+local bubbles = require "octo.ui.bubbles"
 local vim = vim
 local api = vim.api
 local format = string.format
@@ -794,8 +795,8 @@ function M.show_summary()
   end
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
+  -- TODO: we need to get pull requests as well but we do not know it in advance
   local query = graphql("issue_summary_query", owner, name, number)
-  print(owner, name, number)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -804,6 +805,7 @@ function M.show_summary()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = json.parse(output)
+          local max_length = 80
           local issue = resp.data.repository.issue
             local popup_bufnr = api.nvim_create_buf(false, true)
             local chunks = {}
@@ -812,25 +814,30 @@ function M.show_summary()
               {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
             })
             table.insert(chunks, {
-              {"X ", "OctoNvimBubbleRed"},
-              {issue.title.." ", "OctoNvimDetailsLabel"},
+              {"⊙", "OctoNvimBubbleRed"},
+              {" "..issue.title.." ", "OctoNvimDetailsLabel"},
               {"#"..issue.number.." ", "OctoNvimDetailsLabel"}
             })
             table.insert(chunks, {{""}})
             table.insert(chunks, {
-              {string.sub(issue.body, 1, 85)}
+              {string.sub(issue.body, 1, max_length - 4 - 1).."…"}
             })
             table.insert(chunks, {{""}})
             if #issue.labels.nodes > 0 then
               local labels = {}
               for _, label in ipairs(issue.labels.nodes) do
-                table.insert(labels, {label.name.." "})
+                local label_bubble = bubbles.make_label_bubble(
+                  label.name,
+                  label.color,
+                  { margin_width = 1 }
+                )
+                vim.list_extend(labels, label_bubble)
               end
               table.insert(chunks, labels)
               table.insert(chunks, {{""}})
             end
             table.insert(chunks, {
-              {"@"},
+              {vim.g.octo_icon_user or " "},
               {issue.author.login}
             })
             for i=1,#chunks do
@@ -841,8 +848,8 @@ function M.show_summary()
             end
             window.create_popup({
               bufnr = popup_bufnr,
-              width = 80,
-              height = 10
+              width = max_length,
+              height = 2 + #chunks
             })
         end
       end
