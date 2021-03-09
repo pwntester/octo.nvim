@@ -373,9 +373,10 @@ end
 function M.escape_chars(string)
   return string.gsub(
     string,
-    '["]',
+    '["\\]',
     {
-      ['"'] = '\\"'
+      ['"'] = '\\"',
+      ['\\'] = '\\\\',
     }
   )
 end
