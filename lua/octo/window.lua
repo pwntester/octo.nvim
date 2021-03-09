@@ -30,9 +30,9 @@ function M.create_centered_float(opts)
     -- pre-defined content
     width = math.min(vim_width * 0.9, max_line + 4)
     if opts.header then
-      height = math.min(vim_height, 4 + 2 + #opts.content)
+      height = math.min(vim_height, 2 + 2 + #opts.content)
     else
-      height = math.min(vim_height, 4 + #opts.content)
+      height = math.min(vim_height, 2 + #opts.content)
     end
   else
     width = math.floor(vim_width * opts.x_percent)
@@ -50,11 +50,11 @@ function M.create_centered_float(opts)
   if opts.header then
     table.insert(outer, format("│ %s%s │", string.sub(opts.header, 1, width-4), string.rep(" ", width - 4 - #string.sub(opts.header, 1, width-4))))
     table.insert(outer, format("├%s┤", string.rep("─", width-2)))
-    for i=1, height-4 do
+    for _=1, height-4 do
       table.insert(outer, format("│%s│", string.rep(" ", width-2)))
     end
   else
-    for i=i, height-2 do
+    for _=1, height-2 do
       table.insert(outer, format("│%s│", string.rep("─", width-2)))
     end
   end
@@ -79,10 +79,10 @@ function M.create_centered_float(opts)
   api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.content or {})
   local winid = api.nvim_open_win(bufnr, true, {
     relative = "editor",
-    row = opts.header and (y_offset+2+2) or (y_offset+2),
+    row = opts.header and (y_offset+3) or (y_offset+1),
     col = x_offset + 2,
     width = width - 4,
-    height = opts.header and (height-4-2) or (height-4),
+    height = opts.header and (height-2-2) or (height-2),
     focusable = true
   })
   api.nvim_win_set_option(winid, "previewwindow", true)
