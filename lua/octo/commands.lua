@@ -1,6 +1,7 @@
 local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
+local window = require "octo.window"
 local menu = require "octo.menu"
 local reviews = require "octo.reviews"
 local graphql = require "octo.graphql"
@@ -633,7 +634,7 @@ function M.pr_checks()
             end
             table.insert(lines, table.concat(line, "  "))
           end
-          local _, bufnr = util.create_centered_float({
+          local _, bufnr = window.create_centered_float({
             header = "Checks",
             content=lines
           })
