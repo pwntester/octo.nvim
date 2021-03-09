@@ -336,6 +336,7 @@ function M.edit_review_comment()
   api.nvim_err_writeln("No comment found at cursor line")
 end
 
+-- called when saving a review comment buffer
 function M.save_review_comment()
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
@@ -376,6 +377,10 @@ function M.save_review_comment()
                 thread.startLine = thread.line
                 thread.startDiffSide = thread.diffSide
               end
+
+              -- update comment buffer props
+              props.id = thread.comments.nodes[1].id
+              api.nvim_buf_set_var(bufnr, "OctoDiffProps", props)
 
               -- add new comment
               local first_comment = thread.comments.nodes[1]
