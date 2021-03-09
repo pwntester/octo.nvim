@@ -104,17 +104,21 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 ## PR review
 - Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
-- Start a review with `Octo review start`
+- Start a review with `Octo review start` or resume a pending review with `Octo review resume`
 - Quickfix will be populated with the changed files 
 - Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
 - Add comments with `<space>ca` or `:OctoAddReviewComment` on single or multiple lines
 - Add suggestions with `<space>sa` or `:OctoAddReviewSuggestion` on single or multiple lines
+- Edit comments/suggestions with `<space>ce`
 - A new split will open. Enter the comment and save it (`:w`). Optionally close the split
 
 ![](https://i.imgur.com/l9z4tpg.png)
 
 - Add as many comments as needed
 - Review comments with `Octo review comments`
+  - Use <CR> to jump to the selected comment
+  - Use <c-e> to edit the selected comment
+  - Use <c-d> to delete the selected comment
 
 ![](https://i.imgur.com/2DKPZq9.png)
 
@@ -128,7 +132,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 ![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
 
 - Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
-- Open review threads view with `Octo review view`
+- Open review threads view with `Octo review threads`
 - Quickfix will be populated with the changed files 
 - Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
 - Jump between comments with `]c` and `[c`

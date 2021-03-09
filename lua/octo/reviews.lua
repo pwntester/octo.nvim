@@ -785,6 +785,7 @@ function M.add_changes_qf_mappings(bufnr)
   api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "[q", [[<cmd>lua require'octo.reviews'.prev_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "<space>ce", [[<cmd>lua require'octo.reviews'.edit_review_comment()<CR>]], mapping_opts)
   vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
   vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
   vim.cmd [[nnoremap <space>sa :OctoAddReviewSuggestion<CR>]]
