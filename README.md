@@ -225,3 +225,22 @@ The (addition) `viewer` means the user of the plugin or more precisely the user 
 - `g:octo_bubble_delimiter_right`: Right (unicode) character to draw a bubble for labels etc. (default: "")
 - `g:octo_icon_user`: Icon used to signal user names (default: "")
 - `g:octo_icon_reaction_viewer_hint`: Icon as alternative or to complement the highlighting of reactions by the viewer himself (default: "")
+
+## FAQ
+
+**How can I disable bubbles for XYZ?**
+
+Each text-object that makes use of a bubble (except labels) do use their own
+highlight group that linkes per default to the main bubble highlight group. To
+disable most bubbles at once you can simply link `OctoNvimBubble` to `Normal`.
+To only disable them for a certain plain do the same for the specific sub-group
+(e.g. `OctoNvimUser`)
+
+**Why do my issue titles do not get highlightes properly?**
+
+The title of an issue or PR is special as it gets special highlighting applied
+and is an editable section. Due to the latter property it gets the
+`OctoNvimEditable` highlighting via a special signs `linehl` setting. This takes
+precedence over the buffer internal highlights. To only get the background
+highlighted by the editable section, set `OctoNvimEditable` to a highlight with
+a background color definition only.
