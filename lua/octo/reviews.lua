@@ -275,7 +275,6 @@ function M.add_review_comment(isSuggestion)
     api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
     api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
     api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
-    --api.nvim_win_set_var(props.qf_winid, "comment_winid", comment_winid)
 
     if isSuggestion then
       local lines = api.nvim_buf_get_lines(props.content_bufnr, line1-1, line2, false)
@@ -302,20 +301,10 @@ function M.edit_review_comment()
     return
   end
 
-  local comment_key_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
-  local comment_keys = vim.tbl_keys(_review_comments)
-  for _, comment_key in ipairs(comment_keys) do
-    local startLine, line = string.match(comment_key, comment_key_prefix.."(%d+).(%d+)$")
-    if startLine and line then
-      startLine = tonumber(startLine)
-      line = tonumber(line)
-    else
-      goto continue
-    end
-
+  local comments = vim.tbl_values(_review_comments)
+  for _, comment in ipairs(comments) do
     local cursor = api.nvim_win_get_cursor(0)
-    if startLine <= cursor[1] and line >= cursor[1] then
-      local comment = _review_comments[comment_key]
+    if M.is_comment_placed_in_buffer(comment, bufnr) and comment.startLine <= cursor[1] and comment.line >= cursor[1] then
 
       -- create comment window and buffer
       local _, comment_bufnr = window.create_centered_float({
@@ -379,13 +368,13 @@ function M.save_review_comment()
               end
 
               -- update comment buffer props
-              props.id = thread.comments.nodes[1].id
+              local first_comment = thread.comments.nodes[1]
+              props.id = first_comment.id
               api.nvim_buf_set_var(bufnr, "OctoDiffProps", props)
 
               -- add new comment
-              local first_comment = thread.comments.nodes[1]
-              _review_comments[bufname] = {
-                id = thread.comments.nodes[1].id,
+              _review_comments[props.id] = {
+                id = first_comment.id,
                 path = thread.path,
                 startDiffSide = thread.startDiffSide,
                 diffSide = thread.diffSide,
@@ -402,9 +391,10 @@ function M.save_review_comment()
             elseif op == "update" then
 
               -- update existing comment
-              local comment = _review_comments[bufname]
-              comment.body = resp.data.updatePullRequestReviewComment.pullRequestReviewComment.body
-              _review_comments[bufname] = comment
+              local updated_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment.body
+              local comment = _review_comments[updated_comment.id]
+              comment.body = updated_comment.body
+              _review_comments[updated_comment.id] = comment
             end
           end
         end
@@ -914,8 +904,7 @@ function M.resume_review()
                 thread.startDiffSide = thread.diffSide
               end
               local first_comment = thread.comments.nodes[1]
-              local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, thread.diffSide, thread.path, thread.startLine, thread.line)
-              _review_comments[bufname] = {
+              _review_comments[first_comment.id] = {
                 id = first_comment.id,
                 path = thread.path,
                 startDiffSide = thread.startDiffSide,
@@ -985,16 +974,12 @@ function M.discard_review()
 end
 
 function M.delete_pending_review_comment(comment)
-  local qf = vim.fn.getqflist({context = 0})
-  local repo = qf.context.pull_request_repo
-  local number = qf.context.pull_request_number
   local query = graphql("delete_pull_request_review_comment_mutation", comment.id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
       cb = function(_)
-        local bufname = format("octo://%s/pull/%d/comment/%s/%s:%d.%d", repo, number, comment.diffSide, comment.path, comment.startLine, comment.line)
-        _review_comments[bufname] = nil
+        _review_comments[comment.id] = nil
       end
     }
   )
@@ -1107,6 +1092,23 @@ function M.show_pending_comments()
   end
 end
 
+function M.is_comment_placed_in_buffer(comment, bufnr)
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if not status or not props then
+    return false
+  end
+
+  local bufname = props.bufname
+  local diffSide, path = string.match(bufname, "octo://[^/]+/[^/]+/pull/%d+/file/([^/]+)/(.+)")
+  if not diffSide or not path then
+    return false
+  end
+  if diffSide == comment.diffSide and path == comment.path then
+    return true
+  end
+  return false
+end
+
 function M.show_comment()
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
@@ -1114,23 +1116,12 @@ function M.show_comment()
     return
   end
 
-  local comment_key_prefix = string.gsub(props.bufname, "/file/", "/comment/")..":"
-  local comment_keys = vim.tbl_keys(_review_comments)
-  for _, comment_key in ipairs(comment_keys) do
-    local comment = _review_comments[comment_key]
-    local startLine, line = string.match(comment_key, comment_key_prefix.."(%d+).(%d+)$")
-    if startLine and line then
-      startLine = tonumber(startLine)
-      line = tonumber(line)
-    else
-      goto continue
-    end
-
-    local cursor = api.nvim_win_get_cursor(0)
-    if startLine <= cursor[1] and line >= cursor[1] then
+  local comments = vim.tbl_values(_review_comments)
+  local cursor = api.nvim_win_get_cursor(0)
+  for _, comment in ipairs(comments) do
+    if M.is_comment_placed_in_buffer(comment, bufnr) and comment.startLine <= cursor[1] and comment.line >= cursor[1] then
       window.create_comment_popup(props.alt_win, comment)
     end
-    ::continue::
   end
 end
 
@@ -1139,11 +1130,9 @@ function M.place_comment_signs()
   signs.unplace(bufnr)
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
-    local bufname_prefix = format("%s:", string.gsub(props.bufname, "/file/", "/comment/"))
-    local comment_keys = vim.tbl_keys(_review_comments)
-    for _, comment_key in ipairs(comment_keys) do
-      if vim.startswith(comment_key, bufname_prefix) then
-        local comment = _review_comments[comment_key]
+    local comments = vim.tbl_values(_review_comments)
+    for _, comment in ipairs(comments) do
+      if M.is_comment_placed_in_buffer(comment, bufnr) then
           for line = comment.startLine, comment.line do
             signs.place("octo_comment", bufnr, line - 1)
           end
