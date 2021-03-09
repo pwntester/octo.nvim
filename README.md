@@ -230,17 +230,8 @@ The (addition) `viewer` means the user of the plugin or more precisely the user 
 
 **How can I disable bubbles for XYZ?**
 
-Each text-object that makes use of a bubble (except labels) do use their own
-highlight group that linkes per default to the main bubble highlight group. To
-disable most bubbles at once you can simply link `OctoNvimBubble` to `Normal`.
-To only disable them for a certain plain do the same for the specific sub-group
-(e.g. `OctoNvimUser`)
+Each text-object that makes use of a bubble (except labels) do use their own highlight group that linkes per default to the main bubble highlight group. To disable most bubbles at once you can simply link `OctoNvimBubble` to `Normal`. To only disable them for a certain plain do the same for the specific sub-group (e.g. `OctoNvimUser`).
 
-**Why do my issue titles do not get highlightes properly?**
+**Why do my issue titles or markdown syntax do not get highlighted properly?**
 
-The title of an issue or PR is special as it gets special highlighting applied
-and is an editable section. Due to the latter property it gets the
-`OctoNvimEditable` highlighting via a special signs `linehl` setting. This takes
-precedence over the buffer internal highlights. To only get the background
-highlighted by the editable section, set `OctoNvimEditable` to a highlight with
-a background color definition only.
+The title, body and comments of an issue or PR are special as they get special highlighting applied and is an editable section. Due to the latter property it gets the `OctoNvimEditable` highlighting via a special signs `linehl` setting. This takes precedence over the buffer internal highlights. To only get the background highlighted by the editable section, set `OctoNvimEditable` to a highlight with a background color definition only.
