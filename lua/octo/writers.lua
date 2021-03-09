@@ -204,10 +204,12 @@ function M.write_details(bufnr, issue, update)
     --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
     --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
     for _, card in ipairs(issue.projectCards.nodes) do
-      table.insert(projects_vt, {card.column.name, })
-      table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
-      table.insert(projects_vt, {card.project.name})
-      table.insert(projects_vt, {")", "OctoNvimDetailsLabel"})
+      if card.column ~= vim.NIL then
+        table.insert(projects_vt, {card.column.name, })
+        table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
+        table.insert(projects_vt, {card.project.name})
+        table.insert(projects_vt, {")", "OctoNvimDetailsLabel"})
+      end
     end
     table.insert(details, projects_vt)
   end
