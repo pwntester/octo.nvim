@@ -772,32 +772,82 @@ function M.show_summary()
     return
   end
 
+  local repo, number
   local cursor = api.nvim_win_get_cursor(0)
   local current_line = vim.fn.getline(".")
   local different_repo_issue_pattern = "%s([^ /]+/[^ #]+)#(%d+)%s"
   local same_repo_issue_pattern = "%s#(%d+)%s"
-  local start_col, end_col, repo, number = current_line:find(different_repo_issue_pattern)
+  local start_col1, end_col1, repo1, number1 = current_line:find(different_repo_issue_pattern)
 
-  if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
-    local popup_bufnr = api.nvim_create_buf(false, true)
-    api.nvim_buf_set_lines(popup_bufnr, 0, -1, false, {repo, number})
-    window.create_popup({
-      bufnr = popup_bufnr,
-      width = 40,
-      height = 10
-    })
+  if start_col1 and end_col1 and start_col1 <= cursor[2] and cursor[2] <= end_col1 then
+    repo = repo1
+    number = number1
   else
     local start_col2, end_col2, number2 = current_line:find(same_repo_issue_pattern)
     if start_col2 and end_col2 and start_col2 <= cursor[2] and cursor[2] <= end_col2 then
-      local popup_bufnr2 = api.nvim_create_buf(false, true)
-      api.nvim_buf_set_lines(popup_bufnr2, 0, -1, false, {repo2, number2})
-      window.create_popup({
-        bufnr = popup_bufnr2,
-        width = 40,
-        height = 10
-      })
+      repo = repo2
+      number = number2
     end
   end
+  if not repo or not number then
+    return
+  end
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  local query = graphql("issue_summary_query", owner, name, number)
+  print(owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local issue = resp.data.repository.issue
+            local popup_bufnr = api.nvim_create_buf(false, true)
+            local chunks = {}
+            table.insert(chunks, {
+              {repo.." on "},
+              {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
+            })
+            table.insert(chunks, {
+              {"X ", "OctoNvimBubbleRed"},
+              {issue.title.." ", "OctoNvimDetailsLabel"},
+              {"#"..issue.number.." ", "OctoNvimDetailsLabel"}
+            })
+            table.insert(chunks, {{""}})
+            table.insert(chunks, {
+              {string.sub(issue.body, 1, 85)}
+            })
+            table.insert(chunks, {{""}})
+            if #issue.labels.nodes > 0 then
+              local labels = {}
+              for _, label in ipairs(issue.labels.nodes) do
+                table.insert(labels, {label.name.." "})
+              end
+              table.insert(chunks, labels)
+              table.insert(chunks, {{""}})
+            end
+            table.insert(chunks, {
+              {"@"},
+              {issue.author.login}
+            })
+            for i=1,#chunks do
+              writers.write_block({""}, {bufnr = popup_bufnr, line = i})
+            end
+            for i=1,#chunks do
+              writers.write_virtual_text(popup_bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
+            end
+            window.create_popup({
+              bufnr = popup_bufnr,
+              width = 80,
+              height = 10
+            })
+        end
+      end
+    }
+  )
 end
 
 --[[

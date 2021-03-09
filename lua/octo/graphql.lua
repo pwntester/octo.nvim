@@ -1007,6 +1007,32 @@ query($endCursor: String) {
 }
 ]]
 
+-- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
+M.issue_summary_query =
+  [[
+query {
+  repository(owner: "%s", name: "%s") {
+    issue(number: %d) {
+      createdAt
+      state
+      number
+      title
+      body
+      author {
+        login
+      }
+      authorAssociation
+      labels(first: 20) {
+        nodes {
+          color
+          name
+        }
+      }
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 M.repository_id_query = [[
 query {

@@ -175,8 +175,8 @@ function M.create_popup(opts)
 
   local popup_winid = api.nvim_open_win(opts.bufnr, false, {
     relative = "cursor",
-    anchor = "NW",
-    row = 2,
+    anchor = "SW",
+    row = -2,
     col = 2,
     focusable = false,
     style = "minimal",
@@ -195,8 +195,8 @@ function M.create_popup(opts)
   api.nvim_buf_set_lines(border_bufnr, 0, -1, false, border)
   local border_winid = api.nvim_open_win(border_bufnr, false, {
     relative = "cursor",
-    anchor = "NW",
-    row = 1,
+    anchor = "SW",
+    row = -1,
     col = 1,
     focusable = false,
     style = "minimal",
