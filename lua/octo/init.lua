@@ -284,7 +284,7 @@ function M.create_buffer(type, obj, repo, create)
             thread_end = comment_end
             review_end = comment_end
           end
-          folds.create(thread_start-1, thread_end, not thread.isCollapsed)
+          folds.create(thread_start, thread_end, not thread.isCollapsed)
 
           -- mark the thread region
           local thread_mark_id = api.nvim_buf_set_extmark(
