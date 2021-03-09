@@ -27,7 +27,7 @@ if vim.g.octo_qf_height then
   if vim.g.octo_qf_height > 0 and vim.g.octo_qf_height < 1 then
     qf_height = math.floor(vim.o.lines * vim.g.octo_qf_height)
   elseif vim.g.octo_qf_height > 1 then
-    qf_height = vim.g.octo_qf_height
+    qf_height = math.floor(vim.g.octo_qf_height)
   end
 end
 
