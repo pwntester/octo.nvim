@@ -5,6 +5,7 @@ local util = require "octo.util"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local folds = require "octo.folds"
+local window = require "octo.window"
 local vim = vim
 local api = vim.api
 local format = string.format
@@ -760,5 +761,67 @@ function M.apply_buffer_mappings(bufnr, kind)
     )
   end
 end
+
+function M.show_summary()
+  if vim.bo.ft ~= "octo_issue" then
+    return
+  end
+
+  local _, repo2 = pcall(api.nvim_buf_get_var, 0, "repo")
+  if not repo2 then
+    return
+  end
+
+  local cursor = api.nvim_win_get_cursor(0)
+  local current_line = vim.fn.getline(".")
+  local different_repo_issue_pattern = "%s([^ /]+/[^ #]+)#(%d+)%s"
+  local same_repo_issue_pattern = "%s#(%d+)%s"
+  local start_col, end_col, repo, number = current_line:find(different_repo_issue_pattern)
+
+  if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
+    local popup_bufnr = api.nvim_create_buf(false, true)
+    api.nvim_buf_set_lines(popup_bufnr, 0, -1, false, {repo, number})
+    window.create_popup({
+      bufnr = popup_bufnr,
+      width = 40,
+      height = 10
+    })
+  else
+    local start_col2, end_col2, number2 = current_line:find(same_repo_issue_pattern)
+    if start_col2 and end_col2 and start_col2 <= cursor[2] and cursor[2] <= end_col2 then
+      local popup_bufnr2 = api.nvim_create_buf(false, true)
+      api.nvim_buf_set_lines(popup_bufnr2, 0, -1, false, {repo2, number2})
+      window.create_popup({
+        bufnr = popup_bufnr2,
+        width = 40,
+        height = 10
+      })
+    end
+  end
+end
+
+--[[
+pwntester/octo.nvim on Feb 28
+
+<closed icon> Feature request - pop-up window for comments during a review #107
+
+If I have added a comment to a line of code during a review, I can see the highlight …
+
+(UI) (enhancement)
+<user icon> pwntester You commented
+]]--
+
+
+--[[
+pwntester/octo.nvim on Mar 8
+
+popup comments #122
+
+Show review comments on popup windows
+
+[master] ← [popup_comments]
+
+<user icon> pwntester You opened
+]]--
 
 return M
