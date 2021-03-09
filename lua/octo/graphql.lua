@@ -1007,25 +1007,44 @@ query($endCursor: String) {
 }
 ]]
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
+-- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_summary_query =
   [[
-query {
+query { 
   repository(owner: "%s", name: "%s") {
-    issue(number: %d) {
-      createdAt
-      state
-      number
-      title
-      body
-      author {
-        login
+    issueOrPullRequest(number: %d) {
+      ... on PullRequest {
+        createdAt
+        state
+        number
+        title
+        body
+        author {
+          login
+        }
+        authorAssociation
+        labels(first: 20) {
+          nodes {
+            color
+            name
+          }
+        }
       }
-      authorAssociation
-      labels(first: 20) {
-        nodes {
-          color
-          name
+      ... on Issue {
+        createdAt
+        state
+        number
+        title
+        body
+        author {
+          login
+        }
+        authorAssociation
+        labels(first: 20) {
+          nodes {
+            color
+            name
+          }
         }
       }
     }

@@ -795,7 +795,6 @@ function M.show_summary()
   end
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
-  -- TODO: we need to get pull requests as well but we do not know it in advance
   local query = graphql("issue_summary_query", owner, name, number)
   gh.run(
     {
@@ -806,7 +805,7 @@ function M.show_summary()
         elseif output then
           local resp = json.parse(output)
           local max_length = 80
-          local issue = resp.data.repository.issue
+          local issue = resp.data.repository.issueOrPullRequest
             local popup_bufnr = api.nvim_create_buf(false, true)
             local chunks = {}
             table.insert(chunks, {
@@ -820,7 +819,7 @@ function M.show_summary()
             })
             table.insert(chunks, {{""}})
             table.insert(chunks, {
-              {string.sub(issue.body, 1, max_length - 4 - 1).."…"}
+              {string.sub(issue.body, 1, max_length - 4 - 2).."…"}
             })
             table.insert(chunks, {{""}})
             if #issue.labels.nodes > 0 then
