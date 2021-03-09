@@ -1370,9 +1370,10 @@ query {
 local function escape_chars(string)
   local escaped, _ = string.gsub(
     string,
-    '["]',
+    '["\\]',
     {
       ['"'] = '\\"',
+      ['\\'] = '\\\\',
     }
   )
   return escaped
