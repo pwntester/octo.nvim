@@ -409,11 +409,11 @@ function M.save_review_comment()
   end
 
   -- close float window
-  util.set_timeout(100, function()
-    vim.schedule(function()
-      api.nvim_buf_delete(bufnr, {force=true})
-    end)
-  end)
+  -- util.set_timeout(100, function()
+  --   vim.schedule(function()
+  --     api.nvim_buf_delete(bufnr, {force=true})
+  --   end)
+  -- end)
 end
 
 ---
