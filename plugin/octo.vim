@@ -2,39 +2,6 @@ if exists('g:loaded_octo')
   finish
 endif
 
-" colors
-let g:octo_color_bubble_bg = synIDattr(synIDtrans(hlID("NormalFloat")), "bg#")
-let g:octo_color_green = synIDattr(synIDtrans(hlID("DiffAdd")), "fg#")
-let g:octo_color_blue = synIDattr(synIDtrans(hlID("DiffChange")), "fg#")
-let g:octo_color_red = synIDattr(synIDtrans(hlID("DiffDelete")), "fg#")
-
-if get(g:, 'octo_color_bubble_bg', '') != '' && get(g:, 'octo_color_green', '') != '' && get(g:, 'octo_color_red', '') != ''
-
-  " Bubble colors
-  execute('hi! OctoNvimBubbleDelimiter guifg='.g:octo_color_bubble_bg)
-  execute('hi! OctoNvimBubbleBody guibg='.g:octo_color_bubble_bg)
-  execute('hi! OctoNvimBubbleRed guifg='.g:octo_color_red.' guibg='.g:octo_color_bubble_bg)
-  execute('hi! OctoNvimBubbleGreen guifg='.g:octo_color_green.' guibg='.g:octo_color_bubble_bg)
-
-  " Hunks
-  execute('hi! OctoNvimDiffHunkPosition guibg='.g:octo_color_bubble_bg)
-
-  " Commented lines
-  execute('hi! link OctoNvimCommentLine Visual')
-
-  " Tests
-  execute('hi! OctoNvimPassingTest guifg='.g:octo_color_green)
-  execute('hi! OctoNvimFailingTest guifg='.g:octo_color_red)
-
-  " PR changes
-  execute('hi! OctoNvimPullAdditions guifg='.g:octo_color_green)
-  execute('hi! OctoNvimPullDeletions guifg='.g:octo_color_red)
-  execute('hi! OctoNvimPullModifications guifg='.g:octo_color_blue)
-
-  " Editable regions
-  execute('hi! OctoNvimEditable guibg='.g:octo_color_bubble_bg)
-endif
-
 function! s:command_complete(...)
   return luaeval('require("octo.commands").command_complete(_A)', a:000)
 endfunction
@@ -102,6 +69,36 @@ sign define octo_dirty_block_middle text=│ texthl=OctoNvimDirty linehl=OctoNvi
 sign define octo_clean_block_middle text=│ linehl=OctoNvimEditable
 sign define octo_clean_line text=[ linehl=OctoNvimEditable
 sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable
+
+highlight default link OctoNvimDirty ErrorMsg
+highlight default link OctoNvimIssueOpen MoreMsg
+highlight default link OctoNvimIssueClosed ErrorMsg
+highlight default link OctoNvimIssueMerged Keyword
+highlight default link OctoNvimIssueId Question
+highlight default link OctoNvimIssueTitle PreProc
+highlight default link OctoNvimEmpty Comment
+highlight default link OctoNvimFloat NormalFloat
+highlight default link OctoNvimTimelineItemHeading Comment
+highlight default link OctoNvimSymbol Comment
+highlight default link OctoNvimDate Comment
+highlight default link OctoNvimDetailsLabel Title 
+highlight default link OctoNvimDetailsValue Identifier
+highlight default link OctoNvimMissingDetails Comment
+highlight default link OctoNvimCommentLine Visual
+highlight default link OctoNvimEditable NormalFloat
+highlight default OctoNvimViewer guifg=#000000 guibg=#58A6FF
+highlight default link OctoNvimBubble NormalFloat
+highlight default OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
+highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#f85149
+highlight default link OctoNvimUser OctoNvimBubble
+highlight default link OctoNvimUserViewer OctoNvimViewer
+highlight default link OctoNvimReaction OctoNvimBubble
+highlight default link OctoNvimReactionViewer OctoNvimViewer
+highlight default OctoNvimPassingTest guifg=#238636
+highlight default OctoNvimFailingTest guifg=#f85149
+highlight default OctoNvimPullAdditions guifg=#2ea043
+highlight default OctoNvimPullDeletions guifg=#da3633
+highlight default OctoNvimPullModifications guifg=#58A6FF
 
 " folds
 lua require'octo.folds'

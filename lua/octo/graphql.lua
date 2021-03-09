@@ -8,6 +8,7 @@ M.add_reaction_mutation =
       subject {
         reactionGroups {
           content
+          viewerHasReacted
           users {
             totalCount
           }
@@ -25,6 +26,7 @@ M.remove_reaction_mutation =
       subject {
         reactionGroups {
           content
+          viewerHasReacted
           users {
             totalCount
           }
@@ -310,6 +312,7 @@ M.create_issue_mutation =
         }
         reactionGroups {
           content
+          viewerHasReacted
           users {
             totalCount
           }
@@ -321,6 +324,7 @@ M.create_issue_mutation =
             createdAt
             reactionGroups {
               content
+              viewerHasReacted
               users {
                 totalCount
               }
@@ -328,6 +332,7 @@ M.create_issue_mutation =
             author {
               login
             }
+            viewerDidAuthor
           }
         }
         labels(first: 20) {
@@ -340,6 +345,7 @@ M.create_issue_mutation =
           nodes {
             id
             login
+            isViewer
           }
         }
       }
@@ -392,6 +398,7 @@ M.update_issue_state_mutation =
         }
         reactionGroups {
           content
+          viewerHasReacted
           users {
             totalCount
           }
@@ -403,6 +410,7 @@ M.update_issue_state_mutation =
             createdAt
             reactionGroups {
               content
+              viewerHasReacted
               users {
                 totalCount
               }
@@ -410,6 +418,7 @@ M.update_issue_state_mutation =
             author {
               login
             }
+            viewerDidAuthor
           }
         }
         labels(first: 20) {
@@ -422,6 +431,7 @@ M.update_issue_state_mutation =
           nodes {
             id
             login
+            isViewer
           }
         }
       }
@@ -491,6 +501,7 @@ M.update_pull_request_state_mutation =
         }
         reactionGroups {
           content
+          viewerHasReacted
           users {
             totalCount
           }
@@ -502,6 +513,7 @@ M.update_pull_request_state_mutation =
             createdAt
             reactionGroups {
               content
+              viewerHasReacted
               users {
                 totalCount
               }
@@ -509,6 +521,7 @@ M.update_pull_request_state_mutation =
             author {
               login
             }
+            viewerDidAuthor
           }
         }
         labels(first: 20) {
@@ -521,6 +534,7 @@ M.update_pull_request_state_mutation =
           nodes {
             id
             login
+            isViewer
           }
         }
         reviewRequests(first: 20) {
@@ -529,6 +543,7 @@ M.update_pull_request_state_mutation =
             requestedReviewer {
               ... on User {
                 login
+                isViewer
               }
               ... on Team {
                 name
@@ -612,10 +627,12 @@ query($endCursor: String) {
               replyTo { id }
               author { login }
               authorAssociation
+              viewerDidAuthor
               outdated
               diffHunk
               reactionGroups {
                 content
+                viewerHasReacted
                 users {
                   totalCount
                 }
@@ -650,7 +667,16 @@ query($endCursor: String) {
       url
       merged
       mergedBy {
-        login
+        ... on User {
+          login
+          isViewer
+        }
+        ... on Bot {
+          login
+        }
+        ... on Organization {
+          name
+        }
       }
       participants(first:10) {
         nodes {
@@ -677,8 +703,10 @@ query($endCursor: String) {
       author {
         login
       }
+      viewerDidAuthor
       reactionGroups {
         content
+        viewerHasReacted
         users {
           totalCount
         }
@@ -746,6 +774,7 @@ query($endCursor: String) {
             createdAt
             reactionGroups {
               content
+              viewerHasReacted
               users {
                 totalCount
               }
@@ -753,6 +782,7 @@ query($endCursor: String) {
             author {
               login
             }
+            viewerDidAuthor
           }
           ... on PullRequestReview {
             id
@@ -760,6 +790,7 @@ query($endCursor: String) {
             createdAt
             reactionGroups {
               content
+              viewerHasReacted
               users {
                 totalCount
               }
@@ -767,6 +798,7 @@ query($endCursor: String) {
             author {
               login
             }
+            viewerDidAuthor
             state
             comments(last:100) {
               totalCount
@@ -781,6 +813,7 @@ query($endCursor: String) {
                 }
                 author { login }
                 authorAssociation
+                viewerDidAuthor
                 originalPosition
                 position
                 state
@@ -788,6 +821,7 @@ query($endCursor: String) {
                 diffHunk
                 reactionGroups {
                   content
+                  viewerHasReacted
                   users {
                     totalCount
                   }
@@ -823,10 +857,12 @@ query($endCursor: String) {
               }
               author { login }
               authorAssociation
+              viewerDidAuthor
               outdated
               diffHunk
               reactionGroups {
                 content
+                viewerHasReacted
                 users {
                   totalCount
                 }
@@ -845,6 +881,7 @@ query($endCursor: String) {
         nodes {
           id
           login
+          isViewer
         }
       }
       reviewRequests(first: 20) {
@@ -853,6 +890,7 @@ query($endCursor: String) {
           requestedReviewer {
             ... on User {
               login
+              isViewer
             }
             ... on Team {
               name
@@ -887,6 +925,7 @@ query($endCursor: String) {
       author {
         login
       }
+      viewerDidAuthor
       participants(first:10) {
         nodes {
           login
@@ -894,6 +933,7 @@ query($endCursor: String) {
       }
       reactionGroups {
         content
+        viewerHasReacted
         users {
           totalCount
         }
@@ -923,6 +963,7 @@ query($endCursor: String) {
             createdAt
             reactionGroups {
               content
+              viewerHasReacted
               users {
                 totalCount
               }
@@ -930,6 +971,7 @@ query($endCursor: String) {
             author {
               login
             }
+            viewerDidAuthor
           }
           ... on ClosedEvent {
             createdAt
@@ -957,6 +999,7 @@ query($endCursor: String) {
         nodes {
           id
           login
+          isViewer
         }
       }
     }
@@ -1234,6 +1277,7 @@ M.issue_assignees_query =
           nodes {
             id
             login
+            isViewer
           }
         }
       }
@@ -1250,6 +1294,7 @@ M.pull_request_assignees_query =
           nodes {
             id
             login
+            isViewer
           }
         }
       }

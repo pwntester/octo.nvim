@@ -5,6 +5,7 @@ local writers = require "octo.writers"
 local graphql = require "octo.graphql"
 local util = require "octo.util"
 local gh = require "octo.gh"
+local constants = require "octo.constants"
 local defaulter = utils.make_default_callable
 local flatten = vim.tbl_flatten
 local format = string.format

@@ -24,9 +24,19 @@ local function color_is_bright(r, g, b)
   end
 end
 
+function M.get_background_color_of_highlight_group(highlight_group_name)
+  local highlight_group = vim.api.nvim_get_hl_by_name(highlight_group_name, true)
+  local highlight_group_normal = vim.api.nvim_get_hl_by_name("Normal", true)
+  local background_color = highlight_group.background or highlight_group_normal.background
+  local background_color_as_hex = "#" .. string.format("%x", background_color)
+  return background_color_as_hex
+end
+
 function M.create_highlight(rgb_hex, options)
+  local options = options or {}
   local mode = options.mode or "background"
   rgb_hex = rgb_hex:lower()
+  rgb_hex = string.gsub(rgb_hex, "^#", "")
   local cache_key = table.concat({HIGHLIGHT_MODE_NAMES[mode], rgb_hex}, "_")
   local highlight_name = HIGHLIGHT_CACHE[cache_key]
   if not highlight_name then

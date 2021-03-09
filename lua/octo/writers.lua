@@ -1,6 +1,6 @@
-local hl = require "octo.highlights"
 local constants = require "octo.constants"
 local util = require "octo.util"
+local bubbles = require "octo.ui.bubbles"
 local vim = vim
 local api = vim.api
 local max = math.max
@@ -126,14 +126,16 @@ function M.write_reactions(bufnr, reaction_groups, line)
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
   local reactions_vt = {}
+  local content, highlight, bubble
+
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
-      vim.list_extend(reactions_vt, {
-        {"", "OctoNvimBubbleDelimiter"},
-        {util.reaction_map[group.content], "OctoNvimBubbleBody"},
-        {"", "OctoNvimBubbleDelimiter"},
-        {format(" %s ", group.users.totalCount), "Normal"}
-      })
+      icon = util.reaction_map[group.content]
+      bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
+      count = format(" %s ", group.users.totalCount)
+  
+      vim.list_extend(reactions_vt, bubble)
+      table.insert(reactions_vt, { count, "Normal" })
     end
   end
 
@@ -148,10 +150,13 @@ function M.write_details(bufnr, issue, update)
   local details = {}
 
   -- author
-  local author_vt = {
-    {"Created by: ", "OctoNvimDetailsLabel"},
-    {issue.author.login, "OctoNvimDetailsValue"}
-  }
+  local author_vt = {{"Created by: ", "OctoNvimDetailsLabel"}}
+  local author_bubble = bubbles.make_user_bubble(
+    issue.author.login,
+    issue.viewerDidAuthor
+  )
+
+  vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
 
   -- created_at
@@ -182,11 +187,9 @@ function M.write_details(bufnr, issue, update)
     {"Assignees: ", "OctoNvimDetailsLabel"}
   }
   if issue.assignees and #issue.assignees.nodes > 0 then
-    for i, as in ipairs(issue.assignees.nodes) do
-      table.insert(assignees_vt, {as.login, "OctoNvimDetailsValue"})
-      if i ~= #issue.assignees.nodes then
-        table.insert(assignees_vt, {", ", "OctoNvimDetailsLabel"})
-      end
+    for _, assignee in ipairs(issue.assignees.nodes) do
+      local user_bubble = bubbles.make_user_bubble(assignee.login, assignee.isViewer, { margin_width = 1 })
+      vim.list_extend(assignees_vt, user_bubble)
     end
   else
     table.insert(assignees_vt, {"No one assigned ", "OctoNvimMissingDetails"})
@@ -225,12 +228,15 @@ function M.write_details(bufnr, issue, update)
   local labels_vt = {
     {"Labels: ", "OctoNvimDetailsLabel"}
   }
+
   if #issue.labels.nodes > 0 then
     for _, label in ipairs(issue.labels.nodes) do
-      table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
-      table.insert(labels_vt, {label.name, hl.create_highlight(label.color, {})})
-      table.insert(labels_vt, {"", hl.create_highlight(label.color, {mode = "foreground"})})
-      table.insert(labels_vt, {" ", "OctoNvimDetailsLabel"})
+      local label_bubble = bubbles.make_label_bubble(
+        label.name,
+        label.color,
+        { margin_width = 1 }
+      )
+      vim.list_extend(labels_vt, label_bubble)
     end
   else
     table.insert(labels_vt, {"None yet", "OctoNvimMissingDetails"})
@@ -244,14 +250,11 @@ function M.write_details(bufnr, issue, update)
       {"Requested reviewers: ", "OctoNvimDetailsLabel"}
     }
     if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
-      for i, reviewRequest in ipairs(issue.reviewRequests.nodes) do
-        table.insert(
-          requested_reviewers_vt,
-          {reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name, "OctoNvimDetailsValue"}
-        )
-        if i ~= issue.reviewRequests.totalCount then
-          table.insert(requested_reviewers_vt, {", ", "OctoNvimDetailsLabel"})
-        end
+      for _, reviewRequest in ipairs(issue.reviewRequests.nodes) do
+        local name = reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name
+        local is_viewer = reviewRequest.requestedReviewer.login or false 
+        local user_bubble = bubbles.make_user_bubble(name, is_viewer, { margin_width = 1 })
+        vim.list_extend(requested_reviewers_vt, user_bubble)
       end
     else
       table.insert(requested_reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
@@ -260,10 +263,11 @@ function M.write_details(bufnr, issue, update)
 
     -- merged_by
     if issue.merged then
-      local merged_by_vt = {
-        {"Merged by: ", "OctoNvimDetailsLabel"},
-        {issue.mergedBy.login, "OctoNvimDetailsValue"}
-      }
+      local merged_by_vt = {{"Merged by: ", "OctoNvimDetailsLabel"}}
+      local name = issue.mergedBy.login or issue.mergedBy.name
+      local is_viewer = issue.mergedBy.isViewer or false
+      local user_bubble = bubbles.make_user_bubble(name, is_viewer)
+      vim.list_extend(merged_by_vt, user_bubble)
       table.insert(details, merged_by_vt)
     end
 
@@ -338,36 +342,36 @@ function M.write_comment(bufnr, comment, kind, line)
   local start_line = line
   M.write_block({"", ""}, {bufnr = bufnr, line = line})
 
-  local header_vt
+  local header_vt = {}
+  local author_bubble = bubbles.make_user_bubble(
+    comment.author.login,
+    comment.viewerDidAuthor,
+    { margin_width = 1 }
+  )
+
   if kind == "PullRequestReview" then
     -- Review top-level comments
-    header_vt = {
-      {"REVIEW: ", "OctoNvimTimelineItemHeading"},
-      {comment.author.login.." ", "OctoNvimUser"},
-      {"["..comment.state:lower().."] ", "OctoNvimDetailsValue"},
-      {"(", "OctoNvimSymbol"},
-      {util.format_date(comment.createdAt), "OctoNvimDate"},
-      {")", "OctoNvimSymbol"}
-    }
+    table.insert(header_vt, {"REVIEW:", "OctoNvimTimelineItemHeading"})
+    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
+    table.insert(header_vt, {")", "OctoNvimSymbol"})
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
-    header_vt = {
-      {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"},
-      {comment.author.login.." ", "OctoNvimUser"},
-      {"["..comment.state:lower().."] ", "OctoNvimDetailsValue"},
-      {"(", "OctoNvimSymbol"},
-      {util.format_date(comment.createdAt), "OctoNvimDate"},
-      {")", "OctoNvimSymbol"}
-    }
+    table.insert(header_vt, {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"})
+    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
+    table.insert(header_vt, {")", "OctoNvimSymbol"})
   elseif kind == "IssueComment" then
     -- Issue comments
-    header_vt = {
-      {"COMMENT: ", "OctoNvimTimelineItemHeading"},
-      {comment.author.login.." ", "OctoNvimUser"},
-      {"(", "OctoNvimSymbol"},
-      {util.format_date(comment.createdAt), "OctoNvimDate"},
-      {")", "OctoNvimSymbol"}
-    }
+    table.insert(header_vt, {"COMMENT: ", "OctoNvimTimelineItemHeading"})
+    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
+    table.insert(header_vt, {")", "OctoNvimSymbol"})
   end
   local comment_vt_ns = api.nvim_create_namespace("")
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
@@ -575,15 +579,23 @@ function M.write_review_thread_header(bufnr, opts, line)
     {"] ", "OctoNvimSymbol"},
   }
   if opts.isOutdated then
-    table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})
-    table.insert(header_vt, {"outdated", "OctoNvimBubbleRed"})
-    table.insert(header_vt, {" ", "OctoNvimBubbleDelimiter"})
+    local outdated_bubble = bubbles.make_bubble(
+      "outdated",
+      "OctoNvimBubbleRed",
+      { margin_width = 1 }
+    )
+    vim.list_extend(header_vt, outdated_bubble)
   end
+
   if opts.isResolved then
-    table.insert(header_vt, {"", "OctoNvimBubbleDelimiter"})
-    table.insert(header_vt, {"resolved", "OctoNvimBubbleGreen"})
-    table.insert(header_vt, {" ", "OctoNvimBubbleDelimiter"})
+    local resolved_bubble = bubbles.make_bubble(
+      "resolved",
+      "OctoNvimBubbleGreen",
+      { margin_width = 1 }
+    )
+    vim.list_extend(header_vt, resolved_bubble)
   end
+
   M.write_block({""}, {bufnr = bufnr})
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
 end

@@ -1,5 +1,6 @@
 local entry_display = require "telescope.pickers.entry_display"
-local hl = require "octo.highlights"
+local util = require "octo.util"
+local bubbles = require "octo.ui.bubbles"
 local format = string.format
 
 local M = {}
@@ -305,11 +306,10 @@ function M.gen_from_label()
       return nil
     end
 
-    local columns = {
-      {"", hl.create_highlight(entry.label.color, {mode = "foreground"})},
-      {entry.label.name, hl.create_highlight(entry.label.color, {})},
-      {"", hl.create_highlight(entry.label.color, {mode = "foreground"})}
-    }
+    local columns = bubbles.make_label_bubble(
+      entry.label.name,
+      entry.label.color
+    )
 
     local displayer =
       entry_display.create {

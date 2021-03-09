@@ -181,37 +181,57 @@ Just edit the issue title, description or comments as a regular buffer and use `
 
 
 ## Highlight groups
-| Name                        | Default          |
-| ---                         | ---              |
-| `OctoNvimDirty`             | `ErrorMsg`       |
-| `OctoNvimUser`              | `String`     |
-| `OctoNvimIssueTitle`        | `PreProc`        |
-| `OctoNvimIssueId`           | `Question`       |
-| `OctoNvimIssueOpen`         | `MoreMsg`        |
-| `OctoNvimIssueClosed`       | `ErrorMsg`       |
-| `OctoNvimEmpty`             | `Comment`        |
-| `OctoNvimFloat`             | `NormalNC`       |
-| `OctoNvimDate`              | `Comment`       |
-| `OctoNvimSymbol`            | `Comment`       |
-| `OctoNvimTimelineItemHeading`| `Comment`       |
-| `OctoNvimBubbleRed`         | `DiffDelete`.fg  |
-| `OctoNvimBubbleGreen`       | `DiffAdd`.fg     |
-| `OctoNvimBubbleDelimiter`   | `NormalFloat`.bg |
-| `OctoNvimBubbleBody`        | `NormalFloat`.bg |
-| `OctoNvimDetailsLabel`      | `Title`          |
-| `OctoNvimMissingDetails`    | `Comment`        |
-| `OctoNvimDetailsValue `     | `Identifier`     |
-| `OctoNvimDiffHunkPosition`  | `NormalFloat`.bg |
-| `OctoNvimCommentLine`       | `TabLineSel`     |
-| `OctoNvimPassingTest`       | `DiffAdd`        |
-| `OctoNvimFailingTest`       | `DiffDelete`     |
-| `OctoNvimPullAdditions`     | `DiffAdd`        |
-| `OctoNvimPullDeletions`     | `DiffDelete`     |
-| `OctoNvimPullModifications` | `DiffChange`     |
-| `OctoNvimEditable`          | `NormalFloat`.bg|
+| Name                         | Default          |
+| ---                          | ---              |
+| `OctoNvimDirty`              | `ErrorMsg`       |
+| `OctoNvimIssueTitle`         | `PreProc`        |
+| `OctoNvimIssueId`            | `Question`       |
+| `OctoNvimIssueOpen`          | `MoreMsg`        |
+| `OctoNvimIssueClosed`        | `ErrorMsg`       |
+| `OctoNvimEmpty`              | `Comment`        |
+| `OctoNvimFloat`              | `NormalNC`       |
+| `OctoNvimDate`               | `Comment`        |
+| `OctoNvimSymbol`             | `Comment`        |
+| `OctoNvimTimelineItemHeading`| `Comment`        |
+| `OctoNvimDetailsLabel`       | `Title`          |
+| `OctoNvimMissingDetails`     | `Comment`        |
+| `OctoNvimDetailsValue `      | `Identifier`     |
+| `OctoNvimDiffHunkPosition`   | `NormalFloat`    |
+| `OctoNvimCommentLine`        | `TabLineSel`     |
+| `OctoNvimEditable`           | `NormalFloat`    |
+| `OctoNvimViewer`             | GitHub color     |
+| `OctoNvimBubble`             | `NormalFloat`    |
+| `OctoNvimBubbleGreen`        | GitHub color     |  
+| `OctoNvimBubbleRed`          | GitHub color     |
+| `OctoNvimUser`               | `OctoNvimBubble` |
+| `OctoNvimUserViewer`         | `OctoNvimViewer` |
+| `OctoNvimReaction`           | `OctoNvimBubble` |
+| `OctoNvimReactionViewer`     | `OctoNvimViewer` |
+| `OctoNvimPassingTest`        | GitHub color     |
+| `OctoNvimFailingTest`        | GitHub color     |
+| `OctoNvimPullAdditions`      | GitHub color     |
+| `OctoNvimPullDeletions`      | GitHub color     |
+| `OctoNvimPullModifications`  | GitHub color     |
+
+The term `GitHub color` refers to the colors used in the WebUI.
+The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
 
 ## Settings
 
 - `g:octo_date_format`: Date format (default: "%Y %b %d %I:%M %p %Z")
 - `g:octo_remote_order`: Order to resolve the remote for the current working directory (default: ["upstream", "origin"])
 - `g:octo_qf_height`: Percent (when 0 < value < 1) or absolute (when value > 1) height of quickfix window (defaults to 20% relative)
+- `g:octo_bubble_delimiter_left`: Left (unicode) character to draw a bubble for labels etc. (default: "")
+- `g:octo_bubble_delimiter_right`: Right (unicode) character to draw a bubble for labels etc. (default: "")
+- `g:octo_icon_user`: Icon used to signal user names (default: "")
+- `g:octo_icon_reaction_viewer_hint`: Icon as alternative or to complement the highlighting of reactions by the viewer himself (default: "")
+
+## FAQ
+
+**How can I disable bubbles for XYZ?**
+
+Each text-object that makes use of a bubble (except labels) do use their own highlight group that linkes per default to the main bubble highlight group. To disable most bubbles at once you can simply link `OctoNvimBubble` to `Normal`. To only disable them for a certain plain do the same for the specific sub-group (e.g. `OctoNvimUser`).
+
+**Why do my issue titles or markdown syntax do not get highlighted properly?**
+
+The title, body and comments of an issue or PR are special as they get special highlighting applied and is an editable section. Due to the latter property it gets the `OctoNvimEditable` highlighting via a special signs `linehl` setting. This takes precedence over the buffer internal highlights. To only get the background highlighted by the editable section, set `OctoNvimEditable` to a highlight with a background color definition only.
