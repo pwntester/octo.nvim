@@ -343,8 +343,7 @@ function M.save_review_comment()
 
     -- extract comment body
     local bufname = api.nvim_buf_get_name(bufnr)
-    local raw_body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
-    local body = util.escape_chars(raw_body)
+    local body = table.concat(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
     local startLine, line = string.match(bufname, ".*:(%d+)%.(%d+)$")
 
     -- sync comment with GitHub
