@@ -89,7 +89,7 @@ function M.write_state(bufnr, state, number)
   -- title virtual text
   local title_vt = {
     {tostring(number), "OctoNvimIssueId"},
-    {format(" [%s] ", state), format("OctoNvimIssue%s", state)}
+    {format(" [%s] ", state), util.state_hl_map[state]}
   }
 
   -- PR virtual text
@@ -166,7 +166,7 @@ function M.write_details(bufnr, issue, update)
   }
   table.insert(details, created_at_vt)
 
-  if issue.state == "closed" then
+  if issue.state == "CLOSED" then
     -- closed_at
     local closed_at_vt = {
       {"Closed at: ", "OctoNvimDetailsLabel"},
@@ -220,7 +220,8 @@ function M.write_details(bufnr, issue, update)
     {"Milestone: ", "OctoNvimDetailsLabel"}
   }
   if ms ~= nil and ms ~= vim.NIL then
-    table.insert(milestone_vt, {format("%s (%s)", ms.title, ms.state), "OctoNvimDetailsValue"})
+    table.insert(milestone_vt, {ms.title, "OctoNvimDetailsValue"})
+    table.insert(milestone_vt, {format(" (%s)", util.state_hl_map[ms.state]), "OctoNvimDetailsValue"})
   else
     table.insert(milestone_vt, {"No milestone", "OctoNvimMissingDetails"})
   end
@@ -355,7 +356,7 @@ function M.write_comment(bufnr, comment, kind, line)
     -- Review top-level comments
     table.insert(header_vt, {"REVIEW:", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
     table.insert(header_vt, {")", "OctoNvimSymbol"})
@@ -363,7 +364,7 @@ function M.write_comment(bufnr, comment, kind, line)
     -- Review thread comments
     table.insert(header_vt, {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
     table.insert(header_vt, {")", "OctoNvimSymbol"})

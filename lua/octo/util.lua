@@ -13,6 +13,17 @@ local json = {
 local M = {}
 local repo_id_cache = {}
 
+M.state_hl_map = {
+  MERGED = "OctoNvimStateMerged",
+  CLOSED = "OctoNvimStateClosed",
+  OPEN = "OctoNvimStateOpen",
+  APPROVED = "OctoNvimStateApproved",
+  CHANGES_REQUESTED = "OctoNvimStateChangesRequested",
+  COMMENTED = "OctoNvimStateCommented",
+  DISMISSED = "OctoNvimStateDismissed",
+  PENDING = "OctoNvimStatePending"
+}
+
 M.reaction_map = {
   ["THUMBS_UP"] = "👍",
   ["THUMBS_DOWN"] = "👎",
