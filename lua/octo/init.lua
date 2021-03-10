@@ -763,14 +763,10 @@ function M.apply_buffer_mappings(bufnr, kind)
 end
 
 function M.show_summary()
-  if vim.bo.ft ~= "octo_issue" then
-    return
-  end
+  if vim.bo.ft ~= "octo_issue" then return end
 
   local _, current_repo = pcall(api.nvim_buf_get_var, 0, "repo")
-  if not current_repo then
-    return
-  end
+  if not current_repo then return end
 
   local repo, number = util.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
 
@@ -785,6 +781,8 @@ function M.show_summary()
 
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
+
+  local owner, name = util.split_repo(repo)
   local query = graphql("issue_summary_query", owner, name, number)
   gh.run(
     {
