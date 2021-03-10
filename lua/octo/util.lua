@@ -523,6 +523,15 @@ function M.getwin4buf(bufnr)
   return -1
 end
 
+function M.cursor_in_col_range(start_col, end_col)
+  local cursor = api.nvim_win_get_cursor(0)
+  if start_col and end_col then
+    if start_col <= cursor[2] and cursor[2] <= end_col then
+      return true
+    end
+  end
+  return false
+end
 function M.extract_pattern_at_cursor(pattern)
   local current_line = vim.fn.getline(".")
   if current_line:find(pattern) then

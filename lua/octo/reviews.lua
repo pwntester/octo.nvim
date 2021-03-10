@@ -448,10 +448,10 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
       local first_comment = thread.comments.nodes[1]
       local mods = {}
       if thread.isResolved then
-        table.insert(mods, "RESOLVED")
+        table.insert(mods, "RESOLVED ")
       end
       if thread.isOutdated then
-        table.insert(mods, "OUTDATED")
+        table.insert(mods, "OUTDATED ")
       end
       local comment_id = util.graph2rest(first_comment.id)
       local lnum = thread.line
