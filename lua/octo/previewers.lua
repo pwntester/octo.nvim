@@ -27,8 +27,7 @@ M.issue =
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.issue.number
-          local owner = vim.split(opts.repo, "/")[1]
-          local name = vim.split(opts.repo, "/")[2]
+          local owner, name = util.split_repo(opts.repo)
           local query = graphql("issue_query", owner, name, number)
           gh.run(
             {
@@ -88,8 +87,7 @@ M.pull_request =
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.pull_request.number
-          local owner = vim.split(opts.repo, "/")[1]
-          local name = vim.split(opts.repo, "/")[2]
+          local owner, name = util.split_repo(opts.repo)
           local query = graphql("pull_request_query", owner, name, number)
           gh.run(
             {

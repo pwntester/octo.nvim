@@ -49,8 +49,7 @@ function M.load(bufnr, cb)
     api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = util.split_repo(repo)
   local query, key
   if type == "pull" then
     query = graphql("pull_request_query", owner, name, number)
@@ -779,8 +778,7 @@ function M.show_summary()
     repo, number = util.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
   end
 
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  if not repo or not number then return end
 
   local owner, name = util.split_repo(repo)
   local query = graphql("issue_summary_query", owner, name, number)

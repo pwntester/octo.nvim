@@ -419,8 +419,7 @@ function M.review_threads()
   if not repo then
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = util.split_repo(repo)
   local query = graphql("review_threads_query", owner, name, number)
   gh.run(
     {
@@ -875,10 +874,8 @@ function M.resume_review()
   if not repo then
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-
   -- start new review
+  local owner, name = util.split_repo(repo)
   local query = graphql("pending_review_threads_query", owner, name, number)
   gh.run(
     {
@@ -933,9 +930,7 @@ function M.discard_review()
   if not repo then
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-
+  local owner, name = util.split_repo(repo)
   local query = graphql("pending_review_threads_query", owner, name, number)
   gh.run(
     {

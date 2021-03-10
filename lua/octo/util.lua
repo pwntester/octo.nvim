@@ -319,8 +319,7 @@ function M.get_repo_id(repo)
   if repo_id_cache[repo] then
     return repo_id_cache[repo]
   else
-    local owner = vim.split(repo, "/")[1]
-    local name = vim.split(repo, "/")[2]
+    local owner, name = M.split_repo(repo)
     local query = graphql("repository_id_query", owner, name)
     local output =
       gh.run(
@@ -473,8 +472,7 @@ function M.open_issue_at_cursor()
 end
 
 function M.get_file_contents(repo, commit, path, cb)
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = M.split_repo(repo)
   local query = graphql("file_content_query", owner, name, commit, path)
   gh.run(
     {
@@ -532,6 +530,13 @@ function M.cursor_in_col_range(start_col, end_col)
   end
   return false
 end
+
+function M.split_repo(repo)
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  return owner, name
+end
+
 function M.extract_pattern_at_cursor(pattern)
   local current_line = vim.fn.getline(".")
   if current_line:find(pattern) then
