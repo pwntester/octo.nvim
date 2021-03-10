@@ -247,6 +247,7 @@ function M.add_comment()
     body = " ",
     first_comment_id = first_comment_id,
     id = -1,
+    state = "PENDING",
     reactionGroups = {
       {
         content = "THUMBS_UP",
