@@ -656,6 +656,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 
   -- prepare comment buffer
   local comment_win = api.nvim_win_get_var(main_win, "comment_win")
+  -- TODO: this will fail if user closes reviewthread window
   api.nvim_set_current_win(comment_win)
 
   local comment_bufname = format("octo://%s/pull/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id)
