@@ -6,7 +6,6 @@ local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local folds = require "octo.folds"
 local window = require "octo.window"
-local bubbles = require "octo.ui.bubbles"
 local vim = vim
 local api = vim.api
 local format = string.format
