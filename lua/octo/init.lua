@@ -804,80 +804,19 @@ function M.show_summary()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = json.parse(output)
-          local max_length = 80
           local issue = resp.data.repository.issueOrPullRequest
-            local popup_bufnr = api.nvim_create_buf(false, true)
-            local chunks = {}
-            table.insert(chunks, {
-              {repo.." on "},
-              {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
-            })
-            table.insert(chunks, {
-              {"⊙", "OctoNvimBubbleRed"},
-              {" "..issue.title.." ", "OctoNvimDetailsLabel"},
-              {"#"..issue.number.." ", "OctoNvimDetailsLabel"}
-            })
-            table.insert(chunks, {{""}})
-            table.insert(chunks, {
-              {string.sub(issue.body, 1, max_length - 4 - 2).."…"}
-            })
-            table.insert(chunks, {{""}})
-            if #issue.labels.nodes > 0 then
-              local labels = {}
-              for _, label in ipairs(issue.labels.nodes) do
-                local label_bubble = bubbles.make_label_bubble(
-                  label.name,
-                  label.color,
-                  { margin_width = 1 }
-                )
-                vim.list_extend(labels, label_bubble)
-              end
-              table.insert(chunks, labels)
-              table.insert(chunks, {{""}})
-            end
-            table.insert(chunks, {
-              {vim.g.octo_icon_user or " "},
-              {issue.author.login}
-            })
-            for i=1,#chunks do
-              writers.write_block({""}, {bufnr = popup_bufnr, line = i})
-            end
-            for i=1,#chunks do
-              writers.write_virtual_text(popup_bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
-            end
-            window.create_popup({
-              bufnr = popup_bufnr,
-              width = max_length,
-              height = 2 + #chunks
-            })
+          local popup_bufnr = api.nvim_create_buf(false, true)
+          local max_length = 80
+          local lines = writers.write_issue_summary(popup_bufnr, issue, {max_length = max_length})
+          window.create_popup({
+            bufnr = popup_bufnr,
+            width = max_length,
+            height = 2 + lines
+          })
         end
       end
     }
   )
 end
-
---[[
-pwntester/octo.nvim on Feb 28
-
-<closed icon> Feature request - pop-up window for comments during a review #107
-
-If I have added a comment to a line of code during a review, I can see the highlight …
-
-(UI) (enhancement)
-<user icon> pwntester You commented
-]]--
-
-
---[[
-pwntester/octo.nvim on Mar 8
-
-popup comments #122
-
-Show review comments on popup windows
-
-[master] ← [popup_comments]
-
-<user icon> pwntester You opened
-]]--
 
 return M

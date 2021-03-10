@@ -603,6 +603,75 @@ function M.write_review_thread_header(bufnr, opts, line)
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
 end
 
+function M.write_issue_summary(bufnr, issue, opts)
+  opts = opts or {}
+  local max_length = opts.max_length or 80
+  local chunks = {}
+
+  -- repo and date line
+  table.insert(chunks, {
+    {issue.repository.nameWithOwner, "OctoNvimDetailsValue"},
+    {" on ", "OctoNvimDetailsLabel"},
+    {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
+  })
+
+  -- issue body
+  table.insert(chunks, {
+    {"["..issue.state.."] ", util.state_hl_map[issue.state]},
+    {issue.title.." ", "OctoNvimDetailsLabel"},
+    {"#"..issue.number.." ", "OctoNvimDetailsValue"}
+  })
+  table.insert(chunks, {{""}})
+
+  -- issue body
+  table.insert(chunks, {
+    {string.sub(issue.body, 1, max_length - 4 - 2).."…"}
+  })
+  table.insert(chunks, {{""}})
+
+  -- labels
+  if #issue.labels.nodes > 0 then
+    local labels = {}
+    for _, label in ipairs(issue.labels.nodes) do
+      local label_bubble = bubbles.make_label_bubble(
+        label.name,
+        label.color,
+        { margin_width = 1 }
+      )
+      vim.list_extend(labels, label_bubble)
+    end
+    table.insert(chunks, labels)
+    table.insert(chunks, {{""}})
+  end
+
+  -- PR branches
+  if issue.__typename == "PullRequest" then
+    table.insert(chunks, {
+      {"[", "OctoNvimDetailsValue"},
+      {issue.baseRefName, "OctoNvimDetailsLabel"},
+      {"] ⟵ [", "OctoNvimDetailsValue"},
+      {issue.headRefName, "OctoNvimDetailsLabel"},
+      {"]", "OctoNvimDetailsValue"},
+    })
+    table.insert(chunks, {{""}})
+  end
+
+  -- author line
+  table.insert(chunks, {
+    {vim.g.octo_icon_user or " "},
+    {issue.author.login}
+  })
+
+
+  for i=1,#chunks do
+    M.write_block({""}, {bufnr = bufnr, line = i})
+  end
+  for i=1,#chunks do
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
+  end
+  return #chunks
+end
+
 function M.write_virtual_text(bufnr, ns, line, chunks)
   --api.nvim_buf_set_extmark(bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
   api.nvim_buf_set_virtual_text(bufnr, ns, line, chunks, {})
