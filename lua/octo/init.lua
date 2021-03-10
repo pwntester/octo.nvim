@@ -773,32 +773,15 @@ function M.show_summary()
     return
   end
 
-  local repo, number
-  local cursor = api.nvim_win_get_cursor(0)
-  local current_line = vim.fn.getline(".")
+  local repo, number = util.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
 
-  if current_line:find(different_repo_issue_pattern) then
-    local start_col, end_col, _repo, _number = current_line:find(different_repo_issue_pattern)
-    if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
-      repo = _repo
-      number = _number
-    end
-  elseif current_line:find(same_repo_issue_pattern) then
-    local start_col, end_col, _number = current_line:find(same_repo_issue_pattern)
-    if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
-      repo = current_repo
-      number = _number
-    end
-  elseif current_line:find(url_issue_pattern) then
-    local start_col, end_col, _repo, _number = current_line:find(url_issue_pattern)
-    if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
-      repo = _repo
-      number = _number
-    end
+  if not repo or not number then
+    repo = current_repo
+    number = util.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
   end
 
   if not repo or not number then
-    return
+    repo, number = util.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
   end
 
   local owner = vim.split(repo, "/")[1]

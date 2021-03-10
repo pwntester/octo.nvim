@@ -523,4 +523,16 @@ function M.getwin4buf(bufnr)
   return -1
 end
 
+function M.extract_pattern_at_cursor(pattern)
+  local current_line = vim.fn.getline(".")
+  if current_line:find(pattern) then
+    local res = table.pack(current_line:find(pattern))
+    local start_col = res[1]
+    local end_col = res[2]
+    if M.cursor_in_col_range(start_col, end_col) then
+      return unpack(M.tbl_slice(res, 3, #res))
+    end
+  end
+end
+
 return M
