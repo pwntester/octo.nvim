@@ -776,9 +776,6 @@ function M.show_summary()
   local repo, number
   local cursor = api.nvim_win_get_cursor(0)
   local current_line = vim.fn.getline(".")
-  local different_repo_issue_pattern = "%s([^/]+/[^#]+)#(%d+)%s"
-  local same_repo_issue_pattern = "%s#(%d+)%s"
-  local url_issue_pattern = "[htps]+://.*github.com/([^/]+/[^/]+)/[pulisue]+/(%d+)"
 
   if current_line:find(different_repo_issue_pattern) then
     local start_col, end_col, _repo, _number = current_line:find(different_repo_issue_pattern)
