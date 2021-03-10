@@ -768,31 +768,42 @@ function M.show_summary()
     return
   end
 
-  local _, repo2 = pcall(api.nvim_buf_get_var, 0, "repo")
-  if not repo2 then
+  local _, current_repo = pcall(api.nvim_buf_get_var, 0, "repo")
+  if not current_repo then
     return
   end
 
   local repo, number
   local cursor = api.nvim_win_get_cursor(0)
   local current_line = vim.fn.getline(".")
-  local different_repo_issue_pattern = "%s([^ /]+/[^ #]+)#(%d+)%s"
+  local different_repo_issue_pattern = "%s([^/]+/[^#]+)#(%d+)%s"
   local same_repo_issue_pattern = "%s#(%d+)%s"
-  local start_col1, end_col1, repo1, number1 = current_line:find(different_repo_issue_pattern)
+  local url_issue_pattern = "[htps]+://.*github.com/([^/]+/[^/]+)/[pulisue]+/(%d+)"
 
-  if start_col1 and end_col1 and start_col1 <= cursor[2] and cursor[2] <= end_col1 then
-    repo = repo1
-    number = number1
-  else
-    local start_col2, end_col2, number2 = current_line:find(same_repo_issue_pattern)
-    if start_col2 and end_col2 and start_col2 <= cursor[2] and cursor[2] <= end_col2 then
-      repo = repo2
-      number = number2
+  if current_line:find(different_repo_issue_pattern) then
+    local start_col, end_col, _repo, _number = current_line:find(different_repo_issue_pattern)
+    if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
+      repo = _repo
+      number = _number
+    end
+  elseif current_line:find(same_repo_issue_pattern) then
+    local start_col, end_col, _number = current_line:find(same_repo_issue_pattern)
+    if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
+      repo = current_repo
+      number = _number
+    end
+  elseif current_line:find(url_issue_pattern) then
+    local start_col, end_col, _repo, _number = current_line:find(url_issue_pattern)
+    if start_col and end_col and start_col <= cursor[2] and cursor[2] <= end_col then
+      repo = _repo
+      number = _number
     end
   end
+
   if not repo or not number then
     return
   end
+
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
   local query = graphql("issue_summary_query", owner, name, number)
