@@ -1014,14 +1014,16 @@ query {
   repository(owner: "%s", name: "%s") {
     issueOrPullRequest(number: %d) {
       ... on PullRequest {
+        __typename
+        headRefName
+        baseRefName
         createdAt
         state
         number
         title
         body
-        author {
-          login
-        }
+        repository { nameWithOwner }
+        author { login }
         authorAssociation
         labels(first: 20) {
           nodes {
@@ -1031,14 +1033,14 @@ query {
         }
       }
       ... on Issue {
+        __typename
         createdAt
         state
         number
         title
         body
-        author {
-          login
-        }
+        repository { nameWithOwner }
+        author { login }
         authorAssociation
         labels(first: 20) {
           nodes {
