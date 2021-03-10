@@ -624,8 +624,12 @@ function M.write_issue_summary(bufnr, issue, opts)
   table.insert(chunks, {{""}})
 
   -- issue body
+  local body = vim.split(issue.body, "\n")
+  body = table.concat(body, " ")
+  body = body:gsub('[%c]', ' ')
+  body = body:sub(1, max_length - 4 - 2).."…"
   table.insert(chunks, {
-    {string.sub(issue.body, 1, max_length - 4 - 2).."…"}
+    {body}
   })
   table.insert(chunks, {{""}})
 
