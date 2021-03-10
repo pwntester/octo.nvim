@@ -35,7 +35,7 @@ M.reaction_map = {
   ["EYES"] = "👀"
 }
 
-function table.slice(tbl, first, last, step)
+function M.tbl_slice(tbl, first, last, step)
   local sliced = {}
   for i = first or 1, last or #tbl, step or 1 do
     sliced[#sliced + 1] = tbl[i]
@@ -374,7 +374,7 @@ function M.get_nested_prop(obj, prop)
       break
     else
       local part = parts[1]
-      local remaining = table.concat(table.slice(parts, 2, #parts), ".")
+      local remaining = table.concat(M.tbl_slice(parts, 2, #parts), ".")
       return M.get_nested_prop(obj[part], remaining)
     end
   end
