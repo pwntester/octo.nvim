@@ -8,10 +8,10 @@ local highlights = require "octo.highlights"
 -- background. The bubble shape gets especially defined by the outer delimiters.
 -- An examplary usage in this plugin are for label assigned to an issue.
 
-local function make_bubble(content, highlight_group, options)
-  options = options or {}
-  local margin = string.rep(" ", options.margin_width or 0)
-  local padding = string.rep(" ", options.padding_width or 0)
+local function make_bubble(content, highlight_group, opts)
+  opts = opts or {}
+  local margin = string.rep(" ", opts.margin_width or 0)
+  local padding = string.rep(" ", opts.padding_width or 0)
   local body = padding .. content .. padding
   local left_delimiter = margin .. (vim.g.octo_bubble_delimiter_left or "")
   local right_delimiter = (vim.g.octo_bubble_delimiter_right or "") .. margin
@@ -28,23 +28,31 @@ local function make_bubble(content, highlight_group, options)
   }
 end
 
-local function make_user_bubble(name, is_viewer, options)
+local function make_user_bubble(name, is_viewer, opts)
+  opts = opts or {}
   local highlight = is_viewer and "OctoNvimUserViewer" or "OctoNvimUser"
+  local icon_position = opts.icon_position or "left"
   local icon = vim.g.octo_icon_user or ""
-  local content = icon .. " " .. name
-  return make_bubble(content, highlight, options)
+  icon = opts.icon or icon
+  local content
+  if icon_position == "left" then
+    content = icon .. " " .. name
+  elseif icon_position == "right" then
+    content = name .. " " .. icon
+  end
+  return make_bubble(content, highlight, opts)
 end
 
-local function make_reaction_bubble(icon, includes_viewer, options)
+local function make_reaction_bubble(icon, includes_viewer, opts)
   local highlight = includes_viewer and "OctoNvimReactionViewer" or "OctoNvimReaction"
   local hint_for_viewer = includes_viewer and (vim.g.octo_icon_reaction_viewer_hint or "") or ""
   local content = icon .. hint_for_viewer
-  return make_bubble(content, highlight, options)
+  return make_bubble(content, highlight, opts)
 end
 
-local function make_label_bubble(name, color, options)
+local function make_label_bubble(name, color, opts)
   local highlight = highlights.create_highlight(color)
-  return make_bubble(name, highlight, options)
+  return make_bubble(name, highlight, opts)
 end
 
 return {
