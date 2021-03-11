@@ -21,7 +21,7 @@ function M.check_login()
       args = {"auth", "status"},
       cb = function(_, err)
         local _, _, name = string.find(err, "Logged in to [^%s]+ as ([^%s]+)")
-        vim.g.octo_loggedin_user = name
+        vim.g.octo_viewer = name
       end
     }
   )

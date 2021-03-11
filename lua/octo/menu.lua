@@ -653,7 +653,7 @@ function M.select_target_project_column(cb)
   end
 
   local owner, name = util.split_repo(repo)
-  local query = graphql("projects_query", owner, name, vim.g.octo_loggedin_user, owner)
+  local query = graphql("projects_query", owner, name, vim.g.octo_viewer, owner)
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
