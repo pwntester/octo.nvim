@@ -21,8 +21,42 @@ M.state_hl_map = {
   CHANGES_REQUESTED = "OctoNvimStateChangesRequested",
   COMMENTED = "OctoNvimStateCommented",
   DISMISSED = "OctoNvimStateDismissed",
-  PENDING = "OctoNvimStatePending"
+  REVIEW_REQUIRED = "OctoNvimStatePending"
 }
+
+M.state_icon_map = {
+  MERGED = "⇌",
+  CLOSED = "⚑",
+  OPEN = "⚐",
+  APPROVED = "✓",
+  CHANGES_REQUESTED = "±",
+  COMMENTED = "☷",
+  DISMISSED = "",
+  REVIEW_REQUIRED = ""
+}
+
+M.state_message_map = {
+  MERGED = "Merged",
+  CLOSED = "Closed",
+  OPEN = "Open",
+  APPROVED = "Approved",
+  CHANGES_REQUESTED = "Changes requested",
+  COMMENTED = "Has review comments",
+  DISMISSED = "Dismissed",
+  REVIEW_REQUIRED = "Awaiting required review"
+}
+
+function M.calculate_strongest_review_state(states)
+  if vim.tbl_contains(states, "APPROVED") then
+    return "APPROVED"
+  elseif vim.tbl_contains(states, "CHANGES_REQUESTED") then
+    return "CHANGES_REQUESTED"
+  elseif vim.tbl_contains(states, "COMMENTED") then
+    return "COMMENTED"
+  elseif vim.tbl_contains(states, "REVIEW_REQUIRED") then
+    return "REVIEW_REQUIRED"
+  end
+end
 
 M.reaction_map = {
   ["THUMBS_UP"] = "👍",
