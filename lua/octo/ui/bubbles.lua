@@ -1,7 +1,5 @@
 local vim = vim
-local api = vim.api
 
-local constants = require "octo.constants"
 local highlights = require "octo.highlights"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
@@ -10,13 +8,8 @@ local highlights = require "octo.highlights"
 -- background. The bubble shape gets especially defined by the outer delimiters.
 -- An examplary usage in this plugin are for label assigned to an issue.
 
-local function get_highlight_group_attribute(highlight_group, attribute_name)
-  local highlight_definition = api.nvim_get_hl_by_name(highlight_group, true)
-  return highlight_definition[attribute_name] or ""
-end
-
 local function make_bubble(content, highlight_group, options)
-  local options = options or {}
+  options = options or {}
   local margin = string.rep(" ", options.margin_width or 0)
   local padding = string.rep(" ", options.padding_width or 0)
   local body = padding .. content .. padding
@@ -27,7 +20,7 @@ local function make_bubble(content, highlight_group, options)
     delimiter_color,
     { mode = "foreground" }
   )
-  
+
   return {
     { left_delimiter, delimiter_highlight_group },
     { body, highlight_group },
