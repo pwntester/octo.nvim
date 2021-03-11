@@ -89,7 +89,7 @@ function M.write_state(bufnr, state, number)
   -- title virtual text
   local title_vt = {
     {tostring(number), "OctoNvimIssueId"},
-    {format(" [%s] ", state), format("OctoNvimIssue%s", state)}
+    {format(" [%s] ", state), util.state_hl_map[state]}
   }
 
   -- PR virtual text
@@ -166,7 +166,7 @@ function M.write_details(bufnr, issue, update)
   }
   table.insert(details, created_at_vt)
 
-  if issue.state == "closed" then
+  if issue.state == "CLOSED" then
     -- closed_at
     local closed_at_vt = {
       {"Closed at: ", "OctoNvimDetailsLabel"},
@@ -204,10 +204,12 @@ function M.write_details(bufnr, issue, update)
     --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
     --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
     for _, card in ipairs(issue.projectCards.nodes) do
-      table.insert(projects_vt, {card.column.name, })
-      table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
-      table.insert(projects_vt, {card.project.name})
-      table.insert(projects_vt, {")", "OctoNvimDetailsLabel"})
+      if card.column ~= vim.NIL then
+        table.insert(projects_vt, {card.column.name, })
+        table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
+        table.insert(projects_vt, {card.project.name})
+        table.insert(projects_vt, {")", "OctoNvimDetailsLabel"})
+      end
     end
     table.insert(details, projects_vt)
   end
@@ -218,7 +220,8 @@ function M.write_details(bufnr, issue, update)
     {"Milestone: ", "OctoNvimDetailsLabel"}
   }
   if ms ~= nil and ms ~= vim.NIL then
-    table.insert(milestone_vt, {format("%s (%s)", ms.title, ms.state), "OctoNvimDetailsValue"})
+    table.insert(milestone_vt, {ms.title, "OctoNvimDetailsValue"})
+    table.insert(milestone_vt, {format(" (%s)", util.state_hl_map[ms.state]), "OctoNvimDetailsValue"})
   else
     table.insert(milestone_vt, {"No milestone", "OctoNvimMissingDetails"})
   end
@@ -353,7 +356,7 @@ function M.write_comment(bufnr, comment, kind, line)
     -- Review top-level comments
     table.insert(header_vt, {"REVIEW:", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
     table.insert(header_vt, {")", "OctoNvimSymbol"})
@@ -361,7 +364,7 @@ function M.write_comment(bufnr, comment, kind, line)
     -- Review thread comments
     table.insert(header_vt, {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {comment.state:lower().." ", "OctoNvimDetailsValue"})
+    table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
     table.insert(header_vt, {")", "OctoNvimSymbol"})
@@ -598,6 +601,79 @@ function M.write_review_thread_header(bufnr, opts, line)
 
   M.write_block({""}, {bufnr = bufnr})
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
+end
+
+function M.write_issue_summary(bufnr, issue, opts)
+  opts = opts or {}
+  local max_length = opts.max_length or 80
+  local chunks = {}
+
+  -- repo and date line
+  table.insert(chunks, {
+    {issue.repository.nameWithOwner, "OctoNvimDetailsValue"},
+    {" on ", "OctoNvimDetailsLabel"},
+    {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
+  })
+
+  -- issue body
+  table.insert(chunks, {
+    {"["..issue.state.."] ", util.state_hl_map[issue.state]},
+    {issue.title.." ", "OctoNvimDetailsLabel"},
+    {"#"..issue.number.." ", "OctoNvimDetailsValue"}
+  })
+  table.insert(chunks, {{""}})
+
+  -- issue body
+  local body = vim.split(issue.body, "\n")
+  body = table.concat(body, " ")
+  body = body:gsub('[%c]', ' ')
+  body = body:sub(1, max_length - 4 - 2).."…"
+  table.insert(chunks, {
+    {body}
+  })
+  table.insert(chunks, {{""}})
+
+  -- labels
+  if #issue.labels.nodes > 0 then
+    local labels = {}
+    for _, label in ipairs(issue.labels.nodes) do
+      local label_bubble = bubbles.make_label_bubble(
+        label.name,
+        label.color,
+        { margin_width = 1 }
+      )
+      vim.list_extend(labels, label_bubble)
+    end
+    table.insert(chunks, labels)
+    table.insert(chunks, {{""}})
+  end
+
+  -- PR branches
+  if issue.__typename == "PullRequest" then
+    table.insert(chunks, {
+      {"[", "OctoNvimDetailsValue"},
+      {issue.baseRefName, "OctoNvimDetailsLabel"},
+      {"] ⟵ [", "OctoNvimDetailsValue"},
+      {issue.headRefName, "OctoNvimDetailsLabel"},
+      {"]", "OctoNvimDetailsValue"},
+    })
+    table.insert(chunks, {{""}})
+  end
+
+  -- author line
+  table.insert(chunks, {
+    {vim.g.octo_icon_user or " "},
+    {issue.author.login}
+  })
+
+
+  for i=1,#chunks do
+    M.write_block({""}, {bufnr = bufnr, line = i})
+  end
+  for i=1,#chunks do
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
+  end
+  return #chunks
 end
 
 function M.write_virtual_text(bufnr, ns, line, chunks)

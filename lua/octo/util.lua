@@ -13,6 +13,17 @@ local json = {
 local M = {}
 local repo_id_cache = {}
 
+M.state_hl_map = {
+  MERGED = "OctoNvimStateMerged",
+  CLOSED = "OctoNvimStateClosed",
+  OPEN = "OctoNvimStateOpen",
+  APPROVED = "OctoNvimStateApproved",
+  CHANGES_REQUESTED = "OctoNvimStateChangesRequested",
+  COMMENTED = "OctoNvimStateCommented",
+  DISMISSED = "OctoNvimStateDismissed",
+  PENDING = "OctoNvimStatePending"
+}
+
 M.reaction_map = {
   ["THUMBS_UP"] = "👍",
   ["THUMBS_DOWN"] = "👎",
@@ -24,7 +35,7 @@ M.reaction_map = {
   ["EYES"] = "👀"
 }
 
-function table.slice(tbl, first, last, step)
+function M.tbl_slice(tbl, first, last, step)
   local sliced = {}
   for i = first or 1, last or #tbl, step or 1 do
     sliced[#sliced + 1] = tbl[i]
@@ -308,8 +319,7 @@ function M.get_repo_id(repo)
   if repo_id_cache[repo] then
     return repo_id_cache[repo]
   else
-    local owner = vim.split(repo, "/")[1]
-    local name = vim.split(repo, "/")[2]
+    local owner, name = M.split_repo(repo)
     local query = graphql("repository_id_query", owner, name)
     local output =
       gh.run(
@@ -363,7 +373,7 @@ function M.get_nested_prop(obj, prop)
       break
     else
       local part = parts[1]
-      local remaining = table.concat(table.slice(parts, 2, #parts), ".")
+      local remaining = table.concat(M.tbl_slice(parts, 2, #parts), ".")
       return M.get_nested_prop(obj[part], remaining)
     end
   end
@@ -462,8 +472,7 @@ function M.open_issue_at_cursor()
 end
 
 function M.get_file_contents(repo, commit, path, cb)
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = M.split_repo(repo)
   local query = graphql("file_content_query", owner, name, commit, path)
   gh.run(
     {
@@ -510,6 +519,34 @@ function M.getwin4buf(bufnr)
     end
   end
   return -1
+end
+
+function M.cursor_in_col_range(start_col, end_col)
+  local cursor = api.nvim_win_get_cursor(0)
+  if start_col and end_col then
+    if start_col <= cursor[2] and cursor[2] <= end_col then
+      return true
+    end
+  end
+  return false
+end
+
+function M.split_repo(repo)
+  local owner = vim.split(repo, "/")[1]
+  local name = vim.split(repo, "/")[2]
+  return owner, name
+end
+
+function M.extract_pattern_at_cursor(pattern)
+  local current_line = vim.fn.getline(".")
+  if current_line:find(pattern) then
+    local res = table.pack(current_line:find(pattern))
+    local start_col = res[1]
+    local end_col = res[2]
+    if M.cursor_in_col_range(start_col, end_col) then
+      return unpack(M.tbl_slice(res, 3, #res))
+    end
+  end
 end
 
 return M

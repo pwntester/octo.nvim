@@ -1007,6 +1007,53 @@ query($endCursor: String) {
 }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
+M.issue_summary_query =
+  [[
+query { 
+  repository(owner: "%s", name: "%s") {
+    issueOrPullRequest(number: %d) {
+      ... on PullRequest {
+        __typename
+        headRefName
+        baseRefName
+        createdAt
+        state
+        number
+        title
+        body
+        repository { nameWithOwner }
+        author { login }
+        authorAssociation
+        labels(first: 20) {
+          nodes {
+            color
+            name
+          }
+        }
+      }
+      ... on Issue {
+        __typename
+        createdAt
+        state
+        number
+        title
+        body
+        repository { nameWithOwner }
+        author { login }
+        authorAssociation
+        labels(first: 20) {
+          nodes {
+            color
+            name
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 M.repository_id_query = [[
 query {

@@ -186,8 +186,6 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimDirty`              | `ErrorMsg`       |
 | `OctoNvimIssueTitle`         | `PreProc`        |
 | `OctoNvimIssueId`            | `Question`       |
-| `OctoNvimIssueOpen`          | `MoreMsg`        |
-| `OctoNvimIssueClosed`        | `ErrorMsg`       |
 | `OctoNvimEmpty`              | `Comment`        |
 | `OctoNvimFloat`              | `NormalNC`       |
 | `OctoNvimDate`               | `Comment`        |
@@ -201,7 +199,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimEditable`           | `NormalFloat`    |
 | `OctoNvimViewer`             | GitHub color     |
 | `OctoNvimBubble`             | `NormalFloat`    |
-| `OctoNvimBubbleGreen`        | GitHub color     |  
+| `OctoNvimBubbleGreen`        | GitHub color     |
 | `OctoNvimBubbleRed`          | GitHub color     |
 | `OctoNvimUser`               | `OctoNvimBubble` |
 | `OctoNvimUserViewer`         | `OctoNvimViewer` |
@@ -212,6 +210,14 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `OctoNvimPullAdditions`      | GitHub color     |
 | `OctoNvimPullDeletions`      | GitHub color     |
 | `OctoNvimPullModifications`  | GitHub color     |
+| `OctoNvimStateOpen`          | GitHub color     |
+| `OctoNvimStateClosed`        | GitHub color     |
+| `OctoNvimStateMerge`         | GitHub color     |
+| `OctoNvimStatePending`       | GitHub color     |
+| `OctoNvimStateApproved`      | `OctoNvimStateOpen` |
+| `OctoNvimStateChangesRequested` | `OctoNvimStateClosed` |
+| `OctoNvimStateCommented`     | `Normal` |
+| `OctoNvimStateDismissed`     | `OctoNvimStateClosed` |
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.

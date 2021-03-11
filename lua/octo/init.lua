@@ -5,6 +5,7 @@ local util = require "octo.util"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local folds = require "octo.folds"
+local window = require "octo.window"
 local vim = vim
 local api = vim.api
 local format = string.format
@@ -48,8 +49,7 @@ function M.load(bufnr, cb)
     api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = util.split_repo(repo)
   local query, key
   if type == "pull" then
     query = graphql("pull_request_query", owner, name, number)
@@ -759,6 +759,50 @@ function M.apply_buffer_mappings(bufnr, kind)
       mapping_opts
     )
   end
+end
+
+function M.show_summary()
+  if vim.bo.ft ~= "octo_issue" then return end
+
+  local _, current_repo = pcall(api.nvim_buf_get_var, 0, "repo")
+  if not current_repo then return end
+
+  local repo, number = util.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
+
+  if not repo or not number then
+    repo = current_repo
+    number = util.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+  end
+
+  if not repo or not number then
+    repo, number = util.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+  end
+
+  if not repo or not number then return end
+
+  local owner, name = util.split_repo(repo)
+  local query = graphql("issue_summary_query", owner, name, number)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not util.is_blank(stderr) then
+          api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = json.parse(output)
+          local issue = resp.data.repository.issueOrPullRequest
+          local popup_bufnr = api.nvim_create_buf(false, true)
+          local max_length = 80
+          local lines = writers.write_issue_summary(popup_bufnr, issue, {max_length = max_length})
+          window.create_popup({
+            bufnr = popup_bufnr,
+            width = max_length,
+            height = 2 + lines
+          })
+        end
+      end
+    }
+  )
 end
 
 return M

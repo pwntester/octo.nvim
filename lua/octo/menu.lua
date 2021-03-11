@@ -122,8 +122,7 @@ function M.issues(opts)
     return
   end
 
-  local owner = vim.split(opts.repo, "/")[1]
-  local name = vim.split(opts.repo, "/")[2]
+  local owner, name = util.split_repo(opts.repo)
   local query = graphql("issues_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
@@ -267,8 +266,7 @@ function M.pull_requests(opts)
     return
   end
 
-  local owner = vim.split(opts.repo, "/")[1]
-  local name = vim.split(opts.repo, "/")[2]
+  local owner, name = util.split_repo(opts.repo)
   local query = graphql("pull_requests_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
@@ -654,9 +652,7 @@ function M.select_target_project_column(cb)
     return
   end
 
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-
+  local owner, name = util.split_repo(repo)
   local query = graphql("projects_query", owner, name, vim.g.octo_loggedin_user, owner)
   gh.run(
     {
@@ -730,8 +726,7 @@ function M.select_label(cb)
     return
   end
 
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = util.split_repo(repo)
   local query = graphql("labels_query", owner, name)
   gh.run(
     {
@@ -776,8 +771,7 @@ function M.select_assigned_label(cb)
   local bufnr = api.nvim_get_current_buf()
   local bufname = vim.fn.bufname(bufnr)
   local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = util.split_repo(repo)
   local query, key
   if type == "issue" then
     query = graphql("issue_labels_query", owner, name, number)
@@ -970,8 +964,7 @@ function M.select_assignee(cb)
   local bufnr = api.nvim_get_current_buf()
   local bufname = vim.fn.bufname(bufnr)
   local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = util.split_repo(repo)
   local query, key
   if type == "issue" then
     query = graphql("issue_assignees_query", owner, name, number)

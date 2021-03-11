@@ -57,6 +57,7 @@ au BufEnter octo://* call s:configure_octo_buffer()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
 au CursorHold octo://* lua require'octo.reviews'.show_comment()
+au CursorHold octo://* lua require'octo'.show_summary()
 augroup END
 
 " sign definitions
@@ -71,9 +72,6 @@ sign define octo_clean_line text=[ linehl=OctoNvimEditable
 sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable
 
 highlight default link OctoNvimDirty ErrorMsg
-highlight default link OctoNvimIssueOpen MoreMsg
-highlight default link OctoNvimIssueClosed ErrorMsg
-highlight default link OctoNvimIssueMerged Keyword
 highlight default link OctoNvimIssueId Question
 highlight default link OctoNvimIssueTitle PreProc
 highlight default link OctoNvimEmpty Comment
@@ -99,6 +97,14 @@ highlight default OctoNvimFailingTest guifg=#f85149
 highlight default OctoNvimPullAdditions guifg=#2ea043
 highlight default OctoNvimPullDeletions guifg=#da3633
 highlight default OctoNvimPullModifications guifg=#58A6FF
+highlight default OctoNvimStateOpen guifg=#44c150
+highlight default OctoNvimStateClosed guifg=#ea4e48
+highlight default OctoNvimStateMerged guifg=#ad7cfd
+highlight default OctoNvimStatePending guifg=#d3c846
+highlight default link OctoNvimStateApproved OctoNvimStateOpen
+highlight default link OctoNvimStateChangesRequested OctoNvimStateClosed
+highlight default link OctoNvimStateCommented Normal
+highlight default link OctoNvimStateDismissed OctoNvimStateClosed
 
 " folds
 lua require'octo.folds'

@@ -419,8 +419,7 @@ function M.review_threads()
   if not repo then
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = util.split_repo(repo)
   local query = graphql("review_threads_query", owner, name, number)
   gh.run(
     {
@@ -448,10 +447,10 @@ function M.populate_reviewthreads_qf(repo, number, reviewthreads)
       local first_comment = thread.comments.nodes[1]
       local mods = {}
       if thread.isResolved then
-        table.insert(mods, "RESOLVED")
+        table.insert(mods, "RESOLVED ")
       end
       if thread.isOutdated then
-        table.insert(mods, "OUTDATED")
+        table.insert(mods, "OUTDATED ")
       end
       local comment_id = util.graph2rest(first_comment.id)
       local lnum = thread.line
@@ -656,6 +655,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
 
   -- prepare comment buffer
   local comment_win = api.nvim_win_get_var(main_win, "comment_win")
+  -- TODO: this will fail if user closes reviewthread window
   api.nvim_set_current_win(comment_win)
 
   local comment_bufname = format("octo://%s/pull/%d/reviewthread/%s/comment/%s", repo, number, reviewthread_id, comment_id)
@@ -874,10 +874,8 @@ function M.resume_review()
   if not repo then
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-
   -- start new review
+  local owner, name = util.split_repo(repo)
   local query = graphql("pending_review_threads_query", owner, name, number)
   gh.run(
     {
@@ -932,9 +930,7 @@ function M.discard_review()
   if not repo then
     return
   end
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
-
+  local owner, name = util.split_repo(repo)
   local query = graphql("pending_review_threads_query", owner, name, number)
   gh.run(
     {
