@@ -110,8 +110,8 @@ highlight default link OctoNvimStateDismissed OctoNvimStateClosed
 lua require'octo.folds'
 
 " logged-in user
-if !exists("g:octo_loggedin_user")
-  let g:octo_loggedin_user = v:null
+if !exists("g:octo_viewer")
+  let g:octo_viewer = v:null
   lua require'octo'.check_login()
 endif
 

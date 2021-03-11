@@ -243,7 +243,7 @@ function M.add_comment()
 
   local comment = {
     createdAt = vim.fn.strftime("%FT%TZ"),
-    author = {login = vim.g.octo_loggedin_user},
+    author = {login = vim.g.octo_viewer},
     body = " ",
     first_comment_id = first_comment_id,
     id = -1,

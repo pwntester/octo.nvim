@@ -231,7 +231,6 @@ function M.write_details(bufnr, issue, update)
   local labels_vt = {
     {"Labels: ", "OctoNvimDetailsLabel"}
   }
-
   if #issue.labels.nodes > 0 then
     for _, label in ipairs(issue.labels.nodes) do
       local label_bubble = bubbles.make_label_bubble(
@@ -246,23 +245,53 @@ function M.write_details(bufnr, issue, update)
   end
   table.insert(details, labels_vt)
 
-  -- for pull requests add additional details
+  -- additional details for pull requests
   if issue.commits then
-    -- Pending requested reviewers
-    local requested_reviewers_vt = {
-      {"Requested reviewers: ", "OctoNvimDetailsLabel"}
-    }
+    -- reviewers
+    local reviewers = {}
+    local collect_reviewer = function (name, state)
+      --if vim.g.octo_viewer ~= name then
+        if not reviewers[name] then
+          reviewers[name] = {state}
+        else
+          local states = reviewers[name]
+          if not vim.tbl_contains(states, state) then
+            table.insert(states, state)
+          end
+          reviewers[name] = states
+        end
+      --end
+    end
+    for _, item in ipairs(issue.timelineItems.nodes) do
+      if item.__typename == "PullRequestReview" then
+        local name = item.author.login
+        collect_reviewer(name, item.state)
+      end
+    end
     if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
       for _, reviewRequest in ipairs(issue.reviewRequests.nodes) do
         local name = reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name
-        local is_viewer = reviewRequest.requestedReviewer.login or false 
-        local user_bubble = bubbles.make_user_bubble(name, is_viewer, { margin_width = 1 })
-        vim.list_extend(requested_reviewers_vt, user_bubble)
+        collect_reviewer(name, "REVIEW_REQUIRED")
+      end
+    end
+    local reviewers_vt = {
+      {"Reviewers: ", "OctoNvimDetailsLabel"}
+    }
+    if #vim.tbl_keys(reviewers) > 0 then
+      for _, name in ipairs(vim.tbl_keys(reviewers)) do
+        local strongest_review = util.calculate_strongest_review_state(reviewers[name])
+        local reviewer_vt = {
+          {name , "OctoNvimUser"},
+          {" "},
+          {util.state_icon_map[strongest_review], util.state_hl_map[strongest_review]},
+          {" "},
+        }
+        vim.list_extend(reviewers_vt, reviewer_vt)
       end
     else
-      table.insert(requested_reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
+      table.insert(reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
     end
-    table.insert(details, requested_reviewers_vt)
+    table.insert(details, reviewers_vt)
 
     -- merged_by
     if issue.merged then
@@ -287,7 +316,7 @@ function M.write_details(bufnr, issue, update)
     if issue.reviewDecision and issue.reviewDecision ~= vim.NIL then
       local decision_vt = {
         {"Review decision: ", "OctoNvimDetailsLabel"},
-        {issue.reviewDecision, "OctoNvimDetailsValue"}
+        {util.state_message_map[issue.reviewDecision]},
       }
       table.insert(details, decision_vt)
     end
