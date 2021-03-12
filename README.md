@@ -231,6 +231,7 @@ The (addition) `viewer` means the user of the plugin or more precisely the user 
 - `g:octo_bubble_delimiter_right`: Right (unicode) character to draw a bubble for labels etc. (default: "")
 - `g:octo_icon_user`: Icon used to signal user names (default: "")
 - `g:octo_icon_reaction_viewer_hint`: Icon as alternative or to complement the highlighting of reactions by the viewer himself (default: "")
+- `g:octo_snippet_context_lines`: Number of additional lines displayed from the diff-hunk for single-line comments (default: 3)
 
 ## FAQ
 

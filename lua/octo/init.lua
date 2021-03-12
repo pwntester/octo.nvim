@@ -251,11 +251,6 @@ function M.create_buffer(type, obj, repo, create)
       end
 
       -- print review header and top level comment
-      -- local line = api.nvim_buf_line_count(bufnr) - 1
-      -- writers.write_block({"", ""}, {bufnr = bufnr, line = line})
-      -- local max_length = vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn
-      -- local header_vt = {{format("┌%s┐", string.rep("─", max_length + 2))}}
-      -- api.nvim_buf_set_extmark(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, 0, { virt_text=header_vt, virt_text_pos='overlay'})
       local review_start, review_end = writers.write_comment(bufnr, item, "PullRequestReview")
 
       if #threads > 0 then
@@ -263,9 +258,9 @@ function M.create_buffer(type, obj, repo, create)
         for _, thread in ipairs(threads) do
           local thread_start, thread_end
           for _,comment in ipairs(thread.comments.nodes) do
-            if comment.replyTo == vim.NIL then
 
-              -- review thread header
+            -- review thread header
+            if comment.replyTo == vim.NIL then
               local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
               local end_line = thread.originalLine
               writers.write_review_thread_header(bufnr, {
@@ -276,9 +271,10 @@ function M.create_buffer(type, obj, repo, create)
                 isResolved = thread.isResolved,
               })
 
-              -- write diff lines
-              thread_start, thread_end = writers.write_commented_lines(bufnr, comment.diffHunk, thread.diffSide, start_line, end_line)
+              -- write snippet
+              thread_start, thread_end = writers.write_diff_hunk(bufnr, comment.diffHunk)
             end
+
             local comment_start, comment_end = writers.write_comment(bufnr, comment, "PullRequestReviewComment")
             folds.create(comment_start+1, comment_end, true)
             thread_end = comment_end
