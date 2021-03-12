@@ -21,6 +21,7 @@ M.state_hl_map = {
   CHANGES_REQUESTED = "OctoNvimStateChangesRequested",
   COMMENTED = "OctoNvimStateCommented",
   DISMISSED = "OctoNvimStateDismissed",
+  PENDING = "OctoNvimStatePending",
   REVIEW_REQUIRED = "OctoNvimStatePending"
 }
 
@@ -32,6 +33,7 @@ M.state_icon_map = {
   CHANGES_REQUESTED = "±",
   COMMENTED = "☷",
   DISMISSED = "",
+  PENDING = "",
   REVIEW_REQUIRED = ""
 }
 
@@ -43,6 +45,7 @@ M.state_message_map = {
   CHANGES_REQUESTED = "Changes requested",
   COMMENTED = "Has review comments",
   DISMISSED = "Dismissed",
+  PENDING = "Awaiting required review",
   REVIEW_REQUIRED = "Awaiting required review"
 }
 
@@ -53,6 +56,8 @@ function M.calculate_strongest_review_state(states)
     return "CHANGES_REQUESTED"
   elseif vim.tbl_contains(states, "COMMENTED") then
     return "COMMENTED"
+  elseif vim.tbl_contains(states, "PENDING") then
+    return "PENDING"
   elseif vim.tbl_contains(states, "REVIEW_REQUIRED") then
     return "REVIEW_REQUIRED"
   end
