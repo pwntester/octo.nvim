@@ -450,13 +450,13 @@ function M.write_comment(bufnr, comment, kind, line)
   return start_line, line
 end
 
-function M.write_diff_hunk(bufnr, diff_hunk, start_line, marker)
+function M.write_diff_hunk(bufnr, diffhunk, start_line, marker)
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
 
-  local lines = vim.split(diff_hunk, "\n")
+  local lines = vim.split(diffhunk, "\n")
 
   -- print #lines + 2 empty lines
   local empty_lines = {}
@@ -522,7 +522,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, marker)
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
 
-  -- print diff_hunk as virtual text
+  -- print diffhunk as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
@@ -536,20 +536,30 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
   start_pos = start_pos ~= vim.NIL and start_pos or end_pos
 
+  -- add context for single-line comments
+  if start_pos == end_pos then
+    local context_lines = vim.g.octo_snippet_context_lines or 3
+    start_pos = start_pos - context_lines
+  end
+
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
 
-  local lines = vim.split(diff_hunk, "\n")
+  local diffhunk_lines = vim.split(diffhunk, "\n")
 
-  -- print end_pos - start_pos + 2 empty lines
+  -- print end_pos - start_pos + 2 borders + 2 empty lines
+  -- to hold virtual text
   local empty_lines = {}
   for _=1,(end_pos-start_pos+4) do
     table.insert(empty_lines, "")
   end
-  local diff_directive = lines[1]
+  M.write_block(empty_lines, {bufnr = bufnr, line = start_line})
+
+  -- separate diffhunk lines into right/left hunks
+  local diff_directive = diffhunk_lines[1]
   local side_lines = {}
-  for i=2,#lines do
-    local line = lines[i]
+  for i=2,#diffhunk_lines do
+    local line = diffhunk_lines[i]
     if vim.startswith(line, "+") and side == "RIGHT" then
       table.insert(side_lines, line)
     elseif vim.startswith(line, "-") and side == "LEFT" then
@@ -587,7 +597,7 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_lnum + max_length + 2))}})
 
-  -- print diff_hunk as virtual text
+  -- print diffhunk as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
