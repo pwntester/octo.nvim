@@ -276,8 +276,8 @@ function M.create_buffer(type, obj, repo, create)
                 isResolved = thread.isResolved,
               })
 
-              -- write diff lines
-              thread_start, thread_end = writers.write_commented_lines(bufnr, comment.diffHunk, thread.diffSide, start_line, end_line)
+              -- write snippet
+              thread_start, thread_end = writers.write_thread_snippet(bufnr, comment.diffHunk, thread.diffSide, start_line, end_line)
             end
             local comment_start, comment_end = writers.write_comment(bufnr, comment, "PullRequestReviewComment")
             folds.create(comment_start+1, comment_end, true)

@@ -532,7 +532,7 @@ function M.write_diff_hunk(bufnr, diff_hunk, start_line, marker)
   return start_line, line
 end
 
-function M.write_commented_lines(bufnr, diff_hunk, side, start_pos, end_pos, start_line)
+function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start_line)
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
   start_pos = start_pos ~= vim.NIL and start_pos or end_pos
 
