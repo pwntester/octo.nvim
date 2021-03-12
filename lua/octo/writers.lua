@@ -568,13 +568,13 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
       table.insert(side_lines, line)
     end
   end
+
+  -- calculate longest hunk line
   local max_length = -1
   for _, line in ipairs(side_lines) do
     max_length = math.max(max_length, #line)
   end
   max_length = math.min(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn) + 1
-
-  M.write_block(empty_lines, {bufnr = bufnr, line = start_line})
 
   local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
   local offset = side == "RIGHT" and right_offset or left_offset
@@ -583,15 +583,17 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
   local max_lnum = math.max(#tostring(start_pos), #tostring(end_pos))
   table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_lnum + max_length + 2))}})
   for i, line in ipairs(final_lines) do
-    local stripped_line = line:gsub("^.", "")
+    local stripped_line = line:gsub("^.", " ")
     local hl_line = side == "RIGHT" and "DiffAdd" or "DiffDelete"
     local vt_line = {stripped_line, hl_line}
-    local fill = string.rep(" ", max_length - #stripped_line)
+    local lnum = tostring(i + start_pos - 1)
+    local lnum_length = #lnum
+    local padded_lnum = string.rep("0", max_lnum - lnum_length)..lnum
     table.insert( vt_lines, {
       {"│"},
-      {" "..tostring(i + start_pos - 1).." ", "DiffChange"},
+      {format(" %s ", padded_lnum), "DiffChange"},
       vt_line,
-      {fill, hl_line},
+      {string.rep(" ", max_length - #stripped_line), hl_line},
       {"│"}
     })
   end
