@@ -687,7 +687,7 @@ function M.show_reviewthread_qf_entry(repo, number, main_win)
       isOutdated = thread.isOutdated,
       isResolved = thread.isResolved
     })
-    writers.write_thread_snippet(comment_bufnr, main_comment.diffHunk, thread.diffSide, start_line, end_line)
+    writers.write_diff_hunk(comment_bufnr, main_comment.diffHunk)
 
     -- write thread
     api.nvim_buf_set_var(comment_bufnr, "comments", {})

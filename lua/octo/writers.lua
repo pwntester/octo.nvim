@@ -450,7 +450,7 @@ function M.write_comment(bufnr, comment, kind, line)
   return start_line, line
 end
 
-function M.write_diff_hunk(bufnr, diffhunk, start_line, marker)
+function M.write_diff_hunk(bufnr, diffhunk, start_line)
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
@@ -458,66 +458,128 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, marker)
 
   local lines = vim.split(diffhunk, "\n")
 
-  -- print #lines + 2 empty lines
-  local empty_lines = {}
-  local max_length = -1
-  for _, l in ipairs(lines) do
-    table.insert(empty_lines, "")
-    if #l > max_length then
-      max_length = #l
+  local lower_boundary
+  for i = #lines, 1, -1 do
+    local line = lines[i]
+    if not vim.startswith(line, "+") and not vim.startswith(line, "-") then
+      lower_boundary = i
+      break
     end
   end
+  local context_lines = vim.g.octo_snippet_context_lines or 3
+  local snippet_start = math.max(1, lower_boundary - context_lines)
+  local snippet_end = #lines
+
+  -- print #lines + 2 empty lines to hold virtual text
+  local empty_lines = {}
+  local max_length = -1
+  for i = snippet_start, snippet_end do
+    table.insert(empty_lines, "")
+
+    local line = lines[i]
+    if #line > max_length then
+      max_length = #line
+    end
+  end
+
   max_length = math.max(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn)
   vim.list_extend(empty_lines, {"", "", ""})
   M.write_block(empty_lines, {bufnr = bufnr, line = start_line})
 
+  -- generate map from diffhunk line to code line
+  local diff_directive = lines[1]
+  local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
+  local right_side_lines = {}
+  local left_side_lines = {}
+  local right_counter = right_offset
+  local left_counter = left_offset
+  for i=2, snippet_end do
+    local line = lines[i]
+    if vim.startswith(line, "+") then
+      right_side_lines[i] = right_counter
+      right_counter = right_counter + 1
+    elseif vim.startswith(line, "-") then
+      left_side_lines[i] = left_counter
+      left_counter = left_counter + 1
+    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
+      right_side_lines[i] = right_counter
+      left_side_lines[i] = left_counter
+      right_counter = right_counter + 1
+      left_counter = left_counter + 1
+    end
+  end
+  local max_lnum = math.max(#tostring(right_offset + #lines), #tostring(left_offset + #lines))
+
+  local lnum_chunks =  function(left_line, right_line)
+    if not left_line and right_line then
+      return {
+        {string.rep(" ", max_lnum), "DiffAdd"},
+        {" ", "DiffAdd"},
+        {string.rep(" ", max_lnum - #tostring(right_line))..tostring(right_line), "DiffAdd"},
+        {" ", "DiffAdd"}
+      }
+    elseif not right_line and left_line then
+      return {
+        {string.rep(" ", max_lnum - #tostring(left_line))..tostring(left_line), "DiffDelete"},
+        {" ", "DiffDelete"},
+        {string.rep(" ", max_lnum), "DiffDelete"},
+        {" ", "DiffDelete"}
+      }
+    elseif right_line and left_line then
+      return {
+        {string.rep(" ", max_lnum - #tostring(left_line))..tostring(left_line)},
+        {" "},
+        {string.rep(" ", max_lnum - #tostring(right_line))..tostring(right_line)},
+        {" "}
+      }
+    end
+  end
+
   local vt_lines = {}
   table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
-  for i, line in ipairs(lines) do
+  for i=snippet_start, snippet_end do
+    local line = lines[i]
 
-    local arrow = i == marker and ">" or " "
     if vim.startswith(line, "@@ ") then
       local index = string.find(line, "@[^@]*$")
       table.insert(
         vt_lines,
         {
-          {"│"..arrow},
+          {"│"},
+          {string.rep(" ", 2*max_lnum +1), "DiffLine"},
           {string.sub(line, 0, index), "DiffLine"},
           {string.sub(line, index + 1), "DiffSubname"},
-          {string.rep(" ", 1 + max_length - #line)},
+          {string.rep(" ", 1 + max_length - #line - 2*max_lnum)},
           {"│"}
         }
       )
     elseif vim.startswith(line, "+") then
-      table.insert(
-        vt_lines,
-        {
-          {"│"..arrow},
-          {line, "DiffAdd"},
-          {string.rep(" ", max_length - #line)},
-          {" │"}
-        }
-      )
+      local vt_line = {{"│"}}
+      vim.list_extend(vt_line, lnum_chunks(nil, right_side_lines[i]))
+      vim.list_extend(vt_line, {
+        {line:gsub("^.", " "), "DiffAdd"},
+        {string.rep(" ", max_length - #line - 2*max_lnum - 1)},
+        {" │"}
+      })
+      table.insert(vt_lines, vt_line)
     elseif vim.startswith(line, "-") then
-      table.insert(
-        vt_lines,
-        {
-          {"│"..arrow},
-          {line, "DiffDelete"},
-          {string.rep(" ", max_length - #line)},
-          {" │"}
-        }
-      )
+      local vt_line = {{"│"}}
+      vim.list_extend(vt_line, lnum_chunks(left_side_lines[i], nil))
+      vim.list_extend(vt_line, {
+        {line:gsub("^.", " "), "DiffDelete"},
+        {string.rep(" ", max_length - #line - 2*max_lnum - 1)},
+        {" │"}
+      })
+      table.insert(vt_lines, vt_line)
     else
-      table.insert(
-        vt_lines,
-        {
-          {"│"..arrow},
-          {line},
-          {string.rep(" ", max_length - #line)},
-          {" │"}
-        }
-      )
+      local vt_line = {{"│"}}
+      vim.list_extend(vt_line, lnum_chunks(left_side_lines[i], right_side_lines[i]))
+      vim.list_extend(vt_line, {
+        {line},
+        {string.rep(" ", max_length - #line - 2*max_lnum - 1)},
+        {" │"}
+      })
+      table.insert(vt_lines, vt_line)
     end
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
