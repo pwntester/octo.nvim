@@ -450,95 +450,149 @@ function M.write_comment(bufnr, comment, kind, line)
   return start_line, line
 end
 
-function M.write_diff_hunk(bufnr, diffhunk, start_line)
+local function find_snippet_range(diffhunk_lines)
+  local context_lines = vim.g.octo_snippet_context_lines or 4
+  local snippet_start
+  local count = 0
+  for i = #diffhunk_lines, 1, -1 do
+    local line = diffhunk_lines[i]
+
+    -- once we find a where the snippet should start, add `context_lines` of context
+    if snippet_start then
+      if vim.startswith(line, "+") or vim.startswith(line, "-") then
+        -- we found a different diff, so do not include it
+        snippet_start = i + 1
+        break
+      end
+      snippet_start = i
+      count = count + 1
+      if count > context_lines then
+        break
+      end
+    end
+
+    -- if we cant find a lower bondary in last `context_lines` then set boundary
+    if not snippet_start and i < #diffhunk_lines - context_lines + 2 then
+      snippet_start = i
+      break
+    end
+
+    -- found lower boundary
+    if not snippet_start and not vim.startswith(line, "+") and not vim.startswith(line, "-") then
+      snippet_start = i
+    end
+  end
+
+  local snippet_end = #diffhunk_lines
+
+  return snippet_start, snippet_end
+end
+
+local function get_lnum_chunks(opts)
+  if not opts.left_line and opts.right_line then
+    return {
+      {string.rep(" ", opts.max_lnum), "DiffAdd"},
+      {" ", "DiffAdd"},
+      {string.rep(" ", opts.max_lnum - #tostring(opts.right_line))..tostring(opts.right_line), "DiffAdd"},
+      {" ", "DiffAdd"}
+    }
+  elseif not opts.right_line and opts.left_line then
+    return {
+      {string.rep(" ", opts.max_lnum - #tostring(opts.left_line))..tostring(opts.left_line), "DiffDelete"},
+      {" ", "DiffDelete"},
+      {string.rep(" ", opts.max_lnum), "DiffDelete"},
+      {" ", "DiffDelete"}
+    }
+  elseif opts.right_line and opts.left_line then
+    return {
+      {string.rep(" ", opts.max_lnum - #tostring(opts.left_line))..tostring(opts.left_line)},
+      {" "},
+      {string.rep(" ", opts.max_lnum - #tostring(opts.right_line))..tostring(opts.right_line)},
+      {" "}
+    }
+  end
+end
+
+function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
 
-  local lines = vim.split(diffhunk, "\n")
+  local diffhunk_lines = vim.split(diffhunk, "\n")
 
-  local lower_boundary
-  for i = #lines, 1, -1 do
-    local line = lines[i]
-    if not vim.startswith(line, "+") and not vim.startswith(line, "-") then
-      lower_boundary = i
-      break
+  -- generate maps from diffhunk line to code line:
+  --- right_side_lines
+  --- left_side_lines
+  local diff_directive = diffhunk_lines[1]
+  local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
+  local right_side_lines = {}
+  local left_side_lines = {}
+  local right_side_line = right_offset
+  local left_side_line = left_offset
+  for i=2, #diffhunk_lines do
+    local line = diffhunk_lines[i]
+    if vim.startswith(line, "+") then
+      right_side_lines[i] = right_side_line
+      right_side_line = right_side_line + 1
+    elseif vim.startswith(line, "-") then
+      left_side_lines[i] = left_side_line
+      left_side_line = left_side_line + 1
+    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
+      right_side_lines[i] = right_side_line
+      left_side_lines[i] = left_side_line
+      right_side_line = right_side_line + 1
+      left_side_line = left_side_line + 1
     end
   end
-  local context_lines = vim.g.octo_snippet_context_lines or 3
-  local snippet_start = math.max(1, lower_boundary - context_lines)
-  local snippet_end = #lines
 
-  -- print #lines + 2 empty lines to hold virtual text
-  local empty_lines = {}
+  -- calculate length of the higher line number
+  local max_lnum = math.max(#tostring(right_offset + #diffhunk_lines), #tostring(left_offset + #diffhunk_lines))
+
+  -- calculate diffhunk subrange to show
+  local snippet_start, snippet_end
+  if comment_side and comment_start ~= comment_end then
+    -- for multiline comments, discard caluclat print just those lines
+    local side_lines
+    if comment_side == "RIGHT" then
+      side_lines = right_side_lines
+    elseif comment_side == "LEFT" then
+      side_lines = left_side_lines
+    end
+    for pos, l in pairs(side_lines) do
+      if l == comment_start then
+        snippet_start = pos
+      elseif l == comment_end then
+        snippet_end = pos
+      end
+    end
+  else
+    -- for single-line comment, add additional context lines
+    snippet_start, snippet_end = find_snippet_range(diffhunk_lines)
+  end
+
+  -- calculate longest line in the visible section of the diffhunk
   local max_length = -1
   for i = snippet_start, snippet_end do
-    table.insert(empty_lines, "")
-
-    local line = lines[i]
+    local line = diffhunk_lines[i]
     if #line > max_length then
       max_length = #line
     end
   end
-
   max_length = math.max(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn)
-  vim.list_extend(empty_lines, {"", "", ""})
+
+  -- write empty lines to hold virtual text
+  local empty_lines = {}
+  for _ = snippet_start, snippet_end + 3 do
+    table.insert(empty_lines, "")
+  end
   M.write_block(empty_lines, {bufnr = bufnr, line = start_line})
 
-  -- generate map from diffhunk line to code line
-  local diff_directive = lines[1]
-  local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
-  local right_side_lines = {}
-  local left_side_lines = {}
-  local right_counter = right_offset
-  local left_counter = left_offset
-  for i=2, snippet_end do
-    local line = lines[i]
-    if vim.startswith(line, "+") then
-      right_side_lines[i] = right_counter
-      right_counter = right_counter + 1
-    elseif vim.startswith(line, "-") then
-      left_side_lines[i] = left_counter
-      left_counter = left_counter + 1
-    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
-      right_side_lines[i] = right_counter
-      left_side_lines[i] = left_counter
-      right_counter = right_counter + 1
-      left_counter = left_counter + 1
-    end
-  end
-  local max_lnum = math.max(#tostring(right_offset + #lines), #tostring(left_offset + #lines))
-
-  local lnum_chunks =  function(left_line, right_line)
-    if not left_line and right_line then
-      return {
-        {string.rep(" ", max_lnum), "DiffAdd"},
-        {" ", "DiffAdd"},
-        {string.rep(" ", max_lnum - #tostring(right_line))..tostring(right_line), "DiffAdd"},
-        {" ", "DiffAdd"}
-      }
-    elseif not right_line and left_line then
-      return {
-        {string.rep(" ", max_lnum - #tostring(left_line))..tostring(left_line), "DiffDelete"},
-        {" ", "DiffDelete"},
-        {string.rep(" ", max_lnum), "DiffDelete"},
-        {" ", "DiffDelete"}
-      }
-    elseif right_line and left_line then
-      return {
-        {string.rep(" ", max_lnum - #tostring(left_line))..tostring(left_line)},
-        {" "},
-        {string.rep(" ", max_lnum - #tostring(right_line))..tostring(right_line)},
-        {" "}
-      }
-    end
-  end
-
+  -- prepare vt chunks
   local vt_lines = {}
   table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
-  for i=snippet_start, snippet_end do
-    local line = lines[i]
+  for i = snippet_start, snippet_end do
+    local line = diffhunk_lines[i]
 
     if vim.startswith(line, "@@ ") then
       local index = string.find(line, "@[^@]*$")
@@ -548,43 +602,43 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line)
           {"│"},
           {string.rep(" ", 2*max_lnum +1), "DiffLine"},
           {string.sub(line, 0, index), "DiffLine"},
-          {string.sub(line, index + 1), "DiffSubname"},
-          {string.rep(" ", 1 + max_length - #line - 2*max_lnum)},
+          {string.sub(line, index + 1), "DiffLine"},
+          {string.rep(" ", 1 + max_length - #line - 2*max_lnum), "DiffLine"},
           {"│"}
         }
       )
     elseif vim.startswith(line, "+") then
       local vt_line = {{"│"}}
-      vim.list_extend(vt_line, lnum_chunks(nil, right_side_lines[i]))
+      vim.list_extend(vt_line, get_lnum_chunks({right_line=right_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line:gsub("^.", " "), "DiffAdd"},
-        {string.rep(" ", max_length - #line - 2*max_lnum - 1)},
-        {" │"}
+        {string.rep(" ", max_length - #line - 2*max_lnum), "DiffAdd"},
+        {"│"}
       })
       table.insert(vt_lines, vt_line)
     elseif vim.startswith(line, "-") then
       local vt_line = {{"│"}}
-      vim.list_extend(vt_line, lnum_chunks(left_side_lines[i], nil))
+      vim.list_extend(vt_line, get_lnum_chunks({left_line=left_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line:gsub("^.", " "), "DiffDelete"},
-        {string.rep(" ", max_length - #line - 2*max_lnum - 1)},
-        {" │"}
+        {string.rep(" ", max_length - #line - 2*max_lnum), "DiffDelete"},
+        {"│"}
       })
       table.insert(vt_lines, vt_line)
     else
       local vt_line = {{"│"}}
-      vim.list_extend(vt_line, lnum_chunks(left_side_lines[i], right_side_lines[i]))
+      vim.list_extend(vt_line, get_lnum_chunks({left_line=left_side_lines[i], right_line=right_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line},
-        {string.rep(" ", max_length - #line - 2*max_lnum - 1)},
-        {" │"}
+        {string.rep(" ", max_length - #line - 2*max_lnum)},
+        {"│"}
       })
       table.insert(vt_lines, vt_line)
     end
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
 
-  -- print diffhunk as virtual text
+  -- print snippet as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)

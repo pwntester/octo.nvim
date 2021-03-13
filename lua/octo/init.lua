@@ -272,7 +272,7 @@ function M.create_buffer(type, obj, repo, create)
               })
 
               -- write snippet
-              thread_start, thread_end = writers.write_diff_hunk(bufnr, comment.diffHunk)
+              thread_start, thread_end = writers.write_diff_hunk(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
             end
 
             local comment_start, comment_end = writers.write_comment(bufnr, comment, "PullRequestReviewComment")
