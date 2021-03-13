@@ -731,7 +731,13 @@ query($endCursor: String) {
         nodes {
           __typename
           ... on AssignedEvent {
+            actor {
+              login
+            }
             assignee {
+              ... on Organization {
+                name
+              }
               ... on User {
                 login
               }
@@ -740,6 +746,7 @@ query($endCursor: String) {
           }
           ... on PullRequestCommit {
             commit {
+              messageHeadline
               committedDate
               abbreviatedOid
               changedFiles
@@ -763,6 +770,12 @@ query($endCursor: String) {
             mergeRefName
           }
           ... on ClosedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on ReopenedEvent {
             createdAt
             actor {
               login
@@ -979,8 +992,20 @@ query($endCursor: String) {
               login
             }
           }
+          ... on ReopenedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
           ... on AssignedEvent {
+            actor {
+              login
+            }
             assignee {
+              ... on Organization {
+                name
+              }
               ... on User {
                 login
               }
