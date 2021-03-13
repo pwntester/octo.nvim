@@ -823,7 +823,6 @@ function M.write_issue_summary(bufnr, issue, opts)
     {issue.author.login}
   })
 
-
   for i=1,#chunks do
     M.write_block({""}, {bufnr = bufnr, line = i})
   end
@@ -831,6 +830,47 @@ function M.write_issue_summary(bufnr, issue, opts)
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
   end
   return #chunks
+end
+
+local function write_event(bufnr, vt)
+  local line = api.nvim_buf_line_count(bufnr) - 1
+  M.write_block({""}, {bufnr = bufnr, line = line+2})
+  M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line+1, vt)
+end
+
+function M.write_assigned_event(bufnr, item)
+  local vt = {
+    {format("%s assigned this to %s (%s)", item.actor.login, item.assignee.login or item.assignee.name, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
+  }
+  write_event(bufnr, vt)
+end
+
+function M.write_commit_event(bufnr, item)
+  local vt = {
+    {format("%s added %s '%s' (%s)", item.commit.committer.user.login, item.commit.abbreviatedOid, item.commit.messageHeadline, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
+  }
+  write_event(bufnr, vt)
+end
+
+function M.write_merged_event(bufnr, item)
+  local vt = {
+    {format("%s merged commit %s into %s (%s)", item.actor.login, item.commit.abbreviatedOid, item.mergeRefName, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
+  }
+  write_event(bufnr, vt)
+end
+
+function M.write_closed_event(bufnr, item)
+  local vt = {
+    {format("%s closed this (%s)", item.actor.login, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
+  }
+  write_event(bufnr, vt)
+end
+
+function M.write_reopened_event(bufnr, item)
+  local vt = {
+    {format("%s reopened this (%s)", item.actor.login, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
+  }
+  write_event(bufnr, vt)
 end
 
 function M.write_virtual_text(bufnr, ns, line, chunks)

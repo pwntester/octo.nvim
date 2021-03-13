@@ -226,13 +226,23 @@ function M.create_buffer(type, obj, repo, create)
   -- write timeline items
   local review_thread_map = {}
 
+  local prev_is_event = false
   for _, item in ipairs(obj.timelineItems.nodes) do
+
     if item.__typename == "IssueComment" then
+      if prev_is_event then
+        writers.write_block({""}, {bufnr = bufnr})
+      end
+
       -- write the comment
       local start_line, end_line = writers.write_comment(bufnr, item, "IssueComment")
       folds.create(start_line+1, end_line, true)
+      prev_is_event = false
 
     elseif item.__typename == "PullRequestReview" then
+      if prev_is_event then
+        writers.write_block({""}, {bufnr = bufnr})
+      end
 
       -- A review can have 0+ threads
       local threads = {}
@@ -301,6 +311,22 @@ function M.create_buffer(type, obj, repo, create)
         end
         folds.create(review_start+1, review_end, true)
       end
+      prev_is_event = false
+    elseif item.__typename == "AssignedEvent" then
+      writers.write_assigned_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "PullRequestCommit" then
+      writers.write_commit_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "MergedEvent" then
+      writers.write_merged_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "ClosedEvent" then
+      writers.write_closed_event(bufnr, item, prev_is_event)
+      prev_is_event = true
+    elseif item.__typename == "ReopenedEvent" then
+      writers.write_reopened_event(bufnr, item, prev_is_event)
+      prev_is_event = true
     end
     ::continue::
   end
