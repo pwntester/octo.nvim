@@ -839,37 +839,84 @@ local function write_event(bufnr, vt)
 end
 
 function M.write_assigned_event(bufnr, item)
-  local vt = {
-    {format("%s assigned this to %s (%s)", item.actor.login, item.assignee.login or item.assignee.name, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
-  }
+  local actor_bubble = bubbles.make_user_bubble(
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer
+  )
+  local vt = {}
+  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
+  vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {" assigned this to ", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {item.assignee.login or item.assignee.name, "OctoNvimDetailsLabel"})
+  table.insert(vt, {" (", "OctoNvimSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
+  table.insert(vt, {")", "OctoNvimSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_commit_event(bufnr, item)
-  local vt = {
-    {format("%s added %s '%s' (%s)", item.commit.committer.user.login, item.commit.abbreviatedOid, item.commit.messageHeadline, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
-  }
+  local commiter_bubble = bubbles.make_user_bubble(
+    item.commit.committer.user.login,
+    item.commit.committer.user.login == vim.g.octo_viewer
+  )
+  local vt = {}
+  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
+  vim.list_extend(vt, commiter_bubble)
+  table.insert(vt, {" added ", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {item.commit.abbreviatedOid, "OctoNvimDetailsLabel"})
+  table.insert(vt, {" '", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {item.commit.messageHeadline, "OctoNvimDetailsLabel"})
+  table.insert(vt, {"' (", "OctoNvimSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
+  table.insert(vt, {")", "OctoNvimSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_merged_event(bufnr, item)
-  local vt = {
-    {format("%s merged commit %s into %s (%s)", item.actor.login, item.commit.abbreviatedOid, item.mergeRefName, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
-  }
+  local actor_bubble = bubbles.make_user_bubble(
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer
+  )
+  local vt = {}
+  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
+  vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {" merged commit ", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {item.commit.abbreviatedOid, "OctoNvimDetailsLabel"})
+  table.insert(vt, {" into ", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {item.mergeRefName, "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {" (", "OctoNvimSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
+  table.insert(vt, {")", "OctoNvimSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_closed_event(bufnr, item)
-  local vt = {
-    {format("%s closed this (%s)", item.actor.login, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
-  }
+  local actor_bubble = bubbles.make_user_bubble(
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer
+  )
+  local vt = {}
+  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
+  vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {" closed this ", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {"(", "OctoNvimSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
+  table.insert(vt, {")", "OctoNvimSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_reopened_event(bufnr, item)
-  local vt = {
-    {format("%s reopened this (%s)", item.actor.login, util.format_date(item.createdAt)), "OctoNvimTimelineItemHeading"}
-  }
+  local actor_bubble = bubbles.make_user_bubble(
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer
+  )
+  local vt = {}
+  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
+  vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {" reopened this ", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {"(", "OctoNvimSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
+  table.insert(vt, {")", "OctoNvimSymbol"})
   write_event(bufnr, vt)
 end
 
