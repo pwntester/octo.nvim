@@ -401,7 +401,10 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
-    table.insert(header_vt, {")", "OctoNvimSymbol"})
+    table.insert(header_vt, {") ", "OctoNvimSymbol"})
+    if not comment.viewerCanUpdate then
+      table.insert(header_vt, {"", "OctoNvimRed"})
+    end
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
     table.insert(header_vt, {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"})
@@ -409,14 +412,20 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
-    table.insert(header_vt, {")", "OctoNvimSymbol"})
+    table.insert(header_vt, {") ", "OctoNvimSymbol"})
+    if not comment.viewerCanUpdate then
+      table.insert(header_vt, {"", "OctoNvimRed"})
+    end
   elseif kind == "IssueComment" then
     -- Issue comments
     table.insert(header_vt, {"COMMENT: ", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
-    table.insert(header_vt, {")", "OctoNvimSymbol"})
+    table.insert(header_vt, {") ", "OctoNvimSymbol"})
+    if not comment.viewerCanUpdate then
+      table.insert(header_vt, {"", "OctoNvimRed"})
+    end
   end
   local comment_vt_ns = api.nvim_create_namespace("")
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
