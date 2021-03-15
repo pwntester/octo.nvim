@@ -231,7 +231,7 @@ function M.create_buffer(type, obj, repo, create)
 
     if item.__typename == "IssueComment" then
       if prev_is_event then
-        writers.write_block({""}, {bufnr = bufnr})
+        writers.write_block(bufnr, {""})
       end
 
       -- write the comment
@@ -241,7 +241,7 @@ function M.create_buffer(type, obj, repo, create)
 
     elseif item.__typename == "PullRequestReview" then
       if prev_is_event then
-        writers.write_block({""}, {bufnr = bufnr})
+        writers.write_block(bufnr, {""})
       end
 
       -- A review can have 0+ threads

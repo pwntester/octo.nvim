@@ -9,28 +9,20 @@ local format = string.format
 
 local M = {}
 
-function M.write_block(lines, opts)
-  opts = opts or {}
-  local bufnr = opts.bufnr or api.nvim_get_current_buf()
+function M.write_block(bufnr, lines, line, mark)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  line = line or api.nvim_buf_line_count(bufnr) + 1
+  mark = mark or false
 
   if type(lines) == "string" then
     lines = vim.split(lines, "\n", true)
   end
 
-  local line = opts.line or api.nvim_buf_line_count(bufnr) + 1
-
   -- write content lines
   api.nvim_buf_set_lines(bufnr, line - 1, line - 1 + #lines, false, lines)
 
-  -- trailing empty lines
-  if opts.trailing_lines then
-    for _ = 1, opts.trailing_lines, 1 do
-      api.nvim_buf_set_lines(bufnr, -1, -1, false, {""})
-    end
-  end
-
   -- set extmarks
-  if opts.mark then
+  if mark then
     -- (empty line) start ext mark at 0
     -- start line
     -- ...
@@ -65,7 +57,7 @@ function M.write_block(lines, opts)
 end
 
 function M.write_title(bufnr, title, line)
-  local title_mark = M.write_block({title, ""}, {bufnr = bufnr, mark = true, line = line})
+  local title_mark = M.write_block(bufnr, {title, ""}, line, true)
   api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimIssueTitle", 0, 0, -1)
   api.nvim_buf_set_var(
     bufnr,
@@ -111,7 +103,7 @@ function M.write_body(bufnr, issue, line)
   local description = body:gsub("\r\n", "\n")
   local lines = vim.split(description, "\n", true)
   vim.list_extend(lines, {""})
-  local desc_mark = M.write_block(lines, {bufnr = bufnr, mark = true, line = line})
+  local desc_mark = M.write_block(bufnr, lines, line, true)
   api.nvim_buf_set_var(
     bufnr,
     "description",
@@ -149,7 +141,7 @@ function M.write_reactions(bufnr, reaction_groups, line, mode)
     return nil
   elseif reactions_count > 0 then
     if mode == "append" then
-      M.write_block({"", ""}, {bufnr = bufnr, line = line})
+      M.write_block(bufnr, {"", ""}, line)
       M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
     elseif mode == "insert" then
       api.nvim_buf_set_lines(bufnr, line, line, false, {"", ""})
@@ -373,7 +365,7 @@ function M.write_details(bufnr, issue, update)
     table.insert(empty_lines, "")
   end
   if not update then
-    M.write_block(empty_lines, {bufnr = bufnr, line = line})
+    M.write_block(bufnr, empty_lines, line)
   end
 
   -- write details as virtual text
@@ -393,7 +385,7 @@ function M.write_comment(bufnr, comment, kind, line)
   -- heading
   line = line or api.nvim_buf_line_count(bufnr) + 1
   local start_line = line
-  M.write_block({"", ""}, {bufnr = bufnr, line = line})
+  M.write_block(bufnr, {"", ""}, line)
 
   local header_vt = {}
   local author_bubble = bubbles.make_user_bubble(
@@ -442,7 +434,7 @@ function M.write_comment(bufnr, comment, kind, line)
   end
   local content = vim.split(comment_body, "\n", true)
   vim.list_extend(content, {""})
-  local comment_mark = M.write_block(content, {bufnr = bufnr, mark = true, line = line})
+  local comment_mark = M.write_block(bufnr, content, line, true)
 
   -- reactions
   line = line + #content
@@ -609,7 +601,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
   for _ = snippet_start, snippet_end + 3 do
     table.insert(empty_lines, "")
   end
-  M.write_block(empty_lines, {bufnr = bufnr, line = start_line})
+  M.write_block(bufnr, empty_lines, start_line)
 
   -- prepare vt chunks
   local vt_lines = {}
@@ -692,7 +684,7 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
   for _=1,(end_pos-start_pos+4) do
     table.insert(empty_lines, "")
   end
-  M.write_block(empty_lines, {bufnr = bufnr, line = start_line})
+  M.write_block(bufnr, empty_lines, start_line)
 
   -- separate diffhunk lines into right/left hunks
   local diff_directive = diffhunk_lines[1]
@@ -779,7 +771,7 @@ function M.write_review_thread_header(bufnr, opts, line)
     vim.list_extend(header_vt, resolved_bubble)
   end
 
-  M.write_block({""}, {bufnr = bufnr})
+  M.write_block(bufnr, {""})
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
 end
 
@@ -847,7 +839,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   })
 
   for i=1,#chunks do
-    M.write_block({""}, {bufnr = bufnr, line = i})
+    M.write_block(bufnr, {""}, i)
   end
   for i=1,#chunks do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
@@ -857,7 +849,7 @@ end
 
 local function write_event(bufnr, vt)
   local line = api.nvim_buf_line_count(bufnr) - 1
-  M.write_block({""}, {bufnr = bufnr, line = line+2})
+  M.write_block(bufnr, {""}, line + 2)
   M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line+1, vt)
 end
 
