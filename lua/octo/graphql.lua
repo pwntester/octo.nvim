@@ -704,6 +704,7 @@ query($endCursor: String) {
         login
       }
       viewerDidAuthor
+      viewerCanUpdate
       reactionGroups {
         content
         viewerHasReacted
@@ -796,11 +797,15 @@ query($endCursor: String) {
               login
             }
             viewerDidAuthor
+            viewerCanUpdate
+            viewerCanDelete
           }
           ... on PullRequestReview {
             id
             body
             createdAt
+            viewerCanUpdate
+            viewerCanDelete
             reactionGroups {
               content
               viewerHasReacted
@@ -827,6 +832,8 @@ query($endCursor: String) {
                 author { login }
                 authorAssociation
                 viewerDidAuthor
+                viewerCanUpdate
+                viewerCanDelete
                 originalPosition
                 position
                 state
@@ -931,6 +938,8 @@ query($endCursor: String) {
       closedAt
       updatedAt
       url
+      viewerDidAuthor
+      viewerCanUpdate
       milestone {
         title
         state
@@ -938,7 +947,6 @@ query($endCursor: String) {
       author {
         login
       }
-      viewerDidAuthor
       participants(first:10) {
         nodes {
           login
@@ -985,6 +993,8 @@ query($endCursor: String) {
               login
             }
             viewerDidAuthor
+            viewerCanUpdate
+            viewerCanDelete
           }
           ... on ClosedEvent {
             createdAt
