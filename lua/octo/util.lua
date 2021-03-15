@@ -438,7 +438,6 @@ function M.open_in_browser()
     type = "pr"
   end
   local cmd = format("gh %s view --web -R %s %d", type, repo, number)
-  print(cmd)
   os.execute(cmd)
 end
 
@@ -446,7 +445,7 @@ function M.get_repo_number_from_varargs(...)
   local repo, number
   local args = table.pack(...)
   if args.n == 0 then
-    print("Missing arguments")
+    print("[Octo] Missing arguments")
     return
   elseif args.n == 1 then
     repo = M.get_remote_name()
@@ -455,15 +454,15 @@ function M.get_repo_number_from_varargs(...)
     repo = args[1]
     number = tonumber(args[2])
   else
-    print("Unexpected arguments")
+    print("[Octo] Unexpected arguments")
     return
   end
   if not repo then
-    print("Cant find repo name")
+    print("[Octo] Cant find repo name")
     return
   end
   if not number then
-    print("Missing issue/pr number")
+    print("[Octo] Missing issue/pr number")
     return
   end
   return repo, number

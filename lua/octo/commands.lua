@@ -211,13 +211,13 @@ function M.octo(object, action, ...)
     elseif repo and number and kind == "pull" then
       util.get_pull_request(repo, number)
     else
-      print("Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(commands)))
+      print("[Octo] Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(commands)))
       return
     end
   else
     local a = o[action]
     if not a then
-      print("Incorrect action, valid actions are:" .. vim.inspect(vim.tbl_keys(o)))
+      print("[Octo] Incorrect action, valid actions are:" .. vim.inspect(vim.tbl_keys(o)))
       return
     else
       a(...)
@@ -321,7 +321,7 @@ function M.delete_comment()
   local cursor = api.nvim_win_get_cursor(0)
   local comment, start_line, end_line = util.get_comment_at_cursor(bufnr, cursor)
   if not comment then
-    print("The cursor does not seem to be located at any comment")
+    print("[Octo] The cursor does not seem to be located at any comment")
     return
   end
   local query
@@ -469,7 +469,6 @@ function M.unresolve_comment()
               local items = qf.items
               for _, item in ipairs(items) do
                 if item.pattern == pattern then
-                  print("found")
                   item.text = string.gsub(item.text, "RESOLVED", "")
                   break
                 end
@@ -523,7 +522,7 @@ function M.change_state(type, state)
             api.nvim_buf_set_var(bufnr, "state", new_state)
             writers.write_state(bufnr, new_state:upper(), number)
             writers.write_details(bufnr, obj, true)
-            print("Issue state changed to: " .. new_state)
+            print("[Octo] Issue state changed to: " .. new_state)
           end
         end
       end
@@ -536,7 +535,7 @@ function M.create_issue(repo)
     repo = util.get_remote_name()
   end
   if not repo then
-    print("Cant find repo name")
+    print("[Octo] Cant find repo name")
     return
   end
 
@@ -578,8 +577,8 @@ function M.checkout_pr()
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
         else
-          print(output)
-          print(format("Checked out PR %d", number))
+          print("[Octo]", output)
+          print(format("[Octo] Checked out PR %d", number))
         end
       end
     }
@@ -596,7 +595,7 @@ function M.pr_ready_for_review()
     {
       args = {"pr", "ready", tostring(number)},
       cb = function(output, stderr)
-        print(output, stderr)
+        print("[Octo]", output, stderr)
         writers.write_state(bufnr)
       end
     }
@@ -686,7 +685,7 @@ function M.merge_pr(...)
     {
       args = args,
       cb = function(output, stderr)
-        print(output, stderr)
+        print("[Octo]", output, stderr)
         writers.write_state(bufnr)
       end
     }

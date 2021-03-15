@@ -346,7 +346,7 @@ function M.write_details(bufnr, issue, update)
   end
 
   local line = 3
-  -- print #details + 2 empty lines
+  -- write #details + 2 empty lines
   local empty_lines = {}
   for _ = 1, #details + 2, 1 do
     table.insert(empty_lines, "")
@@ -355,7 +355,7 @@ function M.write_details(bufnr, issue, update)
     M.write_block(empty_lines, {bufnr = bufnr, line = line})
   end
 
-  -- print details as virtual text
+  -- write details as virtual text
   for _, d in ipairs(details) do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, d)
     line = line + 1
@@ -552,7 +552,8 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
   -- calculate diffhunk subrange to show
   local snippet_start, snippet_end
   if comment_side and comment_start ~= comment_end then
-    -- for multiline comments, discard caluclat print just those lines
+    -- for multiline comments, discard calculated values
+    -- write just those lines
     local side_lines
     if comment_side == "RIGHT" then
       side_lines = right_side_lines
@@ -638,7 +639,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
 
-  -- print snippet as virtual text
+  -- write snippet as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
@@ -663,7 +664,7 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
 
   local diffhunk_lines = vim.split(diffhunk, "\n")
 
-  -- print end_pos - start_pos + 2 borders + 2 empty lines
+  -- write end_pos - start_pos + 2 borders + 2 empty lines
   -- to hold virtual text
   local empty_lines = {}
   for _=1,(end_pos-start_pos+4) do
@@ -715,7 +716,7 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
   end
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_lnum + max_length + 2))}})
 
-  -- print diffhunk as virtual text
+  -- write diffhunk as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
