@@ -421,28 +421,32 @@ function M.save_buffer()
       gh.run(
         {
           args = {"api", "graphql", "-f", format("query=%s", query)},
-          cb = function(output)
-            local resp = json.parse(output)
-            local obj
-            if issue_kind == "pull" then
-              obj = resp.data.updatePullRequest.pullRequest
-            elseif issue_kind == "issue" then
-              obj = resp.data.updateIssue.issue
-            end
-            if title_metadata.body == obj.title then
-              title_metadata.saved_body = obj.title
-              title_metadata.dirty = false
-              api.nvim_buf_set_var(bufnr, "title", title_metadata)
-            end
+          cb = function(output, stderr)
+            if stderr and not util.is_blank(stderr) then
+              api.nvim_err_writeln(stderr)
+            elseif output then
+              local resp = json.parse(output)
+              local obj
+              if issue_kind == "pull" then
+                obj = resp.data.updatePullRequest.pullRequest
+              elseif issue_kind == "issue" then
+                obj = resp.data.updateIssue.issue
+              end
+              if title_metadata.body == obj.title then
+                title_metadata.saved_body = obj.title
+                title_metadata.dirty = false
+                api.nvim_buf_set_var(bufnr, "title", title_metadata)
+              end
 
-            if desc_metadata.body == obj.body then
-              desc_metadata.saved_body = obj.body
-              desc_metadata.dirty = false
-              api.nvim_buf_set_var(bufnr, "description", desc_metadata)
-            end
+              if desc_metadata.body == obj.body then
+                desc_metadata.saved_body = obj.body
+                desc_metadata.dirty = false
+                api.nvim_buf_set_var(bufnr, "description", desc_metadata)
+              end
 
-            signs.render_signcolumn(bufnr)
-            print("Saved!")
+              signs.render_signcolumn(bufnr)
+              print("Saved!")
+            end
           end
         }
       )
