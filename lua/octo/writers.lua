@@ -37,7 +37,8 @@ function M.write_block(lines, opts)
     -- end line
     -- (empty line)
     -- (empty line) end ext mark at 0
-    -- except for title where we cant place initial mark on line -1
+    --
+    -- (except for title where we cant place initial mark on line -1)
 
     local start_line = line
     local end_line = line
@@ -107,8 +108,10 @@ function M.write_body(bufnr, issue, line)
   if vim.startswith(body, constants.NO_BODY_MSG) or util.is_blank(body) then
     body = " "
   end
-  local description = string.gsub(body, "\r\n", "\n")
-  local desc_mark = M.write_block(description, {bufnr = bufnr, mark = true, trailing_lines = 3, line = line})
+  local description = body:gsub("\r\n", "\n")
+  local lines = vim.split(description, "\n", true)
+  vim.list_extend(lines, {""})
+  local desc_mark = M.write_block(lines, {bufnr = bufnr, mark = true, line = line})
   api.nvim_buf_set_var(
     bufnr,
     "description",
@@ -121,26 +124,44 @@ function M.write_body(bufnr, issue, line)
   )
 end
 
-function M.write_reactions(bufnr, reaction_groups, line)
+function M.write_reactions(bufnr, reaction_groups, line, mode)
+
+  mode = mode or "append"
+
   -- clear namespace and set vt
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
+  local reactions_count = 0
   local reactions_vt = {}
-  local content, highlight, bubble
-
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
-      icon = util.reaction_map[group.content]
-      bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
-      count = format(" %s ", group.users.totalCount)
-  
+      reactions_count = reactions_count  + 1
+      local icon = util.reaction_map[group.content]
+      local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
+      local count = format(" %s ", group.users.totalCount)
       vim.list_extend(reactions_vt, bubble)
       table.insert(reactions_vt, { count, "Normal" })
     end
   end
+  if mode == "delete" and reactions_count == 0 and line then
+    api.nvim_buf_set_lines(bufnr, line, line+2, false, {})
+    api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
+    return nil
+  elseif reactions_count > 0 then
+    if mode == "append" then
+      M.write_block({"", ""}, {bufnr = bufnr, line = line})
+      M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
+    elseif mode == "insert" then
+      api.nvim_buf_set_lines(bufnr, line, line, false, {"", ""})
+      M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line, reactions_vt)
+    else
+      M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
+    end
+    return line
+  else
+    return nil
+  end
 
-  M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
-  return line
 end
 
 function M.write_details(bufnr, issue, update)
@@ -420,12 +441,13 @@ function M.write_comment(bufnr, comment, kind, line)
     comment_body = " "
   end
   local content = vim.split(comment_body, "\n", true)
-  vim.list_extend(content, {"", "", ""})
+  vim.list_extend(content, {""})
   local comment_mark = M.write_block(content, {bufnr = bufnr, mark = true, line = line})
 
   -- reactions
-  line = line + #content - 2
+  line = line + #content
   local reaction_line = M.write_reactions(bufnr, comment.reactionGroups, line)
+  if reaction_line then line = line + 2 end
 
   -- update metadata
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
@@ -447,7 +469,7 @@ function M.write_comment(bufnr, comment, kind, line)
   )
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 
-  return start_line, line
+  return start_line, line - 1
 end
 
 local function find_snippet_range(diffhunk_lines)

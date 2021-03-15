@@ -732,15 +732,20 @@ function M.reaction_action(action, reaction)
     return
   end
 
+  local query, reaction_line, reaction_groups, insert_line
   local cursor = api.nvim_win_get_cursor(0)
+
   local comment = util.get_comment_at_cursor(bufnr, cursor)
-
-  local query, reaction_line, reaction_groups
-
   if comment then
     -- found a comment at cursor
     reaction_groups = comment.reaction_groups
     reaction_line = comment.reaction_line
+    if reaction_line == nil then
+      local prev_extmark = comment.extmark
+      local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, prev_extmark, {details = true})
+      local _, end_line = util.get_extmark_region(bufnr, mark)
+      insert_line = end_line + 2
+    end
 
     if action == "add" then
       query = graphql("add_reaction_mutation", comment.id, reaction)
@@ -748,9 +753,15 @@ function M.reaction_action(action, reaction)
       query = graphql("remove_reaction_mutation", comment.id, reaction)
     end
   elseif vim.bo.ft == "octo_issue" then
-    -- cursor not located on a comment, using the issue instead
-    reactions = api.nvim_buf_get_var(bufnr, "body_reactions")
+    -- cursor not located on a comment, using the issue body instead
+    reaction_groups = api.nvim_buf_get_var(bufnr, "body_reaction_groups")
     reaction_line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
+    if reaction_line == nil then
+      local prev_extmark = api.nvim_buf_get_var(bufnr, "description").extmark
+      local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, prev_extmark, {details = true})
+      local _, end_line = util.get_extmark_region(bufnr, mark)
+      insert_line = end_line + 2
+    end
 
     local id = api.nvim_buf_get_var(bufnr, "iid")
     if action == "add" then
@@ -775,11 +786,16 @@ function M.reaction_action(action, reaction)
             reaction_groups = resp.data.removeReaction.subject.reactionGroups
           end
 
-          -- update comment metadata with new reactions
-          util.update_reactions_at_cursor(bufnr, cursor, reaction_groups)
-
-          -- refresh reactions
-          writers.write_reactions(bufnr, reaction_groups, reaction_line)
+          if action == "delete" and reaction_line then
+            util.update_reactions_at_cursor(bufnr, cursor, reaction_groups, reaction_line - 1)
+            writers.write_reactions(bufnr, reaction_groups, reaction_line - 1, "delete")
+          elseif action == "add" and reaction_line == nil then
+            util.update_reactions_at_cursor(bufnr, cursor, reaction_groups, insert_line + 1)
+            writers.write_reactions(bufnr, reaction_groups, insert_line, "insert")
+          else
+            util.update_reactions_at_cursor(bufnr, cursor, reaction_groups, reaction_line - 1)
+            writers.write_reactions(bufnr, reaction_groups, reaction_line - 1, "update")
+          end
         end
       end
     }

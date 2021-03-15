@@ -314,7 +314,14 @@ function M.get_thread_at_cursor(bufnr, cursor)
   return nil
 end
 
-function M.update_reactions_at_cursor(bufnr, cursor, reaction_groups)
+function M.update_reactions_at_cursor(bufnr, cursor, reaction_groups, reaction_line)
+  local reactions_count = 0
+  for _, group in ipairs(reaction_groups) do
+    if group.users.totalCount > 0 then
+      reactions_count = reactions_count  + 1
+    end
+  end
+
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for i, comment in ipairs(comments) do
     local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
@@ -322,14 +329,31 @@ function M.update_reactions_at_cursor(bufnr, cursor, reaction_groups)
     local end_line = mark[3]["end_row"] + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
       --  cursor located in the body of a comment
+      --  update reaction groups
       comments[i].reaction_groups = reaction_groups
+
+      -- update reaction line
+      if not comments[i].reaction_line and reactions_count > 0 then
+        comments[i].reaction_line = reaction_line
+      elseif reactions_count == 0 then
+        comments[i].reaction_line = nil
+      end
+
+      -- update comments
       api.nvim_buf_set_var(bufnr, "comments", comments)
       return
     end
   end
 
   -- cursor not located at any comment, so updating issue
-  api.nvim_buf_set_var(bufnr, "body_reactions", reactions)
+  --  update reaction groups
+  api.nvim_buf_set_var(bufnr, "body_reaction_groups", reaction_groups)
+  local body_reaction_line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
+  if not body_reaction_line and reactions_count > 0 then
+    api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
+  elseif reactions_count == 0 then
+    api.nvim_buf_set_var(bufnr, "body_reaction_line", nil)
+  end
 end
 
 function M.format_date(date_string)

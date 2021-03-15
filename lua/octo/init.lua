@@ -197,8 +197,8 @@ function M.create_buffer(type, obj, repo, create)
   writers.write_body(bufnr, obj)
 
   -- write body reactions
-  local reaction_line = writers.write_reactions(bufnr, obj.reactionGroups, api.nvim_buf_line_count(bufnr) - 1)
-  api.nvim_buf_set_var(bufnr, "body_reactions", obj.reactions)
+  local reaction_line = writers.write_reactions(bufnr, obj.reactionGroups, api.nvim_buf_line_count(bufnr)+1)
+  api.nvim_buf_set_var(bufnr, "body_reaction_groups", obj.reactionGroups)
   api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 
   -- initialize comments metadata
@@ -267,7 +267,7 @@ function M.create_buffer(type, obj, repo, create)
         -- print each of the threads
         for _, thread in ipairs(threads) do
           local thread_start, thread_end
-          for _,comment in ipairs(thread.comments.nodes) do
+          for _, comment in ipairs(thread.comments.nodes) do
 
             -- review thread header
             if comment.replyTo == vim.NIL then
