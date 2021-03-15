@@ -71,7 +71,15 @@ sign define octo_clean_block_middle text=│ linehl=OctoNvimEditable
 sign define octo_clean_line text=[ linehl=OctoNvimEditable
 sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable
 
-highlight default link OctoNvimDirty ErrorMsg
+highlight default OctoNvimViewer guifg=#000000 guibg=#58A6FF
+highlight default OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
+highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#da3633
+highlight default OctoNvimGreen guifg=#2ea043
+highlight default OctoNvimRed guifg=#da3633
+highlight default OctoNvimPurple guifg=#ad7cfd
+highlight default OctoNvimYellow guifg=#d3c846
+highlight default OctoNvimBlue guifg=#58A6FF
+highlight default link OctoNvimDirty OctoNvimRed
 highlight default link OctoNvimIssueId Question
 highlight default link OctoNvimIssueTitle PreProc
 highlight default link OctoNvimEmpty Comment
@@ -84,23 +92,20 @@ highlight default link OctoNvimDetailsValue Identifier
 highlight default link OctoNvimMissingDetails Comment
 highlight default link OctoNvimCommentLine Visual
 highlight default link OctoNvimEditable NormalFloat
-highlight default OctoNvimViewer guifg=#000000 guibg=#58A6FF
 highlight default link OctoNvimBubble NormalFloat
-highlight default OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
-highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#f85149
 highlight default link OctoNvimUser OctoNvimBubble
 highlight default link OctoNvimUserViewer OctoNvimViewer
 highlight default link OctoNvimReaction OctoNvimBubble
 highlight default link OctoNvimReactionViewer OctoNvimViewer
-highlight default OctoNvimPassingTest guifg=#238636
-highlight default OctoNvimFailingTest guifg=#f85149
-highlight default OctoNvimPullAdditions guifg=#2ea043
-highlight default OctoNvimPullDeletions guifg=#da3633
-highlight default OctoNvimPullModifications guifg=#58A6FF
-highlight default OctoNvimStateOpen guifg=#44c150
-highlight default OctoNvimStateClosed guifg=#ea4e48
-highlight default OctoNvimStateMerged guifg=#ad7cfd
-highlight default OctoNvimStatePending guifg=#d3c846
+highlight default link OctoNvimPassingTest OctoNvimGreen
+highlight default link OctoNvimFailingTest OctoNvimRed
+highlight default link OctoNvimPullAdditions OctoNvimGreen 
+highlight default link OctoNvimPullDeletions OctoNvimRed 
+highlight default link OctoNvimPullModifications OctoNvimBlue
+highlight default link OctoNvimStateOpen OctoNvimGreen
+highlight default link OctoNvimStateClosed OctoNvimRed
+highlight default link OctoNvimStateMerged OctoNvimPurple
+highlight default link OctoNvimStatePending OctoNvimYellow
 highlight default link OctoNvimStateApproved OctoNvimStateOpen
 highlight default link OctoNvimStateChangesRequested OctoNvimStateClosed
 highlight default link OctoNvimStateCommented Normal
