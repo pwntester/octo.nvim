@@ -359,9 +359,9 @@ function M.write_details(bufnr, issue, update)
   end
 
   local line = 3
-  -- write #details + 2 empty lines
+  -- write #details + empty lines
   local empty_lines = {}
-  for _ = 1, #details + 2, 1 do
+  for _ = 1, #details + 1 do
     table.insert(empty_lines, "")
   end
   if not update then
