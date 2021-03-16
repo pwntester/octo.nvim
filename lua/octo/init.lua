@@ -330,6 +330,10 @@ function M.create_buffer(type, obj, repo, create)
     end
     ::continue::
   end
+  if prev_is_event then
+    writers.write_block(bufnr, {""})
+  end
+
   api.nvim_buf_set_var(bufnr, "reviewThreadMap", review_thread_map)
 
   async_fetch_taggable_users(bufnr, repo, obj.participants.nodes)
