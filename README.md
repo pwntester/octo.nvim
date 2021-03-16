@@ -242,3 +242,8 @@ Each text-object that makes use of a bubble (except labels) do use their own hig
 **Why do my issue titles or markdown syntax do not get highlighted properly?**
 
 The title, body and comments of an issue or PR are special as they get special highlighting applied and is an editable section. Due to the latter property it gets the `OctoNvimEditable` highlighting via a special signs `linehl` setting. This takes precedence over the buffer internal highlights. To only get the background highlighted by the editable section, set `OctoNvimEditable` to a highlight with a background color definition only.
+
+## Contributing
+
+Contributions are always welcomed! Please refer to [CONTRIBUTING](/CONTRIBUTING) for detailed guidelines.
+You can start with the issues labeled with `good first issue`.
