@@ -310,6 +310,9 @@ function M.add_comment()
     vim.fn.execute(":" .. thread_end_line + 4)
     vim.fn.execute("startinsert")
   end
+
+  -- drop undo history
+  vim.fn["octo#clear_history"]()
 end
 
 function M.delete_comment()
