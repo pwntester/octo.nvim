@@ -613,4 +613,69 @@ function M.extract_pattern_at_cursor(pattern)
   end
 end
 
+function M.pattern_split(str, pattern)
+  -- https://gist.github.com/boredom101/0074f1af6bd5cd6c7848ac6af3e88e85
+  local words = {}
+  for word in str:gmatch(pattern) do
+    words[#words+1] = word
+  end
+  return words
+end
+
+function M.text_wrap(text, width)
+  -- https://gist.github.com/boredom101/0074f1af6bd5cd6c7848ac6af3e88e85
+
+  width = width or math.floor((vim.fn.winwidth(0) * 3) / 4)
+  local lines = M.pattern_split(text, "[^\r\n]+")
+  local widthLeft
+  local result = {}
+  local line = {}
+
+  -- Insert each source line into the result, one-by-one
+  for k=1, #lines do
+    local sourceLine = lines[k]
+    widthLeft = width -- all the width is left
+    local words = M.pattern_split(sourceLine, "%S+")
+    for l=1, #words do
+      local word = words[l]
+      -- If the word is longer than an entire line:
+      if #word > width then
+        -- In case the word is longer than multible lines:
+        while (#word > width) do
+          -- Fit as much as possible
+          table.insert(line, word:sub(0, widthLeft))
+          table.insert(result, table.concat(line, " "))
+
+          -- Take the rest of the word for next round
+          word = word:sub(widthLeft + 1)
+          widthLeft = width
+          line = {}
+        end
+
+        -- The rest of the word that could share a line
+        line = {word}
+        widthLeft = width - (#word + 1)
+
+      -- If we have no space left in the current line
+      elseif (#word + 1) > widthLeft then
+        table.insert(result, table.concat(line, " "))
+
+        -- start next line
+        line = {word}
+        widthLeft = width - (#word + 1)
+
+      -- if we could fit the word on the line
+      else
+        table.insert(line, word)
+        widthLeft = widthLeft - (#word + 1)
+      end
+    end
+
+    -- Insert the rest of the source line
+    table.insert(result, table.concat(line, " "))
+    line = {}
+  end
+  return result
+end
+
 return M
