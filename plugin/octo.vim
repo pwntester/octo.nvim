@@ -121,7 +121,7 @@ if !exists("g:octo_viewer")
 endif
 
 " mappings
-nnoremap <Plug>(OctoOpenIssueAtCursor) <cmd>lua require'octo.util'.open_issue_at_cursor()<CR>
+nnoremap <Plug>(OctoOpenIssueAtCursor) <cmd>lua require'octo.navigation'.go_to_issue()<CR>
 
 " settings
 let g:octo_date_format = get(g:, 'octo_date_format', "%Y %b %d %I:%M %p %Z")

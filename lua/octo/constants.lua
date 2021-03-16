@@ -20,6 +20,6 @@ M.NO_BODY_MSG = "No description provided."
 
 M.LONG_ISSUE_PATTERN = "%s([^/]+/[^#]+)#(%d+)%s"
 M.SHORT_ISSUE_PATTERN = "%s#(%d+)%s"
-M.URL_ISSUE_PATTERN = "[htps]+://.*github.com/([^/]+/[^/]+)/[pulisue]+/(%d+)"
+M.URL_ISSUE_PATTERN = "[htps]+://.*github.com/([^/]+/[^/]+)/([pulisue]+)/(%d+)"
 
 return M

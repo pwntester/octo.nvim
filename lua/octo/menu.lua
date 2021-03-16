@@ -11,6 +11,7 @@ local previewers = require "octo.previewers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local util = require "octo.util"
+local navigation = require "octo.navigation"
 local graphql = require "octo.graphql"
 local entry_maker = require "octo.entry_maker"
 local format = string.format
@@ -103,7 +104,7 @@ local function open_in_browser(type, repo)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     local number = selection.value
     actions.close(prompt_bufnr)
-    util.open_in_browser(type, repo, number)
+    navigation.open_in_browser(type, repo, number)
   end
 end
 

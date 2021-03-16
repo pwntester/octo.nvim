@@ -666,7 +666,7 @@ function M.apply_buffer_mappings(bufnr, kind)
       bufnr,
       "n",
       "<c-o>",
-      [[<cmd>lua require'octo.util'.open_in_browser()<CR>]],
+      [[<cmd>lua require'octo.navigation'.open_in_browser()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
@@ -792,8 +792,6 @@ function M.apply_buffer_mappings(bufnr, kind)
 end
 
 function M.show_summary()
-  if vim.bo.ft ~= "octo_issue" then return end
-
   local _, current_repo = pcall(api.nvim_buf_get_var, 0, "repo")
   if not current_repo then return end
 
@@ -805,7 +803,7 @@ function M.show_summary()
   end
 
   if not repo or not number then
-    repo, number = util.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+    repo, _, number = util.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
   end
 
   if not repo or not number then return end

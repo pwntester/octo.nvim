@@ -456,17 +456,6 @@ function M.escape_chars(string)
   )
 end
 
-function M.open_in_browser()
-  local repo, number = M.get_repo_number()
-  local bufname = vim.fn.bufname()
-  local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  if type == "pull" then
-    type = "pr"
-  end
-  local cmd = format("gh %s view --web -R %s %d", type, repo, number)
-  os.execute(cmd)
-end
-
 function M.get_repo_number_from_varargs(...)
   local repo, number
   local args = table.pack(...)
@@ -505,33 +494,11 @@ function M.get_pull_request(...)
 end
 
 function M.parse_url(url)
-  local repo, kind, number = string.match(url, "https://github.com/([^/]+/[^/]+)/([^/]+)/(%d+)")
+  local repo, kind, number = string.match(url, constants.URL_ISSUE_PATTERN)
   if repo and number and kind == "issues" then
     return repo, number, "issue"
   elseif repo and number and kind == "pull" then
     return repo, number, kind
-  end
-end
-
-function M.open_issue_at_cursor()
-  local current_line = vim.fn.getline(".")
-  local url_pattern = "[a-z]+://[^ >,;()]+"
-  local issue_pattern = "([^ /]+/[^ #]+)#(%d+)"
-  local repo, number, kind
-  local uri = current_line:match(url_pattern)
-  if uri then
-    repo, number, kind = M.parse_url(uri)
-  else
-    repo, number = current_line:match(issue_pattern)
-    if not repo or not number then
-      api.nvim_err_writeln("No URI found in line.")
-      return
-    end
-  end
-  if repo and number and (kind == "issue" or not kind) then
-    M.get_issue(repo, number)
-  elseif repo and number and kind == "pull" then
-    M.get_pull_request(repo, number)
   end
 end
 

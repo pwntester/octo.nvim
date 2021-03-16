@@ -1,6 +1,7 @@
 local octo = require "octo"
 local gh = require "octo.gh"
 local util = require "octo.util"
+local navigation = require "octo.navigation"
 local window = require "octo.window"
 local menu = require "octo.menu"
 local reviews = require "octo.reviews"
@@ -43,7 +44,7 @@ local commands = {
       M.reload()
     end,
     browser = function()
-      util.open_in_browser()
+      navigation.open_in_browser()
     end
   },
   pr = {
@@ -89,7 +90,7 @@ local commands = {
       M.reload()
     end,
     browser = function()
-      util.open_in_browser()
+      navigation.open_in_browser()
     end
   },
   review = {
