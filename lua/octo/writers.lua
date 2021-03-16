@@ -92,7 +92,7 @@ function M.write_state(bufnr, state, number)
       table.insert(title_vt, {"[DRAFT] ", "OctoNvimIssueId"})
     end
   end
-  M.write_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt)
+  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
 function M.write_body(bufnr, issue, line)
@@ -463,6 +463,8 @@ function M.write_comment(bufnr, comment, kind, line)
       extmark = comment_mark,
       namespace = comment_vt_ns,
       reaction_line = reaction_line,
+      viewerCanUpdate = comment.viewerCanUpdate,
+      viewerCanDelete = comment.viewerCanDelete,
       reaction_groups = comment.reactionGroups,
       kind = kind,
       first_comment_id = comment.first_comment_id,
@@ -946,8 +948,8 @@ function M.write_reopened_event(bufnr, item)
 end
 
 function M.write_virtual_text(bufnr, ns, line, chunks)
-  --api.nvim_buf_set_extmark(bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
-  api.nvim_buf_set_virtual_text(bufnr, ns, line, chunks, {})
+  api.nvim_buf_set_extmark(bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
+  --api.nvim_buf_set_virtual_text(bufnr, ns, line, chunks, {})
 end
 
 return M

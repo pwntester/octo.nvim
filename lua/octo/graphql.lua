@@ -583,6 +583,8 @@ query {
               author {login}
               authorAssociation
               viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
               state
               pullRequestReview {
                 id
@@ -628,6 +630,8 @@ query($endCursor: String) {
               author { login }
               authorAssociation
               viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
               outdated
               diffHunk
               reactionGroups {
@@ -878,6 +882,8 @@ query($endCursor: String) {
               author { login }
               authorAssociation
               viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
               outdated
               diffHunk
               reactionGroups {
