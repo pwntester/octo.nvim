@@ -302,7 +302,7 @@ function M.add_comment()
   if kind == "IssueComment" or vim.bo.ft == "octo_reviewthread" then
     -- just place it at the bottom
     writers.write_comment(bufnr, comment, kind)
-    vim.fn.execute("normal! Gkkk")
+    vim.fn.execute("normal! Gk")
     vim.fn.execute("startinsert")
   elseif kind == "PullRequestReviewComment" and vim.bo.ft == "octo_issue" then
     api.nvim_buf_set_lines(bufnr, thread_end_line + 1, thread_end_line + 1, false, {"x", "x", "x", "x", "x", "x"})
@@ -554,7 +554,7 @@ function M.create_issue(repo)
         elseif output then
           local resp = json.parse(output)
           octo.create_buffer("issue", resp.data.createIssue.issue, repo, true)
-          vim.fn.execute("normal! Gkkk")
+          vim.fn.execute("normal! Gk")
           vim.fn.execute("startinsert")
         end
       end
