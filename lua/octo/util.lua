@@ -212,9 +212,11 @@ function M.get_extmark_region(bufnr, mark)
     end_line = start_line
   end
   -- Indexing is zero-based, end-exclusive, so adding 1 to end line
-  local lines = api.nvim_buf_get_lines(bufnr, start_line, end_line + 1, true)
-  local text = vim.fn.join(lines, "\n")
-  return start_line, end_line, text
+  local status, lines = pcall(api.nvim_buf_get_lines, bufnr, start_line, end_line + 1, true)
+  if status and lines then
+    local text = vim.fn.join(lines, "\n")
+    return start_line, end_line, text
+  end
 end
 
 function M.update_metadata(metadata, start_line, end_line, text)
