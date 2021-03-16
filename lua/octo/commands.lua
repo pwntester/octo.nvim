@@ -249,6 +249,8 @@ function M.add_comment()
     first_comment_id = first_comment_id,
     id = -1,
     state = "PENDING",
+    viewerCanUpdate = true,
+    viewerCanDelete = true,
     reactionGroups = {
       {
         content = "THUMBS_UP",
