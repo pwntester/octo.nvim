@@ -407,7 +407,7 @@ function M.write_comment(bufnr, comment, kind, line)
     end
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
-    table.insert(header_vt, {"THREAD COMMENT: ", "OctoNvimTimelineItemHeading"})
+    table.insert(header_vt, {"THREAD COMMENT:", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
     table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
@@ -418,7 +418,7 @@ function M.write_comment(bufnr, comment, kind, line)
     end
   elseif kind == "IssueComment" then
     -- Issue comments
-    table.insert(header_vt, {"COMMENT: ", "OctoNvimTimelineItemHeading"})
+    table.insert(header_vt, {"COMMENT:", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
     table.insert(header_vt, {"(", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
@@ -865,7 +865,8 @@ end
 function M.write_assigned_event(bufnr, item)
   local actor_bubble = bubbles.make_user_bubble(
     item.actor.login,
-    item.actor.login == vim.g.octo_viewer
+    item.actor.login == vim.g.octo_viewer,
+    { margin_width = 1 }
   )
   local vt = {}
   table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
