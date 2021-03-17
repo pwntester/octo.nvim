@@ -1512,6 +1512,64 @@ query {
 }
 ]]
 
+M.reactions_for_object_query =
+  [[
+query {
+  node(id: "%s") {
+    ... on Issue {
+      reactionGroups {
+        content
+        users(last: 100) {
+          nodes {
+            login
+          }
+        }
+      }
+    }
+    ... on PullRequest {
+      reactionGroups {
+        content
+        users(last: 100) {
+          nodes {
+            login
+          }
+        }
+      }
+    }
+    ... on PullRequestReviewComment {
+      reactionGroups {
+        content
+        users(last: 100) {
+          nodes {
+            login
+          }
+        }
+      }
+    }
+    ... on PullRequestReview {
+      reactionGroups {
+        content
+        users(last: 100) {
+          nodes {
+            login
+          }
+        }
+      }
+    }
+    ... on IssueComment {
+      reactionGroups {
+        content
+        users(last: 100) {
+          nodes {
+            login
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
 local function escape_chars(string)
   local escaped, _ = string.gsub(
     string,

@@ -568,6 +568,25 @@ function M.split_repo(repo)
   return owner, name
 end
 
+function M.reactions_at_cursor()
+  local bufnr = api.nvim_get_current_buf()
+  local cursor = api.nvim_win_get_cursor(0)
+  local ok_body, body_reaction_line = pcall(api.nvim_buf_get_var, bufnr, "body_reaction_line")
+  if ok_body and body_reaction_line and body_reaction_line == cursor[1] then
+    return api.nvim_buf_get_var(bufnr, "iid")
+  end
+
+  local ok_comments, comments_metadata = pcall(api.nvim_buf_get_var, bufnr, "comments")
+  if ok_comments and comments_metadata then
+    for _, c in pairs(comments_metadata) do
+      if c.reaction_line and c.reaction_line == cursor[1] then
+        return c.id
+      end
+    end
+  end
+  return nil
+end
+
 function M.extract_pattern_at_cursor(pattern)
   local current_line = vim.fn.getline(".")
   if current_line:find(pattern) then

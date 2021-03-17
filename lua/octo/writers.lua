@@ -786,6 +786,29 @@ function M.write_review_thread_header(bufnr, opts, line)
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
 end
 
+function M.write_reactions_summary(bufnr, reactions)
+  local chunks = {}
+  local max_width = -1
+  for reaction, users in pairs(reactions) do
+    local user_str = table.concat(users, ", ")
+    max_width = math.max(#user_str, max_width)
+    table.insert(chunks, {
+      {" "},
+      {util.reaction_map[reaction]},
+      {" "},
+      {user_str},
+      {" "},
+    })
+  end
+  for i=1,#chunks do
+    M.write_block(bufnr, {""}, i)
+  end
+  for i=1,#chunks do
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
+  end
+  return max_width
+end
+
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
   local max_length = opts.max_length or 80

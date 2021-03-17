@@ -791,9 +791,46 @@ function M.apply_buffer_mappings(bufnr, kind)
   end
 end
 
-function M.show_summary()
+function M.on_cursor_hold()
   local _, current_repo = pcall(api.nvim_buf_get_var, 0, "repo")
   if not current_repo then return end
+
+  local id = util.reactions_at_cursor()
+  if id then
+    local query = graphql("reactions_for_object_query", id)
+    gh.run(
+      {
+        args = {"api", "graphql", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local resp = json.parse(output)
+            local reactions = {}
+            local reactionGroups = resp.data.node.reactionGroups
+            for _, reactionGroup in ipairs(reactionGroups) do
+              local users = reactionGroup.users.nodes
+              local logins = {}
+              for _, user in ipairs(users) do
+                table.insert(logins, user.login)
+              end
+              if #logins > 0 then
+                reactions[reactionGroup.content] = logins
+              end
+            end
+            local popup_bufnr = api.nvim_create_buf(false, true)
+            local max_width = writers.write_reactions_summary(popup_bufnr, reactions)
+            window.create_popup({
+              bufnr = popup_bufnr,
+              width = max_width + 10,
+              height = 2 + #vim.tbl_keys(reactions)
+            })
+          end
+        end
+      }
+    )
+    return
+  end
 
   local repo, number = util.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
 
