@@ -816,6 +816,7 @@ function M.write_issue_summary(bufnr, issue, opts)
 
   -- repo and date line
   table.insert(chunks, {
+    {" "},
     {issue.repository.nameWithOwner, "OctoNvimDetailsValue"},
     {" on ", "OctoNvimDetailsLabel"},
     {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
@@ -823,6 +824,7 @@ function M.write_issue_summary(bufnr, issue, opts)
 
   -- issue body
   table.insert(chunks, {
+    {" "},
     {"["..issue.state.."] ", util.state_hl_map[issue.state]},
     {issue.title.." ", "OctoNvimDetailsLabel"},
     {"#"..issue.number.." ", "OctoNvimDetailsValue"}
@@ -835,6 +837,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   body = body:gsub('[%c]', ' ')
   body = body:sub(1, max_length - 4 - 2).."…"
   table.insert(chunks, {
+    {" "},
     {body}
   })
   table.insert(chunks, {{""}})
@@ -857,6 +860,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   -- PR branches
   if issue.__typename == "PullRequest" then
     table.insert(chunks, {
+      {" "},
       {"[", "OctoNvimDetailsValue"},
       {issue.baseRefName, "OctoNvimDetailsLabel"},
       {"] ⟵ [", "OctoNvimDetailsValue"},
@@ -868,6 +872,7 @@ function M.write_issue_summary(bufnr, issue, opts)
 
   -- author line
   table.insert(chunks, {
+    {" "},
     {vim.g.octo_icon_user or " "},
     {issue.author.login}
   })
