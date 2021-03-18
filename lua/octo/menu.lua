@@ -59,7 +59,6 @@ local function get_filter(opts, kind)
       val = string.gsub(val, '"OPEN"', "OPEN")
       val = string.gsub(val, '"CLOSED"', "CLOSED")
       val = string.gsub(val, '"MERGED"', "MERGED")
-      val = string.gsub(val, '"ALL"', "ALL")
       filter = filter .. value .. ":" .. val .. ","
     end
   end
