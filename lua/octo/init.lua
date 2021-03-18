@@ -824,11 +824,11 @@ function M.on_cursor_hold()
               end
             end
             local popup_bufnr = api.nvim_create_buf(false, true)
-            local max_width = writers.write_reactions_summary(popup_bufnr, reactions)
+            local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
             window.create_popup({
               bufnr = popup_bufnr,
-              width = max_width + 10,
-              height = 2 + #vim.tbl_keys(reactions)
+              width = 4 + max_length,
+              height = 2 + lines_count
             })
           end
         end

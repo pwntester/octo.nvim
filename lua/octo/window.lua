@@ -11,7 +11,7 @@ function M.create_border_header_float(opts)
   table.insert(outer, format("┌%s┐", line_fill))
   if opts.header then
     local trimmed_header = string.sub(opts.header, 1, opts.width-2*opts.border_width-2*opts.padding)
-    local fill = string.rep(" ", opts.width - 2*opts.padding -2*opts.border_width - #trimmed_header)
+    local fill = string.rep(" ", opts.width - 2*opts.padding -2*opts.border_width - vim.fn.strchars(trimmed_header))
     table.insert(outer, format("│ %s%s │", trimmed_header, fill))
     table.insert(outer, format("├%s┤", line_fill))
     for _=1, opts.height-2*opts.border_width-2*opts.header_height do
@@ -77,7 +77,7 @@ function M.create_centered_float(opts)
   local max_line = -1
   if opts.content then
     for _, line in ipairs(opts.content) do
-      max_line = math.max(#line, max_line)
+      max_line = math.max(vim.fn.strchars(line), max_line)
     end
   end
   -- calculate window height/width
@@ -88,9 +88,9 @@ function M.create_centered_float(opts)
     -- pre-defined content
     opts.width = math.min(vim_width * 0.9, max_line + 2*opts.padding + 2*opts.border_width)
     if opts.header then
-      opts.height = math.min(vim_height, 3*opts.border_width + opts.header_height + #opts.content)
+      opts.height = math.min(vim_height, 3*opts.border_width + opts.header_height + vim.fn.strchars(opts.content))
     else
-      opts.height = math.min(vim_height, 2*opts.border_width + #opts.content)
+      opts.height = math.min(vim_height, 2*opts.border_width + vim.fn.strchars(opts.content))
     end
   else
     opts.width = math.floor(vim_width * opts.x_percent)
@@ -135,7 +135,7 @@ function M.create_comment_popup(win, comment)
   local border_width = 1
   local padding = 1
   local body = vim.list_extend(header, vim.split(comment.body, "\n"))
-  local height = math.min(2*border_width + #body, vim.fn.winheight(win))
+  local height = math.min(2*border_width + vim.fn.strchars(body), vim.fn.winheight(win))
 
   local preview_bufnr = api.nvim_create_buf(false, true)
   api.nvim_buf_set_lines(preview_bufnr, 0, -1, false, body)
@@ -190,7 +190,6 @@ function M.create_popup(opts)
     opts.height = 10
   end
 
-  local padding = 1
   local border_width = 1
   local popup_winid = api.nvim_open_win(opts.bufnr, false, {
     relative = "cursor",

@@ -775,26 +775,23 @@ function M.write_review_thread_header(bufnr, opts, line)
 end
 
 function M.write_reactions_summary(bufnr, reactions)
-  local chunks = {}
-  local max_width = -1
+  local lines = {}
+  local max_width = math.floor(vim.fn.winwidth(0) * 0.4)
   for reaction, users in pairs(reactions) do
     local user_str = table.concat(users, ", ")
-    max_width = math.max(#user_str, max_width)
-    table.insert(chunks, {
-      {" "},
-      {util.reaction_map[reaction]},
-      {" "},
-      {user_str},
-      {" "},
-    })
+    local reaction_lines = util.text_wrap(format(" %s %s", util.reaction_map[reaction], user_str), max_width)
+    local indented_lines = {reaction_lines[1]}
+    for i=2,#reaction_lines do
+      table.insert(indented_lines, "   "..reaction_lines[i])
+    end
+    vim.list_extend(lines, indented_lines)
   end
-  for i=1,#chunks do
-    M.write_block(bufnr, {""}, i)
+  local max_length = -1
+  for _, line in ipairs(lines) do
+    max_length = math.max(max_length, vim.fn.strchars(line))
   end
-  for i=1,#chunks do
-    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
-  end
-  return max_width
+  api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
+  return #lines, max_length
 end
 
 function M.write_issue_summary(bufnr, issue, opts)
