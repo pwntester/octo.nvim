@@ -800,6 +800,7 @@ function M.on_cursor_hold()
   local _, current_repo = pcall(api.nvim_buf_get_var, 0, "repo")
   if not current_repo then return end
 
+  -- reactions
   local id = util.reactions_at_cursor()
   if id then
     local query = graphql("reactions_for_object_query", id)
@@ -829,6 +830,32 @@ function M.on_cursor_hold()
               bufnr = popup_bufnr,
               width = 4 + max_length,
               height = 2 + lines_count
+            })
+          end
+        end
+      }
+    )
+    return
+  end
+
+  local login = util.extract_pattern_at_cursor(constants.USER_PATTERN)
+  if login then
+    local query = graphql("user_profile_query", login)
+    gh.run(
+      {
+        args = {"api", "graphql", "-f", format("query=%s", query)},
+        cb = function(output, stderr)
+          if stderr and not util.is_blank(stderr) then
+            api.nvim_err_writeln(stderr)
+          elseif output then
+            local resp = json.parse(output)
+            local user = resp.data.user
+            local popup_bufnr = api.nvim_create_buf(false, true)
+            local lines, max_length = writers.write_user_profile(popup_bufnr, user)
+            window.create_popup({
+              bufnr = popup_bufnr,
+              width = 4 + max_length,
+              height = 2 + lines
             })
           end
         end

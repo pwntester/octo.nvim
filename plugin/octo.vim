@@ -74,6 +74,9 @@ sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable
 highlight default OctoNvimViewer guifg=#000000 guibg=#58A6FF
 highlight default OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
 highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#da3633
+highlight default OctoNvimBubblePurple guifg=#ffffff guibg=#ad7cfd
+highlight default OctoNvimBubbleYellow guifg=#ffffff guibg=#d3c846
+highlight default OctoNvimBubbleBlue guifg=#ffffff guibg=#58A6FF
 highlight default OctoNvimGreen guifg=#2ea043
 highlight default OctoNvimRed guifg=#da3633
 highlight default OctoNvimPurple guifg=#ad7cfd

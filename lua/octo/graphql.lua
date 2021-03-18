@@ -1449,31 +1449,40 @@ M.request_reviews_mutation =
   }
 ]]
 
-M.user_query =
+M.user_profile_query =
   [[
-query($endCursor: String) {
-  search(query: "%s", type: USER, first: 100) {
-    nodes {
-      ... on User {
-        id
-        login
-      }
-      ... on Organization {
-        id
-        login
-        teams(first:100, after: $endCursor) {
-          totalCount
-          nodes {
-            id
-            name
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-        }
+query {
+  user(login: "%s") {
+    login
+    bio
+    company
+    followers(first: 1) {
+      totalCount
+    }
+    following(first: 1) {
+      totalCount
+    }
+    hovercard {
+      contexts {
+        message
       }
     }
+    hasSponsorsListing
+    isEmployee
+    isViewer
+    location
+    organizations(last: 5) {
+      nodes {
+        name
+      }
+    }
+    name
+    status {
+      emoji
+      message
+    }
+    twitterUsername
+    websiteUrl
   }
 }
 ]]
@@ -1568,6 +1577,10 @@ query {
     }
   }
 }
+]]
+
+M.user_query =
+  [[
 ]]
 
 local function escape_chars(string)

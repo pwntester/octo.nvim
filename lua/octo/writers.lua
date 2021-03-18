@@ -795,6 +795,154 @@ function M.write_reactions_summary(bufnr, reactions)
   return #lines, max_length
 end
 
+local function chunk_length(max_length, chunk)
+  local length = 0
+  for _, c in ipairs(chunk) do
+    length = length + strlen(c[1])
+  end
+  return math.max(max_length, length)
+end
+
+function M.write_user_profile(bufnr, user, opts)
+  opts = opts or {}
+  local max_width = opts.max_width or 80
+  local chunks = {}
+  local max_length = -1
+
+  -- name
+  local name_chunk = {
+    {" "},
+    {user.login, "OctoNvimDetailsValue"},
+  }
+  if user.name ~= vim.NIL then
+    vim.list_extend(name_chunk, {
+      {format(" (%s)", user.name)},
+    })
+  end
+  max_length = chunk_length(max_length, name_chunk)
+  table.insert(chunks, name_chunk)
+
+  -- status
+  if user.status ~= vim.NIL then
+    local status_chunk = {{" "}}
+    if user.status.emoji ~= vim.NIL then
+      table.insert(status_chunk, {user.status.emoji})
+      table.insert(status_chunk, {" "})
+    end
+    if user.status.message ~= vim.NIL then
+      table.insert(status_chunk, {user.status.message})
+    end
+    if #status_chunk > 0 then
+      max_length = chunk_length(max_length, status_chunk)
+      table.insert(chunks, status_chunk)
+    end
+  end
+
+  -- bio
+  if user.bio~= vim.NIL then
+    for _, line in ipairs(util.text_wrap(user.bio, max_width - 4)) do
+      local bio_line_chunk = {{" "}, {line}}
+      max_length = chunk_length(max_length, bio_line_chunk)
+      table.insert(chunks, bio_line_chunk)
+    end
+  end
+
+  -- followers/following
+  local follow_chunk = {
+    {" "},
+    {"Followers: ", "OctoNvimDetailsValue"},
+    {tostring(user.followers.totalCount)},
+    {" Following: ", "OctoNvimDetailsValue"},
+    {tostring(user.following.totalCount)},
+  }
+  max_length = chunk_length(max_length, follow_chunk)
+  table.insert(chunks, follow_chunk)
+
+  -- location
+  if user.location ~= vim.NIL then
+    local location_chunk = {
+      {" "},
+      {"🏠 ".. user.location}
+    }
+    max_length = chunk_length(max_length, location_chunk)
+    table.insert(chunks, location_chunk)
+  end
+
+  -- company
+  if user.company ~= vim.NIL then
+    local company_chunk = {
+      {" "},
+      {"🏢 ".. user.company}
+    }
+    max_length = chunk_length(max_length, company_chunk)
+    table.insert(chunks, company_chunk)
+  end
+
+  -- hovercards
+  if #user.hovercard.contexts > 0 then
+    for _, context in ipairs(user.hovercard.contexts) do
+      local hovercard_chunk = {
+        {" "},
+        {context.message}
+      }
+      max_length = chunk_length(max_length, hovercard_chunk)
+      table.insert(chunks, hovercard_chunk)
+    end
+  end
+
+  -- twitter
+  if user.twitterUsername ~= vim.NIL then
+    local twitter_chunk = {
+      {" "},
+      {"🐦 ".. user.twitterUsername}
+    }
+    max_length = chunk_length(max_length, twitter_chunk)
+    table.insert(chunks, twitter_chunk)
+  end
+
+  -- website
+  if user.websiteUrl ~= vim.NIL then
+    local website_chunk = {
+      {" "},
+      {"🔗 ".. user.websiteUrl}
+    }
+    max_length = chunk_length(max_length, website_chunk)
+    table.insert(chunks, website_chunk)
+  end
+
+  -- badges
+  local badges_chunk = {}
+  if user.hasSponsorsListing then
+    local sponsor_bubble = bubbles.make_bubble(
+      "SPONSOR",
+      "OctoNvimBubbleBlue",
+      { margin_width = 1 }
+    )
+    vim.list_extend(badges_chunk, sponsor_bubble)
+  end
+  if user.isEmployee then
+    local staff_bubble = bubbles.make_bubble(
+      "STAFF",
+      "OctoNvimBubblePurple",
+      { margin_width = 1 }
+    )
+    vim.list_extend(badges_chunk, staff_bubble)
+  end
+  if #badges_chunk > 0 then
+    max_length = chunk_length(max_length, badges_chunk)
+    table.insert(chunks, badges_chunk)
+  end
+
+  for i=1,#chunks do
+    M.write_block(bufnr, {""}, i)
+  end
+  for i=1,#chunks do
+    print(vim.inspect(chunks[i]))
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
+  end
+  return #chunks, max_length
+end
+
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
   local max_length = opts.max_length or 80
