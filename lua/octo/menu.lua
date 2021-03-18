@@ -257,6 +257,10 @@ end
 
 function M.pull_requests(opts)
   opts = opts or {}
+  if not opts.states then
+    opts.states = "OPEN"
+  end
+
   local filter = get_filter(opts, "pull_request")
 
   if not opts.repo or opts.repo == vim.NIL then
