@@ -116,18 +116,13 @@ function M.write_body(bufnr, issue, line)
   )
 end
 
-function M.write_reactions(bufnr, reaction_groups, line, mode)
-
-  mode = mode or "append"
-
+function M.write_reactions(bufnr, reaction_groups, line)
   -- clear namespace and set vt
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
-  local reactions_count = 0
   local reactions_vt = {}
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
-      reactions_count = reactions_count  + 1
       local icon = util.reaction_map[group.content]
       local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
       local count = format(" %s ", group.users.totalCount)
@@ -135,25 +130,13 @@ function M.write_reactions(bufnr, reaction_groups, line, mode)
       table.insert(reactions_vt, { count, "Normal" })
     end
   end
-  if mode == "delete" and reactions_count == 0 and line then
-    api.nvim_buf_set_lines(bufnr, line, line+2, false, {})
-    api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
-    return nil
-  elseif reactions_count > 0 then
-    if mode == "append" then
-      M.write_block(bufnr, {"", ""}, line)
-      M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
-    elseif mode == "insert" then
-      api.nvim_buf_set_lines(bufnr, line, line, false, {"", ""})
-      M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line, reactions_vt)
-    else
-      M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
-    end
+  local reactions_count = util.count_reactions(reaction_groups)
+  if reactions_count > 0 then
+    M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
     return line
   else
     return nil
   end
-
 end
 
 function M.write_details(bufnr, issue, update)
@@ -445,10 +428,15 @@ function M.write_comment(bufnr, comment, kind, line)
   vim.list_extend(content, {""})
   local comment_mark = M.write_block(bufnr, content, line, true)
 
-  -- reactions
   line = line + #content
-  local reaction_line = M.write_reactions(bufnr, comment.reactionGroups, line)
-  if reaction_line then line = line + 2 end
+
+  -- reactions
+  local reaction_line
+  if util.count_reactions(comment.reactionGroups) > 0 then
+    M.write_block(bufnr, {"", ""}, line)
+    reaction_line = M.write_reactions(bufnr, comment.reactionGroups, line)
+    line = line + 2
+  end
 
   -- update metadata
   local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")

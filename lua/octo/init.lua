@@ -197,7 +197,12 @@ function M.create_buffer(type, obj, repo, create)
   writers.write_body(bufnr, obj)
 
   -- write body reactions
-  local reaction_line = writers.write_reactions(bufnr, obj.reactionGroups, api.nvim_buf_line_count(bufnr)+1)
+  local reaction_line
+  if util.count_reactions(obj.reactionGroups) > 0 then
+    local line = api.nvim_buf_line_count(bufnr) + 1
+    writers.write_block(bufnr, {"", ""}, line)
+    reaction_line = writers.write_reactions(bufnr, obj.reactionGroups, line)
+  end
   api.nvim_buf_set_var(bufnr, "body_reaction_groups", obj.reactionGroups)
   api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
 
@@ -736,56 +741,56 @@ function M.apply_buffer_mappings(bufnr, kind)
       bufnr,
       "n",
       "<space>rp",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', 'hooray')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('hooray')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>rh",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', 'heart')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('heart')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>re",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', 'eyes')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('eyes')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>r+",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', '+1')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('+1')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>r-",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', '-1')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('-1')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>rr",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', 'rocket')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('rocket')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>rl",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', 'laugh')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('laugh')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
       "<space>rc",
-      [[<cmd>lua require'octo.commands'.reaction_action('add', 'confused')<CR>]],
+      [[<cmd>lua require'octo.commands'.reaction_action('confused')<CR>]],
       mapping_opts
     )
   end

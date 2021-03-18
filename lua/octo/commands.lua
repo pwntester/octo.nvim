@@ -165,11 +165,38 @@ local commands = {
     end
   },
   reaction = {
-    add = function(reaction)
-      M.reaction_action("add", reaction)
+    thumbs_up = function()
+      M.reaction_action("THUMBS_UP")
     end,
-    delete = function(reaction)
-      M.reaction_action("delete", reaction)
+    ["+1"] = function()
+      M.reaction_action("THUMBS_UP")
+    end,
+    thumbs_down = function()
+      M.reaction_action("THUMBS_DOWN")
+    end,
+    ["-1"] = function()
+      M.reaction_action("THUMBS_DOWN")
+    end,
+    eyes = function()
+      M.reaction_action("EYES")
+    end,
+    laugh = function()
+      M.reaction_action("LAUGH")
+    end,
+    confused = function()
+      M.reaction_action("CONFUSED")
+    end,
+    hooray = function()
+      M.reaction_action("HOORAY")
+    end,
+    party = function()
+      M.reaction_action("HOORAY")
+    end,
+    tada = function()
+      M.reaction_action("HOORAY")
+    end,
+    rocket = function()
+      M.reaction_action("ROCKET")
     end
   },
   card = {
@@ -234,8 +261,7 @@ function M.add_comment()
   end
 
   local kind
-  local cursor = api.nvim_win_get_cursor(0)
-  local thread_id, _, thread_end_line, first_comment_id = util.get_thread_at_cursor(bufnr, cursor)
+  local thread_id, _, thread_end_line, first_comment_id = util.get_thread_at_cursor(bufnr)
   if thread_id then
     kind = "PullRequestReviewComment"
   else
@@ -324,8 +350,7 @@ function M.delete_comment()
   if not repo then
     return
   end
-  local cursor = api.nvim_win_get_cursor(0)
-  local comment, start_line, end_line = util.get_comment_at_cursor(bufnr, cursor)
+  local comment, start_line, end_line = util.get_comment_at_cursor(bufnr)
   if not comment then
     print("[Octo] The cursor does not seem to be located at any comment")
     return
@@ -374,8 +399,7 @@ function M.resolve_comment()
 
   local thread_id, thread_line, comment_id
   if vim.bo.ft == "octo_issue" then
-    local cursor = api.nvim_win_get_cursor(0)
-    thread_id, thread_line = util.get_thread_at_cursor(bufnr, cursor)
+    thread_id, thread_line = util.get_thread_at_cursor(bufnr)
   elseif vim.bo.ft == "octo_reviewthread" then
     local bufname = api.nvim_buf_get_name(bufnr)
     thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
@@ -436,8 +460,7 @@ function M.unresolve_comment()
 
   local thread_id, thread_line, comment_id
   if vim.bo.ft == "octo_issue" then
-    local cursor = api.nvim_win_get_cursor(0)
-    thread_id, thread_line = util.get_thread_at_cursor(bufnr, cursor)
+    thread_id, thread_line = util.get_thread_at_cursor(bufnr)
   elseif vim.bo.ft == "octo_reviewthread" then
     local bufname = api.nvim_buf_get_name(bufnr)
     thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
@@ -723,25 +746,27 @@ function M.show_pr_diff()
   )
 end
 
-function M.reaction_action(action, reaction)
+function M.reaction_action(reaction)
   local bufnr = api.nvim_get_current_buf()
-
-  reaction = reaction:upper()
-  if reaction == "+1" then
-    reaction = "THUMBS_UP"
-  elseif reaction == "-1" then
-    reaction = "THUMBS_DOWN"
-  end
 
   local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
   if not repo then
     return
   end
 
-  local query, reaction_line, reaction_groups, insert_line
-  local cursor = api.nvim_win_get_cursor(0)
+  -- normalize reactions
+  reaction = reaction:upper()
+  if reaction == "+1" then
+    reaction = "THUMBS_UP"
+  elseif reaction == "-1" then
+    reaction = "THUMBS_DOWN"
+  elseif reaction == "PARTY" or reaction == "TADA" then
+    reaction = "HOORAY"
+  end
 
-  local comment = util.get_comment_at_cursor(bufnr, cursor)
+  local reaction_line, reaction_groups, insert_line, id, action
+
+  local comment = util.get_comment_at_cursor(bufnr)
   if comment then
     -- found a comment at cursor
     reaction_groups = comment.reaction_groups
@@ -752,14 +777,9 @@ function M.reaction_action(action, reaction)
       local _, end_line = util.get_extmark_region(bufnr, mark)
       insert_line = end_line + 2
     end
-
-    if action == "add" then
-      query = graphql("add_reaction_mutation", comment.id, reaction)
-    elseif action == "delete" then
-      query = graphql("remove_reaction_mutation", comment.id, reaction)
-    end
+    id = comment.id
   elseif vim.bo.ft == "octo_issue" then
-    -- cursor not located on a comment, using the issue body instead
+    -- using the issue body instead
     reaction_groups = api.nvim_buf_get_var(bufnr, "body_reaction_groups")
     reaction_line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
     if reaction_line == nil then
@@ -768,16 +788,25 @@ function M.reaction_action(action, reaction)
       local _, end_line = util.get_extmark_region(bufnr, mark)
       insert_line = end_line + 2
     end
-
-    local id = api.nvim_buf_get_var(bufnr, "iid")
-    if action == "add" then
-      query = graphql("add_reaction_mutation", id, reaction)
-    elseif action == "delete" then
-      query = graphql("remove_reaction_mutation", id, reaction)
-    end
+    id = api.nvim_buf_get_var(bufnr, "iid")
   end
 
+  for _, reaction_group in ipairs(reaction_groups) do
+    if reaction_group.content == reaction and reaction_group.viewerHasReacted then
+      action = "remove"
+      break
+    elseif reaction_group.content == reaction and not reaction_group.viewerHasReacted then
+      action = "add"
+      break
+    end
+  end
+  if action ~= "add" and action ~= "remove"  then
+    return
+  end
+
+
   -- add/delete reaction
+  local query = graphql(action.."_reaction_mutation", id, reaction)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -788,20 +817,22 @@ function M.reaction_action(action, reaction)
           local resp = json.parse(output)
           if action == "add" then
             reaction_groups = resp.data.addReaction.subject.reactionGroups
-          elseif action == "delete" then
+          elseif action == "remove" then
             reaction_groups = resp.data.removeReaction.subject.reactionGroups
           end
 
-          if action == "delete" and reaction_line then
-            util.update_reactions_at_cursor(bufnr, cursor, reaction_groups, reaction_line - 1)
-            writers.write_reactions(bufnr, reaction_groups, reaction_line - 1, "delete")
-          elseif action == "add" and reaction_line == nil then
-            util.update_reactions_at_cursor(bufnr, cursor, reaction_groups, insert_line + 1)
-            writers.write_reactions(bufnr, reaction_groups, insert_line, "insert")
-          else
-            util.update_reactions_at_cursor(bufnr, cursor, reaction_groups, reaction_line - 1)
-            writers.write_reactions(bufnr, reaction_groups, reaction_line - 1, "update")
+          reaction_line = reaction_line or insert_line + 1
+          util.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
+          if action == "remove" and util.count_reactions(reaction_groups) == 0 then
+            -- delete lines
+            api.nvim_buf_set_lines(bufnr, reaction_line - 1, reaction_line + 1, false, {})
+            api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, reaction_line - 1, reaction_line + 1)
+          elseif action == "add" and insert_line then
+            -- add lines
+            api.nvim_buf_set_lines(bufnr, insert_line, insert_line, false, {"", ""})
           end
+          writers.write_reactions(bufnr, reaction_groups, reaction_line)
+          util.update_issue_metadata(bufnr)
         end
       end
     }

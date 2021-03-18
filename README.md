@@ -69,8 +69,13 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | delete | <assignee> |
 | reviewer | add | <reviewer> |
 | | delete | <reviewer> |
-| reaction | add | <+1\|-1\|eyes\|laugh\|confused\|rocket\|hooray>|
-| | delete | <+1\|-1\|eyes\|laugh\|confused\|rocket\|hooray>|
+| reaction | thumbs_up \| +1 | |
+| | thumbs_down \| -1 | |
+| | eyes | |
+| | laugh | |
+| | confused | |
+| | rocket | |
+| | hooray \| party \| tada | |
 | card | add | |
 | | delete | |
 | | move | |
@@ -166,16 +171,16 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `<space>ld` | delete label                          |
 | `<space>aa` | add assignee                          |
 | `<space>ad` | delete assignee                       |
-| `<space>va` | request reViewer                      |
-| `<space>vd` | delete reViewer                       |
-| `<space>rh` | add :heart: reaction                  |
-| `<space>rp` | add :hooray: reaction                 |
-| `<space>re` | add :eyes: reaction                   |
-| `<space>rl` | add :laugh: reaction                  |
-| `<space>rc` | add :confused: reaction               |
-| `<space>r+` | add :+1: reaction                     |
-| `<space>r-` | add :-1: reaction                     |
-| `<space>rr` | add :rocket: reaction                 |
+| `<space>va` | request reviewer                      |
+| `<space>vd` | delete reviewer                       |
+| `<space>rh` | add/remove :heart: reaction           |
+| `<space>rp` | add/remove :hooray: reaction          |
+| `<space>re` | add/remove :eyes: reaction            |
+| `<space>rl` | add/remove :laugh: reaction           |
+| `<space>rc` | add/remove :confused: reaction        |
+| `<space>r+` | add/remove :+1: reaction              |
+| `<space>r-` | add/remove :-1: reaction              |
+| `<space>rr` | add/remove :rocket: reaction          |
 | `<C-o>`     | open issue/pull in browser            |
 | `<C-r>`     | reload current issue/pull             |
 

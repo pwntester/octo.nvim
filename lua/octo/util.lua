@@ -276,7 +276,8 @@ function M.update_issue_metadata(bufnr)
   api.nvim_buf_set_var(bufnr, "comments", comments)
 end
 
-function M.get_comment_at_cursor(bufnr, cursor)
+function M.get_comment_at_cursor(bufnr)
+  local cursor = api.nvim_win_get_cursor(0)
   local comments = api.nvim_buf_get_var(bufnr, "comments")
   for _, comment in ipairs(comments) do
     local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
@@ -289,7 +290,8 @@ function M.get_comment_at_cursor(bufnr, cursor)
   return nil
 end
 
-function M.get_thread_at_cursor(bufnr, cursor)
+function M.get_thread_at_cursor(bufnr)
+  local cursor = api.nvim_win_get_cursor(0)
   if vim.bo[bufnr].ft == "octo_issue" then
     local thread_map = api.nvim_buf_get_var(bufnr, "reviewThreadMap")
     local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
@@ -316,7 +318,8 @@ function M.get_thread_at_cursor(bufnr, cursor)
   return nil
 end
 
-function M.update_reactions_at_cursor(bufnr, cursor, reaction_groups, reaction_line)
+function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
+  local cursor = api.nvim_win_get_cursor(0)
   local reactions_count = 0
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
@@ -662,6 +665,16 @@ function M.text_wrap(text, width)
     line = {}
   end
   return result
+end
+
+function M.count_reactions(reaction_groups)
+  local reactions_count = 0
+  for _, group in ipairs(reaction_groups) do
+    if group.users.totalCount > 0 then
+      reactions_count = reactions_count  + 1
+    end
+  end
+  return reactions_count
 end
 
 return M

@@ -42,7 +42,6 @@ M.issue =
                   writers.write_details(bufnr, issue)
                   writers.write_body(bufnr, issue)
                   writers.write_state(bufnr, issue.state:upper(), number)
-                  --writers.write_reactions(bufnr, issue.reactions, api.nvim_buf_line_count(bufnr) - 1)
                   api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
                 end
               end
@@ -102,11 +101,9 @@ M.pull_request =
                   writers.write_details(bufnr, pull_request)
                   writers.write_body(bufnr, pull_request)
                   writers.write_state(bufnr, pull_request.state:upper(), number)
-                  writers.write_reactions(
-                    bufnr,
-                    pull_request.reactionGroups,
-                    api.nvim_buf_line_count(bufnr) - 1
-                  )
+                  local reactions_line = api.nvim_buf_line_count(bufnr) - 1
+                  writers.write_block(bufnr, {"", ""}, reactions_line)
+                  writers.write_reactions(bufnr, pull_request.reactionGroups, reactions_line)
                   api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
                 end
               end
