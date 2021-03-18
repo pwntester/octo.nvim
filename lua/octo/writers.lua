@@ -6,6 +6,7 @@ local api = vim.api
 local max = math.max
 local min = math.min
 local format = string.format
+local strlen = vim.fn.strdisplaywidth
 
 local M = {}
 
@@ -506,21 +507,21 @@ local function get_lnum_chunks(opts)
     return {
       {string.rep(" ", opts.max_lnum), "DiffAdd"},
       {" ", "DiffAdd"},
-      {string.rep(" ", opts.max_lnum - #tostring(opts.right_line))..tostring(opts.right_line), "DiffAdd"},
+      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.right_line)))..tostring(opts.right_line), "DiffAdd"},
       {" ", "DiffAdd"}
     }
   elseif not opts.right_line and opts.left_line then
     return {
-      {string.rep(" ", opts.max_lnum - #tostring(opts.left_line))..tostring(opts.left_line), "DiffDelete"},
+      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.left_line)))..tostring(opts.left_line), "DiffDelete"},
       {" ", "DiffDelete"},
       {string.rep(" ", opts.max_lnum), "DiffDelete"},
       {" ", "DiffDelete"}
     }
   elseif opts.right_line and opts.left_line then
     return {
-      {string.rep(" ", opts.max_lnum - #tostring(opts.left_line))..tostring(opts.left_line)},
+      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.left_line)))..tostring(opts.left_line)},
       {" "},
-      {string.rep(" ", opts.max_lnum - #tostring(opts.right_line))..tostring(opts.right_line)},
+      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.right_line)))..tostring(opts.right_line)},
       {" "}
     }
   end
@@ -560,7 +561,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
   end
 
   -- calculate length of the higher line number
-  local max_lnum = math.max(#tostring(right_offset + #diffhunk_lines), #tostring(left_offset + #diffhunk_lines))
+  local max_lnum = math.max(strlen(tostring(right_offset + #diffhunk_lines)), strlen(tostring(left_offset + #diffhunk_lines)))
 
   -- calculate diffhunk subrange to show
   local snippet_start, snippet_end
@@ -589,8 +590,8 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
   local max_length = -1
   for i = snippet_start, snippet_end do
     local line = diffhunk_lines[i]
-    if #line > max_length then
-      max_length = #line
+    if strlen(line) > max_length then
+      max_length = strlen(line)
     end
   end
   max_length = math.max(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn)
@@ -617,7 +618,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
           {string.rep(" ", 2*max_lnum +1), "DiffLine"},
           {string.sub(line, 0, index), "DiffLine"},
           {string.sub(line, index + 1), "DiffLine"},
-          {string.rep(" ", 1 + max_length - #line - 2*max_lnum), "DiffLine"},
+          {string.rep(" ", 1 + max_length - strlen(line) - 2*max_lnum), "DiffLine"},
           {"│"}
         }
       )
@@ -626,7 +627,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
       vim.list_extend(vt_line, get_lnum_chunks({right_line=right_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line:gsub("^.", " "), "DiffAdd"},
-        {string.rep(" ", max_length - #line - 2*max_lnum), "DiffAdd"},
+        {string.rep(" ", max_length - strlen(line) - 2*max_lnum), "DiffAdd"},
         {"│"}
       })
       table.insert(vt_lines, vt_line)
@@ -635,7 +636,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
       vim.list_extend(vt_line, get_lnum_chunks({left_line=left_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line:gsub("^.", " "), "DiffDelete"},
-        {string.rep(" ", max_length - #line - 2*max_lnum), "DiffDelete"},
+        {string.rep(" ", max_length - strlen(line) - 2*max_lnum), "DiffDelete"},
         {"│"}
       })
       table.insert(vt_lines, vt_line)
@@ -644,7 +645,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
       vim.list_extend(vt_line, get_lnum_chunks({left_line=left_side_lines[i], right_line=right_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line},
-        {string.rep(" ", max_length - #line - 2*max_lnum)},
+        {string.rep(" ", max_length - strlen(line) - 2*max_lnum)},
         {"│"}
       })
       table.insert(vt_lines, vt_line)
@@ -702,7 +703,7 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
   -- calculate longest hunk line
   local max_length = -1
   for _, line in ipairs(side_lines) do
-    max_length = math.max(max_length, #line)
+    max_length = math.max(max_length, strlen(line))
   end
   max_length = math.min(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn) + 1
 
@@ -710,20 +711,20 @@ function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start
   local offset = side == "RIGHT" and right_offset or left_offset
   local final_lines = {unpack(side_lines, start_pos - offset + 1, end_pos - offset + 1)}
   local vt_lines = {}
-  local max_lnum = math.max(#tostring(start_pos), #tostring(end_pos))
+  local max_lnum = math.max(strlen(tostring(start_pos)), strlen(tostring(end_pos)))
   table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_lnum + max_length + 2))}})
   for i, line in ipairs(final_lines) do
     local stripped_line = line:gsub("^.", " ")
     local hl_line = side == "RIGHT" and "DiffAdd" or "DiffDelete"
     local vt_line = {stripped_line, hl_line}
     local lnum = tostring(i + start_pos - 1)
-    local lnum_length = #lnum
+    local lnum_length = strlen(lnum)
     local padded_lnum = string.rep("0", max_lnum - lnum_length)..lnum
     table.insert( vt_lines, {
       {"│"},
       {format(" %s ", padded_lnum), "DiffChange"},
       vt_line,
-      {string.rep(" ", max_length - #stripped_line), hl_line},
+      {string.rep(" ", max_length - strlen(stripped_line)), hl_line},
       {"│"}
     })
   end
@@ -788,7 +789,7 @@ function M.write_reactions_summary(bufnr, reactions)
   end
   local max_length = -1
   for _, line in ipairs(lines) do
-    max_length = math.max(max_length, vim.fn.strchars(line))
+    max_length = math.max(max_length, strlen(line))
   end
   api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
   return #lines, max_length
