@@ -1044,13 +1044,15 @@ function M.write_assigned_event(bufnr, item)
 end
 
 function M.write_commit_event(bufnr, item)
-  local commiter_bubble = bubbles.make_user_bubble(
-    item.commit.committer.user.login,
-    item.commit.committer.user.login == vim.g.octo_viewer
-  )
   local vt = {}
   table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
-  vim.list_extend(vt, commiter_bubble)
+  if item.commit.committer.user ~= vim.NIL then
+    local commiter_bubble = bubbles.make_user_bubble(
+      item.commit.committer.user.login,
+      item.commit.committer.user.login == vim.g.octo_viewer
+    )
+    vim.list_extend(vt, commiter_bubble)
+  end
   table.insert(vt, {" added ", "OctoNvimTimelineItemHeading"})
   table.insert(vt, {item.commit.abbreviatedOid, "OctoNvimDetailsLabel"})
   table.insert(vt, {" '", "OctoNvimTimelineItemHeading"})
