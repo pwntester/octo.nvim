@@ -20,13 +20,7 @@ M.NO_BODY_MSG = "No description provided."
 
 M.LONG_ISSUE_PATTERN = "%s([^/]+/[^#]+)#(%d+)%s"
 M.SHORT_ISSUE_PATTERN = "%s#(%d+)%s"
-local github_hostname = "" 
-if vim.g.octo_github_hostname then
-    github_hostname = vim.g.octo_github_hostname
-else
-    github_hostname = "github.com"
-end
-M.URL_ISSUE_PATTERN = ("[htps]+://.*" .. github_hostname .. "/([^/]+/[^/]+)/([pulisue]+)/(%d+)")
+M.URL_ISSUE_PATTERN = ("[htps]+://[^/]+/([^/]+/[^/]+)/([pulisue]+)/(%d+)")
 
 M.USER_PATTERN = "@(%S+)"
 

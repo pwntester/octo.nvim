@@ -237,7 +237,7 @@ The (addition) `viewer` means the user of the plugin or more precisely the user 
 - `g:octo_icon_user`: Icon used to signal user names (default: "")
 - `g:octo_icon_reaction_viewer_hint`: Icon as alternative or to complement the highlighting of reactions by the viewer himself (default: "")
 - `g:octo_snippet_context_lines`: Number of additional lines displayed from the diff-hunk for single-line comments (default: 3)
-- `g:octo_github_hostname`: Hostname to use for non-public, GHE (GitHub Enterprise) instances (default: null).
+- `g:octo_github_hostname`: Host name to use for non-public GHE (GitHub Enterprise) instances (default: null).
 
 ## FAQ
 
