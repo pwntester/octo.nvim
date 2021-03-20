@@ -58,6 +58,7 @@ local function get_filter(opts, kind)
       val = json.stringify(val)
       val = string.gsub(val, '"OPEN"', "OPEN")
       val = string.gsub(val, '"CLOSED"', "CLOSED")
+      val = string.gsub(val, '"MERGED"', "MERGED")
       filter = filter .. value .. ":" .. val .. ","
     end
   end
@@ -257,6 +258,10 @@ end
 
 function M.pull_requests(opts)
   opts = opts or {}
+  if not opts.states then
+    opts.states = "OPEN"
+  end
+
   local filter = get_filter(opts, "pull_request")
 
   if not opts.repo or opts.repo == vim.NIL then
