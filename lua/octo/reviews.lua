@@ -34,7 +34,6 @@ end
 ---
 --- Changes
 ---
-
 function M.populate_changes_qf(changes, opts)
   -- open a new tab so we can easily clean all the windows mess
   vim.cmd [[tabnew %]]
@@ -320,7 +319,6 @@ function M.edit_review_comment()
       api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.body, "\n"))
       return
     end
-    ::continue::
   end
   api.nvim_err_writeln("No comment found at cursor line")
 end
@@ -401,19 +399,11 @@ function M.save_review_comment()
       }
     )
   end
-
-  -- close float window
-  -- util.set_timeout(100, function()
-  --   vim.schedule(function()
-  --     api.nvim_buf_delete(bufnr, {force=true})
-  --   end)
-  -- end)
 end
 
 ---
 --- Review threads
 ---
-
 function M.review_threads()
   local repo, number, _ = util.get_repo_number_pr()
   if not repo then
