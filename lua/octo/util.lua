@@ -283,9 +283,21 @@ function M.get_comment_at_cursor(bufnr)
     local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
-    if start_line <= cursor[1] and end_line >= cursor[1] then
+    if start_line +1 <= cursor[1] and end_line - 2 >= cursor[1] then
       return comment, start_line, end_line
     end
+  end
+  return nil
+end
+
+function M.get_body_at_cursor(bufnr)
+  local cursor = api.nvim_win_get_cursor(0)
+  local metadata = api.nvim_buf_get_var(bufnr, "description")
+  local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
+  local start_line = mark[1] + 1
+  local end_line = mark[3]["end_row"] + 1
+  if start_line + 1<= cursor[1] and end_line - 2>= cursor[1] then
+    return metadata, start_line, end_line
   end
   return nil
 end

@@ -112,7 +112,8 @@ function M.write_body(bufnr, issue, line)
       saved_body = description,
       body = description,
       dirty = false,
-      extmark = desc_mark
+      extmark = desc_mark,
+      viewerCanUpdate = issue.viewerCanUpdate
     }
   )
 end

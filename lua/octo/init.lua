@@ -295,7 +295,7 @@ function M.create_buffer(type, obj, repo, create)
             thread_end = comment_end
             review_end = comment_end
           end
-          folds.create(thread_start, thread_end, not thread.isCollapsed)
+          folds.create(thread_start - 1, thread_end - 1, not thread.isCollapsed)
 
           -- mark the thread region
           local thread_mark_id = api.nvim_buf_set_extmark(
@@ -362,18 +362,18 @@ function M.create_buffer(type, obj, repo, create)
 end
 
 function M.check_editable()
-  local cursor = api.nvim_win_get_cursor(0)
+  local bufnr = api.nvim_get_current_buf()
 
-  -- proccess comment extmarked regions
-  local marks = api.nvim_buf_get_extmarks(0, constants.OCTO_COMMENT_NS, 0, -1, {details = true})
-  for _, mark in ipairs(marks) do
-    local start_line = mark[2]
-    local end_line = mark[4]["end_row"]
-    if cursor[1] == 1 or -- title
-       (start_line+1 < cursor[1] and end_line > cursor[1]) then
-      return
-    end
+  local body = util.get_body_at_cursor(bufnr)
+  if body and body.viewerCanUpdate then
+    return
   end
+
+  local comment = util.get_comment_at_cursor(bufnr)
+  if comment and comment.viewerCanUpdate then
+    return
+  end
+
   local key = api.nvim_replace_termcodes("<esc>", true, false, true)
   api.nvim_feedkeys(key, "m", true)
   print("Cannot make changes to non-editable regions")
