@@ -582,6 +582,11 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
         snippet_end = pos
       end
     end
+    if not snippet_end then
+      -- could not find comment end line in the diff hunk,
+      -- defaulting to last diff hunk line
+      snippet_end = #side_lines
+    end
   else
     -- for single-line comment, add additional context lines
     snippet_start, snippet_end = find_snippet_range(diffhunk_lines)
