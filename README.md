@@ -183,6 +183,8 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `<space>rr` | add/remove :rocket: reaction          |
 | `<C-o>`     | open issue/pull in browser            |
 | `<C-r>`     | reload current issue/pull             |
+| `[c`        | go to previous comment                |
+| `]c`        | go to next comment                    |
 
 
 ## Highlight groups

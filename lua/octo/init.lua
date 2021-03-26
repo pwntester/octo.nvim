@@ -718,6 +718,20 @@ function M.apply_buffer_mappings(bufnr, kind)
       [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
       mapping_opts
     )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "]c",
+      [[<cmd>lua require'octo'.next_comment()<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      "[c",
+      [[<cmd>lua require'octo'.prev_comment()<CR>]],
+      mapping_opts
+    )
 
     -- comments
     api.nvim_buf_set_keymap(
@@ -900,6 +914,58 @@ function M.on_cursor_hold()
       end
     }
   )
+end
+
+function M.next_comment()
+  local bufnr = api.nvim_get_current_buf()
+  if vim.bo[bufnr].ft == "octo_issue" then
+    local cursor = api.nvim_win_get_cursor(0)
+    local current_line = cursor[1]
+    local lines = util.get_sorted_comment_lines()
+    lines = util.tbl_slice(lines, 3, #lines)
+    local target
+    if current_line < lines[1]+1 then
+      -- go to first comment
+      target = lines[1]+1
+    elseif current_line > lines[#lines]+1 then
+      -- do not move
+      target = current_line - 1
+    else
+      for i=#lines, 1, -1 do
+        if current_line >= lines[i]+1 then
+          target = lines[i+1]+1
+          break
+        end
+      end
+    end
+    api.nvim_win_set_cursor(0, {target+1, cursor[2]})
+  end
+end
+
+function M.prev_comment()
+  local bufnr = api.nvim_get_current_buf()
+  if vim.bo[bufnr].ft == "octo_issue" then
+    local cursor = api.nvim_win_get_cursor(0)
+    local current_line = cursor[1]
+    local lines = util.get_sorted_comment_lines()
+    lines = util.tbl_slice(lines, 3, #lines)
+    local target
+    if current_line > lines[#lines]+2 then
+      -- go to last comment
+      target = lines[#lines]+1
+    elseif current_line <= lines[1]+2 then
+      -- do not move
+      target = current_line - 1
+    else
+      for i=1, #lines, 1 do
+        if current_line <= lines[i]+2 then
+          target = lines[i-1]+1
+          break
+        end
+      end
+    end
+    api.nvim_win_set_cursor(0, {target+1, cursor[2]})
+  end
 end
 
 return M

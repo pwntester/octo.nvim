@@ -689,4 +689,14 @@ function M.count_reactions(reaction_groups)
   return reactions_count
 end
 
+function M.get_sorted_comment_lines(bufnr)
+  local lines = {}
+  local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_COMMENT_NS, 0, -1, {details = true})
+  for _, mark in ipairs(marks) do
+    table.insert(lines, mark[2])
+  end
+  table.sort(lines)
+  return lines
+end
+
 return M
