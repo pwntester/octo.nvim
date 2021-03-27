@@ -61,7 +61,8 @@ au CursorHold octo://* lua require'octo'.on_cursor_hold()
 augroup END
 
 " sign definitions
-sign define octo_comment text=❯ texthl=OctoNvimCommentLine linehl=OctoNvimCommentLine 
+sign define octo_comment text=❯ texthl=OctoNvimCommentSign linehl=OctoNvimCommentLine 
+sign define octo_comment_range text=│ texthl=OctoNvimCommentRangeLine
 sign define octo_clean_block_start text=┌ linehl=OctoNvimEditable
 sign define octo_clean_block_end text=└ linehl=OctoNvimEditable
 sign define octo_dirty_block_start text=┌ texthl=OctoNvimDirty linehl=OctoNvimEditable
@@ -94,6 +95,8 @@ highlight default link OctoNvimDetailsLabel Title
 highlight default link OctoNvimDetailsValue Identifier
 highlight default link OctoNvimMissingDetails Comment
 highlight default link OctoNvimCommentLine Visual
+highlight default link OctoNvimCommentSign OctoNvimYellow
+highlight default link OctoNvimCommentRangeLine OctoNvimYellow
 highlight default link OctoNvimEditable NormalFloat
 highlight default link OctoNvimBubble NormalFloat
 highlight default link OctoNvimUser OctoNvimBubble

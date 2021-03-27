@@ -107,7 +107,7 @@ function M.diff_changes_qf_entry(target)
   local repo = qf.context.pull_request_repo
   local number = qf.context.pull_request_number
 
-  -- calculate valid ranges
+  -- calculate valid comment ranges
   local valid_left_ranges = {}
   local valid_right_ranges = {}
   local valid_hunks = {}
@@ -141,7 +141,7 @@ function M.diff_changes_qf_entry(target)
     bufname = left_bufname,
     content_bufnr = left_bufnr,
     hunks = valid_hunks,
-    ranges = valid_left_ranges,
+    comment_ranges = valid_left_ranges,
     alt_win = right_win
   })
 
@@ -172,7 +172,7 @@ function M.diff_changes_qf_entry(target)
     bufname = right_bufname,
     content_bufnr = right_bufnr,
     hunks = valid_hunks,
-    ranges = valid_right_ranges,
+    comment_ranges = valid_right_ranges,
     alt_win = left_win
   })
 
@@ -251,9 +251,9 @@ function M.add_review_comment(isSuggestion)
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
-    -- check we are in a valid range
+    -- check we are in a valid comment range
     local diff_hunk
-    for i, range in ipairs(props.ranges) do
+    for i, range in ipairs(props.comment_ranges) do
       if range[1] <= line1 and range[2] >= line2 then
         diff_hunk = props.hunks[i]
         break
@@ -1099,7 +1099,6 @@ function M.show_comment()
   if not status or not props then
     return
   end
-
   local comments = vim.tbl_values(_review_comments)
   local cursor = api.nvim_win_get_cursor(0)
   for _, comment in ipairs(comments) do
@@ -1114,6 +1113,11 @@ function M.place_comment_signs()
   signs.unplace(bufnr)
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
+    for _, range in ipairs(props.comment_ranges) do
+      for line = range[1], range[2] do
+        signs.place("octo_comment_range", bufnr, line - 1)
+      end
+    end
     local comments = vim.tbl_values(_review_comments)
     for _, comment in ipairs(comments) do
       if M.is_comment_placed_in_buffer(comment, bufnr) then

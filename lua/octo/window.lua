@@ -136,7 +136,7 @@ function M.create_comment_popup(win, comment)
   local border_width = 1
   local padding = 1
   local body = vim.list_extend(header, vim.split(comment.body, "\n"))
-  local height = math.min(2*border_width + strlen(body), vim.fn.winheight(win))
+  local height = math.min(2*border_width + #body, vim.fn.winheight(win))
 
   local preview_bufnr = api.nvim_create_buf(false, true)
   api.nvim_buf_set_lines(preview_bufnr, 0, -1, false, body)
