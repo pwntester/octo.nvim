@@ -128,20 +128,21 @@ function M.try_close_wins(...)
   end
 end
 
-function M.create_comment_popup(win, comment)
+function M.create_thread_popup(win, thread)
   local vertical_offset = vim.fn.line(".") - vim.fn.line("w0")
   local win_width = vim.fn.winwidth(win)
   local horizontal_offset = math.floor(win_width / 4) -- 1/4 of win width
-  local header = {format(" %s %s[%s] [%s]", comment.author.login, comment.viewerDidAuthor and "[Author] " or " ", comment.authorAssociation, comment.state)}
+  local first_comment = thread.comments.nodes[1]
+  local header = {format(" %s %s[%s] [%s]", first_comment.author.login, first_comment.viewerDidAuthor and "[Author] " or " ", first_comment.authorAssociation, first_comment.state)}
   local border_width = 1
   local padding = 1
-  local body = vim.list_extend(header, vim.split(comment.body, "\n"))
+  local body = vim.list_extend(header, vim.split(first_comment.body, "\n"))
   local height = math.min(2*border_width + #body, vim.fn.winheight(win))
 
   local preview_bufnr = api.nvim_create_buf(false, true)
   api.nvim_buf_set_lines(preview_bufnr, 0, -1, false, body)
   local preview_width = win_width - 2*border_width - 2*padding - horizontal_offset
-  local preview_col = comment.diffSide == "LEFT" and (padding + border_width) or (padding + border_width + horizontal_offset)
+  local preview_col = thread.diffSide == "LEFT" and (padding + border_width) or (padding + border_width + horizontal_offset)
   local preview_winid = api.nvim_open_win(preview_bufnr, false, {
     relative = "win",
     win = win,
@@ -159,7 +160,7 @@ function M.create_comment_popup(win, comment)
   local border = {}
   local borderwin_width = win_width - horizontal_offset
   local line_fill = string.rep("─", borderwin_width-2*border_width)
-  local border_col = comment.diffSide == "LEFT" and 0 or horizontal_offset
+  local border_col = thread.diffSide == "LEFT" and 0 or horizontal_offset
   table.insert(border, format("┌%s┐", line_fill))
   for _=1, height-2 do
     table.insert(border, format("│%s│", string.rep(" ", borderwin_width-2*border_width)))

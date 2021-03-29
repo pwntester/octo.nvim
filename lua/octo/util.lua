@@ -699,4 +699,21 @@ function M.get_sorted_comment_lines(bufnr)
   return lines
 end
 
+function M.is_thread_placed_in_buffer(comment, bufnr)
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if not status or not props then
+    return false
+  end
+
+  local bufname = props.bufname
+  local diffSide, path = string.match(bufname, "octo://[^/]+/[^/]+/pull/%d+/file/([^/]+)/(.+)")
+  if not diffSide or not path then
+    return false
+  end
+  if diffSide == comment.diffSide and path == comment.path then
+    return true
+  end
+  return false
+end
+
 return M

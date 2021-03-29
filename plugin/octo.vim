@@ -56,13 +56,20 @@ au!
 au BufEnter octo://* call s:configure_octo_buffer()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
-au CursorHold octo://* lua require'octo.reviews'.show_comment()
+au CursorHold octo://* lua require'octo.reviews'.show_review_threads()
 au CursorHold octo://* lua require'octo'.on_cursor_hold()
 augroup END
 
 " sign definitions
-sign define octo_comment text=❯ texthl=OctoNvimCommentSign linehl=OctoNvimCommentLine 
-sign define octo_comment_range text=│ texthl=OctoNvimCommentRangeLine
+          
+sign define octo_thread text= texthl=OctoNvimBlue
+sign define octo_thread_resolved text=  texthl=OctoNvimGreen
+sign define octo_thread_outdated text=  texthl=OctoNvimRed
+sign define octo_thread_pending text= texthl=OctoNvimYellow
+sign define octo_thread_resolved_pending text= texthl=OctoNvimYellow
+sign define octo_thread_outdated_pending text= texthl=OctoNvimYellow
+
+sign define octo_comment_range numhl=OctoNvimGreen
 sign define octo_clean_block_start text=┌ linehl=OctoNvimEditable
 sign define octo_clean_block_end text=└ linehl=OctoNvimEditable
 sign define octo_dirty_block_start text=┌ texthl=OctoNvimDirty linehl=OctoNvimEditable
@@ -94,9 +101,6 @@ highlight default link OctoNvimDate Comment
 highlight default link OctoNvimDetailsLabel Title 
 highlight default link OctoNvimDetailsValue Identifier
 highlight default link OctoNvimMissingDetails Comment
-highlight default link OctoNvimCommentLine Visual
-highlight default link OctoNvimCommentSign OctoNvimYellow
-highlight default link OctoNvimCommentRangeLine OctoNvimYellow
 highlight default link OctoNvimEditable NormalFloat
 highlight default link OctoNvimBubble NormalFloat
 highlight default link OctoNvimUser OctoNvimBubble

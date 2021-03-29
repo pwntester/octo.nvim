@@ -76,6 +76,38 @@ M.start_review_mutation =
       pullRequestReview {
         id
         state
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              startLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  pullRequestReview {
+                    id
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -562,19 +594,24 @@ M.pending_review_threads_query =
 query { 
   repository(owner:"%s", name:"%s") {
     pullRequest (number: %d){
-      reviews(first:1, states:PENDING) {
+      reviews(first:100, states:PENDING) {
         nodes {
           id
+          viewerDidAuthor
         }
       }
-      reviewThreads(last:50) {
+      reviewThreads(last:100) {
         nodes {	
+          id
           path
           diffSide
           startDiffSide
           line
           startLine
-          comments(first:1) {
+          isResolved
+          isCollapsed
+          isOutdated
+          comments(first:100) {
             nodes {
               id
               body

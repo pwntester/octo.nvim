@@ -15,7 +15,7 @@ local json = {
 local M = {}
 
 -- holds the comments for the current pending review
-local _review_comments = {}
+local _review_threads = {}
 -- holds the id of the current pending review
 local _review_id = -1
 -- holds a cache of the changed files contents for the current pending review
@@ -300,23 +300,23 @@ function M.edit_review_comment()
     return
   end
 
-  local comments = vim.tbl_values(_review_comments)
-  for _, comment in ipairs(comments) do
+  local threads = vim.tbl_values(_review_threads)
+  for _, thread in ipairs(threads) do
     local cursor = api.nvim_win_get_cursor(0)
-    if M.is_comment_placed_in_buffer(comment, bufnr) and comment.startLine <= cursor[1] and comment.line >= cursor[1] then
+    if util.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine <= cursor[1] and thread.line >= cursor[1] then
 
-      -- create comment window and buffer
+      -- create thread window and buffer
       local _, comment_bufnr = window.create_centered_float({
-        header = format("Edit comment for %s (from %d to %d) [%s]", comment.path, comment.startLine, comment.line, props.diffSide)
+        header = format("Edit comment for %s (from %d to %d) [%s]", thread.path, thread.startLine, thread.line, props.diffSide)
       })
 
-      local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), comment.startLine, comment.line)
+      local bufname = format("%s:%d.%d", string.gsub(props.bufname, "/file/", "/comment/"), thread.startLine, thread.line)
       api.nvim_buf_set_name(comment_bufnr, bufname)
       api.nvim_buf_set_option(comment_bufnr, "syntax", "markdown")
       api.nvim_buf_set_option(comment_bufnr, "buftype", "acwrite")
-      props["id"] = comment.id
+      props["id"] = thread.id
       api.nvim_buf_set_var(comment_bufnr, "OctoDiffProps", props)
-      api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(comment.body, "\n"))
+      api.nvim_buf_set_lines(comment_bufnr, 0, -1, false, vim.split(thread.comments.nodes[1].body, "\n"))
       return
     end
   end
@@ -366,12 +366,14 @@ function M.save_review_comment()
               end
 
               -- update comment buffer props
-              local first_comment = thread.comments.nodes[1]
-              props.id = first_comment.id
+              props.id = thread.id
               api.nvim_buf_set_var(bufnr, "OctoDiffProps", props)
 
-              -- add new comment
-              _review_comments[props.id] = {
+              -- add new thread
+              _review_threads[props.id] = thread
+
+              --[[
+              {
                 id = first_comment.id,
                 path = thread.path,
                 startDiffSide = thread.startDiffSide,
@@ -386,13 +388,7 @@ function M.save_review_comment()
                 viewerDidAuthor = first_comment.viewerDidAuthor,
                 state = first_comment.state
               }
-            elseif op == "update" then
-
-              -- update existing comment
-              local updated_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment.body
-              local comment = _review_comments[updated_comment.id]
-              comment.body = updated_comment.body
-              _review_comments[updated_comment.id] = comment
+              ]]--
             end
           end
         end
@@ -801,7 +797,7 @@ function M.start_review()
   end
 
   _review_id = -1
-  _review_comments = {}
+  _review_threads = {}
   _review_files = {}
 
   -- start new review
@@ -814,7 +810,18 @@ function M.start_review()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = json.parse(output)
+
           _review_id = resp.data.addPullRequestReview.pullRequestReview.id
+
+          local threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
+          for _, thread in ipairs(threads) do
+            if thread.startLine == vim.NIL then
+              thread.startLine = thread.line
+              thread.startDiffSide = thread.diffSide
+            end
+            _review_threads[thread.id] = thread
+          end
+
           M.initiate_review(repo, number, pr)
         end
       end
@@ -879,33 +886,27 @@ function M.resume_review()
             api.nvim_err_writeln("No pending reviews found")
             return
           end
-          _review_id = resp.data.repository.pullRequest.reviews.nodes[1].id
+
+          -- There can only be one pending review for a given user
+          for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
+            if review.viewerDidAuthor then
+              _review_id = review.id
+              break
+            end
+          end
+
+          if not _review_id then
+            api.nvim_err_writeln("No pending reviews found for viewer")
+            return
+          end
 
           local threads = resp.data.repository.pullRequest.reviewThreads.nodes
           for _, thread in ipairs(threads) do
-            local review_id = thread.comments.nodes[1].pullRequestReview.id
-            if review_id == _review_id then
-              if thread.startLine == vim.NIL then
-                thread.startLine = thread.line
-                thread.startDiffSide = thread.diffSide
-              end
-              local first_comment = thread.comments.nodes[1]
-              _review_comments[first_comment.id] = {
-                id = first_comment.id,
-                path = thread.path,
-                startDiffSide = thread.startDiffSide,
-                diffSide = thread.diffSide,
-                diffHunk = first_comment.diffHunk,
-                commit = first_comment.commit.abbreviatedOid,
-                startLine = thread.startLine,
-                line = thread.line,
-                body = first_comment.body,
-                author = first_comment.author,
-                authorAssociation = first_comment.authorAssociation,
-                viewerDidAuthor = first_comment.viewerDidAuthor,
-                state = first_comment.state
-              }
+            if thread.startLine == vim.NIL then
+              thread.startLine = thread.line
+              thread.startDiffSide = thread.diffSide
             end
+            _review_threads[thread.id] = thread
           end
 
           M.initiate_review(repo, number, pr)
@@ -963,7 +964,14 @@ function M.delete_pending_review_comment(comment)
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
       cb = function(_)
-        _review_comments[comment.id] = nil
+        for _, thread in ipairs(_review_threads) do
+          for _, c in ipairs(thread.comments.nodes) do
+            if comment.id == c then
+              _review_threads[thread.id] = nil
+              break
+            end
+          end
+        end
       end
     }
   )
@@ -1061,49 +1069,34 @@ function M.show_pending_comments()
     api.nvim_err_writeln("No review in progress")
     return
   end
-  local comments = vim.tbl_values(_review_comments)
-  local filtered_comments = {}
-  for _, comment in ipairs(comments) do
-    if not util.is_blank(vim.fn.trim(comment.body)) then
-      table.insert(filtered_comments, comment)
+  local threads = vim.tbl_values(_review_threads)
+  local filtered_threads = {}
+  for _, thread in ipairs(threads) do
+    local first_comment = thread.comments.nodes[1]
+    local review = first_comment.pullRequestReview
+    if review.state == "PENDING" and not util.is_blank(vim.fn.trim(first_comment.body)) then
+      table.insert(filtered_threads, thread)
     end
   end
-  if #filtered_comments == 0 then
+  if #filtered_threads == 0 then
     api.nvim_err_writeln("No pending comments found")
     return
   else
-    require"octo.menu".pending_comments(filtered_comments)
+    require"octo.menu".pending_comments(filtered_threads)
   end
 end
 
-function M.is_comment_placed_in_buffer(comment, bufnr)
-  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
-  if not status or not props then
-    return false
-  end
-
-  local bufname = props.bufname
-  local diffSide, path = string.match(bufname, "octo://[^/]+/[^/]+/pull/%d+/file/([^/]+)/(.+)")
-  if not diffSide or not path then
-    return false
-  end
-  if diffSide == comment.diffSide and path == comment.path then
-    return true
-  end
-  return false
-end
-
-function M.show_comment()
+function M.show_review_threads()
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if not status or not props then
     return
   end
-  local comments = vim.tbl_values(_review_comments)
+  local threads = vim.tbl_values(_review_threads)
   local cursor = api.nvim_win_get_cursor(0)
-  for _, comment in ipairs(comments) do
-    if M.is_comment_placed_in_buffer(comment, bufnr) and comment.startLine <= cursor[1] and comment.line >= cursor[1] then
-      window.create_comment_popup(props.alt_win, comment)
+  for _, thread in ipairs(threads) do
+    if util.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine <= cursor[1] and thread.line >= cursor[1] then
+      window.create_thread_popup(props.alt_win, thread)
     end
   end
 end
@@ -1118,12 +1111,27 @@ function M.place_comment_signs()
         signs.place("octo_comment_range", bufnr, line - 1)
       end
     end
-    local comments = vim.tbl_values(_review_comments)
-    for _, comment in ipairs(comments) do
-      if M.is_comment_placed_in_buffer(comment, bufnr) then
-          for line = comment.startLine, comment.line do
-            signs.place("octo_comment", bufnr, line - 1)
+    local threads = vim.tbl_values(_review_threads)
+    for _, thread in ipairs(threads) do
+      if util.is_thread_placed_in_buffer(thread, bufnr) then
+        for line = thread.startLine, thread.line do
+          local sign = "octo_thread"
+
+          if thread.isResolved then
+            sign = sign .. "_resolved"
+          elseif thread.isOudated then
+            sign = sign .. "_outdated"
           end
+
+          for _, comment in ipairs(thread.comments.nodes) do
+            if comment.state == "PENDING" then
+              sign = sign .. "_pending"
+              break
+            end
+          end
+
+          signs.place(sign, bufnr, line - 1)
+        end
       end
     end
   end
