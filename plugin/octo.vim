@@ -86,7 +86,7 @@ highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#da3633
 highlight default OctoNvimBubblePurple guifg=#ffffff guibg=#ad7cfd
 highlight default OctoNvimBubbleYellow guifg=#ffffff guibg=#d3c846
 highlight default OctoNvimBubbleBlue guifg=#ffffff guibg=#58A6FF
-highlight default OctoNvimGreen guifg=#2ea043
+highlight default OctoNvimGreen guifg=#238636
 highlight default OctoNvimRed guifg=#da3633
 highlight default OctoNvimPurple guifg=#ad7cfd
 highlight default OctoNvimYellow guifg=#d3c846
