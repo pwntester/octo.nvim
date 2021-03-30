@@ -56,8 +56,9 @@ au!
 au BufEnter octo://* call s:configure_octo_buffer()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
-au CursorHold octo://* lua require'octo.reviews'.show_review_threads()
 au CursorHold octo://* lua require'octo'.on_cursor_hold()
+au CursorHold octo://* lua require'octo.reviews'.show_review_threads()
+au CursorMoved octo://* lua require'octo.reviews'.clear_review_threads()
 augroup END
 
 " sign definitions

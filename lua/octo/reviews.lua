@@ -127,29 +127,17 @@ function M.diff_changes_qf_entry(target)
   local left_bufname = format("octo://%s/pull/%d/file/LEFT/%s", repo, number, path)
   local left_bufnr = vim.fn.bufnr(left_bufname)
   if left_bufnr == -1 then
-    left_bufnr = api.nvim_create_buf(false, true)
+    left_bufnr = api.nvim_create_buf(true, true)
     api.nvim_buf_set_name(left_bufnr, left_bufname)
     api.nvim_buf_set_lines(left_bufnr, 0, -1, false, {"Loading ..."})
     api.nvim_buf_set_option(left_bufnr, "modifiable", false)
   end
-  api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", {
-    diffSide = "LEFT",
-    commit = left_commit,
-    qf_idx = qf.idx,
-    qf_winid = qf.winid,
-    path = path,
-    bufname = left_bufname,
-    content_bufnr = left_bufnr,
-    hunks = valid_hunks,
-    comment_ranges = valid_left_ranges,
-    alt_win = right_win
-  })
 
   -- prepare right buffer
   local right_bufname = format("octo://%s/pull/%d/file/RIGHT/%s", repo, number, path)
   local right_bufnr = vim.fn.bufnr(right_bufname)
   if right_bufnr == -1 then
-    right_bufnr = api.nvim_create_buf(false, true)
+    right_bufnr = api.nvim_create_buf(true, true)
     api.nvim_buf_set_name(right_bufnr, right_bufname)
     api.nvim_buf_set_lines(right_bufnr, 0, -1, false, {"Loading ..."})
     api.nvim_buf_set_option(right_bufnr, "modifiable", false)
@@ -173,7 +161,22 @@ function M.diff_changes_qf_entry(target)
     content_bufnr = right_bufnr,
     hunks = valid_hunks,
     comment_ranges = valid_right_ranges,
-    alt_win = left_win
+    alt_win = left_win,
+    alt_bufnr = left_bufnr
+  })
+
+  api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", {
+    diffSide = "LEFT",
+    commit = left_commit,
+    qf_idx = qf.idx,
+    qf_winid = qf.winid,
+    path = path,
+    bufname = left_bufname,
+    content_bufnr = left_bufnr,
+    hunks = valid_hunks,
+    comment_ranges = valid_left_ranges,
+    alt_win = right_win,
+    alt_bufnr = right_bufnr
   })
 
   local write_diff_lines = function(lines, side)
@@ -1086,6 +1089,23 @@ function M.show_pending_comments()
   end
 end
 
+function M.clear_review_threads()
+  local bufnr = api.nvim_get_current_buf()
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if not status or not props then
+    return
+  end
+  local diff_bufnr = props.alt_bufnr
+  local current_alt_bufnr = api.nvim_win_get_buf(props.alt_win)
+  if current_alt_bufnr ~= diff_bufnr then
+    api.nvim_win_set_buf(props.alt_win, diff_bufnr)
+    local bufname = api.nvim_buf_get_name(current_alt_bufnr)
+    if vim.startswith(bufname, "octo://thread") then
+      api.nvim_buf_delete(current_alt_bufnr, {force = true})
+    end
+  end
+end
+
 function M.show_review_threads()
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
@@ -1094,10 +1114,52 @@ function M.show_review_threads()
   end
   local threads = vim.tbl_values(_review_threads)
   local cursor = api.nvim_win_get_cursor(0)
+  local threads_at_cursor = {}
   for _, thread in ipairs(threads) do
     if util.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine <= cursor[1] and thread.line >= cursor[1] then
-      window.create_thread_popup(props.alt_win, thread)
+      table.insert(threads_at_cursor, thread)
     end
+  end
+
+  if #threads_at_cursor == 0 then
+    return
+  end
+
+  -- window.create_thread_popup(props.alt_win, thread)
+  local thread_bufnr = api.nvim_create_buf(false, true)
+  local thread_bufname = format("octo://thread")
+  api.nvim_buf_set_name(thread_bufnr, thread_bufname)
+
+  for _, thread in ipairs(threads_at_cursor) do
+    local thread_start, thread_end
+    for _, comment in ipairs(thread.comments.nodes) do
+
+      -- review thread header
+      if comment.replyTo == vim.NIL then
+        local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+        local end_line = thread.originalLine
+        writers.write_review_thread_header(bufnr, {
+          path = thread.path,
+          start_line = start_line,
+          end_line = end_line,
+          isOutdated = thread.isOutdated,
+          isResolved = thread.isResolved,
+        })
+
+        -- write snippet
+        thread_start, thread_end = writers.write_diff_hunk(thread_bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+      end
+
+      api.nvim_buf_set_var(thread_bufnr, "comments", {})
+      local comment_start, comment_end = writers.write_comment(thread_bufnr, comment, "PullRequestReviewComment")
+      thread_end = comment_end
+    end
+  end
+
+  if api.nvim_win_is_valid(props.alt_win) then
+    api.nvim_win_set_buf(props.alt_win, thread_bufnr)
+  else
+    api.nvim_err_writeln("[Octo] Cannot find diff window")
   end
 end
 
