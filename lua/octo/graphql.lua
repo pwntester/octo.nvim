@@ -103,6 +103,13 @@ M.start_review_mutation =
                   pullRequestReview {
                     id
                   }
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
                 }
               }
             }
@@ -625,6 +632,13 @@ query {
               state
               pullRequestReview {
                 id
+              }
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
               }
             }
           }
