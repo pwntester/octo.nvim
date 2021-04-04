@@ -178,7 +178,7 @@ M.changed_files =
   {}
 )
 
-M.review_comment =
+M.review_thread =
   defaulter(
   function()
     return previewers.new_buffer_previewer {
@@ -188,9 +188,13 @@ M.review_comment =
       define_preview = function(self, entry)
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
-          -- TODO: pretty print
-          writers.write_diff_hunk(bufnr, entry.comment.diffHunk)
-          api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(entry.comment.body, "\n"))
+          api.nvim_buf_set_var(bufnr, "review_thread_map", {})
+          api.nvim_buf_set_var(bufnr, "comments", {})
+          writers.write_threads(bufnr, {entry.thread})
+          api.nvim_buf_call(bufnr, function()
+            vim.cmd [[setlocal foldmethod=manual]]
+            vim.cmd [[normal! zR]]
+          end)
         end
       end
     }

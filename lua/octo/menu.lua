@@ -572,43 +572,27 @@ end
 ---
 -- REVIEW COMMENTS
 ---
-function M.pending_comments(comments)
+function M.pending_threads(threads)
   local max_linenr_length = -1
-  for _, comment in ipairs(comments) do
-    max_linenr_length = math.max(max_linenr_length, #tostring(comment.startLine))
-    max_linenr_length = math.max(max_linenr_length, #tostring(comment.line))
+  for _, thread in ipairs(threads) do
+    max_linenr_length = math.max(max_linenr_length, #tostring(thread.startLine))
+    max_linenr_length = math.max(max_linenr_length, #tostring(thread.line))
   end
   pickers.new(
     {},
     {
-      prompt_prefix = "Review Comments >",
+      prompt_prefix = "Pending Review Comments>",
       finder = finders.new_table {
-        results = comments,
-        entry_maker = entry_maker.gen_from_review_comment(max_linenr_length)
+        results = threads,
+        entry_maker = entry_maker.gen_from_review_thread(max_linenr_length)
       },
       sorter = conf.generic_sorter({}),
-      previewer = previewers.review_comment.new({}),
-      attach_mappings = function(_, map)
-
-        -- update comment mapping
-        map("i", "<c-e>", function(prompt_bufnr)
-          local comment = action_state.get_selected_entry(prompt_bufnr).comment
-          actions.close(prompt_bufnr)
-          reviews.update_pending_review_comment(comment)
-        end)
-
-        -- delete comment mapping
-        map("i", "<c-d>", function(prompt_bufnr)
-          local comment = action_state.get_selected_entry(prompt_bufnr).comment
-          actions.close(prompt_bufnr)
-          reviews.delete_pending_review_comment(comment)
-        end)
-
-        -- jump to comment
+      previewer = previewers.review_thread.new({}),
+      attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
-          local comment = action_state.get_selected_entry(prompt_bufnr).comment
+          local thread = action_state.get_selected_entry(prompt_bufnr).thread
           actions.close(prompt_bufnr)
-          reviews.jump_to_pending_review_comment(comment)
+          reviews.jump_to_pending_review_thread(thread)
         end)
         return true
       end

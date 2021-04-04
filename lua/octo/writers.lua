@@ -1,5 +1,6 @@
 local constants = require "octo.constants"
 local util = require "octo.util"
+local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
 local vim = vim
 local api = vim.api
@@ -381,10 +382,15 @@ function M.write_comment(bufnr, comment, kind, line)
 
   if kind == "PullRequestReview" then
     -- Review top-level comments
+    local state_bubble = bubbles.make_bubble(
+      comment.state:lower(),
+      util.state_hl_map[comment.state],
+      { margin_width = 1 }
+    )
     table.insert(header_vt, {"REVIEW:", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
-    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    vim.list_extend(header_vt, state_bubble)
+    table.insert(header_vt, {" (", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
     table.insert(header_vt, {") ", "OctoNvimSymbol"})
     if not comment.viewerCanUpdate then
@@ -392,10 +398,17 @@ function M.write_comment(bufnr, comment, kind, line)
     end
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
+    local state_bubble = bubbles.make_bubble(
+      comment.state:lower(),
+      util.state_hl_map[comment.state],
+      { margin_width = 1 }
+    )
     table.insert(header_vt, {"THREAD COMMENT:", "OctoNvimTimelineItemHeading"})
     vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {comment.state:lower().." ", util.state_hl_map[comment.state]})
-    table.insert(header_vt, {"(", "OctoNvimSymbol"})
+    if comment.state ~= "SUBMITTED" then
+      vim.list_extend(header_vt, state_bubble)
+    end
+    table.insert(header_vt, {" (", "OctoNvimSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
     table.insert(header_vt, {") ", "OctoNvimSymbol"})
     if not comment.viewerCanUpdate then
@@ -455,9 +468,15 @@ function M.write_comment(bufnr, comment, kind, line)
       reaction_line = reaction_line,
       viewerCanUpdate = comment.viewerCanUpdate,
       viewerCanDelete = comment.viewerCanDelete,
+      viewerDidAuthor = comment.viewerDidAuthor,
       reaction_groups = comment.reactionGroups,
       kind = kind,
-      first_comment_id = comment.first_comment_id,
+      replyTo = comment.replyTo,
+      reviewId = comment.pullRequestReview and comment.pullRequestReview.id,
+      path = comment.path,
+      diffSide = comment.diffSide,
+      codeStartLine = comment.start_line,
+      codeEndLine = comment.end_line
     }
   )
   api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
@@ -472,7 +491,7 @@ local function find_snippet_range(diffhunk_lines)
   for i = #diffhunk_lines, 1, -1 do
     local line = diffhunk_lines[i]
 
-    -- once we find a where the snippet should start, add `context_lines` of context
+    -- once we find where the snippet should start, add `context_lines` of context
     if snippet_start then
       if vim.startswith(line, "+") or vim.startswith(line, "-") then
         -- we found a different diff, so do not include it
@@ -486,7 +505,7 @@ local function find_snippet_range(diffhunk_lines)
       end
     end
 
-    -- if we cant find a lower bondary in last `context_lines` then set boundary
+    -- if we cant find a lower boundary in the last `context_lines` then set boundary
     if not snippet_start and i < #diffhunk_lines - context_lines + 2 then
       snippet_start = i
       break
@@ -528,7 +547,7 @@ local function get_lnum_chunks(opts)
   end
 end
 
-function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
+function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
@@ -540,7 +559,7 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
   --- right_side_lines
   --- left_side_lines
   local diff_directive = diffhunk_lines[1]
-  local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
+  local left_offset, right_offset  = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+),%d+%s@@")
   local right_side_lines = {}
   local left_side_lines = {}
   local right_side_line = right_offset
@@ -576,9 +595,9 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
       side_lines = left_side_lines
     end
     for pos, l in pairs(side_lines) do
-      if l == comment_start then
+      if tonumber(l) == tonumber(comment_start) then
         snippet_start = pos
-      elseif l == comment_end then
+      elseif tonumber(l) == tonumber(comment_end) then
         snippet_end = pos
       end
     end
@@ -589,7 +608,18 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
     end
   else
     -- for single-line comment, add additional context lines
-    snippet_start, snippet_end = find_snippet_range(diffhunk_lines)
+    local side_lines
+    if comment_side == "RIGHT" then
+      side_lines = right_side_lines
+    elseif comment_side == "LEFT" then
+      side_lines = left_side_lines
+    end
+    for pos, l in pairs(side_lines) do
+      if tonumber(l) == tonumber(comment_start) then
+        snippet_start, snippet_end = find_snippet_range(util.tbl_slice(diffhunk_lines, 1, pos, 1))
+        break
+      end
+    end
   end
 
   -- calculate longest line in the visible section of the diffhunk
@@ -660,83 +690,6 @@ function M.write_diff_hunk(bufnr, diffhunk, start_line, comment_start, comment_e
   table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
 
   -- write snippet as virtual text
-  local line = start_line - 1
-  for _, vt_line in ipairs(vt_lines) do
-    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
-    line = line + 1
-  end
-
-  return start_line, line
-end
-
-function M.write_thread_snippet(bufnr, diffhunk, side, start_pos, end_pos, start_line)
-  start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
-  start_pos = start_pos ~= vim.NIL and start_pos or end_pos
-
-  -- add context for single-line comments
-  if start_pos == end_pos then
-    local context_lines = vim.g.octo_snippet_context_lines or 3
-    start_pos = start_pos - context_lines
-  end
-
-  -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
-
-  local diffhunk_lines = vim.split(diffhunk, "\n")
-
-  -- write end_pos - start_pos + 2 borders + 2 empty lines
-  -- to hold virtual text
-  local empty_lines = {}
-  for _=1,(end_pos-start_pos+4) do
-    table.insert(empty_lines, "")
-  end
-  M.write_block(bufnr, empty_lines, start_line)
-
-  -- separate diffhunk lines into right/left hunks
-  local diff_directive = diffhunk_lines[1]
-  local side_lines = {}
-  for i=2,#diffhunk_lines do
-    local line = diffhunk_lines[i]
-    if vim.startswith(line, "+") and side == "RIGHT" then
-      table.insert(side_lines, line)
-    elseif vim.startswith(line, "-") and side == "LEFT" then
-      table.insert(side_lines, line)
-    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
-      table.insert(side_lines, line)
-    end
-  end
-
-  -- calculate longest hunk line
-  local max_length = -1
-  for _, line in ipairs(side_lines) do
-    max_length = math.max(max_length, strlen(line))
-  end
-  max_length = math.min(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn) + 1
-
-  local left_offset, right_offset  = string.match(diff_directive, "@@%s%-(%d+),%d+%s%+(%d+),%d+%s@@")
-  local offset = side == "RIGHT" and right_offset or left_offset
-  local final_lines = {unpack(side_lines, start_pos - offset + 1, end_pos - offset + 1)}
-  local vt_lines = {}
-  local max_lnum = math.max(strlen(tostring(start_pos)), strlen(tostring(end_pos)))
-  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_lnum + max_length + 2))}})
-  for i, line in ipairs(final_lines) do
-    local stripped_line = line:gsub("^.", " ")
-    local hl_line = side == "RIGHT" and "DiffAdd" or "DiffDelete"
-    local vt_line = {stripped_line, hl_line}
-    local lnum = tostring(i + start_pos - 1)
-    local lnum_length = strlen(lnum)
-    local padded_lnum = string.rep("0", max_lnum - lnum_length)..lnum
-    table.insert( vt_lines, {
-      {"│"},
-      {format(" %s ", padded_lnum), "DiffChange"},
-      vt_line,
-      {string.rep(" ", max_length - strlen(stripped_line)), hl_line},
-      {"│"}
-    })
-  end
-  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_lnum + max_length + 2))}})
-
-  -- write diffhunk as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
@@ -943,7 +896,6 @@ function M.write_user_profile(bufnr, user, opts)
     M.write_block(bufnr, {""}, i)
   end
   for i=1,#chunks do
-    print(vim.inspect(chunks[i]))
     M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
   end
   return #chunks, max_length
@@ -1115,6 +1067,67 @@ function M.write_reopened_event(bufnr, item)
   table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
   table.insert(vt, {")", "OctoNvimSymbol"})
   write_event(bufnr, vt)
+end
+
+function M.write_threads(bufnr, threads)
+  local review_thread_map = {}
+  local comment_start, comment_end
+
+  -- print each of the threads
+  for _, thread in ipairs(threads) do
+    local thread_start, thread_end
+    for _, comment in ipairs(thread.comments.nodes) do
+      -- augment comment details
+      comment.path = thread.path
+      comment.diffSide = thread.diffSide
+      -- review thread header
+      if comment.replyTo == vim.NIL then
+        local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+        local end_line = thread.originalLine
+        comment.start_line = start_line
+        comment.end_line = end_line
+        M.write_review_thread_header(bufnr, {
+          path = thread.path,
+          start_line = start_line,
+          end_line = end_line,
+          isOutdated = thread.isOutdated,
+          isResolved = thread.isResolved,
+        })
+
+        -- write snippet
+        thread_start, thread_end = M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+      end
+
+      comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")
+      folds.create(bufnr, comment_start+1, comment_end, true)
+      thread_end = comment_end
+    end
+    folds.create(bufnr, thread_start - 1, thread_end - 1, not thread.isCollapsed)
+
+    -- mark the thread region
+    local thread_mark_id = api.nvim_buf_set_extmark(
+      bufnr,
+      constants.OCTO_THREAD_NS,
+      thread_start - 1,
+      0,
+      {
+        end_line = thread_end,
+        end_col = 0
+      }
+    )
+    -- store it as a buffer var to be able to find a thread_id given the cursor position
+    review_thread_map[tostring(thread_mark_id)] = {
+      threadId = thread.id,
+      replyTo = thread.comments.nodes[1].id,
+      reviewId = thread.comments.nodes[1].pullRequestReview.id
+    }
+  end
+
+  local buffer_thread_map = api.nvim_buf_get_var(bufnr, "review_thread_map")
+  local merged = vim.tbl_extend("error", buffer_thread_map, review_thread_map)
+  api.nvim_buf_set_var(bufnr, "review_thread_map", merged)
+
+  return comment_end
 end
 
 function M.write_virtual_text(bufnr, ns, line, chunks)

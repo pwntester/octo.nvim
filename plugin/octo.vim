@@ -2,10 +2,6 @@ if exists('g:loaded_octo')
   finish
 endif
 
-function! s:command_complete(...)
-  return luaeval('require("octo.commands").command_complete(_A)', a:000)
-endfunction
-
 " commands
 if executable('gh')
   command! -complete=customlist,s:command_complete -nargs=* Octo lua require"octo.commands".octo(<f-args>)
@@ -29,31 +25,15 @@ function! octo#issue_complete(findstart, base) abort
   return luaeval("require'octo.completion'.issue_complete(_A[1], _A[2])", [a:findstart, a:base])
 endfunction
 
-" autocommands
-function s:configure_octo_buffer() abort
-  " issue/pr/comment buffers
-  if match(bufname(), "octo://.\\+/.\\+/pull/\\d\\+/file/") == -1
-    setlocal omnifunc=octo#issue_complete
-    setlocal nonumber norelativenumber nocursorline wrap
-    setlocal foldcolumn=3
-    setlocal signcolumn=yes
-    setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀
-    setlocal foldtext=v:lua.OctoFoldText()
-    setlocal foldmethod=manual
-    setlocal foldenable
-    setlocal foldcolumn=3
-    setlocal foldlevelstart=99
-    setlocal conceallevel=2
-    setlocal syntax=markdown
-  " file diff buffers
-  else
-    lua require"octo.reviews".place_comment_signs()
-  end
+function! s:command_complete(...)
+  return luaeval('require("octo.commands").command_complete(_A)', a:000)
 endfunction
 
+
+" autocommands
 augroup octo_autocmds
 au!
-au BufEnter octo://* call s:configure_octo_buffer()
+au BufEnter octo://* lua require'octo'.configure_octo_buffer()
 au BufReadCmd octo://* lua require'octo'.load_buffer()
 au BufWriteCmd octo://* lua require'octo'.save_buffer()
 au CursorHold octo://* lua require'octo'.on_cursor_hold()
@@ -62,7 +42,6 @@ au CursorMoved octo://* lua require'octo.reviews'.clear_review_threads()
 augroup END
 
 " sign definitions
-          
 sign define octo_thread text= texthl=OctoNvimBlue
 sign define octo_thread_resolved text=  texthl=OctoNvimGreen
 sign define octo_thread_outdated text=  texthl=OctoNvimRed
@@ -81,11 +60,11 @@ sign define octo_clean_line text=[ linehl=OctoNvimEditable
 sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable
 
 highlight default OctoNvimViewer guifg=#000000 guibg=#58A6FF
-highlight default OctoNvimBubbleGreen guifg=#ffffff guibg=#238636
-highlight default OctoNvimBubbleRed guifg=#ffffff guibg=#da3633
-highlight default OctoNvimBubblePurple guifg=#ffffff guibg=#ad7cfd
-highlight default OctoNvimBubbleYellow guifg=#ffffff guibg=#d3c846
-highlight default OctoNvimBubbleBlue guifg=#ffffff guibg=#58A6FF
+highlight default OctoNvimBubbleGreen guibg=#238636 guifg=#acf2bd
+highlight default OctoNvimBubbleRed guibg=#da3633 guifg=#fdb8c0
+highlight default OctoNvimBubblePurple guifg=#ffffff guibg=#6f42c1
+highlight default OctoNvimBubbleYellow guibg=#735c0f guifg=#d3c846 
+highlight default OctoNvimBubbleBlue guifg=#eaf5ff guibg=#0366d6
 highlight default OctoNvimGreen guifg=#238636
 highlight default OctoNvimRed guifg=#da3633
 highlight default OctoNvimPurple guifg=#ad7cfd
@@ -116,11 +95,12 @@ highlight default link OctoNvimPullModifications OctoNvimBlue
 highlight default link OctoNvimStateOpen OctoNvimGreen
 highlight default link OctoNvimStateClosed OctoNvimRed
 highlight default link OctoNvimStateMerged OctoNvimPurple
-highlight default link OctoNvimStatePending OctoNvimYellow
+highlight default link OctoNvimStatePending OctoNvimBubbleYellow
 highlight default link OctoNvimStateApproved OctoNvimStateOpen
 highlight default link OctoNvimStateChangesRequested OctoNvimStateClosed
 highlight default link OctoNvimStateCommented Normal
 highlight default link OctoNvimStateDismissed OctoNvimStateClosed
+highlight default link OctoNvimStateSubmitted OctoNvimBubbleGreen
 
 " folds
 lua require'octo.folds'

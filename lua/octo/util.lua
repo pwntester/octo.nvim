@@ -22,7 +22,8 @@ M.state_hl_map = {
   COMMENTED = "OctoNvimStateCommented",
   DISMISSED = "OctoNvimStateDismissed",
   PENDING = "OctoNvimStatePending",
-  REVIEW_REQUIRED = "OctoNvimStatePending"
+  REVIEW_REQUIRED = "OctoNvimStatePending",
+  SUBMITTED = "OctoNvimStateSubmitted",
 }
 
 M.state_icon_map = {
@@ -304,28 +305,21 @@ end
 
 function M.get_thread_at_cursor(bufnr)
   local cursor = api.nvim_win_get_cursor(0)
-  if vim.bo[bufnr].ft == "octo_issue" then
-    local thread_map = api.nvim_buf_get_var(bufnr, "reviewThreadMap")
-    local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
-    for _, mark in ipairs(marks) do
-      local info = thread_map[tostring(mark[1])]
-      if not info then
-        goto continue
+  local thread_map = api.nvim_buf_get_var(bufnr, "review_thread_map")
+  local thread_marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
+  for _, mark in ipairs(thread_marks) do
+    local markId = tostring(mark[1])
+    local info = thread_map[markId]
+    if info then
+      local threadId = info.threadId
+      local replyTo = info.replyTo
+      local reviewId = info.reviewId
+      local startLine = mark[2]
+      local endLine = mark[4]["end_row"]
+      if startLine <= cursor[1] and endLine >= cursor[1] then
+        return threadId, startLine, endLine, replyTo, reviewId
       end
-      local thread_id = info.thread_id
-      local first_comment_id = info.first_comment_id
-      local start_line = mark[2]
-      local end_line = mark[4]["end_row"]
-      if start_line <= cursor[1] and end_line >= cursor[1] then
-        return thread_id, start_line, end_line, first_comment_id
-      end
-      ::continue::
     end
-  elseif vim.bo[bufnr].ft == "octo_reviewthread" then
-    local bufname = api.nvim_buf_get_name(bufnr)
-    local thread_id, first_comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
-    local end_line = api.nvim_buf_line_count(bufnr) - 1
-    return thread_id, 1, end_line, first_comment_id
   end
   return nil
 end
@@ -714,6 +708,18 @@ function M.is_thread_placed_in_buffer(comment, bufnr)
     return true
   end
   return false
+end
+
+function M.get_octo_kind(bufname)
+  local kind
+  if string.match(bufname, "octo://.*/reviewthread/.*") then
+    kind = "reviewthread"
+  elseif string.match(bufname, "octo://.*/pull/.*") then
+    kind = "pull"
+  elseif string.match(bufname, "octo://.*/issue/.*") then
+    kind = "issue"
+  end
+  return kind
 end
 
 return M

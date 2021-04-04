@@ -35,7 +35,7 @@ end
 function M.render_signcolumn(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
   local ft = api.nvim_buf_get_option(bufnr, "filetype")
-  if not vim.startswith(ft, "octo_") then
+  if ft ~= "octo_issue" and ft ~= "octo_reviewthread" then
     return
   end
 
