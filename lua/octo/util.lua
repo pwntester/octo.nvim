@@ -304,7 +304,8 @@ end
 
 function M.get_thread_at_cursor(bufnr)
   local cursor = api.nvim_win_get_cursor(0)
-  local thread_map = api.nvim_buf_get_var(bufnr, "review_thread_map")
+  local ok, thread_map = pcall(api.nvim_buf_get_var, bufnr, "review_thread_map")
+  if not thread_map or not ok then return end
   local thread_marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
   for _, mark in ipairs(thread_marks) do
     local markId = tostring(mark[1])
@@ -320,7 +321,7 @@ function M.get_thread_at_cursor(bufnr)
       end
     end
   end
-  return nil
+  return
 end
 
 function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
