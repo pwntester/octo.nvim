@@ -584,7 +584,8 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   local max_lnum = math.max(strlen(tostring(right_offset + #diffhunk_lines)), strlen(tostring(left_offset + #diffhunk_lines)))
 
   -- calculate diffhunk subrange to show
-  local snippet_start, snippet_end
+  local snippet_start = start_line
+  local snippet_end = start_line
   if comment_side and comment_start ~= comment_end then
     -- for multiline comments, discard calculated values
     -- write just those lines

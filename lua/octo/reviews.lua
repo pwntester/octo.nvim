@@ -324,6 +324,7 @@ function M.update_threads(threads)
   for _, thread in ipairs(threads) do
     if thread.startLine == vim.NIL then
       thread.startLine = thread.line
+      thread.originalStartLine = thread.originaLine
       thread.startDiffSide = thread.diffSide
     end
     _review_threads[thread.id] = thread
@@ -365,6 +366,7 @@ function M.resume_review()
           end
 
           local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+
           M.update_threads(threads)
           M.initiate_review(repo, number, pr)
         end
@@ -575,7 +577,9 @@ function M.show_review_threads()
   local comment_line = cursor[1]
   local threads_at_cursor = {}
   for _, thread in ipairs(threads) do
-    if util.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine <= comment_line and thread.line >= comment_line then
+    if not thread.isOutdated and
+      util.is_thread_placed_in_buffer(thread, bufnr) and
+      thread.startLine <= comment_line and thread.line >= comment_line then
       table.insert(threads_at_cursor, thread)
     end
   end
@@ -627,13 +631,13 @@ function M.place_thread_signs()
     end
     local threads = vim.tbl_values(_review_threads)
     for _, thread in ipairs(threads) do
-      if util.is_thread_placed_in_buffer(thread, bufnr) then
+      if not thread.isOutdated and util.is_thread_placed_in_buffer(thread, bufnr) then
         for line = thread.startLine, thread.line do
           local sign = "octo_thread"
 
           if thread.isResolved then
             sign = sign .. "_resolved"
-          elseif thread.isOudated then
+          elseif thread.isOutdated then
             sign = sign .. "_outdated"
           end
 
