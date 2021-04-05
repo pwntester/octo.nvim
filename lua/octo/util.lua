@@ -703,7 +703,7 @@ function M.get_octo_kind(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
   local bufname = api.nvim_buf_get_name(bufnr)
   local kind
-  if string.match(bufname, "octo://.*/reviewthread/.*") then
+  if string.match(bufname, "octo://.*/reviewthreads/.*") then
     kind = "reviewthread"
   elseif string.match(bufname, "octo://.*/pull/.*") then
     kind = "pull"
