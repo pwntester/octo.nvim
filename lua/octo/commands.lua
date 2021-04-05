@@ -482,16 +482,14 @@ function M.change_state(type, state)
 end
 
 function M.create_issue(repo)
-  if not repo then
-    repo = util.get_remote_name()
-  end
+  if not repo then repo = util.get_remote_name() end
   if not repo then
     print("[Octo] Cant find repo name")
     return
   end
 
   vim.fn.inputsave()
-  local title = vim.fn.input("Enter title: ")
+  local title = vim.fn.input(format("Creating issue in %s. Enter title: ", repo))
   vim.fn.inputrestore()
 
   local repo_id = util.get_repo_id(repo)

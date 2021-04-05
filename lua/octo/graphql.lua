@@ -668,6 +668,8 @@ M.create_issue_mutation =
         closedAt
         updatedAt
         url
+        viewerDidAuthor
+        viewerCanUpdate
         milestone {
           title
           state
@@ -687,22 +689,69 @@ M.create_issue_mutation =
             totalCount
           }
         }
-        comments(first: 100) {
+        projectCards(last: 20) {
           nodes {
             id
-            body
-            createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
+            state
+            column {
+              name
+            }
+            project {
+              name
+            }
+          }
+        }
+        timelineItems(first: 100, after: $endCursor) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            __typename
+            ... on IssueComment {
+              id
+              body
+              createdAt
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
+              }
+              author {
+                login
+              }
+              viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
+            }
+            ... on ClosedEvent {
+              createdAt
+              actor {
+                login
               }
             }
-            author {
-              login
+            ... on ReopenedEvent {
+              createdAt
+              actor {
+                login
+              }
             }
-            viewerDidAuthor
+            ... on AssignedEvent {
+              actor {
+                login
+              }
+              assignee {
+                ... on Organization {
+                  name
+                }
+                ... on User {
+                  login
+                }
+              }
+              createdAt
+            }
           }
         }
         labels(first: 20) {
