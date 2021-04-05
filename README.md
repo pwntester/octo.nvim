@@ -42,7 +42,7 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | edit | [repo] <number> |
 | | list | [repo] [key=value]*<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-b>`: Opens issue in web browser |
 | | search | |
-| | reload | |
+| | reload | same as doing `e!`|
 | | browser | |
 | pr | list | [repo] [key=value]<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-b>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
 | | search | |
@@ -56,7 +56,7 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | merge | [commit\|rebase\|squash] [delete] |
 | | ready| |
 | | checks | |
-| | reload | |
+| | reload | same as doing `e!`|
 | | browser | |
 | gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-b>`: Opens Gist in web browser |
 | comment | add | |
@@ -84,7 +84,6 @@ There is only an `Octo <object> <action> [arguments]` command:
 | | resume| Edit a pending review for current PR |
 | | discard| Deletes a pending review for current PR if any |
 | | comments| View pending review comments |
-| | threads | View all review threads (comment+replies)|
 
 * If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
@@ -114,39 +113,16 @@ Just edit the issue title, description or comments as a regular buffer and use `
 - Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
 - Add comments with `<space>ca` or `:OctoAddReviewComment` on single or multiple lines
 - Add suggestions with `<space>sa` or `:OctoAddReviewSuggestion` on single or multiple lines
-- Edit comments/suggestions with `<space>ce`
-- A new split will open. Enter the comment and save it (`:w`). Optionally close the split
-
-![](https://i.imgur.com/l9z4tpg.png)
-
+- Edit/Delete comments as you would normally do in an Issue or PR buffer
 - Add as many comments as needed
 - Review comments with `Octo review comments`
   - Use <CR> to jump to the selected comment
-  - Use <c-e> to edit the selected comment
-  - Use <c-d> to delete the selected comment
-
-![](https://i.imgur.com/2DKPZq9.png)
-
-- When ready submit the review with `Octo review submit`
+- When ready, submit the review with `Octo review submit`
 - A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
-
-![](https://i.imgur.com/aRHqIhg.png)
-
-## Viewing PR Reviews
-
-![](https://camo.githubusercontent.com/97aaf7efe7c8ff45cbc4359f28339fd9f9dd7ba3609fbd14b0649a979af15431/68747470733a2f2f692e696d6775722e636f6d2f71495a5a6b48342e706e67) 
-
-- Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
-- Open review threads view with `Octo review threads`
-- Quickfix will be populated with the changed files 
-- Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
-- Jump between comments with `]c` and `[c`
-- You can reply to a comment, delete them, add/remove reactions, etc. as if you where in an Octo issue buffer
 
 ## Completion
 - Issue/PR id completion (#)
 - User completion (@)
-
 
 ## Mappings
 `<Plug>(OctoOpenIssueAtCursor)`: Open issue/pr at cursor with Octo
