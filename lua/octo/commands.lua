@@ -277,7 +277,7 @@ function M.add_comment()
     viewerCanUpdate = true,
     viewerCanDelete = true,
     viewerDidAuthor = true,
-    pullRequestReview = { id = reviews.getReviewId() },
+    pullRequestReview = { id = reviews.get_review_id() },
     reactionGroups = {
       { content = "THUMBS_UP", users = { totalCount = 0 } },
       { content = "THUMBS_DOWN", users = { totalCount = 0 } },

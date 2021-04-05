@@ -18,7 +18,7 @@ local _review_id = -1
 local _review_threads = {}
 local _review_files = {}
 
-function M.getReviewId()
+function M.get_review_id()
   return _review_id
 end
 
@@ -35,7 +35,7 @@ end
 ---
 --- Changes
 ---
-function M.populate_changes_qf(changes, opts)
+function M.populate_qf(changes, opts)
   -- open a new tab so we can easily clean all the windows mess
   vim.cmd [[tabnew %]]
 
@@ -77,17 +77,17 @@ function M.populate_changes_qf(changes, opts)
 
   vim.fn.setqflist({}, "r", {context = context, items = items})
 
-  M.diff_changes_qf_entry()
+  M.select_qf_entry()
 
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
   -- there's probably a better way to map this without changing the window
   vim.cmd(format("%dcopen", qf_height))
-  vim.cmd [[nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
-  M.add_changes_qf_mappings()
+  vim.cmd [[nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.select_qf_entry()<CR>]]
+  M.add_review_mappings()
   vim.cmd [[wincmd p]]
 end
 
-function M.diff_changes_qf_entry(target)
+function M.select_qf_entry(target)
   -- cleanup content buffers and windows
   vim.cmd [[cclose]]
   vim.cmd [[silent! only]]
@@ -96,8 +96,8 @@ function M.diff_changes_qf_entry(target)
 
   -- select qf entry
   vim.cmd(format("%dcopen", qf_height))
-  vim.cmd [[nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.diff_changes_qf_entry()<CR>]]
-  M.add_changes_qf_mappings()
+  vim.cmd [[nnoremap <silent><buffer> <CR> <CR><BAR>:lua require'octo.reviews'.select_qf_entry()<CR>]]
+  M.add_review_mappings()
   vim.cmd [[cc]]
 
   local qf = vim.fn.getqflist({context = 0, idx = 0, items = 0, winid = 0})
@@ -147,10 +147,10 @@ function M.diff_changes_qf_entry(target)
   -- configure window layout and mappings
   api.nvim_set_current_win(right_win)
   api.nvim_win_set_buf(right_win, right_bufnr)
-  M.add_changes_qf_mappings()
+  M.add_review_mappings()
   vim.cmd(format("leftabove vert sbuffer %d", left_bufnr))
   local left_win = util.getwin4buf(left_bufnr)
-  M.add_changes_qf_mappings()
+  M.add_review_mappings()
 
   api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", {
     diffSide = "RIGHT",
@@ -248,7 +248,7 @@ function M.close_review_tab()
   vim.cmd [[silent! tabclose]]
 end
 
-function M.add_changes_qf_mappings(bufnr)
+function M.add_review_mappings(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
   local mapping_opts = {silent = true, noremap = true}
   api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
@@ -271,7 +271,7 @@ function M.next_change()
   else
     vim.cmd [[cnext]]
   end
-  M.diff_changes_qf_entry()
+  M.select_qf_entry()
 end
 
 function M.prev_change()
@@ -281,7 +281,7 @@ function M.prev_change()
   else
     vim.cmd [[cprev]]
   end
-  M.diff_changes_qf_entry()
+  M.select_qf_entry()
 end
 
 --
@@ -396,7 +396,7 @@ function M.initiate_review(repo, number, pr)
             }
             table.insert(changes, change)
           end
-          M.populate_changes_qf(
+          M.populate_qf(
             changes,
             {
               pull_request_repo = repo,
@@ -539,7 +539,7 @@ function M.jump_to_pending_review_thread(thread)
   if idx then
     -- select qf item
     vim.fn.setqflist({}, 'r', {idx = idx })
-    M.diff_changes_qf_entry({
+    M.select_qf_entry({
       diffSide = thread.diffSide,
       startLine = thread.startLine,
       line = thread.line,
