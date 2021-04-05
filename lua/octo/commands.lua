@@ -389,7 +389,6 @@ function M.resolve_thread()
                 isResolved = thread.isResolved
               }, thread_line - 2)
             local threads = resp.data.resolveReviewThread.thread.pullRequest.reviewThreads.nodes
-print(vim.inspect(threads))
             require"octo.reviews".update_threads(threads)
             --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
           end

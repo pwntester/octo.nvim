@@ -559,7 +559,7 @@ function M.clear_review_threads()
     if current_alt_bufnr ~= diff_bufnr then
       api.nvim_win_set_buf(props.alt_win, diff_bufnr)
       local bufname = api.nvim_buf_get_name(current_alt_bufnr)
-      if string.match(bufname, "octo://.+/pull/%d+/reviewthreads") then
+      if string.match(bufname, "octo://.+/pull/%d+/reviewthreads/.*") then
         api.nvim_buf_delete(current_alt_bufnr, {force = true})
       end
     end
@@ -589,7 +589,7 @@ function M.show_review_threads()
   end
 
   if api.nvim_win_is_valid(props.alt_win) then
-    local thread_bufnr = M.create_thread_buffer(props.repo, props.number, comment_line)
+    local thread_bufnr = M.create_thread_buffer(props.repo, props.number, props.diffSide, props.path)
     writers.write_threads(thread_bufnr, threads_at_cursor)
     api.nvim_win_set_buf(props.alt_win, thread_bufnr)
     octo.configure_octo_buffer(thread_bufnr)
@@ -601,15 +601,24 @@ function M.show_review_threads()
   end
 end
 
-function M.create_thread_buffer(repo, number, line)
-  local thread_bufnr = api.nvim_create_buf(false, true)
-  local thread_bufname = format("octo://%s/pull/%d/reviewthreads/%d", repo, number, line)
+function M.create_thread_buffer(repo, number, side, path)
+  if not vim.startswith(path, "/") then
+    path = "/"..path
+  end
+  local thread_bufname = format("octo://%s/pull/%d/reviewthreads/%s%s", repo, number, side, path)
+  local thread_bufnr = vim.fn.bufnr(thread_bufname)
+  if thread_bufnr == -1 then
+    thread_bufnr = api.nvim_create_buf(false, true)
+    api.nvim_buf_set_name(thread_bufnr, thread_bufname)
+  else
+    api.nvim_buf_set_lines(thread_bufnr, 0, -1, false, {})
+    api.nvim_buf_clear_namespace(thread_bufnr, -1, 0, -1)
+  end
   api.nvim_buf_set_var(thread_bufnr, "repo", repo)
   api.nvim_buf_set_var(thread_bufnr, "number", number)
   api.nvim_buf_set_var(thread_bufnr, "review_thread_map", {})
   api.nvim_buf_set_option(thread_bufnr, "filetype", "markdown") -- octo_issue
   api.nvim_buf_set_option(thread_bufnr, "buftype", "acwrite")
-  api.nvim_buf_set_name(thread_bufnr, thread_bufname)
 
   -- add mappings to the thread window buffer
   octo.apply_buffer_mappings(thread_bufnr, "reviewthread")
@@ -729,7 +738,7 @@ function M.add_review_comment(isSuggestion)
   local threads = {thread}
 
   if api.nvim_win_is_valid(props.alt_win) then
-    local thread_bufnr = M.create_thread_buffer(props.repo, props.number, line1)
+    local thread_bufnr = M.create_thread_buffer(props.repo, props.number, props.diffSide, props.path)
     writers.write_threads(thread_bufnr, threads)
     api.nvim_win_set_buf(props.alt_win, thread_bufnr)
     octo.configure_octo_buffer(thread_bufnr)
