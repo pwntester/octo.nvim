@@ -1094,6 +1094,7 @@ function M.write_threads(bufnr, threads)
           isResolved = thread.isResolved,
         })
 
+        M.write_block(bufnr, {""}, line)
         -- write snippet
         thread_start, thread_end = M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
       end
@@ -1102,7 +1103,7 @@ function M.write_threads(bufnr, threads)
       folds.create(bufnr, comment_start+1, comment_end, true)
       thread_end = comment_end
     end
-    folds.create(bufnr, thread_start - 1, thread_end - 1, not thread.isCollapsed)
+    folds.create(bufnr, thread_start-1, thread_end - 1, not thread.isCollapsed)
 
     -- mark the thread region
     local thread_mark_id = api.nvim_buf_set_extmark(
