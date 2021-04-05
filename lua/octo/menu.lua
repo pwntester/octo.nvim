@@ -817,11 +817,9 @@ function M.select_user(cb)
   pickers.new(
     opts,
     {
-      prompt_prefix = "User Search >",
+      prompt_prefix = "User Search>",
       finder = function(prompt, process_result, process_complete)
-        if not prompt or prompt == "" then
-          return nil
-        end
+        if not prompt or prompt == "" then return nil end
         prompt = "repos:>10 " .. prompt
 
         -- skip requests for empty prompts

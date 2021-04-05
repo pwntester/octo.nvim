@@ -977,7 +977,7 @@ function M.add_user(subject)
 
   local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
   if not iid_ok or not iid then
-    api.nvim_err_writeln("Cannot get issue/pr id")
+    api.nvim_err_writeln("[Octo] Cannot get issue/pr id")
   end
 
   menu.select_user(

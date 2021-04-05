@@ -95,7 +95,7 @@ highlight default link OctoNvimPullModifications OctoNvimBlue
 highlight default link OctoNvimStateOpen OctoNvimGreen
 highlight default link OctoNvimStateClosed OctoNvimRed
 highlight default link OctoNvimStateMerged OctoNvimPurple
-highlight default link OctoNvimStatePending OctoNvimBubbleYellow
+highlight default link OctoNvimStatePending OctoNvimYellow
 highlight default link OctoNvimStateApproved OctoNvimStateOpen
 highlight default link OctoNvimStateChangesRequested OctoNvimStateClosed
 highlight default link OctoNvimStateCommented Normal

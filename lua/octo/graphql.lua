@@ -1976,7 +1976,33 @@ query {
 
 M.user_query =
   [[
+query($endCursor: String) {
+  search(query: "%s", type: USER, first: 100) {
+    nodes {
+      ... on User {
+        id
+        login
+      }
+      ... on Organization {
+        id
+        login
+        teams(first:100, after: $endCursor) {
+          totalCount
+          nodes {
+            id
+            name
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }
+  }
+}
 ]]
+
 
 local function escape_chars(string)
   local escaped, _ = string.gsub(
