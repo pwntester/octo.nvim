@@ -631,7 +631,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       max_length = strlen(line)
     end
   end
-  max_length = math.max(max_length, vim.fn.winwidth(0) - 10 - vim.wo.foldcolumn)
+  max_length = math.max(max_length, vim.fn.winwidth(0) - 10)
 
   -- write empty lines to hold virtual text
   local empty_lines = {}
