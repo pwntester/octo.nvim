@@ -38,7 +38,7 @@ function M.configure_octo_buffer(bufnr)
       vim.cmd [[setlocal syntax=markdown]]
 
       -- autocmds
-      vim.cmd [[ augroup octo_reviewthread_autocmds ]]
+      vim.cmd [[ augroup octo_buffer_autocmds ]]
       vim.cmd(format([[ au! * <buffer=%d> ]], bufnr))
       vim.cmd(format([[ au TextChanged <buffer=%d> lua require"octo.signs".render_signcolumn() ]], bufnr))
       vim.cmd(format([[ au TextChangedI <buffer=%d> lua require"octo.signs".render_signcolumn() ]], bufnr))
@@ -316,20 +316,18 @@ end
 function M.save_buffer()
   local bufnr = api.nvim_get_current_buf()
 
-  local ft = api.nvim_buf_get_option(bufnr, "filetype")
-  local repo = util.get_repo_number({"octo_issue", "octo_reviewthread"})
+  local repo = util.get_repo_number({"issue", "pull", "reviewthread"})
   if not repo then
     return
   end
 
-  local bufname = api.nvim_buf_get_name(bufnr)
-  local kind = util.get_octo_kind(bufname)
+  local kind = util.get_octo_kind(bufnr)
 
   -- collect comment metadata
   util.update_issue_metadata(bufnr)
 
   -- title & body
-  if ft == "octo_issue" then
+  if kind == "issue" or kind == "pull" then
     do_save_title_and_body(bufnr, kind)
   end
 
@@ -493,7 +491,7 @@ function M.create_buffer(type, obj, repo, create)
   end
 
   -- configure buffer
-  api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
+  api.nvim_buf_set_option(bufnr, "filetype", "markdown") -- octo_issue
   api.nvim_buf_set_option(bufnr, "buftype", "acwrite")
   M.configure_octo_buffer(bufnr)
 
@@ -871,7 +869,8 @@ end
 
 function M.next_comment()
   local bufnr = api.nvim_get_current_buf()
-  if vim.bo[bufnr].ft == "octo_issue" then
+  local kind = util.get_octo_kind(bufnr)
+  if kind then
     local cursor = api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
     local lines = util.get_sorted_comment_lines()
@@ -897,7 +896,8 @@ end
 
 function M.prev_comment()
   local bufnr = api.nvim_get_current_buf()
-  if vim.bo[bufnr].ft == "octo_issue" then
+  local kind = util.get_octo_kind(bufnr)
+  if kind then
     local cursor = api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
     local lines = util.get_sorted_comment_lines()

@@ -603,8 +603,7 @@ function M.create_thread_buffer(repo, number, line)
   api.nvim_buf_set_var(thread_bufnr, "repo", repo)
   api.nvim_buf_set_var(thread_bufnr, "number", number)
   api.nvim_buf_set_var(thread_bufnr, "review_thread_map", {})
-  -- TODO: get rid of octo_reviewthread ft
-  api.nvim_buf_set_option(thread_bufnr, "filetype", "octo_reviewthread")
+  api.nvim_buf_set_option(thread_bufnr, "filetype", "markdown") -- octo_issue
   api.nvim_buf_set_option(thread_bufnr, "buftype", "acwrite")
   api.nvim_buf_set_name(thread_bufnr, thread_bufname)
 

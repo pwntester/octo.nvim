@@ -34,10 +34,8 @@ end
 
 function M.render_signcolumn(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
-  local ft = api.nvim_buf_get_option(bufnr, "filetype")
-  if ft ~= "octo_issue" and ft ~= "octo_reviewthread" then
-    return
-  end
+  local kind = util.get_octo_kind(bufnr)
+  if not kind then return end
 
   local issue_dirty = false
 
@@ -51,7 +49,7 @@ function M.render_signcolumn(bufnr)
   api.nvim_buf_clear_namespace(bufnr, constants.OCTO_EMPTY_MSG_VT_NS, 0, -1)
 
   local start_line, end_line
-  if ft == "octo_issue" then
+  if kind == "issue" or kind == "pull" then
     -- title
     local title = api.nvim_buf_get_var(bufnr, "title")
     if title["dirty"] then

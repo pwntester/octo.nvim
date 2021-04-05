@@ -133,54 +133,53 @@ function M.in_pr_repo()
   return false
 end
 
-function M.in_pr_branch()
-  local bufname = api.nvim_buf_get_name(0)
-  if not vim.startswith(bufname, "octo://") then
-    return
-  end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    -- only works with Git 2.22 and above
-    -- local cmd = "git branch --show-current"
-    local cmd = "git rev-parse --abbrev-ref HEAD"
-    local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
-    if local_branch == format("%s/%s", pr.headRepoName, pr.headRefName) then
-      -- for PRs submitted from master, local_branch will get something like other_repo/master
-      local_branch = vim.split(local_branch, "/")[2]
-    end
-    local local_repo = M.get_remote_name()
-    if pr.baseRepoName ~= local_repo then
-      api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
-      return false
-    elseif pr.headRefName ~= local_branch then
-      -- TODO: suggest to checkout the branch
-      api.nvim_err_writeln(format("Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
-      return false
-    end
-    return true
-  end
-  return false
-end
+-- function M.in_pr_branch()
+--   local bufname = api.nvim_buf_get_name(0)
+--   if not vim.startswith(bufname, "octo://") then
+--     return
+--   end
+--   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+--   if status and pr then
+--     -- only works with Git 2.22 and above
+--     -- local cmd = "git branch --show-current"
+--     local cmd = "git rev-parse --abbrev-ref HEAD"
+--     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+--     if local_branch == format("%s/%s", pr.headRepoName, pr.headRefName) then
+--       -- for PRs submitted from master, local_branch will get something like other_repo/master
+--       local_branch = vim.split(local_branch, "/")[2]
+--     end
+--     local local_repo = M.get_remote_name()
+--     if pr.baseRepoName ~= local_repo then
+--       api.nvim_err_writeln(format("[Octo] Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
+--       return false
+--     elseif pr.headRefName ~= local_branch then
+--       -- TODx: suggest to checkout the branch
+--       api.nvim_err_writeln(format("[Octo] Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
+--       return false
+--     end
+--     return true
+--   end
+--   return false
+-- end
 
 -- TODO: we need a better name for this
-function M.get_repo_number(filetypes)
+function M.get_repo_number(kinds)
   local bufnr = api.nvim_get_current_buf()
-  filetypes = filetypes or {"octo_issue"}
-  if not vim.tbl_contains(filetypes, vim.bo.ft) then
-    api.nvim_err_writeln(
-      format("Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(filetypes), vim.bo.ft)
-    )
+  kinds = kinds or {"issue", "pull"}
+  local kind =  M.get_octo_kind(bufnr)
+  if not vim.tbl_contains(kinds, kind) then
+    api.nvim_err_writeln(format("[Octo] Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(kinds), kind))
     return
   end
 
   local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
   if not number_ok then
-    api.nvim_err_writeln("Missing octo metadata")
+    api.nvim_err_writeln("[Octo] Missing octo metadata")
     return
   end
   local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
   if not repo_ok then
-    api.nvim_err_writeln("Missing octo metadata")
+    api.nvim_err_writeln("[Octo] Missing octo metadata")
     return
   end
   return repo, number
@@ -234,8 +233,8 @@ end
 function M.update_issue_metadata(bufnr)
   local mark, text, start_line, end_line, metadata
 
-  local ft = api.nvim_buf_get_option(bufnr, "filetype")
-  if ft == "octo_issue" then
+  local kind = M.get_octo_kind(bufnr)
+  if kind == "issue" or kind == "pull" then
     -- title
     metadata = api.nvim_buf_get_var(bufnr, "title")
     mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
@@ -370,17 +369,6 @@ end
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
-end
-
-function M.get_buffer_kind(bufnr)
-  local ft = api.nvim_buf_get_option(bufnr, "filetype")
-  local kind
-  if ft == "octo_issue" then
-    kind = "issues"
-  elseif ft == "octo_reviewthread" then
-    kind = "pulls"
-  end
-  return kind
 end
 
 function M.graph2rest(id)
@@ -710,7 +698,9 @@ function M.is_thread_placed_in_buffer(comment, bufnr)
   return false
 end
 
-function M.get_octo_kind(bufname)
+function M.get_octo_kind(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  local bufname = api.nvim_buf_get_name(bufnr)
   local kind
   if string.match(bufname, "octo://.*/reviewthread/.*") then
     kind = "reviewthread"
