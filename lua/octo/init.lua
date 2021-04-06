@@ -35,7 +35,6 @@ function M.configure_octo_buffer(bufnr)
       vim.cmd [[setlocal foldmethod=manual]]
       vim.cmd [[setlocal foldenable]]
       vim.cmd [[setlocal foldlevelstart=99]]
-      vim.cmd [[setlocal syntax=markdown]]
 
       -- autocmds
       vim.cmd [[ augroup octo_buffer_autocmds ]]
@@ -491,7 +490,7 @@ function M.create_buffer(type, obj, repo, create)
   end
 
   -- configure buffer
-  api.nvim_buf_set_option(bufnr, "filetype", "markdown") -- octo_issue
+  api.nvim_buf_set_option(bufnr, "filetype", "octo")
   api.nvim_buf_set_option(bufnr, "buftype", "acwrite")
   M.configure_octo_buffer(bufnr)
 

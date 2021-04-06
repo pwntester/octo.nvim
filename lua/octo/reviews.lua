@@ -464,7 +464,7 @@ function M.submit_review()
     header = "Press <c-a> to approve, <c-m> to comment or <c-r> to request changes"
   })
   api.nvim_set_current_win(winid)
-  api.nvim_buf_set_option(bufnr, "syntax", "markdown")
+  api.nvim_buf_set_option(bufnr, "syntax", "octo")
 
   local mapping_opts = {script = true, silent = true, noremap = true}
   api.nvim_buf_set_keymap(bufnr, "i", "<CR>", "<CR>", mapping_opts)
@@ -617,7 +617,7 @@ function M.create_thread_buffer(repo, number, side, path)
   api.nvim_buf_set_var(thread_bufnr, "repo", repo)
   api.nvim_buf_set_var(thread_bufnr, "number", number)
   api.nvim_buf_set_var(thread_bufnr, "review_thread_map", {})
-  api.nvim_buf_set_option(thread_bufnr, "filetype", "markdown") -- octo_issue
+  api.nvim_buf_set_option(thread_bufnr, "filetype", "octo")
   api.nvim_buf_set_option(thread_bufnr, "buftype", "acwrite")
 
   -- add mappings to the thread window buffer

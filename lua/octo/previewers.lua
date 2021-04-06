@@ -41,7 +41,7 @@ M.issue =
                   writers.write_details(bufnr, issue)
                   writers.write_body(bufnr, issue)
                   writers.write_state(bufnr, issue.state:upper(), number)
-                  api.nvim_buf_set_option(bufnr, "filetype", "markdown")
+                  api.nvim_buf_set_option(bufnr, "filetype", "octo")
                 end
               end
             }
@@ -103,7 +103,7 @@ M.pull_request =
                   local reactions_line = api.nvim_buf_line_count(bufnr) - 1
                   writers.write_block(bufnr, {"", ""}, reactions_line)
                   writers.write_reactions(bufnr, pull_request.reactionGroups, reactions_line)
-                  api.nvim_buf_set_option(bufnr, "filetype", "markdown")
+                  api.nvim_buf_set_option(bufnr, "filetype", "octo")
                 end
               end
             }
