@@ -109,14 +109,17 @@ Just edit the issue title, description or comments as a regular buffer and use `
 ## PR review
 - Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
 - Start a review with `Octo review start` or resume a pending review with `Octo review resume`
-- Quickfix will be populated with the changed files 
+- Quickfix will be populated with the PR changed files 
 - Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
-- Add comments with `<space>ca` or `:OctoAddReviewComment` on single or multiple lines
-- Add suggestions with `<space>sa` or `:OctoAddReviewSuggestion` on single or multiple lines
-- Edit/Delete comments as you would normally do in an Issue or PR buffer
-- Add as many comments as needed
-- Review comments with `Octo review comments`
-  - Use <CR> to jump to the selected comment
+- Add comments with `<space>ca` or suggestions with `<space>sa` on single or multiple visual-selected lines
+  - A new buffer will appear in the alternate diff window. Cursor will be positioned in the new buffer
+  - When ready, save the buffer to commit changes to GitHub
+  - Move back to the diff window and move the cursor, the thread buffer will hide
+- Hold the cursor on a line with a comment to show a thread buffer with all the thread comments
+  - To modify, delete, react or reply to a comment, move to the window containing the thread buffer
+  - Perform any operations as if you were in a regular issue buffer 
+- Review pending comments with `Octo review comments`
+  - Use <CR> to jump to the selected pending comment
 - When ready, submit the review with `Octo review submit`
 - A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
 
