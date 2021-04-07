@@ -22,7 +22,8 @@ M.state_hl_map = {
   COMMENTED = "OctoNvimStateCommented",
   DISMISSED = "OctoNvimStateDismissed",
   PENDING = "OctoNvimStatePending",
-  REVIEW_REQUIRED = "OctoNvimStatePending"
+  REVIEW_REQUIRED = "OctoNvimStatePending",
+  SUBMITTED = "OctoNvimStateSubmitted",
 }
 
 M.state_icon_map = {
@@ -132,54 +133,53 @@ function M.in_pr_repo()
   return false
 end
 
-function M.in_pr_branch()
-  local bufname = api.nvim_buf_get_name(0)
-  if not vim.startswith(bufname, "octo://") then
-    return
-  end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
-    -- only works with Git 2.22 and above
-    -- local cmd = "git branch --show-current"
-    local cmd = "git rev-parse --abbrev-ref HEAD"
-    local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
-    if local_branch == format("%s/%s", pr.headRepoName, pr.headRefName) then
-      -- for PRs submitted from master, local_branch will get something like other_repo/master
-      local_branch = vim.split(local_branch, "/")[2]
-    end
-    local local_repo = M.get_remote_name()
-    if pr.baseRepoName ~= local_repo then
-      api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
-      return false
-    elseif pr.headRefName ~= local_branch then
-      -- TODO: suggest to checkout the branch
-      api.nvim_err_writeln(format("Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
-      return false
-    end
-    return true
-  end
-  return false
-end
+-- function M.in_pr_branch()
+--   local bufname = api.nvim_buf_get_name(0)
+--   if not vim.startswith(bufname, "octo://") then
+--     return
+--   end
+--   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+--   if status and pr then
+--     -- only works with Git 2.22 and above
+--     -- local cmd = "git branch --show-current"
+--     local cmd = "git rev-parse --abbrev-ref HEAD"
+--     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+--     if local_branch == format("%s/%s", pr.headRepoName, pr.headRefName) then
+--       -- for PRs submitted from master, local_branch will get something like other_repo/master
+--       local_branch = vim.split(local_branch, "/")[2]
+--     end
+--     local local_repo = M.get_remote_name()
+--     if pr.baseRepoName ~= local_repo then
+--       api.nvim_err_writeln(format("[Octo] Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
+--       return false
+--     elseif pr.headRefName ~= local_branch then
+--       -- TODx: suggest to checkout the branch
+--       api.nvim_err_writeln(format("[Octo] Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
+--       return false
+--     end
+--     return true
+--   end
+--   return false
+-- end
 
 -- TODO: we need a better name for this
-function M.get_repo_number(filetypes)
+function M.get_repo_number(kinds)
   local bufnr = api.nvim_get_current_buf()
-  filetypes = filetypes or {"octo_issue"}
-  if not vim.tbl_contains(filetypes, vim.bo.ft) then
-    api.nvim_err_writeln(
-      format("Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(filetypes), vim.bo.ft)
-    )
+  kinds = kinds or {"issue", "pull"}
+  local kind =  M.get_octo_kind(bufnr)
+  if not vim.tbl_contains(kinds, kind) then
+    api.nvim_err_writeln(format("[Octo] Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(kinds), kind))
     return
   end
 
   local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
   if not number_ok then
-    api.nvim_err_writeln("Missing octo metadata")
+    api.nvim_err_writeln("[Octo] Missing octo metadata")
     return
   end
   local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
   if not repo_ok then
-    api.nvim_err_writeln("Missing octo metadata")
+    api.nvim_err_writeln("[Octo] Missing octo metadata")
     return
   end
   return repo, number
@@ -233,8 +233,8 @@ end
 function M.update_issue_metadata(bufnr)
   local mark, text, start_line, end_line, metadata
 
-  local ft = api.nvim_buf_get_option(bufnr, "filetype")
-  if ft == "octo_issue" then
+  local kind = M.get_octo_kind(bufnr)
+  if kind == "issue" or kind == "pull" then
     -- title
     metadata = api.nvim_buf_get_var(bufnr, "title")
     mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
@@ -304,30 +304,24 @@ end
 
 function M.get_thread_at_cursor(bufnr)
   local cursor = api.nvim_win_get_cursor(0)
-  if vim.bo[bufnr].ft == "octo_issue" then
-    local thread_map = api.nvim_buf_get_var(bufnr, "reviewThreadMap")
-    local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
-    for _, mark in ipairs(marks) do
-      local info = thread_map[tostring(mark[1])]
-      if not info then
-        goto continue
+  local ok, thread_map = pcall(api.nvim_buf_get_var, bufnr, "review_thread_map")
+  if not thread_map or not ok then return end
+  local thread_marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
+  for _, mark in ipairs(thread_marks) do
+    local markId = tostring(mark[1])
+    local info = thread_map[markId]
+    if info then
+      local threadId = info.threadId
+      local replyTo = info.replyTo
+      local reviewId = info.reviewId
+      local startLine = mark[2]
+      local endLine = mark[4]["end_row"]
+      if startLine <= cursor[1] and endLine >= cursor[1] then
+        return threadId, startLine, endLine, replyTo, reviewId
       end
-      local thread_id = info.thread_id
-      local first_comment_id = info.first_comment_id
-      local start_line = mark[2]
-      local end_line = mark[4]["end_row"]
-      if start_line <= cursor[1] and end_line >= cursor[1] then
-        return thread_id, start_line, end_line, first_comment_id
-      end
-      ::continue::
     end
-  elseif vim.bo[bufnr].ft == "octo_reviewthread" then
-    local bufname = api.nvim_buf_get_name(bufnr)
-    local thread_id, first_comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/(.*)/comment/(.*)")
-    local end_line = api.nvim_buf_line_count(bufnr) - 1
-    return thread_id, 1, end_line, first_comment_id
   end
-  return nil
+  return
 end
 
 function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
@@ -376,17 +370,6 @@ end
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
-end
-
-function M.get_buffer_kind(bufnr)
-  local ft = api.nvim_buf_get_option(bufnr, "filetype")
-  local kind
-  if ft == "octo_issue" then
-    kind = "issues"
-  elseif ft == "octo_reviewthread" then
-    kind = "pulls"
-  end
-  return kind
 end
 
 function M.graph2rest(id)
@@ -697,6 +680,37 @@ function M.get_sorted_comment_lines(bufnr)
   end
   table.sort(lines)
   return lines
+end
+
+function M.is_thread_placed_in_buffer(comment, bufnr)
+  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
+  if not status or not props then
+    return false
+  end
+
+  local bufname = props.bufname
+  local diffSide, path = string.match(bufname, "octo://[^/]+/[^/]+/pull/%d+/file/([^/]+)/(.+)")
+  if not diffSide or not path then
+    return false
+  end
+  if diffSide == comment.diffSide and path == comment.path then
+    return true
+  end
+  return false
+end
+
+function M.get_octo_kind(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+  local bufname = api.nvim_buf_get_name(bufnr)
+  local kind
+  if string.match(bufname, "octo://.*/reviewthreads/.*") then
+    kind = "reviewthread"
+  elseif string.match(bufname, "octo://.*/pull/.*") then
+    kind = "pull"
+  elseif string.match(bufname, "octo://.*/issue/.*") then
+    kind = "issue"
+  end
+  return kind
 end
 
 return M

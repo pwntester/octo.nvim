@@ -150,18 +150,15 @@ function M.gen_from_git_changed_files()
   end
 end
 
-function M.gen_from_review_comment(linenr_length)
+function M.gen_from_review_thread(linenr_length)
   local make_display = function(entry)
-    if not entry then
-      return nil
-    end
+    if not entry then return nil end
 
     local columns = {
-      {entry.comment.path, "TelescopeResultsNumber"},
-      {entry.comment.commit},
-      {entry.comment.diffSide},
-      {entry.comment.startLine},
-      {entry.comment.line}
+      {entry.thread.path, "TelescopeResultsNumber"},
+      {entry.thread.diffSide},
+      {entry.thread.startLine},
+      {entry.thread.line}
     }
 
     local displayer =
@@ -169,26 +166,24 @@ function M.gen_from_review_comment(linenr_length)
       separator = " ",
       items = {
         {remaining = true},
-        {width = 7},
         {width = 5},
         {width = linenr_length},
         {width = linenr_length}
       }
     }
-
     return displayer(columns)
   end
 
-  return function(comment)
-    if not comment or vim.tbl_isempty(comment) then
+  return function(thread)
+    if not thread or vim.tbl_isempty(thread) then
       return nil
     end
 
     return {
-      value = comment.path..":"..comment.startLine..":"..comment.line,
-      ordinal = comment.path..":"..comment.startLine..":"..comment.line,
+      value = thread.path..":"..thread.startLine..":"..thread.line,
+      ordinal = thread.path..":"..thread.startLine..":"..thread.line,
       display = make_display,
-      comment = comment
+      thread = thread
     }
   end
 end

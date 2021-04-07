@@ -103,9 +103,6 @@ local commands = {
     submit = function()
       reviews.submit_review()
     end,
-    threads = function()
-      reviews.review_threads()
-    end,
     resume = function()
       reviews.resume_review()
     end,
@@ -126,10 +123,10 @@ local commands = {
   },
   thread = {
     resolve = function()
-      M.resolve_comment()
+      M.resolve_thread()
     end,
     unresolve = function()
-      M.unresolve_comment()
+      M.unresolve_thread()
     end
   },
   comment = {
@@ -138,10 +135,7 @@ local commands = {
     end,
     delete = function()
       M.delete_comment()
-    end,
-    edit = function()
-      reviews.edit_review_comment()
-    end,
+    end
   },
   label = {
     add = function()
@@ -255,88 +249,56 @@ end
 
 function M.add_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number({"octo_issue", "octo_reviewthread"})
-  if not repo then
+  local repo = util.get_repo_number({"issue", "pull", "reviewthread"})
+  if not repo then return end
+
+  local comment_kind
+  local thread_id, _, thread_end_line, replyTo = util.get_thread_at_cursor(bufnr)
+  if thread_id then
+    comment_kind = "PullRequestReviewComment"
+  else
+    comment_kind = "IssueComment"
+  end
+
+  local kind = util.get_octo_kind(bufnr)
+  if comment_kind == "PullRequestReviewComment" and (kind == "issue" or kind == "pull") then
+    -- TODO: support adding single-comment reviews from PR buffer
+    api.nvim_err_writeln("[Octo] Not yet supported")
     return
   end
 
-  local kind
-  local thread_id, _, thread_end_line, first_comment_id = util.get_thread_at_cursor(bufnr)
-  if thread_id then
-    kind = "PullRequestReviewComment"
-  else
-    kind = "IssueComment"
-  end
-
   local comment = {
-    createdAt = vim.fn.strftime("%FT%TZ"),
-    author = {login = vim.g.octo_viewer},
-    body = " ",
-    first_comment_id = first_comment_id,
     id = -1,
+    author = {login = vim.g.octo_viewer},
     state = "PENDING",
+    createdAt = vim.fn.strftime("%FT%TZ"),
+    body = " ",
+    replyTo = replyTo,
     viewerCanUpdate = true,
     viewerCanDelete = true,
+    viewerDidAuthor = true,
+    pullRequestReview = { id = reviews.get_review_id() },
     reactionGroups = {
-      {
-        content = "THUMBS_UP",
-        users = {
-          totalCount = 0
-        }
-      },
-      {
-        content = "THUMBS_DOWN",
-        users = {
-          totalCount = 0
-        }
-      },
-      {
-        content = "LAUGH",
-        users = {
-          totalCount = 0
-        }
-      },
-      {
-        content = "HOORAY",
-        users = {
-          totalCount = 0
-        }
-      },
-      {
-        content = "CONFUSED",
-        users = {
-          totalCount = 0
-        }
-      },
-      {
-        content = "HEART",
-        users = {
-          totalCount = 0
-        }
-      },
-      {
-        content = "ROCKET",
-        users = {
-          totalCount = 0
-        }
-      },
-      {
-        content = "EYES",
-        users = {
-          totalCount = 0
-        }
-      }
+      { content = "THUMBS_UP", users = { totalCount = 0 } },
+      { content = "THUMBS_DOWN", users = { totalCount = 0 } },
+      { content = "LAUGH", users = { totalCount = 0 } },
+      { content = "HOORAY", users = { totalCount = 0 } },
+      { content = "CONFUSED", users = { totalCount = 0 } },
+      { content = "HEART", users = { totalCount = 0 } },
+      { content = "ROCKET", users = { totalCount = 0 } },
+      { content = "EYES", users = { totalCount = 0 } }
     }
   }
-  if kind == "IssueComment" or vim.bo.ft == "octo_reviewthread" then
+
+  if comment_kind == "IssueComment" then
     -- just place it at the bottom
-    writers.write_comment(bufnr, comment, kind)
+    writers.write_comment(bufnr, comment, comment_kind)
     vim.fn.execute("normal! Gk")
     vim.fn.execute("startinsert")
-  elseif kind == "PullRequestReviewComment" and vim.bo.ft == "octo_issue" then
-    api.nvim_buf_set_lines(bufnr, thread_end_line + 1, thread_end_line + 1, false, {"x", "x", "x", "x", "x", "x"})
-    writers.write_comment(bufnr, comment, kind, thread_end_line + 2)
-    vim.fn.execute(":" .. thread_end_line + 4)
+  elseif comment_kind == "PullRequestReviewComment" then
+    api.nvim_buf_set_lines(bufnr, thread_end_line, thread_end_line, false, {"x", "x", "x", "x"})
+    writers.write_comment(bufnr, comment, comment_kind, thread_end_line + 1)
+    vim.fn.execute(":" .. thread_end_line + 3)
     vim.fn.execute("startinsert")
   end
 
@@ -346,10 +308,8 @@ end
 
 function M.delete_comment()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull", "reviewthread"})
+  if not repo then return end
   local comment, start_line, end_line = util.get_comment_at_cursor(bufnr)
   if not comment then
     print("[Octo] The cursor does not seem to be located at any comment")
@@ -369,13 +329,24 @@ function M.delete_comment()
     gh.run(
       {
         args = {"api", "graphql", "-f", format("query=%s", query)},
-        cb = function(_)
+        cb = function(output)
           -- TODO: deleting the last review thread comment, it deletes the whole thread
           -- so diff hunk should not be showed any more
-          api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
+          local resp = json.parse(output)
+          if comment.kind == "PullRequestReviewComment" then
+            local threads = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest.reviewThreads.nodes
+            require"octo.reviews".update_threads(threads)
+          end
+
+          if comment.reaction_line then
+            api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
+            api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
+          else
+            api.nvim_buf_set_lines(bufnr, start_line - 2, end_line - 1, false, {})
+          end
           api.nvim_buf_clear_namespace(bufnr, comment.namespace, 0, -1)
-          api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
           api.nvim_buf_del_extmark(bufnr, constants.OCTO_COMMENT_NS, comment.extmark)
+
           local comments = api.nvim_buf_get_var(bufnr, "comments")
           local updated = {}
           for _, c in ipairs(comments) do
@@ -390,21 +361,11 @@ function M.delete_comment()
   end
 end
 
-function M.resolve_comment()
+function M.resolve_thread()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
-  if not repo then
-    return
-  end
-
-  local thread_id, thread_line, comment_id
-  if vim.bo.ft == "octo_issue" then
-    thread_id, thread_line = util.get_thread_at_cursor(bufnr)
-  elseif vim.bo.ft == "octo_reviewthread" then
-    local bufname = api.nvim_buf_get_name(bufnr)
-    thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
-  end
-
+  local repo = util.get_repo_number({"issue", "pull", "reviewthread"})
+  if not repo then return end
+  local thread_id, thread_line = util.get_thread_at_cursor(bufnr)
   local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run(
     {
@@ -416,34 +377,20 @@ function M.resolve_comment()
           local resp = json.parse(output)
           local thread = resp.data.resolveReviewThread.thread
           if thread.isResolved then
-            if vim.bo.ft == "octo_issue" then
-              -- review thread header
-              local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
-              local end_line = thread.originalLine
-              writers.write_review_thread_header(
-                bufnr,
-                {
-                  path = thread.path,
-                  start_line = start_line,
-                  end_line = end_line,
-                  isOutdated = thread.isOutdated,
-                  isResolved = thread.isResolved
-                },
-                thread_line - 2
-              )
-              vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
-            elseif vim.bo.ft == "octo_reviewthread" then
-              local pattern = format("%s/%s", thread_id, comment_id)
-              local qf = vim.fn.getqflist({items = 0})
-              local items = qf.items
-              for _, item in ipairs(items) do
-                if item.pattern == pattern then
-                  item.text = string.gsub(item.text, "%) ", ") RESOLVED ", 1)
-                  break
-                end
-              end
-              vim.fn.setqflist({}, "r", {items = items})
-            end
+            -- review thread header
+            local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+            local end_line = thread.originalLine
+            writers.write_review_thread_header(
+              bufnr, {
+                path = thread.path,
+                start_line = start_line,
+                end_line = end_line,
+                isOutdated = thread.isOutdated,
+                isResolved = thread.isResolved
+              }, thread_line - 2)
+            local threads = resp.data.resolveReviewThread.thread.pullRequest.reviewThreads.nodes
+            require"octo.reviews".update_threads(threads)
+            --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
           end
         end
       end
@@ -451,21 +398,11 @@ function M.resolve_comment()
   )
 end
 
-function M.unresolve_comment()
+function M.unresolve_thread()
   local bufnr = api.nvim_get_current_buf()
-  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
-  if not repo then
-    return
-  end
-
-  local thread_id, thread_line, comment_id
-  if vim.bo.ft == "octo_issue" then
-    thread_id, thread_line = util.get_thread_at_cursor(bufnr)
-  elseif vim.bo.ft == "octo_reviewthread" then
-    local bufname = api.nvim_buf_get_name(bufnr)
-    thread_id, comment_id = string.match(bufname, "octo://.*/pull/%d+/reviewthread/([^/]+)/comment/(.*)")
-  end
-
+  local repo = util.get_repo_number({"issue", "pull", "reviewthread"})
+  if not repo then return end
+  local thread_id, thread_line = util.get_thread_at_cursor(bufnr)
   local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run(
     {
@@ -477,33 +414,19 @@ function M.unresolve_comment()
           local resp = json.parse(output)
           local thread = resp.data.unresolveReviewThread.thread
           if not thread.isResolved then
-            if vim.bo.ft == "octo_issue" then
-              -- review thread header
-              local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
-              local end_line = thread.originalLine
-              writers.write_review_thread_header(
-                bufnr,
-                {
-                  path = thread.path,
-                  start_line = start_line,
-                  end_line = end_line,
-                  isOutdated = thread.isOutdated,
-                  isResolved = thread.isResolved
-                },
-                thread_line - 2
-              )
-            elseif vim.bo.ft == "octo_reviewthread" then
-              local pattern = format("%s/%s", thread_id, comment_id)
-              local qf = vim.fn.getqflist({items = 0})
-              local items = qf.items
-              for _, item in ipairs(items) do
-                if item.pattern == pattern then
-                  item.text = string.gsub(item.text, "RESOLVED", "")
-                  break
-                end
-              end
-              vim.fn.setqflist({}, "r", {items = items})
-            end
+            -- review thread header
+            local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+            local end_line = thread.originalLine
+            writers.write_review_thread_header(
+              bufnr, {
+                path = thread.path,
+                start_line = start_line,
+                end_line = end_line,
+                isOutdated = thread.isOutdated,
+                isResolved = thread.isResolved
+              }, thread_line - 2)
+            local threads = resp.data.unresolveReviewThread.thread.pullRequest.reviewThreads.nodes
+            require"octo.reviews".update_threads(threads)
           end
         end
       end
@@ -513,10 +436,8 @@ end
 
 function M.change_state(type, state)
   local bufnr = api.nvim_get_current_buf()
-  local repo, number = util.get_repo_number({"octo_issue"})
-  if not repo then
-    return
-  end
+  local repo, number = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   if not state then
     api.nvim_err_writeln("Missing argument: state")
@@ -560,16 +481,14 @@ function M.change_state(type, state)
 end
 
 function M.create_issue(repo)
-  if not repo then
-    repo = util.get_remote_name()
-  end
+  if not repo then repo = util.get_remote_name() end
   if not repo then
     print("[Octo] Cant find repo name")
     return
   end
 
   vim.fn.inputsave()
-  local title = vim.fn.input("Enter title: ")
+  local title = vim.fn.input(format("Creating issue in %s. Enter title: ", repo))
   vim.fn.inputrestore()
 
   local repo_id = util.get_repo_id(repo)
@@ -748,11 +667,9 @@ end
 
 function M.reaction_action(reaction)
   local bufnr = api.nvim_get_current_buf()
-
-  local repo, _ = util.get_repo_number({"octo_issue", "octo_reviewthread"})
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull", "reviewthread"})
+  if not repo then return end
+  local kind = util.get_octo_kind(bufnr)
 
   -- normalize reactions
   reaction = reaction:upper()
@@ -778,7 +695,7 @@ function M.reaction_action(reaction)
       insert_line = end_line + 2
     end
     id = comment.id
-  elseif vim.bo.ft == "octo_issue" then
+  elseif kind == "issue" or kind == "pull" then
     -- using the issue body instead
     reaction_groups = api.nvim_buf_get_var(bufnr, "body_reaction_groups")
     reaction_line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
@@ -867,10 +784,8 @@ end
 
 function M.add_project_card()
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
   if not iid_ok or not iid then
@@ -907,10 +822,8 @@ end
 
 function M.delete_project_card()
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   -- show card selection menu
   menu.select_project_card(
@@ -942,10 +855,8 @@ end
 
 function M.move_project_card()
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   menu.select_project_card(
     function(source_card)
@@ -981,19 +892,15 @@ end
 
 function M.reload(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
   octo.load_buffer(bufnr)
 end
 
 function M.add_label()
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
   if not iid_ok or not iid then
@@ -1027,10 +934,8 @@ end
 
 function M.delete_label()
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
   if not iid_ok or not iid then
@@ -1064,14 +969,12 @@ end
 
 function M.add_user(subject)
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
   if not iid_ok or not iid then
-    api.nvim_err_writeln("Cannot get issue/pr id")
+    api.nvim_err_writeln("[Octo] Cannot get issue/pr id")
   end
 
   menu.select_user(
@@ -1106,10 +1009,8 @@ end
 
 function M.remove_assignee()
   local bufnr = api.nvim_get_current_buf()
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local repo = util.get_repo_number({"issue", "pull"})
+  if not repo then return end
 
   local iid_ok, iid = pcall(api.nvim_buf_get_var, 0, "iid")
   if not iid_ok or not iid then

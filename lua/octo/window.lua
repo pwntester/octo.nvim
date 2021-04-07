@@ -128,60 +128,6 @@ function M.try_close_wins(...)
   end
 end
 
-function M.create_comment_popup(win, comment)
-  local vertical_offset = vim.fn.line(".") - vim.fn.line("w0")
-  local win_width = vim.fn.winwidth(win)
-  local horizontal_offset = math.floor(win_width / 4) -- 1/4 of win width
-  local header = {format(" %s %s[%s] [%s]", comment.author.login, comment.viewerDidAuthor and "[Author] " or " ", comment.authorAssociation, comment.state)}
-  local border_width = 1
-  local padding = 1
-  local body = vim.list_extend(header, vim.split(comment.body, "\n"))
-  local height = math.min(2*border_width + #body, vim.fn.winheight(win))
-
-  local preview_bufnr = api.nvim_create_buf(false, true)
-  api.nvim_buf_set_lines(preview_bufnr, 0, -1, false, body)
-  local preview_width = win_width - 2*border_width - 2*padding - horizontal_offset
-  local preview_col = comment.diffSide == "LEFT" and (padding + border_width) or (padding + border_width + horizontal_offset)
-  local preview_winid = api.nvim_open_win(preview_bufnr, false, {
-    relative = "win",
-    win = win,
-    row = vertical_offset + padding,
-    col = preview_col,
-    width = preview_width,
-    height = height - 2*border_width
-  })
-  api.nvim_win_set_option(preview_winid, "foldcolumn", "0")
-  api.nvim_win_set_option(preview_winid, "signcolumn", "no")
-  api.nvim_win_set_option(preview_winid, "number", false)
-  api.nvim_win_set_option(preview_winid, "relativenumber", false)
-  vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, preview_winid)
-
-  local border = {}
-  local borderwin_width = win_width - horizontal_offset
-  local line_fill = string.rep("─", borderwin_width-2*border_width)
-  local border_col = comment.diffSide == "LEFT" and 0 or horizontal_offset
-  table.insert(border, format("┌%s┐", line_fill))
-  for _=1, height-2 do
-    table.insert(border, format("│%s│", string.rep(" ", borderwin_width-2*border_width)))
-  end
-  table.insert(border, format("└%s┘", line_fill))
-  local border_bufnr = api.nvim_create_buf(false, true)
-  api.nvim_buf_set_lines(border_bufnr, 0, -1, false, border)
-  local border_winid = api.nvim_open_win(border_bufnr, false, {
-    relative = "win",
-    win = win,
-    row = vertical_offset,
-    col = border_col,
-    width = borderwin_width,
-    height = height
-  })
-  api.nvim_win_set_option(border_winid, "foldcolumn", "0")
-  api.nvim_win_set_option(border_winid, "signcolumn", "no")
-  api.nvim_win_set_option(border_winid, "number", false)
-  api.nvim_win_set_option(border_winid, "relativenumber", false)
-  vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, border_winid)
-end
-
 function M.create_popup(opts)
   opts = opts or {}
   if not opts.width then

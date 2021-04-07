@@ -18,7 +18,7 @@ M.OCTO_EVENT_VT_NS = api.nvim_create_namespace("octo_details_vt")
 
 M.NO_BODY_MSG = "No description provided."
 
-M.LONG_ISSUE_PATTERN = "([A-Za-z0-9_. -]+/[A-Za-z0-9_. -]+)#(%d+)"
+M.LONG_ISSUE_PATTERN = "([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(%d+)"
 M.SHORT_ISSUE_PATTERN = "%s#(%d+)"
 M.URL_ISSUE_PATTERN = ("[htps]+://[^/]+/([^/]+/[^/]+)/([pulisue]+)/(%d+)")
 

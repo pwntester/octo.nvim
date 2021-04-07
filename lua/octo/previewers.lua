@@ -41,7 +41,7 @@ M.issue =
                   writers.write_details(bufnr, issue)
                   writers.write_body(bufnr, issue)
                   writers.write_state(bufnr, issue.state:upper(), number)
-                  api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
+                  api.nvim_buf_set_option(bufnr, "filetype", "octo")
                 end
               end
             }
@@ -103,7 +103,7 @@ M.pull_request =
                   local reactions_line = api.nvim_buf_line_count(bufnr) - 1
                   writers.write_block(bufnr, {"", ""}, reactions_line)
                   writers.write_reactions(bufnr, pull_request.reactionGroups, reactions_line)
-                  api.nvim_buf_set_option(bufnr, "filetype", "octo_issue")
+                  api.nvim_buf_set_option(bufnr, "filetype", "octo")
                 end
               end
             }
@@ -178,7 +178,7 @@ M.changed_files =
   {}
 )
 
-M.review_comment =
+M.review_thread =
   defaulter(
   function()
     return previewers.new_buffer_previewer {
@@ -188,9 +188,13 @@ M.review_comment =
       define_preview = function(self, entry)
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
-          -- TODO: pretty print
-          writers.write_diff_hunk(bufnr, entry.comment.diffHunk)
-          api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(entry.comment.body, "\n"))
+          api.nvim_buf_set_var(bufnr, "review_thread_map", {})
+          api.nvim_buf_set_var(bufnr, "comments", {})
+          writers.write_threads(bufnr, {entry.thread})
+          api.nvim_buf_call(bufnr, function()
+            vim.cmd [[setlocal foldmethod=manual]]
+            vim.cmd [[normal! zR]]
+          end)
         end
       end
     }

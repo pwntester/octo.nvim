@@ -47,6 +47,50 @@ M.resolve_review_thread_mutation =
         isOutdated
         isResolved
         path
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              originalLine
+              startLine
+              originalStartLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  replyTo { id }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -63,6 +107,50 @@ M.unresolve_review_thread_mutation =
         isOutdated
         isResolved
         path
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              originalLine
+              startLine
+              originalStartLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  replyTo { id }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -76,6 +164,50 @@ M.start_review_mutation =
       pullRequestReview {
         id
         state
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              line
+              originalLine
+              startLine
+              originalStartLine
+              diffSide
+              startDiffSide
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  replyTo { id }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -100,6 +232,7 @@ mutation {
   deletePullRequestReview(input: {pullRequestReviewId: "%s"}) { 
     pullRequestReview {
       id
+      state
     }
   }
 }
@@ -111,12 +244,8 @@ M.add_pull_request_review_thread_mutation =
 mutation { 
   addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) { 
     thread {
-      path
-      diffSide
-      startDiffSide
-      line
-      startLine
-      comments(first:1) {
+      id
+      comments(last:100) {
         nodes {
           id
           body
@@ -125,9 +254,65 @@ mutation {
           author {login}
           authorAssociation
           viewerDidAuthor
+          viewerCanUpdate
+          viewerCanDelete
           state
+          replyTo { id }
           pullRequestReview {
             id
+            state
+          }
+          path
+          reactionGroups {
+            content
+            viewerHasReacted
+            users {
+              totalCount
+            }
+          }
+        } 
+      }
+      pullRequest {
+        reviewThreads(last:100) {
+          nodes {	
+            id
+            path
+            diffSide
+            startDiffSide
+            line
+            originalLine
+            startLine
+            originalStartLine
+            isResolved
+            isCollapsed
+            isOutdated
+            comments(first:100) {
+              nodes {
+                id
+                body
+                diffHunk
+                commit { abbreviatedOid }
+                author {login}
+                authorAssociation
+                viewerDidAuthor
+                viewerCanUpdate
+                viewerCanDelete
+                state
+                replyTo { id }
+                pullRequestReview {
+                  id
+                  state
+                }
+                path
+                reactionGroups {
+                  content
+                  viewerHasReacted
+                  users {
+                    totalCount
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -142,12 +327,8 @@ M.add_pull_request_review_multiline_thread_mutation =
 mutation { 
   addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) { 
     thread {
-      path
-      diffSide
-      startDiffSide
-      line
-      startLine
-      comments(first:1) {
+      id
+      comments(last:100) {
         nodes {
           id
           body
@@ -156,9 +337,65 @@ mutation {
           author {login}
           authorAssociation
           viewerDidAuthor
+          viewerCanUpdate
+          viewerCanDelete
           state
+          replyTo { id }
           pullRequestReview {
             id
+            state
+          }
+          path
+          reactionGroups {
+            content
+            viewerHasReacted
+            users {
+              totalCount
+            }
+          }
+        } 
+      }
+      pullRequest {
+        reviewThreads(last:100) {
+          nodes {	
+            id
+            path
+            diffSide
+            startDiffSide
+            line
+            originalLine
+            startLine
+            originalStartLine
+            isResolved
+            isCollapsed
+            isOutdated
+            comments(first:100) {
+              nodes {
+                id
+                body
+                diffHunk
+                commit { abbreviatedOid }
+                author {login}
+                authorAssociation
+                viewerDidAuthor
+                viewerCanUpdate
+                viewerCanDelete
+                state
+                replyTo { id }
+                pullRequestReview {
+                  id
+                  state
+                }
+                path
+                reactionGroups {
+                  content
+                  viewerHasReacted
+                  users {
+                    totalCount
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -203,6 +440,50 @@ M.update_pull_request_review_comment_mutation =
       pullRequestReviewComment {
         id
         body
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              originalLine
+              startLine
+              originalStartLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  replyTo { id }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -215,6 +496,7 @@ M.update_pull_request_review_mutation =
     updatePullRequestReview(input: {pullRequestReviewId: "%s", body: "%s"}) {
       pullRequestReview {
         id
+        state
         body
       }
     }
@@ -222,17 +504,61 @@ M.update_pull_request_review_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
--- M.add_pull_request_review_comment_mutation =
--- [[
---   mutation {
---     addPullRequestReviewComment(input: {inReplyTo: "%s", body: "%s"}) {
---       comment{
---         id
---         body
---       }
---     }
---   }
--- ]]
+M.add_pull_request_review_comment_mutation =
+[[
+  mutation {
+    addPullRequestReviewComment(input: {inReplyTo: "%s", body: "%s", pullRequestReviewId: "%s"}) {
+      comment {
+        id
+        body
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              originalLine
+              startLine
+              originalStartLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  replyTo { id }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]]
 
 -- M.add_pull_request_review_comment_mutation =
 -- [[
@@ -263,6 +589,50 @@ M.delete_pull_request_review_comment_mutation =
     deletePullRequestReviewComment(input: {id: "%s"}) {
       pullRequestReview {
         id
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              originalLine
+              startLine
+              originalStartLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  replyTo { id }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -298,6 +668,8 @@ M.create_issue_mutation =
         closedAt
         updatedAt
         url
+        viewerDidAuthor
+        viewerCanUpdate
         milestone {
           title
           state
@@ -317,22 +689,69 @@ M.create_issue_mutation =
             totalCount
           }
         }
-        comments(first: 100) {
+        projectCards(last: 20) {
           nodes {
             id
-            body
-            createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
+            state
+            column {
+              name
+            }
+            project {
+              name
+            }
+          }
+        }
+        timelineItems(first: 100, after: $endCursor) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            __typename
+            ... on IssueComment {
+              id
+              body
+              createdAt
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
+              }
+              author {
+                login
+              }
+              viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
+            }
+            ... on ClosedEvent {
+              createdAt
+              actor {
+                login
               }
             }
-            author {
-              login
+            ... on ReopenedEvent {
+              createdAt
+              actor {
+                login
+              }
             }
-            viewerDidAuthor
+            ... on AssignedEvent {
+              actor {
+                login
+              }
+              assignee {
+                ... on Organization {
+                  name
+                }
+                ... on User {
+                  login
+                }
+              }
+              createdAt
+            }
           }
         }
         labels(first: 20) {
@@ -562,19 +981,26 @@ M.pending_review_threads_query =
 query { 
   repository(owner:"%s", name:"%s") {
     pullRequest (number: %d){
-      reviews(first:1, states:PENDING) {
+      reviews(first:100, states:PENDING) {
         nodes {
           id
+          viewerDidAuthor
         }
       }
-      reviewThreads(last:50) {
+      reviewThreads(last:100) {
         nodes {	
+          id
           path
           diffSide
           startDiffSide
           line
+          originalLine
           startLine
-          comments(first:1) {
+          originalStartLine
+          isResolved
+          isCollapsed
+          isOutdated
+          comments(first:100) {
             nodes {
               id
               body
@@ -586,8 +1012,18 @@ query {
               viewerCanUpdate
               viewerCanDelete
               state
+              replyTo { id }
               pullRequestReview {
                 id
+                state
+              }
+              path
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
               }
             }
           }
@@ -626,6 +1062,11 @@ query($endCursor: String) {
               commit {
                 oid
               }
+              pullRequestReview {
+                id
+                state
+              }
+              path
               replyTo { id }
               author { login }
               authorAssociation
@@ -826,9 +1267,7 @@ query($endCursor: String) {
               totalCount
               nodes{
                 id
-                replyTo {
-                  id
-                }
+                replyTo { id }
                 body
                 commit {
                   oid
@@ -879,6 +1318,11 @@ query($endCursor: String) {
               commit {
                 oid
               }
+              pullRequestReview {
+                id
+                state
+              }
+              path
               author { login }
               authorAssociation
               viewerDidAuthor
@@ -1581,7 +2025,33 @@ query {
 
 M.user_query =
   [[
+query($endCursor: String) {
+  search(query: "%s", type: USER, first: 100) {
+    nodes {
+      ... on User {
+        id
+        login
+      }
+      ... on Organization {
+        id
+        login
+        teams(first:100, after: $endCursor) {
+          totalCount
+          nodes {
+            id
+            name
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }
+  }
+}
 ]]
+
 
 local function escape_chars(string)
   local escaped, _ = string.gsub(

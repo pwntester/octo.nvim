@@ -1,8 +1,14 @@
-" store and remove current syntax value
-if exists('b:current_syntax')
-  let old_syntax = b:current_syntax
-  unlet b:current_syntax
+" quit when a syntax file was already loaded
+if exists("b:current_syntax")
+  finish
 endif
+
+if !exists('main_syntax')
+  let main_syntax = 'octo'
+endif
+
+runtime! syntax/markdown.vim ftplugin/markdown.vim ftplugin/markdown_*.vim ftplugin/markdown/*.vim
+unlet! b:current_syntax
 
 call matchadd('Conceal', ':heart:', 10, -1, {'conceal':'❤️'})
 call matchadd('Conceal', ':+1:', 10, -1, {'conceal':'👍'})
@@ -21,7 +27,7 @@ call matchadd('Conceal', ':man_shrugging:', 10, -1, {'conceal':'🤷'})
 call matchadd('Conceal', ':face_palm:', 10, -1, {'conceal':'🤦'})
 call matchadd('Conceal', ':man_facepalmin:', 10, -1, {'conceal':'🤦'})
 
-" restore current syntax value
-if exists('old_syntax')
-  let b:current_syntax = old_syntax
+let b:current_syntax = "octo"
+if main_syntax ==# 'octo'
+  unlet main_syntax
 endif
