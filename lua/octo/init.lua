@@ -608,6 +608,9 @@ function M.create_buffer(type, obj, repo, create)
     elseif item.__typename == "ReopenedEvent" then
       writers.write_reopened_event(bufnr, item, prev_is_event)
       prev_is_event = true
+    elseif item.__typename == "LabeledEvent" then
+      writers.write_labeled_event(bufnr, item, prev_is_event)
+      prev_is_event = true
     end
     ::continue::
   end

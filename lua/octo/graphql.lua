@@ -708,6 +708,16 @@ M.create_issue_mutation =
           }
           nodes {
             __typename
+            ... on LabeledEvent {
+              actor {
+                login
+              }
+              createdAt
+              label {
+                color
+                name
+              }
+            }
             ... on IssueComment {
               id
               body
@@ -1176,6 +1186,16 @@ query($endCursor: String) {
         }
         nodes {
           __typename
+          ... on LabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
           ... on AssignedEvent {
             actor {
               login
@@ -1428,6 +1448,16 @@ query($endCursor: String) {
         }
         nodes {
           __typename
+          ... on LabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
           ... on IssueComment {
             id
             body
