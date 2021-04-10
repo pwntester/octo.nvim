@@ -609,7 +609,10 @@ function M.create_buffer(type, obj, repo, create)
       writers.write_reopened_event(bufnr, item, prev_is_event)
       prev_is_event = true
     elseif item.__typename == "LabeledEvent" then
-      writers.write_labeled_event(bufnr, item, prev_is_event)
+      writers.write_labeled_event(bufnr, item, "added")
+      prev_is_event = true
+    elseif item.__typename == "UnlabeledEvent" then
+      writers.write_labeled_event(bufnr, item, "removed")
       prev_is_event = true
     end
     ::continue::

@@ -1055,7 +1055,7 @@ function M.write_closed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
-function M.write_labeled_event(bufnr, item)
+function M.write_labeled_event(bufnr, item, action)
   local actor_bubble = bubbles.make_user_bubble(
     item.actor.login,
     item.actor.login == vim.g.octo_viewer
@@ -1068,7 +1068,7 @@ function M.write_labeled_event(bufnr, item)
   local vt = {}
   table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
   vim.list_extend(vt, actor_bubble)
-  table.insert(vt, {" added", "OctoNvimTimelineItemHeading"})
+  table.insert(vt, {" "..action, "OctoNvimTimelineItemHeading"})
   vim.list_extend(vt, label_bubble)
   table.insert(vt, {"label ", "OctoNvimTimelineItemHeading"})
   table.insert(vt, {"(", "OctoNvimSymbol"})
