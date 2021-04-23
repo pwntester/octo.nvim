@@ -513,7 +513,7 @@ function M.get_file_contents(repo, commit, path, cb)
           local resp = json.parse(output)
           local blob = resp.data.repository.object
           local lines = {}
-          if blob and blob ~= vim.NIL then
+          if blob and blob ~= vim.NIL and type(blob.text) == "string"  then
             lines = vim.split(blob.text, "\n")
           end
           cb(lines)

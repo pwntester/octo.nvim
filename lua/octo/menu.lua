@@ -410,7 +410,6 @@ end
 ---
 -- SEARCH
 ---
-
 function M.issue_search(opts)
   opts = opts or {}
 
