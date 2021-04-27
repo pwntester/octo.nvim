@@ -206,6 +206,7 @@ local function do_add_thread_comment(bufnr, metadata)
 
             local threads = resp.data.addPullRequestReviewComment.comment.pullRequest.reviewThreads.nodes
             require"octo.reviews".update_threads(threads)
+            require"octo.reviews".update_qf()
             signs.render_signcolumn(bufnr)
           end
         end
@@ -246,6 +247,8 @@ local function do_add_new_thread(bufnr, metadata)
 
             local threads = resp.data.addPullRequestReviewThread.thread.pullRequest.reviewThreads.nodes
             require"octo.reviews".update_threads(threads)
+            require"octo.reviews".update_qf()
+            require"octo.reviews".update_thread_signs()
             signs.render_signcolumn(bufnr)
 
             -- update thread map
@@ -292,6 +295,7 @@ local function do_update_comment(bufnr, metadata)
             comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
             local threads = resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
             require"octo.reviews".update_threads(threads)
+            require"octo.reviews".update_qf()
           elseif metadata.kind == "PullRequestReview" then
             comment = resp.data.updatePullRequestReview.pullRequestReview
           end

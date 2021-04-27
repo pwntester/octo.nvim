@@ -590,6 +590,7 @@ M.delete_pull_request_review_comment_mutation =
       pullRequestReview {
         id
         pullRequest {
+          id
           reviewThreads(last:100) {
             nodes {	
               id

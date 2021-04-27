@@ -330,12 +330,31 @@ function M.delete_comment()
       {
         args = {"api", "graphql", "-f", format("query=%s", query)},
         cb = function(output)
-          -- TODO: deleting the last review thread comment, it deletes the whole thread
+          -- TODO: deleting the last review thread comment, it deletes the whole thread and review
           -- so diff hunk should not be showed any more
           local resp = json.parse(output)
           if comment.kind == "PullRequestReviewComment" then
-            local threads = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest.reviewThreads.nodes
-            require"octo.reviews".update_threads(threads)
+            local pr = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest
+            local threads = pr.reviewThreads.nodes
+            if #threads == 0 then
+              -- this was the last comment on the last thread, so the review has been deleted
+              local bufname = api.nvim_buf_get_name(bufnr)
+              if string.match(bufname, "octo://.+/pull/%d+/reviewthreads/.*") then
+                vim.cmd [[ b # ]]           -- Move to alternate buffer (diff buffer)
+                vim.cmd [[ bd # ]]          -- Delete alternate buffer (thread buffer)
+                vim.cmd [[ wincmd p ]]      -- Move to previous window
+              end
+              -- TODO: if I delete the thread buffer, or the user does it, the window gets closed, and alt_win points to nil
+              -- We need to handle deletion of the buffer gracefully
+              reviews.update_threads({})
+              reviews.create_review(pr.id, function(resp)
+                reviews.set_review_id(resp.data.addPullRequestReview.pullRequestReview.id)
+              end)
+            else
+              reviews.update_threads(threads)
+            end
+            reviews.update_qf()
+            reviews.update_thread_signs()
           end
 
           if comment.reaction_line then
@@ -389,7 +408,8 @@ function M.resolve_thread()
                 isResolved = thread.isResolved
               }, thread_line - 2)
             local threads = resp.data.resolveReviewThread.thread.pullRequest.reviewThreads.nodes
-            require"octo.reviews".update_threads(threads)
+            reviews.update_threads(threads)
+            reviews.update_qf()
             --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
           end
         end
@@ -426,7 +446,8 @@ function M.unresolve_thread()
                 isResolved = thread.isResolved
               }, thread_line - 2)
             local threads = resp.data.unresolveReviewThread.thread.pullRequest.reviewThreads.nodes
-            require"octo.reviews".update_threads(threads)
+            reviews.update_threads(threads)
+            reviews.update_qf()
           end
         end
       end

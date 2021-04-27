@@ -22,6 +22,10 @@ function M.get_review_id()
   return _review_id
 end
 
+function M.set_review_id(id)
+  _review_id = id
+end
+
 -- sets the height of the quickfix window
 local qf_height = math.floor(vim.o.lines * 0.2)
 if vim.g.octo_qf_height then
@@ -77,6 +81,8 @@ function M.populate_qf(changes, opts)
 
   vim.fn.setqflist({}, "r", {context = context, items = items})
 
+  M.update_qf()
+
   M.select_qf_entry()
 
   -- bind <CR> for current quickfix window to properly set up diff split layout after selecting an item
@@ -107,6 +113,10 @@ function M.select_qf_entry(target)
   local path = qf.items[qf.idx].module
   local repo = qf.context.pull_request_repo
   local number = qf.context.pull_request_number
+
+  if not ctxitem or ctxitem == vim.NIL or not ctxitem.patch then
+    return
+  end
 
   -- calculate valid comment ranges
   local valid_left_ranges = {}
@@ -155,8 +165,8 @@ function M.select_qf_entry(target)
   api.nvim_buf_set_var(right_bufnr, "OctoDiffProps", {
     diffSide = "RIGHT",
     commit = right_commit,
-    qf_idx = qf.idx,
-    qf_winid = qf.winid,
+    -- qf_idx = qf.idx,
+    -- qf_winid = qf.winid,
     path = qf.items[qf.idx].module,
     bufname = right_bufname,
     content_bufnr = right_bufnr,
@@ -171,8 +181,8 @@ function M.select_qf_entry(target)
   api.nvim_buf_set_var(left_bufnr, "OctoDiffProps", {
     diffSide = "LEFT",
     commit = left_commit,
-    qf_idx = qf.idx,
-    qf_winid = qf.winid,
+    -- qf_idx = qf.idx,
+    -- qf_winid = qf.winid,
     path = path,
     bufname = left_bufname,
     content_bufnr = left_bufnr,
@@ -253,6 +263,8 @@ function M.add_review_mappings(bufnr)
   local mapping_opts = {silent = true, noremap = true}
   api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "[q", [[<cmd>lua require'octo.reviews'.prev_change()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "]t", [[<cmd>lua require'octo.reviews'.next_thread()<CR>]], mapping_opts)
+  api.nvim_buf_set_keymap(bufnr, "n", "[t", [[<cmd>lua require'octo.reviews'.prev_thread()<CR>]], mapping_opts)
   api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]], mapping_opts)
   vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
   vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
@@ -262,6 +274,42 @@ function M.add_review_mappings(bufnr)
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))
   vim.cmd [[wincmd p]]
+end
+
+function M.next_thread()
+  local bufnr = api.nvim_get_current_buf()
+  local bufname = api.nvim_buf_get_name(bufnr)
+  local path = string.match(bufname, "octo://.+/pull/%d+/file/[^/]+/(.+)")
+  local current_line = vim.fn.line(".")
+  local candidate = math.huge
+  if path then
+    for _, thread in ipairs(M.threads_for_path(path)) do
+      if thread.originalLine > current_line and thread.originalLine < candidate then
+        candidate = thread.originalLine
+      end
+    end
+  end
+  if candidate < math.huge then
+    vim.cmd(":"..candidate)
+  end
+end
+
+function M.prev_thread()
+  local bufnr = api.nvim_get_current_buf()
+  local bufname = api.nvim_buf_get_name(bufnr)
+  local path = string.match(bufname, "octo://.+/pull/%d+/file/[^/]+/(.+)")
+  local current_line = vim.fn.line(".")
+  local candidate = -1
+  if path then
+    for _, thread in ipairs(M.threads_for_path(path)) do
+      if thread.originalLine < current_line and thread.originalLine > candidate then
+        candidate = thread.originalLine
+      end
+    end
+  end
+  if candidate > -1 then
+    vim.cmd(":"..candidate)
+  end
 end
 
 function M.next_change()
@@ -297,8 +345,16 @@ function M.start_review()
   _review_threads = {}
   _review_files = {}
 
-  -- start new review
-  local query = graphql("start_review_mutation", pr.id)
+  M.create_review(pr.id, function(resp)
+    _review_id = resp.data.addPullRequestReview.pullRequestReview.id
+    local threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
+    M.update_threads(threads)
+    M.initiate_review(repo, number, pr)
+  end)
+end
+
+function M.create_review(pr_id, callback)
+  local query = graphql("start_review_mutation", pr_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", format("query=%s", query)},
@@ -307,12 +363,7 @@ function M.start_review()
           api.nvim_err_writeln(stderr)
         elseif output then
           local resp = json.parse(output)
-
-          _review_id = resp.data.addPullRequestReview.pullRequestReview.id
-
-          local threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
-          M.update_threads(threads)
-          M.initiate_review(repo, number, pr)
+          callback(resp)
         end
       end
     }
@@ -329,6 +380,50 @@ function M.update_threads(threads)
     end
     _review_threads[thread.id] = thread
   end
+end
+
+function M.threads_for_path(path)
+  local threads = {}
+  for _, thread in pairs(_review_threads) do
+    if path == thread.path then
+      table.insert(threads, thread)
+    end
+  end
+  return threads
+end
+
+function M.thread_counts(threads)
+  local total = #threads
+  local resolved = 0
+  local outdated = 0
+  for _, thread in pairs(threads) do
+    if thread.isOutdated then
+      outdated = outdated + 1
+    end
+    if thread.isResolved then
+      resolved = resolved + 1
+    end
+  end
+  return total, resolved, outdated
+end
+
+function M.update_qf()
+  local qf = vim.fn.getqflist({context = 0, idx = 0, items = 0, winid = 0})
+  local context = qf.context
+  local items = qf.items
+  local updated_items = {}
+  for _, item in ipairs(items) do
+    local path_threads = M.threads_for_path(item.module)
+    local total, resolved, outdated = M.thread_counts(path_threads)
+    local i = string.find(item.text, "%(")
+    local changes = item.text
+    if i then
+      changes = string.sub(item.text, 1, i - 2)
+    end
+    item.text = format("%s (%d total %d resolved %d outdated)", changes, total, resolved, outdated)
+    table.insert(updated_items, item)
+  end
+  vim.fn.setqflist({}, "r", {context = context, items = updated_items})
 end
 
 function M.resume_review()
@@ -550,9 +645,7 @@ end
 function M.clear_review_threads()
   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
-  if not status or not props then
-    return
-  end
+  if not status or not props then return end
   local diff_bufnr = props.alt_bufnr
   if api.nvim_win_is_valid(props.alt_win) then
     local current_alt_bufnr = api.nvim_win_get_buf(props.alt_win)
@@ -567,7 +660,7 @@ function M.clear_review_threads()
 end
 
 function M.show_review_threads()
-  local bufnr = api.nvim_get_current_buf()
+   local bufnr = api.nvim_get_current_buf()
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if not status or not props then
     return
@@ -628,8 +721,18 @@ function M.create_thread_buffer(repo, number, side, path)
   return thread_bufnr
 end
 
-function M.place_thread_signs()
-  local bufnr = api.nvim_get_current_buf()
+function M.update_thread_signs()
+  for _, winid in ipairs(api.nvim_tabpage_list_wins(0)) do
+    local bufnr  = api.nvim_win_get_buf(winid)
+    local bufname = api.nvim_buf_get_name(bufnr)
+    if string.match(bufname, "octo://.+/pull/%d+/file/.*") then
+      M.place_thread_signs(bufnr)
+    end
+  end
+end
+
+function M.place_thread_signs(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
   signs.unplace(bufnr)
   local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
   if status and props then
