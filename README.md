@@ -1,95 +1,113 @@
-# octo.nvim
-Plugin to work with GitHub issues and PRs from Neovim. Just edit the issue description/comments and save it with `:w`.
-Modified description or comments are highlighted in the signcolumn.
+# Octo.nvim
 
-### Issue
+Edit and review GitHub issues and pull requests from the comfort of your favorite editor.
+
+
+    
+## Screenshots
+
 ![](https://i.imgur.com/ipbMFUs.png)
 
-### Pull Request (checks)
 ![](https://i.imgur.com/xfE6yN2.png)
 
-## Installation
+## Features
+
+- Edit GitHub issues and PRs
+- Add/Modify/Delete comments
+- Add/Remove label, reactions, assignees, project cards, reviewers, etc.
+- Add Review PRs
+
+## Installation 
 
 Use your favourite plugin manager to install it. eg:
 
 ```
-Plug 'pwntester/octo.nvim'
+use {'pwntester/octo.nvim'}
 ```
 
 ## Requirements
 
 - Install [GitHub CLI](https://cli.github.com/)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+ 
+## Usage
 
-```
-Plug 'nvim-lua/popup.nvim'
-Plug 'nvim-lua/plenary.nvim'
-Plug 'nvim-telescope/telescope.nvim'
-
--- To use Telescope interface for octo pickers 
-lua require('telescope').load_extension('octo')
-```
+Just edit the issue title, body or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
 
 ## Commands
 
 There is only an `Octo <object> <action> [arguments]` command: 
+If no command is passed, the argument to `Octo` is treated as a URL from where an issue or pr repo and number are extracted
 
 | Object | Action | Arguments|
 |---|---|---|
-| issue | close | |
-| | reopen | |
-| | create | [repo] |
-| | edit | [repo] <number> |
-| | list | [repo] [key=value]*<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit issue<br>`<C-b>`: Opens issue in web browser |
-| | search | |
-| | reload | same as doing `e!`|
-| | browser | |
-| pr | list | [repo] [key=value]<br>[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)<br>Mappings:<br>`<CR>`: Edit PR<br>`<C-b>`: Opens PR in web browser<br>`<C-o>`: Checkout PR |
-| | search | |
-| | edit | [repo] <number> |
+| issue | close | Close the current issue|
+| | reopen | Reopen the current issue|
+| | create [repo]| Creates a new issue in the current or specified repo |
+| | edit [repo] <number> | Edit issue `<number>` in current or specified repo |
+| | list [repo] [key=value] (1) | List all issues satisfying given filter |
+| | search | Live issue search |
+| | reload | Reload issue. Same as doing `e!`|
+| | browser | Open current issue in the browser |
+| pr | list [repo] [key=value] (2)| List all PRs satisfying given filter |
+| | search | Live issue search |
+| | edit [repo] <number> | Edit PR `<number>` in current or specified repo|
 | | open | |
-| | close | |
-| | checkout | |
-| | commits | |
-| | changes | |
-| | diff | |
-| | merge | [commit\|rebase\|squash] [delete] |
-| | ready| |
-| | checks | |
-| | reload | same as doing `e!`|
-| | browser | |
-| gist | list | [repo] [key=value]*<br>[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`<br>Mappings:<br>`<CR>`: Append Gist to buffer<br>`<C-b>`: Opens Gist in web browser |
-| comment | add | |
-| | delete | |
+| | close | Close the current PR|
+| | checkout | Checkout PR|
+| | commits | List all PR commits|
+| | changes | Show all PR changes (diff hunks)|
+| | diff | Show PR diff |
+| | merge [commit\|rebase\|squash] [delete] | Merge current PR using the specified method|
+| | ready| Mark a draft PR as ready for review |
+| | checks | Show the status of all checks run on the PR |
+| | reload | Reload PR. Same as doing `e!`|
+| | browser | Open current PR in the browser|
+| gist | list [repo] [key=value] | List user gists |
+| comment | add | Add a new comment |
+| | delete | Delete a comment |
 | thread | resolve| Mark a review thread as resolved |
 | | unresolve | Mark a review thread as unresolved |
-| label | add | <label> |
-| | delete | <label> |
-| assignees| add | <assignee> |
-| | delete | <assignee> |
-| reviewer | add | <reviewer> |
-| | delete | <reviewer> |
-| reaction | thumbs_up \| +1 | |
-| | thumbs_down \| -1 | |
-| | eyes | |
-| | laugh | |
-| | confused | |
-| | rocket | |
-| | hooray \| party \| tada | |
-| card | add | |
-| | delete | |
-| | move | |
+| label | add | Add a label from available label menu |
+| | delete | Remove a label |
+| assignees| add | Assign a user |
+| | delete | Unassign a user |
+| reviewer | add | Assign a PR reviewer |
+| | delete | Unassign a PR reviewer |
+| reaction | `thumbs_up` \| `+1` | Add :+1: reaction|
+| | `thumbs_down` \| `-1` | Add :-1: reaction|
+| | `eyes` | Add :eyes: reaction|
+| | `laugh` | Add :laugh: reaction|
+| | `confused` | Add :confused: reaction|
+| | `rocket` | Add :rocket: reaction|
+| | `hooray` \| `party` \| `tada` | Add :hooray: reaction|
+| card | add | Assign issue/PR to a project new card |
+| | delete | Delete project card |
+| | move | Move project card to different project/column|
 | review| start| Start a new review |
 | | submit| Submit the review |
 | | resume| Edit a pending review for current PR |
 | | discard| Deletes a pending review for current PR if any |
 | | comments| View pending review comments |
 
-* If repo is not provided, it will be derived from `<cwd>/.git/config`.
+0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
-If no command is passed, the argument to `Octo` is treated as a URL from where an issue or pr repo and number are extracted
+1. In-menu mappings:
+- `<CR>`: Edit Issue
+- `<C-b>`: Opens issue in web browser
+[Available filter keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
-Examples:
+2. In-menu mappings:
+- `<CR>`: Edit PR
+- `<C-b>`: Opens PR in web browser
+[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
+
+3. In-menu mappings:
+- `<CR>`: Append Gist to buffer
+- `<C-b>`: Opens Gist in web browser
+[Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`
+
+## Examples
 
 ```
 Octo https://github.com/pwntester/octo.nvim/issues/12
@@ -103,10 +121,8 @@ Octo issue list createdBy=pwntester
 Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 ```
 
-## Usage
-Just edit the issue title, description or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
-
 ## PR review
+
 - Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
 - Start a review with `Octo review start` or resume a pending review with `Octo review resume`
 - Quickfix will be populated with the PR changed files 
@@ -130,8 +146,7 @@ Just edit the issue title, description or comments as a regular buffer and use `
 ## Mappings
 `<Plug>(OctoOpenIssueAtCursor)`: Open issue/pr at cursor with Octo
 
-
-## In-issue mappings
+### Issue/PR/Thread mappings
 | Mapping     | Description                           |
 | ---         | ---                                   |
 | `<space>gi` | navigate to a local repo issue        |
@@ -162,8 +177,15 @@ Just edit the issue title, description or comments as a regular buffer and use `
 | `<space>rr` | add/remove :rocket: reaction          |
 | `<C-o>`     | open issue/pull in browser            |
 | `<C-r>`     | reload current issue/pull             |
-| `[c`        | go to previous comment                |
-| `]c`        | go to next comment                    |
+
+### Thread review mappings
+| `[c`        | go to previous change |
+| `]c`        | go to next change |
+| `[q`        | go to previous file |
+| `]q`        | go to next file |
+| `[t`        | go to previous thread |
+| `]t`        | go to next thread|
+| `<C-c>`   | close review tab|
 
 
 ## Highlight groups
@@ -232,5 +254,12 @@ The title, body and comments of an issue or PR are special as they get special h
 
 ## Contributing
 
-Contributions are always welcomed! Please refer to [CONTRIBUTING](/CONTRIBUTING) for detailed guidelines.
-You can start with the issues labeled with `good first issue`.
+Contributions are always welcome!
+
+See `contributing.md` for ways to get started.
+
+Please adhere to this project's `code of conduct`.
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
