@@ -551,7 +551,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNKS_VT_NS, 0, start_line - 1)
+  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, start_line - 2, -1)
 
   local diffhunk_lines = vim.split(diffhunk, "\n")
 
@@ -693,7 +693,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   -- write snippet as virtual text
   local line = start_line - 1
   for _, vt_line in ipairs(vt_lines) do
-    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, line, vt_line)
+    M.write_virtual_text(bufnr, constants.OCTO_DIFFHUNK_VT_NS, line, vt_line)
     line = line + 1
   end
 
@@ -897,7 +897,7 @@ function M.write_user_profile(bufnr, user, opts)
     M.write_block(bufnr, {""}, i)
   end
   for i=1,#chunks do
-    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
+    M.write_virtual_text(bufnr, constants.OCTO_PROFILE_VT_NS, i-1, chunks[i])
   end
   return #chunks, max_length
 end
@@ -974,7 +974,7 @@ function M.write_issue_summary(bufnr, issue, opts)
     M.write_block(bufnr, {""}, i)
   end
   for i=1,#chunks do
-    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, i-1, chunks[i])
+    M.write_virtual_text(bufnr, constants.OCTO_SUMMARY_VT_NS, i-1, chunks[i])
   end
   return #chunks
 end

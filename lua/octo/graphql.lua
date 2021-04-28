@@ -874,6 +874,75 @@ M.update_issue_state_mutation =
             isViewer
           }
         }
+        timelineItems(last: 100) {
+          nodes {
+            __typename
+            ... on LabeledEvent {
+              actor {
+                login
+              }
+              createdAt
+              label {
+                color
+                name
+              }
+            }
+            ... on UnlabeledEvent {
+              actor {
+                login
+              }
+              createdAt
+              label {
+                color
+                name
+              }
+            }
+            ... on IssueComment {
+              id
+              body
+              createdAt
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
+              }
+              author {
+                login
+              }
+              viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
+            }
+            ... on ClosedEvent {
+              createdAt
+              actor {
+                login
+              }
+            }
+            ... on ReopenedEvent {
+              createdAt
+              actor {
+                login
+              }
+            }
+            ... on AssignedEvent {
+              actor {
+                login
+              }
+              assignee {
+                ... on Organization {
+                  name
+                }
+                ... on User {
+                  login
+                }
+              }
+              createdAt
+            }
+          }
+        }
       }
     }
   }
@@ -975,6 +1044,147 @@ M.update_pull_request_state_mutation =
             id
             login
             isViewer
+          }
+        }
+        timelineItems(last: 100) {
+          nodes {
+            __typename
+            ... on LabeledEvent {
+              actor {
+                login
+              }
+              createdAt
+              label {
+                color
+                name
+              }
+            }
+            ... on UnlabeledEvent {
+              actor {
+                login
+              }
+              createdAt
+              label {
+                color
+                name
+              }
+            }
+            ... on AssignedEvent {
+              actor {
+                login
+              }
+              assignee {
+                ... on Organization {
+                  name
+                }
+                ... on User {
+                  login
+                }
+              }
+              createdAt
+            }
+            ... on PullRequestCommit {
+              commit {
+                messageHeadline
+                committedDate
+                abbreviatedOid
+                changedFiles
+                additions
+                deletions
+                committer {
+                  user {
+                    login
+                  }
+                }
+              }          
+            }
+            ... on MergedEvent {
+              createdAt
+              actor {
+                login
+              }
+              commit {
+                abbreviatedOid
+              }
+              mergeRefName
+            }
+            ... on ClosedEvent {
+              createdAt
+              actor {
+                login
+              }
+            }
+            ... on ReopenedEvent {
+              createdAt
+              actor {
+                login
+              }
+            }
+            ... on IssueComment {
+              id
+              body
+              createdAt
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
+              }
+              author {
+                login
+              }
+              viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
+            }
+            ... on PullRequestReview {
+              id
+              body
+              createdAt
+              viewerCanUpdate
+              viewerCanDelete
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
+              }
+              author {
+                login
+              }
+              viewerDidAuthor
+              state
+              comments(last:100) {
+                totalCount
+                nodes{
+                  id
+                  replyTo { id }
+                  body
+                  commit {
+                    oid
+                  }
+                  author { login }
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  originalPosition
+                  position
+                  state
+                  outdated
+                  diffHunk
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
           }
         }
         reviewRequests(first: 20) {

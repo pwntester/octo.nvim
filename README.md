@@ -52,7 +52,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | pr | list [repo] [key=value] (2)| List all PRs satisfying given filter |
 | | search | Live issue search |
 | | edit [repo] <number> | Edit PR `<number>` in current or specified repo|
-| | open | |
+| | reopen | Reopen the current PR|
 | | close | Close the current PR|
 | | checkout | Checkout PR|
 | | commits | List all PR commits|

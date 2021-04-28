@@ -54,7 +54,7 @@ local commands = {
     close = function()
       M.change_state("pull", "CLOSED")
     end,
-    open = function()
+    reopen = function()
       M.change_state("pull", "OPEN")
     end,
     list = function(repo, ...)
