@@ -74,13 +74,14 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | delete | Unassign a user |
 | reviewer | add | Assign a PR reviewer |
 | | delete | Unassign a PR reviewer |
-| reaction | `thumbs_up` \| `+1` | Add :+1: reaction|
-| | `thumbs_down` \| `-1` | Add :-1: reaction|
-| | `eyes` | Add :eyes: reaction|
-| | `laugh` | Add :laugh: reaction|
-| | `confused` | Add :confused: reaction|
-| | `rocket` | Add :rocket: reaction|
-| | `hooray` \| `party` \| `tada` | Add :hooray: reaction|
+| reaction | `thumbs_up` \| `+1` | Add 👍 reaction|
+| | `thumbs_down` \| `-1` | Add 👎 reaction|
+| | `eyes` | Add 👀 reaction|
+| | `laugh` | Add 😄 reaction|
+| | `confused` | Add 😕 reaction|
+| | `rocket` | Add 🚀 reaction|
+| | `heart` | Add ❤️ reaction|
+| | `hooray` \| `party` \| `tada` | Add 🎉 reaction|
 | card | add | Assign issue/PR to a project new card |
 | | delete | Delete project card |
 | | move | Move project card to different project/column|
@@ -167,14 +168,14 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 | `<space>ad` | delete assignee                       |
 | `<space>va` | request reviewer                      |
 | `<space>vd` | delete reviewer                       |
-| `<space>rh` | add/remove :heart: reaction           |
-| `<space>rp` | add/remove :hooray: reaction          |
-| `<space>re` | add/remove :eyes: reaction            |
-| `<space>rl` | add/remove :laugh: reaction           |
-| `<space>rc` | add/remove :confused: reaction        |
-| `<space>r+` | add/remove :+1: reaction              |
-| `<space>r-` | add/remove :-1: reaction              |
-| `<space>rr` | add/remove :rocket: reaction          |
+| `<space>rh` | add/remove ❤️ reaction                |
+| `<space>rp` | add/remove 🎉 reaction                |
+| `<space>re` | add/remove 👀 reaction                |
+| `<space>rl` | add/remove 😄 reaction                |
+| `<space>rc` | add/remove 😕 reaction                |
+| `<space>r+` | add/remove 👍 reaction                |
+| `<space>r-` | add/remove 👎 reaction                |
+| `<space>rr` | add/remove 🚀 reaction                |
 | `<C-o>`     | open issue/pull in browser            |
 | `<C-r>`     | reload current issue/pull             |
 
@@ -185,7 +186,7 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 | `]q`        | go to next file |
 | `[t`        | go to previous thread |
 | `]t`        | go to next thread|
-| `<C-c>`   | close review tab|
+| `<C-c>`     | close review tab|
 
 
 ## Highlight groups
