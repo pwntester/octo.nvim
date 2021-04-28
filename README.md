@@ -6,9 +6,11 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
     
 ## Screenshots
 
-![](https://i.imgur.com/ipbMFUs.png)
+<img width="2123" alt="image" src="https://user-images.githubusercontent.com/125701/116367294-7c628180-a807-11eb-8141-afe28de007ad.png">
 
-![](https://i.imgur.com/xfE6yN2.png)
+<img width="2121" alt="image" src="https://user-images.githubusercontent.com/125701/116367690-e713bd00-a807-11eb-8a5a-0325a65acdbb.png">
+
+<img width="2125" alt="image" src="https://user-images.githubusercontent.com/125701/116368525-b5e7bc80-a808-11eb-88f7-9691f87bb8b2.png">
 
 ## Features
 
