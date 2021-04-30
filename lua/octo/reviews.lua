@@ -337,9 +337,7 @@ end
 --
 function M.start_review()
   local repo, number, pr = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
+  if not repo then return end
 
   _review_id = -1
   _review_threads = {}
@@ -475,7 +473,7 @@ function M.initiate_review(repo, number, pr)
   local url = format("repos/%s/pulls/%d/files", repo, number)
   gh.run(
     {
-      args = {"api", url},
+      args = {"api", "--paginate", url},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
           api.nvim_err_writeln(stderr)
