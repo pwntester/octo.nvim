@@ -121,8 +121,8 @@ function M.setup(opts)
     qf_height = opts.qf_height or 11;
     reaction_viewer_hint_icon = opts.icon_reaction_viewer_hint or "";
     user_icon = opts.user_icon or " ";
-    bubble_delimiter_right = opts.bubble_delimiter_right or "";
-    bubble_delimiter_left = opts.bubble_delimiter_left or "";
+    right_bubble_delimiter = opts.right_bubble_delimiter or "";
+    left_bubble_delimiter = opts.left_bubble_delimiter or "";
     github_hostname = opts.github_hostname or "";
     snippet_context_lines = opts.snippet_context_lines or 4;
     keymaps = {

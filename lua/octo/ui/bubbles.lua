@@ -11,8 +11,8 @@ local function make_bubble(content, highlight_group, opts)
   local margin = string.rep(" ", opts.margin_width or 0)
   local padding = string.rep(" ", opts.padding_width or 0)
   local body = padding .. content .. padding
-  local left_delimiter = margin .. (require"octo".settings.bubble_delimiter_left or "")
-  local right_delimiter = (require"octo".settings.bubble_delimiter_right or "") .. margin
+  local left_delimiter = margin .. (require"octo".settings.left_bubble_delimiter or "")
+  local right_delimiter = (require"octo".settings.right_bubble_delimiter or "") .. margin
   local delimiter_color = highlights.get_background_color_of_highlight_group(highlight_group)
   local delimiter_highlight_group = highlights.create_highlight(
     delimiter_color,
