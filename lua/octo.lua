@@ -8,12 +8,249 @@ local folds = require "octo.folds"
 local window = require "octo.window"
 local vim = vim
 local api = vim.api
+local cmd = vim.cmd
 local format = string.format
 local json = {
   parse = vim.fn.json_decode,
 }
 
-local M = {}
+local M = {
+  settings = {
+    keymaps = {}
+  }
+}
+
+function M.setup(opts)
+  opts = opts or {}
+  opts.keymaps = opts.keymaps or {}
+
+  -- commands
+  if vim.fn.executable('gh') then
+    cmd [[command! -complete=customlist,v:lua.octo_command_complete -nargs=* Octo lua require"octo.commands".octo(<f-args>)]]
+    cmd [[command! -range OctoAddReviewComment lua require"octo.reviews".add_review_comment(false)]]
+    cmd [[command! -range OctoAddReviewSuggestion lua require"octo.reviews".add_review_comment(true)]]
+  else
+    print("[Octo] Cannot find `gh` command.")
+  end
+
+-- autocommands
+  cmd [[augroup octo_autocmds]]
+  cmd [[au!]]
+  cmd [[au BufEnter octo://* lua require'octo'.configure_octo_buffer()]]
+  cmd [[au BufReadCmd octo://* lua require'octo'.load_buffer()]]
+  cmd [[au BufWriteCmd octo://* lua require'octo'.save_buffer()]]
+  cmd [[au CursorHold octo://* lua require'octo'.on_cursor_hold()]]
+  cmd [[au CursorHold octo://* lua require'octo.reviews'.show_review_threads()]]
+  cmd [[au CursorMoved octo://* lua require'octo.reviews'.clear_review_threads()]]
+  cmd [[augroup END]]
+
+  -- sign definitions
+  cmd [[sign define octo_thread text= texthl=OctoNvimBlue]]
+  cmd [[sign define octo_thread_resolved text=  texthl=OctoNvimGreen]]
+  cmd [[sign define octo_thread_outdated text=  texthl=OctoNvimRed]]
+  cmd [[sign define octo_thread_pending text= texthl=OctoNvimYellow]]
+  cmd [[sign define octo_thread_resolved_pending text= texthl=OctoNvimYellow]]
+  cmd [[sign define octo_thread_outdated_pending text= texthl=OctoNvimYellow]]
+
+  cmd [[sign define octo_comment_range numhl=OctoNvimGreen]]
+  cmd [[sign define octo_clean_block_start text=┌ linehl=OctoNvimEditable]]
+  cmd [[sign define octo_clean_block_end text=└ linehl=OctoNvimEditable]]
+  cmd [[sign define octo_dirty_block_start text=┌ texthl=OctoNvimDirty linehl=OctoNvimEditable]]
+  cmd [[sign define octo_dirty_block_end text=└ texthl=OctoNvimDirty linehl=OctoNvimEditable]]
+  cmd [[sign define octo_dirty_block_middle text=│ texthl=OctoNvimDirty linehl=OctoNvimEditable]]
+  cmd [[sign define octo_clean_block_middle text=│ linehl=OctoNvimEditable]]
+  cmd [[sign define octo_clean_line text=[ linehl=OctoNvimEditable]]
+  cmd [[sign define octo_dirty_line text=[ texthl=OctoNvimDirty linehl=OctoNvimEditable]]
+
+  -- highlight group definitions
+  cmd [[highlight default OctoNvimViewer guifg=#000000 guibg=#58A6FF]]
+  cmd [[highlight default OctoNvimBubbleGreen guibg=#238636 guifg=#acf2bd]]
+  cmd [[highlight default OctoNvimBubbleRed guibg=#da3633 guifg=#fdb8c0]]
+  cmd [[highlight default OctoNvimBubblePurple guifg=#ffffff guibg=#6f42c1]]
+  cmd [[highlight default OctoNvimBubbleYellow guibg=#735c0f guifg=#d3c846 ]]
+  cmd [[highlight default OctoNvimBubbleBlue guifg=#eaf5ff guibg=#0366d6]]
+  cmd [[highlight default OctoNvimGreen guifg=#238636]]
+  cmd [[highlight default OctoNvimRed guifg=#da3633]]
+  cmd [[highlight default OctoNvimPurple guifg=#ad7cfd]]
+  cmd [[highlight default OctoNvimYellow guifg=#d3c846]]
+  cmd [[highlight default OctoNvimBlue guifg=#58A6FF]]
+  cmd [[highlight default link OctoNvimDirty OctoNvimRed]]
+  cmd [[highlight default link OctoNvimIssueId Question]]
+  cmd [[highlight default link OctoNvimIssueTitle PreProc]]
+  cmd [[highlight default link OctoNvimEmpty Comment]]
+  cmd [[highlight default link OctoNvimFloat NormalFloat]]
+  cmd [[highlight default link OctoNvimTimelineItemHeading Comment]]
+  cmd [[highlight default link OctoNvimSymbol Comment]]
+  cmd [[highlight default link OctoNvimDate Comment]]
+  cmd [[highlight default link OctoNvimDetailsLabel Title ]]
+  cmd [[highlight default link OctoNvimDetailsValue Identifier]]
+  cmd [[highlight default link OctoNvimMissingDetails Comment]]
+  cmd [[highlight default link OctoNvimEditable NormalFloat]]
+  cmd [[highlight default link OctoNvimBubble NormalFloat]]
+  cmd [[highlight default link OctoNvimUser OctoNvimBubble]]
+  cmd [[highlight default link OctoNvimUserViewer OctoNvimViewer]]
+  cmd [[highlight default link OctoNvimReaction OctoNvimBubble]]
+  cmd [[highlight default link OctoNvimReactionViewer OctoNvimViewer]]
+  cmd [[highlight default link OctoNvimPassingTest OctoNvimGreen]]
+  cmd [[highlight default link OctoNvimFailingTest OctoNvimRed]]
+  cmd [[highlight default link OctoNvimPullAdditions OctoNvimGreen ]]
+  cmd [[highlight default link OctoNvimPullDeletions OctoNvimRed ]]
+  cmd [[highlight default link OctoNvimPullModifications OctoNvimBlue]]
+  cmd [[highlight default link OctoNvimStateOpen OctoNvimGreen]]
+  cmd [[highlight default link OctoNvimStateClosed OctoNvimRed]]
+  cmd [[highlight default link OctoNvimStateMerged OctoNvimPurple]]
+  cmd [[highlight default link OctoNvimStatePending OctoNvimYellow]]
+  cmd [[highlight default link OctoNvimStateApproved OctoNvimStateOpen]]
+  cmd [[highlight default link OctoNvimStateChangesRequested OctoNvimStateClosed]]
+  cmd [[highlight default link OctoNvimStateCommented Normal]]
+  cmd [[highlight default link OctoNvimStateDismissed OctoNvimStateClosed]]
+  cmd [[highlight default link OctoNvimStateSubmitted OctoNvimBubbleGreen]]
+
+  -- folds
+  require'octo.folds'
+
+  -- logged-in user
+  if not vim.g.octo_viewer then
+    M.check_login()
+  end
+
+  -- settings
+  M.settings = {
+    date_format = opts.date_format or "%Y %b %d %I:%M %p %Z";
+    default_remote = opts.default_remote or {"upstream", "origin"};
+    qf_height = opts.qf_height or 11;
+    reaction_viewer_hint_icon = opts.icon_reaction_viewer_hint or "";
+    user_icon = opts.user_icon or " ";
+    bubble_delimiter_right = opts.bubble_delimiter_right or "";
+    bubble_delimiter_left = opts.bubble_delimiter_left or "";
+    github_hostname = opts.github_hostname or "";
+    snippet_context_lines = opts.snippet_context_lines or 4;
+    keymaps = {
+      reload = opts.keymaps.reload or "<C-r>";
+      open_in_browser = opts.keymaps.open_in_browser or "<C-o>";
+      goto_issue = opts.keymaps.goto_issue or "<space>gi";
+      close = opts.keymaps.close or "<space>ic";
+      reopen = opts.keymaps.reopen or "<space>io";
+      list_issues = opts.keymaps.list_issues or "<space>il";
+      list_commits = opts.keymaps.list_commits or "<space>pc";
+      list_changed_files = opts.keymaps.list_changed_files or "<space>pf";
+      show_pr_diff = opts.keymaps.show_pr_diff or "<space>pd";
+      checkout_pr = opts.keymaps.checkout_pr or "<space>po";
+      merge_pr = opts.keymaps.merge_pr or "<space>pm";
+      add_reviewer = opts.keymaps.add_reviewer or "<space>va";
+      remove_reviewer = opts.keymaps.remove_reviewer or "<space>vd";
+      add_assignee = opts.keymaps.add_assignee or "<space>aa";
+      remove_assignee = opts.keymaps.remove_assignee or "<space>ad";
+      add_label = opts.keymaps.add_label or "<space>la";
+      remove_label = opts.keymaps.remove_label or "<space>ld";
+      add_comment = opts.keymaps.add_comment or "<space>ca";
+      delete_comment = opts.keymaps.delete_comment or "<space>cd";
+      add_suggestion = opts.keymaps.add_comment or "<space>sa";
+      react_hooray = opts.keymaps.react_hooray or "<space>rp";
+      react_heart = opts.keymaps.react_heart or "<space>rh";
+      react_eyes = opts.keymaps.react_eyes or "<space>re";
+      react_thumbs_up = opts.keymaps.react_thumbs_up or "<space>r+";
+      react_thumbs_down = opts.keymaps.react_thumbs_down or "<space>r-";
+      react_rocket = opts.keymaps.rocket or "<space>rr";
+      react_laugh = opts.keymaps.react_laugh or "<space>rl";
+      react_confused = opts.keymaps.react_confused or "<space>rc";
+      next_changed_file = opts.keymaps.next_changed_file or "]q";
+      prev_change_file = opts.keymaps.prev_change_file or "[q";
+      next_comment = opts.keymaps.next_comment or "]c";
+      prev_comment = opts.keymaps.prev_comment or "[c";
+      next_thread = opts.keymaps.next_thread or "]t";
+      prev_thread = opts.keymaps.prev_thread or "[t";
+      close_tab = opts.keymaps.close_tab or "<C-c>";
+    }
+  }
+
+  vim.g.loaded_octo = true
+end
+
+function _G.octo_command_complete(argLead, cmdLine)
+  local command_keys = vim.tbl_keys(require"octo.commands".commands)
+  local parts = vim.split(cmdLine, " ")
+
+  local get_options = function(options)
+    local valid_options = {}
+    for _, option in pairs(options) do
+      if string.sub(option, 1, #argLead) == argLead then
+        table.insert(valid_options, option)
+      end
+    end
+    return valid_options
+  end
+
+  if #parts == 2 then
+    return get_options(command_keys)
+  elseif #parts == 3 then
+    local o = require"octo.commands".commands[parts[2]]
+    if not o then
+      return
+    end
+    return get_options(vim.tbl_keys(o))
+  end
+end
+
+function _G.octo_omnifunc(findstart, base)
+  -- :help complete-functions
+  if findstart == 1 then
+    -- findstart
+    local line = api.nvim_get_current_line()
+    local pos = vim.fn.col(".")
+
+    local start, finish = 0, 0
+    while true do
+      start, finish = string.find(line, "#(%d*)", start + 1)
+      if start and pos > start and pos <= finish + 1 then
+        return start - 1
+      elseif not start then
+        break
+      end
+    end
+
+    start, finish = 0, 0
+    while true do
+      start, finish = string.find(line, "@(%w*)", start + 1)
+      if start and pos > start and pos <= finish + 1 then
+        return start - 1
+      elseif not start then
+        break
+      end
+    end
+
+    return -2
+  elseif findstart == 0 then
+    local entries = {}
+    if vim.startswith(base, "@") then
+      local users = api.nvim_buf_get_var(0, "taggable_users") or {}
+      for _, user in pairs(users) do
+        table.insert(entries, {word = format("@%s", user), abbr = user})
+      end
+    else
+      if vim.startswith(base, "#") then
+        local issues = api.nvim_buf_get_var(0, "issues") or {}
+        for _, i in ipairs(issues) do
+          if vim.startswith("#" .. tostring(i.number), base) then
+            table.insert(
+              entries,
+              {
+                abbr = tostring(i.number),
+                word = format("#%d", i.number),
+                menu = i.title
+              }
+            )
+          end
+        end
+      end
+    end
+    return entries
+  end
+end
+
+function _G.octo_foldtext()
+  return "..."
+end
 
 function M.configure_octo_buffer(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
@@ -22,19 +259,21 @@ function M.configure_octo_buffer(bufnr)
     -- file diff buffers
     require"octo.reviews".place_thread_signs()
   else
+
     -- issue/pr/comment buffers
     api.nvim_buf_call(bufnr, function()
+
       --options
-      vim.cmd [[setlocal omnifunc=octo#issue_complete]]
-      vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
-      vim.cmd [[setlocal foldcolumn=3]]
-      vim.cmd [[setlocal signcolumn=yes]]
+      vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
       vim.cmd [[setlocal conceallevel=2]]
-      vim.cmd [[setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀]]
-      vim.cmd [[setlocal foldtext=v:lua.OctoFoldText()]]
-      vim.cmd [[setlocal foldmethod=manual]]
+      vim.cmd [[setlocal signcolumn=yes]]
       vim.cmd [[setlocal foldenable]]
+      vim.cmd [[setlocal foldtext=v:lua.octo_foldtext()]]
+      vim.cmd [[setlocal foldmethod=manual]]
+      vim.cmd [[setlocal foldcolumn=3]]
       vim.cmd [[setlocal foldlevelstart=99]]
+      vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
+      vim.cmd [[setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀]]
 
       -- autocmds
       vim.cmd [[ augroup octo_buffer_autocmds ]]
@@ -632,7 +871,7 @@ function M.create_buffer(type, obj, repo, create)
   signs.render_signcolumn(bufnr)
 
   -- drop undo history
-  vim.fn["octo#clear_history"]()
+  util.clear_history()
 
   -- reset modified option
   api.nvim_buf_set_option(bufnr, "modified", false)
@@ -663,14 +902,14 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>ic",
+      M.settings.keymaps.close,
       [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>io",
+      M.settings.keymaps.reopen,
       [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
       mapping_opts
     )
@@ -680,7 +919,7 @@ function M.apply_buffer_mappings(bufnr, kind)
       api.nvim_buf_set_keymap(
         bufnr,
         "n",
-        "<space>il",
+        M.settings.keymaps.list_issues,
         format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
         mapping_opts
       )
@@ -689,37 +928,49 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>po",
+      M.settings.keymaps.checkout_pr,
       [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]],
       mapping_opts
     )
-    api.nvim_buf_set_keymap(bufnr, "n", "<space>pc", [[<cmd>lua require'octo.menu'.commits()<CR>]], mapping_opts)
-    api.nvim_buf_set_keymap(bufnr, "n", "<space>pf", [[<cmd>lua require'octo.menu'.files()<CR>]], mapping_opts)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>pd",
+      M.settings.keymaps.list_commits,
+      [[<cmd>lua require'octo.menu'.commits()<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      M.settings.keymaps.list_changed_files,
+      [[<cmd>lua require'octo.menu'.files()<CR>]],
+      mapping_opts
+    )
+    api.nvim_buf_set_keymap(
+      bufnr,
+      "n",
+      M.settings.keymaps.show_pr_diff,
       [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>pm",
+      M.settings.keymaps.merge_pr,
       [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>va",
+      M.settings.keymaps.add_reviewer,
       [[<cmd>lua require'octo.commands'.add_user('reviewer')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>vd",
+      M.settings.keymaps.remove_reviewer,
       [[<cmd>lua require'octo.commands'.remove_user('reviewer')<CR>]],
       mapping_opts
     )
@@ -729,43 +980,42 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<c-r>",
+      M.settings.keymaps.reload,
       [[<cmd>lua require'octo.commands'.reload()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<c-o>",
+      M.settings.keymaps.open_in_browser,
       [[<cmd>lua require'octo.navigation'.open_in_browser()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>la",
+      M.settings.keymaps.add_label,
       [[<cmd>lua require'octo.commands'.add_label()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>ld",
+      M.settings.keymaps.remove_label,
       [[<cmd>lua require'octo.commands'.delete_label()<CR>]],
       mapping_opts
     )
-
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>aa",
+      M.settings.keymaps.add_assignee,
       [[<cmd>lua require'octo.commands'.add_user('assignee')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>ad",
+      M.settings.keymaps.remove_assignee,
       [[<cmd>lua require'octo.commands'.remove_user('assignee')<CR>]],
       mapping_opts
     )
@@ -780,21 +1030,21 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>gi",
+      M.settings.keymaps.goto_issue,
       [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "]c",
+      M.settings.keymaps.next_comment,
       [[<cmd>lua require'octo'.next_comment()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "[c",
+      M.settings.keymaps.prev_comment,
       [[<cmd>lua require'octo'.prev_comment()<CR>]],
       mapping_opts
     )
@@ -803,7 +1053,7 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>ca",
+      M.settings.keymaps.add_comment,
       [[<cmd>lua require'octo.commands'.add_comment()<CR>]],
       mapping_opts
     )
@@ -811,7 +1061,7 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>cd",
+      M.settings.keymaps.delete_comment,
       [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
       mapping_opts
     )
@@ -820,56 +1070,56 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>rp",
+      M.settings.keymaps.react_hooray,
       [[<cmd>lua require'octo.commands'.reaction_action('hooray')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>rh",
+      M.settings.keymaps.react_heart,
       [[<cmd>lua require'octo.commands'.reaction_action('heart')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>re",
+      M.settings.keymaps.react_eyes,
       [[<cmd>lua require'octo.commands'.reaction_action('eyes')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>r+",
+      M.settings.keymaps.react_thumbs_up,
       [[<cmd>lua require'octo.commands'.reaction_action('+1')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>r-",
+      M.settings.keymaps.react_thumbs_down,
       [[<cmd>lua require'octo.commands'.reaction_action('-1')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>rr",
+      M.settings.keymaps.react_rocket,
       [[<cmd>lua require'octo.commands'.reaction_action('rocket')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>rl",
+      M.settings.keymaps.react_laugh,
       [[<cmd>lua require'octo.commands'.reaction_action('laugh')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      "<space>rc",
+      M.settings.keymaps.react_confused,
       [[<cmd>lua require'octo.commands'.reaction_action('confused')<CR>]],
       mapping_opts
     )

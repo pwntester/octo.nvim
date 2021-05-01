@@ -18,7 +18,7 @@ local json = {
 local M = {}
 
 -- supported commands
-local commands = {
+M.commands = {
   issue = {
     create = function(repo)
       M.create_issue(repo)
@@ -225,7 +225,7 @@ function M.process_varargs(repo, ...)
 end
 
 function M.octo(object, action, ...)
-  local o = commands[object]
+  local o = M.commands[object]
   if not o then
     local repo, number, kind = util.parse_url(object)
     if repo and number and kind == "issue" then
@@ -233,7 +233,7 @@ function M.octo(object, action, ...)
     elseif repo and number and kind == "pull" then
       util.get_pull_request(repo, number)
     else
-      print("[Octo] Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(commands)))
+      print("[Octo] Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(M.commands)))
       return
     end
   else
@@ -303,7 +303,7 @@ function M.add_comment()
   end
 
   -- drop undo history
-  vim.fn["octo#clear_history"]()
+  util.clear_history()
 end
 
 function M.delete_comment()
@@ -775,32 +775,6 @@ function M.reaction_action(reaction)
       end
     }
   )
-end
-
-function M.command_complete(args)
-  local command_keys = vim.tbl_keys(commands)
-  local argLead, cmdLine, _ = unpack(args)
-  local parts = vim.split(cmdLine, " ")
-
-  local get_options = function(options)
-    local valid_options = {}
-    for _, option in pairs(options) do
-      if string.sub(option, 1, #argLead) == argLead then
-        table.insert(valid_options, option)
-      end
-    end
-    return valid_options
-  end
-
-  if #parts == 2 then
-    return get_options(command_keys)
-  elseif #parts == 3 then
-    local o = commands[parts[2]]
-    if not o then
-      return
-    end
-    return get_options(vim.tbl_keys(o))
-  end
 end
 
 function M.add_project_card()

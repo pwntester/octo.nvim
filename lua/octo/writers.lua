@@ -485,7 +485,7 @@ function M.write_comment(bufnr, comment, kind, line)
 end
 
 local function find_snippet_range(diffhunk_lines)
-  local context_lines = vim.g.octo_snippet_context_lines or 4
+  local context_lines = require"octo".settings.snippet_context_lines or 4
   local snippet_start
   local count = 0
   for i = #diffhunk_lines, 1, -1 do
@@ -966,7 +966,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   -- author line
   table.insert(chunks, {
     {" "},
-    {vim.g.octo_icon_user or " "},
+    {require"octo".settings.user_icon or " "},
     {issue.author.login}
   })
 

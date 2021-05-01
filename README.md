@@ -24,7 +24,64 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 Use your favourite plugin manager to install it. eg:
 
 ```
-use {'pwntester/octo.nvim'}
+use {'pwntester/octo.nvim', config=function()
+  require"octo".setup()
+end}
+```
+
+## Settings
+
+```
+use {'pwntester/octo.nvim', config=function()
+  require"octo".setup({
+    date_format = "%Y %b %d %I:%M %p %Z";   -- Date format
+    remote_order = {"upstream", "origin"};  -- Order to resolve the remote for the current working directory
+    qf_height = 11;                         -- Percent (when 0 < value < 1) or absolute (when value > 1) height of quickfix window
+    user_icon = " ";                       -- Icon used to signal user names
+    reaction_viewer_hint_icon = "";        -- Icon as alternative or to complement the highlighting of reactions by the viewer himself
+    bubble_delimiter_left = "";            -- Left (unicode) character to draw a bubble for labels etc.
+    bubble_delimiter_right = "";           -- Right (unicode) character to draw a bubble for labels etc.
+    github_hostname = "";                   -- Host name to use for non-public GHE (GitHub Enterprise) instances
+    snippet_context_lines = 4;              -- Number of additional lines displayed from the diff-hunk for single-line comments
+    keymaps = {
+      reload = "<C-r>";                     -- reload issue/PR
+      open_in_browser = "<C-o>";            -- open issue/PR in browser
+      goto_issue = "<space>gi";             -- navigate to a local repo issue
+      close = "<space>ic";                  -- close issue/PR
+      reopen = "<space>io";                 -- reopen issue/PR
+      list_issues = "<space>il";            -- list open issues on same repo
+      list_commits = "<space>pc";           -- list PR commits
+      list_changed_files = "<space>pf";     -- list PR changed files
+      show_pr_diff = "<space>pd";           -- show PR diff
+      checkout_pr = "<space>po";            -- checkout PR
+      merge_pr = "<space>pm";               -- merge PR
+      add_reviewer = "<space>va";           -- add reviewer
+      remove_reviewer = "<space>vd";        -- remove reviewer
+      add_assignee = "<space>aa";           -- add assignee
+      remove_assignee = "<space>ad";        -- remove assignee
+      add_label = "<space>la";              -- add label
+      remove_label = "<space>ld";           -- remove label
+      add_comment = "<space>ca";            -- add comment
+      delete_comment = "<space>cd";         -- delete comment
+      add_suggestion = "<space>sa";         -- add review suggestion
+      react_hooray = "<space>rp";           -- add/remove 🎉 reaction
+      react_heart = "<space>rh";            -- add/remove ❤️ reaction 
+      react_eyes = "<space>re";             -- add/remove 👀 reaction
+      react_thumbs_up = "<space>r+";        -- add/remove 👍 reaction
+      react_thumbs_down = "<space>r-";      -- add/remove 👎 reaction
+      react_rocket = "<space>rr";           -- add/remove 🚀 reaction
+      react_laugh = "<space>rl";            -- add/remove 😄 reaction
+      react_confused = "<space>rc";         -- add/remove 😕 reaction
+      next_changed_file = "]q";             -- go to next file
+      prev_change_file = "[q";              -- go to previous file
+      next_comment = "]c";                  -- go to next change 
+      prev_comment = "[c";                  -- go to previous change
+      next_thread = "]t";                   -- go to previous comment thread
+      prev_thread = "[t";                   -- go to next comment thread
+      close_tab = "<C-c>";                  -- close review tab
+    }
+  })
+end}
 ```
 
 ## Requirements
@@ -146,51 +203,6 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 - Issue/PR id completion (#)
 - User completion (@)
 
-## Mappings
-`<Plug>(OctoOpenIssueAtCursor)`: Open issue/pr at cursor with Octo
-
-### Issue/PR/Thread mappings
-| Mapping     | Description                           |
-| ---         | ---                                   |
-| `<space>gi` | navigate to a local repo issue        |
-| `<space>ca` | add comment                           |
-| `<space>cd` | delete comment                        |
-| `<space>ic` | close issue                           |
-| `<space>io` | reopen issue                          |
-| `<space>il` | list open issues on same repo         |
-| `<space>po` | checkout pull request                 |
-| `<space>pc` | list pull request commits             |
-| `<space>pf` | list pull request files               |
-| `<space>pd` | show pull request diff                |
-| `<space>pr` | mark pull request as ready for review |
-| `<space>pm` | merge pull request                    |
-| `<space>la` | add label                             |
-| `<space>ld` | delete label                          |
-| `<space>aa` | add assignee                          |
-| `<space>ad` | delete assignee                       |
-| `<space>va` | request reviewer                      |
-| `<space>vd` | delete reviewer                       |
-| `<space>rh` | add/remove ❤️ reaction                |
-| `<space>rp` | add/remove 🎉 reaction                |
-| `<space>re` | add/remove 👀 reaction                |
-| `<space>rl` | add/remove 😄 reaction                |
-| `<space>rc` | add/remove 😕 reaction                |
-| `<space>r+` | add/remove 👍 reaction                |
-| `<space>r-` | add/remove 👎 reaction                |
-| `<space>rr` | add/remove 🚀 reaction                |
-| `<C-o>`     | open issue/pull in browser            |
-| `<C-r>`     | reload current issue/pull             |
-
-### Thread review mappings
-| `[c`        | go to previous change |
-| `]c`        | go to next change |
-| `[q`        | go to previous file |
-| `]q`        | go to next file |
-| `[t`        | go to previous thread |
-| `]t`        | go to next thread|
-| `<C-c>`     | close review tab|
-
-
 ## Highlight groups
 | Name                         | Default          |
 | ---                          | ---              |
@@ -232,18 +244,6 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
-
-## Settings
-
-- `g:octo_date_format`: Date format (default: "%Y %b %d %I:%M %p %Z")
-- `g:octo_remote_order`: Order to resolve the remote for the current working directory (default: ["upstream", "origin"])
-- `g:octo_qf_height`: Percent (when 0 < value < 1) or absolute (when value > 1) height of quickfix window (defaults to 20% relative)
-- `g:octo_bubble_delimiter_left`: Left (unicode) character to draw a bubble for labels etc. (default: "")
-- `g:octo_bubble_delimiter_right`: Right (unicode) character to draw a bubble for labels etc. (default: "")
-- `g:octo_icon_user`: Icon used to signal user names (default: "")
-- `g:octo_icon_reaction_viewer_hint`: Icon as alternative or to complement the highlighting of reactions by the viewer himself (default: "")
-- `g:octo_snippet_context_lines`: Number of additional lines displayed from the diff-hunk for single-line comments (default: 3)
-- `g:octo_github_hostname`: Host name to use for non-public GHE (GitHub Enterprise) instances (default: null).
 
 ## FAQ
 

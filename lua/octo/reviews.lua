@@ -28,11 +28,11 @@ end
 
 -- sets the height of the quickfix window
 local qf_height = math.floor(vim.o.lines * 0.2)
-if vim.g.octo_qf_height then
-  if vim.g.octo_qf_height > 0 and vim.g.octo_qf_height < 1 then
-    qf_height = math.floor(vim.o.lines * vim.g.octo_qf_height)
-  elseif vim.g.octo_qf_height > 1 then
-    qf_height = math.floor(vim.g.octo_qf_height)
+if octo.settings.qf_height then
+  if octo.settings.qf_height > 0 and octo.settings.qf_height < 1 then
+    qf_height = math.floor(vim.o.lines * octo.settings.qf_height)
+  elseif octo.settings.qf_height > 1 then
+    qf_height = math.floor(octo.settings.qf_height)
   end
 end
 
@@ -261,15 +261,45 @@ end
 function M.add_review_mappings(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
   local mapping_opts = {silent = true, noremap = true}
-  api.nvim_buf_set_keymap(bufnr, "n", "]q", [[<cmd>lua require'octo.reviews'.next_change()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "[q", [[<cmd>lua require'octo.reviews'.prev_change()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "]t", [[<cmd>lua require'octo.reviews'.next_thread()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "[t", [[<cmd>lua require'octo.reviews'.prev_thread()<CR>]], mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]], mapping_opts)
-  vim.cmd [[nnoremap <space>ca :OctoAddReviewComment<CR>]]
-  vim.cmd [[vnoremap <space>ca :OctoAddReviewComment<CR>]]
-  vim.cmd [[nnoremap <space>sa :OctoAddReviewSuggestion<CR>]]
-  vim.cmd [[vnoremap <space>sa :OctoAddReviewSuggestion<CR>]]
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    octo.settings.keymaps.next_changed_file,
+    [[<cmd>lua require'octo.reviews'.next_change()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    octo.settings.keymaps.prev_changed_file,
+    [[<cmd>lua require'octo.reviews'.prev_change()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    octo.settings.keymaps.next_thread,
+    [[<cmd>lua require'octo.reviews'.next_thread()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    octo.settings.keymaps.prev_thread,
+    [[<cmd>lua require'octo.reviews'.prev_thread()<CR>]],
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    octo.settings.keymaps.close_tab,
+    [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]],
+    mapping_opts
+  )
+  vim.cmd(format("nnoremap %s :OctoAddReviewComment<CR>", octo.settings.keymaps.add_comment))
+  vim.cmd(format("vnoremap %s :OctoAddReviewComment<CR>", octo.settings.keymaps.add_comment))
+  vim.cmd(format("nnoremap %s :OctoAddReviewSuggestion<CR>", octo.settings.keymaps.add_suggestion))
+  vim.cmd(format("vnoremap %s :OctoAddReviewSuggestion<CR>", octo.settings.keymaps.add_suggestion))
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))
@@ -560,12 +590,48 @@ function M.submit_review()
   api.nvim_buf_set_option(bufnr, "syntax", "octo")
 
   local mapping_opts = {script = true, silent = true, noremap = true}
-  api.nvim_buf_set_keymap(bufnr, "i", "<CR>", "<CR>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "q", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<esc>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format(":call nvim_win_close(%d, 1)<CR>", winid), mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-a>", ":lua require'octo.reviews'.do_submit_review('APPROVE')<CR>", mapping_opts)
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-m>", ":lua require'octo.reviews'.do_submit_review('COMMENT')<CR>", mapping_opts)
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "i",
+    "<CR>",
+    "<CR>",
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "q",
+    format(":call nvim_win_close(%d, 1)<CR>", winid),
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<esc>",
+    format(":call nvim_win_close(%d, 1)<CR>", winid),
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<C-c>",
+    format(":call nvim_win_close(%d, 1)<CR>", winid),
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<C-a>",
+    ":lua require'octo.reviews'.do_submit_review('APPROVE')<CR>",
+    mapping_opts
+  )
+  api.nvim_buf_set_keymap(
+    bufnr,
+    "n",
+    "<C-m>",
+    ":lua require'octo.reviews'.do_submit_review('COMMENT')<CR>",
+    mapping_opts
+  )
   api.nvim_buf_set_keymap(
     bufnr,
     "n",
@@ -574,7 +640,6 @@ function M.submit_review()
     mapping_opts
   )
   vim.cmd [[normal G]]
-  --vim.cmd [[startinsert]]
 end
 
 function M.do_submit_review(event)

@@ -8,9 +8,9 @@ local function run(opts)
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
     table.insert(opts.args, "Accept: application/vnd.github.v3+json;application/vnd.github.squirrel-girl-preview+json;application/vnd.github.comfort-fade-preview+json")
-    if vim.g.octo_github_hostname then
+    if not require"octo.util".is_blank(require"octo".settings.github_hostname) then
       table.insert(opts.args, "--hostname")
-      table.insert(opts.args, vim.g.octo_github_hostname)
+      table.insert(opts.args, require"octo".settings.github_hostname)
     end
   end
 

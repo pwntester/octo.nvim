@@ -1,7 +1,3 @@
-function _G.OctoFoldText()
-  return "..."
-end
-
 local M = {}
 
 function M.create(bufnr, start_line, end_line, is_opened)

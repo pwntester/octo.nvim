@@ -92,7 +92,7 @@ function M.is_blank(s)
 end
 
 function M.get_remote_name()
-  local candidates = vim.g.octo_default_remote
+  local candidates = require"octo".settings.default_remote
   for _, candidate in ipairs(candidates) do
     local cmd = format("git config --get remote.%s.url", candidate)
     local url = string.gsub(vim.fn.system(cmd), "%s+", "")
@@ -369,7 +369,7 @@ end
 
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
-  return date(date_string):addminutes(time_bias):fmt(vim.g.octo_date_format)
+  return date(date_string):addminutes(time_bias):fmt(require"octo".settings.date_format)
 end
 
 function M.graph2rest(id)
@@ -711,6 +711,15 @@ function M.get_octo_kind(bufnr)
     kind = "issue"
   end
   return kind
+end
+
+
+-- clear buffer undo history
+function M.clear_history()
+  local old_undolevels = vim.o.undolevels
+  vim.o.undolevels = -1
+  vim.cmd [[exe "normal a \<BS>\<Esc>"]]
+  vim.o.undolevels = old_undolevels
 end
 
 return M
