@@ -264,42 +264,42 @@ function M.add_review_mappings(bufnr)
   api.nvim_buf_set_keymap(
     bufnr,
     "n",
-    octo.settings.keymaps.next_changed_file,
+    octo.settings.mappings.next_changed_file,
     [[<cmd>lua require'octo.reviews'.next_change()<CR>]],
     mapping_opts
   )
   api.nvim_buf_set_keymap(
     bufnr,
     "n",
-    octo.settings.keymaps.prev_changed_file,
+    octo.settings.mappings.prev_changed_file,
     [[<cmd>lua require'octo.reviews'.prev_change()<CR>]],
     mapping_opts
   )
   api.nvim_buf_set_keymap(
     bufnr,
     "n",
-    octo.settings.keymaps.next_thread,
+    octo.settings.mappings.next_thread,
     [[<cmd>lua require'octo.reviews'.next_thread()<CR>]],
     mapping_opts
   )
   api.nvim_buf_set_keymap(
     bufnr,
     "n",
-    octo.settings.keymaps.prev_thread,
+    octo.settings.mappings.prev_thread,
     [[<cmd>lua require'octo.reviews'.prev_thread()<CR>]],
     mapping_opts
   )
   api.nvim_buf_set_keymap(
     bufnr,
     "n",
-    octo.settings.keymaps.close_tab,
+    octo.settings.mappings.close_tab,
     [[<cmd>lua require'octo.reviews'.close_review_tab()<CR>]],
     mapping_opts
   )
-  vim.cmd(format("nnoremap %s :OctoAddReviewComment<CR>", octo.settings.keymaps.add_comment))
-  vim.cmd(format("vnoremap %s :OctoAddReviewComment<CR>", octo.settings.keymaps.add_comment))
-  vim.cmd(format("nnoremap %s :OctoAddReviewSuggestion<CR>", octo.settings.keymaps.add_suggestion))
-  vim.cmd(format("vnoremap %s :OctoAddReviewSuggestion<CR>", octo.settings.keymaps.add_suggestion))
+  vim.cmd(format("nnoremap %s :OctoAddReviewComment<CR>", octo.settings.mappings.add_comment))
+  vim.cmd(format("vnoremap %s :OctoAddReviewComment<CR>", octo.settings.mappings.add_comment))
+  vim.cmd(format("nnoremap %s :OctoAddReviewSuggestion<CR>", octo.settings.mappings.add_suggestion))
+  vim.cmd(format("vnoremap %s :OctoAddReviewSuggestion<CR>", octo.settings.mappings.add_suggestion))
 
   -- reset quickfix height. Sometimes it messes up after selecting another item
   vim.cmd(format("%dcopen", qf_height))

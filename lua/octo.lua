@@ -16,13 +16,13 @@ local json = {
 
 local M = {
   settings = {
-    keymaps = {}
+    mappings = {}
   }
 }
 
 function M.setup(opts)
   opts = opts or {}
-  opts.keymaps = opts.keymaps or {}
+  opts.mappings = opts.mappings or {}
 
   -- commands
   if vim.fn.executable('gh') then
@@ -125,42 +125,42 @@ function M.setup(opts)
     left_bubble_delimiter = opts.left_bubble_delimiter or "";
     github_hostname = opts.github_hostname or "";
     snippet_context_lines = opts.snippet_context_lines or 4;
-    keymaps = {
-      reload = opts.keymaps.reload or "<C-r>";
-      open_in_browser = opts.keymaps.open_in_browser or "<C-o>";
-      goto_issue = opts.keymaps.goto_issue or "<space>gi";
-      close = opts.keymaps.close or "<space>ic";
-      reopen = opts.keymaps.reopen or "<space>io";
-      list_issues = opts.keymaps.list_issues or "<space>il";
-      list_commits = opts.keymaps.list_commits or "<space>pc";
-      list_changed_files = opts.keymaps.list_changed_files or "<space>pf";
-      show_pr_diff = opts.keymaps.show_pr_diff or "<space>pd";
-      checkout_pr = opts.keymaps.checkout_pr or "<space>po";
-      merge_pr = opts.keymaps.merge_pr or "<space>pm";
-      add_reviewer = opts.keymaps.add_reviewer or "<space>va";
-      remove_reviewer = opts.keymaps.remove_reviewer or "<space>vd";
-      add_assignee = opts.keymaps.add_assignee or "<space>aa";
-      remove_assignee = opts.keymaps.remove_assignee or "<space>ad";
-      add_label = opts.keymaps.add_label or "<space>la";
-      remove_label = opts.keymaps.remove_label or "<space>ld";
-      add_comment = opts.keymaps.add_comment or "<space>ca";
-      delete_comment = opts.keymaps.delete_comment or "<space>cd";
-      add_suggestion = opts.keymaps.add_comment or "<space>sa";
-      react_hooray = opts.keymaps.react_hooray or "<space>rp";
-      react_heart = opts.keymaps.react_heart or "<space>rh";
-      react_eyes = opts.keymaps.react_eyes or "<space>re";
-      react_thumbs_up = opts.keymaps.react_thumbs_up or "<space>r+";
-      react_thumbs_down = opts.keymaps.react_thumbs_down or "<space>r-";
-      react_rocket = opts.keymaps.rocket or "<space>rr";
-      react_laugh = opts.keymaps.react_laugh or "<space>rl";
-      react_confused = opts.keymaps.react_confused or "<space>rc";
-      next_changed_file = opts.keymaps.next_changed_file or "]q";
-      prev_change_file = opts.keymaps.prev_change_file or "[q";
-      next_comment = opts.keymaps.next_comment or "]c";
-      prev_comment = opts.keymaps.prev_comment or "[c";
-      next_thread = opts.keymaps.next_thread or "]t";
-      prev_thread = opts.keymaps.prev_thread or "[t";
-      close_tab = opts.keymaps.close_tab or "<C-c>";
+    mappings = {
+      reload = opts.mappings.reload or "<C-r>";
+      open_in_browser = opts.mappings.open_in_browser or "<C-o>";
+      goto_issue = opts.mappings.goto_issue or "<space>gi";
+      close = opts.mappings.close or "<space>ic";
+      reopen = opts.mappings.reopen or "<space>io";
+      list_issues = opts.mappings.list_issues or "<space>il";
+      list_commits = opts.mappings.list_commits or "<space>pc";
+      list_changed_files = opts.mappings.list_changed_files or "<space>pf";
+      show_pr_diff = opts.mappings.show_pr_diff or "<space>pd";
+      checkout_pr = opts.mappings.checkout_pr or "<space>po";
+      merge_pr = opts.mappings.merge_pr or "<space>pm";
+      add_reviewer = opts.mappings.add_reviewer or "<space>va";
+      remove_reviewer = opts.mappings.remove_reviewer or "<space>vd";
+      add_assignee = opts.mappings.add_assignee or "<space>aa";
+      remove_assignee = opts.mappings.remove_assignee or "<space>ad";
+      add_label = opts.mappings.add_label or "<space>la";
+      remove_label = opts.mappings.remove_label or "<space>ld";
+      add_comment = opts.mappings.add_comment or "<space>ca";
+      delete_comment = opts.mappings.delete_comment or "<space>cd";
+      add_suggestion = opts.mappings.add_comment or "<space>sa";
+      react_hooray = opts.mappings.react_hooray or "<space>rp";
+      react_heart = opts.mappings.react_heart or "<space>rh";
+      react_eyes = opts.mappings.react_eyes or "<space>re";
+      react_thumbs_up = opts.mappings.react_thumbs_up or "<space>r+";
+      react_thumbs_down = opts.mappings.react_thumbs_down or "<space>r-";
+      react_rocket = opts.mappings.rocket or "<space>rr";
+      react_laugh = opts.mappings.react_laugh or "<space>rl";
+      react_confused = opts.mappings.react_confused or "<space>rc";
+      next_changed_file = opts.mappings.next_changed_file or "]q";
+      prev_change_file = opts.mappings.prev_change_file or "[q";
+      next_comment = opts.mappings.next_comment or "]c";
+      prev_comment = opts.mappings.prev_comment or "[c";
+      next_thread = opts.mappings.next_thread or "]t";
+      prev_thread = opts.mappings.prev_thread or "[t";
+      close_tab = opts.mappings.close_tab or "<C-c>";
     }
   }
 
@@ -902,14 +902,14 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.close,
+      M.settings.mappings.close,
       [[<cmd>lua require'octo.commands'.change_issue_state('closed')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.reopen,
+      M.settings.mappings.reopen,
       [[<cmd>lua require'octo.commands'.change_issue_state('open')<CR>]],
       mapping_opts
     )
@@ -919,7 +919,7 @@ function M.apply_buffer_mappings(bufnr, kind)
       api.nvim_buf_set_keymap(
         bufnr,
         "n",
-        M.settings.keymaps.list_issues,
+        M.settings.mappings.list_issues,
         format("<cmd>lua require'octo.menu'.issues('%s')<CR>", repo),
         mapping_opts
       )
@@ -928,49 +928,49 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.checkout_pr,
+      M.settings.mappings.checkout_pr,
       [[<cmd>lua require'octo.commands'.checkout_pr()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.list_commits,
+      M.settings.mappings.list_commits,
       [[<cmd>lua require'octo.menu'.commits()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.list_changed_files,
+      M.settings.mappings.list_changed_files,
       [[<cmd>lua require'octo.menu'.files()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.show_pr_diff,
+      M.settings.mappings.show_pr_diff,
       [[<cmd>lua require'octo.commands'.show_pr_diff()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.merge_pr,
+      M.settings.mappings.merge_pr,
       [[<cmd>lua require'octo.commands'.merge_pr("commit")<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.add_reviewer,
+      M.settings.mappings.add_reviewer,
       [[<cmd>lua require'octo.commands'.add_user('reviewer')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.remove_reviewer,
+      M.settings.mappings.remove_reviewer,
       [[<cmd>lua require'octo.commands'.remove_user('reviewer')<CR>]],
       mapping_opts
     )
@@ -980,42 +980,42 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.reload,
+      M.settings.mappings.reload,
       [[<cmd>lua require'octo.commands'.reload()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.open_in_browser,
+      M.settings.mappings.open_in_browser,
       [[<cmd>lua require'octo.navigation'.open_in_browser()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.add_label,
+      M.settings.mappings.add_label,
       [[<cmd>lua require'octo.commands'.add_label()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.remove_label,
+      M.settings.mappings.remove_label,
       [[<cmd>lua require'octo.commands'.delete_label()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.add_assignee,
+      M.settings.mappings.add_assignee,
       [[<cmd>lua require'octo.commands'.add_user('assignee')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.remove_assignee,
+      M.settings.mappings.remove_assignee,
       [[<cmd>lua require'octo.commands'.remove_user('assignee')<CR>]],
       mapping_opts
     )
@@ -1030,21 +1030,21 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.goto_issue,
+      M.settings.mappings.goto_issue,
       [[<cmd>lua require'octo.navigation'.go_to_issue()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.next_comment,
+      M.settings.mappings.next_comment,
       [[<cmd>lua require'octo'.next_comment()<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.prev_comment,
+      M.settings.mappings.prev_comment,
       [[<cmd>lua require'octo'.prev_comment()<CR>]],
       mapping_opts
     )
@@ -1053,7 +1053,7 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.add_comment,
+      M.settings.mappings.add_comment,
       [[<cmd>lua require'octo.commands'.add_comment()<CR>]],
       mapping_opts
     )
@@ -1061,7 +1061,7 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.delete_comment,
+      M.settings.mappings.delete_comment,
       [[<cmd>lua require'octo.commands'.delete_comment()<CR>]],
       mapping_opts
     )
@@ -1070,56 +1070,56 @@ function M.apply_buffer_mappings(bufnr, kind)
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_hooray,
+      M.settings.mappings.react_hooray,
       [[<cmd>lua require'octo.commands'.reaction_action('hooray')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_heart,
+      M.settings.mappings.react_heart,
       [[<cmd>lua require'octo.commands'.reaction_action('heart')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_eyes,
+      M.settings.mappings.react_eyes,
       [[<cmd>lua require'octo.commands'.reaction_action('eyes')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_thumbs_up,
+      M.settings.mappings.react_thumbs_up,
       [[<cmd>lua require'octo.commands'.reaction_action('+1')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_thumbs_down,
+      M.settings.mappings.react_thumbs_down,
       [[<cmd>lua require'octo.commands'.reaction_action('-1')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_rocket,
+      M.settings.mappings.react_rocket,
       [[<cmd>lua require'octo.commands'.reaction_action('rocket')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_laugh,
+      M.settings.mappings.react_laugh,
       [[<cmd>lua require'octo.commands'.reaction_action('laugh')<CR>]],
       mapping_opts
     )
     api.nvim_buf_set_keymap(
       bufnr,
       "n",
-      M.settings.keymaps.react_confused,
+      M.settings.mappings.react_confused,
       [[<cmd>lua require'octo.commands'.reaction_action('confused')<CR>]],
       mapping_opts
     )
