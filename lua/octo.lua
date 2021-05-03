@@ -155,7 +155,7 @@ function M.setup(opts)
       react_laugh = opts.mappings.react_laugh or "<space>rl";
       react_confused = opts.mappings.react_confused or "<space>rc";
       next_changed_file = opts.mappings.next_changed_file or "]q";
-      prev_change_file = opts.mappings.prev_change_file or "[q";
+      prev_changed_file = opts.mappings.prev_changed_file or "[q";
       next_comment = opts.mappings.next_comment or "]c";
       prev_comment = opts.mappings.prev_comment or "[c";
       next_thread = opts.mappings.next_thread or "]t";
