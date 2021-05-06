@@ -1,4 +1,5 @@
-# :octocat: Octo.nvim
+# :octopus: Octo.nvim
+
 <p align="center">
 	GitHub in NeoVim.
 </p>
@@ -45,6 +46,21 @@
 Edit and review GitHub issues and pull requests from the comfort of your favorite editor.
 </div>
 
+# 🌲 Table of Contents
+* [✨ Features](#-features)
+* [⚡️ Requirements](#-requirements)
+* [📦 Installation](#-installation)
+* [⚙️ Configuration](#-configuration)
+* [🚀 Usage](#-usage)
+* [🤖 Commands](#-commands)
+* [🔥 Examples](#-examples)
+* [📋 PR review](#-pr-review)
+* [🍞 Completion](#-completion)
+* [🎨 Colors](#-colors)
+* [🙋 FAQ](#-faq)
+* [✋ Contributing](#-contributing)
+* [📜 License](#-license)
+
 ## ✨ Features
 
 - Edit GitHub issues and PRs
@@ -52,7 +68,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 - Add/Remove label, reactions, assignees, project cards, reviewers, etc.
 - Add Review PRs
 
-## ⚡️ Requirements
+## ⚡️Requirements
 
 - Install [GitHub CLI](https://cli.github.com/)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
