@@ -1,12 +1,49 @@
 # :octocat: Octo.nvim
+<p align="center">
+	GitHub in NeoVim.
+</p>
 
+
+<p align="center">
+    <a href="https://github.com/pwntester/octo.nvim"><img
+            src="https://img.shields.io/github/repo-size/pwntester/octo.nvim"
+            alt="GitHub repository size"/></a>
+    <a href="https://github.com/pwntester/octo.nvim/issues"><img
+            src="https://img.shields.io/github/issues/pwntester/octo.nvim"
+            alt="Issues"/></a>
+    <a href="https://github.com/pwntester/octo.nvim/blob/master/LICENSE"><img
+            src="https://img.shields.io/github/license/pwntester/octo.nvim"
+            alt="License"/></a><br />
+    <a href="https://saythanks.io/to/alvaro%40pwntester.com"><img
+            src="https://img.shields.io/badge/say-thanks-modal.svg"
+            alt="Say thanks"/></a>    
+    <a href="https://github.com/pwntester/octo.nvim/commits/main"><img
+			         src="https://img.shields.io/github/last-commit/pwntester/octo.nvim"
+			         alt="Latest commit"/></a>
+    <a href="https://github.com/pwntester/octo.nvim/stargazers"><img
+            src="https://img.shields.io/github/stars/pwntester/octo.nvim"
+            alt="Repository's starts"/></a>
+</p>
+
+<img width="2099" alt="image" src="https://user-images.githubusercontent.com/125701/117284893-9f281200-ae67-11eb-9d66-ab3f127f23ce.png">
+<p align="center">
+	Issue/Pull Request listing
+</p>
+
+<img width="2116" alt="image" src="https://user-images.githubusercontent.com/125701/117285783-aef42600-ae68-11eb-9073-a7e52eb2f1a9.png">
+<p align="center">
+	Issue/Pull Request buffer
+</p>
+
+<img width="2120" alt="image" src="https://user-images.githubusercontent.com/125701/117286381-6be68280-ae69-11eb-9319-0e633f2b5390.png">
+<p align="center">
+	Label picking
+</p>
+
+# TL;DR
+<div style="text-align: justify">
 Edit and review GitHub issues and pull requests from the comfort of your favorite editor.
-
-<img width="2123" alt="image" src="https://user-images.githubusercontent.com/125701/116367294-7c628180-a807-11eb-8141-afe28de007ad.png">
-
-<img width="2121" alt="image" src="https://user-images.githubusercontent.com/125701/116367690-e713bd00-a807-11eb-8a5a-0325a65acdbb.png">
-
-<img width="2125" alt="image" src="https://user-images.githubusercontent.com/125701/116368525-b5e7bc80-a808-11eb-88f7-9691f87bb8b2.png">
+</div>
 
 ## ✨ Features
 
