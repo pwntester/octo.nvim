@@ -1,10 +1,6 @@
-# Octo.nvim
+# :octocat: Octo.nvim
 
 Edit and review GitHub issues and pull requests from the comfort of your favorite editor.
-
-
-    
-## Screenshots
 
 <img width="2123" alt="image" src="https://user-images.githubusercontent.com/125701/116367294-7c628180-a807-11eb-8141-afe28de007ad.png">
 
@@ -12,14 +8,19 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 
 <img width="2125" alt="image" src="https://user-images.githubusercontent.com/125701/116368525-b5e7bc80-a808-11eb-88f7-9691f87bb8b2.png">
 
-## Features
+## ✨ Features
 
 - Edit GitHub issues and PRs
 - Add/Modify/Delete comments
 - Add/Remove label, reactions, assignees, project cards, reviewers, etc.
 - Add Review PRs
 
-## Installation 
+## ⚡️ Requirements
+
+- Install [GitHub CLI](https://cli.github.com/)
+- Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+ 
+## 📦 Installation 
 
 Use your favourite plugin manager to install it. eg:
 
@@ -29,7 +30,7 @@ use {'pwntester/octo.nvim', config=function()
 end}
 ```
 
-## Settings
+## ⚙️ Configuration
 
 ```
 use {'pwntester/octo.nvim', config=function()
@@ -84,16 +85,11 @@ use {'pwntester/octo.nvim', config=function()
 end}
 ```
 
-## Requirements
-
-- Install [GitHub CLI](https://cli.github.com/)
-- Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
- 
-## Usage
+## 🚀 Usage
 
 Just edit the issue title, body or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
 
-## Commands
+## 🤖 Commands
 
 There is only an `Octo <object> <action> [arguments]` command: 
 If no command is passed, the argument to `Octo` is treated as a URL from where an issue or pr repo and number are extracted
@@ -167,7 +163,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `<C-b>`: Opens Gist in web browser
 [Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`
 
-## Examples
+## 🔥 Examples
 
 ```
 Octo https://github.com/pwntester/octo.nvim/issues/12
@@ -181,7 +177,7 @@ Octo issue list createdBy=pwntester
 Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 ```
 
-## PR review
+## 📋 PR review
 
 - Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
 - Start a review with `Octo review start` or resume a pending review with `Octo review resume`
@@ -199,70 +195,70 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 - When ready, submit the review with `Octo review submit`
 - A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
 
-## Completion
+## 🍞 Completion
 - Issue/PR id completion (#)
 - User completion (@)
 
-## Highlight groups
-| Name                         | Default          |
-| ---                          | ---              |
-| `OctoNvimDirty`              | `ErrorMsg`       |
-| `OctoNvimIssueTitle`         | `PreProc`        |
-| `OctoNvimIssueId`            | `Question`       |
-| `OctoNvimEmpty`              | `Comment`        |
-| `OctoNvimFloat`              | `NormalNC`       |
-| `OctoNvimDate`               | `Comment`        |
-| `OctoNvimSymbol`             | `Comment`        |
-| `OctoNvimTimelineItemHeading`| `Comment`        |
-| `OctoNvimDetailsLabel`       | `Title`          |
-| `OctoNvimMissingDetails`     | `Comment`        |
-| `OctoNvimDetailsValue `      | `Identifier`     |
-| `OctoNvimDiffHunkPosition`   | `NormalFloat`    |
-| `OctoNvimCommentLine`        | `TabLineSel`     |
-| `OctoNvimEditable`           | `NormalFloat`    |
-| `OctoNvimViewer`             | GitHub color     |
-| `OctoNvimBubble`             | `NormalFloat`    |
-| `OctoNvimBubbleGreen`        | GitHub color     |
-| `OctoNvimBubbleRed`          | GitHub color     |
-| `OctoNvimUser`               | `OctoNvimBubble` |
-| `OctoNvimUserViewer`         | `OctoNvimViewer` |
-| `OctoNvimReaction`           | `OctoNvimBubble` |
-| `OctoNvimReactionViewer`     | `OctoNvimViewer` |
-| `OctoNvimPassingTest`        | GitHub color     |
-| `OctoNvimFailingTest`        | GitHub color     |
-| `OctoNvimPullAdditions`      | GitHub color     |
-| `OctoNvimPullDeletions`      | GitHub color     |
-| `OctoNvimPullModifications`  | GitHub color     |
-| `OctoNvimStateOpen`          | GitHub color     |
-| `OctoNvimStateClosed`        | GitHub color     |
-| `OctoNvimStateMerge`         | GitHub color     |
-| `OctoNvimStatePending`       | GitHub color     |
-| `OctoNvimStateApproved`      | `OctoNvimStateOpen` |
-| `OctoNvimStateChangesRequested` | `OctoNvimStateClosed` |
-| `OctoNvimStateCommented`     | `Normal` |
-| `OctoNvimStateDismissed`     | `OctoNvimStateClosed` |
+## 🎨 Colors
+| Highlight Group             | Defaults to     |
+| ---                         | ---             |
+| *OctoDirty*                 | ErrorMsg        |
+| *OctoIssueTitle*            | PreProc         |
+| *OctoIssueId*               | Question        |
+| *OctoEmpty*                 | Comment         |
+| *OctoFloat*                 | NormalNC        |
+| *OctoDate*                  | Comment         |
+| *OctoSymbol*                | Comment         |
+| *OctoTimelineItemHeading*   | Comment         |
+| *OctoDetailsLabel*          | Title           |
+| *OctoMissingDetails*        | Comment         |
+| *OctoDetailsValue *         | Identifier      |
+| *OctoDiffHunkPosition*      | NormalFloat     |
+| *OctoCommentLine*           | TabLineSel      |
+| *OctoEditable*              | NormalFloat     |
+| *OctoViewer*                | GitHub color    |
+| *OctoBubble*                | NormalFloat     |
+| *OctoBubbleGreen*           | GitHub color    |
+| *OctoBubbleRed*             | GitHub color    |
+| *OctoUser*                  | OctoBubble      |
+| *OctoUserViewer*            | OctoViewer      |
+| *OctoReaction*              | OctoBubble      |
+| *OctoReactionViewer*        | OctoViewer      |
+| *OctoPassingTest*           | GitHub color    |
+| *OctoFailingTest*           | GitHub color    |
+| *OctoPullAdditions*         | GitHub color    |
+| *OctoPullDeletions*         | GitHub color    |
+| *OctoPullModifications*     | GitHub color    |
+| *OctoStateOpen*             | GitHub color    |
+| *OctoStateClosed*           | GitHub color    |
+| *OctoStateMerge*            | GitHub color    |
+| *OctoStatePending*          | GitHub color    |
+| *OctoStateApproved*         | OctoStateOpen   |
+| *OctoStateChangesRequested* | OctoStateClosed |
+| *OctoStateCommented*        | Normal          |
+| *OctoStateDismissed*        | OctoStateClosed |
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
 
-## FAQ
+## 🙋 FAQ
 
 **How can I disable bubbles for XYZ?**
 
-Each text-object that makes use of a bubble (except labels) do use their own highlight group that linkes per default to the main bubble highlight group. To disable most bubbles at once you can simply link `OctoNvimBubble` to `Normal`. To only disable them for a certain plain do the same for the specific sub-group (e.g. `OctoNvimUser`).
+Each text-object that makes use of a bubble (except labels) do use their own highlight group that linkes per default to the main bubble highlight group. To disable most bubbles at once you can simply link `OctoBubble` to `Normal`. To only disable them for a certain plain do the same for the specific sub-group (e.g. `OctoUser`).
 
 **Why do my issue titles or markdown syntax do not get highlighted properly?**
 
-The title, body and comments of an issue or PR are special as they get special highlighting applied and is an editable section. Due to the latter property it gets the `OctoNvimEditable` highlighting via a special signs `linehl` setting. This takes precedence over the buffer internal highlights. To only get the background highlighted by the editable section, set `OctoNvimEditable` to a highlight with a background color definition only.
+The title, body and comments of an issue or PR are special as they get special highlighting applied and is an editable section. Due to the latter property it gets the `OctoEditable` highlighting via a special signs `linehl` setting. This takes precedence over the buffer internal highlights. To only get the background highlighted by the editable section, set `OctoEditable` to a highlight with a background color definition only.
 
-## Contributing
+## ✋ Contributing
 
 Contributions are always welcome!
 
-See `contributing.md` for ways to get started.
+See [`CONTRIBUTING`](/CONTRIBUTING.md) for ways to get started.
 
-Please adhere to this project's `code of conduct`.
+Please adhere to this project's [`CODE_OF_CONDUCT`](/CODE_OF_CONDUCT).
 
-## License
+## 📜 License
 
 [MIT](https://choosealicense.com/licenses/mit/)
