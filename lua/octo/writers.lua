@@ -651,6 +651,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   table.insert(vt_lines, {{string.format("┌%s┐", string.rep("─", max_length + 2))}})
   for i = snippet_start, snippet_end do
     local line = diffhunk_lines[i]
+    if not line then break end
 
     if vim.startswith(line, "@@ ") then
       local index = string.find(line, "@[^@]*$")

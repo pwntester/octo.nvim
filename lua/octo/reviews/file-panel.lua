@@ -250,7 +250,6 @@ function FilePanel:render()
       local file_changes_length = string.len(diffstat.total)
       s = string.rep(" ", max_changes_length - file_changes_length) .. diffstat.total .. " "
       offset = #s
-
       if diffstat.additions > 0 then
         s = s .. string.rep("■", diffstat.additions)
         add_hl("OctoDiffstatAdditions", line_idx, offset, offset + (3*diffstat.additions))

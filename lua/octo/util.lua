@@ -762,6 +762,7 @@ end
 
 -- calculate valid comment ranges
 function M.process_patch(patch)
+  if not patch then return end
   local hunks = {}
   local left_ranges = {}
   local right_ranges = {}
@@ -783,6 +784,14 @@ end
 function M.diffstat(stats)
   -- round up to closest multiple of 5
   local total = stats.additions + stats.deletions
+  if total == 0 then
+    return {
+      total = 0,
+      additions = 0,
+      deletions = 0,
+      neutral = 5
+    }
+  end
   local mod = total % 5;
   local round = total - mod;
   if mod > 0 then
