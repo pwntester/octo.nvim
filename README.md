@@ -31,14 +31,14 @@
 	Issue/Pull Request listing
 </p>
 
-<img width="2116" alt="image" src="https://user-images.githubusercontent.com/125701/117285783-aef42600-ae68-11eb-9073-a7e52eb2f1a9.png">
+<img width="1328" alt="image" src="https://user-images.githubusercontent.com/125701/118050762-2ef62080-b380-11eb-9fbd-bcd413935dc4.png">
 <p align="center">
 	Issue/Pull Request buffer
 </p>
 
-<img width="2120" alt="image" src="https://user-images.githubusercontent.com/125701/117286381-6be68280-ae69-11eb-9319-0e633f2b5390.png">
+<img width="1341" alt="image" src="https://user-images.githubusercontent.com/125701/118053010-05d78f00-b384-11eb-8d70-d32bce49e72e.png">
 <p align="center">
-	Label picking
+	PR review panel
 </p>
 
 # TL;DR
