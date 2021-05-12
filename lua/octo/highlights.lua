@@ -1,6 +1,5 @@
-local format = string.format
-
 local M = {}
+
 local HIGHLIGHT_NAME_PREFIX = "octo"
 local HIGHLIGHT_CACHE = {}
 local HIGHLIGHT_MODE_NAMES = {
@@ -51,7 +50,7 @@ function M.create_highlight(rgb_hex, options)
     -- Create the highlight
     highlight_name = make_highlight_name(rgb_hex, mode)
     if mode == "foreground" then
-      vim.cmd(format("highlight %s guifg=#%s", highlight_name, rgb_hex))
+      vim.cmd(string.format("highlight %s guifg=#%s", highlight_name, rgb_hex))
     else
       local r, g, b = rgb_hex:sub(1, 2), rgb_hex:sub(3, 4), rgb_hex:sub(5, 6)
       r, g, b = tonumber(r, 16), tonumber(g, 16), tonumber(b, 16)
@@ -61,7 +60,7 @@ function M.create_highlight(rgb_hex, options)
       else
         fg_color = "ffffff"
       end
-      vim.cmd(format("highlight %s guifg=#%s guibg=#%s", highlight_name, fg_color, rgb_hex))
+      vim.cmd(string.format("highlight %s guifg=#%s guibg=#%s", highlight_name, fg_color, rgb_hex))
     end
     HIGHLIGHT_CACHE[cache_key] = highlight_name
   end

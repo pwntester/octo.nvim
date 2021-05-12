@@ -1,31 +1,27 @@
-local format = string.format
-local api = vim.api
-local strlen = vim.fn.strdisplaywidth
-
 local M = {}
 
 function M.create_border_header_float(opts)
   local outer_winid, outer_bufnr
-  outer_bufnr = api.nvim_create_buf(false, true)
+  outer_bufnr = vim.api.nvim_create_buf(false, true)
   local outer = {}
   local line_fill = string.rep("─", opts.width-2*opts.border_width)
-  table.insert(outer, format("┌%s┐", line_fill))
+  table.insert(outer, string.format("┌%s┐", line_fill))
   if opts.header then
     local trimmed_header = string.sub(opts.header, 1, opts.width-2*opts.border_width-2*opts.padding)
-    local fill = string.rep(" ", opts.width - 2*opts.padding -2*opts.border_width - strlen(trimmed_header))
-    table.insert(outer, format("│ %s%s │", trimmed_header, fill))
-    table.insert(outer, format("├%s┤", line_fill))
+    local fill = string.rep(" ", opts.width - 2*opts.padding -2*opts.border_width - vim.fn.strdisplaywidth(trimmed_header))
+    table.insert(outer, string.format("│ %s%s │", trimmed_header, fill))
+    table.insert(outer, string.format("├%s┤", line_fill))
     for _=1, opts.height-2*opts.border_width-2*opts.header_height do
-      table.insert(outer, format("│%s│", string.rep(" ", opts.width-2*opts.border_width)))
+      table.insert(outer, string.format("│%s│", string.rep(" ", opts.width-2*opts.border_width)))
     end
   else
     for _=1, opts.height-2*opts.border_width do
-      table.insert(outer, format("│%s│", line_fill))
+      table.insert(outer, string.format("│%s│", line_fill))
     end
   end
-  table.insert(outer, format("└%s┘", line_fill))
-  api.nvim_buf_set_lines(outer_bufnr, 0, -1, false, outer)
-  outer_winid = api.nvim_open_win(outer_bufnr, false, {
+  table.insert(outer, string.format("└%s┘", line_fill))
+  vim.api.nvim_buf_set_lines(outer_bufnr, 0, -1, false, outer)
+  outer_winid = vim.api.nvim_open_win(outer_bufnr, false, {
     relative = "editor",
     row = opts.y_offset,
     col = opts.x_offset,
@@ -33,18 +29,18 @@ function M.create_border_header_float(opts)
     height = opts.height,
     focusable = false
   })
-  api.nvim_buf_set_option(outer_bufnr, "modifiable", false)
-  api.nvim_win_set_option(outer_winid, "foldcolumn", "0")
-  api.nvim_win_set_option(outer_winid, "signcolumn", "no")
-  api.nvim_win_set_option(outer_winid, "number", false)
-  api.nvim_win_set_option(outer_winid, "relativenumber", false)
+  vim.api.nvim_buf_set_option(outer_bufnr, "modifiable", false)
+  vim.api.nvim_win_set_option(outer_winid, "foldcolumn", "0")
+  vim.api.nvim_win_set_option(outer_winid, "signcolumn", "no")
+  vim.api.nvim_win_set_option(outer_winid, "number", false)
+  vim.api.nvim_win_set_option(outer_winid, "relativenumber", false)
   return outer_winid
 end
 
 function M.create_content_float(opts)
-  local bufnr = api.nvim_create_buf(false, true)
-  api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.content or {})
-  local winid = api.nvim_open_win(bufnr, true, {
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.content or {})
+  local winid = vim.api.nvim_open_win(bufnr, true, {
     relative = "editor",
     row = opts.header and (opts.y_offset+2*opts.border_width+opts.header_height) or (opts.y_offset+opts.border_width),
     col = opts.x_offset + opts.border_width + opts.padding,
@@ -52,11 +48,11 @@ function M.create_content_float(opts)
     height = opts.header and (opts.height-3*opts.border_width-2*opts.header_height) or (opts.height-2*opts.border_width),
     focusable = true
   })
-  api.nvim_win_set_option(winid, "previewwindow", true)
-  api.nvim_win_set_option(winid, "foldcolumn", "0")
-  api.nvim_win_set_option(winid, "signcolumn", "no")
-  api.nvim_win_set_option(winid, "number", false)
-  api.nvim_win_set_option(winid, "relativenumber", false)
+  vim.api.nvim_win_set_option(winid, "previewwindow", true)
+  vim.api.nvim_win_set_option(winid, "foldcolumn", "0")
+  vim.api.nvim_win_set_option(winid, "signcolumn", "no")
+  vim.api.nvim_win_set_option(winid, "number", false)
+  vim.api.nvim_win_set_option(winid, "relativenumber", false)
   return winid, bufnr
 end
 
@@ -78,7 +74,7 @@ function M.create_centered_float(opts)
   local max_line = -1
   if opts.content then
     for _, line in ipairs(opts.content) do
-      max_line = math.max(strlen(line), max_line)
+      max_line = math.max(vim.fn.strdisplaywidth(line), max_line)
     end
   end
   -- calculate window height/width
@@ -89,9 +85,9 @@ function M.create_centered_float(opts)
     -- pre-defined content
     opts.width = math.min(vim_width * 0.9, max_line + 2*opts.padding + 2*opts.border_width)
     if opts.header then
-      opts.height = math.min(vim_height, 3*opts.border_width + opts.header_height + strlen(opts.content))
+      opts.height = math.min(vim_height, 3*opts.border_width + opts.header_height + #opts.content) + 1
     else
-      opts.height = math.min(vim_height, 2*opts.border_width + strlen(opts.content))
+      opts.height = math.min(vim_height, 2*opts.border_width + #opts.content) + 1
     end
   else
     opts.width = math.floor(vim_width * opts.x_percent)
@@ -117,7 +113,7 @@ function M.create_centered_float(opts)
 
   -- mappings
   local mapping_opts = {script = true, silent = true, noremap = true}
-  api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", format("<cmd>lua require'octo.window'.try_close_wins(%d, %d)<CR>", winid, outer_winid), mapping_opts)
+  vim.api.nvim_buf_set_keymap(bufnr, "n", "<C-c>", string.format("<cmd>lua require'octo.window'.try_close_wins(%d, %d)<CR>", winid, outer_winid), mapping_opts)
 
   return winid, bufnr
 end
@@ -138,7 +134,7 @@ function M.create_popup(opts)
   end
 
   local border_width = 1
-  local popup_winid = api.nvim_open_win(opts.bufnr, false, {
+  local popup_winid = vim.api.nvim_open_win(opts.bufnr, false, {
     relative = "cursor",
     anchor = "SW",
     row = -2,
@@ -151,14 +147,14 @@ function M.create_popup(opts)
   vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, popup_winid)
 
   local border = {}
-  table.insert(border, format("┌%s┐", string.rep("─", opts.width-2*border_width)))
+  table.insert(border, string.format("┌%s┐", string.rep("─", opts.width-2*border_width)))
   for _=1, opts.height-2 do
-    table.insert(border, format("│%s│", string.rep(" ", opts.width-2*border_width)))
+    table.insert(border, string.format("│%s│", string.rep(" ", opts.width-2*border_width)))
   end
-  table.insert(border, format("└%s┘", string.rep("─", opts.width-2*border_width)))
-  local border_bufnr = api.nvim_create_buf(false, true)
-  api.nvim_buf_set_lines(border_bufnr, 0, -1, false, border)
-  local border_winid = api.nvim_open_win(border_bufnr, false, {
+  table.insert(border, string.format("└%s┘", string.rep("─", opts.width-2*border_width)))
+  local border_bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(border_bufnr, 0, -1, false, border)
+  local border_winid = vim.api.nvim_open_win(border_bufnr, false, {
     relative = "cursor",
     anchor = "SW",
     row = -1,
@@ -168,10 +164,10 @@ function M.create_popup(opts)
     width = opts.width,
     height = opts.height
   })
-  api.nvim_win_set_option(border_winid, "foldcolumn", "0")
-  api.nvim_win_set_option(border_winid, "signcolumn", "no")
-  api.nvim_win_set_option(border_winid, "number", false)
-  api.nvim_win_set_option(border_winid, "relativenumber", false)
+  vim.api.nvim_win_set_option(border_winid, "foldcolumn", "0")
+  vim.api.nvim_win_set_option(border_winid, "signcolumn", "no")
+  vim.api.nvim_win_set_option(border_winid, "number", false)
+  vim.api.nvim_win_set_option(border_winid, "relativenumber", false)
   vim.lsp.util.close_preview_autocmd({"CursorMoved", "CursorMovedI", "WinLeave"}, border_winid)
 end
 

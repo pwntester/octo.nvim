@@ -7,6 +7,7 @@ local utils = require "telescope.utils"
 local conf = require "telescope.config".values
 local sorters = require "telescope.sorters"
 local make_entry = require "telescope.make_entry"
+
 local previewers = require "octo.previewers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
@@ -14,13 +15,6 @@ local util = require "octo.util"
 local navigation = require "octo.navigation"
 local graphql = require "octo.graphql"
 local entry_maker = require "octo.entry_maker"
-local format = string.format
-local vim = vim
-local api = vim.api
-local json = {
-  parse = vim.fn.json_decode,
-  stringify = vim.fn.json_encode
-}
 
 local M = {}
 
@@ -55,7 +49,7 @@ local function get_filter(opts, kind)
         -- string
         val = opts[value]
       end
-      val = json.stringify(val)
+      val = vim.fn.json_encode(val)
       val = string.gsub(val, '"OPEN"', "OPEN")
       val = string.gsub(val, '"CLOSED"', "CLOSED")
       val = string.gsub(val, '"MERGED"', "MERGED")
@@ -123,7 +117,7 @@ function M.issues(opts)
     opts.repo = util.get_remote_name()
   end
   if not opts.repo then
-    api.nvim_err_writeln("Cannot find repo")
+    vim.api.nvim_err_writeln("Cannot find repo")
     return
   end
 
@@ -132,16 +126,16 @@ function M.issues(opts)
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
-      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
           print(" ")
           local resp = util.aggregate_pages(output, "data.repository.issues.nodes")
           local issues = resp.data.repository.issues.nodes
           if #issues == 0 then
-            api.nvim_err_writeln(format("There are no matching issues in %s.", opts.repo))
+            vim.api.nvim_err_writeln(string.format("There are no matching issues in %s.", opts.repo))
             return
           end
           local max_number = -1
@@ -154,7 +148,7 @@ function M.issues(opts)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Issues >",
+              prompt_prefix = "Issues>",
               finder = finders.new_table {
                 results = issues,
                 entry_maker = entry_maker.gen_from_issue(max_number)
@@ -189,7 +183,7 @@ local function open_gist(prompt_bufnr)
   local gist_id = tmp_table[1]
   local gist = utils.get_os_command_output({"gh", "gist", "view",  gist_id, "-r"})
   if gist and vim.api.nvim_buf_get_option(vim.api.nvim_get_current_buf(), "modifiable") then
-    api.nvim_put(gist, "b", true, true)
+    vim.api.nvim_put(gist, "b", true, true)
   end
 end
 
@@ -205,16 +199,14 @@ function M.gists(opts)
   end
   local output = utils.get_os_command_output(cmd)
   if not output or #output == 0 then
-    api.nvim_err_writeln("No gists found")
+    vim.api.nvim_err_writeln("No gists found")
     return
   end
 
-  -- TODO: make a decent displayer
- 
   pickers.new(
     opts,
     {
-      prompt_prefix = "Gists >",
+      prompt_prefix = "Gists>",
       finder = finders.new_table {
         results = output,
         entry_maker = make_entry.gen_from_string(opts)
@@ -252,7 +244,7 @@ local function checkout_pull_request(repo)
         args = args,
         cb = function(output)
           print(output)
-          print(format("Checked out PR %d", number))
+          print(string.format("Checked out PR %d", number))
         end
       }
     )
@@ -270,7 +262,7 @@ function M.pull_requests(opts)
     opts.repo = util.get_remote_name()
   end
   if not opts.repo then
-    api.nvim_err_writeln("Cannot find repo")
+    vim.api.nvim_err_writeln("Cannot find repo")
     return
   end
 
@@ -279,16 +271,16 @@ function M.pull_requests(opts)
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
-      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
           print(" ")
           local resp = util.aggregate_pages(output, "data.repository.pullRequests.nodes")
           local pull_requests = resp.data.repository.pullRequests.nodes
           if #pull_requests == 0 then
-            api.nvim_err_writeln(format("There are no matching pull requests in %s.", opts.repo))
+            vim.api.nvim_err_writeln(string.format("There are no matching pull requests in %s.", opts.repo))
             return
           end
           local max_number = -1
@@ -301,7 +293,7 @@ function M.pull_requests(opts)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Pull Requests >",
+              prompt_prefix = "Pull Requests>",
               finder = finders.new_table {
                 results = pull_requests,
                 entry_maker = entry_maker.gen_from_pull_request(max_number)
@@ -328,30 +320,29 @@ end
 -- COMMITS
 --
 function M.commits()
-  local repo, number, _ = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer or not buffer:isPullRequest() then return end
   -- TODO: graphql
-  local url = format("repos/%s/pulls/%d/commits", repo, number)
+  local url = string.format("repos/%s/pulls/%d/commits", buffer.repo, buffer.number)
   gh.run(
     {
       args = {"api", url},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local results = json.parse(output)
+          local results = vim.fn.json_decode(output)
           pickers.new(
             {},
             {
-              prompt_prefix = "PR Commits >",
+              prompt_prefix = "PR Commits>",
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_commits()
               },
               sorter = conf.generic_sorter({}),
-              previewer = previewers.commit.new({repo = repo}),
+              previewer = previewers.commit.new({repo = buffer.repo}),
               attach_mappings = function()
                 action_set.select:replace(function(prompt_bufnr, type)
                   open_preview_buffer(type)(prompt_bufnr)
@@ -370,29 +361,28 @@ end
 -- FILES
 --
 function M.changed_files()
-  local repo, number, _ = util.get_repo_number_pr()
-  if not repo then
-    return
-  end
-  local url = format("repos/%s/pulls/%d/files", repo, number)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer or not buffer:isPullRequest() then return end
+  local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
   gh.run(
     {
       args = {"api", url},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local results = json.parse(output)
+          local results = vim.fn.json_decode(output)
           pickers.new(
             {},
             {
-              prompt_prefix = "PR Files Changed >",
+              prompt_prefix = "PR Files Changed>",
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_changed_files()
               },
               sorter = conf.generic_sorter({}),
-              previewer = previewers.changed_files.new({repo = repo, number = number}),
+              previewer = previewers.changed_files.new({repo = buffer.repo, number = buffer.number}),
               attach_mappings = function()
                 action_set.select:replace(function(prompt_bufnr, type)
                   open_preview_buffer(type)(prompt_bufnr)
@@ -417,7 +407,7 @@ function M.issue_search(opts)
     opts.repo = util.get_remote_name()
   end
   if not opts.repo then
-    api.nvim_err_writeln("Cannot find repo")
+    vim.api.nvim_err_writeln("Cannot find repo")
     return
   end
 
@@ -425,7 +415,7 @@ function M.issue_search(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "Issue Search >",
+      prompt_prefix = "Issue Search>",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -453,7 +443,7 @@ function M.issue_search(opts)
           local query = graphql("search_issues_query", opts.repo, prompt)
           gh.run(
             {
-              args = {"api", "graphql", "-f", format("query=%s", query)},
+              args = {"api", "graphql", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
 
                 -- do not process response, if this is not the last request we sent
@@ -463,9 +453,9 @@ function M.issue_search(opts)
                 end
 
                 if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
+                  vim.api.nvim_err_writeln(stderr)
                 elseif output then
-                  local resp = json.parse(output)
+                  local resp = vim.fn.json_decode(output)
                   for _, issue in ipairs(resp.data.search.nodes) do
                     process_result(entry_maker.gen_from_issue(6)(issue))
                   end
@@ -496,7 +486,7 @@ function M.pull_request_search(opts)
     opts.repo = util.get_remote_name()
   end
   if not opts.repo then
-    api.nvim_err_writeln("Cannot find repo")
+    vim.api.nvim_err_writeln("Cannot find repo")
     return
   end
 
@@ -504,7 +494,7 @@ function M.pull_request_search(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "PR Search >",
+      prompt_prefix = "PR Search>",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -532,7 +522,7 @@ function M.pull_request_search(opts)
           local query = graphql("search_pull_requests_query", opts.repo, prompt)
           gh.run(
             {
-              args = {"api", "graphql", "-f", format("query=%s", query)},
+              args = {"api", "graphql", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
 
                 -- do not process response, if this is not the last request we sent
@@ -542,9 +532,9 @@ function M.pull_request_search(opts)
                 end
 
                 if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
+                  vim.api.nvim_err_writeln(stderr)
                 elseif output then
-                  local resp = json.parse(output)
+                  local resp = vim.fn.json_decode(output)
                   for _, pull_request in ipairs(resp.data.search.nodes) do
                     process_result(entry_maker.gen_from_pull_request(6)(pull_request))
                   end
@@ -603,20 +593,20 @@ end
 -- PROJECTS
 ---
 function M.select_project_card(cb)
-  local opts = vim.deepcopy(dropdown_opts)
-  local ok, cards = pcall(api.nvim_buf_get_var, 0, "cards")
-  if not ok or not cards or #cards.nodes == 0 then
-    api.nvim_err_writeln("Cant find any project cards")
-    return
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  local cards = buffer.node.projectCards
+  if not cards or #cards.nodes == 0 then vim.api.nvim_err_writeln("[Octo] Cant find any project cards") return
   end
 
   if #cards.nodes == 1 then
     cb(cards.nodes[1].id)
   else
+    local opts = vim.deepcopy(dropdown_opts)
     pickers.new(
       opts,
       {
-        prompt_prefix = "Choose card >",
+        prompt_prefix = "Choose card>",
         finder = finders.new_table {
           results = cards.nodes,
           entry_maker = entry_maker.gen_from_project_card()
@@ -636,21 +626,17 @@ function M.select_project_card(cb)
 end
 
 function M.select_target_project_column(cb)
-  local opts = vim.deepcopy(dropdown_opts)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
 
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
-
-  local owner, name = util.split_repo(repo)
-  local query = graphql("projects_query", owner, name, vim.g.octo_viewer, owner)
+  local query = graphql("projects_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
   gh.run(
     {
-      args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output)
         if output then
-          local resp = json.parse(output)
+          local resp = vim.fn.json_decode(output)
           local projects = {}
           local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
           local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
@@ -659,37 +645,38 @@ function M.select_target_project_column(cb)
           vim.list_extend(projects, user_projects)
           vim.list_extend(projects, org_projects)
           if #projects == 0 then
-            api.nvim_err_writeln(format("There are no matching projects for %s.", repo))
+            vim.api.nvim_err_writeln(string.format("There are no matching projects for %s.", buffer.repo))
             return
           end
 
+          local opts = vim.deepcopy(dropdown_opts)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose target project >",
+              prompt_prefix = "Choose target project>",
               finder = finders.new_table {
                 results = projects,
                 entry_maker = entry_maker.gen_from_project()
               },
               sorter = conf.generic_sorter(opts),
-              attach_mappings = function(_, _)
-                actions.select_default:replace(function(prompt_bufnr)
+              attach_mappings = function()
+                action_set.select:replace(function(prompt_bufnr)
                   local selected_project = action_state.get_selected_entry(prompt_bufnr)
-                  actions.close(prompt_bufnr)
+                  actions._close(prompt_bufnr, true)
                   local opts2 = vim.deepcopy(dropdown_opts)
                   pickers.new(
                     opts2,
                     {
-                      prompt_prefix = "Choose target column >",
+                      prompt_prefix = "Choose target column>",
                       finder = finders.new_table {
                         results = selected_project.project.columns.nodes,
                         entry_maker = entry_maker.gen_from_project_column()
                       },
                       sorter = conf.generic_sorter(opts2),
                       attach_mappings = function()
-                        actions.select_default:replace(function(prompt_bufnr)
-                          actions.close(prompt_bufnr)
-                          local selected_column = action_state.get_selected_entry(prompt_bufnr)
+                        action_set.select:replace(function(prompt_bufnr2)
+                          local selected_column = action_state.get_selected_entry(prompt_bufnr2)
+                          actions.close(prompt_bufnr2)
                           cb(selected_column.column.id)
                         end)
                         return true
@@ -712,26 +699,24 @@ end
 --
 function M.select_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
-  local repo = util.get_repo_number()
-  if not repo then
-    return
-  end
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
 
-  local owner, name = util.split_repo(repo)
-  local query = graphql("labels_query", owner, name)
+  local query = graphql("labels_query", buffer.owner, buffer.name)
   gh.run(
     {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = json.parse(output)
+          local resp = vim.fn.json_decode(output)
           local labels = resp.data.repository.labels.nodes
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose label >",
+              prompt_prefix = "Choose label>",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -755,35 +740,30 @@ end
 
 function M.select_assigned_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
-  local repo, number = util.get_repo_number()
-  if not repo then
-    return
-  end
-  local bufnr = api.nvim_get_current_buf()
-  local bufname = vim.fn.bufname(bufnr)
-  local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  local owner, name = util.split_repo(repo)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
   local query, key
-  if type == "issue" then
-    query = graphql("issue_labels_query", owner, name, number)
+  if buffer:isIssue() then
+    query = graphql("issue_labels_query", buffer.owner, buffer.name, buffer.number)
     key = "issue"
-  elseif type == "pull" then
-    query = graphql("pull_request_labels_query", owner, name, number)
+  elseif buffer:isPullRequest() then
+    query = graphql("pull_request_labels_query", buffer.owner, buffer.name, buffer.number)
     key = "pullRequest"
   end
   gh.run(
     {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = json.parse(output)
+          local resp = vim.fn.json_decode(output)
           local labels = resp.data.repository[key].labels.nodes
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose label >",
+              prompt_prefix = "Choose label>",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -842,10 +822,10 @@ function M.select_user(cb)
           local query = graphql("user_query", prompt, prompt)
           gh.run(
             {
-              args = {"api", "graphql", "--paginate", "-f", format("query=%s", query)},
+              args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
                 if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
+                  vim.api.nvim_err_writeln(stderr)
                 elseif output then
                   -- do not process response, if this is not the last request we sent
                   if prompt ~= queue[#queue] then
@@ -891,7 +871,7 @@ function M.select_user(cb)
 
                   -- process orgs with teams
                   for _, org in pairs(orgs) do
-                    org.display = format("%s (%d)", org.text, #org.teams)
+                    org.display = string.format("%s (%d)", org.text, #org.teams)
                     process_result(org)
                   end
 
@@ -908,7 +888,7 @@ function M.select_user(cb)
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
           local selected_user = action_state.get_selected_entry(prompt_bufnr)
-          actions.close(prompt_bufnr)
+          actions._close(prompt_bufnr, true)
           if not selected_user.teams then
             -- user
             cb(selected_user.value)
@@ -917,13 +897,13 @@ function M.select_user(cb)
             pickers.new(
               opts,
               {
-                prompt_prefix = "Choose team >",
+                prompt_prefix = "Choose team>",
                 finder = finders.new_table {
                   results = selected_user.teams,
                   entry_maker = entry_maker.gen_from_team()
                 },
                 sorter = conf.generic_sorter(opts),
-                attach_mappings = function(_, _)
+                attach_mappings = function()
                   actions.select_default:replace(function(prompt_bufnr)
                     local selected_team = action_state.get_selected_entry(prompt_bufnr)
                     actions.close(prompt_bufnr)
@@ -946,35 +926,30 @@ end
 --
 function M.select_assignee(cb)
   local opts = vim.deepcopy(dropdown_opts)
-  local repo, number = util.get_repo_number()
-  if not repo then
-    return
-  end
-  local bufnr = api.nvim_get_current_buf()
-  local bufname = vim.fn.bufname(bufnr)
-  local _, type = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  local owner, name = util.split_repo(repo)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
   local query, key
-  if type == "issue" then
-    query = graphql("issue_assignees_query", owner, name, number)
+  if buffer:isIssue() then
+    query = graphql("issue_assignees_query", buffer.owner, buffer.name, buffer.number)
     key = "issue"
-  elseif type == "pull" then
-    query = graphql("pull_request_assignees_query", owner, name, number)
+  elseif buffer:isPullRequest() then
+    query = graphql("pull_request_assignees_query", buffer.owner, buffer.name, buffer.number)
     key = "pullRequest"
   end
   gh.run(
     {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not util.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = json.parse(output)
+          local resp = vim.fn.json_decode(output)
           local assignees = resp.data.repository[key].assignees.nodes
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose assignee >",
+              prompt_prefix = "Choose assignee>",
               finder = finders.new_table {
                 results = assignees,
                 entry_maker = entry_maker.gen_from_user()

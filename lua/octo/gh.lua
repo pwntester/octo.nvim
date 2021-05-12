@@ -1,16 +1,16 @@
+local config = require'octo.config'
 local Job = require("plenary.job")
 
 local function run(opts)
   opts = opts or {}
-
+  local conf = config.get_config()
   local mode = opts.mode or "async"
-
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
     table.insert(opts.args, "Accept: application/vnd.github.v3+json;application/vnd.github.squirrel-girl-preview+json;application/vnd.github.comfort-fade-preview+json")
-    if not require"octo.util".is_blank(require"octo".settings.github_hostname) then
+    if not require"octo.util".is_blank(conf.github_hostname) then
       table.insert(opts.args, "--hostname")
-      table.insert(opts.args, require"octo".settings.github_hostname)
+      table.insert(opts.args, conf.github_hostname)
     end
   end
 
@@ -40,7 +40,7 @@ local function run(opts)
   )
   if mode == "sync" then
     job:sync()
-    return table.concat(job:result(), "\n")
+    return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
   else
     job:start()
   end
