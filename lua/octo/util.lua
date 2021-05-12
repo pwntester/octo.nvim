@@ -3,27 +3,32 @@ local date = require "octo.date"
 local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
-local format = string.format
-local vim = vim
-local api = vim.api
-local json = {
-  parse = vim.fn.json_decode
-}
+local config = require'octo.config'
 
 local M = {}
+
 local repo_id_cache = {}
+local path_sep = package.config:sub(1,1)
+
+M.state_msg_map = {
+  APPROVED = "approved",
+  CHANGES_REQUESTED = "requested changes",
+  COMMENTED = "commented",
+  DISMISSED = "dismissed",
+  PENDING = "pending",
+}
 
 M.state_hl_map = {
-  MERGED = "OctoNvimStateMerged",
-  CLOSED = "OctoNvimStateClosed",
-  OPEN = "OctoNvimStateOpen",
-  APPROVED = "OctoNvimStateApproved",
-  CHANGES_REQUESTED = "OctoNvimStateChangesRequested",
-  COMMENTED = "OctoNvimStateCommented",
-  DISMISSED = "OctoNvimStateDismissed",
-  PENDING = "OctoNvimStatePending",
-  REVIEW_REQUIRED = "OctoNvimStatePending",
-  SUBMITTED = "OctoNvimStateSubmitted",
+  MERGED = "OctoStateMerged",
+  CLOSED = "OctoStateClosed",
+  OPEN = "OctoStateOpen",
+  APPROVED = "OctoStateApproved",
+  CHANGES_REQUESTED = "OctoStateChangesRequested",
+  COMMENTED = "OctoStateCommented",
+  DISMISSED = "OctoStateDismissed",
+  PENDING = "OctoStatePending",
+  REVIEW_REQUIRED = "OctoStatePending",
+  SUBMITTED = "OctoStateSubmitted",
 }
 
 M.state_icon_map = {
@@ -75,12 +80,50 @@ M.reaction_map = {
   ["EYES"] = "👀"
 }
 
+
+function M.tbl_soft_extend(a, b)
+  for k, v in pairs(a) do
+    if type(v) ~= "table" then
+      if b[k] ~= nil then
+        a[k] = b[k]
+      end
+    end
+  end
+end
+
+function M.tbl_deep_clone(t)
+  if not t then return end
+  local clone = {}
+
+  for k, v in pairs(t) do
+    if type(v) == "table" then
+      clone[k] = M.tbl_deep_clone(v)
+    else
+      clone[k] = v
+    end
+  end
+
+  return clone
+end
+
 function M.tbl_slice(tbl, first, last, step)
   local sliced = {}
   for i = first or 1, last or #tbl, step or 1 do
     sliced[#sliced + 1] = tbl[i]
   end
   return sliced
+end
+
+function M.tbl_concat(a, b)
+  local result = {}
+  for i, v in ipairs(a) do
+    result[i] = v
+  end
+  for i, v in ipairs(b) do
+    result[#a + i] = v
+  end
+
+  return result
 end
 
 function table.pack(...)
@@ -92,9 +135,10 @@ function M.is_blank(s)
 end
 
 function M.get_remote_name()
-  local candidates = require"octo".settings.default_remote
+  local conf = config.get_config()
+  local candidates = conf.default_remote
   for _, candidate in ipairs(candidates) do
-    local cmd = format("git config --get remote.%s.url", candidate)
+    local cmd = string.format("git config --get remote.%s.url", candidate)
     local url = string.gsub(vim.fn.system(cmd), "%s+", "")
     if not M.is_blank(url) then
       local owner, name
@@ -106,55 +150,52 @@ function M.get_remote_name()
         owner = vim.split(segment, "/")[1]
         name = string.gsub(vim.split(segment, "/")[2], ".git$", "")
       end
-      return format("%s/%s", owner, name)
+      return string.format("%s/%s", owner, name)
     end
   end
 end
 
 function M.in_pr_repo()
-  local bufname = api.nvim_buf_get_name(0)
-  if not vim.startswith(bufname, "octo://") then
-    api.nvim_err_writeln("Not in Octo buffer")
-    return
-  end
-  local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
-  if status and pr then
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then vim.api.nvim_err_writeln("Not in Octo buffer") return end
+  if buffer:isPullRequest() then
     local local_repo = M.get_remote_name()
-    if pr.baseRepoName ~= local_repo then
-      api.nvim_err_writeln(format("Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
+    if buffer.node.baseRepoName ~= local_repo then
+      vim.api.nvim_err_writeln(string.format("[Oto] Not in PR repo. Expected %s, got %s", buffer.node.baseRepoName, local_repo))
       return false
     else
       return true
     end
   else
-    api.nvim_err_writeln("Not in Octo PR buffer")
+    vim.api.nvim_err_writeln("[Octo] Not in Octo PR buffer")
     return
   end
   return false
 end
 
 -- function M.in_pr_branch()
---   local bufname = api.nvim_buf_get_name(0)
+--   local bufname = vim.api.nvim_buf_get_name(0)
 --   if not vim.startswith(bufname, "octo://") then
 --     return
 --   end
---   local status, pr = pcall(api.nvim_buf_get_var, 0, "pr")
+--   local status, pr = pcall(vim.api.nvim_buf_get_var, 0, "pr")
 --   if status and pr then
 --     -- only works with Git 2.22 and above
 --     -- local cmd = "git branch --show-current"
 --     local cmd = "git rev-parse --abbrev-ref HEAD"
 --     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
---     if local_branch == format("%s/%s", pr.headRepoName, pr.headRefName) then
+--     if local_branch == string.format("%s/%s", pr.headRepoName, pr.headRefName) then
 --       -- for PRs submitted from master, local_branch will get something like other_repo/master
 --       local_branch = vim.split(local_branch, "/")[2]
 --     end
 --     local local_repo = M.get_remote_name()
 --     if pr.baseRepoName ~= local_repo then
---       api.nvim_err_writeln(format("[Octo] Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
+--       vim.api.nvim_err_writeln(format("[Octo] Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
 --       return false
 --     elseif pr.headRefName ~= local_branch then
 --       -- TODx: suggest to checkout the branch
---       api.nvim_err_writeln(format("[Octo] Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
+--       vim.api.nvim_err_writeln(format("[Octo] Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
 --       return false
 --     end
 --     return true
@@ -162,128 +203,36 @@ end
 --   return false
 -- end
 
--- TODO: we need a better name for this
-function M.get_repo_number(kinds)
-  local bufnr = api.nvim_get_current_buf()
-  kinds = kinds or {"issue", "pull"}
-  local kind =  M.get_octo_kind(bufnr)
-  if not vim.tbl_contains(kinds, kind) then
-    api.nvim_err_writeln(format("[Octo] Not in correct octo buffer. Expected any of %s, got %s", vim.inspect(kinds), kind))
-    return
-  end
+-- TODO: replace calls to get_repo_number_pr with this one
+function M.get_current_pr()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
 
-  local number_ok, number = pcall(api.nvim_buf_get_var, bufnr, "number")
-  if not number_ok then
-    api.nvim_err_writeln("[Octo] Missing octo metadata")
-    return
-  end
-  local repo_ok, repo = pcall(api.nvim_buf_get_var, bufnr, "repo")
-  if not repo_ok then
-    api.nvim_err_writeln("[Octo] Missing octo metadata")
-    return
-  end
-  return repo, number
-end
-
-function M.get_repo_number_pr()
-  local repo, number = M.get_repo_number()
-  if not repo then
-    return
-  end
-  local bufnr = api.nvim_get_current_buf()
-  local pr_ok, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
-  if not pr_ok then
-    api.nvim_err_writeln("Not PR buffer")
-    return nil
-  end
-  return repo, number, pr
-end
-
-function M.get_extmark_region(bufnr, mark)
-  -- extmarks are placed on
-  -- start line - 1 (except for line 0)
-  -- end line + 2
-  local start_line = mark[1] + 1
-  if start_line == 1 then
-    start_line = 0
-  end
-  local end_line = mark[3]["end_row"] - 2
-  if start_line > end_line then
-    end_line = start_line
-  end
-  -- Indexing is zero-based, end-exclusive, so adding 1 to end line
-  local status, lines = pcall(api.nvim_buf_get_lines, bufnr, start_line, end_line + 1, true)
-  if status and lines then
-    local text = vim.fn.join(lines, "\n")
-    return start_line, end_line, text
-  end
-end
-
-function M.update_metadata(metadata, start_line, end_line, text)
-  metadata["start_line"] = start_line
-  metadata["end_line"] = end_line
-  if vim.fn.trim(text) ~= vim.fn.trim(metadata["saved_body"]) then
-    metadata["dirty"] = true
-  else
-    metadata["dirty"] = false
-  end
-  metadata["body"] = text
-end
-
-function M.update_issue_metadata(bufnr)
-  local mark, text, start_line, end_line, metadata
-
-  local kind = M.get_octo_kind(bufnr)
-  if kind == "issue" or kind == "pull" then
-    -- title
-    metadata = api.nvim_buf_get_var(bufnr, "title")
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
-    start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-    M.update_metadata(metadata, start_line, end_line, text)
-    api.nvim_buf_set_var(bufnr, "title", metadata)
-
-    -- description
-    metadata = api.nvim_buf_get_var(bufnr, "description")
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
-    start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-    if text == "" then
-      -- description has been removed
-      -- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
-      api.nvim_buf_set_lines(bufnr, start_line, start_line + 1, false, {" ", ""})
-      api.nvim_win_set_cursor(0, {start_line + 1, 0})
-    end
-    M.update_metadata(metadata, start_line, end_line, text)
-    api.nvim_buf_set_var(bufnr, "description", metadata)
-  end
-
-  -- comments
-  local comments = api.nvim_buf_get_var(bufnr, "comments")
-  for i, m in ipairs(comments) do
-    metadata = m
-    mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
-    start_line, end_line, text = M.get_extmark_region(bufnr, mark)
-
-    if text == "" then
-      -- comment has been removed
-      -- the space in ' ' is crucial to prevent this block of code from repeating on TextChanged(I)?
-      api.nvim_buf_set_lines(bufnr, start_line, start_line + 1, false, {" ", ""})
-      api.nvim_win_set_cursor(0, {start_line + 1, 0})
-    end
-
-    M.update_metadata(metadata, start_line, end_line, text)
-    comments[i] = metadata
-  end
-  api.nvim_buf_set_var(bufnr, "comments", comments)
+  local Rev = require'octo.reviews.rev'.Rev
+  local PullRequest = require'octo.model.pull-request'.PullRequest
+  return PullRequest:new({
+    repo = buffer.repo,
+    number = buffer.number,
+    id = buffer.node.id,
+    left = Rev:new(buffer.node.baseRefOid),
+    right = Rev:new(buffer.node.headRefOid)
+  })
 end
 
 function M.get_comment_at_cursor(bufnr)
-  local cursor = api.nvim_win_get_cursor(0)
-  local comments = api.nvim_buf_get_var(bufnr, "comments")
-  for _, comment in ipairs(comments) do
-    local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  return M.get_comment_at_line(bufnr, cursor[1])
+end
+
+function M.get_comment_at_line(bufnr, line)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  for _, comment in ipairs(buffer.commentsMetadata) do
+    local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
-    if start_line +1 <= cursor[1] and end_line - 2 >= cursor[1] then
+    if start_line +1 <= line and end_line - 2 >= line then
       return comment, start_line, end_line
     end
   end
@@ -291,9 +240,10 @@ function M.get_comment_at_cursor(bufnr)
 end
 
 function M.get_body_at_cursor(bufnr)
-  local cursor = api.nvim_win_get_cursor(0)
-  local metadata = api.nvim_buf_get_var(bufnr, "description")
-  local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
+  local buffer = octo_buffers[bufnr]
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local metadata = buffer.bodyMetadata
+  local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
   local start_line = mark[1] + 1
   local end_line = mark[3]["end_row"] + 1
   if start_line + 1<= cursor[1] and end_line - 2>= cursor[1] then
@@ -303,21 +253,21 @@ function M.get_body_at_cursor(bufnr)
 end
 
 function M.get_thread_at_cursor(bufnr)
-  local cursor = api.nvim_win_get_cursor(0)
-  local ok, thread_map = pcall(api.nvim_buf_get_var, bufnr, "review_thread_map")
-  if not thread_map or not ok then return end
-  local thread_marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  return M.get_thread_at_line(bufnr, cursor[1])
+end
+
+function M.get_thread_at_line(bufnr, line)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  local thread_marks = vim.api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, {details = true})
   for _, mark in ipairs(thread_marks) do
-    local markId = tostring(mark[1])
-    local info = thread_map[markId]
-    if info then
-      local threadId = info.threadId
-      local replyTo = info.replyTo
-      local reviewId = info.reviewId
+    local thread = buffer.threadsMetadata[tostring(mark[1])]
+    if thread then
       local startLine = mark[2]
-      local endLine = mark[4]["end_row"]
-      if startLine <= cursor[1] and endLine >= cursor[1] then
-        return threadId, startLine, endLine, replyTo, reviewId
+      local endLine = mark[4].end_row
+      if startLine <= line and endLine >= line then
+        return thread.threadId, startLine, endLine, thread.replyTo, thread.reviewId
       end
     end
   end
@@ -325,7 +275,8 @@ function M.get_thread_at_cursor(bufnr)
 end
 
 function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
-  local cursor = api.nvim_win_get_cursor(0)
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local buffer = octo_buffers[bufnr]
   local reactions_count = 0
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
@@ -333,43 +284,42 @@ function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
     end
   end
 
-  local comments = api.nvim_buf_get_var(bufnr, "comments")
+  local comments = buffer.commentsMetadata
   for i, comment in ipairs(comments) do
-    local mark = api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
+    local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, comment.extmark, {details = true})
     local start_line = mark[1] + 1
-    local end_line = mark[3]["end_row"] + 1
+    local end_line = mark[3].end_row + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then
       --  cursor located in the body of a comment
       --  update reaction groups
-      comments[i].reaction_groups = reaction_groups
+      comments[i].reactionGroups = reaction_groups
 
       -- update reaction line
-      if not comments[i].reaction_line and reactions_count > 0 then
-        comments[i].reaction_line = reaction_line
+      if not comments[i].reactionLine and reactions_count > 0 then
+        comments[i].reactionLine = reaction_line
       elseif reactions_count == 0 then
-        comments[i].reaction_line = nil
+        comments[i].reactionLine = nil
       end
 
-      -- update comments
-      api.nvim_buf_set_var(bufnr, "comments", comments)
       return
     end
   end
 
   -- cursor not located at any comment, so updating issue
   --  update reaction groups
-  api.nvim_buf_set_var(bufnr, "body_reaction_groups", reaction_groups)
-  local body_reaction_line = api.nvim_buf_get_var(bufnr, "body_reaction_line")
+  buffer.bodyMetadata.reactionGroups = reaction_groups
+  local body_reaction_line = buffer.bodyMetadata.reactionLine
   if not body_reaction_line and reactions_count > 0 then
-    api.nvim_buf_set_var(bufnr, "body_reaction_line", reaction_line)
+    buffer.bodyMetadata.reactionLine = reaction_line
   elseif reactions_count == 0 then
-    api.nvim_buf_set_var(bufnr, "body_reaction_line", nil)
+    buffer.bodyMetadata.reactionLine = nil
   end
 end
 
 function M.format_date(date_string)
+  local conf = config.get_config()
   local time_bias = date():getbias() * -1
-  return date(date_string):addminutes(time_bias):fmt(require"octo".settings.date_format)
+  return date(date_string):addminutes(time_bias):fmt(conf.date_format)
 end
 
 function M.graph2rest(id)
@@ -387,11 +337,11 @@ function M.get_repo_id(repo)
     local output =
       gh.run(
       {
-        args = {"api", "graphql", "-f", format("query=%s", query)},
+        args = {"api", "graphql", "-f", string.format("query=%s", query)},
         mode = "sync"
       }
     )
-    local resp = json.parse(output)
+    local resp = vim.fn.json_decode(output)
     local id = resp.data.repository.id
     repo_id_cache[repo] = id
     return id
@@ -403,11 +353,11 @@ function M.get_pages(text)
   while true do
     local idx = string.find(text, '}{"data"')
     if not idx then
-      table.insert(responses, json.parse(text))
+      table.insert(responses, vim.fn.json_decode(text))
       break
     end
     local resp = string.sub(text, 0, idx)
-    table.insert(responses, json.parse(resp))
+    table.insert(responses, vim.fn.json_decode(resp))
     text = string.sub(text, idx + 1)
   end
   return responses
@@ -483,12 +433,12 @@ end
 
 function M.get_issue(...)
   local repo, number = M.get_repo_number_from_varargs(...)
-  vim.cmd(format("edit octo://%s/issue/%s", repo, number))
+  vim.cmd(string.format("edit octo://%s/issue/%s", repo, number))
 end
 
 function M.get_pull_request(...)
   local repo, number = M.get_repo_number_from_varargs(...)
-  vim.cmd(format("edit octo://%s/pull/%s", repo, number))
+  vim.cmd(string.format("edit octo://%s/pull/%s", repo, number))
 end
 
 function M.parse_url(url)
@@ -505,12 +455,12 @@ function M.get_file_contents(repo, commit, path, cb)
   local query = graphql("file_content_query", owner, name, commit, path)
   gh.run(
     {
-      args = {"api", "graphql", "-f", format("query=%s", query)},
+      args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not M.is_blank(stderr) then
-          api.nvim_err_writeln(stderr)
+          vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = json.parse(output)
+          local resp = vim.fn.json_decode(output)
           local blob = resp.data.repository.object
           local lines = {}
           if blob and blob ~= vim.NIL and type(blob.text) == "string"  then
@@ -540,10 +490,10 @@ function M.set_timeout(delay, callback, ...)
 end
 
 function M.getwin4buf(bufnr)
-  local tabpage = api.nvim_get_current_tabpage()
-  local wins = api.nvim_tabpage_list_wins(tabpage)
+  local tabpage = vim.api.nvim_get_current_tabpage()
+  local wins = vim.api.nvim_tabpage_list_wins(tabpage)
   for _, w in ipairs(wins) do
-    if bufnr == api.nvim_win_get_buf(w) then
+    if bufnr == vim.api.nvim_win_get_buf(w) then
       return w
     end
   end
@@ -551,7 +501,7 @@ function M.getwin4buf(bufnr)
 end
 
 function M.cursor_in_col_range(start_col, end_col)
-  local cursor = api.nvim_win_get_cursor(0)
+  local cursor = vim.api.nvim_win_get_cursor(0)
   if start_col and end_col then
     if start_col <= cursor[2] and cursor[2] <= end_col then
       return true
@@ -567,17 +517,18 @@ function M.split_repo(repo)
 end
 
 function M.reactions_at_cursor()
-  local bufnr = api.nvim_get_current_buf()
-  local cursor = api.nvim_win_get_cursor(0)
-  local ok_body, body_reaction_line = pcall(api.nvim_buf_get_var, bufnr, "body_reaction_line")
-  if ok_body and body_reaction_line and body_reaction_line == cursor[1] then
-    return api.nvim_buf_get_var(bufnr, "iid")
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local body_reaction_line = buffer.bodyMetadata.reactionLine
+  if body_reaction_line and body_reaction_line == cursor[1] then
+    return buffer.node.id
   end
 
-  local ok_comments, comments_metadata = pcall(api.nvim_buf_get_var, bufnr, "comments")
-  if ok_comments and comments_metadata then
+  local comments_metadata = buffer.commentsMetadata
+  if comments_metadata then
     for _, c in pairs(comments_metadata) do
-      if c.reaction_line and c.reaction_line == cursor[1] then
+      if c.reactionLine and c.reactionLine == cursor[1] then
         return c.id
       end
     end
@@ -674,7 +625,7 @@ end
 
 function M.get_sorted_comment_lines(bufnr)
   local lines = {}
-  local marks = api.nvim_buf_get_extmarks(bufnr, constants.OCTO_COMMENT_NS, 0, -1, {details = true})
+  local marks = vim.api.nvim_buf_get_extmarks(bufnr, constants.OCTO_COMMENT_NS, 0, -1, {details = true})
   for _, mark in ipairs(marks) do
     table.insert(lines, mark[2])
   end
@@ -683,36 +634,16 @@ function M.get_sorted_comment_lines(bufnr)
 end
 
 function M.is_thread_placed_in_buffer(comment, bufnr)
-  local status, props = pcall(api.nvim_buf_get_var, bufnr, "OctoDiffProps")
-  if not status or not props then
-    return false
-  end
-
-  local bufname = props.bufname
-  local diffSide, path = string.match(bufname, "octo://[^/]+/[^/]+/pull/%d+/file/([^/]+)/(.+)")
-  if not diffSide or not path then
-    return false
-  end
-  if diffSide == comment.diffSide and path == comment.path then
-    return true
-  end
+  local bufname = vim.api.nvim_buf_get_name(bufnr)
+  local split, path = M.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  if not split or not path then return false end
+  if split == comment.diffSide and path == comment.path then return true end
   return false
 end
 
-function M.get_octo_kind(bufnr)
-  bufnr = bufnr or api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(bufnr)
-  local kind
-  if string.match(bufname, "octo://.*/reviewthreads/.*") then
-    kind = "reviewthread"
-  elseif string.match(bufname, "octo://.*/pull/.*") then
-    kind = "pull"
-  elseif string.match(bufname, "octo://.*/issue/.*") then
-    kind = "issue"
-  end
-  return kind
+function M.get_split_and_path(bufname)
+  return string.match(bufname, "octo://[^/]+/[^/]+/review/[^/]+/file/([^/]+)/(.+)")
 end
-
 
 -- clear buffer undo history
 function M.clear_history()
@@ -720,6 +651,174 @@ function M.clear_history()
   vim.o.undolevels = -1
   vim.cmd [[exe "normal a \<BS>\<Esc>"]]
   vim.o.undolevels = old_undolevels
+end
+
+function M.clamp(value, min, max)
+  if value < min then return min end
+  if value > max then return max end
+  return value
+end
+
+function M.enum(t)
+  for i, v in ipairs(t) do
+    t[v] = i
+  end
+  return t
+end
+
+function M.find_named_buffer(name)
+  for _, v in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.fn.bufname(v) == name then
+      return v
+    end
+  end
+  return nil
+end
+
+function M.wipe_named_buffer(name)
+  local bn = M.find_named_buffer(name)
+  if bn then
+    local win_ids = vim.fn.win_findbuf(bn)
+    for _, id in ipairs(win_ids) do
+      if vim.fn.win_gettype(id) ~= "autocmd" then
+        vim.api.nvim_win_close(id, true)
+      end
+    end
+
+    vim.api.nvim_buf_set_name(bn, "")
+    vim.schedule(function ()
+      pcall(vim.api.nvim_buf_delete, bn, {})
+    end)
+  end
+end
+
+function M.str_shorten(s, new_length)
+  if string.len(s) > new_length - 1 then
+    return "…" .. s:sub(string.len(s) - new_length + 1, string.len(s))
+  end
+  return s
+end
+
+---Get a path relative to another path.
+---@param path string
+---@param relative_to string
+---@return string
+function M.path_relative(path, relative_to)
+  local p, _ = path:gsub("^" .. M.path_to_matching_str(M.path_add_trailing(relative_to)), "")
+  return p
+end
+
+function M.path_to_matching_str(path)
+  return path:gsub('(%-)', '(%%-)'):gsub('(%.)', '(%%.)'):gsub('(%_)', '(%%_)')
+end
+
+function M.path_add_trailing(path)
+  if path:sub(-1) == path_sep then
+    return path
+  end
+
+  return path..path_sep
+end
+
+---Get the path to the parent directory of the given path. Returns `nil` if the
+---path has no parent.
+---@param path string
+---@param remove_trailing boolean
+---@return string|nil
+function M.path_parent(path, remove_trailing)
+  path = " " .. M.path_remove_trailing(path)
+  local i = path:match("^.+()" .. path_sep)
+  if not i then return nil end
+  path = path:sub(2, i)
+  if remove_trailing then
+    path = M.path_remove_trailing(path)
+  end
+  return path
+end
+
+function M.path_remove_trailing(path)
+  local p, _ = path:gsub(path_sep..'$', '')
+  return p
+end
+
+---Get the basename of the given path.
+---@param path string
+---@return string
+function M.path_basename(path)
+  path = M.path_remove_trailing(path)
+  local i = path:match("^.*()" .. path_sep)
+  if not i then return path end
+  return path:sub(i + 1, #path)
+end
+
+function M.path_extension(path)
+  path = M.path_basename(path)
+  return path:match(".*%.(.*)")
+end
+
+function M.path_join(paths)
+  return table.concat(paths, path_sep)
+end
+
+-- calculate valid comment ranges
+function M.process_patch(patch)
+  local hunks = {}
+  local left_ranges = {}
+  local right_ranges = {}
+  local hunk_strings = vim.split(patch:gsub("^@@", ""), "\n@@")
+  for _, hunk in ipairs(hunk_strings) do
+    local header = vim.split(hunk, "\n")[1]
+    local found, _, left_start, left_length, right_start, right_length =
+      string.find(header, "^%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@")
+    if found then
+      table.insert(hunks, hunk)
+      table.insert(left_ranges, {tonumber(left_start), left_start + left_length - 1})
+      table.insert(right_ranges, {tonumber(right_start), right_start + right_length - 1})
+    end
+  end
+  return hunks, left_ranges, right_ranges
+end
+
+-- calculate GutHub diffstat histogram bar
+function M.diffstat(stats)
+  -- round up to closest multiple of 5
+  local total = stats.additions + stats.deletions
+  local mod = total % 5;
+  local round = total - mod;
+  if mod > 0 then
+      round = round + 5;
+  end
+  -- calculate insertion to deletion ratio
+  local unit = round / 5
+  local additions = math.floor((0.5+stats.additions)/unit)
+  local deletions = math.floor((0.5+stats.deletions)/unit)
+  local neutral = 5 - additions - deletions
+  return {
+    total = total,
+    additions = additions,
+    deletions = deletions,
+    neutral = neutral
+  }
+end
+
+function M.get_extmark_region(bufnr, mark)
+  -- extmarks are placed on
+  -- start line - 1 (except for line 0)
+  -- end line + 2
+  local start_line = mark[1] + 1
+  if start_line == 1 then
+    start_line = 0
+  end
+  local end_line = mark[3]["end_row"] - 2
+  if start_line > end_line then
+    end_line = start_line
+  end
+  -- Indexing is zero-based, end-exclusive, so adding 1 to end line
+  local status, lines = pcall(vim.api.nvim_buf_get_lines, bufnr, start_line, end_line + 1, true)
+  if status and lines then
+    local text = vim.fn.join(lines, "\n")
+    return start_line, end_line, text
+  end
 end
 
 return M

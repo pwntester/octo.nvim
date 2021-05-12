@@ -702,11 +702,7 @@ M.create_issue_mutation =
             }
           }
         }
-        timelineItems(first: 100, after: $endCursor) {
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
+        timelineItems(first: 100) {
           nodes {
             __typename
             ... on LabeledEvent {
@@ -1120,6 +1116,43 @@ M.update_pull_request_state_mutation =
                 login
               }
             }
+            ... on ReviewRequestedEvent {
+              createdAt
+              actor {
+                login
+              }
+              requestedReviewer {
+                ... on User {
+                  login
+                  isViewer
+                }
+                ... on Team {
+                  name
+                }
+              }
+            }
+            ... on ReviewRequestRemovedEvent {
+              createdAt
+              actor {
+                login
+              }
+              requestedReviewer {
+                ... on User {
+                  login
+                  isViewer
+                }
+                ... on Team {
+                  name
+                }
+              }
+            }
+            ... on ReviewDismissedEvent {
+              createdAt
+              actor {
+                login
+              }
+              dismissalMessage
+            }
             ... on IssueComment {
               id
               body
@@ -1477,6 +1510,43 @@ query($endCursor: String) {
             actor {
               login
             }
+          }
+          ... on ReviewRequestedEvent {
+            createdAt
+            actor {
+              login
+            }
+            requestedReviewer {
+              ... on User {
+                login
+                isViewer
+              }
+              ... on Team {
+                name
+              }
+            }
+          }
+          ... on ReviewRequestRemovedEvent {
+            createdAt
+            actor {
+              login
+            }
+            requestedReviewer {
+              ... on User {
+                login
+                isViewer
+              }
+              ... on Team {
+                name
+              }
+            }
+          }
+          ... on ReviewDismissedEvent {
+            createdAt
+            actor {
+              login
+            }
+            dismissalMessage
           }
           ... on IssueComment {
             id
@@ -2340,7 +2410,7 @@ return function(query, ...)
   local opts = { escape = true }
   for _, v in ipairs{...} do
     if type(v) == "table" then
-      opts = v
+      opts = vim.tbl_deep_extend("force", opts, v)
       break
     end
   end

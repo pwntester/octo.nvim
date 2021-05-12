@@ -1,19 +1,17 @@
+local ThreadMetadata = require "octo.model.thread-metadata".ThreadMetadata
+local BodyMetadata = require "octo.model.body-metadata".BodyMetadata
+local TitleMetadata = require "octo.model.title-metadata".TitleMetadata
 local constants = require "octo.constants"
+local config = require'octo.config'
 local util = require "octo.util"
 local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
-local vim = vim
-local api = vim.api
-local max = math.max
-local min = math.min
-local format = string.format
-local strlen = vim.fn.strdisplaywidth
 
 local M = {}
 
 function M.write_block(bufnr, lines, line, mark)
-  bufnr = bufnr or api.nvim_get_current_buf()
-  line = line or api.nvim_buf_line_count(bufnr) + 1
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  line = line or vim.api.nvim_buf_line_count(bufnr) + 1
   mark = mark or false
 
   if type(lines) == "string" then
@@ -21,7 +19,7 @@ function M.write_block(bufnr, lines, line, mark)
   end
 
   -- write content lines
-  api.nvim_buf_set_lines(bufnr, line - 1, line - 1 + #lines, false, lines)
+  vim.api.nvim_buf_set_lines(bufnr, line - 1, line - 1 + #lines, false, lines)
 
   -- set extmarks
   if mark then
@@ -45,13 +43,13 @@ function M.write_block(bufnr, lines, line, mark)
       end
     end
 
-    return api.nvim_buf_set_extmark(
+    return vim.api.nvim_buf_set_extmark(
       bufnr,
       constants.OCTO_COMMENT_NS,
-      max(0, start_line - 1 - 1),
+      math.max(0, start_line - 1 - 1),
       0,
       {
-        end_line = min(end_line + 2 - 1, api.nvim_buf_line_count(bufnr)),
+        end_line = math.min(end_line + 2 - 1, vim.api.nvim_buf_line_count(bufnr)),
         end_col = 0
       }
     )
@@ -60,41 +58,40 @@ end
 
 function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, {title, ""}, line, true)
-  api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimIssueTitle", 0, 0, -1)
-  api.nvim_buf_set_var(
-    bufnr,
-    "title",
-    {
-      saved_body = title,
+  vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
+  local buffer = octo_buffers[bufnr]
+  if buffer then
+    buffer.titleMetadata = TitleMetadata:new({
+      savedBody = title,
       body = title,
       dirty = false,
-      extmark = title_mark
-    }
-  )
+      extmark = tonumber(title_mark)
+    })
+  end
 end
 
 function M.write_state(bufnr, state, number)
-  bufnr = bufnr or api.nvim_get_current_buf()
-  state = state or api.nvim_buf_get_var(bufnr, "state")
-  number = number or api.nvim_buf_get_var(bufnr, "number")
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  state = state or buffer.node.state
+  number = number or buffer.number
 
   -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
 
   -- title virtual text
   local title_vt = {
-    {tostring(number), "OctoNvimIssueId"},
-    {format(" [%s] ", state), util.state_hl_map[state]}
+    {tostring(number), "OctoIssueId"},
+    {string.format(" [%s] ", state), util.state_hl_map[state]}
   }
 
   -- PR virtual text
-  local status, pr = pcall(api.nvim_buf_get_var, bufnr, "pr")
-  if status and pr then
-    if pr.isDraft then
-      table.insert(title_vt, {"[DRAFT] ", "OctoNvimIssueId"})
+  if buffer and buffer:isPullRequest() then
+    if buffer.node.isDraft then
+      table.insert(title_vt, {"[DRAFT] ", "OctoIssueId"})
     end
   end
-  api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
+  vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
 function M.write_body(bufnr, issue, line)
@@ -106,29 +103,28 @@ function M.write_body(bufnr, issue, line)
   local lines = vim.split(description, "\n", true)
   vim.list_extend(lines, {""})
   local desc_mark = M.write_block(bufnr, lines, line, true)
-  api.nvim_buf_set_var(
-    bufnr,
-    "description",
-    {
-      saved_body = description,
+  local buffer = octo_buffers[bufnr]
+  if buffer then
+    buffer.bodyMetadata = BodyMetadata:new({
+      savedBody = description,
       body = description,
       dirty = false,
       extmark = desc_mark,
       viewerCanUpdate = issue.viewerCanUpdate
-    }
-  )
+    })
+  end
 end
 
 function M.write_reactions(bufnr, reaction_groups, line)
   -- clear namespace and set vt
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
   local reactions_vt = {}
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
       local icon = util.reaction_map[group.content]
       local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
-      local count = format(" %s ", group.users.totalCount)
+      local count = string.format(" %s ", group.users.totalCount)
       vim.list_extend(reactions_vt, bubble)
       table.insert(reactions_vt, { count, "Normal" })
     end
@@ -144,12 +140,12 @@ end
 
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
   local details = {}
 
   -- author
-  local author_vt = {{"Created by: ", "OctoNvimDetailsLabel"}}
+  local author_vt = {{"Created by: ", "OctoDetailsLabel"}}
   local author_bubble = bubbles.make_user_bubble(
     issue.author.login,
     issue.viewerDidAuthor
@@ -160,30 +156,30 @@ function M.write_details(bufnr, issue, update)
 
   -- created_at
   local created_at_vt = {
-    {"Created at: ", "OctoNvimDetailsLabel"},
-    {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
+    {"Created at: ", "OctoDetailsLabel"},
+    {util.format_date(issue.createdAt), "OctoDetailsValue"}
   }
   table.insert(details, created_at_vt)
 
   if issue.state == "CLOSED" then
     -- closed_at
     local closed_at_vt = {
-      {"Closed at: ", "OctoNvimDetailsLabel"},
-      {util.format_date(issue.closedAt), "OctoNvimDetailsValue"}
+      {"Closed at: ", "OctoDetailsLabel"},
+      {util.format_date(issue.closedAt), "OctoDetailsValue"}
     }
     table.insert(details, closed_at_vt)
   else
     -- updated_at
     local updated_at_vt = {
-      {"Updated at: ", "OctoNvimDetailsLabel"},
-      {util.format_date(issue.updatedAt), "OctoNvimDetailsValue"}
+      {"Updated at: ", "OctoDetailsLabel"},
+      {util.format_date(issue.updatedAt), "OctoDetailsValue"}
     }
     table.insert(details, updated_at_vt)
   end
 
   -- assignees
   local assignees_vt = {
-    {"Assignees: ", "OctoNvimDetailsLabel"}
+    {"Assignees: ", "OctoDetailsLabel"}
   }
   if issue.assignees and #issue.assignees.nodes > 0 then
     for _, assignee in ipairs(issue.assignees.nodes) do
@@ -191,23 +187,23 @@ function M.write_details(bufnr, issue, update)
       vim.list_extend(assignees_vt, user_bubble)
     end
   else
-    table.insert(assignees_vt, {"No one assigned ", "OctoNvimMissingDetails"})
+    table.insert(assignees_vt, {"No one assigned ", "OctoMissingDetails"})
   end
   table.insert(details, assignees_vt)
 
   -- projects
   if issue.projectCards and #issue.projectCards.nodes > 0 then
     local projects_vt = {
-      {"Projects: ", "OctoNvimDetailsLabel"}
+      {"Projects: ", "OctoDetailsLabel"}
     }
     --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
     --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
     for _, card in ipairs(issue.projectCards.nodes) do
       if card.column ~= vim.NIL then
         table.insert(projects_vt, {card.column.name, })
-        table.insert(projects_vt, {" (", "OctoNvimDetailsLabel"})
+        table.insert(projects_vt, {" (", "OctoDetailsLabel"})
         table.insert(projects_vt, {card.project.name})
-        table.insert(projects_vt, {")", "OctoNvimDetailsLabel"})
+        table.insert(projects_vt, {")", "OctoDetailsLabel"})
       end
     end
     table.insert(details, projects_vt)
@@ -216,31 +212,31 @@ function M.write_details(bufnr, issue, update)
   -- milestones
   local ms = issue.milestone
   local milestone_vt = {
-    {"Milestone: ", "OctoNvimDetailsLabel"}
+    {"Milestone: ", "OctoDetailsLabel"}
   }
   if ms ~= nil and ms ~= vim.NIL then
-    table.insert(milestone_vt, {ms.title, "OctoNvimDetailsValue"})
-    table.insert(milestone_vt, {format(" (%s)", util.state_hl_map[ms.state]), "OctoNvimDetailsValue"})
+    table.insert(milestone_vt, {ms.title, "OctoDetailsValue"})
+    table.insert(milestone_vt, {string.format(" (%s)", util.state_hl_map[ms.state]), "OctoDetailsValue"})
   else
-    table.insert(milestone_vt, {"No milestone", "OctoNvimMissingDetails"})
+    table.insert(milestone_vt, {"No milestone", "OctoMissingDetails"})
   end
   table.insert(details, milestone_vt)
 
   -- labels
   local labels_vt = {
-    {"Labels: ", "OctoNvimDetailsLabel"}
+    {"Labels: ", "OctoDetailsLabel"}
   }
   if #issue.labels.nodes > 0 then
     for _, label in ipairs(issue.labels.nodes) do
       local label_bubble = bubbles.make_label_bubble(
         label.name,
         label.color,
-        { margin_width = 1 }
+        { right_margin_width = 1 }
       )
       vim.list_extend(labels_vt, label_bubble)
     end
   else
-    table.insert(labels_vt, {"None yet", "OctoNvimMissingDetails"})
+    table.insert(labels_vt, {"None yet", "OctoMissingDetails"})
   end
   table.insert(details, labels_vt)
 
@@ -269,18 +265,20 @@ function M.write_details(bufnr, issue, update)
     end
     if issue.reviewRequests and issue.reviewRequests.totalCount > 0 then
       for _, reviewRequest in ipairs(issue.reviewRequests.nodes) do
-        local name = reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name
-        collect_reviewer(name, "REVIEW_REQUIRED")
+        if reviewRequest.requestedReviewer ~= vim.NIL then
+          local name = reviewRequest.requestedReviewer.login or reviewRequest.requestedReviewer.name
+          collect_reviewer(name, "REVIEW_REQUIRED")
+        end
       end
     end
     local reviewers_vt = {
-      {"Reviewers: ", "OctoNvimDetailsLabel"}
+      {"Reviewers: ", "OctoDetailsLabel"}
     }
     if #vim.tbl_keys(reviewers) > 0 then
       for _, name in ipairs(vim.tbl_keys(reviewers)) do
         local strongest_review = util.calculate_strongest_review_state(reviewers[name])
         local reviewer_vt = {
-          {name , "OctoNvimUser"},
+          {name , "OctoUser"},
           {" "},
           {util.state_icon_map[strongest_review], util.state_hl_map[strongest_review]},
           {" "},
@@ -288,13 +286,13 @@ function M.write_details(bufnr, issue, update)
         vim.list_extend(reviewers_vt, reviewer_vt)
       end
     else
-      table.insert(reviewers_vt, {"No reviewers", "OctoNvimMissingDetails"})
+      table.insert(reviewers_vt, {"No reviewers", "OctoMissingDetails"})
     end
     table.insert(details, reviewers_vt)
 
     -- merged_by
     if issue.merged then
-      local merged_by_vt = {{"Merged by: ", "OctoNvimDetailsLabel"}}
+      local merged_by_vt = {{"Merged by: ", "OctoDetailsLabel"}}
       local name = issue.mergedBy.login or issue.mergedBy.name
       local is_viewer = issue.mergedBy.isViewer or false
       local user_bubble = bubbles.make_user_bubble(name, is_viewer)
@@ -304,43 +302,43 @@ function M.write_details(bufnr, issue, update)
 
     -- from/into branches
     local branches_vt = {
-      {"From: ", "OctoNvimDetailsLabel"},
-      {issue.headRefName, "OctoNvimDetailsValue"},
-      {" Into: ", "OctoNvimDetailsLabel"},
-      {issue.baseRefName, "OctoNvimDetailsValue"}
+      {"From: ", "OctoDetailsLabel"},
+      {issue.headRefName, "OctoDetailsValue"},
+      {" Into: ", "OctoDetailsLabel"},
+      {issue.baseRefName, "OctoDetailsValue"}
     }
     table.insert(details, branches_vt)
 
     -- review decision
     if issue.reviewDecision and issue.reviewDecision ~= vim.NIL then
       local decision_vt = {
-        {"Review decision: ", "OctoNvimDetailsLabel"},
+        {"Review decision: ", "OctoDetailsLabel"},
         {util.state_message_map[issue.reviewDecision]},
       }
       table.insert(details, decision_vt)
     end
 
     -- changes
-    local unit = (issue.additions + issue.deletions) / 4
-    local additions = math.floor(0.5 + issue.additions / unit)
-    local deletions = math.floor(0.5 + issue.deletions / unit)
     local changes_vt = {
-      {"Commits: ", "OctoNvimDetailsLabel"},
-      {tostring(issue.commits.totalCount), "OctoNvimDetailsValue"},
-      {" Changed files: ", "OctoNvimDetailsLabel"},
-      {tostring(issue.changedFiles), "OctoNvimDetailsValue"},
-      {" (", "OctoNvimDetailsLabel"},
-      {format("+%d ", issue.additions), "OctoNvimPullAdditions"},
-      {format("-%d ", issue.deletions), "OctoNvimPullDeletions"}
+      {"Commits: ", "OctoDetailsLabel"},
+      {tostring(issue.commits.totalCount), "OctoDetailsValue"},
+      {" Changed files: ", "OctoDetailsLabel"},
+      {tostring(issue.changedFiles), "OctoDetailsValue"},
+      {" (", "OctoDetailsLabel"},
+      {string.format("+%d ", issue.additions), "OctoDiffstatAdditions"},
+      {string.format("-%d ", issue.deletions), "OctoDiffstatDeletions"}
     }
-    if additions > 0 then
-      table.insert(changes_vt, {string.rep("■", additions), "OctoNvimPullAdditions"})
+    local diffstat = util.diffstat({additions = issue.additions, deletions = issue.deletions})
+    if diffstat.additions > 0 then
+      table.insert(changes_vt, {string.rep("■", diffstat.additions), "OctoDiffstatAdditions"})
     end
-    if deletions > 0 then
-      table.insert(changes_vt, {string.rep("■", deletions), "OctoNvimPullDeletions"})
+    if diffstat.deletions > 0 then
+      table.insert(changes_vt, {string.rep("■", diffstat.deletions), "OctoDiffstatDeletions"})
     end
-    table.insert(changes_vt, {"■", "OctiNvimPullModifications"})
-    table.insert(changes_vt, {")", "OctoNvimDetailsLabel"})
+    if diffstat.neutral > 0 then
+      table.insert(changes_vt, {string.rep("■", diffstat.neutral), "OctoDiffstatNeutral"})
+    end
+    table.insert(changes_vt, {")", "OctoDetailsLabel"})
     table.insert(details, changes_vt)
   end
 
@@ -368,33 +366,37 @@ function M.write_comment(bufnr, comment, kind, line)
   ---- PullRequestReview
   ---- PullRequestReviewComment
 
+  local buffer = octo_buffers[bufnr]
+  local conf = config.get_config()
+
   -- heading
-  line = line or api.nvim_buf_line_count(bufnr) + 1
+  line = line or vim.api.nvim_buf_line_count(bufnr) + 1
   local start_line = line
   M.write_block(bufnr, {"", ""}, line)
 
   local header_vt = {}
-  local author_bubble = bubbles.make_user_bubble(
-    comment.author.login,
-    comment.viewerDidAuthor,
-    { margin_width = 1 }
-  )
+  -- local author_bubble = bubbles.make_user_bubble(
+  --   comment.author.login,
+  --   comment.viewerDidAuthor,
+  --   { margin_width = 1 }
+  -- )
 
   if kind == "PullRequestReview" then
     -- Review top-level comments
     local state_bubble = bubbles.make_bubble(
-      comment.state:lower(),
-      util.state_hl_map[comment.state],
-      { margin_width = 1 }
+      util.state_msg_map[comment.state],
+      util.state_hl_map[comment.state]
     )
-    table.insert(header_vt, {"REVIEW:", "OctoNvimTimelineItemHeading"})
-    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+    table.insert(header_vt, {"REVIEW: ", "OctoTimelineItemHeading"})
+    --vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
     vim.list_extend(header_vt, state_bubble)
-    table.insert(header_vt, {" (", "OctoNvimSymbol"})
-    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
-    table.insert(header_vt, {") ", "OctoNvimSymbol"})
+    table.insert(header_vt, {"(", "OctoSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoDate"})
+    table.insert(header_vt, {") ", "OctoSymbol"})
     if not comment.viewerCanUpdate then
-      table.insert(header_vt, {"", "OctoNvimRed"})
+      table.insert(header_vt, {"", "OctoRed"})
     end
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
@@ -403,29 +405,33 @@ function M.write_comment(bufnr, comment, kind, line)
       util.state_hl_map[comment.state],
       { margin_width = 1 }
     )
-    table.insert(header_vt, {"THREAD COMMENT:", "OctoNvimTimelineItemHeading"})
-    vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {string.rep(" ", 2*conf.timeline_indent)..conf.timeline_marker.." ", "OctoTimelineMarker"})
+    table.insert(header_vt, {"THREAD COMMENT: ", "OctoTimelineItemHeading"})
+    --vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
     if comment.state ~= "SUBMITTED" then
       vim.list_extend(header_vt, state_bubble)
     end
-    table.insert(header_vt, {" (", "OctoNvimSymbol"})
-    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
-    table.insert(header_vt, {") ", "OctoNvimSymbol"})
+    table.insert(header_vt, {" (", "OctoSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoDate"})
+    table.insert(header_vt, {") ", "OctoSymbol"})
     if not comment.viewerCanUpdate then
-      table.insert(header_vt, {"", "OctoNvimRed"})
+      table.insert(header_vt, {"", "OctoRed"})
     end
   elseif kind == "IssueComment" then
     -- Issue comments
-    table.insert(header_vt, {"COMMENT:", "OctoNvimTimelineItemHeading"})
-    vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {"(", "OctoNvimSymbol"})
-    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoNvimDate"})
-    table.insert(header_vt, {") ", "OctoNvimSymbol"})
+    table.insert(header_vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+    table.insert(header_vt, {"COMMENT: ", "OctoTimelineItemHeading"})
+    --vim.list_extend(header_vt, author_bubble)
+    table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
+    table.insert(header_vt, {" (", "OctoSymbol"})
+    table.insert(header_vt, {util.format_date(comment.createdAt), "OctoDate"})
+    table.insert(header_vt, {") ", "OctoSymbol"})
     if not comment.viewerCanUpdate then
-      table.insert(header_vt, {"", "OctoNvimRed"})
+      table.insert(header_vt, {"", "OctoRed"})
     end
   end
-  local comment_vt_ns = api.nvim_create_namespace("")
+  local comment_vt_ns = vim.api.nvim_create_namespace("")
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
 
   if kind == "PullRequestReview" and util.is_blank(comment.body) then
@@ -454,38 +460,38 @@ function M.write_comment(bufnr, comment, kind, line)
   end
 
   -- update metadata
-  local comments_metadata = api.nvim_buf_get_var(bufnr, "comments")
+  local comments_metadata = buffer.commentsMetadata
   table.insert(
     comments_metadata,
     {
       author = comment.author.name,
       id = comment.id,
       dirty = false,
-      saved_body = comment_body,
+      savedBody = comment_body,
       body = comment_body,
       extmark = comment_mark,
       namespace = comment_vt_ns,
-      reaction_line = reaction_line,
+      reactionLine = reaction_line,
       viewerCanUpdate = comment.viewerCanUpdate,
       viewerCanDelete = comment.viewerCanDelete,
       viewerDidAuthor = comment.viewerDidAuthor,
-      reaction_groups = comment.reactionGroups,
+      reactionGroups = comment.reactionGroups,
       kind = kind,
       replyTo = comment.replyTo,
       reviewId = comment.pullRequestReview and comment.pullRequestReview.id,
       path = comment.path,
       diffSide = comment.diffSide,
-      codeStartLine = comment.start_line,
-      codeEndLine = comment.end_line
+      snippetStartLine = comment.start_line,
+      snippetEndLine = comment.end_line
     }
   )
-  api.nvim_buf_set_var(bufnr, "comments", comments_metadata)
 
   return start_line, line - 1
 end
 
 local function find_snippet_range(diffhunk_lines)
-  local context_lines = require"octo".settings.snippet_context_lines or 4
+  local conf = config.get_config()
+  local context_lines = conf.snippet_context_lines or 4
   local snippet_start
   local count = 0
   for i = #diffhunk_lines, 1, -1 do
@@ -527,31 +533,31 @@ local function get_lnum_chunks(opts)
     return {
       {string.rep(" ", opts.max_lnum), "DiffAdd"},
       {" ", "DiffAdd"},
-      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.right_line)))..tostring(opts.right_line), "DiffAdd"},
+      {string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.right_line)))..tostring(opts.right_line), "DiffAdd"},
       {" ", "DiffAdd"}
     }
   elseif not opts.right_line and opts.left_line then
     return {
-      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.left_line)))..tostring(opts.left_line), "DiffDelete"},
+      {string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.left_line)))..tostring(opts.left_line), "DiffDelete"},
       {" ", "DiffDelete"},
       {string.rep(" ", opts.max_lnum), "DiffDelete"},
       {" ", "DiffDelete"}
     }
   elseif opts.right_line and opts.left_line then
     return {
-      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.left_line)))..tostring(opts.left_line)},
+      {string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.left_line)))..tostring(opts.left_line)},
       {" "},
-      {string.rep(" ", opts.max_lnum - strlen(tostring(opts.right_line)))..tostring(opts.right_line)},
+      {string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.right_line)))..tostring(opts.right_line)},
       {" "}
     }
   end
 end
 
 function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
-  start_line = start_line or api.nvim_buf_line_count(bufnr) + 1
+  start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, start_line - 2, -1)
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, start_line - 2, -1)
 
   local diffhunk_lines = vim.split(diffhunk, "\n")
 
@@ -581,7 +587,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   end
 
   -- calculate length of the higher line number
-  local max_lnum = math.max(strlen(tostring(right_offset + #diffhunk_lines)), strlen(tostring(left_offset + #diffhunk_lines)))
+  local max_lnum = math.max(vim.fn.strdisplaywidth(tostring(right_offset + #diffhunk_lines)), vim.fn.strdisplaywidth(tostring(left_offset + #diffhunk_lines)))
 
   -- calculate diffhunk subrange to show
   local snippet_start = start_line
@@ -627,8 +633,8 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   local max_length = -1
   for i = snippet_start, snippet_end do
     local line = diffhunk_lines[i]
-    if strlen(line) > max_length then
-      max_length = strlen(line)
+    if vim.fn.strdisplaywidth(line) > max_length then
+      max_length = vim.fn.strdisplaywidth(line)
     end
   end
   max_length = math.max(max_length, vim.fn.winwidth(0) - 10)
@@ -642,7 +648,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
 
   -- prepare vt chunks
   local vt_lines = {}
-  table.insert(vt_lines, {{format("┌%s┐", string.rep("─", max_length + 2))}})
+  table.insert(vt_lines, {{string.format("┌%s┐", string.rep("─", max_length + 2))}})
   for i = snippet_start, snippet_end do
     local line = diffhunk_lines[i]
 
@@ -655,7 +661,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
           {string.rep(" ", 2*max_lnum +1), "DiffLine"},
           {string.sub(line, 0, index), "DiffLine"},
           {string.sub(line, index + 1), "DiffLine"},
-          {string.rep(" ", 1 + max_length - strlen(line) - 2*max_lnum), "DiffLine"},
+          {string.rep(" ", 1 + max_length - vim.fn.strdisplaywidth(line) - 2*max_lnum), "DiffLine"},
           {"│"}
         }
       )
@@ -664,7 +670,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       vim.list_extend(vt_line, get_lnum_chunks({right_line=right_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line:gsub("^.", " "), "DiffAdd"},
-        {string.rep(" ", max_length - strlen(line) - 2*max_lnum), "DiffAdd"},
+        {string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2*max_lnum), "DiffAdd"},
         {"│"}
       })
       table.insert(vt_lines, vt_line)
@@ -673,7 +679,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       vim.list_extend(vt_line, get_lnum_chunks({left_line=left_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line:gsub("^.", " "), "DiffDelete"},
-        {string.rep(" ", max_length - strlen(line) - 2*max_lnum), "DiffDelete"},
+        {string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2*max_lnum), "DiffDelete"},
         {"│"}
       })
       table.insert(vt_lines, vt_line)
@@ -682,13 +688,13 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       vim.list_extend(vt_line, get_lnum_chunks({left_line=left_side_lines[i], right_line=right_side_lines[i], max_lnum=max_lnum}))
       vim.list_extend(vt_line, {
         {line},
-        {string.rep(" ", max_length - strlen(line) - 2*max_lnum)},
+        {string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2*max_lnum)},
         {"│"}
       })
       table.insert(vt_lines, vt_line)
     end
   end
-  table.insert(vt_lines, {{format("└%s┘", string.rep("─", max_length + 2))}})
+  table.insert(vt_lines, {{string.format("└%s┘", string.rep("─", max_length + 2))}})
 
   -- write snippet as virtual text
   local line = start_line - 1
@@ -701,34 +707,39 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
 end
 
 function M.write_review_thread_header(bufnr, opts, line)
-  line = line or api.nvim_buf_line_count(bufnr) - 1
+  line = line or vim.api.nvim_buf_line_count(bufnr) - 1
+
+  local conf = config.get_config()
 
   -- clear virtual texts
-  api.nvim_buf_clear_namespace(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, line + 2)
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, line + 2)
 
   local header_vt = {
-    {"THREAD: ", "OctoNvimTimelineItemHeading"},
-    {"[", "OctoNvimSymbol"},
-    {opts.path.." ", "OctoNvimDetailsLabel"},
-    {tostring(opts.start_line)..":"..tostring(opts.end_line), "OctoNvimDetailsValue"},
-    {"] ", "OctoNvimSymbol"},
+    {string.rep(" ", conf.timeline_indent)..conf.timeline_marker.." ", "OctoTimelineMarker"},
+    {"THREAD: ", "OctoTimelineItemHeading"},
+    {"[", "OctoSymbol"},
+    {opts.path.." ", "OctoDetailsLabel"},
+    {tostring(opts.start_line)..":"..tostring(opts.end_line), "OctoDetailsValue"},
+    {"] ", "OctoSymbol"},
   }
   if opts.isOutdated then
-    local outdated_bubble = bubbles.make_bubble(
-      "outdated",
-      "OctoNvimBubbleRed",
-      { margin_width = 1 }
-    )
-    vim.list_extend(header_vt, outdated_bubble)
+    -- local outdated_bubble = bubbles.make_bubble(
+    --   "outdate",
+    --   "OctoBubbleRed",
+    --   { margin_width = 1 }
+    -- )
+    -- vim.list_extend(header_vt, outdated_bubble)
+    vim.list_extend(header_vt, {{" ", "OctoRed"}})
   end
 
   if opts.isResolved then
-    local resolved_bubble = bubbles.make_bubble(
-      "resolved",
-      "OctoNvimBubbleGreen",
-      { margin_width = 1 }
-    )
-    vim.list_extend(header_vt, resolved_bubble)
+    -- local resolved_bubble = bubbles.make_bubble(
+    --   "resolved",
+    --   "OctoBubbleGreen",
+    --   { margin_width = 1 }
+    -- )
+    --vim.list_extend(header_vt, resolved_bubble)
+    vim.list_extend(header_vt, {{"﫠", "OctoGreen"}})
   end
 
   M.write_block(bufnr, {""})
@@ -740,7 +751,7 @@ function M.write_reactions_summary(bufnr, reactions)
   local max_width = math.floor(vim.fn.winwidth(0) * 0.4)
   for reaction, users in pairs(reactions) do
     local user_str = table.concat(users, ", ")
-    local reaction_lines = util.text_wrap(format(" %s %s", util.reaction_map[reaction], user_str), max_width)
+    local reaction_lines = util.text_wrap(string.format(" %s %s", util.reaction_map[reaction], user_str), max_width)
     local indented_lines = {reaction_lines[1]}
     for i=2,#reaction_lines do
       table.insert(indented_lines, "   "..reaction_lines[i])
@@ -749,16 +760,16 @@ function M.write_reactions_summary(bufnr, reactions)
   end
   local max_length = -1
   for _, line in ipairs(lines) do
-    max_length = math.max(max_length, strlen(line))
+    max_length = math.max(max_length, vim.fn.strdisplaywidth(line))
   end
-  api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
+  vim.api.nvim_buf_set_lines(bufnr, 0, 0, false, lines)
   return #lines, max_length
 end
 
 local function chunk_length(max_length, chunk)
   local length = 0
   for _, c in ipairs(chunk) do
-    length = length + strlen(c[1])
+    length = length + vim.fn.strdisplaywidth(c[1])
   end
   return math.max(max_length, length)
 end
@@ -772,11 +783,11 @@ function M.write_user_profile(bufnr, user, opts)
   -- name
   local name_chunk = {
     {" "},
-    {user.login, "OctoNvimDetailsValue"},
+    {user.login, "OctoDetailsValue"},
   }
   if user.name ~= vim.NIL then
     vim.list_extend(name_chunk, {
-      {format(" (%s)", user.name)},
+      {string.format(" (%s)", user.name)},
     })
   end
   max_length = chunk_length(max_length, name_chunk)
@@ -810,9 +821,9 @@ function M.write_user_profile(bufnr, user, opts)
   -- followers/following
   local follow_chunk = {
     {" "},
-    {"Followers: ", "OctoNvimDetailsValue"},
+    {"Followers: ", "OctoDetailsValue"},
     {tostring(user.followers.totalCount)},
-    {" Following: ", "OctoNvimDetailsValue"},
+    {" Following: ", "OctoDetailsValue"},
     {tostring(user.following.totalCount)},
   }
   max_length = chunk_length(max_length, follow_chunk)
@@ -875,7 +886,7 @@ function M.write_user_profile(bufnr, user, opts)
   if user.hasSponsorsListing then
     local sponsor_bubble = bubbles.make_bubble(
       "SPONSOR",
-      "OctoNvimBubbleBlue",
+      "OctoBubbleBlue",
       { margin_width = 1 }
     )
     vim.list_extend(badges_chunk, sponsor_bubble)
@@ -883,7 +894,7 @@ function M.write_user_profile(bufnr, user, opts)
   if user.isEmployee then
     local staff_bubble = bubbles.make_bubble(
       "STAFF",
-      "OctoNvimBubblePurple",
+      "OctoBubblePurple",
       { margin_width = 1 }
     )
     vim.list_extend(badges_chunk, staff_bubble)
@@ -904,23 +915,24 @@ end
 
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
+  local conf = config.get_config()
   local max_length = opts.max_length or 80
   local chunks = {}
 
   -- repo and date line
   table.insert(chunks, {
     {" "},
-    {issue.repository.nameWithOwner, "OctoNvimDetailsValue"},
-    {" on ", "OctoNvimDetailsLabel"},
-    {util.format_date(issue.createdAt), "OctoNvimDetailsValue"}
+    {issue.repository.nameWithOwner, "OctoDetailsValue"},
+    {" on ", "OctoDetailsLabel"},
+    {util.format_date(issue.createdAt), "OctoDetailsValue"}
   })
 
   -- issue body
   table.insert(chunks, {
     {" "},
     {"["..issue.state.."] ", util.state_hl_map[issue.state]},
-    {issue.title.." ", "OctoNvimDetailsLabel"},
-    {"#"..issue.number.." ", "OctoNvimDetailsValue"}
+    {issue.title.." ", "OctoDetailsLabel"},
+    {"#"..issue.number.." ", "OctoDetailsValue"}
   })
   table.insert(chunks, {{""}})
 
@@ -942,7 +954,7 @@ function M.write_issue_summary(bufnr, issue, opts)
       local label_bubble = bubbles.make_label_bubble(
         label.name,
         label.color,
-        { margin_width = 1 }
+        { right_margin_width = 1 }
       )
       vim.list_extend(labels, label_bubble)
     end
@@ -954,11 +966,11 @@ function M.write_issue_summary(bufnr, issue, opts)
   if issue.__typename == "PullRequest" then
     table.insert(chunks, {
       {" "},
-      {"[", "OctoNvimDetailsValue"},
-      {issue.baseRefName, "OctoNvimDetailsLabel"},
-      {"] ⟵ [", "OctoNvimDetailsValue"},
-      {issue.headRefName, "OctoNvimDetailsLabel"},
-      {"]", "OctoNvimDetailsValue"},
+      {"[", "OctoDetailsValue"},
+      {issue.baseRefName, "OctoDetailsLabel"},
+      {"] ⟵ [", "OctoDetailsValue"},
+      {issue.headRefName, "OctoDetailsLabel"},
+      {"]", "OctoDetailsValue"},
     })
     table.insert(chunks, {{""}})
   end
@@ -966,7 +978,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   -- author line
   table.insert(chunks, {
     {" "},
-    {require"octo".settings.user_icon or " "},
+    {conf.user_icon or " "},
     {issue.author.login}
   })
 
@@ -980,120 +992,206 @@ function M.write_issue_summary(bufnr, issue, opts)
 end
 
 local function write_event(bufnr, vt)
-  local line = api.nvim_buf_line_count(bufnr) - 1
+  local line = vim.api.nvim_buf_line_count(bufnr) - 1
   M.write_block(bufnr, {""}, line + 2)
   M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line+1, vt)
 end
 
 function M.write_assigned_event(bufnr, item)
-  local actor_bubble = bubbles.make_user_bubble(
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer,
-    { margin_width = 1 }
-  )
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
   local vt = {}
-  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
-  vim.list_extend(vt, actor_bubble)
-  table.insert(vt, {" assigned this to ", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {item.assignee.login or item.assignee.name, "OctoNvimDetailsLabel"})
-  table.insert(vt, {" (", "OctoNvimSymbol"})
-  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
-  table.insert(vt, {")", "OctoNvimSymbol"})
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+  --vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+  table.insert(vt, {" assigned this to ", "OctoTimelineItemHeading"})
+  table.insert(vt, {item.assignee.login or item.assignee.name, "OctoDetailsLabel"})
+  table.insert(vt, {" (", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_commit_event(bufnr, item)
   local vt = {}
-  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
   if item.commit.committer.user ~= vim.NIL then
-    local commiter_bubble = bubbles.make_user_bubble(
-      item.commit.committer.user.login,
-      item.commit.committer.user.login == vim.g.octo_viewer
-    )
-    vim.list_extend(vt, commiter_bubble)
+    -- local commiter_bubble = bubbles.make_user_bubble(
+    --   item.commit.committer.user.login,
+    --   item.commit.committer.user.login == vim.g.octo_viewer
+    -- )
+    -- vim.list_extend(vt, commiter_bubble)
+    table.insert(vt, {item.commit.committer.user.login, item.commit.committer.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
   end
-  table.insert(vt, {" added ", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {item.commit.abbreviatedOid, "OctoNvimDetailsLabel"})
-  table.insert(vt, {" '", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {item.commit.messageHeadline, "OctoNvimDetailsLabel"})
-  table.insert(vt, {"' (", "OctoNvimSymbol"})
-  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
-  table.insert(vt, {")", "OctoNvimSymbol"})
+  table.insert(vt, {" added ", "OctoTimelineItemHeading"})
+  table.insert(vt, {item.commit.abbreviatedOid, "OctoDetailsLabel"})
+  table.insert(vt, {" '", "OctoTimelineItemHeading"})
+  table.insert(vt, {item.commit.messageHeadline, "OctoDetailsLabel"})
+  table.insert(vt, {"' (", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_merged_event(bufnr, item)
-  local actor_bubble = bubbles.make_user_bubble(
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer
-  )
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
   local vt = {}
-  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
-  vim.list_extend(vt, actor_bubble)
-  table.insert(vt, {" merged commit ", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {item.commit.abbreviatedOid, "OctoNvimDetailsLabel"})
-  table.insert(vt, {" into ", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {item.mergeRefName, "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {" (", "OctoNvimSymbol"})
-  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
-  table.insert(vt, {")", "OctoNvimSymbol"})
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+  --vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+  table.insert(vt, {" merged commit ", "OctoTimelineItemHeading"})
+  table.insert(vt, {item.commit.abbreviatedOid, "OctoDetailsLabel"})
+  table.insert(vt, {" into ", "OctoTimelineItemHeading"})
+  table.insert(vt, {item.mergeRefName, "OctoTimelineItemHeading"})
+  table.insert(vt, {" (", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_closed_event(bufnr, item)
-  local actor_bubble = bubbles.make_user_bubble(
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer
-  )
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
   local vt = {}
-  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
-  vim.list_extend(vt, actor_bubble)
-  table.insert(vt, {" closed this ", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {"(", "OctoNvimSymbol"})
-  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
-  table.insert(vt, {")", "OctoNvimSymbol"})
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+  --vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+  table.insert(vt, {" closed this ", "OctoTimelineItemHeading"})
+  table.insert(vt, {"(", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
   write_event(bufnr, vt)
 end
 
-function M.write_labeled_event(bufnr, item, action)
-  local actor_bubble = bubbles.make_user_bubble(
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer
-  )
-  local label_bubble = bubbles.make_label_bubble(
-    item.label.name,
-    item.label.color,
-    { margin_width = 1 }
-  )
-  local vt = {}
-  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
-  vim.list_extend(vt, actor_bubble)
-  table.insert(vt, {" "..action, "OctoNvimTimelineItemHeading"})
-  vim.list_extend(vt, label_bubble)
-  table.insert(vt, {"label ", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {"(", "OctoNvimSymbol"})
-  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
-  table.insert(vt, {")", "OctoNvimSymbol"})
-  write_event(bufnr, vt)
+function M.write_labeled_events(bufnr, items, action)
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
+  local labels_by_actor = {}
+  for _, item in  ipairs(items) do
+    local labels = labels_by_actor[item.actor.login] or {}
+    table.insert(labels, item.label)
+    labels_by_actor[item.actor.login] = labels
+  end
+
+  for _, actor in ipairs(vim.tbl_keys(labels_by_actor)) do
+    local vt = {}
+    local conf = config.get_config()
+    table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+    table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+    --vim.list_extend(vt, actor_bubble)
+    table.insert(vt, {actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+    table.insert(vt, {" "..action.." ", "OctoTimelineItemHeading"})
+    local labels = labels_by_actor[actor]
+    for _, label in ipairs(labels) do
+      local label_bubble = bubbles.make_label_bubble(
+        label.name,
+        label.color,
+        { right_margin_width = 1 }
+      )
+      vim.list_extend(vt, label_bubble)
+    end
+    table.insert(vt, {#labels > 1 and "labels" or "label", "OctoTimelineItemHeading"})
+    write_event(bufnr, vt)
+  end
 end
 
 function M.write_reopened_event(bufnr, item)
-  local actor_bubble = bubbles.make_user_bubble(
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer
-  )
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
   local vt = {}
-  table.insert(vt, {"EVENT: ", "OctoNvimTimelineItemHeading"})
-  vim.list_extend(vt, actor_bubble)
-  table.insert(vt, {" reopened this ", "OctoNvimTimelineItemHeading"})
-  table.insert(vt, {"(", "OctoNvimSymbol"})
-  table.insert(vt, {util.format_date(item.createdAt), "OctoNvimDate"})
-  table.insert(vt, {")", "OctoNvimSymbol"})
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+  --vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+  table.insert(vt, {" reopened this ", "OctoTimelineItemHeading"})
+  table.insert(vt, {"(", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
+  write_event(bufnr, vt)
+end
+
+function M.write_review_requested_event(bufnr, item)
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
+  local vt = {}
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+  --vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+  table.insert(vt, {" requested a review from ", "OctoTimelineItemHeading"})
+  table.insert(vt, {item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser"})
+  table.insert(vt, {" (", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
+  write_event(bufnr, vt)
+end
+
+function M.write_review_request_removed_event(bufnr, item)
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
+  local vt = {}
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+  --vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+  table.insert(vt, {" removed a review request for ", "OctoTimelineItemHeading"})
+  table.insert(vt, {item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser"})
+  table.insert(vt, {" (", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
+  write_event(bufnr, vt)
+end
+
+function M.write_review_dismissed_event(bufnr, item)
+  -- local actor_bubble = bubbles.make_user_bubble(
+  --   item.actor.login,
+  --   item.actor.login == vim.g.octo_viewer
+  -- )
+  local vt = {}
+  local conf = config.get_config()
+  table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
+  table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
+  --vim.list_extend(vt, actor_bubble)
+  table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+  table.insert(vt, {" dismissed a review", "OctoTimelineItemHeading"})
+  if item.dismissalMessage ~= vim.NIL then
+    table.insert(vt, {" [", "OctoTimelineItemHeading"})
+    table.insert(vt, {item.dismissalMessage, "OctoUser"})
+    table.insert(vt, {"]", "OctoTimelineItemHeading"})
+  end
+  table.insert(vt, {" (", "OctoSymbol"})
+  table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
+  table.insert(vt, {")", "OctoSymbol"})
   write_event(bufnr, vt)
 end
 
 function M.write_threads(bufnr, threads)
-  local review_thread_map = {}
   local comment_start, comment_end
 
   -- print each of the threads
@@ -1117,7 +1215,8 @@ function M.write_threads(bufnr, threads)
           isResolved = thread.isResolved,
         })
 
-        M.write_block(bufnr, {""}, line)
+        M.write_block(bufnr, {""})
+        --M.write_block(bufnr, {""}, line)
         -- write snippet
         thread_start, thread_end = M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
       end
@@ -1129,7 +1228,7 @@ function M.write_threads(bufnr, threads)
     folds.create(bufnr, thread_start-1, thread_end - 1, not thread.isCollapsed)
 
     -- mark the thread region
-    local thread_mark_id = api.nvim_buf_set_extmark(
+    local thread_mark_id = vim.api.nvim_buf_set_extmark(
       bufnr,
       constants.OCTO_THREAD_NS,
       thread_start - 1,
@@ -1139,24 +1238,22 @@ function M.write_threads(bufnr, threads)
         end_col = 0
       }
     )
-    -- store it as a buffer var to be able to find a thread_id given the cursor position
-    review_thread_map[tostring(thread_mark_id)] = {
+    local buffer = octo_buffers[bufnr]
+    buffer.threadsMetadata[tostring(thread_mark_id)] = ThreadMetadata:new({
       threadId = thread.id,
       replyTo = thread.comments.nodes[1].id,
       reviewId = thread.comments.nodes[1].pullRequestReview.id
-    }
+    })
   end
-
-  local buffer_thread_map = api.nvim_buf_get_var(bufnr, "review_thread_map")
-  local merged = vim.tbl_extend("error", buffer_thread_map, review_thread_map)
-  api.nvim_buf_set_var(bufnr, "review_thread_map", merged)
 
   return comment_end
 end
 
 function M.write_virtual_text(bufnr, ns, line, chunks)
-  api.nvim_buf_set_extmark(bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
-  --api.nvim_buf_set_virtual_text(bufnr, ns, line, chunks, {})
+  local ok = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
+  --if not ok then
+    --print(vim.inspect(chunks))
+  --end
 end
 
 return M

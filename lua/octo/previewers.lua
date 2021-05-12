@@ -1,3 +1,4 @@
+local OctoBuffer = require'octo.model.octo-buffer'.OctoBuffer
 local previewers = require "telescope.previewers"
 local utils = require "telescope.utils"
 local putils = require "telescope.previewers.utils"
@@ -6,12 +7,6 @@ local graphql = require "octo.graphql"
 local util = require "octo.util"
 local gh = require "octo.gh"
 local defaulter = utils.make_default_callable
-local flatten = vim.tbl_flatten
-local format = string.format
-local api = vim.api
-local json = {
-  parse = vim.fn.json_decode,
-}
 
 local M = {}
 
@@ -24,24 +19,24 @@ M.issue =
       end,
       define_preview = function(self, entry)
         local bufnr = self.state.bufnr
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
+        if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.issue.number
           local owner, name = util.split_repo(opts.repo)
           local query = graphql("issue_query", owner, name, number)
           gh.run(
             {
-              args = {"api", "graphql", "-f", format("query=%s", query)},
+              args = {"api", "graphql", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
                 if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
-                elseif output and api.nvim_buf_is_valid(bufnr) then
-                  local result = json.parse(output)
+                  vim.api.nvim_err_writeln(stderr)
+                elseif output and vim.api.nvim_buf_is_valid(bufnr) then
+                  local result = vim.fn.json_decode(output)
                   local issue = result.data.repository.issue
                   writers.write_title(bufnr, issue.title, 1)
                   writers.write_details(bufnr, issue)
                   writers.write_body(bufnr, issue)
                   writers.write_state(bufnr, issue.state:upper(), number)
-                  api.nvim_buf_set_option(bufnr, "filetype", "octo")
+                  vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
                 end
               end
             }
@@ -67,7 +62,7 @@ M.gist =
           else
             table.insert(result, "less")
           end
-          return flatten(result)
+          return vim.tbl_flatten(result)
         end
     }
   end,
@@ -83,27 +78,27 @@ M.pull_request =
       end,
       define_preview = function(self, entry)
         local bufnr = self.state.bufnr
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
+        if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.pull_request.number
           local owner, name = util.split_repo(opts.repo)
           local query = graphql("pull_request_query", owner, name, number)
           gh.run(
             {
-              args = {"api", "graphql", "-f", format("query=%s", query)},
+              args = {"api", "graphql", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
                 if stderr and not util.is_blank(stderr) then
-                  api.nvim_err_writeln(stderr)
-                elseif output and api.nvim_buf_is_valid(bufnr) then
-                  local result = json.parse(output)
+                  vim.api.nvim_err_writeln(stderr)
+                elseif output and vim.api.nvim_buf_is_valid(bufnr) then
+                  local result = vim.fn.json_decode(output)
                   local pull_request = result.data.repository.pullRequest
                   writers.write_title(bufnr, pull_request.title, 1)
                   writers.write_details(bufnr, pull_request)
                   writers.write_body(bufnr, pull_request)
                   writers.write_state(bufnr, pull_request.state:upper(), number)
-                  local reactions_line = api.nvim_buf_line_count(bufnr) - 1
+                  local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
                   writers.write_block(bufnr, {"", ""}, reactions_line)
                   writers.write_reactions(bufnr, pull_request.reactionGroups, reactions_line)
-                  api.nvim_buf_set_option(bufnr, "filetype", "octo")
+                  vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
                 end
               end
             }
@@ -123,17 +118,17 @@ M.commit =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local lines = {}
-          vim.list_extend(lines, {format("Commit: %s", entry.value)})
-          vim.list_extend(lines, {format("Author: %s", entry.author)})
-          vim.list_extend(lines, {format("Date: %s", entry.date)})
+          vim.list_extend(lines, {string.format("Commit: %s", entry.value)})
+          vim.list_extend(lines, {string.format("Author: %s", entry.author)})
+          vim.list_extend(lines, {string.format("Date: %s", entry.date)})
           vim.list_extend(lines, {""})
           vim.list_extend(lines, vim.split(entry.msg, "\n"))
           vim.list_extend(lines, {""})
-          api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
 
-          local url = format("/repos/%s/commits/%s", opts.repo, entry.value)
+          local url = string.format("/repos/%s/commits/%s", opts.repo, entry.value)
           putils.job_maker(
             {"gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff"},
             self.state.bufnr,
@@ -142,10 +137,10 @@ M.commit =
               bufname = self.state.bufname,
               mode = "append",
               callback = function(bufnr, _)
-                api.nvim_buf_set_option(bufnr, "filetype", "diff")
-                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 0, 0, string.len("Commit:"))
-                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 1, 0, string.len("Author:"))
-                api.nvim_buf_add_highlight(bufnr, -1, "OctoNvimDetailsLabel", 2, 0, string.len("Date:"))
+                vim.api.nvim_buf_set_option(bufnr, "filetype", "diff")
+                vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 0, 0, string.len("Commit:"))
+                vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 1, 0, string.len("Author:"))
+                vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 2, 0, string.len("Date:"))
               end
             }
           )
@@ -165,11 +160,11 @@ M.changed_files =
         return entry.value
       end,
       define_preview = function(self, entry)
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
           local diff = entry.change.patch
           if diff then
-            api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
-            api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
+            vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
           end
         end
       end
@@ -187,11 +182,13 @@ M.review_thread =
       end,
       define_preview = function(self, entry)
         local bufnr = self.state.bufnr
-        if self.state.bufname ~= entry.value or api.nvim_buf_line_count(bufnr) == 1 then
-          api.nvim_buf_set_var(bufnr, "review_thread_map", {})
-          api.nvim_buf_set_var(bufnr, "comments", {})
+        if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
+          local buffer = OctoBuffer:new({
+            bufnr = bufnr
+          })
+          buffer:configure()
           writers.write_threads(bufnr, {entry.thread})
-          api.nvim_buf_call(bufnr, function()
+          vim.api.nvim_buf_call(bufnr, function()
             vim.cmd [[setlocal foldmethod=manual]]
             vim.cmd [[normal! zR]]
           end)

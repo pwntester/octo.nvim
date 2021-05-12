@@ -1,4 +1,5 @@
 local highlights = require "octo.highlights"
+local config = require"octo.config"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
 -- Sometimes they are also called Chips in WebUI framworks. After all they wrap
@@ -8,11 +9,16 @@ local highlights = require "octo.highlights"
 
 local function make_bubble(content, highlight_group, opts)
   opts = opts or {}
+  local conf = config.get_config()
   local margin = string.rep(" ", opts.margin_width or 0)
+  local right_margin = string.rep(" ", opts.right_margin_width or 0)
+  local left_margin = string.rep(" ", opts.left_margin_width or 0)
   local padding = string.rep(" ", opts.padding_width or 0)
-  local body = padding .. content .. padding
-  local left_delimiter = margin .. (require"octo".settings.left_bubble_delimiter or "")
-  local right_delimiter = (require"octo".settings.right_bubble_delimiter or "") .. margin
+  local right_padding = string.rep(" ", opts.right_padding_width or 0)
+  local left_padding = string.rep(" ", opts.left_padding_width or 0)
+  local body = left_padding .. padding .. content .. padding .. right_padding
+  local left_delimiter = (left_margin .. margin) .. (conf.left_bubble_delimiter)
+  local right_delimiter = (conf.right_bubble_delimiter) .. (right_margin .. margin)
   local delimiter_color = highlights.get_background_color_of_highlight_group(highlight_group)
   local delimiter_highlight_group = highlights.create_highlight(
     delimiter_color,
@@ -28,9 +34,10 @@ end
 
 local function make_user_bubble(name, is_viewer, opts)
   opts = opts or {}
-  local highlight = is_viewer and "OctoNvimUserViewer" or "OctoNvimUser"
+  local conf = config.get_config()
+  local highlight = is_viewer and "OctoUserViewer" or "OctoUser"
   local icon_position = opts.icon_position or "left"
-  local icon = require"octo".settings.user_icon or ""
+  local icon = conf.user_icon
   icon = opts.icon or icon
   local content
   if icon_position == "left" then
@@ -42,8 +49,9 @@ local function make_user_bubble(name, is_viewer, opts)
 end
 
 local function make_reaction_bubble(icon, includes_viewer, opts)
-  local highlight = includes_viewer and "OctoNvimReactionViewer" or "OctoNvimReaction"
-  local hint_for_viewer = includes_viewer and (require"octo".settings.reaction_viewer_hint_icon or "") or ""
+  local conf = config.get_config()
+  local highlight = includes_viewer and "OctoReactionViewer" or "OctoReaction"
+  local hint_for_viewer = includes_viewer and (conf.reaction_viewer_hint_icon) or ""
   local content = icon .. hint_for_viewer
   return make_bubble(content, highlight, opts)
 end

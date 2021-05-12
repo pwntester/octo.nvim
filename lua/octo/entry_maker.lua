@@ -1,7 +1,5 @@
 local entry_display = require "telescope.pickers.entry_display"
-local util = require "octo.util"
 local bubbles = require "octo.ui.bubbles"
-local format = string.format
 
 local M = {}
 
@@ -106,7 +104,7 @@ function M.gen_from_git_commits()
       ordinal = entry.sha .. " " .. entry.commit.message,
       msg = entry.commit.message,
       display = make_display,
-      author = format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
+      author = string.format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
       date = entry.commit.author.date
     }
   end
@@ -128,9 +126,9 @@ function M.gen_from_git_changed_files()
   local make_display = function(entry)
     return displayer {
       {entry.value:sub(1, 7), "TelescopeResultsNumber"},
-      {entry.change.status, "OctoNvimDetailsLabel"},
-      {format("+%d", entry.change.additions), "OctoNvimPullAdditions"},
-      {format("-%d", entry.change.deletions), "OctoNvimPullDeletions"},
+      {entry.change.status, "OctoDetailsLabel"},
+      {string.format("+%d", entry.change.additions), "OctoPullAdditions"},
+      {string.format("-%d", entry.change.deletions), "OctoPullDeletions"},
       vim.split(entry.msg, "\n")[1]
     }
   end
@@ -225,9 +223,7 @@ end
 
 function M.gen_from_project_column()
   local make_display = function(entry)
-    if not entry then
-      return nil
-    end
+    if not entry then return nil end
 
     local columns = {
       {entry.column.name}
@@ -248,7 +244,6 @@ function M.gen_from_project_column()
     if not column or vim.tbl_isempty(column) then
       return nil
     end
-
     return {
       value = column.id,
       ordinal = column.id.. " " .. column.name,
@@ -266,7 +261,7 @@ function M.gen_from_project_card()
 
     local columns = {
       {entry.card.column.name},
-      {format(" (%s)", entry.card.project.name), "OctoNvimDetailsValue"},
+      {string.format(" (%s)", entry.card.project.name), "OctoDetailsValue"},
     }
 
     local displayer =
