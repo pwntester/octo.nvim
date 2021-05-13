@@ -1,3 +1,6 @@
+-- Heavily derived from `diffview.nvim`:
+-- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/rev.lua
+--
 local M = {}
 
 ---@class Rev

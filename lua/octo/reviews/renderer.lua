@@ -1,3 +1,6 @@
+-- Heavily derived from `diffview.nvim`:
+-- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/renderer.lua
+--
 local M = {}
 local web_devicons
 

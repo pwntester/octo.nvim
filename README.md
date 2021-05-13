@@ -383,6 +383,10 @@ See [`CONTRIBUTING`](/CONTRIBUTING.md) for ways to get started.
 
 Please adhere to this project's [`CODE_OF_CONDUCT`](/CODE_OF_CONDUCT).
 
+## 🌟 Credits
+The PR review panel is heavily inspired in [diffview.nvim](https://github.com/sindrets/diffview.nvim)
+
 ## 📜 License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+

@@ -1,3 +1,6 @@
+-- Heavily derived from `diffview.nvim`:
+-- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/view.lua
+--
 local FilePanel = require'octo.reviews.file-panel'.FilePanel
 local utils = require'octo.util'
 local file_entry = require'octo.reviews.file-entry'

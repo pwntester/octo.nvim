@@ -1,3 +1,6 @@
+-- Heavily derived from `diffview.nvim`:
+-- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-entry.lua
+--
 local utils = require'octo.util'
 local config = require'octo.config'
 local signs = require'octo.signs'
