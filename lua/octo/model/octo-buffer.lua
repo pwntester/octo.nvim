@@ -123,7 +123,7 @@ function OctoBuffer:render_issue()
       prev_is_event = true
     end
     if item.__typename ~= "UnlabeledEvent" and #unrendered_unlabeled_events > 0 then
-      writers.write_labeled_event(self.bufnr, unrendered_unlabeled_events, "removed", prev_is_event)
+      writers.write_labeled_events(self.bufnr, unrendered_unlabeled_events, "removed", prev_is_event)
       unrendered_unlabeled_events = {}
       prev_is_event = true
     end
