@@ -88,7 +88,7 @@ function Review:start()
   self:create(function(resp)
     self.id = resp.data.addPullRequestReview.pullRequestReview.id
     local threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
-    self:update_threads(self.threads)
+    self:update_threads(threads)
     self:initiate()
   end)
 end
