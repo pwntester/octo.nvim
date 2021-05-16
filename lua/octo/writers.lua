@@ -423,7 +423,9 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
     table.insert(header_vt, {"COMMENT: ", "OctoTimelineItemHeading"})
     --vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
+    if comment.author ~= vim.NIL then
+      table.insert(header_vt, {comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser"})
+    end
     table.insert(header_vt, {" (", "OctoSymbol"})
     table.insert(header_vt, {util.format_date(comment.createdAt), "OctoDate"})
     table.insert(header_vt, {") ", "OctoSymbol"})
@@ -464,7 +466,7 @@ function M.write_comment(bufnr, comment, kind, line)
   table.insert(
     comments_metadata,
     {
-      author = comment.author.name,
+      author = comment.author ~= vim.NIL and comment.author.name or "",
       id = comment.id,
       dirty = false,
       savedBody = comment_body,
@@ -1086,9 +1088,10 @@ function M.write_labeled_events(bufnr, items, action)
   -- )
   local labels_by_actor = {}
   for _, item in  ipairs(items) do
-    local labels = labels_by_actor[item.actor.login] or {}
+    local key = item.actor ~=vim.NIL and item.actor.login or vim.NIL
+    local labels = labels_by_actor[key] or {}
     table.insert(labels, item.label)
-    labels_by_actor[item.actor.login] = labels
+    labels_by_actor[key] = labels
   end
 
   for _, actor in ipairs(vim.tbl_keys(labels_by_actor)) do
@@ -1097,8 +1100,12 @@ function M.write_labeled_events(bufnr, items, action)
     table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
     table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
     --vim.list_extend(vt, actor_bubble)
-    table.insert(vt, {actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
-    table.insert(vt, {" "..action.." ", "OctoTimelineItemHeading"})
+    if actor ~= vim.NIL then
+      table.insert(vt, {actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
+      table.insert(vt, {" "..action.." ", "OctoTimelineItemHeading"})
+    else
+      table.insert(vt, {action.." ", "OctoTimelineItemHeading"})
+    end
     local labels = labels_by_actor[actor]
     for _, label in ipairs(labels) do
       local label_bubble = bubbles.make_label_bubble(
@@ -1136,14 +1143,19 @@ function M.write_review_requested_event(bufnr, item)
   --   item.actor.login,
   --   item.actor.login == vim.g.octo_viewer
   -- )
+
   local vt = {}
   local conf = config.get_config()
   table.insert(vt, {conf.timeline_marker.." ", "OctoTimelineMarker"})
   table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
-  table.insert(vt, {" requested a review from ", "OctoTimelineItemHeading"})
-  table.insert(vt, {item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser"})
+  if item.requestedReviewer == vim.NIL then
+    table.insert(vt, {" requested a review", "OctoTimelineItemHeading"})
+  else
+    table.insert(vt, {" requested a review from ", "OctoTimelineItemHeading"})
+    table.insert(vt, {item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser"})
+  end
   table.insert(vt, {" (", "OctoSymbol"})
   table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
   table.insert(vt, {")", "OctoSymbol"})
@@ -1161,8 +1173,12 @@ function M.write_review_request_removed_event(bufnr, item)
   table.insert(vt, {"EVENT: ", "OctoTimelineItemHeading"})
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, {item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser"})
-  table.insert(vt, {" removed a review request for ", "OctoTimelineItemHeading"})
-  table.insert(vt, {item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser"})
+  if item.requestedReviewer == vim.NIL then
+    table.insert(vt, {" removed a review request", "OctoTimelineItemHeading"})
+  else
+    table.insert(vt, {" removed a review request for ", "OctoTimelineItemHeading"})
+    table.insert(vt, {item.requestedReviewer.login or item.requestedReviewer.name, "OctoUser"})
+  end
   table.insert(vt, {" (", "OctoSymbol"})
   table.insert(vt, {util.format_date(item.createdAt), "OctoDate"})
   table.insert(vt, {")", "OctoSymbol"})

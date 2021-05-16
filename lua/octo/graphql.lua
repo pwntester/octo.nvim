@@ -760,12 +760,13 @@ M.create_issue_mutation =
                 login
               }
               assignee {
-                ... on Organization {
-                  name
-                }
+                ... on Organization { name }
+                ... on Bot { login }
                 ... on User {
                   login
+                  isViewer
                 }
+                ... on Mannequin { login }
               }
               createdAt
             }
@@ -928,12 +929,13 @@ M.update_issue_state_mutation =
                 login
               }
               assignee {
-                ... on Organization {
-                  name
-                }
+                ... on Organization { name }
+                ... on Bot { login }
                 ... on User {
                   login
+                  isViewer
                 }
+                ... on Mannequin { login }
               }
               createdAt
             }
@@ -1071,12 +1073,13 @@ M.update_pull_request_state_mutation =
                 login
               }
               assignee {
-                ... on Organization {
-                  name
-                }
+                ... on Organization { name }
+                ... on Bot { login }
                 ... on User {
                   login
+                  isViewer
                 }
+                ... on Mannequin { login }
               }
               createdAt
             }
@@ -1127,9 +1130,8 @@ M.update_pull_request_state_mutation =
                   login
                   isViewer
                 }
-                ... on Team {
-                  name
-                }
+                ... on Mannequin { login }
+                ... on Team { name }
               }
             }
             ... on ReviewRequestRemovedEvent {
@@ -1142,9 +1144,8 @@ M.update_pull_request_state_mutation =
                   login
                   isViewer
                 }
-                ... on Team {
-                  name
-                }
+                ... on Mannequin { login }
+                ... on Team { name }
               }
             }
             ... on ReviewDismissedEvent {
@@ -1229,9 +1230,8 @@ M.update_pull_request_state_mutation =
                 login
                 isViewer
               }
-              ... on Team {
-                name
-              }
+              ... on Mannequin { login }
+              ... on Team { name }
             }
           }
         }
@@ -1377,16 +1377,13 @@ query($endCursor: String) {
       url
       merged
       mergedBy {
+        ... on Organization { name }
+        ... on Bot { login }
         ... on User {
           login
           isViewer
         }
-        ... on Bot {
-          login
-        }
-        ... on Organization {
-          name
-        }
+        ... on Mannequin { login }
       }
       participants(first:10) {
         nodes {
@@ -1467,12 +1464,13 @@ query($endCursor: String) {
               login
             }
             assignee {
-              ... on Organization {
-                name
-              }
+              ... on Organization { name }
+              ... on Bot { login }
               ... on User {
                 login
+                isViewer
               }
+              ... on Mannequin { login }
             }
             createdAt
           }
@@ -1523,9 +1521,8 @@ query($endCursor: String) {
                 login
                 isViewer
               }
-              ... on Team {
-                name
-              }
+              ... on Mannequin { login }
+              ... on Team { name }
             }
           }
           ... on ReviewRequestRemovedEvent {
@@ -1538,9 +1535,8 @@ query($endCursor: String) {
                 login
                 isViewer
               }
-              ... on Team {
-                name
-              }
+              ... on Mannequin { login }
+              ... on Team { name }
             }
           }
           ... on ReviewDismissedEvent {
@@ -1685,9 +1681,8 @@ query($endCursor: String) {
               login
               isViewer
             }
-            ... on Team {
-              name
-            }
+            ... on Mannequin { login }
+            ... on Team { name }
           }
         }
       }
@@ -1806,12 +1801,13 @@ query($endCursor: String) {
               login
             }
             assignee {
-              ... on Organization {
-                name
-              }
+              ... on Organization { name }
+              ... on Bot { login }
               ... on User {
                 login
+                isViewer
               }
+              ... on Mannequin { login }
             }
             createdAt
           }
