@@ -995,6 +995,7 @@ M.update_pull_request_state_mutation =
         baseRefName
         baseRefOid
         baseRepository {
+          name
           nameWithOwner
         }
         milestone {
@@ -1403,6 +1404,7 @@ query($endCursor: String) {
       baseRefName
       baseRefOid
       baseRepository {
+        name
         nameWithOwner
       }
       milestone {

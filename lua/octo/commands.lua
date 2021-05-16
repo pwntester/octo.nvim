@@ -224,6 +224,10 @@ function M.process_varargs(repo, ...)
 end
 
 function M.octo(object, action, ...)
+  if not object then
+    print("[Octo] Missing arguments")
+    return
+  end
   if not vim.g.octo_viewer then
     local name = require"octo".check_login()
     if not name then

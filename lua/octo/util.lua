@@ -158,11 +158,11 @@ end
 function M.in_pr_repo()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  if not buffer then vim.api.nvim_err_writeln("Not in Octo buffer") return end
+  if not buffer then vim.api.nvim_err_writeln("[Octo] Not in Octo buffer") return end
   if buffer:isPullRequest() then
     local local_repo = M.get_remote_name()
-    if buffer.node.baseRepoName ~= local_repo then
-      vim.api.nvim_err_writeln(string.format("[Oto] Not in PR repo. Expected %s, got %s", buffer.node.baseRepoName, local_repo))
+    if buffer.node.baseRepository.nameWithOwner ~= local_repo then
+      vim.api.nvim_err_writeln(string.format("[Oto] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
       return false
     else
       return true
