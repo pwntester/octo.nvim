@@ -730,7 +730,7 @@ function M.write_review_thread_header(bufnr, opts, line)
     --   { margin_width = 1 }
     -- )
     -- vim.list_extend(header_vt, outdated_bubble)
-    vim.list_extend(header_vt, {{" ", "OctoRed"}})
+    vim.list_extend(header_vt, {{conf.outdated_icon, "OctoRed"}})
   end
 
   if opts.isResolved then
@@ -740,7 +740,7 @@ function M.write_review_thread_header(bufnr, opts, line)
     --   { margin_width = 1 }
     -- )
     --vim.list_extend(header_vt, resolved_bubble)
-    vim.list_extend(header_vt, {{"﫠", "OctoGreen"}})
+    vim.list_extend(header_vt, {{conf.resolved_icon, "OctoGreen"}})
   end
 
   M.write_block(bufnr, {""})

@@ -1,12 +1,16 @@
+local config = require'octo.config'
+
 local M = {}
 
 function M.setup()
-  vim.cmd [[sign define octo_thread text= texthl=OctoBlue]]
-  vim.cmd [[sign define octo_thread_resolved text=  texthl=OctoGreen]]
-  vim.cmd [[sign define octo_thread_outdated text=  texthl=OctoRed]]
-  vim.cmd [[sign define octo_thread_pending text= texthl=OctoYellow]]
-  vim.cmd [[sign define octo_thread_resolved_pending text= texthl=OctoYellow]]
-  vim.cmd [[sign define octo_thread_outdated_pending text= texthl=OctoYellow]]
+  local conf = config.get_config()
+
+  vim.cmd(string.format("sign define octo_thread text=%s texthl=OctoBlue", conf.comment_icon))
+  vim.cmd(string.format("sign define octo_thread_resolved text=%s  texthl=OctoGreen", conf.comment_icon))
+  vim.cmd(string.format("sign define octo_thread_outdated text=%s  texthl=OctoRed", conf.comment_icon))
+  vim.cmd(string.format("sign define octo_thread_pending text=%s texthl=OctoYellow", conf.comment_icon))
+  vim.cmd(string.format("sign define octo_thread_resolved_pending text=%s texthl=OctoYellow", conf.comment_icon))
+  vim.cmd(string.format("sign define octo_thread_outdated_pending text=%s texthl=OctoYellow", conf.comment_icon))
 
   vim.cmd [[sign define octo_comment_range numhl=OctoGreen]]
   vim.cmd [[sign define octo_clean_block_start text=┌ linehl=OctoEditable]]

@@ -72,6 +72,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 
 - Install [GitHub CLI](https://cli.github.com/)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- Install [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons)
  
 ## 📦 Installation 
 
