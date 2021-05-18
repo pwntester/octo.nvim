@@ -1535,8 +1535,12 @@ query($endCursor: String) {
                 login
                 isViewer
               }
-              ... on Mannequin { login }
-              ... on Team { name }
+              ... on Mannequin {
+                login
+              }
+              ... on Team {
+                name
+              }
             }
           }
           ... on ReviewDismissedEvent {

@@ -316,7 +316,7 @@ end
 
 function M.hide_review_threads()
   local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  local split, path = util.get_split_and_path(bufnr)
   if not split or not path then return end
   local review = M.get_current_review()
   local file = review.layout:cur_file()
@@ -338,7 +338,7 @@ end
 
 function M.show_review_threads()
   local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  local split, path = util.get_split_and_path(bufnr)
   if not split or not path then return end
   local review = M.get_current_review()
   local file = review.layout:cur_file()
@@ -400,7 +400,7 @@ end
 
 function M.add_review_comment(isSuggestion)
   local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  local split, path = util.get_split_and_path(bufnr)
   if not split or not path then return end
 
   local review = M.get_current_review()

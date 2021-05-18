@@ -162,7 +162,7 @@ function M.in_pr_repo()
   if buffer:isPullRequest() then
     local local_repo = M.get_remote_name()
     if buffer.node.baseRepository.nameWithOwner ~= local_repo then
-      vim.api.nvim_err_writeln(string.format("[Oto] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
+      vim.api.nvim_err_writeln(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
       return false
     else
       return true
@@ -634,22 +634,24 @@ function M.get_sorted_comment_lines(bufnr)
 end
 
 function M.is_thread_placed_in_buffer(comment, bufnr)
-  local bufname = vim.api.nvim_buf_get_name(bufnr)
-  local split, path = M.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  local split, path = M.get_split_and_path(bufnr)
   if not split or not path then return false end
   if split == comment.diffSide and path == comment.path then return true end
   return false
 end
 
-function M.get_split_and_path(bufname)
-  return string.match(bufname, "octo://[^/]+/[^/]+/review/[^/]+/file/([^/]+)/(.+)")
+function M.get_split_and_path(bufnr)
+  local ok, props = pcall(vim.api.nvim_buf_get_var, bufnr, "octo_diff_props")
+  if ok and props then
+    return props.split, props.path
+  end
 end
 
 -- clear buffer undo history
 function M.clear_history()
   local old_undolevels = vim.o.undolevels
   vim.o.undolevels = -1
-  vim.cmd [[exe "normal a \<BS>\<Esc>"]]
+  vim.cmd [[exe "normal a \<BS>"]]
   vim.o.undolevels = old_undolevels
 end
 

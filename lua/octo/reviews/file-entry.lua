@@ -155,7 +155,12 @@ function FileEntry:load_buffers(left_winid, right_winid)
 
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
-      local bn = M._create_buffer(split.bufname, split.binary)
+      local bn = M._create_buffer({
+        path = self.path,
+        split = split.pos,
+        binary = split.binary,
+        bufname = split.bufname
+      })
       table.insert(self.associated_bufs, bn)
       vim.api.nvim_win_set_buf(split.winid, bn)
       split.bufid = bn
@@ -272,14 +277,18 @@ function M._get_null_buffer()
   return M._null_buffer
 end
 
-function M._create_buffer(bufname, null)
-  if null then return M._get_null_buffer() end
+function M._create_buffer(opts)
+  if opts.binary then return M._get_null_buffer() end
 
-  local bn = vim.api.nvim_create_buf(false, false)
-  vim.api.nvim_buf_set_name(bn, bufname)
-  vim.api.nvim_buf_set_option(bn, "modified", false)
-  vim.api.nvim_buf_set_option(bn, "modifiable", false)
-  return bn
+  local bufnr = vim.api.nvim_create_buf(false, false)
+  vim.api.nvim_buf_set_name(bufnr, opts.bufname)
+  vim.api.nvim_buf_set_option(bufnr, "modified", false)
+  vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
+  vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
+    path = opts.path;
+    split = string.upper(opts.split);
+  })
+  return bufnr
 end
 
 function M._write_buffer(bufid, lines)

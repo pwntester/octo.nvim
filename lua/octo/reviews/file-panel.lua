@@ -379,7 +379,7 @@ end
 
 function M.next_thread()
   local bufnr = vim.api.nvim_get_current_buf()
-  local _, path = utils.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  local _, path = utils.get_split_and_path(bufnr)
   local current_line = vim.fn.line(".")
   local candidate = math.huge
   if path then
@@ -396,7 +396,7 @@ end
 
 function M.prev_thread()
   local bufnr = vim.api.nvim_get_current_buf()
-  local _, path = utils.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  local _, path = utils.get_split_and_path(bufnr)
   local current_line = vim.fn.line(".")
   local candidate = -1
   if path then

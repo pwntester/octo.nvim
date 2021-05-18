@@ -29,16 +29,16 @@ end
 
 function M.configure_octo_buffer(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(vim.api.nvim_buf_get_name(bufnr))
+  local split, path = util.get_split_and_path(bufnr)
+  local buffer = octo_buffers[bufnr]
   if split and path then
     -- review diff buffers
     local current_review = reviews.get_current_review()
     if current_review and #current_review.threads > 0 then
       current_review.layout:cur_file():place_signs()
     end
-  else
+  elseif buffer then
     -- issue/pr/reviewthread buffers
-    local buffer = octo_buffers[bufnr]
     buffer:configure()
   end
 end
