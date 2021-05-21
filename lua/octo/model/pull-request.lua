@@ -8,6 +8,7 @@ local M = {}
 ---@field id string
 ---@field left Rev
 ---@field right Rev
+---@field files table
 local PullRequest = {}
 PullRequest.__index = PullRequest
 
@@ -19,8 +20,12 @@ function PullRequest:new(opts)
     number = opts.number,
     id = opts.id,
     left = opts.left,
-    right = opts.right
+    right = opts.right,
   }
+  this.files = {}
+  for _, file in ipairs(opts.files) do
+    this.files[file.path] = file.viewerViewedState
+  end
   this.owner, this.name = util.split_repo(this.repo)
   setmetatable(this, self)
   return this

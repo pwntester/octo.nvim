@@ -213,6 +213,40 @@ M.start_review_mutation =
   }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
+M.mark_file_as_viewed_mutation =
+  [[
+  mutation {
+    markFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+      pullRequest {
+        files(first:100){
+          nodes {
+            path
+            viewerViewedState
+          }
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#unmarkfileasviewed
+M.unmark_file_as_viewed_mutation =
+  [[
+  mutation {
+    unmarkFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+      pullRequest {
+        files(first:100){
+          nodes {
+            path
+            viewerViewedState
+          }
+        }
+      }
+    }
+  }
+]]
+
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.submit_pull_request_review_mutation =
   [[
@@ -977,6 +1011,12 @@ M.update_pull_request_state_mutation =
         closedAt
         updatedAt
         url
+        files(first:100) {
+          nodes {
+            path
+            viewerViewedState 
+          } 
+        }
         merged
         mergedBy {
           login
@@ -1375,6 +1415,12 @@ query($endCursor: String) {
       closedAt
       updatedAt
       url
+      files(first:100) {
+        nodes {
+          path
+          viewerViewedState 
+        } 
+      }
       merged
       mergedBy {
         ... on Organization { name }

@@ -2,6 +2,8 @@
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-entry.lua
 --
 local utils = require'octo.util'
+local graphql = require'octo.graphql'
+local gh = require'octo.gh'
 local config = require'octo.config'
 local signs = require'octo.signs'
 local mappings = require'octo.mappings'
@@ -27,14 +29,13 @@ M._null_buffer = nil
 ---@field right_binary boolean|nil
 ---@field left_bufid integer
 ---@field right_bufid integer
----@field left_bufname string
----@field right_bufname string
 ---@field left_lines string[]
 ---@field right_lines string[]
 ---@field left_comment_ranges table
 ---@field right_comment_ranges table
 ---@field associated_bufs integer[]
 ---@field diffhunks string[]
+---@field viewed_state string
 local FileEntry = {}
 FileEntry.__index = FileEntry
 
@@ -49,9 +50,6 @@ FileEntry.winopts = {
 function FileEntry:new(opt)
   local pr = opt.pull_request
   local diffhunks, left_ranges, right_ranges = utils.process_patch(opt.patch)
-  local current_review = require"octo.reviews".get_current_review()
-  local left_bufname = string.format("octo://%s/review/%s/file/LEFT/%s", pr.repo, current_review.id, opt.path)
-  local right_bufname = string.format("octo://%s/review/%s/file/RIGHT/%s", pr.repo, current_review.id, opt.path)
 
   local this = {
     path = opt.path,
@@ -61,17 +59,49 @@ function FileEntry:new(opt)
     pull_request = pr,
     status = opt.status,
     stats = opt.stats,
-    left_bufname = left_bufname,
-    right_bufname = right_bufname,
     left_comment_ranges = left_ranges,
     right_comment_ranges = right_ranges,
     diffhunks = diffhunks,
-    associated_bufs = {}
+    associated_bufs = {},
+    viewed_state = pr.files[opt.path]
   }
 
   setmetatable(this, self)
 
   return this
+end
+
+---FileEntry toggle_viewed
+function FileEntry:toggle_viewed()
+  local query, next_state
+  if self.viewed_state == "VIEWED" then
+    query = graphql("unmark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    next_state = "UNVIEWED"
+  elseif self.viewed_state == "UNVIEWED" then
+    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    next_state = "VIEWED"
+  elseif self.viewed_state == "DISMISSED" then
+    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    next_state = "VIEWED"
+  end
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", string.format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+        elseif output then
+          --local resp = vim.fn.json_decode(output)
+          self.viewed_state = next_state
+          local current_review = require"octo.reviews".get_current_review()
+          if current_review then
+            current_review.layout.file_panel:render()
+            current_review.layout.file_panel:redraw()
+          end
+        end
+      end
+    }
+  )
 end
 
 ---FileEntry finalizer
@@ -142,14 +172,17 @@ end
 ---@param left_winid integer
 ---@param right_winid integer
 function FileEntry:load_buffers(left_winid, right_winid)
+  local current_review = require"octo.reviews".get_current_review()
+  local left_bufname = string.format("octo://%s/review/%s/file/LEFT/%s", self.pull_request.repo, current_review.id, self.path)
+  local right_bufname = string.format("octo://%s/review/%s/file/RIGHT/%s", self.pull_request.repo, current_review.id, self.path)
   local splits = {
     {
       winid = left_winid, bufid = self.left_bufid,
-      bufname = self.left_bufname, pos = "left", binary = self.left_binary == true
+      bufname = left_bufname, pos = "left", binary = self.left_binary == true
     },
     {
       winid = right_winid, bufid = self.right_bufid,
-      bufname = self.right_bufname, pos = "right", binary = self.right_binary == true
+      bufname = right_bufname, pos = "right", binary = self.right_binary == true
     }
   }
 

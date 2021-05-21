@@ -170,6 +170,12 @@ M.keypress_event_cbs = {
     local current_review = require"octo.reviews".get_current_review()
     current_review:submit('REQUEST_CHANGES')
   end,
+  toggle_viewed = function()
+    local layout = M.get_current_layout()
+    if layout then
+      layout.file_panel:get_file_at_cursor():toggle_viewed()
+    end
+  end,
 }
 
 function M.get_current_layout()
