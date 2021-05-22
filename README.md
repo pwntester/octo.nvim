@@ -178,6 +178,12 @@ use {'pwntester/octo.nvim', config=function()
       react_laugh = "<space>rl",           -- add/remove 😄 reaction
       react_confused = "<space>rc",        -- add/remove 😕 reaction
     },
+    submit_win = {
+      approve_review = "<C-a>",            -- approve review
+      comment_review = "<C-m>",            -- comment review
+      request_changes = "<C-r>",           -- request changes review
+      close_review_tab = "<C-c>",          -- close review tab
+    },
     review_diff = {
       add_review_comment = "<space>ca",    -- add a new review comment
       add_review_suggestion = "<space>sa", -- add a new review suggestion
@@ -188,12 +194,7 @@ use {'pwntester/octo.nvim', config=function()
       select_next_entry = "]q",            -- move to previous changed file
       select_prev_entry = "[q",            -- move to next changed file
       close_review_tab = "<C-c>",          -- close review tab
-    },
-    submit_win = {
-      approve_review = "<C-a>",            -- approve review
-      comment_review = "<C-m>",            -- comment review
-      request_changes = "<C-r>",           -- request changes review
-      close_review_tab = "<C-c>",          -- close review tab
+      toggle_viewed = "<leader><space>",   -- toggle viewer viewed state
     },
     file_panel = {
       next_entry = "j",                    -- move to next changed file
@@ -205,6 +206,7 @@ use {'pwntester/octo.nvim', config=function()
       select_next_entry = "]q",            -- move to previous changed file
       select_prev_entry = "[q",            -- move to next changed file
       close_review_tab = "<C-c>",          -- close review tab
+      toggle_viewed = "<leader><space>",   -- toggle viewer viewed state
     }
   }
 })

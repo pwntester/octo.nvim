@@ -94,6 +94,12 @@ M.defaults = {
       react_confused = "<space>rc",
       close_review_tab = "<C-c>",
     },
+    submit_win = {
+      close_review_win = "<C-c>",
+      approve_review = "<C-a>",
+      comment_review = "<C-m>",
+      request_changes = "<C-r>",
+    },
     review_diff = {
       add_review_comment = "<space>ca",
       add_review_suggestion = "<space>sa",
@@ -105,12 +111,6 @@ M.defaults = {
       prev_thread = "[t",
       close_review_tab = "<C-c>",
       toggle_viewed = "<leader><space>",
-    },
-    submit_win = {
-      close_review_win = "<C-c>",
-      approve_review = "<C-a>",
-      comment_review = "<C-m>",
-      request_changes = "<C-r>",
     },
     file_panel = {
       next_entry = "j",
