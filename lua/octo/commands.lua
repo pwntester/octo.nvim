@@ -576,21 +576,22 @@ function M.create_issue(repo)
 end
 
 function M.checkout_pr()
-  if not util.in_pr_repo() then
-    return
-  end
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then return end
+  if not util.in_pr_repo() then return end
   gh.run(
     {
       args = {"pr", "checkout", buffer.number, "-R", buffer.repo},
-      cb = function(output, stderr)
+      cb = function(_, stderr)
         if stderr and not util.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        else
-          print("[Octo]", output)
-          print(string.format("[Octo] Checked out PR %d", buffer.number))
+          for _, line in ipairs(vim.fn.split(stderr, "\n")) do
+            if line:match("Switched to branch") or line:match("Already on") then
+              print("[Octo]", line)
+              return
+            end
+          end
+          vim.api.nvim_err_writeln("[Octo]", stderr)
         end
       end
     }
