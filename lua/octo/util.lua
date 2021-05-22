@@ -10,6 +10,12 @@ local M = {}
 local repo_id_cache = {}
 local path_sep = package.config:sub(1,1)
 
+M.viewed_state_map = {
+  VIEWED = { icon = "﫟", hl = "OctoGreen"},
+  UNVIEWED = { icon = " ", hl = "OctoBlue"},
+  DISMISSED = { icon = " ", hl = "OctoRed"},
+}
+
 M.state_msg_map = {
   APPROVED = "approved",
   CHANGES_REQUESTED = "requested changes",
@@ -159,51 +165,51 @@ function M.in_pr_repo()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then vim.api.nvim_err_writeln("[Octo] Not in Octo buffer") return end
-  if buffer:isPullRequest() then
-    local local_repo = M.get_remote_name()
-    if buffer.node.baseRepository.nameWithOwner ~= local_repo then
-      vim.api.nvim_err_writeln(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
-      return false
-    else
-      return true
-    end
-  else
+  if not buffer:isPullRequest() then
     vim.api.nvim_err_writeln("[Octo] Not in Octo PR buffer")
     return
   end
-  return false
+
+  local local_repo = M.get_remote_name()
+  if buffer.node.baseRepository.nameWithOwner ~= local_repo then
+    vim.api.nvim_err_writeln(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
+    return false
+  else
+    return true
+  end
 end
 
--- function M.in_pr_branch()
---   local bufname = vim.api.nvim_buf_get_name(0)
---   if not vim.startswith(bufname, "octo://") then
---     return
---   end
---   local status, pr = pcall(vim.api.nvim_buf_get_var, 0, "pr")
---   if status and pr then
---     -- only works with Git 2.22 and above
---     -- local cmd = "git branch --show-current"
---     local cmd = "git rev-parse --abbrev-ref HEAD"
---     local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
---     if local_branch == string.format("%s/%s", pr.headRepoName, pr.headRefName) then
---       -- for PRs submitted from master, local_branch will get something like other_repo/master
---       local_branch = vim.split(local_branch, "/")[2]
---     end
---     local local_repo = M.get_remote_name()
---     if pr.baseRepoName ~= local_repo then
---       vim.api.nvim_err_writeln(format("[Octo] Not in PR repo. Expected %s, got %s", pr.baseRepoName, local_repo))
---       return false
---     elseif pr.headRefName ~= local_branch then
---       -- TODx: suggest to checkout the branch
---       vim.api.nvim_err_writeln(format("[Octo] Not in PR branch. Expected %s, got %s", pr.headRefName, local_branch))
---       return false
---     end
---     return true
---   end
---   return false
--- end
+function M.in_pr_branch()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
+  if not buffer:isPullRequest() then
+    vim.api.nvim_err_writeln("[Octo] Not in Octo PR buffer")
+    return
+  end
 
--- TODO: replace calls to get_repo_number_pr with this one
+  local cmd = "git rev-parse --abbrev-ref HEAD"
+  local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+  if local_branch == string.format("%s/%s", buffer.node.headRepoName, buffer.node.headRefName) then
+    -- for PRs submitted from master, local_branch will get something like other_repo/master
+    local_branch = vim.split(local_branch, "/")[2]
+  end
+
+  local local_repo = M.get_remote_name()
+  if buffer.node.baseRepository.nameWithOwner == local_repo and buffer.node.headRefName == local_branch then
+    return true
+  elseif buffer.node.baseRepository.nameWithOwner ~= local_repo then
+    vim.api.nvim_err_writeln(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
+    return false
+  elseif buffer.node.headRefName ~= local_branch then
+    -- TODO: suggest to checkout the branch
+    vim.api.nvim_err_writeln(string.format("[Octo] Not in PR branch. Expected %s, got %s", buffer.node.headRefName, local_branch))
+    return false
+  else
+    return false
+  end
+end
+
 function M.get_current_pr()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -216,7 +222,8 @@ function M.get_current_pr()
     number = buffer.number,
     id = buffer.node.id,
     left = Rev:new(buffer.node.baseRefOid),
-    right = Rev:new(buffer.node.headRefOid)
+    right = Rev:new(buffer.node.headRefOid),
+    files = buffer.node.files.nodes
   })
 end
 

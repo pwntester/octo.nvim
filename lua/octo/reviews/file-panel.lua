@@ -222,6 +222,7 @@ function FilePanel:render()
     self.render_data:add_hl(...)
   end
 
+  local current_review = require"octo.reviews".get_current_review()
   local conf = config.get_config()
   local strlen = vim.fn.strlen
   local s = "Files changed"
@@ -270,9 +271,16 @@ function FilePanel:render()
       end
     end
 
-    -- stastus
+    -- status
     add_hl(renderer.get_git_hl(file.status), line_idx, offset + 1, offset + 2)
-    s = s .. " " .. file.status .. " "
+    s = s .. " " .. file.status
+    offset = #s
+
+    -- viewer viewed state
+    local viewerViewedStateIcon = utils.viewed_state_map[file.viewed_state].icon
+    local viewerViewedStateHl = utils.viewed_state_map[file.viewed_state].hl
+    s = s .. " " .. viewerViewedStateIcon
+    add_hl(viewerViewedStateHl, line_idx, offset + 1, offset + 4)
     offset = #s
 
     -- icon
@@ -312,7 +320,6 @@ function FilePanel:render()
     line_idx = line_idx + 1
   end
 
-  local current_review = require"octo.reviews".get_current_review()
   local right = current_review.layout.right
   local left = current_review.layout.left
   local extra_info = { left:abbrev() .. ".." .. right:abbrev() }

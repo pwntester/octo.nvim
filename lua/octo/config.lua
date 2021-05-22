@@ -104,6 +104,7 @@ M.defaults = {
       next_thread = "]t",
       prev_thread = "[t",
       close_review_tab = "<C-c>",
+      toggle_viewed = "<leader><space>",
     },
     submit_win = {
       close_review_win = "<C-c>",
@@ -121,6 +122,7 @@ M.defaults = {
       focus_files = "<leader>e",
       toggle_files = "<leader>b",
       close_review_tab = "<C-c>",
+      toggle_viewed = "<leader><space>",
     }
   }
 }
