@@ -4,6 +4,7 @@ local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local config = require'octo.config'
+local Job = require("plenary.job")
 
 local M = {}
 
@@ -159,6 +160,38 @@ function M.get_remote_name()
       return string.format("%s/%s", owner, name)
     end
   end
+end
+
+function M.commit_exists(commit, cb)
+  Job:new({
+    enable_recording = true,
+    command = "git",
+    args = {"cat-file", "-t", commit},
+    on_exit = vim.schedule_wrap(
+      function(j_self, _, _)
+        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+          cb(true)
+        else
+          cb(false)
+        end
+      end
+    )
+  }):start()
+end
+
+function M.get_file_at_commit(path, commit, cb)
+  Job:new({
+    enable_recording = true,
+    command = "git",
+    args = {"show", string.format("%s:%s", commit, path)},
+    on_exit = vim.schedule_wrap(
+      function(j_self, _, _)
+        local output = table.concat(j_self:result(), "\n")
+        local stderr = table.concat(j_self:stderr_result(), "\n")
+        cb(vim.split(output, "\n"), vim.split(stderr, "\n"))
+      end
+    )
+  }):start()
 end
 
 function M.in_pr_repo()

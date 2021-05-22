@@ -1,4 +1,4 @@
-local util = require"octo.util"
+local utils = require"octo.util"
 
 local M = {}
 
@@ -21,12 +21,21 @@ function PullRequest:new(opts)
     id = opts.id,
     left = opts.left,
     right = opts.right,
+    local_right = false,
+    local_left = false
   }
   this.files = {}
   for _, file in ipairs(opts.files) do
     this.files[file.path] = file.viewerViewedState
   end
-  this.owner, this.name = util.split_repo(this.repo)
+  this.owner, this.name = utils.split_repo(this.repo)
+  utils.commit_exists(this.right.commit, function(exists)
+    this.local_right = exists
+  end)
+  utils.commit_exists(this.left.commit, function(exists)
+    this.local_left = exists
+  end)
+
   setmetatable(this, self)
   return this
 end

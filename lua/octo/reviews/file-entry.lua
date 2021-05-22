@@ -158,14 +158,26 @@ function FileEntry:get_buf(split)
   end
 end
 
----Fetch file content from GitHub.
+---Fetch file content locally or from GitHub.
 function FileEntry:fetch()
-  utils.get_file_contents(self.pull_request.repo, self.pull_request.right:abbrev(), self.path, function(lines)
-    self.right_lines = lines
-  end)
-  utils.get_file_contents(self.pull_request.repo, self.pull_request.left:abbrev(), self.path, function(lines)
-    self.left_lines = lines
-  end)
+  if self.pull_request.local_right then
+    utils.get_file_at_commit(self.path, self.pull_request.right.commit, function(lines)
+      self.right_lines = lines
+    end)
+  else
+    utils.get_file_contents(self.pull_request.repo, self.pull_request.right:abbrev(), self.path, function(lines)
+      self.right_lines = lines
+    end)
+  end
+  if self.pull_request.local_left then
+    utils.get_file_at_commit(self.path, self.pull_request.left.commit, function(lines)
+      self.left_lines = lines
+    end)
+  else
+    utils.get_file_contents(self.pull_request.repo, self.pull_request.left:abbrev(), self.path, function(lines)
+      self.left_lines = lines
+    end)
+  end
 end
 
 ---Load the buffers.
