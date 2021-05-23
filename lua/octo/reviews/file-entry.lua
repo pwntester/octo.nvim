@@ -184,54 +184,62 @@ end
 ---@param left_winid integer
 ---@param right_winid integer
 function FileEntry:load_buffers(left_winid, right_winid)
-  local current_review = require"octo.reviews".get_current_review()
-  local left_bufname = string.format("octo://%s/review/%s/file/LEFT/%s", self.pull_request.repo, current_review.id, self.path)
-  local right_bufname = string.format("octo://%s/review/%s/file/RIGHT/%s", self.pull_request.repo, current_review.id, self.path)
   local splits = {
     {
-      winid = left_winid, bufid = self.left_bufid,
-      bufname = left_bufname, pos = "left", binary = self.left_binary == true
+      winid = left_winid, bufid = self.left_bufid, lines = self.left_lines,
+      pos = "left", binary = self.left_binary == true
     },
     {
-      winid = right_winid, bufid = self.right_bufid,
-      bufname = right_bufname, pos = "right", binary = self.right_binary == true
+      winid = right_winid, bufid = self.right_bufid, lines = self.right_lines,
+      pos = "right", binary = self.right_binary == true
     }
   }
 
+  -- configure diff buffers
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
-      local bn = M._create_buffer({
+      -- create new buffer
+      -- TODO: if PR is checkout, use file from FS for right buffer
+      split.bufid = M._create_buffer({
         path = self.path,
         split = split.pos,
         binary = split.binary,
-        bufname = split.bufname
+        lines = split.lines,
+        repo = self.pull_request.repo
       })
-      table.insert(self.associated_bufs, bn)
-      vim.api.nvim_win_set_buf(split.winid, bn)
-      split.bufid = bn
-      M._attach_buffer(split.bufid)
-    else
-      vim.api.nvim_win_set_buf(split.winid, split.bufid)
-      M._attach_buffer(split.bufid)
+
+      -- register new buffer
+      table.insert(self.associated_bufs, split.bufid)
+      self[split.pos.."_bufid"] = split.bufid
+      self[split.pos.."_winid"] = split.winid
     end
-  end
-  self.left_bufid = splits[1].bufid
-  self.right_bufid = splits[2].bufid
-  self.left_winid = splits[1].winid
-  self.right_winid = splits[2].winid
 
-  if self.left_lines and self.right_lines then
-    M._write_buffer(self.right_bufid, self.right_lines)
-    M._write_buffer(self.left_bufid, self.left_lines)
-    self:place_signs()
+    M._configure_buffer(split.bufid)
+    vim.api.nvim_win_set_buf(split.winid, split.bufid)
   end
 
-  M._update_windows(left_winid, right_winid)
+  -- show thread signs and virtual text
+  self:place_signs()
+
+  -- configure windows
+  M._configure_windows(left_winid, right_winid)
+
+  -- activate diff
+  for _, split in ipairs(splits) do
+    vim.api.nvim_buf_call(split.bufid, function()
+      vim.cmd [[filetype detect]]
+      vim.cmd [[doau BufEnter]]
+      vim.cmd [[diffthis]]
+      -- Scroll to trigger the scrollbind and sync the windows. This works more
+      -- consistently than calling `:syncbind`.
+      vim.cmd([[exec "normal! \<c-y>"]])
+    end)
+  end
 end
 
 function FileEntry:attach_buffers()
-  if self.left_bufid then M._attach_buffer(self.left_bufid) end
-  if self.right_bufid then M._attach_buffer(self.right_bufid) end
+  if self.left_bufid then M._configure_buffer(self.left_bufid) end
+  if self.right_bufid then M._configure_buffer(self.right_bufid) end
 end
 
 function FileEntry:detach_buffers()
@@ -324,49 +332,39 @@ end
 
 function M._create_buffer(opts)
   if opts.binary then return M._get_null_buffer() end
-
   local bufnr = vim.api.nvim_create_buf(false, false)
-  vim.api.nvim_buf_set_name(bufnr, opts.bufname)
+  local current_review = require"octo.reviews".get_current_review()
+  local bufname = string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
+  vim.api.nvim_buf_set_name(bufnr, bufname)
   vim.api.nvim_buf_set_option(bufnr, "modified", false)
   vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
   vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
     path = opts.path;
     split = string.upper(opts.split);
   })
+  if opts.lines then
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
+  end
   return bufnr
-end
-
-function M._write_buffer(bufid, lines)
-  vim.api.nvim_buf_set_option(bufid, "modifiable", true)
-  vim.api.nvim_buf_set_lines(bufid, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(bufid, "modifiable", false)
-  vim.api.nvim_buf_call(bufid, function()
-    vim.cmd [[filetype detect]]
-    vim.cmd [[doau BufEnter]]
-    vim.cmd [[diffthis]]
-    --vim.cmd [[normal! gg]c]]
-  end)
 end
 
 function M.load_null_buffer(winid)
   local bn = M._get_null_buffer()
   vim.api.nvim_win_set_buf(winid, bn)
-  M._attach_buffer(bn)
+  M._configure_buffer(bn)
 end
 
-function M._update_windows(left_winid, right_winid)
+function M._configure_windows(left_winid, right_winid)
   for _, id in ipairs({ left_winid, right_winid }) do
     for k, v in pairs(FileEntry.winopts) do
       vim.api.nvim_win_set_option(id, k, v)
     end
   end
-
-  -- Scroll to trigger the scrollbind and sync the windows. This works more
-  -- consistently than calling `:syncbind`.
-  vim.cmd([[exec "normal! \<c-y>"]])
 end
 
-function M._attach_buffer(bufid)
+function M._configure_buffer(bufid)
   local conf = config.get_config()
   for rhs, lhs in pairs(conf.mappings.review_diff) do
     vim.api.nvim_buf_set_keymap(bufid, "n", lhs, mappings.callback(rhs), { noremap = true, silent = true })
