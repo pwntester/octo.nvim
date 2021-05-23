@@ -531,7 +531,7 @@ function M.show_pending_comments()
     vim.api.nvim_err_writeln("[Octo] No pending comments found")
     return
   else
-    require"octo.menu".pending_threads(pending_threads)
+    require"octo.telescope.menu".pending_threads(pending_threads)
   end
 end
 

@@ -1,4 +1,4 @@
-local menu = require'octo.menu'
+local menu = require'octo.telescope.menu'
 return require'telescope'.register_extension {
   exports = {
     commits = menu.commits,

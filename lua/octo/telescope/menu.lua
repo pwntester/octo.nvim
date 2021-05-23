@@ -7,14 +7,13 @@ local utils = require "telescope.utils"
 local conf = require "telescope.config".values
 local sorters = require "telescope.sorters"
 local make_entry = require "telescope.make_entry"
-
-local previewers = require "octo.previewers"
+local previewers = require "octo.telescope.previewers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local util = require "octo.util"
 local navigation = require "octo.navigation"
 local graphql = require "octo.graphql"
-local entry_maker = require "octo.entry_maker"
+local entry_maker = require "octo.telescope.entry_maker"
 
 local M = {}
 

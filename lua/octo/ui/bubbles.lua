@@ -1,4 +1,4 @@
-local highlights = require "octo.highlights"
+local colors = require "octo.colors"
 local config = require"octo.config"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
@@ -19,8 +19,8 @@ local function make_bubble(content, highlight_group, opts)
   local body = left_padding .. padding .. content .. padding .. right_padding
   local left_delimiter = (left_margin .. margin) .. (conf.left_bubble_delimiter)
   local right_delimiter = (conf.right_bubble_delimiter) .. (right_margin .. margin)
-  local delimiter_color = highlights.get_background_color_of_highlight_group(highlight_group)
-  local delimiter_highlight_group = highlights.create_highlight(
+  local delimiter_color = colors.get_background_color_of_highlight_group(highlight_group)
+  local delimiter_highlight_group = colors.create_highlight(
     delimiter_color,
     { mode = "foreground" }
   )
@@ -57,7 +57,7 @@ local function make_reaction_bubble(icon, includes_viewer, opts)
 end
 
 local function make_label_bubble(name, color, opts)
-  local highlight = highlights.create_highlight(color)
+  local highlight = colors.create_highlight(color)
   return make_bubble(name, highlight, opts)
 end
 

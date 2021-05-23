@@ -21,16 +21,16 @@ M.keypress_event_cbs = {
     local bufnr = vim.api.nvim_get_current_buf()
     local buffer = octo_buffers[bufnr]
     local repo = buffer.repo
-    if repo then require"octo.menu".issues(repo) end
+    if repo then require"octo.telescope.menu".issues(repo) end
   end,
   checkout_pr = function()
     require"octo.commands".checkout_pr()
   end,
   list_commits = function()
-    require"octo.menu".commits()
+    require"octo.telescope.menu".commits()
   end,
   list_changed_files = function()
-    require"octo.menu".files()
+    require"octo.telescope.menu".files()
   end,
   show_pr_diff = function()
     require"octo.commands".show_pr_diff()
