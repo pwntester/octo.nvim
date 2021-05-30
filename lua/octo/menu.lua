@@ -605,7 +605,7 @@ function M.select_project_card(cb)
     pickers.new(
       opts,
       {
-        prompt_title = "Choose card",
+        prompt_title = "Choose Card",
         finder = finders.new_table {
           results = cards.nodes,
           entry_maker = entry_maker.gen_from_project_card()
@@ -652,7 +652,7 @@ function M.select_target_project_column(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose target project",
+              prompt_title = "Choose Target Project",
               finder = finders.new_table {
                 results = projects,
                 entry_maker = entry_maker.gen_from_project()
@@ -666,7 +666,7 @@ function M.select_target_project_column(cb)
                   pickers.new(
                     opts2,
                     {
-                      prompt_title = "Choose target column",
+                      prompt_title = "Choose Target Column",
                       finder = finders.new_table {
                         results = selected_project.project.columns.nodes,
                         entry_maker = entry_maker.gen_from_project_column()
@@ -715,7 +715,7 @@ function M.select_label(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose label",
+              prompt_title = "Choose Label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -762,7 +762,7 @@ function M.select_assigned_label(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose label",
+              prompt_title = "Choose Label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -896,7 +896,7 @@ function M.select_user(cb)
             pickers.new(
               opts,
               {
-                prompt_title = "Choose team",
+                prompt_title = "Choose Team",
                 finder = finders.new_table {
                   results = selected_user.teams,
                   entry_maker = entry_maker.gen_from_team()
@@ -948,7 +948,7 @@ function M.select_assignee(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose assignee",
+              prompt_title = "Choose Assignee",
               finder = finders.new_table {
                 results = assignees,
                 entry_maker = entry_maker.gen_from_user()
