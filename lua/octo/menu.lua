@@ -21,7 +21,6 @@ local M = {}
 local dropdown_opts = require('telescope.themes').get_dropdown({
   results_height = 15;
   width = 0.4;
-  prompt_title = '';
   previewer = false;
   borderchars = {
     prompt = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
@@ -148,7 +147,7 @@ function M.issues(opts)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Issues>",
+              prompt_title = "Issues",
               finder = finders.new_table {
                 results = issues,
                 entry_maker = entry_maker.gen_from_issue(max_number)
@@ -206,7 +205,7 @@ function M.gists(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "Gists>",
+      prompt_title = "Gists",
       finder = finders.new_table {
         results = output,
         entry_maker = make_entry.gen_from_string(opts)
@@ -293,7 +292,7 @@ function M.pull_requests(opts)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Pull Requests>",
+              prompt_title = "Pull Requests",
               finder = finders.new_table {
                 results = pull_requests,
                 entry_maker = entry_maker.gen_from_pull_request(max_number)
@@ -336,7 +335,7 @@ function M.commits()
           pickers.new(
             {},
             {
-              prompt_prefix = "PR Commits>",
+              prompt_title = "PR Commits",
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_commits()
@@ -376,7 +375,7 @@ function M.changed_files()
           pickers.new(
             {},
             {
-              prompt_prefix = "PR Files Changed>",
+              prompt_title = "PR Files Changed",
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_changed_files()
@@ -415,7 +414,7 @@ function M.issue_search(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "Issue Search>",
+      prompt_title = "Issue Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -494,7 +493,7 @@ function M.pull_request_search(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "PR Search>",
+      prompt_title = "PR Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -570,7 +569,7 @@ function M.pending_threads(threads)
   pickers.new(
     {},
     {
-      prompt_prefix = "Pending Review Comments>",
+      prompt_title = "Pending Review Comments",
       finder = finders.new_table {
         results = threads,
         entry_maker = entry_maker.gen_from_review_thread(max_linenr_length)
@@ -606,7 +605,7 @@ function M.select_project_card(cb)
     pickers.new(
       opts,
       {
-        prompt_prefix = "Choose card>",
+        prompt_title = "Choose card",
         finder = finders.new_table {
           results = cards.nodes,
           entry_maker = entry_maker.gen_from_project_card()
@@ -653,7 +652,7 @@ function M.select_target_project_column(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose target project>",
+              prompt_title = "Choose target project",
               finder = finders.new_table {
                 results = projects,
                 entry_maker = entry_maker.gen_from_project()
@@ -667,7 +666,7 @@ function M.select_target_project_column(cb)
                   pickers.new(
                     opts2,
                     {
-                      prompt_prefix = "Choose target column>",
+                      prompt_title = "Choose target column",
                       finder = finders.new_table {
                         results = selected_project.project.columns.nodes,
                         entry_maker = entry_maker.gen_from_project_column()
@@ -716,7 +715,7 @@ function M.select_label(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose label>",
+              prompt_title = "Choose label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -763,7 +762,7 @@ function M.select_assigned_label(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose label>",
+              prompt_title = "Choose label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -796,7 +795,7 @@ function M.select_user(cb)
   pickers.new(
     opts,
     {
-      prompt_prefix = "User Search>",
+      prompt_title = "User Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then return nil end
         prompt = "repos:>10 " .. prompt
@@ -897,7 +896,7 @@ function M.select_user(cb)
             pickers.new(
               opts,
               {
-                prompt_prefix = "Choose team>",
+                prompt_title = "Choose team",
                 finder = finders.new_table {
                   results = selected_user.teams,
                   entry_maker = entry_maker.gen_from_team()
@@ -949,7 +948,7 @@ function M.select_assignee(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose assignee>",
+              prompt_title = "Choose assignee",
               finder = finders.new_table {
                 results = assignees,
                 entry_maker = entry_maker.gen_from_user()
