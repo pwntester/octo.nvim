@@ -4,7 +4,7 @@ local signs = require "octo.signs"
 local constants = require "octo.constants"
 local config = require "octo.config"
 local colors = require'octo.colors'
-local util = require "octo.util"
+local utils = require "octo.utils"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local window = require "octo.window"
@@ -29,7 +29,7 @@ end
 
 function M.configure_octo_buffer(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(bufnr)
+  local split, path = utils.get_split_and_path(bufnr)
   local buffer = octo_buffers[bufnr]
   if split and path then
     -- review diff buffers
@@ -69,7 +69,7 @@ function M.load(bufnr, cb)
     vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
-  local owner, name = util.split_repo(repo)
+  local owner, name = utils.split_repo(repo)
   local query, key
   if kind == "pull" then
     query = graphql("pull_request_query", owner, name, number)
@@ -82,10 +82,10 @@ function M.load(bufnr, cb)
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = util.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+          local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
           local obj = resp.data.repository[key]
           cb(obj)
         end
@@ -106,14 +106,14 @@ function M.on_cursor_hold()
   if not buffer then return end
 
   -- reactions popup
-  local id = util.reactions_at_cursor()
+  local id = utils.reactions_at_cursor()
   if id then
     local query = graphql("reactions_for_object_query", id)
     gh.run(
       {
         args = {"api", "graphql", "-f", string.format("query=%s", query)},
         cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
+          if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output then
             local resp = vim.fn.json_decode(output)
@@ -144,14 +144,14 @@ function M.on_cursor_hold()
   end
 
   -- user popup
-  local login = util.extract_pattern_at_cursor(constants.USER_PATTERN)
+  local login = utils.extract_pattern_at_cursor(constants.USER_PATTERN)
   if login then
     local query = graphql("user_profile_query", login)
     gh.run(
       {
         args = {"api", "graphql", "-f", string.format("query=%s", query)},
         cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
+          if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output then
             local resp = vim.fn.json_decode(output)
@@ -171,22 +171,22 @@ function M.on_cursor_hold()
   end
 
   -- link popup
-  local repo, number = util.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
+  local repo, number = utils.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
   if not repo or not number then
     repo = buffer.repo
-    number = util.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    number = utils.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
   end
   if not repo or not number then
-    repo, _, number = util.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+    repo, _, number = utils.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
   end
   if not repo or not number then return end
-  local owner, name = util.split_repo(repo)
+  local owner, name = utils.split_repo(repo)
   local query = graphql("issue_summary_query", owner, name, number)
   gh.run(
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -238,12 +238,12 @@ end
 -- function M.check_editable()
 --   local bufnr = vim.api.nvim_get_current_buf()
 --
---   local body = util.get_body_at_cursor(bufnr)
+--   local body = utils.get_body_at_cursor(bufnr)
 --   if body and body.viewerCanUpdate then
 --     return
 --   end
 --
---   local comment = util.get_comment_at_cursor(bufnr)
+--   local comment = utils.get_comment_at_cursor(bufnr)
 --   if comment and comment.viewerCanUpdate then
 --     return
 --   end

@@ -1,4 +1,4 @@
-local utils = require"octo.util"
+local utils = require"octo.utils"
 
 local M = {}
 

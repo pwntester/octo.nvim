@@ -1,7 +1,6 @@
 local M = {}
 
 M.defaults = {
-  date_format = "%Y %b %d %I:%M %p %Z";
   default_remote = {"upstream", "origin"};
   reaction_viewer_hint_icon = "";
   user_icon = " ";
@@ -135,8 +134,8 @@ end
 
 function M.setup(user_config)
   user_config = user_config or {}
-  M._config = require"octo.util".tbl_deep_clone(M.defaults)
-  require"octo.util".tbl_soft_extend(M._config, user_config)
+  M._config = require"octo.utils".tbl_deep_clone(M.defaults)
+  require"octo.utils".tbl_soft_extend(M._config, user_config)
 
   M._config.file_panel = vim.tbl_deep_extend(
     "force", M.defaults.file_panel, user_config.file_panel or {}

@@ -12,9 +12,9 @@ local repo_id_cache = {}
 local path_sep = package.config:sub(1,1)
 
 M.viewed_state_map = {
+  DISMISSED = { icon = " ", hl = "OctoRed"},
   VIEWED = { icon = "﫟", hl = "OctoGreen"},
   UNVIEWED = { icon = " ", hl = "OctoBlue"},
-  DISMISSED = { icon = " ", hl = "OctoRed"},
 }
 
 M.state_msg_map = {
@@ -357,9 +357,25 @@ function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
 end
 
 function M.format_date(date_string)
-  local conf = config.get_config()
   local time_bias = date():getbias() * -1
-  return date(date_string):addminutes(time_bias):fmt(conf.date_format)
+  local d = date(date_string):addminutes(time_bias)
+  local now = date(os.time())
+  local diff = date.diff(now, d)
+  if diff:spandays() > 0 and diff:spandays() > 30 and now:getyear() ~= d:getyear() then
+    return string.format("%s %s %d", d:getyear(), d:fmt("%b"), d:getday())
+  elseif diff:spandays() > 0 and diff:spandays() > 30 and now:getyear() == d:getyear() then
+    return string.format("%s %d", d:fmt("%b"), d:getday())
+  elseif diff:spandays() > 0 and diff:spandays() <= 30 then
+    return tostring(math.floor(diff:spandays())) .. " days ago"
+  elseif diff:spanhours() > 0 then
+    return tostring(math.floor(diff:spanhours())) .. " hours ago"
+  elseif diff:spanminutes() > 0 then
+    return tostring(math.floor(diff:spanminutes())) .. " minutes ago"
+  elseif diff:spanseconds() > 0 then
+    return tostring(math.floor(diff:spanswconds())) .. " seconds ago"
+  else
+    return string.format("%s %s %d", d:getyear(), d:fmt("%b"), d:getday())
+  end
 end
 
 function M.graph2rest(id)
@@ -689,6 +705,7 @@ end
 
 -- clear buffer undo history
 function M.clear_history()
+  if true then return end
   local old_undolevels = vim.o.undolevels
   vim.o.undolevels = -1
   vim.cmd [[exe "normal a \<BS>"]]

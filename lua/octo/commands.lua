@@ -1,5 +1,5 @@
 local gh = require"octo.gh"
-local util = require"octo.util"
+local utils = require"octo.utils"
 local navigation = require"octo.navigation"
 local window = require"octo.window"
 local menu = require"octo.telescope.menu"
@@ -17,7 +17,7 @@ M.commands = {
       M.create_issue(repo)
     end,
     edit = function(...)
-      util.get_issue(...)
+      utils.get_issue(...)
     end,
     close = function()
       M.change_state("CLOSED")
@@ -42,7 +42,7 @@ M.commands = {
   },
   pr = {
     edit = function(...)
-      util.get_pull_request(...)
+      utils.get_pull_request(...)
     end,
     close = function()
       M.change_state("CLOSED")
@@ -208,11 +208,11 @@ M.commands = {
 function M.process_varargs(repo, ...)
   local args = table.pack(...)
   if not repo then
-    repo = util.get_remote_name()
+    repo = utils.get_remote_name()
   elseif #vim.split(repo, "/") ~= 2 then
     table.insert(args, repo)
     args.n = args.n + 1
-    repo = util.get_remote_name()
+    repo = utils.get_remote_name()
   end
   local opts = {}
   for i = 1, args.n do
@@ -237,11 +237,11 @@ function M.octo(object, action, ...)
   end
   local o = M.commands[object]
   if not o then
-    local repo, number, kind = util.parse_url(object)
+    local repo, number, kind = utils.parse_url(object)
     if repo and number and kind == "issue" then
-      util.get_issue(repo, number)
+      utils.get_issue(repo, number)
     elseif repo and number and kind == "pull" then
-      util.get_pull_request(repo, number)
+      utils.get_pull_request(repo, number)
     else
       print("[Octo] Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(M.commands)))
       return
@@ -270,7 +270,7 @@ function M.add_comment()
     comment_kind = "IssueComment"
   end
 
-  local thread_id, _, thread_end_line, replyTo = util.get_thread_at_cursor(bufnr)
+  local thread_id, _, thread_end_line, replyTo = utils.get_thread_at_cursor(bufnr)
   if thread_id and not buffer:isReviewThread() then
     vim.api.nvim_err_writeln("[Octo] Start a new review to reply to a thread")
     return
@@ -316,14 +316,14 @@ function M.add_comment()
   end
 
   -- drop undo history
-  util.clear_history()
+  utils.clear_history()
 end
 
 function M.delete_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local comment, start_line, end_line = util.get_comment_at_cursor(bufnr)
+  local comment, start_line, end_line = utils.get_comment_at_cursor(bufnr)
   if not comment then
     print("[Octo] The cursor does not seem to be located at any comment")
     return
@@ -333,7 +333,7 @@ function M.delete_comment()
     query = graphql("delete_issue_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReviewComment" then
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
-    threadId = util.get_thread_at_cursor(bufnr)
+    threadId = utils.get_thread_at_cursor(bufnr)
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
@@ -428,13 +428,13 @@ function M.resolve_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local thread_id, thread_line = util.get_thread_at_cursor(bufnr)
+  local thread_id, thread_line = utils.get_thread_at_cursor(bufnr)
   local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -466,13 +466,13 @@ function M.unresolve_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local thread_id, thread_line = util.get_thread_at_cursor(bufnr)
+  local thread_id, thread_line = utils.get_thread_at_cursor(bufnr)
   local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run(
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -521,7 +521,7 @@ function M.change_state(state)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -546,7 +546,7 @@ function M.change_state(state)
 end
 
 function M.create_issue(repo)
-  if not repo then repo = util.get_remote_name() end
+  if not repo then repo = utils.get_remote_name() end
   if not repo then
     print("[Octo] Cant find repo name")
     return
@@ -556,13 +556,13 @@ function M.create_issue(repo)
   local title = vim.fn.input(string.format("[Octo] Creating issue in %s. Enter title: ", repo))
   vim.fn.inputrestore()
 
-  local repo_id = util.get_repo_id(repo)
+  local repo_id = utils.get_repo_id(repo)
   local query = graphql("create_issue_mutation", repo_id, title, constants.NO_BODY_MSG)
   gh.run(
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -579,12 +579,12 @@ function M.checkout_pr()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then return end
-  if not util.in_pr_repo() then return end
+  if not utils.in_pr_repo() then return end
   gh.run(
     {
       args = {"pr", "checkout", buffer.number, "-R", buffer.repo},
       cb = function(_, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           for _, line in ipairs(vim.fn.split(stderr, "\n")) do
             if line:match("Switched to branch") or line:match("Already on") then
               print("[Octo]", line)
@@ -621,7 +621,7 @@ function M.pr_checks()
     {
       args = {"pr", "checks", tostring(buffer.number), "-R", buffer.repo},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local max_lengths = {}
@@ -709,7 +709,7 @@ function M.show_pr_diff()
       args = {"api", url},
       headers = {"Accept: application/vnd.github.v3.diff"},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local lines = vim.split(output, "\n")
@@ -740,7 +740,7 @@ function M.reaction_action(reaction)
 
   local reaction_line, reaction_groups, insert_line, id
 
-  local comment = util.get_comment_at_cursor(bufnr)
+  local comment = utils.get_comment_at_cursor(bufnr)
   if comment then
     -- found a comment at cursor
     reaction_groups = comment.reactionGroups
@@ -748,7 +748,7 @@ function M.reaction_action(reaction)
     if reaction_line == nil then
       local prev_extmark = comment.extmark
       local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, prev_extmark, {details = true})
-      local _, end_line = util.get_extmark_region(bufnr, mark)
+      local _, end_line = utils.get_extmark_region(bufnr, mark)
       insert_line = end_line + 2
     end
     id = comment.id
@@ -759,7 +759,7 @@ function M.reaction_action(reaction)
     if reaction_line == nil then
       local prev_extmark = buffer.bodyMetadata.extmark
       local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, prev_extmark, {details = true})
-      local _, end_line = util.get_extmark_region(bufnr, mark)
+      local _, end_line = utils.get_extmark_region(bufnr, mark)
       insert_line = end_line + 2
     end
     id = buffer.node.id
@@ -783,7 +783,7 @@ function M.reaction_action(reaction)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -794,8 +794,8 @@ function M.reaction_action(reaction)
           end
 
           reaction_line = reaction_line or insert_line + 1
-          util.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
-          if action == "remove" and util.count_reactions(reaction_groups) == 0 then
+          utils.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
+          if action == "remove" and utils.count_reactions(reaction_groups) == 0 then
             -- delete lines
             vim.api.nvim_buf_set_lines(bufnr, reaction_line - 1, reaction_line + 1, false, {})
             vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, reaction_line - 1, reaction_line + 1)
@@ -825,7 +825,7 @@ function M.add_project_card()
         {
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
-            if stderr and not util.is_blank(stderr) then
+            if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
               -- refresh issue/pr details
@@ -858,7 +858,7 @@ function M.remove_project_card()
         {
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
-            if stderr and not util.is_blank(stderr) then
+            if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
               -- refresh issue/pr details
@@ -893,7 +893,7 @@ function M.move_project_card()
             {
               args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
+                if stderr and not utils.is_blank(stderr) then
                   vim.api.nvim_err_writeln(stderr)
                 elseif output then
                   -- refresh issue/pr details
@@ -936,7 +936,7 @@ function M.add_label()
         {
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
-            if stderr and not util.is_blank(stderr) then
+            if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
               -- refresh issue/pr details
@@ -969,7 +969,7 @@ function M.remove_label()
         {
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
-            if stderr and not util.is_blank(stderr) then
+            if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
               -- refresh issue/pr details
@@ -1007,7 +1007,7 @@ function M.add_user(subject)
         {
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
-            if stderr and not util.is_blank(stderr) then
+            if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
               -- refresh issue/pr details
@@ -1040,7 +1040,7 @@ function M.remove_assignee()
         {
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
-            if stderr and not util.is_blank(stderr) then
+            if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
               -- refresh issue/pr details

@@ -1,6 +1,6 @@
 local BodyMetadata = require'octo.model.body-metadata'.BodyMetadata
 local TitleMetadata = require'octo.model.title-metadata'.TitleMetadata
-local util = require"octo.util"
+local utils = require"octo.utils"
 local mappings = require"octo.mappings"
 local constants = require"octo.constants"
 local config = require"octo.config"
@@ -40,7 +40,7 @@ function OctoBuffer:new(opts)
     threadsMetadata = opts.threadsMetadata or {}
   }
   if this.repo then
-    this.owner, this.name = util.split_repo(this.repo)
+    this.owner, this.name = utils.split_repo(this.repo)
   end
   if this.node and this.node.commits then
     this.kind = "pull"
@@ -103,7 +103,7 @@ function OctoBuffer:render_issue()
 
   -- write body reactions
   local reaction_line
-  if util.count_reactions(self.node.reactionGroups) > 0 then
+  if utils.count_reactions(self.node.reactionGroups) > 0 then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
     writers.write_block(self.bufnr, {"", ""}, line)
     reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)
@@ -155,7 +155,7 @@ function OctoBuffer:render_issue()
       end
 
       -- skip reviews with no threads and empty body
-      if #threads == 0 and util.is_blank(item.body) then
+      if #threads == 0 and utils.is_blank(item.body) then
         goto continue
       end
 
@@ -208,7 +208,7 @@ function OctoBuffer:render_issue()
   --self:render_signcolumn()
 
   -- drop undo history
-  util.clear_history()
+  utils.clear_history()
 
   -- reset modified option
   vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
@@ -365,7 +365,7 @@ function M.do_save_title_and_body(buffer)
       {
         args = {"api", "graphql", "-f", string.format("query=%s", query)},
         cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
+          if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output then
             local resp = vim.fn.json_decode(output)
@@ -404,7 +404,7 @@ function M.do_add_issue_comment(buffer, comment)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", add_query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -436,7 +436,7 @@ function M.do_add_thread_comment(buffer, comment)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -512,7 +512,7 @@ function M.do_add_new_thread(buffer, comment)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -552,7 +552,7 @@ function M.do_update_comment(buffer, comment)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", update_query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -597,7 +597,7 @@ function OctoBuffer:update_metadata()
 
   for _, metadata in ipairs(metadata_objs) do
     local mark = vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, {details = true})
-    local start_line, end_line, text = util.get_extmark_region(self.bufnr, mark)
+    local start_line, end_line, text = utils.get_extmark_region(self.bufnr, mark)
     metadata.body = text
     metadata.startLine = start_line
     metadata.endLine = end_line
@@ -635,7 +635,7 @@ function OctoBuffer:render_signcolumn()
       signs.place_signs(self.bufnr, metadata.startLine, metadata.endLine, metadata.dirty)
 
       -- description virtual text
-      if util.is_blank(metadata.body) then
+      if utils.is_blank(metadata.body) then
         local desc_vt = {{constants.NO_BODY_MSG, "OctoEmpty"}}
         writers.write_virtual_text(self.bufnr, constants.OCTO_EMPTY_MSG_VT_NS, metadata.startLine, desc_vt)
       end
@@ -651,7 +651,7 @@ function OctoBuffer:render_signcolumn()
       signs.place_signs(self.bufnr, metadata.startLine, metadata.endLine, metadata.dirty)
 
       -- comment virtual text
-      if util.is_blank(metadata.body) then
+      if utils.is_blank(metadata.body) then
         local comment_vt = {{constants.NO_BODY_MSG, "OctoEmpty"}}
         writers.write_virtual_text(self.bufnr, constants.OCTO_EMPTY_MSG_VT_NS, metadata.startLine, comment_vt)
       end

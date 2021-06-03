@@ -1,7 +1,7 @@
 -- Heavily derived from `diffview.nvim`:
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-entry.lua
 --
-local utils = require'octo.util'
+local utils = require'octo.utils'
 local graphql = require'octo.graphql'
 local gh = require'octo.gh'
 local config = require'octo.config'
@@ -302,6 +302,11 @@ function FileEntry:place_signs()
           end
 
           signs.place(sign, split.bufnr, line - 1)
+
+          local last_comment = thread.comments.nodes[#thread.comments.nodes]
+          local last_date = last_comment.lastEditedAt ~= vim.NIL and last_comment.lastEditedAt or last_comment.createdAt
+          local vt_msg = string.format("%d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
+          vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, line -1, {{vt_msg, "Comment"}}, {})
         --end
       end
     end

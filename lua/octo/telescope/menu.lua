@@ -3,14 +3,14 @@ local action_state = require "telescope.actions.state"
 local action_set = require "telescope.actions.set"
 local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
-local utils = require "telescope.utils"
+local ts_utils = require "telescope.utils"
 local conf = require "telescope.config".values
 local sorters = require "telescope.sorters"
 local make_entry = require "telescope.make_entry"
 local previewers = require "octo.telescope.previewers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
-local util = require "octo.util"
+local utils = require "octo.utils"
 local navigation = require "octo.navigation"
 local graphql = require "octo.graphql"
 local entry_maker = require "octo.telescope.entry_maker"
@@ -20,7 +20,6 @@ local M = {}
 local dropdown_opts = require('telescope.themes').get_dropdown({
   results_height = 15;
   width = 0.4;
-  prompt_title = '';
   previewer = false;
   borderchars = {
     prompt = {'▀', '▐', '▄', '▌', '▛', '▜', '▟', '▙' };
@@ -72,7 +71,7 @@ local function open(repo, what, command)
     elseif command == 'tab' then
       vim.cmd [[:tab sb %]]
     end
-    vim.cmd(string.format([[ lua require'octo.util'.get_%s('%s', '%s') ]], what, repo, selection.value))
+    vim.cmd(string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], what, repo, selection.value))
   end
 end
 
@@ -113,25 +112,25 @@ function M.issues(opts)
   local filter = get_filter(opts, "issue")
 
   if not opts.repo or opts.repo == vim.NIL then
-    opts.repo = util.get_remote_name()
+    opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
     vim.api.nvim_err_writeln("Cannot find repo")
     return
   end
 
-  local owner, name = util.split_repo(opts.repo)
+  local owner, name = utils.split_repo(opts.repo)
   local query = graphql("issues_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           print(" ")
-          local resp = util.aggregate_pages(output, "data.repository.issues.nodes")
+          local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
           local issues = resp.data.repository.issues.nodes
           if #issues == 0 then
             vim.api.nvim_err_writeln(string.format("There are no matching issues in %s.", opts.repo))
@@ -147,7 +146,7 @@ function M.issues(opts)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Issues>",
+              prompt_title = "Issues",
               finder = finders.new_table {
                 results = issues,
                 entry_maker = entry_maker.gen_from_issue(max_number)
@@ -180,7 +179,7 @@ local function open_gist(prompt_bufnr)
     return
   end
   local gist_id = tmp_table[1]
-  local gist = utils.get_os_command_output({"gh", "gist", "view",  gist_id, "-r"})
+  local gist = ts_utils.get_os_command_output({"gh", "gist", "view",  gist_id, "-r"})
   if gist and vim.api.nvim_buf_get_option(vim.api.nvim_get_current_buf(), "modifiable") then
     vim.api.nvim_put(gist, "b", true, true)
   end
@@ -196,7 +195,7 @@ function M.gists(opts)
   if opts.secret then
     table.insert(cmd, "--secret")
   end
-  local output = utils.get_os_command_output(cmd)
+  local output = ts_utils.get_os_command_output(cmd)
   if not output or #output == 0 then
     vim.api.nvim_err_writeln("No gists found")
     return
@@ -205,7 +204,7 @@ function M.gists(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "Gists>",
+      prompt_title = "Gists",
       finder = finders.new_table {
         results = output,
         entry_maker = make_entry.gen_from_string(opts)
@@ -258,25 +257,25 @@ function M.pull_requests(opts)
   local filter = get_filter(opts, "pull_request")
 
   if not opts.repo or opts.repo == vim.NIL then
-    opts.repo = util.get_remote_name()
+    opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
     vim.api.nvim_err_writeln("Cannot find repo")
     return
   end
 
-  local owner, name = util.split_repo(opts.repo)
+  local owner, name = utils.split_repo(opts.repo)
   local query = graphql("pull_requests_query", owner, name, filter, {escape = false})
   print("Fetching issues (this may take a while) ...")
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           print(" ")
-          local resp = util.aggregate_pages(output, "data.repository.pullRequests.nodes")
+          local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
           local pull_requests = resp.data.repository.pullRequests.nodes
           if #pull_requests == 0 then
             vim.api.nvim_err_writeln(string.format("There are no matching pull requests in %s.", opts.repo))
@@ -292,7 +291,7 @@ function M.pull_requests(opts)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Pull Requests>",
+              prompt_title = "Pull Requests",
               finder = finders.new_table {
                 results = pull_requests,
                 entry_maker = entry_maker.gen_from_pull_request(max_number)
@@ -328,14 +327,14 @@ function M.commits()
     {
       args = {"api", url},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local results = vim.fn.json_decode(output)
           pickers.new(
             {},
             {
-              prompt_prefix = "PR Commits>",
+              prompt_title = "PR Commits",
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_commits()
@@ -368,14 +367,14 @@ function M.changed_files()
     {
       args = {"api", url},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local results = vim.fn.json_decode(output)
           pickers.new(
             {},
             {
-              prompt_prefix = "PR Files Changed>",
+              prompt_title = "PR Files Changed",
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_changed_files()
@@ -403,7 +402,7 @@ function M.issue_search(opts)
   opts = opts or {}
 
   if not opts.repo or opts.repo == vim.NIL then
-    opts.repo = util.get_remote_name()
+    opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
     vim.api.nvim_err_writeln("Cannot find repo")
@@ -414,7 +413,7 @@ function M.issue_search(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "Issue Search>",
+      prompt_title = "Issue Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -422,7 +421,7 @@ function M.issue_search(opts)
         prompt = prompt
 
         -- skip requests for empty prompts
-        if util.is_blank(prompt) then
+        if utils.is_blank(prompt) then
           process_complete()
           return
         end
@@ -451,7 +450,7 @@ function M.issue_search(opts)
                   return
                 end
 
-                if stderr and not util.is_blank(stderr) then
+                if stderr and not utils.is_blank(stderr) then
                   vim.api.nvim_err_writeln(stderr)
                 elseif output then
                   local resp = vim.fn.json_decode(output)
@@ -482,7 +481,7 @@ function M.pull_request_search(opts)
   opts = opts or {}
 
   if not opts.repo or opts.repo == vim.NIL then
-    opts.repo = util.get_remote_name()
+    opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
     vim.api.nvim_err_writeln("Cannot find repo")
@@ -493,7 +492,7 @@ function M.pull_request_search(opts)
   pickers.new(
     opts,
     {
-      prompt_prefix = "PR Search>",
+      prompt_title = "PR Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -501,7 +500,7 @@ function M.pull_request_search(opts)
         prompt = prompt
 
         -- skip requests for empty prompts
-        if util.is_blank(prompt) then
+        if utils.is_blank(prompt) then
           process_complete()
           return
         end
@@ -530,7 +529,7 @@ function M.pull_request_search(opts)
                   return
                 end
 
-                if stderr and not util.is_blank(stderr) then
+                if stderr and not utils.is_blank(stderr) then
                   vim.api.nvim_err_writeln(stderr)
                 elseif output then
                   local resp = vim.fn.json_decode(output)
@@ -569,7 +568,7 @@ function M.pending_threads(threads)
   pickers.new(
     {},
     {
-      prompt_prefix = "Pending Review Comments>",
+      prompt_title = "Pending Review Comments",
       finder = finders.new_table {
         results = threads,
         entry_maker = entry_maker.gen_from_review_thread(max_linenr_length)
@@ -605,7 +604,7 @@ function M.select_project_card(cb)
     pickers.new(
       opts,
       {
-        prompt_prefix = "Choose card>",
+        prompt_title = "Choose Project Card",
         finder = finders.new_table {
           results = cards.nodes,
           entry_maker = entry_maker.gen_from_project_card()
@@ -652,7 +651,7 @@ function M.select_target_project_column(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose target project>",
+              prompt_title = "Choose Target Project",
               finder = finders.new_table {
                 results = projects,
                 entry_maker = entry_maker.gen_from_project()
@@ -666,7 +665,7 @@ function M.select_target_project_column(cb)
                   pickers.new(
                     opts2,
                     {
-                      prompt_prefix = "Choose target column>",
+                      prompt_title = "Choose Target Column",
                       finder = finders.new_table {
                         results = selected_project.project.columns.nodes,
                         entry_maker = entry_maker.gen_from_project_column()
@@ -707,7 +706,7 @@ function M.select_label(cb)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -715,7 +714,7 @@ function M.select_label(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose label>",
+              prompt_title = "Choose Label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -754,7 +753,7 @@ function M.select_assigned_label(cb)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -762,7 +761,7 @@ function M.select_assigned_label(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose label>",
+              prompt_title = "Choose Label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -795,13 +794,13 @@ function M.select_user(cb)
   pickers.new(
     opts,
     {
-      prompt_prefix = "User Search>",
+      prompt_title = "User Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then return nil end
         prompt = "repos:>10 " .. prompt
 
         -- skip requests for empty prompts
-        if util.is_blank(prompt) then
+        if utils.is_blank(prompt) then
           process_complete()
           return
         end
@@ -823,7 +822,7 @@ function M.select_user(cb)
             {
               args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
+                if stderr and not utils.is_blank(stderr) then
                   vim.api.nvim_err_writeln(stderr)
                 elseif output then
                   -- do not process response, if this is not the last request we sent
@@ -833,7 +832,7 @@ function M.select_user(cb)
                   end
                   local users = {}
                   local orgs = {}
-                  local responses = util.get_pages(output)
+                  local responses = utils.get_pages(output)
                   for _, resp in ipairs(responses) do
                     for _, user in ipairs(resp.data.search.nodes) do
                       if not user.teams then
@@ -896,7 +895,7 @@ function M.select_user(cb)
             pickers.new(
               opts,
               {
-                prompt_prefix = "Choose team>",
+                prompt_title = "Choose Team",
                 finder = finders.new_table {
                   results = selected_user.teams,
                   entry_maker = entry_maker.gen_from_team()
@@ -940,7 +939,7 @@ function M.select_assignee(cb)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -948,7 +947,7 @@ function M.select_assignee(cb)
           pickers.new(
             opts,
             {
-              prompt_prefix = "Choose assignee>",
+              prompt_title = "Choose Assignee",
               finder = finders.new_table {
                 results = assignees,
                 entry_maker = entry_maker.gen_from_user()

@@ -1,7 +1,7 @@
 local FileEntry = require'octo.reviews.file-entry'.FileEntry
 local OctoBuffer = require'octo.model.octo-buffer'.OctoBuffer
 local Layout = require'octo.reviews.layout'.Layout
-local util = require "octo.util"
+local utils = require "octo.utils"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local window = require "octo.window"
@@ -73,7 +73,7 @@ function Review:create(callback)
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -99,7 +99,7 @@ function Review:resume()
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -144,7 +144,7 @@ function Review:initiate()
     {
       args = {"api", "--paginate", url},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local status_map = {
@@ -185,7 +185,7 @@ function Review:discard()
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.fn.json_decode(output)
@@ -202,7 +202,7 @@ function Review:discard()
               {
                 args = {"api", "graphql", "-f", string.format("query=%s", delete_query)},
                 cb = function(output, stderr)
-                  if stderr and not util.is_blank(stderr) then
+                  if stderr and not utils.is_blank(stderr) then
                     vim.api.nvim_err_writeln(stderr)
                   elseif output then
                     self.id = -1
@@ -267,13 +267,13 @@ function Review:submit(event)
   local bufnr = vim.api.nvim_get_current_buf()
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local body = util.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
+  local body = utils.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
   local query = graphql("submit_pull_request_review_mutation", self.id, event, body, {escape = false})
   gh.run(
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
-        if stderr and not util.is_blank(stderr) then
+        if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           print("[Octo] Review was submitted successfully!")
@@ -288,7 +288,7 @@ end
 M.Review = Review
 
 function M.start_review()
-  local pull_request = util.get_current_pr()
+  local pull_request = utils.get_current_pr()
   if pull_request then
     local current_review = Review:new(pull_request)
     current_review:start()
@@ -296,7 +296,7 @@ function M.start_review()
 end
 
 function M.resume_review()
-  local pull_request = util.get_current_pr()
+  local pull_request = utils.get_current_pr()
   if pull_request then
     local current_review = Review:new(pull_request)
     current_review:resume()
@@ -316,7 +316,7 @@ end
 
 function M.hide_review_threads()
   local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(bufnr)
+  local split, path = utils.get_split_and_path(bufnr)
   if not split or not path then return end
   local review = M.get_current_review()
   local file = review.layout:cur_file()
@@ -338,7 +338,7 @@ end
 
 function M.show_review_threads()
   local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(bufnr)
+  local split, path = utils.get_split_and_path(bufnr)
   if not split or not path then return end
   local review = M.get_current_review()
   local file = review.layout:cur_file()
@@ -349,8 +349,8 @@ function M.show_review_threads()
   local line = vim.api.nvim_win_get_cursor(0)[1]
   local threads_at_cursor = {}
   for _, thread in ipairs(threads) do
-    --if util.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine <= line and thread.line >= line then
-    if util.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine == line then
+    --if utils.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine <= line and thread.line >= line then
+    if utils.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine == line then
       table.insert(threads_at_cursor, thread)
     end
   end
@@ -400,7 +400,7 @@ end
 
 function M.add_review_comment(isSuggestion)
   local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = util.get_split_and_path(bufnr)
+  local split, path = utils.get_split_and_path(bufnr)
   if not split or not path then return end
 
   local review = M.get_current_review()
@@ -522,7 +522,7 @@ function M.show_pending_comments()
   local pending_threads = {}
   for _, thread in ipairs(vim.tbl_values(current_review.threads)) do
     for _, comment in ipairs(thread.comments.nodes) do
-      if comment.pullRequestReview.state == "PENDING" and not util.is_blank(vim.fn.trim(comment.body)) then
+      if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(vim.fn.trim(comment.body)) then
         table.insert(pending_threads, thread)
       end
     end

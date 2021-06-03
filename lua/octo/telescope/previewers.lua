@@ -1,12 +1,12 @@
 local OctoBuffer = require'octo.model.octo-buffer'.OctoBuffer
 local previewers = require "telescope.previewers"
-local utils = require "telescope.utils"
-local putils = require "telescope.previewers.utils"
+local utils = require "octo.utils"
+local ts_utils = require "telescope.utils"
+local pv_utils = require "telescope.previewers.utils"
 local writers = require "octo.writers"
 local graphql = require "octo.graphql"
-local util = require "octo.util"
 local gh = require "octo.gh"
-local defaulter = utils.make_default_callable
+local defaulter = ts_utils.make_default_callable
 
 local M = {}
 
@@ -21,13 +21,13 @@ M.issue =
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.issue.number
-          local owner, name = util.split_repo(opts.repo)
+          local owner, name = utils.split_repo(opts.repo)
           local query = graphql("issue_query", owner, name, number)
           gh.run(
             {
               args = {"api", "graphql", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
+                if stderr and not utils.is_blank(stderr) then
                   vim.api.nvim_err_writeln(stderr)
                 elseif output and vim.api.nvim_buf_is_valid(bufnr) then
                   local result = vim.fn.json_decode(output)
@@ -80,13 +80,13 @@ M.pull_request =
         local bufnr = self.state.bufnr
         if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
           local number = entry.pull_request.number
-          local owner, name = util.split_repo(opts.repo)
+          local owner, name = utils.split_repo(opts.repo)
           local query = graphql("pull_request_query", owner, name, number)
           gh.run(
             {
               args = {"api", "graphql", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
-                if stderr and not util.is_blank(stderr) then
+                if stderr and not utils.is_blank(stderr) then
                   vim.api.nvim_err_writeln(stderr)
                 elseif output and vim.api.nvim_buf_is_valid(bufnr) then
                   local result = vim.fn.json_decode(output)
@@ -129,7 +129,7 @@ M.commit =
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
 
           local url = string.format("/repos/%s/commits/%s", opts.repo, entry.value)
-          putils.job_maker(
+          pv_utils.job_maker(
             {"gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff"},
             self.state.bufnr,
             {

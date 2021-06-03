@@ -89,7 +89,6 @@ end}
 ```
 use {'pwntester/octo.nvim', config=function()
   require"octo".setup({
-  date_format = "%Y %b %d %I:%M %p %Z";    -- date format
   default_remote = {"upstream", "origin"}; -- order to try remotes
   reaction_viewer_hint_icon = "";         -- marker for user reactions
   user_icon = " ";                        -- user icon

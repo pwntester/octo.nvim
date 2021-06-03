@@ -1,6 +1,6 @@
 local constants = require "octo.constants"
 local graphql = require "octo.graphql"
-local util = require "octo.util"
+local utils = require "octo.utils"
 local gh = require "octo.gh"
 
 local M = {}
@@ -22,33 +22,33 @@ function M.go_to_issue()
   if not buffer then return end
   local current_repo = buffer.repo
 
-  local repo, number = util.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
+  local repo, number = utils.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
 
   if not repo or not number then
     repo = current_repo
-    number = util.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    number = utils.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
   end
 
   if not repo or not number then
-    repo, _, number = util.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+    repo, _, number = utils.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
   end
 
   if repo and number then
-    local owner, name = util.split_repo(repo)
+    local owner, name = utils.split_repo(repo)
     local query = graphql("issue_kind_query", owner, name, number)
     gh.run(
       {
         args = {"api", "graphql", "-f", string.format("query=%s", query)},
         cb = function(output, stderr)
-          if stderr and not util.is_blank(stderr) then
+          if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output then
             local resp = vim.fn.json_decode(output)
             local kind = resp.data.repository.issueOrPullRequest.__typename
             if kind == "Issue" then
-              util.get_issue(repo, number)
+              utils.get_issue(repo, number)
             elseif kind == "PullRequest" then
-              util.get_pull_request(repo, number)
+              utils.get_pull_request(repo, number)
             end
           end
         end
@@ -63,10 +63,10 @@ function M.next_comment()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = util.get_sorted_comment_lines()
+    local lines = utils.get_sorted_comment_lines()
     if not buffer:isReviewThread() then
       -- skil title and body
-      lines = util.tbl_slice(lines, 3, #lines)
+      lines = utils.tbl_slice(lines, 3, #lines)
     end
     if not lines or not current_line then return end
     local target
@@ -94,8 +94,8 @@ function M.prev_comment()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = util.get_sorted_comment_lines()
-    lines = util.tbl_slice(lines, 3, #lines)
+    local lines = utils.get_sorted_comment_lines()
+    lines = utils.tbl_slice(lines, 3, #lines)
     if not lines or not current_line then return end
     local target
     if current_line > lines[#lines]+2 then

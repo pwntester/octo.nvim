@@ -1,5 +1,3 @@
-local util = require"octo.util"
-
 local M = {}
 
 function _G.octo_foldtext()

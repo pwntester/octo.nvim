@@ -66,6 +66,8 @@ M.resolve_review_thread_mutation =
                   id
                   body
                   diffHunk
+                  createdAt
+                  lastEditedAt
                   commit { abbreviatedOid }
                   author {login}
                   authorAssociation
@@ -127,6 +129,8 @@ M.unresolve_review_thread_mutation =
                   body
                   diffHunk
                   commit { abbreviatedOid }
+                  createdAt
+                  lastEditedAt
                   author {login}
                   authorAssociation
                   viewerDidAuthor
@@ -183,6 +187,8 @@ M.start_review_mutation =
                   id
                   body
                   diffHunk
+                  createdAt
+                  lastEditedAt
                   commit { abbreviatedOid }
                   author {login}
                   authorAssociation
@@ -284,6 +290,8 @@ mutation {
           id
           body
           diffHunk
+          createdAt
+          lastEditedAt
           commit { abbreviatedOid }
           author {login}
           authorAssociation
@@ -325,6 +333,8 @@ mutation {
                 id
                 body
                 diffHunk
+                createdAt
+                lastEditedAt
                 commit { abbreviatedOid }
                 author {login}
                 authorAssociation
@@ -367,6 +377,8 @@ mutation {
           id
           body
           diffHunk
+          createdAt
+          lastEditedAt
           commit { abbreviatedOid }
           author {login}
           authorAssociation
@@ -408,6 +420,8 @@ mutation {
                 id
                 body
                 diffHunk
+                createdAt
+                lastEditedAt
                 commit { abbreviatedOid }
                 author {login}
                 authorAssociation
@@ -493,6 +507,8 @@ M.update_pull_request_review_comment_mutation =
                   id
                   body
                   diffHunk
+                  createdAt
+                  lastEditedAt
                   commit { abbreviatedOid }
                   author {login}
                   authorAssociation
@@ -564,6 +580,8 @@ M.add_pull_request_review_comment_mutation =
                   id
                   body
                   diffHunk
+                  createdAt
+                  lastEditedAt
                   commit { abbreviatedOid }
                   author {login}
                   authorAssociation
@@ -643,6 +661,8 @@ M.delete_pull_request_review_comment_mutation =
                   id
                   body
                   diffHunk
+                  createdAt
+                  lastEditedAt
                   commit { abbreviatedOid }
                   author {login}
                   authorAssociation
@@ -1310,6 +1330,8 @@ query {
               id
               body
               diffHunk
+              createdAt
+              lastEditedAt
               commit { abbreviatedOid }
               author {login}
               authorAssociation
@@ -1363,6 +1385,7 @@ query($endCursor: String) {
               id
               body
               createdAt
+              lastEditedAt
               state
               commit {
                 oid
@@ -1642,6 +1665,8 @@ query($endCursor: String) {
                   oid
                 }
                 author { login }
+                createdAt
+                lastEditedAt
                 authorAssociation
                 viewerDidAuthor
                 viewerCanUpdate
@@ -1682,6 +1707,7 @@ query($endCursor: String) {
               id
               body
               createdAt
+              lastEditedAt
               replyTo { id }
               state
               commit {
