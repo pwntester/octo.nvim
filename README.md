@@ -277,11 +277,13 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 1. In-menu mappings:
 - `<CR>`: Edit Issue
 - `<C-b>`: Opens issue in web browser
+- `<C-y>`: Copies URL to system clipboard 
 [Available filter keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
 2. In-menu mappings:
 - `<CR>`: Edit PR
 - `<C-b>`: Opens PR in web browser
+- `<C-y>`: Copies URL to system clipboard 
 [Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
 3. In-menu mappings:

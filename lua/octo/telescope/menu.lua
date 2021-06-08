@@ -5,6 +5,7 @@ local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local ts_utils = require "telescope.utils"
 local conf = require "telescope.config".values
+local config = require'octo.config'
 local sorters = require "telescope.sorters"
 local make_entry = require "telescope.make_entry"
 local previewers = require "octo.telescope.previewers"
@@ -92,12 +93,38 @@ local function open_preview_buffer(command)
   end
 end
 
-local function open_in_browser(type, repo)
+local function open_in_browser(kind, repo)
   return function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     local number = selection.value
     actions.close(prompt_bufnr)
-    navigation.open_in_browser(type, repo, number)
+    navigation.open_in_browser(kind, repo, number)
+  end
+end
+
+local function copy_url(kind, repo)
+  return function(prompt_bufnr)
+    local selection = action_state.get_selected_entry(prompt_bufnr)
+    local number = selection.value
+    actions.close(prompt_bufnr)
+    local octo_conf = config.get_config()
+    local gh_kind
+    if kind == "issue" then
+      gh_kind = "issues"
+    elseif kind == "pr" then
+      gh_kind = "pull"
+    else
+      return
+    end
+    local host
+    if utils.is_blank(octo_conf.github_hostname) then
+      host = "github.com"
+    else
+      host = octo_conf.github_hostname
+    end
+    local url = string.format("https://%s/%s/%s/%d", host, repo, gh_kind, number)
+    vim.fn.setreg('+', url, 'c')
+    print("[Octo] Copied URL to the system clipboard (+ register)")
   end
 end
 
@@ -158,6 +185,7 @@ function M.issues(opts)
                   open(opts.repo, "issue", type)(prompt_bufnr)
                 end)
                 map("i", "<c-b>", open_in_browser("issue", opts.repo))
+                map("i", "<c-y>", copy_url("issue", opts.repo))
                 return true
               end
             }
@@ -266,7 +294,7 @@ function M.pull_requests(opts)
 
   local owner, name = utils.split_repo(opts.repo)
   local query = graphql("pull_requests_query", owner, name, filter, {escape = false})
-  print("Fetching issues (this may take a while) ...")
+  print("Fetching pull requests (this may take a while) ...")
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
@@ -304,6 +332,7 @@ function M.pull_requests(opts)
                 end)
                 map("i", "<c-o>", checkout_pull_request(opts.repo))
                 map("i", "<c-b>", open_in_browser("pr", opts.repo))
+                map("i", "<c-y>", copy_url("pr", opts.repo))
                 return true
               end
             }
@@ -471,6 +500,7 @@ function M.issue_search(opts)
           open(opts.repo, "issue", type)(prompt_bufnr)
         end)
         map("i", "<c-b>", open_in_browser("issue", opts.repo))
+        map("i", "<c-y>", copy_url("issue", opts.repo))
         return true
       end
     }
@@ -550,6 +580,7 @@ function M.pull_request_search(opts)
           open(opts.repo, "pull_request", type)(prompt_bufnr)
         end)
         map("i", "<c-b>", open_in_browser("pr", opts.repo))
+        map("i", "<c-y>", copy_url("pr", opts.repo))
         return true
       end
     }
