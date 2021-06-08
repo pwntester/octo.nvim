@@ -231,6 +231,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | search | Live issue search |
 | | reload | Reload issue. Same as doing `e!`|
 | | browser | Open current issue in the browser |
+| | url | Copies the URL of the current issue to the system clipboard|
 | pr | list [repo] [key=value] (2)| List all PRs satisfying given filter |
 | | search | Live issue search |
 | | edit [repo] <number> | Edit PR `<number>` in current or specified repo|
@@ -245,6 +246,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | checks | Show the status of all checks run on the PR |
 | | reload | Reload PR. Same as doing `e!`|
 | | browser | Open current PR in the browser|
+| | url | Copies the URL of the current issue to the system clipboard|
 | gist | list [repo] [key=value] | List user gists |
 | comment | add | Add a new comment |
 | | delete | Delete a comment |
