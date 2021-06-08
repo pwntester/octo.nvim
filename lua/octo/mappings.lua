@@ -50,6 +50,9 @@ M.keypress_event_cbs = {
   open_in_browser = function()
     require"octo.navigation".open_in_browser()
   end,
+  copy_url = function()
+    require"octo.commands".copy_url()
+  end,
   add_label = function()
     require"octo.commands".add_label()
   end,

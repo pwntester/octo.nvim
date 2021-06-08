@@ -41,7 +41,7 @@ M.commands = {
       navigation.open_in_browser()
     end,
     url = function()
-      M.copy_URL()
+      M.copy_url()
     end
   },
   pr = {
@@ -90,7 +90,7 @@ M.commands = {
       navigation.open_in_browser()
     end,
     url = function()
-      M.copy_URL()
+      M.copy_url()
     end
   },
   review = {
@@ -1065,7 +1065,7 @@ function M.remove_assignee()
   )
 end
 
-function M.copy_URL()
+function M.copy_url()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
