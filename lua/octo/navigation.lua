@@ -13,7 +13,7 @@ function M.open_in_browser()
   if buffer:isPullRequest() then kind = "pr" end
   if buffer:isIssue() then kind = "issue" end
   local cmd = string.format("gh %s view --web -R %s %d", kind, buffer.repo, buffer.number)
-  os.execute(cmd)
+  pcall(vim.cmd, "silent !"..cmd)
 end
 
 function M.go_to_issue()
