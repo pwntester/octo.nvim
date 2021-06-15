@@ -6,6 +6,7 @@ local M = {}
 ---@field repo string
 ---@field number integer
 ---@field id string
+---@field bufnr integer
 ---@field left Rev
 ---@field right Rev
 ---@field files table
@@ -22,7 +23,8 @@ function PullRequest:new(opts)
     left = opts.left,
     right = opts.right,
     local_right = false,
-    local_left = false
+    local_left = false,
+    bufnr = opts.bufnr
   }
   this.files = {}
   for _, file in ipairs(opts.files) do

@@ -51,7 +51,7 @@ FilePanel.bufopts = {
   swapfile = false,
   buftype = 'nofile';
   modifiable = false;
-  filetype = 'octo';
+  filetype = 'octo_panel';
   bufhidden = 'hide';
 }
 

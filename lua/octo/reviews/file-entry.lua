@@ -198,14 +198,20 @@ function FileEntry:load_buffers(left_winid, right_winid)
   -- configure diff buffers
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
-      -- create new buffer
-      -- TODO: if PR is checkout, use file from FS for right buffer
+
+      local use_local = false
+      if split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr) then
+        use_local = true
+      end
+
+      -- create buffer
       split.bufid = M._create_buffer({
         path = self.path,
         split = split.pos,
         binary = split.binary,
         lines = split.lines,
-        repo = self.pull_request.repo
+        repo = self.pull_request.repo,
+        use_local = use_local
       })
 
       -- register new buffer
@@ -337,21 +343,39 @@ end
 
 function M._create_buffer(opts)
   if opts.binary then return M._get_null_buffer() end
-  local bufnr = vim.api.nvim_create_buf(false, false)
   local current_review = require"octo.reviews".get_current_review()
-  local bufname = string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
-  vim.api.nvim_buf_set_name(bufnr, bufname)
+  local bufnr
+  if opts.use_local then
+    bufnr = vim.fn.bufadd(opts.path)
+    --[[
+    for _, bufid in ipairs(vim.api.nvim_list_bufs()) do
+      if opts.path == vim.fn.fnamemodify(vim.fn.expand("#"..bufid), ":~:.") then
+        bufnr = bufid
+        break
+      end
+    end
+    if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+      bufnr = vim.api.nvim_create_buf(false, false)
+      vim.api.nvim_buf_call(bufnr, function()
+        vim.cmd("e "..opts.path)
+      end)
+    end
+    ]]--
+  else
+    bufnr = vim.api.nvim_create_buf(false, false)
+    local bufname = string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
+    vim.api.nvim_buf_set_name(bufnr, bufname)
+    if opts.lines then
+      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
+    end
+  end
   vim.api.nvim_buf_set_option(bufnr, "modified", false)
   vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
   vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
     path = opts.path;
     split = string.upper(opts.split);
   })
-  if opts.lines then
-    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
-    vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
-  end
   return bufnr
 end
 

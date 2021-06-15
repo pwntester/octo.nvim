@@ -212,8 +212,8 @@ function M.in_pr_repo()
   end
 end
 
-function M.in_pr_branch()
-  local bufnr = vim.api.nvim_get_current_buf()
+function M.in_pr_branch(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
   if not buffer:isPullRequest() then
@@ -251,6 +251,7 @@ function M.get_current_pr()
   local Rev = require'octo.reviews.rev'.Rev
   local PullRequest = require'octo.model.pull-request'.PullRequest
   return PullRequest:new({
+    bufnr = bufnr,
     repo = buffer.repo,
     number = buffer.number,
     id = buffer.node.id,
