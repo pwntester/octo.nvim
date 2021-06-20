@@ -398,4 +398,67 @@ function M.gen_from_user()
   end
 end
 
+function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local fork_str = ""
+    if entry.repo.isFork then
+      fork_str = "fork"
+    end
+
+    local access_str = "public"
+    if entry.repo.isPrivate then
+      access_str = "private"
+    end
+
+    local columns = {
+      {string.sub(entry.repo.nameWithOwner, 1, 50), "TelescopeResultsNumber"},
+      {"s:", "TelescopeResultsNumber"},
+      {entry.repo.stargazerCount},
+      {"f:", "TelescopeResultsNumber"},
+      {entry.repo.forkCount},
+      {access_str},
+      {fork_str},
+      {entry.repo.description}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {width = math.min(max_nameWithOwner, 50)},
+        {width = 2},
+        {width = max_stargazerCount},
+        {width = 2},
+        {width = max_forkCount},
+        {width = vim.fn.len("private")},
+        {width = vim.fn.len("fork")},
+        {remaining = true},
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(repo)
+    if not repo or vim.tbl_isempty(repo) then
+      return nil
+    end
+
+    if repo.description == vim.NIL then
+      repo.description = ""
+    end
+
+    return {
+      value = repo.nameWithOwner,
+      ordinal = repo.nameWithOwner .. " " .. repo.description,
+      display = make_display,
+      repo = repo
+    }
+  end
+end
+
 return M

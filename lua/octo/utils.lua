@@ -138,7 +138,7 @@ function table.pack(...)
 end
 
 function M.is_blank(s)
-  return not (s ~= nil and string.match(s, "%S") ~= nil)
+  return not (s ~= nil and s~= vim.NIL and string.match(s, "%S") ~= nil)
 end
 
 function M.get_remote_name()
@@ -486,6 +486,10 @@ function M.get_repo_number_from_varargs(...)
     return
   end
   return repo, number
+end
+
+function M.get_repo(_, repo)
+  vim.cmd(string.format("edit octo://%s/repo", repo))
 end
 
 function M.get_issue(...)
@@ -888,6 +892,14 @@ function M.get_extmark_region(bufnr, mark)
     local text = vim.fn.join(lines, "\n")
     return start_line, end_line, text
   end
+end
+
+function M.fork_repo()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer or not buffer:isRepo() then return end
+  print(string.format("[Octo] Cloning %s. It can take a few minutes", buffer.repo))
+  print(vim.fn.system('echo "n" | gh repo fork ' .. buffer.repo .. ' 2>&1 | cat '))
 end
 
 return M

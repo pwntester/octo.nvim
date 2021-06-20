@@ -95,6 +95,8 @@ M.defaults = {
       react_confused = "<space>rc",
       close_review_tab = "<C-c>",
     },
+    repo = {
+    },
     submit_win = {
       close_review_win = "<C-c>",
       approve_review = "<C-a>",

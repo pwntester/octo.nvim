@@ -347,20 +347,6 @@ function M._create_buffer(opts)
   local bufnr
   if opts.use_local then
     bufnr = vim.fn.bufadd(opts.path)
-    --[[
-    for _, bufid in ipairs(vim.api.nvim_list_bufs()) do
-      if opts.path == vim.fn.fnamemodify(vim.fn.expand("#"..bufid), ":~:.") then
-        bufnr = bufid
-        break
-      end
-    end
-    if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
-      bufnr = vim.api.nvim_create_buf(false, false)
-      vim.api.nvim_buf_call(bufnr, function()
-        vim.cmd("e "..opts.path)
-      end)
-    end
-    ]]--
   else
     bufnr = vim.api.nvim_create_buf(false, false)
     local bufname = string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)

@@ -248,8 +248,12 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | checks | Show the status of all checks run on the PR |
 | | reload | Reload PR. Same as doing `e!`|
 | | browser | Open current PR in the browser|
-| | url | Copies the URL of the current issue to the system clipboard|
-| gist | list [repo] [key=value] | List user gists |
+| | url | Copies the URL of the current PR to the system clipboard|
+| repo | list (3) | List repos user owns, contributes or belong to |
+| | fork | Fork repo |
+| | browser | Open current repo in the browser|
+| | url | Copies the URL of the current repo to the system clipboard|
+| gist | list [repo] [key=value] (4) | List user gists |
 | comment | add | Add a new comment |
 | | delete | Delete a comment |
 | thread | resolve| Mark a review thread as resolved |
@@ -280,19 +284,23 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 
 1. In-menu mappings:
 - `<CR>`: Edit Issue
-- `<C-b>`: Opens issue in web browser
+- `<C-b>`: Opens issue in the browser
 - `<C-y>`: Copies URL to system clipboard 
 [Available filter keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
 2. In-menu mappings:
 - `<CR>`: Edit PR
-- `<C-b>`: Opens PR in web browser
+- `<C-b>`: Opens PR in the browser
 - `<C-y>`: Copies URL to system clipboard 
 [Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
 3. In-menu mappings:
+- `<CR>`: View repo
+- `<C-b>`: Opens repo in the browser
+- `<C-y>`: Copies URL to system clipboard 
+
+4. In-menu mappings:
 - `<CR>`: Append Gist to buffer
-- `<C-b>`: Opens Gist in web browser
 [Available keys](https://cli.github.com/manual/gh_gist_list):  `repo`\|`public`\|`secret`
 
 ## 🔥 Examples
