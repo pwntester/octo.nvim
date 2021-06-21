@@ -643,7 +643,7 @@ local function get_lnum_chunks(opts)
   end
 end
 
-function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
+function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side, path)
   start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
@@ -680,17 +680,15 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   local max_lnum = math.max(vim.fn.strdisplaywidth(tostring(right_offset + #diffhunk_lines)), vim.fn.strdisplaywidth(tostring(left_offset + #diffhunk_lines)))
 
   -- calculate diffhunk subrange to show
-  local snippet_start = start_line
-  local snippet_end = start_line
+  local side_lines
+  if comment_side == "RIGHT" then
+    side_lines = right_side_lines
+  elseif comment_side == "LEFT" then
+    side_lines = left_side_lines
+  end
+  local snippet_start, snippet_end
   if comment_side and comment_start ~= comment_end then
-    -- for multiline comments, discard calculated values
-    -- write just those lines
-    local side_lines
-    if comment_side == "RIGHT" then
-      side_lines = right_side_lines
-    elseif comment_side == "LEFT" then
-      side_lines = left_side_lines
-    end
+    -- multiline comment: write just those lines
     for pos, l in pairs(side_lines) do
       if tonumber(l) == tonumber(comment_start) then
         snippet_start = pos
@@ -698,25 +696,25 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
         snippet_end = pos
       end
     end
-    if not snippet_end then
-      -- could not find comment end line in the diff hunk,
-      -- defaulting to last diff hunk line
-      snippet_end = #side_lines
-    end
   else
     -- for single-line comment, add additional context lines
-    local side_lines
-    if comment_side == "RIGHT" then
-      side_lines = right_side_lines
-    elseif comment_side == "LEFT" then
-      side_lines = left_side_lines
-    end
     for pos, l in pairs(side_lines) do
       if tonumber(l) == tonumber(comment_start) then
         snippet_start, snippet_end = find_snippet_range(utils.tbl_slice(diffhunk_lines, 1, pos, 1))
         break
       end
     end
+  end
+
+  if not snippet_end then
+    -- could not find comment end line in the diff hunk,
+    -- defaulting to last diff hunk line
+    snippet_end = #side_lines
+  end
+  if not snippet_start then
+    -- could not find comment sart line in the diff hunk,
+    -- defaulting to last diff hunk line - 3
+    snippet_start = #side_lines - 3
   end
 
   -- calculate longest line in the visible section of the diffhunk
@@ -1306,7 +1304,7 @@ function M.write_threads(bufnr, threads)
         M.write_block(bufnr, {""})
         --M.write_block(bufnr, {""}, line)
         -- write snippet
-        thread_start, thread_end = M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+        thread_start, thread_end = M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide, thread.path)
       end
 
       comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")
