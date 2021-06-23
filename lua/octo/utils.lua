@@ -4,7 +4,7 @@ local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local config = require'octo.config'
-local Job = pcall(require, 'plenary.job')
+local _, Job = pcall(require, 'plenary.job')
 
 local M = {}
 

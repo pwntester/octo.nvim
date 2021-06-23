@@ -1,5 +1,5 @@
 local config = require'octo.config'
-local Job = pcall(require,'plenary.job')
+local _, Job = pcall(require,'plenary.job')
 
 local function run(opts)
   if not Job then return end
