@@ -4,7 +4,7 @@ local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local config = require'octo.config'
-local Job = require("plenary.job")
+local Job = pcall(require, 'plenary.job')
 
 local M = {}
 
@@ -163,6 +163,7 @@ function M.get_remote_name()
 end
 
 function M.commit_exists(commit, cb)
+  if not Job then return end
   Job:new({
     enable_recording = true,
     command = "git",
@@ -180,6 +181,7 @@ function M.commit_exists(commit, cb)
 end
 
 function M.get_file_at_commit(path, commit, cb)
+  if not Job then return end
   Job:new({
     enable_recording = true,
     command = "git",
