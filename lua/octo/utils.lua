@@ -219,8 +219,8 @@ function M.in_pr_branch(bufnr)
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
   if not buffer:isPullRequest() then
-    vim.api.nvim_err_writeln("[Octo] Not in Octo PR buffer")
-    return
+    --vim.api.nvim_err_writeln("[Octo] Not in Octo PR buffer")
+    return false
   end
 
   local cmd = "git rev-parse --abbrev-ref HEAD"
@@ -234,11 +234,11 @@ function M.in_pr_branch(bufnr)
   if buffer.node.baseRepository.nameWithOwner == local_repo and buffer.node.headRefName == local_branch then
     return true
   elseif buffer.node.baseRepository.nameWithOwner ~= local_repo then
-    vim.api.nvim_err_writeln(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
+    --vim.api.nvim_err_writeln(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
     return false
   elseif buffer.node.headRefName ~= local_branch then
     -- TODO: suggest to checkout the branch
-    vim.api.nvim_err_writeln(string.format("[Octo] Not in PR branch. Expected %s, got %s", buffer.node.headRefName, local_branch))
+    --vim.api.nvim_err_writeln(string.format("[Octo] Not in PR branch. Expected %s, got %s", buffer.node.headRefName, local_branch))
     return false
   else
     return false
