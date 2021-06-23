@@ -95,36 +95,24 @@ end
 
 local function open_in_browser(kind, repo)
   return function(prompt_bufnr)
-    local selection = action_state.get_selected_entry(prompt_bufnr)
-    local number = selection.value
+    local entry = action_state.get_selected_entry(prompt_bufnr)
+    local number
+    if kind == "repo" then
+      repo = entry.repo.nameWithOwner
+    else
+      number = entry.value
+    end
     actions.close(prompt_bufnr)
     navigation.open_in_browser(kind, repo, number)
   end
 end
 
-local function copy_url(kind, repo)
+local function copy_url(kind)
   return function(prompt_bufnr)
-    local selection = action_state.get_selected_entry(prompt_bufnr)
-    local number = selection.value
-    actions.close(prompt_bufnr)
-    local octo_conf = config.get_config()
-    local gh_kind
-    if kind == "issue" then
-      gh_kind = "issues"
-    elseif kind == "pr" then
-      gh_kind = "pull"
-    else
-      return
-    end
-    local host
-    if utils.is_blank(octo_conf.github_hostname) then
-      host = "github.com"
-    else
-      host = octo_conf.github_hostname
-    end
-    local url = string.format("https://%s/%s/%s/%d", host, repo, gh_kind, number)
+    local entry = action_state.get_selected_entry(prompt_bufnr)
+    local url = entry[kind].url
     vim.fn.setreg('+', url, 'c')
-    print("[Octo] Copied URL to the system clipboard (+ register)")
+    print("[Octo] Copied '" .. url .. "' to the system clipboard (+ register)")
   end
 end
 
@@ -185,7 +173,7 @@ function M.issues(opts)
                   open(opts.repo, "issue", type)(prompt_bufnr)
                 end)
                 map("i", "<c-b>", open_in_browser("issue", opts.repo))
-                map("i", "<c-y>", copy_url("issue", opts.repo))
+                map("i", "<c-y>", copy_url("issue"))
                 return true
               end
             }
@@ -241,7 +229,6 @@ function M.gists(opts)
       sorter = conf.generic_sorter(opts),
       attach_mappings = function(_, map)
         map("i", "<CR>", open_gist)
-        map("i", "<c-b>", open_in_browser("gist"))
         return true
       end
     }
@@ -332,7 +319,7 @@ function M.pull_requests(opts)
                 end)
                 map("i", "<c-o>", checkout_pull_request(opts.repo))
                 map("i", "<c-b>", open_in_browser("pr", opts.repo))
-                map("i", "<c-y>", copy_url("pr", opts.repo))
+                map("i", "<c-y>", copy_url("pull_request"))
                 return true
               end
             }
@@ -500,7 +487,7 @@ function M.issue_search(opts)
           open(opts.repo, "issue", type)(prompt_bufnr)
         end)
         map("i", "<c-b>", open_in_browser("issue", opts.repo))
-        map("i", "<c-y>", copy_url("issue", opts.repo))
+        map("i", "<c-y>", copy_url("issue"))
         return true
       end
     }
@@ -580,7 +567,7 @@ function M.pull_request_search(opts)
           open(opts.repo, "pull_request", type)(prompt_bufnr)
         end)
         map("i", "<c-b>", open_in_browser("pr", opts.repo))
-        map("i", "<c-y>", copy_url("pr", opts.repo))
+        map("i", "<c-y>", copy_url("pull_request"))
         return true
       end
     }
@@ -990,6 +977,65 @@ function M.select_assignee(cb)
                   actions.close(prompt_bufnr)
                   cb(selected_assignee.user.id)
                 end)
+                return true
+              end
+            }
+          ):find()
+        end
+      end
+    }
+  )
+end
+
+--
+-- REPOS
+--
+function M.repos(opts)
+  opts = opts or {}
+  if not opts.login then
+    opts.login = vim.g.octo_viewer
+  end
+
+  local query = graphql("repos_query", opts.login)
+  print("Fetching repositories (this may take a while) ...")
+  gh.run(
+    {
+      args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+        elseif output then
+          print(" ")
+          local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
+          local repos = resp.data.repositoryOwner.repositories.nodes
+          if #repos == 0 then
+            vim.api.nvim_err_writeln(string.format("There are no matching repositories for %s.", opts.login))
+            return
+          end
+          local max_nameWithOwner = -1
+          local max_forkCount = -1
+          local max_stargazerCount = -1
+          for _, repo in ipairs(repos) do
+            max_nameWithOwner = math.max(max_nameWithOwner, #repo.nameWithOwner)
+            max_forkCount = math.max(max_forkCount, #tostring(repo.forkCount))
+            max_stargazerCount = math.max(max_stargazerCount, #tostring(repo.stargazerCount))
+          end
+
+          pickers.new(
+            opts,
+            {
+              prompt_title = "Repositories",
+              finder = finders.new_table {
+                results = repos,
+                entry_maker = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, map)
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open(opts.repo, "repo", type)(prompt_bufnr)
+                end)
+                map("i", "<c-b>", open_in_browser("repo"))
+                map("i", "<c-y>", copy_url("repo"))
                 return true
               end
             }

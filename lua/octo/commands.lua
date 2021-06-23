@@ -2,7 +2,6 @@ local gh = require"octo.gh"
 local utils = require"octo.utils"
 local navigation = require"octo.navigation"
 local window = require"octo.window"
-local config = require"octo.config"
 local menu = require"octo.telescope.menu"
 local reviews = require"octo.reviews"
 local graphql = require"octo.graphql"
@@ -85,6 +84,23 @@ M.commands = {
     end,
     reload = function()
       M.reload()
+    end,
+    browser = function()
+      navigation.open_in_browser()
+    end,
+    url = function()
+      M.copy_url()
+    end
+  },
+  repo = {
+    list = function(login)
+      menu.repos({login = login})
+    end,
+    view = function(repo)
+      utils.get_repo(nil, repo)
+    end,
+    fork= function()
+      utils.fork_repo()
     end,
     browser = function()
       navigation.open_in_browser()
@@ -1069,28 +1085,9 @@ function M.copy_url()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-
-
-  local host
-  local conf = config.get_config()
-  if utils.is_blank(conf.github_hostname) then
-    host = "github.com"
-  else
-    host = conf.github_hostname
-  end
-
-  local kind
-  if buffer:isPullRequest() then
-    kind = "pull"
-  elseif buffer:isIssue() then
-    kind = "issues"
-  else
-    return
-  end
-
-  local url = string.format("https://%s/%s/%s/%d", host, buffer.repo, kind, buffer.number)
+  local url = buffer.node.url
   vim.fn.setreg('+', url, 'c')
-  print("[Octo] Copied URL to the system clipboard (+ register)")
+  print("[Octo] Copied URL '".. url .."' to the system clipboard (+ register)")
 end
 
 return M

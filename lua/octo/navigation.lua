@@ -5,14 +5,29 @@ local gh = require "octo.gh"
 
 local M = {}
 
-function M.open_in_browser()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then return end
-  local kind
-  if buffer:isPullRequest() then kind = "pr" end
-  if buffer:isIssue() then kind = "issue" end
-  local cmd = string.format("gh %s view --web -R %s %d", kind, buffer.repo, buffer.number)
+function M.open_in_browser(kind, repo, number)
+  local cmd
+  if not kind and not repo then
+    local bufnr = vim.api.nvim_get_current_buf()
+    local buffer = octo_buffers[bufnr]
+    if not buffer then return end
+    if buffer:isPullRequest() then
+      cmd = string.format("gh pr view --web -R %s %d", buffer.repo, buffer.number)
+    elseif buffer:isIssue() then
+      cmd = string.format("gh issue view --web -R %s %d", buffer.repo, buffer.number)
+    elseif buffer:isRepo() then
+      cmd = string.format("gh repo view --web %s", buffer.repo)
+    end
+  else
+    if kind == "pr" then
+      cmd = string.format("gh pr view --web -R %s %d", repo, number)
+    elseif kind == "issue" then
+      cmd = string.format("gh issue view --web -R %s %d", repo, number)
+    elseif kind == "repo" then
+      cmd = string.format("gh repo view --web %s", repo)
+    end
+  end
+  print(cmd)
   pcall(vim.cmd, "silent !"..cmd)
 end
 

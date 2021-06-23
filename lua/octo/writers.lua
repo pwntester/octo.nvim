@@ -56,6 +56,122 @@ function M.write_block(bufnr, lines, line, mark)
   end
 end
 
+local function add_details_line(details, label, value, kind)
+  if type(value) == "function" then
+    value = value()
+  end
+  if value ~= vim.NIL and value ~= nil then
+    if kind == "date" then
+      value = utils.format_date(value)
+    end
+    local vt = {{label .. ": ", "OctoDetailsLabel"}}
+    if kind == "label" then
+      vim.list_extend(vt, bubbles.make_label_bubble(
+        value.name,
+        value.color,
+        { right_margin_width = 1 }
+      ))
+    elseif kind == "labels" then
+      for _, v in ipairs(value) do
+        vim.list_extend(vt, bubbles.make_label_bubble(
+          v.name,
+          v.color,
+          { right_margin_width = 1 }
+        ))
+      end
+    else
+      vim.list_extend(vt, {{tostring(value), "OctoDetailsValue"}})
+    end
+    table.insert(details, vt)
+  end
+end
+
+function M.write_repo(bufnr, repo)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+
+  local details = {}
+
+  -- clear virtual texts
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REPO_VT_NS, 0, -1)
+
+  add_details_line(details, "Name", repo.nameWithOwner)
+  add_details_line(details, "Description", repo.description)
+  add_details_line(details, "Default branch", repo.defaultBranchRef.name)
+  add_details_line(details, "URL", repo.url)
+  add_details_line(details, "Homepage URL", function()
+    if not utils.is_blank(repo.homepageUrl) then
+      return repo.homepageUrl
+    else
+      return nil
+    end
+  end)
+  add_details_line(details, "Stars", repo.stargazerCount)
+  add_details_line(details, "Forks", repo.forkCount)
+  add_details_line(details, "Size", repo.diskUsage)
+  add_details_line(details, "Created at", repo.createdAt, "date")
+  add_details_line(details, "Updated at", repo.updatedAt, "date")
+  add_details_line(details, "Pushed at", repo.pushedAt, "date")
+  add_details_line(details, "Forked from", function()
+    if repo.isFork and repo.parent ~= vim.NIL then
+      return repo.parent.nameWithOwner
+    else
+      return nil
+    end
+  end)
+  add_details_line(details, "Archived", repo.isArchived, "boolean")
+  add_details_line(details, "Disabled", repo.isDisabled, "boolean")
+  add_details_line(details, "Empty", repo.isEmpty, "boolean")
+  add_details_line(details, "Private", repo.isPrivate, "boolean")
+  add_details_line(details, "Belongs to Org", repo.isInOrganization, "boolean")
+  add_details_line(details, "Locked", function()
+    if repo.isLocked == "true" and utils.is_blank(repo.lockReason) then
+      return repo.lockReason
+    else
+      return nil
+    end
+  end)
+  add_details_line(details, "Mirroed from", function()
+    if repo.isMirror == "true" then
+      return repo.mirrorUrl
+    else
+      return nil
+    end
+  end)
+  add_details_line(details, "Security Policy", function()
+    if repo.isSecurityPolicyEnabled == "true" then
+      return repo.securityPolicyUrl
+    else
+      return nil
+    end
+  end)
+  add_details_line(details, "Projects URL", function()
+    if repo.hasProjectsEnabled == "true" then
+      return repo.projectsUrl
+    else
+      return nil
+    end
+  end)
+  add_details_line(details, "Primary language", repo.primaryLanguage, "label")
+  add_details_line(details, "Languages", repo.languages.nodes, "labels")
+
+  -- write #details + empty lines
+  local line = 1
+  local empty_lines = {}
+  for _ = 1, #details + 1 do
+    table.insert(empty_lines, "")
+  end
+  M.write_block(bufnr, empty_lines, line)
+  for _, d in ipairs(details) do
+    M.write_virtual_text(bufnr, constants.OCTO_REPO_VT_NS, line - 1, d)
+    line = line + 1
+  end
+
+  utils.get_file_contents(repo.nameWithOwner, repo.defaultBranchRef.name, "README.md", function(lines)
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
+  end)
+
+end
+
 function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, {title, ""}, line, true)
   vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
@@ -154,27 +270,11 @@ function M.write_details(bufnr, issue, update)
   vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
 
-  -- created_at
-  local created_at_vt = {
-    {"Created: ", "OctoDetailsLabel"},
-    {utils.format_date(issue.createdAt), "OctoDetailsValue"}
-  }
-  table.insert(details, created_at_vt)
-
+  add_details_line(details, "Created", issue.createdAt, "date")
   if issue.state == "CLOSED" then
-    -- closed_at
-    local closed_at_vt = {
-      {"Closed: ", "OctoDetailsLabel"},
-      {utils.format_date(issue.closedAt), "OctoDetailsValue"}
-    }
-    table.insert(details, closed_at_vt)
+    add_details_line(details, "Closed", issue.closedAt, "date")
   else
-    -- updated_at
-    local updated_at_vt = {
-      {"Updated: ", "OctoDetailsLabel"},
-      {utils.format_date(issue.updatedAt), "OctoDetailsValue"}
-    }
-    table.insert(details, updated_at_vt)
+    add_details_line(details, "Updated", issue.updatedAt, "date")
   end
 
   -- assignees
@@ -543,7 +643,7 @@ local function get_lnum_chunks(opts)
   end
 end
 
-function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
+function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side, path)
   start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
 
   -- clear virtual texts
@@ -580,17 +680,15 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   local max_lnum = math.max(vim.fn.strdisplaywidth(tostring(right_offset + #diffhunk_lines)), vim.fn.strdisplaywidth(tostring(left_offset + #diffhunk_lines)))
 
   -- calculate diffhunk subrange to show
-  local snippet_start = start_line
-  local snippet_end = start_line
+  local side_lines
+  if comment_side == "RIGHT" then
+    side_lines = right_side_lines
+  elseif comment_side == "LEFT" then
+    side_lines = left_side_lines
+  end
+  local snippet_start, snippet_end
   if comment_side and comment_start ~= comment_end then
-    -- for multiline comments, discard calculated values
-    -- write just those lines
-    local side_lines
-    if comment_side == "RIGHT" then
-      side_lines = right_side_lines
-    elseif comment_side == "LEFT" then
-      side_lines = left_side_lines
-    end
+    -- multiline comment: write just those lines
     for pos, l in pairs(side_lines) do
       if tonumber(l) == tonumber(comment_start) then
         snippet_start = pos
@@ -598,25 +696,25 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
         snippet_end = pos
       end
     end
-    if not snippet_end then
-      -- could not find comment end line in the diff hunk,
-      -- defaulting to last diff hunk line
-      snippet_end = #side_lines
-    end
   else
     -- for single-line comment, add additional context lines
-    local side_lines
-    if comment_side == "RIGHT" then
-      side_lines = right_side_lines
-    elseif comment_side == "LEFT" then
-      side_lines = left_side_lines
-    end
     for pos, l in pairs(side_lines) do
       if tonumber(l) == tonumber(comment_start) then
         snippet_start, snippet_end = find_snippet_range(utils.tbl_slice(diffhunk_lines, 1, pos, 1))
         break
       end
     end
+  end
+
+  if not snippet_end then
+    -- could not find comment end line in the diff hunk,
+    -- defaulting to last diff hunk line
+    snippet_end = #side_lines
+  end
+  if not snippet_start then
+    -- could not find comment sart line in the diff hunk,
+    -- defaulting to last diff hunk line - 3
+    snippet_start = #side_lines - 3
   end
 
   -- calculate longest line in the visible section of the diffhunk
@@ -1206,7 +1304,7 @@ function M.write_threads(bufnr, threads)
         M.write_block(bufnr, {""})
         --M.write_block(bufnr, {""}, line)
         -- write snippet
-        thread_start, thread_end = M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+        thread_start, thread_end = M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide, thread.path)
       end
 
       comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")

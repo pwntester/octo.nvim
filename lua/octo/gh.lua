@@ -1,7 +1,8 @@
 local config = require'octo.config'
-local Job = require("plenary.job")
+local _, Job = pcall(require,'plenary.job')
 
 local function run(opts)
+  if not Job then return end
   opts = opts or {}
   local conf = config.get_config()
   local mode = opts.mode or "async"

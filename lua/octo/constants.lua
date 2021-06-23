@@ -6,6 +6,7 @@ M.OCTO_THREAD_NS = vim.api.nvim_create_namespace("octo_thread")
 M.OCTO_FILE_PANEL_NS = vim.api.nvim_create_namespace("octo_file_panel")
 
 M.OCTO_TITLE_VT_NS = vim.api.nvim_create_namespace("octo_title_vt")
+M.OCTO_REPO_VT_NS = vim.api.nvim_create_namespace("octo_title_vt")
 M.OCTO_REACTIONS_VT_NS = vim.api.nvim_create_namespace("octo_reactions_vt")
 M.OCTO_DETAILS_VT_NS = vim.api.nvim_create_namespace("octo_details_vt")
 M.OCTO_DIFFHUNK_VT_NS = vim.api.nvim_create_namespace("octo_diffhunk_vt")

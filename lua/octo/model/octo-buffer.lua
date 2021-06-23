@@ -45,9 +45,11 @@ function OctoBuffer:new(opts)
   if this.node and this.node.commits then
     this.kind = "pull"
     this.taggable_users = {this.node.author.login}
-  elseif this.node then
+  elseif this.node and this.number then
     this.kind = "issue"
     this.taggable_users = {this.node.author.login}
+  elseif this.node and not this.number then
+    this.kind = "repo"
   else
     this.kind = "reviewthread"
   end
@@ -84,6 +86,16 @@ function OctoBuffer:clear()
   for _, m in ipairs(extmarks) do
     vim.api.nvim_buf_del_extmark(self.bufnr, constants.OCTO_COMMENT_NS, m[1])
   end
+end
+
+function OctoBuffer:render_repo()
+  self:clear()
+  writers.write_repo(self.bufnr, self.node)
+
+  -- reset modified option
+  vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
+
+  self.ready = true
 end
 
 function OctoBuffer:render_issue()
@@ -674,6 +686,10 @@ end
 
 function OctoBuffer:isIssue()
   return self.kind == "issue"
+end
+
+function OctoBuffer:isRepo()
+  return self.kind == "repo"
 end
 
 return M

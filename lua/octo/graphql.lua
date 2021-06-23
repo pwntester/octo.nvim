@@ -1987,6 +1987,7 @@ query($endCursor: String) {
       nodes {
         number
         title
+        url
       }
       pageInfo {
         hasNextPage
@@ -2004,6 +2005,7 @@ query($endCursor: String) {
       nodes {
         number
         title
+        url
       }
       pageInfo {
         hasNextPage
@@ -2467,6 +2469,90 @@ query($endCursor: String) {
 }
 ]]
 
+M.repos_query =
+  [[
+query($endCursor: String) {
+  repositoryOwner(login: "%s") {
+    repositories(first: 100, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
+      nodes {
+        createdAt
+        description
+        diskUsage
+        forkCount
+        isArchived
+        isDisabled
+        isEmpty
+        isFork
+        isInOrganization
+        isPrivate
+        isSecurityPolicyEnabled
+        name
+        nameWithOwner
+        parent {
+          nameWithOwner
+        }
+        stargazerCount
+        updatedAt
+        url
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+]]
+
+M.repo_query =
+  [[
+query {
+  repository(owner: "%s", name: "%s") {
+    id
+
+    nameWithOwner
+    description
+    forkCount
+    stargazerCount
+    diskUsage
+    createdAt
+    updatedAt
+    pushedAt
+    isFork
+    parent {
+      nameWithOwner
+    }
+    isArchived
+    isDisabled
+    isPrivate
+    isEmpty
+    isInOrganization
+    isSecurityPolicyEnabled
+    securityPolicyUrl
+    defaultBranchRef {
+      name
+    }
+    url
+    isLocked
+    lockReason
+    isMirror
+    mirrorUrl
+    hasProjectsEnabled
+    projectsUrl
+    homepageUrl
+    primaryLanguage {
+      name
+      color
+    }
+    languages(first:100) {
+      nodes {
+        name
+        color
+      }
+    }
+  }
+}
+]]
 
 local function escape_chars(string)
   local escaped, _ = string.gsub(

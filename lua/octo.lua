@@ -52,23 +52,24 @@ end
 function M.load_buffer(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local bufname = vim.fn.bufname(bufnr)
-  local repo, type, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  if not repo or not type or not number then
+  local repo, kind, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  if not repo then
+    repo = string.match(bufname, "octo://(.+)/repo")
+    if repo then kind = "repo" end
+  end
+  if (kind == "issue" or kind == "pull") and not repo and not number then
+    vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
+    return
+  elseif kind == "repo" and not repo then
     vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
-  M.load(bufnr, function(obj)
-    M.create_buffer(type, obj, repo, false)
+  M.load(repo, kind, number, function(obj)
+    M.create_buffer(kind, obj, repo, false)
   end)
 end
 
-function M.load(bufnr, cb)
-  local bufname = vim.fn.bufname(bufnr)
-  local repo, kind, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
-  if not repo or not kind or not number then
-    vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
-    return
-  end
+function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
   local query, key
   if kind == "pull" then
@@ -77,6 +78,8 @@ function M.load(bufnr, cb)
   elseif kind == "issue" then
     query = graphql("issue_query", owner, name, number)
     key = "issue"
+  elseif kind == "repo" then
+    query = graphql("repo_query", owner, name)
   end
   gh.run(
     {
@@ -85,9 +88,15 @@ function M.load(bufnr, cb)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
-          local obj = resp.data.repository[key]
-          cb(obj)
+          if kind == "pull" or kind == "issue" then
+            local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+            local obj = resp.data.repository[key]
+            cb(obj)
+          elseif kind == "repo" then
+            local resp = vim.fn.json_decode(output)
+            local obj = resp.data.repository
+            cb(obj)
+          end
         end
       end
     }
@@ -205,9 +214,9 @@ function M.on_cursor_hold()
   )
 end
 
-function M.create_buffer(type, obj, repo, create)
+function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
-    vim.api.nvim_err_writeln(string.format("Cannot find issue in %s", repo))
+    vim.api.nvim_err_writeln(string.format("Cannot find %s", repo))
     return
   end
 
@@ -215,12 +224,10 @@ function M.create_buffer(type, obj, repo, create)
   if create then
     bufnr = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_set_current_buf(bufnr)
-    vim.cmd(string.format("file octo://%s/%s/%d", repo, type, obj.number))
+    vim.cmd(string.format("file octo://%s/%s/%d", repo, kind, obj.number))
   else
     bufnr = vim.api.nvim_get_current_buf()
   end
-
-  --vim.api.nvim_set_current_buf(bufnr)
 
   local octo_buffer = OctoBuffer:new({
     bufnr = bufnr,
@@ -230,9 +237,13 @@ function M.create_buffer(type, obj, repo, create)
   })
 
   octo_buffer:configure()
-  octo_buffer:render_issue()
-  octo_buffer:async_fetch_taggable_users()
-  octo_buffer:async_fetch_issues()
+  if kind == "repo" then
+    octo_buffer:render_repo()
+  else
+    octo_buffer:render_issue()
+    octo_buffer:async_fetch_taggable_users()
+    octo_buffer:async_fetch_issues()
+  end
 end
 
 -- function M.check_editable()
