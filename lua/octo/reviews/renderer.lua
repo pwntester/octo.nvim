@@ -62,6 +62,7 @@ function M.render(bufid, data)
 end
 
 local git_status_hl_map = {
+  [" "] = "OctoStatusAdded",
   ["A"] = "OctoStatusAdded",
   ["?"] = "OctoStatusAdded",
   ["M"] = "OctoStatusModified",

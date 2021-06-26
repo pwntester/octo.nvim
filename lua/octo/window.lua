@@ -34,6 +34,7 @@ function M.create_border_header_float(opts)
   vim.api.nvim_win_set_option(outer_winid, "signcolumn", "no")
   vim.api.nvim_win_set_option(outer_winid, "number", false)
   vim.api.nvim_win_set_option(outer_winid, "relativenumber", false)
+  vim.api.nvim_win_set_option(outer_winid, "cursorline", false)
   return outer_winid
 end
 
@@ -53,6 +54,7 @@ function M.create_content_float(opts)
   vim.api.nvim_win_set_option(winid, "signcolumn", "no")
   vim.api.nvim_win_set_option(winid, "number", false)
   vim.api.nvim_win_set_option(winid, "relativenumber", false)
+  vim.api.nvim_win_set_option(winid, "cursorline", false)
   return winid, bufnr
 end
 

@@ -65,6 +65,9 @@ function FileEntry:new(opt)
     associated_bufs = {},
     viewed_state = pr.files[opt.path]
   }
+  if not this.status then
+    this.status = " "
+  end
 
   setmetatable(this, self)
 
