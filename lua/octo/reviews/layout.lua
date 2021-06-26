@@ -166,7 +166,7 @@ function Layout:update_files()
     self:set_file(file)
     self.update_needed = false
   else
-    vim.api.nvim_err_writeln("[Octo] Timeout waiting for file contents from GitHub")
+    vim.notify("[Octo] Timeout waiting for file contents from GitHub", 2)
     vim.cmd [[ ]q ]]
   end
 end

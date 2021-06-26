@@ -67,7 +67,7 @@ function Review:create(callback)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           callback(resp)
@@ -93,11 +93,11 @@ function Review:resume()
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-            vim.api.nvim_err_writeln("[Octo] No pending reviews found")
+            vim.notify("[Octo] No pending reviews found", 2)
             return
           end
 
@@ -110,7 +110,7 @@ function Review:resume()
           end
 
           if not self.id then
-            vim.api.nvim_err_writeln("[Octo] No pending reviews found for viewer")
+            vim.notify("[Octo] No pending reviews found for viewer", 2)
             return
           end
 
@@ -138,7 +138,7 @@ function Review:initiate()
       args = {"api", "--paginate", url},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local status_map = {
             modified = "M",
@@ -179,11 +179,11 @@ function Review:discard()
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-            vim.api.nvim_err_writeln("No pending reviews found")
+            vim.notify("No pending reviews found", 2)
             return
           end
           self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
@@ -196,12 +196,12 @@ function Review:discard()
                 args = {"api", "graphql", "-f", string.format("query=%s", delete_query)},
                 cb = function(output, stderr)
                   if stderr and not utils.is_blank(stderr) then
-                    vim.api.nvim_err_writeln(stderr)
+                    vim.notify(stderr, 2)
                   elseif output then
                     self.id = -1
                     self.threads = {}
                     self.files= {}
-                    print("[Octo] Pending review discarded")
+                    vim.notify("[Octo] Pending review discarded", 1)
                     vim.cmd [[tabclose]]
                   end
                 end
@@ -236,7 +236,7 @@ end
 
 function Review:collect_submit_info()
   if self.id == -1 then
-    vim.api.nvim_err_writeln("No review in progress")
+    vim.notify("No review in progress", 2)
     return
   end
 
@@ -267,9 +267,9 @@ function Review:submit(event)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
-          print("[Octo] Review was submitted successfully!")
+          vim.notify("[Octo] Review was submitted successfully!", 1)
           vim.api.nvim_win_close(winid, 1)
           self.layout:close()
         end
@@ -429,7 +429,7 @@ function M.add_review_comment(isSuggestion)
     end
   end
   if not diff_hunk then
-    vim.api.nvim_err_writeln("[Octo] Cannot place comments outside diff hunks")
+    vim.notify("[Octo] Cannot place comments outside diff hunks", 2)
     return
   end
   if not vim.startswith(diff_hunk, "@@") then
@@ -497,7 +497,7 @@ function M.add_review_comment(isSuggestion)
       vim.cmd [[startinsert]]
     end
   else
-    vim.api.nvim_err_writeln("[Octo] Cannot find diff window")
+    vim.notify("[Octo] Cannot find diff window", 2)
   end
 end
 
@@ -509,7 +509,7 @@ end
 function M.show_pending_comments()
   local current_review = M.get_current_review()
   if not current_review then
-    vim.api.nvim_err_writeln("[Octo] No review in progress")
+    vim.notify("[Octo] No review in progress", 2)
     return
   end
   local pending_threads = {}
@@ -521,7 +521,7 @@ function M.show_pending_comments()
     end
   end
   if #pending_threads == 0 then
-    vim.api.nvim_err_writeln("[Octo] No pending comments found")
+    vim.notify("[Octo] No pending comments found", 2)
     return
   else
     require"octo.telescope.menu".pending_threads(pending_threads)

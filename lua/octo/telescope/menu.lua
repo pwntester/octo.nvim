@@ -112,7 +112,7 @@ local function copy_url(kind)
     local entry = action_state.get_selected_entry(prompt_bufnr)
     local url = entry[kind].url
     vim.fn.setreg('+', url, 'c')
-    print("[Octo] Copied '" .. url .. "' to the system clipboard (+ register)")
+    vim.notify("[Octo] Copied '" .. url .. "' to the system clipboard (+ register)", 1)
   end
 end
 
@@ -130,25 +130,25 @@ function M.issues(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.api.nvim_err_writeln("Cannot find repo")
+    vim.notify("Cannot find repo", 2)
     return
   end
 
   local owner, name = utils.split_repo(opts.repo)
   local query = graphql("issues_query", owner, name, filter, {escape = false})
-  print("Fetching issues (this may take a while) ...")
+  vim.notify("Fetching issues (this may take a while) ...", 1)
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           print(" ")
           local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
           local issues = resp.data.repository.issues.nodes
           if #issues == 0 then
-            vim.api.nvim_err_writeln(string.format("There are no matching issues in %s.", opts.repo))
+            vim.notify(string.format("There are no matching issues in %s.", opts.repo), 2)
             return
           end
           local max_number = -1
@@ -213,7 +213,7 @@ function M.gists(opts)
   end
   local output = ts_utils.get_os_command_output(cmd)
   if not output or #output == 0 then
-    vim.api.nvim_err_writeln("No gists found")
+    vim.notify("No gists found", 2)
     return
   end
 
@@ -256,8 +256,8 @@ local function checkout_pull_request(repo)
       {
         args = args,
         cb = function(output)
-          print(output)
-          print(string.format("Checked out PR %d", number))
+          vim.notify(output, 1)
+          vim.notify(string.format("Checked out PR %d", number), 1)
         end
       }
     )
@@ -275,25 +275,25 @@ function M.pull_requests(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.api.nvim_err_writeln("Cannot find repo")
+    vim.notify("Cannot find repo", 2)
     return
   end
 
   local owner, name = utils.split_repo(opts.repo)
   local query = graphql("pull_requests_query", owner, name, filter, {escape = false})
-  print("Fetching pull requests (this may take a while) ...")
+  vim.notify("Fetching pull requests (this may take a while) ...", 1)
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           print(" ")
           local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
           local pull_requests = resp.data.repository.pullRequests.nodes
           if #pull_requests == 0 then
-            vim.api.nvim_err_writeln(string.format("There are no matching pull requests in %s.", opts.repo))
+            vim.notify(string.format("There are no matching pull requests in %s.", opts.repo), 2)
             return
           end
           local max_number = -1
@@ -344,7 +344,7 @@ function M.commits()
       args = {"api", url},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local results = vim.fn.json_decode(output)
           pickers.new(
@@ -384,7 +384,7 @@ function M.changed_files()
       args = {"api", url},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local results = vim.fn.json_decode(output)
           pickers.new(
@@ -421,7 +421,7 @@ function M.issue_search(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.api.nvim_err_writeln("Cannot find repo")
+    vim.notify("Cannot find repo", 2)
     return
   end
 
@@ -467,7 +467,7 @@ function M.issue_search(opts)
                 end
 
                 if stderr and not utils.is_blank(stderr) then
-                  vim.api.nvim_err_writeln(stderr)
+                  vim.notify(stderr, 2)
                 elseif output then
                   local resp = vim.fn.json_decode(output)
                   for _, issue in ipairs(resp.data.search.nodes) do
@@ -501,7 +501,7 @@ function M.pull_request_search(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.api.nvim_err_writeln("Cannot find repo")
+    vim.notify("Cannot find repo", 2)
     return
   end
 
@@ -547,7 +547,7 @@ function M.pull_request_search(opts)
                 end
 
                 if stderr and not utils.is_blank(stderr) then
-                  vim.api.nvim_err_writeln(stderr)
+                  vim.notify(stderr, 2)
                 elseif output then
                   local resp = vim.fn.json_decode(output)
                   for _, pull_request in ipairs(resp.data.search.nodes) do
@@ -612,7 +612,7 @@ function M.select_project_card(cb)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   local cards = buffer.node.projectCards
-  if not cards or #cards.nodes == 0 then vim.api.nvim_err_writeln("[Octo] Cant find any project cards") return
+  if not cards or #cards.nodes == 0 then vim.notify("[Octo] Cant find any project cards", 2) return
   end
 
   if #cards.nodes == 1 then
@@ -661,7 +661,7 @@ function M.select_target_project_column(cb)
           vim.list_extend(projects, user_projects)
           vim.list_extend(projects, org_projects)
           if #projects == 0 then
-            vim.api.nvim_err_writeln(string.format("There are no matching projects for %s.", buffer.repo))
+            vim.notify(string.format("There are no matching projects for %s.", buffer.repo), 2)
             return
           end
 
@@ -725,7 +725,7 @@ function M.select_label(cb)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local labels = resp.data.repository.labels.nodes
@@ -772,7 +772,7 @@ function M.select_assigned_label(cb)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local labels = resp.data.repository[key].labels.nodes
@@ -841,7 +841,7 @@ function M.select_user(cb)
               args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
                 if stderr and not utils.is_blank(stderr) then
-                  vim.api.nvim_err_writeln(stderr)
+                  vim.notify(stderr, 2)
                 elseif output then
                   -- do not process response, if this is not the last request we sent
                   if prompt ~= queue[#queue] then
@@ -958,7 +958,7 @@ function M.select_assignee(cb)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local assignees = resp.data.repository[key].assignees.nodes
@@ -997,19 +997,19 @@ function M.repos(opts)
   end
 
   local query = graphql("repos_query", opts.login)
-  print("Fetching repositories (this may take a while) ...")
+  vim.notify("Fetching repositories (this may take a while) ...", 1)
   gh.run(
     {
       args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           print(" ")
           local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
           local repos = resp.data.repositoryOwner.repositories.nodes
           if #repos == 0 then
-            vim.api.nvim_err_writeln(string.format("There are no matching repositories for %s.", opts.login))
+            vim.notify(string.format("There are no matching repositories for %s.", opts.login), 2)
             return
           end
           local max_nameWithOwner = -1

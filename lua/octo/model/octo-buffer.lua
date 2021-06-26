@@ -400,7 +400,7 @@ function M.do_save_title_and_body(buffer)
             end
 
             buffer:render_signcolumn()
-            print("[Octo] Saved!")
+            vim.notify("[Octo] Saved!", 1)
           end
         end
       }

@@ -248,13 +248,13 @@ end
 
 function M.octo(object, action, ...)
   if not object then
-    print("[Octo] Missing arguments")
+    vim.notify("[Octo] Missing arguments", 1)
     return
   end
   if not vim.g.octo_viewer then
     local name = require"octo".check_login()
     if not name then
-      vim.api.nvim_err_writeln("[Octo] You are not logged into any GitHub hosts. Run `gh auth login` to authenticate.")
+      vim.notify("[Octo] You are not logged into any GitHub hosts. Run `gh auth login` to authenticate.", 2)
       return
     end
   end
@@ -266,13 +266,13 @@ function M.octo(object, action, ...)
     elseif repo and number and kind == "pull" then
       utils.get_pull_request(repo, number)
     else
-      print("[Octo] Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(M.commands)))
+      vim.notify("[Octo] Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(M.commands)), 1)
       return
     end
   else
     local a = o[action]
     if not a then
-      print("[Octo] Incorrect action, valid actions are:" .. vim.inspect(vim.tbl_keys(o)))
+      vim.notify("[Octo] Incorrect action, valid actions are:" .. vim.inspect(vim.tbl_keys(o)), 1)
       return
     else
       a(...)
@@ -295,7 +295,7 @@ function M.add_comment()
 
   local thread_id, _, thread_end_line, replyTo = utils.get_thread_at_cursor(bufnr)
   if thread_id and not buffer:isReviewThread() then
-    vim.api.nvim_err_writeln("[Octo] Start a new review to reply to a thread")
+    vim.notify("[Octo] Start a new review to reply to a thread", 2)
     return
   elseif not thread_id and buffer:isReviewThread() then
     return
@@ -348,7 +348,7 @@ function M.delete_comment()
   if not buffer then return end
   local comment, start_line, end_line = utils.get_comment_at_cursor(bufnr)
   if not comment then
-    print("[Octo] The cursor does not seem to be located at any comment")
+    vim.notify("[Octo] The cursor does not seem to be located at any comment", 1)
     return
   end
   local query, threadId
@@ -389,7 +389,7 @@ function M.delete_comment()
             end
             buffer.commentsMetadata = updated
           else
-            print("ERROR", bufnr)
+            vim.notify("ERROR", bufnr, 1)
           end
 
           if comment.kind == "PullRequestReviewComment" then
@@ -458,7 +458,7 @@ function M.resolve_thread()
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local thread = resp.data.resolveReviewThread.thread
@@ -496,7 +496,7 @@ function M.unresolve_thread()
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local thread = resp.data.unresolveReviewThread.thread
@@ -528,7 +528,7 @@ function M.change_state(state)
   if not buffer then return end
 
   if not state then
-    vim.api.nvim_err_writeln("[Octo] Missing argument: state")
+    vim.notify("[Octo] Missing argument: state", 2)
     return
   end
 
@@ -545,7 +545,7 @@ function M.change_state(state)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local new_state, obj
@@ -560,7 +560,7 @@ function M.change_state(state)
             buffer.node.state = new_state
             writers.write_state(bufnr, new_state:upper(), buffer.number)
             writers.write_details(bufnr, obj, true)
-            print("[Octo] Issue state changed to: " .. new_state)
+            vim.notify("[Octo] Issue state changed to: " .. new_state, 1)
           end
         end
       end
@@ -571,7 +571,7 @@ end
 function M.create_issue(repo)
   if not repo then repo = utils.get_remote_name() end
   if not repo then
-    print("[Octo] Cant find repo name")
+    vim.notify("[Octo] Cant find repo name", 1)
     return
   end
 
@@ -586,7 +586,7 @@ function M.create_issue(repo)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           require"octo".create_buffer("issue", resp.data.createIssue.issue, repo, true)
@@ -610,11 +610,11 @@ function M.checkout_pr()
         if stderr and not utils.is_blank(stderr) then
           for _, line in ipairs(vim.fn.split(stderr, "\n")) do
             if line:match("Switched to branch") or line:match("Already on") then
-              print("[Octo]", line)
+              vim.notify("[Octo]", line, 1)
               return
             end
           end
-          vim.api.nvim_err_writeln("[Octo]", stderr)
+          vim.notify("[Octo]", stderr, 2)
         end
       end
     }
@@ -629,7 +629,7 @@ function M.pr_ready_for_review()
     {
       args = {"pr", "ready", tostring(buffer.number)},
       cb = function(output, stderr)
-        print("[Octo]", output, stderr)
+        vim.notify("[Octo]", output, stderr, 1)
         writers.write_state(bufnr)
       end
     }
@@ -645,7 +645,7 @@ function M.pr_checks()
       args = {"pr", "checks", tostring(buffer.number), "-R", buffer.repo},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local max_lengths = {}
           local parts = {}
@@ -715,7 +715,7 @@ function M.merge_pr(...)
     {
       args = args,
       cb = function(output, stderr)
-        print("[Octo]", output, stderr)
+        vim.notify("[Octo]", output, stderr, 1)
         writers.write_state(bufnr)
       end
     }
@@ -733,7 +733,7 @@ function M.show_pr_diff()
       headers = {"Accept: application/vnd.github.v3.diff"},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local lines = vim.split(output, "\n")
           local wbufnr = vim.api.nvim_create_buf(true, true)
@@ -807,7 +807,7 @@ function M.reaction_action(reaction)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          vim.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           if action == "add" then
@@ -849,7 +849,7 @@ function M.add_project_card()
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
+              vim.notify(stderr, 2)
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
@@ -882,7 +882,7 @@ function M.remove_project_card()
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
+              vim.notify(stderr, 2)
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
@@ -917,7 +917,7 @@ function M.move_project_card()
               args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
               cb = function(output, stderr)
                 if stderr and not utils.is_blank(stderr) then
-                  vim.api.nvim_err_writeln(stderr)
+                  vim.notify(stderr, 2)
                 elseif output then
                   -- refresh issue/pr details
                   require"octo".load(
@@ -950,7 +950,7 @@ function M.add_label()
   if not buffer then return end
 
   local iid = buffer.node.id
-  if not iid then vim.api.nvim_err_writeln("Cannot get issue/pr id") end
+  if not iid then vim.notify("Cannot get issue/pr id", 2) end
 
   menu.select_label(
     function(label_id)
@@ -960,7 +960,7 @@ function M.add_label()
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
+              vim.notify(stderr, 2)
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
@@ -983,7 +983,7 @@ function M.remove_label()
   if not buffer then return end
 
   local iid = buffer.node.id
-  if not iid then vim.api.nvim_err_writeln("Cannot get issue/pr id") end
+  if not iid then vim.notify("Cannot get issue/pr id", 2) end
 
   menu.select_assigned_label(
     function(label_id)
@@ -993,7 +993,7 @@ function M.remove_label()
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
+              vim.notify(stderr, 2)
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
@@ -1016,7 +1016,7 @@ function M.add_user(subject)
   if not buffer then return end
 
   local iid = buffer.node.id
-  if not iid then vim.api.nvim_err_writeln("[Octo] Cannot get issue/pr id") end
+  if not iid then vim.notify("[Octo] Cannot get issue/pr id", 2) end
 
   menu.select_user(
     function(user_id)
@@ -1031,7 +1031,7 @@ function M.add_user(subject)
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
+              vim.notify(stderr, 2)
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
@@ -1054,7 +1054,7 @@ function M.remove_assignee()
   if not buffer then return end
 
   local iid = buffer.node.id
-  if not iid then vim.api.nvim_err_writeln("[Octo] Cannot get issue/pr id") end
+  if not iid then vim.notify("[Octo] Cannot get issue/pr id", 2) end
 
   menu.select_assignee(
     function(user_id)
@@ -1064,7 +1064,7 @@ function M.remove_assignee()
           args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
+              vim.notify(stderr, 2)
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
@@ -1087,7 +1087,7 @@ function M.copy_url()
   if not buffer then return end
   local url = buffer.node.url
   vim.fn.setreg('+', url, 'c')
-  print("[Octo] Copied URL '".. url .."' to the system clipboard (+ register)")
+  vim.notify("[Octo] Copied URL '".. url .."' to the system clipboard (+ register)", 1)
 end
 
 return M

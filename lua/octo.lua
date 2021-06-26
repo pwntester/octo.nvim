@@ -261,7 +261,7 @@ end
 --
 --   local key = vim.api.nvim_replace_termcodes("<esc>", true, false, true)
 --   vim.api.nvim_feedkeys(key, "m", true)
---   print("[Octo] Cannot make changes to non-editable regions")
+--   vim.notify("[Octo] Cannot make changes to non-editable regions", 1)
 -- end
 
 function M.check_login()
