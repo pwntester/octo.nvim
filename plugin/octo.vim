@@ -14,7 +14,6 @@ augroup octo_autocmds
   au CursorHold octo://* lua require'octo'.on_cursor_hold()
   au CursorHold octo://* lua require'octo.reviews'.show_review_threads()
   au CursorMoved octo://* lua require'octo.reviews'.hide_review_threads()
-  "au TabEnter * lua require'octo.reviews'.on_tab_enter()
   au TabClosed * lua require'octo.reviews'.close(tonumber(vim.fn.expand("<afile>")))
   au TabLeave * lua require'octo.reviews'.on_tab_leave()
   au WinLeave * lua require'octo.reviews'.on_win_leave()
