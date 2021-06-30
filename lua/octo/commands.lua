@@ -853,7 +853,9 @@ function M.add_project_card()
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
-                bufnr,
+                buffer.repo,
+                buffer.kind,
+                buffer.number,
                 function(obj)
                   writers.write_details(bufnr, obj, true)
                   buffer.node.projectCards = obj.projectCards
@@ -886,7 +888,9 @@ function M.remove_project_card()
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
-                bufnr,
+                buffer.repo,
+                buffer.kind,
+                buffer.number,
                 function(obj)
                   buffer.node.projectCards = obj.projectCards
                   writers.write_details(bufnr, obj, true)
@@ -921,7 +925,9 @@ function M.move_project_card()
                 elseif output then
                   -- refresh issue/pr details
                   require"octo".load(
-                    bufnr,
+                    buffer.repo,
+                    buffer.kind,
+                    buffer.number,
                     function(obj)
                       buffer.node.projectCards = obj.projectCards
                       writers.write_details(bufnr, obj, true)
@@ -941,7 +947,11 @@ function M.reload(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  require"octo".load_buffer(bufnr)
+  require"octo".load_buffer(
+    buffer.repo,
+    buffer.kind,
+    buffer.number
+  )
 end
 
 function M.add_label()
@@ -964,7 +974,9 @@ function M.add_label()
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
-                bufnr,
+                buffer.repo,
+                buffer.kind,
+                buffer.number,
                 function(obj)
                   writers.write_details(bufnr, obj, true)
                 end
@@ -997,7 +1009,9 @@ function M.remove_label()
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
-                bufnr,
+                buffer.repo,
+                buffer.kind,
+                buffer.number,
                 function(obj)
                   writers.write_details(bufnr, obj, true)
                 end
@@ -1035,7 +1049,9 @@ function M.add_user(subject)
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
-                bufnr,
+                buffer.repo,
+                buffer.kind,
+                buffer.number,
                 function(obj)
                   writers.write_details(bufnr, obj, true)
                 end
@@ -1068,7 +1084,9 @@ function M.remove_assignee()
             elseif output then
               -- refresh issue/pr details
               require"octo".load(
-                bufnr,
+                buffer.repo,
+                buffer.kind,
+                buffer.number,
                 function(obj)
                   writers.write_details(bufnr, obj, true)
                 end
