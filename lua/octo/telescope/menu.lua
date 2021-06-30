@@ -5,9 +5,7 @@ local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local ts_utils = require "telescope.utils"
 local conf = require "telescope.config".values
-local config = require'octo.config'
 local sorters = require "telescope.sorters"
-local make_entry = require "telescope.make_entry"
 local previewers = require "octo.telescope.previewers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
@@ -144,7 +142,6 @@ function M.issues(opts)
         if stderr and not utils.is_blank(stderr) then
           vim.notify(stderr, 2)
         elseif output then
-          print(" ")
           local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
           local issues = resp.data.repository.issues.nodes
           if #issues == 0 then
@@ -189,50 +186,63 @@ end
 --
 local function open_gist(prompt_bufnr)
   local selection = action_state.get_selected_entry(prompt_bufnr)
+  local gist = selection.gist
   actions.close(prompt_bufnr)
-  local tmp_table = vim.split(selection.value, "\t")
-  if vim.tbl_isempty(tmp_table) then
-    return
-  end
-  local gist_id = tmp_table[1]
-  local gist = ts_utils.get_os_command_output({"gh", "gist", "view",  gist_id, "-r"})
-  if gist and vim.api.nvim_buf_get_option(vim.api.nvim_get_current_buf(), "modifiable") then
-    vim.api.nvim_put(gist, "b", true, true)
+  for _, file in ipairs(gist.files) do
+    local bufnr = vim.api.nvim_create_buf(true, true)
+    if file.text then
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(file.text, "\n"))
+    else
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, gist.description)
+    end
+    vim.api.nvim_buf_set_name(bufnr, file.name)
+    vim.api.nvim_win_set_buf(0, bufnr)
+    vim.api.nvim_buf_call(bufnr, function()
+      vim.cmd [[filetype detect]]
+    end)
   end
 end
 
 function M.gists(opts)
-  opts = opts or {}
-  opts.limit = opts.limit or 100
-  local cmd = {"gh", "gist", "list", "--limit", opts.limit}
+  local privacy
   if opts.public then
-    table.insert(cmd, "--public")
+    privacy = "PUBLIC"
+  elseif opts.secret then
+    privacy = "SECRET"
+  else
+    privacy = "ALL"
   end
-  if opts.secret then
-    table.insert(cmd, "--secret")
-  end
-  local output = ts_utils.get_os_command_output(cmd)
-  if not output or #output == 0 then
-    vim.notify("No gists found", 2)
-    return
-  end
-
-  pickers.new(
-    opts,
+  local query = graphql("gists_query", privacy)
+  gh.run(
     {
-      prompt_title = "Gists",
-      finder = finders.new_table {
-        results = output,
-        entry_maker = make_entry.gen_from_string(opts)
-      },
-      previewer = previewers.gist.new(opts),
-      sorter = conf.generic_sorter(opts),
-      attach_mappings = function(_, map)
-        map("i", "<CR>", open_gist)
-        return true
+      args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.notify(stderr, 2)
+        elseif output then
+          local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
+          local gists = resp.data.viewer.gists.nodes
+          pickers.new(
+            opts,
+            {
+              prompt_title = "Gists",
+              finder = finders.new_table {
+                results = gists,
+                entry_maker = entry_maker.gen_from_gist()
+              },
+              --previewer = previewers.gist.new(opts),
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, map)
+                map("i", "<CR>", open_gist)
+                return true
+              end
+            }
+          ):find()
+        end
       end
     }
-  ):find()
+  )
+
 end
 
 --
@@ -289,7 +299,6 @@ function M.pull_requests(opts)
         if stderr and not utils.is_blank(stderr) then
           vim.notify(stderr, 2)
         elseif output then
-          print(" ")
           local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
           local pull_requests = resp.data.repository.pullRequests.nodes
           if #pull_requests == 0 then
@@ -1005,7 +1014,6 @@ function M.repos(opts)
         if stderr and not utils.is_blank(stderr) then
           vim.notify(stderr, 2)
         elseif output then
-          print(" ")
           local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
           local repos = resp.data.repositoryOwner.repositories.nodes
           if #repos == 0 then

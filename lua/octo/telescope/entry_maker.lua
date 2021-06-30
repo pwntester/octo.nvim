@@ -1,5 +1,6 @@
 local entry_display = require "telescope.pickers.entry_display"
 local bubbles = require "octo.ui.bubbles"
+local utils = require "octo.utils"
 
 local M = {}
 
@@ -457,6 +458,60 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
       ordinal = repo.nameWithOwner .. " " .. repo.description,
       display = make_display,
       repo = repo
+    }
+  end
+end
+
+function M.gen_from_gist()
+  local make_display = function(entry)
+    if not entry then return end
+
+    local fork_str = ""
+    if entry.gist.isFork then
+      fork_str = "fork"
+    end
+
+    local access_str = "private"
+    if entry.gist.isPublic then
+      access_str = "public"
+    end
+
+    local description = entry.gist.description
+    if (not description or utils.is_blank(description) or description == vim.NIL) and #entry.gist.files > 0 then
+      description = entry.gist.files[1].name
+    end
+
+    local columns = {
+      {access_str},
+      {fork_str},
+      {description, "TelescopeResultsNumber"},
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = " ",
+      items = {
+        {width = vim.fn.len("private")},
+        {width = vim.fn.len("fork")},
+        {remaining = true},
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(gist)
+    if not gist or vim.tbl_isempty(gist) then return end
+
+    if gist.description == vim.NIL then
+      gist.description = ""
+    end
+
+    return {
+      value = gist.name,
+      ordinal = gist.name .. " " .. gist.description,
+      display = make_display,
+      gist = gist
     }
   end
 end

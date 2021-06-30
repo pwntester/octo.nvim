@@ -2554,6 +2554,35 @@ query {
 }
 ]]
 
+M.gists_query =
+  [[
+query($endCursor: String) {
+  viewer {
+    gists(first: 100, privacy: %s, after: $endCursor) {
+      nodes {
+        name
+        isPublic
+        isFork
+        description
+        createdAt
+        files {
+          encodedName
+          encoding
+          extension
+          name
+          size
+          text
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+]]
+
 local function escape_chars(string)
   local escaped, _ = string.gsub(
     string,
