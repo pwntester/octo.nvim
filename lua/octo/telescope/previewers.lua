@@ -49,24 +49,27 @@ M.issue =
 
 M.gist =
   defaulter(
-  function(opts)
-    return previewers.new_termopen_previewer {
-      get_command = opts.get_command or function(entry)
-          local tmp_table = vim.split(entry.value, "\t")
-          if vim.tbl_isempty(tmp_table) then
-            return {"echo", ""}
-          end
-          local result = {"gh", "gist", "view", tmp_table[1], "|"}
-          if vim.fn.executable("bat") then
-            table.insert(result, {"bat", "--style=plain", "--color=always", "--paging=always", "--decorations=never", "--pager=less"})
+  function()
+    return previewers.new_buffer_previewer {
+      get_buffer_by_name = function(_, entry)
+        return entry.value
+      end,
+      define_preview = function(self, entry)
+        local bufnr = self.state.bufnr
+        if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
+          local file = entry.gist.files[1]
+          if file.text then
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(file.text, "\n"))
           else
-            table.insert(result, "less")
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, entry.gist.description)
           end
-          return vim.tbl_flatten(result)
+          vim.api.nvim_buf_call(bufnr, function()
+            pcall(vim.cmd,  "set filetype="..string.gsub(file.extension, "\\.", ""))
+          end)
         end
+      end
     }
-  end,
-  {}
+  end
 )
 
 M.pull_request =

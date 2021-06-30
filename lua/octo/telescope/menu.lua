@@ -230,7 +230,7 @@ function M.gists(opts)
                 results = gists,
                 entry_maker = entry_maker.gen_from_gist()
               },
-              --previewer = previewers.gist.new(opts),
+              previewer = previewers.gist.new(opts),
               sorter = conf.generic_sorter(opts),
               attach_mappings = function(_, map)
                 map("i", "<CR>", open_gist)
