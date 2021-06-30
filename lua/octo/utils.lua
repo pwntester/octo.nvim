@@ -248,7 +248,14 @@ end
 function M.get_current_pr()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  if not buffer then return end
+  if not buffer then
+    vim.notify("[Octo] Not in an active Octo buffer", 2)
+    return
+  end
+  if not buffer:isPullRequest() then
+    vim.notify("[Octo] Not in a PR buffer", 2)
+    return
+  end
 
   local Rev = require'octo.reviews.rev'.Rev
   local PullRequest = require'octo.model.pull-request'.PullRequest
