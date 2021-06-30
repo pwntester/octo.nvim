@@ -22,6 +22,6 @@ M.LONG_ISSUE_PATTERN = "([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(%d+)"
 M.SHORT_ISSUE_PATTERN = "%s#(%d+)"
 M.URL_ISSUE_PATTERN = ("[htps]+://[^/]+/([^/]+/[^/]+)/([pulisue]+)/(%d+)")
 
-M.USER_PATTERN = "@(%S+)"
+M.USER_PATTERN = "@([%w-]+)"
 
 return M
