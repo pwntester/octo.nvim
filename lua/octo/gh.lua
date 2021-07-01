@@ -8,7 +8,7 @@ local function run(opts)
   local mode = opts.mode or "async"
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
-    table.insert(opts.args, "Accept: application/vnd.github.v3+json;application/vnd.github.squirrel-girl-preview+json;application/vnd.github.comfort-fade-preview+json")
+    table.insert(opts.args, "Accept: application/vnd.github.bane-preview+json;application/vnd.github.v3+json;application/vnd.github.squirrel-girl-preview+json;application/vnd.github.comfort-fade-preview+json")
     if not require"octo.utils".is_blank(conf.github_hostname) then
       table.insert(opts.args, "--hostname")
       table.insert(opts.args, conf.github_hostname)

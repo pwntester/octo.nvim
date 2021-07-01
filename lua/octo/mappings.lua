@@ -53,6 +53,9 @@ M.keypress_event_cbs = {
   copy_url = function()
     require"octo.commands".copy_url()
   end,
+  create_label = function()
+    require"octo.commands".add_create()
+  end,
   add_label = function()
     require"octo.commands".add_label()
   end,

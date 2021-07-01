@@ -2131,6 +2131,21 @@ M.delete_project_card_mutation =
   }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/mutations#createlabel
+-- requires application/vnd.github.bane-preview+json
+M.create_label_mutation =
+  [[
+  mutation {
+    createLabel(input: {repositoryId: "%s", name: "%s", description: "%s", color: "%s"}) {
+      label {
+        id
+        name
+      }
+    }
+  }
+]]
+
+
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation =
   [[
@@ -2210,20 +2225,6 @@ M.pull_request_labels_query =
             color
           }
         }
-      }
-    }
-  }
-]]
-
--- https://docs.github.com/en/graphql/reference/mutations#createlabel
--- requires application/vnd.github.bane-preview+json
-M.create_label_mutation =
-  [[
-  mutation {
-    createLabel(input: {repositoryId: "%s", name: "%s", description: "%s", color: "%s") {
-      label {
-        id
-        name
       }
     }
   }

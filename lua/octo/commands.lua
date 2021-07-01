@@ -160,6 +160,9 @@ M.commands = {
     end
   },
   label = {
+    create = function()
+      M.create_label()
+    end,
     add = function()
       M.add_label()
     end,
@@ -954,20 +957,61 @@ function M.reload(bufnr)
   )
 end
 
+function M.create_label()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
+
+  local repo_id = utils.get_repo_id(buffer.repo)
+
+  vim.fn.inputsave()
+  local name = vim.fn.input(string.format("[Octo] Creating label for %s. Enter title: ", buffer.repo))
+  local color = vim.fn.input("[Octo] Enter color (RGB): ")
+  local description = vim.fn.input("[Octo] Enter description: ")
+  vim.fn.inputrestore()
+  color = string.gsub(color, "#", "")
+
+  local query = graphql("create_label_mutation", repo_id, name, description, color)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", string.format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.notify(stderr, 2)
+        elseif output then
+          local resp = vim.fn.json_decode(output)
+          local label = resp.data.createLabel.label
+          vim.notify("[Octo] Created label: "..label.name, 1)
+
+          -- refresh issue/pr details
+          require"octo".load(
+            buffer.repo,
+            buffer.kind,
+            buffer.number,
+            function(obj)
+              writers.write_details(bufnr, obj, true)
+            end
+          )
+        end
+      end
+    }
+  )
+end
+
 function M.add_label()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
 
   local iid = buffer.node.id
-  if not iid then vim.notify("Cannot get issue/pr id", 2) end
+  if not iid then vim.notify("[Octo] Cannot get issue/pr id", 2) end
 
   menu.select_label(
     function(label_id)
       local query = graphql("add_labels_mutation", iid, label_id)
       gh.run(
         {
-          args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
+          args = {"api", "graphql", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
               vim.notify(stderr, 2)
@@ -995,14 +1039,14 @@ function M.remove_label()
   if not buffer then return end
 
   local iid = buffer.node.id
-  if not iid then vim.notify("Cannot get issue/pr id", 2) end
+  if not iid then vim.notify("[Octo] Cannot get issue/pr id", 2) end
 
   menu.select_assigned_label(
     function(label_id)
       local query = graphql("remove_labels_mutation", iid, label_id)
       gh.run(
         {
-          args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
+          args = {"api", "graphql", "-f", string.format("query=%s", query)},
           cb = function(output, stderr)
             if stderr and not utils.is_blank(stderr) then
               vim.notify(stderr, 2)

@@ -112,6 +112,7 @@ use {'pwntester/octo.nvim', config=function()
       copy_url = "<C-y>",                  -- copy url to system clipboard
       add_assignee = "<space>aa",          -- add assignee
       remove_assignee = "<space>ad",       -- remove assignee
+      create_label = "<space>lc",          -- create label
       add_label = "<space>la",             -- add label
       remove_label = "<space>ld",          -- remove label
       goto_issue = "<space>gi",            -- navigate to a local repo issue
@@ -144,6 +145,7 @@ use {'pwntester/octo.nvim', config=function()
       copy_url = "<C-y>",                  -- copy url to system clipboard
       add_assignee = "<space>aa",          -- add assignee
       remove_assignee = "<space>ad",       -- remove assignee
+      create_label = "<space>lc",          -- create label
       add_label = "<space>la",             -- add label
       remove_label = "<space>ld",          -- remove label
       goto_issue = "<space>gi",            -- navigate to a local repo issue
@@ -260,6 +262,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | unresolve | Mark a review thread as unresolved |
 | label | add | Add a label from available label menu |
 | | remove | Remove a label |
+| | create | Create a new label |
 | assignees| add | Assign a user |
 | | remove | Unassign a user |
 | reviewer | add | Assign a PR reviewer |
