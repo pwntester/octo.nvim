@@ -216,7 +216,7 @@ end
 
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
-    vim.api.nvim_err_writeln(string.format("Cannot find %s", repo))
+    vim.api.nvim_err_writeln("[Octo] Cannot find " .. repo)
     return
   end
 

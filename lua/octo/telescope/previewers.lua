@@ -14,6 +14,7 @@ M.issue =
   defaulter(
   function(opts)
     return previewers.new_buffer_previewer {
+      title = opts.preview_title,
       get_buffer_by_name = function(_, entry)
         return entry.value
       end,
@@ -49,8 +50,9 @@ M.issue =
 
 M.gist =
   defaulter(
-  function()
+  function(opts)
     return previewers.new_buffer_previewer {
+      title = opts.preview_title,
       get_buffer_by_name = function(_, entry)
         return entry.value
       end,
@@ -76,6 +78,7 @@ M.pull_request =
   defaulter(
   function(opts)
     return previewers.new_buffer_previewer {
+      title = opts.preview_title,
       get_buffer_by_name = function(_, entry)
         return entry.value
       end,
@@ -116,6 +119,7 @@ M.commit =
   defaulter(
   function(opts)
     return previewers.new_buffer_previewer {
+      title = opts.preview_title,
       keep_last_buf = true,
       get_buffer_by_name = function(_, entry)
         return entry.value
@@ -156,8 +160,9 @@ M.commit =
 
 M.changed_files =
   defaulter(
-  function()
+  function(opts)
     return previewers.new_buffer_previewer {
+      title = opts.preview_title,
       keep_last_buf = true,
       get_buffer_by_name = function(_, entry)
         return entry.value
@@ -178,8 +183,9 @@ M.changed_files =
 
 M.review_thread =
   defaulter(
-  function()
+  function(opts)
     return previewers.new_buffer_previewer {
+      title = opts.preview_title,
       get_buffer_by_name = function(_, entry)
         return entry.value
       end,

@@ -19,11 +19,12 @@ local M = {}
 local dropdown_opts = require('telescope.themes').get_dropdown({
   results_height = 15;
   width = 0.4;
+  prompt_title = false;
+  results_title = false;
   previewer = false;
   borderchars = {
     results =  {'▔', '▕', '▁', '▏', '🭽', '🭾', '🭿', '🭼' };
-    prompt =  {' ', '▕', '▁', '▏', '▏', '▕', '🭿', '🭼' };
-    preview = {'▔', '▕', '▁', '▏', '🭽', '🭾', '🭿', '🭼' };
+    prompt =  {'▔', '▕', '▁', '▏', '🭽', '🭾', '🭿', '🭼' };
   };
 })
 
@@ -128,7 +129,7 @@ function M.issues(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.notify("Cannot find repo", 2)
+    vim.notify("[Octo] Cannot find repo", 2)
     return
   end
 
@@ -155,11 +156,12 @@ function M.issues(opts)
               max_number = #tostring(issue.number)
             end
           end
-
+          opts.preview_title = opts.preview_title or ''
+          opts.prompt_title = opts.prompt_title or ''
+          opts.results_title = opts.results_title or ''
           pickers.new(
             opts,
             {
-              prompt_title = "Issues",
               finder = finders.new_table {
                 results = issues,
                 entry_maker = entry_maker.gen_from_issue(max_number)
@@ -223,10 +225,12 @@ function M.gists(opts)
         elseif output then
           local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
           local gists = resp.data.viewer.gists.nodes
+          opts.preview_title = opts.preview_title or ''
+          opts.prompt_title = opts.prompt_title or ''
+          opts.results_title = opts.results_title or ''
           pickers.new(
             opts,
             {
-              prompt_title = "Gists",
               finder = finders.new_table {
                 results = gists,
                 entry_maker = entry_maker.gen_from_gist()
@@ -286,7 +290,7 @@ function M.pull_requests(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.notify("Cannot find repo", 2)
+    vim.notify("[Octo] Cannot find repo", 2)
     return
   end
 
@@ -313,11 +317,12 @@ function M.pull_requests(opts)
               max_number = #tostring(pull.number)
             end
           end
-
+          opts.preview_title = opts.preview_title or ''
+          opts.prompt_title = opts.prompt_title or ''
+          opts.results_title = opts.results_title or ''
           pickers.new(
             opts,
             {
-              prompt_title = "Pull Requests",
               finder = finders.new_table {
                 results = pull_requests,
                 entry_maker = entry_maker.gen_from_pull_request(max_number)
@@ -361,7 +366,9 @@ function M.commits()
           pickers.new(
             {},
             {
-              prompt_title = "PR Commits",
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_commits()
@@ -401,7 +408,9 @@ function M.changed_files()
           pickers.new(
             {},
             {
-              prompt_title = "PR Files Changed",
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
               finder = finders.new_table {
                 results = results,
                 entry_maker = entry_maker.gen_from_git_changed_files()
@@ -432,15 +441,16 @@ function M.issue_search(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.notify("Cannot find repo", 2)
+    vim.notify("[Octo] Cannot find repo", 2)
     return
   end
-
   local queue = {}
+  opts.preview_title = opts.preview_title or ''
+  opts.prompt_title = opts.prompt_title or ''
+  opts.results_title = opts.results_title or ''
   pickers.new(
     opts,
     {
-      prompt_title = "Issue Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -512,15 +522,16 @@ function M.pull_request_search(opts)
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
-    vim.notify("Cannot find repo", 2)
+    vim.notify("[Octo] Cannot find repo", 2)
     return
   end
-
   local queue = {}
+  opts.preview_title = opts.preview_title or ''
+  opts.prompt_title = opts.prompt_title or ''
+  opts.results_title = opts.results_title or ''
   pickers.new(
     opts,
     {
-      prompt_title = "PR Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then
           return nil
@@ -597,7 +608,9 @@ function M.pending_threads(threads)
   pickers.new(
     {},
     {
-      prompt_title = "Pending Review Comments",
+      prompt_title = false,
+      results_title = false,
+      preview_title = false,
       finder = finders.new_table {
         results = threads,
         entry_maker = entry_maker.gen_from_review_thread(max_linenr_length)
@@ -633,7 +646,6 @@ function M.select_project_card(cb)
     pickers.new(
       opts,
       {
-        prompt_title = "Choose Project Card",
         finder = finders.new_table {
           results = cards.nodes,
           entry_maker = entry_maker.gen_from_project_card()
@@ -680,7 +692,6 @@ function M.select_target_project_column(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose Target Project",
               finder = finders.new_table {
                 results = projects,
                 entry_maker = entry_maker.gen_from_project()
@@ -694,7 +705,6 @@ function M.select_target_project_column(cb)
                   pickers.new(
                     opts2,
                     {
-                      prompt_title = "Choose Target Column",
                       finder = finders.new_table {
                         results = selected_project.project.columns.nodes,
                         entry_maker = entry_maker.gen_from_project_column()
@@ -743,7 +753,6 @@ function M.select_label(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose Label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -790,7 +799,6 @@ function M.select_assigned_label(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose Label",
               finder = finders.new_table {
                 results = labels,
                 entry_maker = entry_maker.gen_from_label()
@@ -823,7 +831,6 @@ function M.select_user(cb)
   pickers.new(
     opts,
     {
-      prompt_title = "User Search",
       finder = function(prompt, process_result, process_complete)
         if not prompt or prompt == "" then return nil end
         prompt = "repos:>10 " .. prompt
@@ -924,7 +931,9 @@ function M.select_user(cb)
             pickers.new(
               opts,
               {
-                prompt_title = "Choose Team",
+                prompt_title = false,
+                results_title = false,
+                preview_title = false,
                 finder = finders.new_table {
                   results = selected_user.teams,
                   entry_maker = entry_maker.gen_from_team()
@@ -976,7 +985,6 @@ function M.select_assignee(cb)
           pickers.new(
             opts,
             {
-              prompt_title = "Choose Assignee",
               finder = finders.new_table {
                 results = assignees,
                 entry_maker = entry_maker.gen_from_user()
@@ -1031,11 +1039,12 @@ function M.repos(opts)
             max_forkCount = math.max(max_forkCount, #tostring(repo.forkCount))
             max_stargazerCount = math.max(max_stargazerCount, #tostring(repo.stargazerCount))
           end
-
+          opts.preview_title = opts.preview_title or ''
+          opts.prompt_title = opts.prompt_title or ''
+          opts.results_title = opts.results_title or ''
           pickers.new(
             opts,
             {
-              prompt_title = "Repositories",
               finder = finders.new_table {
                 results = repos,
                 entry_maker = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
