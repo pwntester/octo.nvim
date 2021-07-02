@@ -235,18 +235,17 @@ function M.write_reactions(bufnr, reaction_groups, line)
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
-  local reactions_vt = {}
-  for _, group in ipairs(reaction_groups) do
-    if group.users.totalCount > 0 then
-      local icon = utils.reaction_map[group.content]
-      local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
-      local count = string.format(" %s ", group.users.totalCount)
-      vim.list_extend(reactions_vt, bubble)
-      table.insert(reactions_vt, { count, "Normal" })
-    end
-  end
   local reactions_count = utils.count_reactions(reaction_groups)
   if reactions_count > 0 then
+    local reactions_vt = {}
+    for _, group in ipairs(reaction_groups) do
+      if group.users.totalCount > 0 then
+        local icon = utils.reaction_map[group.content]
+        local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
+        vim.list_extend(reactions_vt, bubble)
+        table.insert(reactions_vt, { " " .. group.users.totalCount .. " ", "NormalFront" })
+      end
+    end
     M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
     return line
   else
@@ -259,6 +258,14 @@ function M.write_details(bufnr, issue, update)
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
   local details = {}
+  local buffer = octo_buffers[bufnr]
+
+  -- repo
+  local repo_vt = {
+    {"Repo: ", "OctoDetailsLabel"},
+    {" " .. buffer.repo, "OctoDetailsValue"}
+  }
+  table.insert(details, repo_vt)
 
   -- author
   local author_vt = {{"Created by: ", "OctoDetailsLabel"}}
@@ -1335,8 +1342,14 @@ function M.write_threads(bufnr, threads)
   return comment_end
 end
 
-function M.write_virtual_text(bufnr, ns, line, chunks)
-  local ok = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
+function M.write_virtual_text(bufnr, ns, line, chunks, mode)
+  mode = mode or "extmark"
+  local ok
+  if mode == "extmark" then
+    ok = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, { virt_text=chunks, virt_text_pos='overlay'})
+  elseif mode == "vt" then
+    ok = pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
+  end
   --if not ok then
     --print(vim.inspect(chunks))
   --end

@@ -53,7 +53,7 @@ local function get_hl_groups()
     BubbleDelimiterBlue = { fg = colors.dark_blue },
     FilePanelTitle = { fg = get_fg("Directory") or colors.blue, gui = "bold" },
     FilePanelCounter = { fg = get_fg("Identifier") or colors.purple, gui = "bold" },
-    FilePanelFileName = { fg = get_fg("Normal") or colors.white },
+    NormalFront = { fg = get_fg("Normal") or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
   }
 end
@@ -67,7 +67,7 @@ local function get_hl_links()
     StatusLine = "StatusLine",
     StatusLineNC = "StatusLineNC",
     EndOfBuffer = "EndOfBuffer",
-    FilePanelFileName = "Normal",
+    FilePanelFileName = "NormalFront",
     FilePanelPath = "Comment",
     StatusAdded = "OctoGreen",
     StatusUntracked = "OctoGreen",
