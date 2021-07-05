@@ -325,7 +325,7 @@ function M.write_details(bufnr, issue, update)
   }
   if ms ~= nil and ms ~= vim.NIL then
     table.insert(milestone_vt, {ms.title, "OctoDetailsValue"})
-    table.insert(milestone_vt, {string.format(" (%s)", utils.state_hl_map[ms.state]), "OctoDetailsValue"})
+    table.insert(milestone_vt, {string.format(" (%s)", utils.state_message_map[ms.state]), "OctoDetailsValue"})
   else
     table.insert(milestone_vt, {"No milestone", "OctoMissingDetails"})
   end
