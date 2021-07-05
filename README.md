@@ -4,7 +4,6 @@
 	GitHub in NeoVim.
 </p>
 
-
 <p align="center">
     <a href="https://github.com/pwntester/octo.nvim"><img
             src="https://img.shields.io/github/repo-size/pwntester/octo.nvim"
@@ -26,20 +25,8 @@
             alt="Repository's starts"/></a>
 </p>
 
-<img width="2099" alt="image" src="https://user-images.githubusercontent.com/125701/117284893-9f281200-ae67-11eb-9d66-ab3f127f23ce.png">
-<p align="center">
-	Issue/Pull Request listing
-</p>
+![issues](https://user-images.githubusercontent.com/125701/124493896-6f897d80-ddb6-11eb-9c61-ea2dc9265b52.gif)
 
-<img width="1328" alt="image" src="https://user-images.githubusercontent.com/125701/118050762-2ef62080-b380-11eb-9fbd-bcd413935dc4.png">
-<p align="center">
-	Issue/Pull Request buffer
-</p>
-
-<img width="1341" alt="image" src="https://user-images.githubusercontent.com/125701/118053010-05d78f00-b384-11eb-8d70-d32bce49e72e.png">
-<p align="center">
-	PR review panel
-</p>
 
 # TL;DR
 <div style="text-align: justify">
