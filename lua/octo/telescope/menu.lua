@@ -17,8 +17,10 @@ local entry_maker = require "octo.telescope.entry_maker"
 local M = {}
 
 local dropdown_opts = require('telescope.themes').get_dropdown({
-  results_height = 15;
-  width = 0.4;
+  layout_config = {
+    width = 0.4;
+    height = 15;
+  };
   prompt_title = false;
   results_title = false;
   previewer = false;
