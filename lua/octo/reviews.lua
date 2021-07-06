@@ -308,9 +308,12 @@ end
 ------------
 
 function M.hide_review_threads()
+  -- This function is called from a very broad CursorMoved
+  -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
   if not split or not path then return end
+
   local review = M.get_current_review()
   local file = review.layout:cur_file()
   if not file then return end
@@ -330,9 +333,12 @@ function M.hide_review_threads()
 end
 
 function M.show_review_threads()
+  -- This function is called from a very broad CursorHold
+  -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
   if not split or not path then return end
+
   local review = M.get_current_review()
   local file = review.layout:cur_file()
   if not file then return end
