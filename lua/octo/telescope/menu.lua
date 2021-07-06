@@ -827,7 +827,10 @@ end
 --
 function M.select_user(cb)
   local opts = vim.deepcopy(dropdown_opts)
-  opts.results_height = 35;
+  opts.layout_config = {
+    width = 0.4;
+    height = 15;
+  };
 
   local queue = {}
   pickers.new(
