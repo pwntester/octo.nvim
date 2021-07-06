@@ -25,7 +25,9 @@
             alt="Repository's starts"/></a>
 </p>
 
-![issues](https://user-images.githubusercontent.com/125701/124493896-6f897d80-ddb6-11eb-9c61-ea2dc9265b52.gif)
+![issues](https://user-images.githubusercontent.com/125701/124568675-76130600-de45-11eb-9944-2607c5863f37.gif)
+
+![prs](https://user-images.githubusercontent.com/125701/124568138-e8cfb180-de44-11eb-994a-0791d8be63ad.gif)
 
 
 # TL;DR
