@@ -33,7 +33,6 @@ local function run(opts)
     Job:new(
     {
       enable_recording = true,
-      env = { NO_COLOR = 1 },
       command = "gh",
       args = opts.args,
       on_exit = vim.schedule_wrap(
@@ -44,7 +43,8 @@ local function run(opts)
             opts.cb(output, stderr)
           end
         end
-      )
+      ),
+      env = { PATH = vim.env["PATH"], NO_COLOR = 1 }
     }
   )
   if mode == "sync" then
