@@ -81,15 +81,16 @@ local function open_preview_buffer(command)
   return function(prompt_bufnr)
     actions.close(prompt_bufnr)
     local preview_bufnr = require "telescope.state".get_global_key("last_preview_bufnr")
-    if command == 'edit' then
+    if command == 'default' then
       vim.cmd(string.format(":buffer %d", preview_bufnr))
-    elseif command == 'split' then
+    elseif command == 'horizontal' then
       vim.cmd(string.format(":sbuffer %d", preview_bufnr))
-    elseif command == 'vsplit' then
+    elseif command == 'vertical' then
       vim.cmd(string.format(":vert sbuffer %d", preview_bufnr))
-    elseif command == 'tabedit' then
+    elseif command == 'tab' then
       vim.cmd(string.format(":tab sb %d", preview_bufnr))
     end
+
     vim.cmd [[stopinsert]]
   end
 end
