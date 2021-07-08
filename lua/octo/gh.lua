@@ -33,6 +33,7 @@ local function run(opts)
     Job:new(
     {
       enable_recording = true,
+      env = { NO_COLOR = 1 },
       command = "gh",
       args = opts.args,
       on_exit = vim.schedule_wrap(
