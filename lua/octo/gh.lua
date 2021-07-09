@@ -8,6 +8,18 @@ local headers = {
   "application/vnd.github.bane-preview+json",
 }
 
+local env_vars = {
+  PATH = vim.env["PATH"],
+  GH_CONFIG_DIR = vim.env["GH_CONFIG_DIR"],
+  XDG_CONFIG_HOME = vim.env["XDG_CONFIG_HOME"],
+  XDG_DATA_HOME = vim.env["XDG_DATA_HOME"],
+  XDG_STATE_HOME = vim.env["XDG_STATE_HOME"],
+  AppData = vim.env["AppData"],
+  LocalAppData = vim.env["LocalAppData"],
+  HOME = vim.env["HOME"],
+  NO_COLOR = 1
+}
+
 local function run(opts)
   if not Job then return end
   opts = opts or {}
@@ -44,7 +56,7 @@ local function run(opts)
           end
         end
       ),
-      env = { PATH = vim.env["PATH"], NO_COLOR = 1 }
+      env = env_vars
     }
   )
   if mode == "sync" then
