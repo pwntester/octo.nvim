@@ -277,6 +277,7 @@ end
 
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
+  if not self.left_comment_ranges or not self.right_comment_ranges then return end
   local splits = {
     {bufnr = self.left_bufid, comment_ranges = self.left_comment_ranges},
     {bufnr = self.right_bufid, comment_ranges = self.right_comment_ranges},
