@@ -23,11 +23,11 @@ local function check_login()
       args = {"auth", "status"},
       cb = function(_, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.notify(stderr, 2)
           local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
           if name then
             vim.g.octo_viewer = name
-            return name
+          else
+            vim.notify(stderr, 2)
           end
         end
       end
