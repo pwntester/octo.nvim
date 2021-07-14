@@ -17,6 +17,24 @@ local M = {}
 _G.octo_repo_issues = {}
 _G.octo_buffers = {}
 
+local function check_login()
+  gh.run(
+    {
+      args = {"auth", "status"},
+      cb = function(_, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.notify(stderr, 2)
+          local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
+          if name then
+            vim.g.octo_viewer = name
+            return name
+          end
+        end
+      end
+    }
+  )
+end
+
 function M.init()
   colors.setup()
 end
@@ -24,7 +42,7 @@ end
 function M.setup(user_config)
   signs.setup()
   config.setup(user_config or {})
-  M.check_login()
+  check_login()
 end
 
 function M.configure_octo_buffer(bufnr)
@@ -263,19 +281,5 @@ end
 --   vim.api.nvim_feedkeys(key, "m", true)
 --   vim.notify("[Octo] Cannot make changes to non-editable regions", 1)
 -- end
-
-function M.check_login()
-  local _, err = gh.run(
-    {
-      args = {"auth", "status"},
-      mode = "sync"
-    }
-  )
-  local name = string.match(err, "Logged in to [^%s]+ as ([^%s]+)")
-  if name then
-    vim.g.octo_viewer = name
-    return name
-  end
-end
 
 return M
