@@ -7,6 +7,7 @@ local reviews = require"octo.reviews"
 local graphql = require"octo.graphql"
 local constants = require"octo.constants"
 local writers = require"octo.writers"
+local _, Job = pcall(require, 'plenary.job')
 
 local M = {}
 
@@ -606,22 +607,24 @@ function M.checkout_pr()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then return end
   if not utils.in_pr_repo() then return end
-  gh.run(
-    {
-      args = {"pr", "checkout", buffer.number, "-R", buffer.repo},
-      cb = function(_, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          for _, line in ipairs(vim.fn.split(stderr, "\n")) do
-            if line:match("Switched to branch") or line:match("Already on") then
-              vim.notify("[Octo] Succeded", line, 1)
-              return
-            end
+  if not Job then return end
+  Job:new({
+    enable_recording = true,
+    command = "git",
+    args = {"checkout",  buffer.node.headRefName},
+    on_exit = vim.schedule_wrap(
+      function(j_self, _, _)
+        local stderr = table.concat(j_self:stderr_result(), "\n")
+        for _, line in ipairs(vim.fn.split(stderr, "\n")) do
+          if line:match("Switched to branch") or line:match("Already on") then
+            vim.notify("[Octo] " .. line, 1)
+            return
           end
-          vim.notify("[Octo] Error", stderr, 2)
         end
+        vim.notify("[Octo] " .. stderr, 2)
       end
-    }
-  )
+    )
+  }):start()
 end
 
 function M.pr_ready_for_review()
