@@ -65,6 +65,9 @@ M.commands = {
       if not utils.in_pr_repo() then return end
       utils.checkout_pr(buffer.node.headRefName)
     end,
+    create = function()
+      M.create_pr()
+    end,
     commits = function()
       menu.commits()
     end,
@@ -607,6 +610,38 @@ function M.create_issue(repo)
         elseif output then
           local resp = vim.fn.json_decode(output)
           require"octo".create_buffer("issue", resp.data.createIssue.issue, repo, true)
+          vim.fn.execute("normal! Gk")
+          vim.fn.execute("startinsert")
+        end
+      end
+    }
+  )
+end
+
+function M.create_pr(is_draft)
+  local repo = utils.get_remote_name()
+  if not repo then
+    vim.notify("[Octo] Cant find repo name", 1)
+    return
+  end
+
+  vim.fn.inputsave()
+  local title = vim.fn.input(string.format("[Octo] Creating PR in %s. Enter title: ", repo))
+  local base_ref_name = vim.fn.input(string.format("[Octo] Creating PR in %s. Enter base branch: ", repo))
+  local head_ref_name = vim.fn.input(string.format("[Octo] Creating PR in %s. Enter head branch: ", repo))
+  vim.fn.inputrestore()
+
+  local repo_id = utils.get_repo_id(repo)
+  local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, constants.NO_BODY_MSG, is_draft)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", string.format("query=%s", query)},
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.notify(stderr, 2)
+        elseif output then
+          local resp = vim.fn.json_decode(output)
+          require"octo".create_buffer("pull", resp.data.createPullRequest.pullRequest, repo, true)
           vim.fn.execute("normal! Gk")
           vim.fn.execute("startinsert")
         end
