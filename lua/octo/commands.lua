@@ -656,6 +656,7 @@ function M.create_pr(is_draft)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local node = resp.data.createPullRequest.pullRequest
+          vim.notify(string.format("[Octo] #%d - `%s` created successfully", node.number, node.title), 1)
           require"octo".create_buffer("pull", node, repo, true)
           vim.fn.execute("normal! Gk")
           vim.fn.execute("startinsert")
