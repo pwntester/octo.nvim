@@ -61,8 +61,8 @@ M.commands = {
     checkout = function()
       M.checkout_pr()
     end,
-    create = function()
-      M.create_pr()
+    create = function(...)
+      M.create_pr(...)
     end,
     commits = function()
       menu.commits()
@@ -628,6 +628,7 @@ function M.checkout_pr()
 end
 
 function M.create_pr(is_draft)
+  is_draft = "draft" == is_draft and true or false
   local repo = utils.get_remote_name()
   if not repo then
     vim.notify("[Octo] Cant find repo name", 1)
