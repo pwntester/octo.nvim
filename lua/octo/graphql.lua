@@ -2584,6 +2584,19 @@ query($endCursor: String) {
 }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/mutations#createpullrequest
+M.create_pr_mutation =
+[[
+	mutation {
+			createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: %d, title: "%s", body: "%s", draft: %s}) {
+				pullRequest {
+					id
+					url
+				}
+			}
+	}
+]]
+
 local function escape_chars(string)
   local escaped, _ = string.gsub(
     string,
