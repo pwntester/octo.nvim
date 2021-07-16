@@ -2589,7 +2589,7 @@ query($endCursor: String) {
 M.create_pr_mutation =
 [[
 	mutation {
-			createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: %d, title: "%s", body: "%s", draft: %s}) {
+			createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: "%s", body: "%s", draft: %s}) {
 				pullRequest {
 					id
 					url
