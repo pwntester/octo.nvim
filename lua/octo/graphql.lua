@@ -2662,11 +2662,7 @@ M.create_pr_mutation =
             }
           }
         }
-        timelineItems(first: 100, after: $endCursor) {
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
+        timelineItems(first: 100) {
           nodes {
             __typename
             ... on LabeledEvent {

@@ -647,7 +647,6 @@ function M.create_pr(is_draft)
 
   local repo_id = utils.get_repo_id(repo)
   local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, constants.NO_BODY_MSG, is_draft)
-  print(query)
   gh.run(
     {
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
@@ -657,7 +656,6 @@ function M.create_pr(is_draft)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local node = resp.data.createPullRequest.pullRequest
-          print(vim.inspect(node))
           require"octo".create_buffer("pull", node, repo, true)
           vim.fn.execute("normal! Gk")
           vim.fn.execute("startinsert")
