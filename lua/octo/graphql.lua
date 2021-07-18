@@ -2506,12 +2506,11 @@ query($endCursor: String) {
 }
 ]]
 
-M.repo_query =
+M.repository_query =
   [[
 query {
   repository(owner: "%s", name: "%s") {
     id
-
     nameWithOwner
     description
     forkCount
@@ -2521,6 +2520,9 @@ query {
     updatedAt
     pushedAt
     isFork
+    defaultBranchRef {
+      name
+    }
     parent {
       nameWithOwner
     }
