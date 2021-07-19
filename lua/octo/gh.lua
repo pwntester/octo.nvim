@@ -22,6 +22,25 @@ local env_vars = {
 
 local function run(opts)
   if not Job then return end
+
+  -- Lazy load viewer name on the first gh command
+  if not vim.g.octo_viewer then
+    local job = Job:new( {
+      enable_recording = true,
+      command = "gh",
+      args = {"auth", "status"},
+      env = env_vars
+    })
+    job:sync()
+    local stderr = table.concat(job:stderr_result(), "\n")
+    local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
+    if name then
+      vim.g.octo_viewer = name
+    else
+      vim.notify(stderr, 2)
+    end
+  end
+
   opts = opts or {}
   local conf = config.get_config()
   local mode = opts.mode or "async"

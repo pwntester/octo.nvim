@@ -255,10 +255,6 @@ function M.octo(object, action, ...)
     vim.notify("[Octo] Missing arguments", 1)
     return
   end
-  if not vim.g.octo_viewer then
-    vim.notify("[Octo] You are not logged into any GitHub hosts. Run `gh auth login` to authenticate.", 2)
-    return
-  end
   local o = M.commands[object]
   if not o then
     local repo, number, kind = utils.parse_url(object)

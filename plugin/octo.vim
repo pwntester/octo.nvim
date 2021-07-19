@@ -19,6 +19,6 @@ augroup octo_autocmds
   au WinLeave * lua require'octo.reviews'.on_win_leave()
 augroup END
 
-lua require"octo".init()
+lua require'octo.colors'.setup()
 
 let g:loaded_octo = 1
