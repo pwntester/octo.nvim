@@ -283,10 +283,11 @@ function M.get_comment_at_line(bufnr, line)
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
     if start_line +1 <= line and end_line - 2 >= line then
-      return comment, start_line, end_line
+      comment.bufferStartLine = start_line
+      comment.bufferEndLine = end_line
+      return comment
     end
   end
-  return nil
 end
 
 function M.get_body_at_cursor(bufnr)
@@ -317,8 +318,8 @@ function M.get_thread_at_line(bufnr, line)
       local startLine = mark[2] - 1
       local endLine = mark[4].end_row
       if startLine <= line and endLine >= line then
-        thread.startLine = startLine
-        thread.endLine = endLine
+        thread.bufferStartLine = startLine
+        thread.bufferEndLine = endLine
         return thread
       end
     end

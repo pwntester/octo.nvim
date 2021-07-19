@@ -297,7 +297,7 @@ function M.add_comment()
   local _thread = utils.get_thread_at_cursor(bufnr)
   local thread_id = _thread.threadId
   local replyTo = _thread.replyTo
-  local thread_end_line = _thread.endLine
+  local thread_end_line = _thread.bufferEndLine
   if thread_id and not buffer:isReviewThread() then
     vim.notify("[Octo] Start a new review to reply to a thread", 2)
     return
@@ -350,7 +350,9 @@ function M.delete_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local comment, start_line, end_line = utils.get_comment_at_cursor(bufnr)
+  local comment = utils.get_comment_at_cursor(bufnr)
+  local start_line = comment.bufferStartLine
+  local end_line = comment.bufferEndLine
   if not comment then
     vim.notify("[Octo] The cursor does not seem to be located at any comment", 1)
     return
@@ -458,7 +460,7 @@ function M.resolve_thread()
   if not buffer then return end
   local _thread = utils.get_thread_at_cursor(bufnr)
   local thread_id = _thread.threadId
-  local thread_line = _thread.startLine
+  local thread_line = _thread.bufferStartLine
   local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run(
     {
@@ -498,7 +500,7 @@ function M.unresolve_thread()
   if not buffer then return end
   local _thread = utils.get_thread_at_cursor(bufnr)
   local thread_id = _thread.threadId
-  local thread_line = _thread.startLine
+  local thread_line = _thread.bufferStartLine
   local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run(
     {
