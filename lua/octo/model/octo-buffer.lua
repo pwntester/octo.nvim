@@ -212,12 +212,9 @@ function OctoBuffer:render_issue()
     end
     ::continue::
   end
-  -- if prev_is_event then
-  --   writers.write_block(self.bufnr, {""})
-  -- end
-
-  -- show signs
-  --self:render_signcolumn()
+  if prev_is_event then
+    writers.write_block(self.bufnr, {""})
+  end
 
   -- drop undo history
   utils.clear_history()

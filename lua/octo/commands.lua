@@ -255,10 +255,6 @@ function M.octo(object, action, ...)
     vim.notify("[Octo] Missing arguments", 1)
     return
   end
-  if not vim.g.octo_viewer then
-    vim.notify("[Octo] You are not logged into any GitHub hosts. Run `gh auth login` to authenticate.", 2)
-    return
-  end
   local o = M.commands[object]
   if not o then
     local repo, number, kind = utils.parse_url(object)
@@ -294,7 +290,14 @@ function M.add_comment()
     comment_kind = "IssueComment"
   end
 
-  local thread_id, _, thread_end_line, replyTo = utils.get_thread_at_cursor(bufnr)
+  local replyTo, thread_id, thread_end_line
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  if _thread then
+    thread_id = _thread.threadId
+    replyTo = _thread.replyTo
+    thread_end_line = _thread.bufferEndLine
+  end
+
   if thread_id and not buffer:isReviewThread() then
     vim.notify("[Octo] Start a new review to reply to a thread", 2)
     return
@@ -347,7 +350,9 @@ function M.delete_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local comment, start_line, end_line = utils.get_comment_at_cursor(bufnr)
+  local comment = utils.get_comment_at_cursor(bufnr)
+  local start_line = comment.bufferStartLine
+  local end_line = comment.bufferEndLine
   if not comment then
     vim.notify("[Octo] The cursor does not seem to be located at any comment", 1)
     return
@@ -357,7 +362,8 @@ function M.delete_comment()
     query = graphql("delete_issue_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReviewComment" then
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
-    threadId = utils.get_thread_at_cursor(bufnr)
+    local _thread = utils.get_thread_at_cursor(bufnr)
+    threadId = _thread.threadId
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
@@ -452,7 +458,10 @@ function M.resolve_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local thread_id, thread_line = utils.get_thread_at_cursor(bufnr)
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  if not _thread then return end
+  local thread_id = _thread.threadId
+  local thread_line = _thread.bufferStartLine
   local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run(
     {
@@ -490,7 +499,10 @@ function M.unresolve_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local thread_id, thread_line = utils.get_thread_at_cursor(bufnr)
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  if not _thread then return end
+  local thread_id = _thread.threadId
+  local thread_line = _thread.bufferStartLine
   local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run(
     {

@@ -59,6 +59,7 @@ M.defaults = {
       reload = "<C-r>",
       open_in_browser = "<C-b>",
       copy_url = "<C-y>",
+      goto_file = "gf",
       add_assignee = "<space>aa",
       remove_assignee = "<space>ad",
       create_label = "<space>lc",

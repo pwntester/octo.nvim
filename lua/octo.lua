@@ -3,7 +3,6 @@ local gh = require "octo.gh"
 local signs = require "octo.signs"
 local constants = require "octo.constants"
 local config = require "octo.config"
-local colors = require'octo.colors'
 local utils = require "octo.utils"
 local graphql = require "octo.graphql"
 local writers = require "octo.writers"
@@ -17,32 +16,9 @@ local M = {}
 _G.octo_repo_issues = {}
 _G.octo_buffers = {}
 
-local function check_login()
-  gh.run(
-    {
-      args = {"auth", "status"},
-      cb = function(_, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
-          if name then
-            vim.g.octo_viewer = name
-          else
-            vim.notify(stderr, 2)
-          end
-        end
-      end
-    }
-  )
-end
-
-function M.init()
-  colors.setup()
-end
-
 function M.setup(user_config)
   signs.setup()
   config.setup(user_config or {})
-  check_login()
 end
 
 function M.configure_octo_buffer(bufnr)
