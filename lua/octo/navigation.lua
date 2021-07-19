@@ -27,8 +27,22 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh repo view --web %s", repo)
     end
   end
-  print(cmd)
   pcall(vim.cmd, "silent !"..cmd)
+end
+
+function M.go_to_file()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then return end
+  if not buffer:isPullRequest() then return end
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  local stat = vim.loop.fs_stat(utils.path_join({vim.fn.getcwd(), _thread.path}))
+  if stat and stat.type then
+    vim.cmd("e ".._thread.path)
+    vim.api.nvim_win_set_cursor(0, {_thread.line, 0})
+  else
+    vim.notify("[Octo] Cannot find file in CWD", 2)
+  end
 end
 
 function M.go_to_issue()

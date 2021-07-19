@@ -71,6 +71,9 @@ M.keypress_event_cbs = {
   goto_issue = function()
     require"octo.navigation".go_to_issue()
   end,
+  goto_file = function()
+    require"octo.navigation".go_to_file()
+  end,
   next_comment = function()
     require"octo.navigation".next_comment()
   end,
