@@ -1339,7 +1339,7 @@ function M.write_threads(bufnr, threads)
       replyTo = thread.comments.nodes[1].id,
       reviewId = thread.comments.nodes[1].pullRequestReview.id,
       path = thread.path,
-      line = thread.originalLine
+      line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
     })
   end
 
