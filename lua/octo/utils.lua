@@ -314,10 +314,12 @@ function M.get_thread_at_line(bufnr, line)
   for _, mark in ipairs(thread_marks) do
     local thread = buffer.threadsMetadata[tostring(mark[1])]
     if thread then
-      local startLine = mark[2]
+      local startLine = mark[2] - 1
       local endLine = mark[4].end_row
       if startLine <= line and endLine >= line then
-        return thread.threadId, startLine, endLine, thread.replyTo, thread.reviewId
+        thread.startLine = startLine
+        thread.endLine = endLine
+        return thread
       end
     end
   end

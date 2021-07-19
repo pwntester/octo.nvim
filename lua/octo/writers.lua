@@ -1337,7 +1337,9 @@ function M.write_threads(bufnr, threads)
     buffer.threadsMetadata[tostring(thread_mark_id)] = ThreadMetadata:new({
       threadId = thread.id,
       replyTo = thread.comments.nodes[1].id,
-      reviewId = thread.comments.nodes[1].pullRequestReview.id
+      reviewId = thread.comments.nodes[1].pullRequestReview.id,
+      path = thread.path,
+      line = thread.originalLine
     })
   end
 

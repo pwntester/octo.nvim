@@ -294,7 +294,10 @@ function M.add_comment()
     comment_kind = "IssueComment"
   end
 
-  local thread_id, _, thread_end_line, replyTo = utils.get_thread_at_cursor(bufnr)
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  local thread_id = _thread.threadId
+  local replyTo = _thread.replyTo
+  local thread_end_line = _thread.endLine
   if thread_id and not buffer:isReviewThread() then
     vim.notify("[Octo] Start a new review to reply to a thread", 2)
     return
@@ -357,7 +360,8 @@ function M.delete_comment()
     query = graphql("delete_issue_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReviewComment" then
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
-    threadId = utils.get_thread_at_cursor(bufnr)
+    local _thread = utils.get_thread_at_cursor(bufnr)
+    threadId = _thread.threadId
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
@@ -452,7 +456,9 @@ function M.resolve_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local thread_id, thread_line = utils.get_thread_at_cursor(bufnr)
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  local thread_id = _thread.threadId
+  local thread_line = _thread.startLine
   local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.run(
     {
@@ -490,7 +496,9 @@ function M.unresolve_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
-  local thread_id, thread_line = utils.get_thread_at_cursor(bufnr)
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  local thread_id = _thread.threadId
+  local thread_line = _thread.startLine
   local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.run(
     {
