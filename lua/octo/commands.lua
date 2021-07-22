@@ -653,13 +653,44 @@ function M.create_pr(is_draft)
           -- get repo default branch
           local default_branch = node.defaultBranchRef.name
 
+          -- get remote branches
+          local remote_branches = node.refs.nodes
+
+          local remote_branch_exists = false
+          for _, remote_branch in ipairs(remote_branches) do
+            if local_branch == remote_branch.name then
+              remote_branch_exists = true
+            end
+          end
+          local remote_branch
+          if not remote_branch_exists then
+            local choice = vim.fn.confirm("Remote branch '"..local_branch.."' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+            if choice == 1 then
+              local remote = "origin"
+              remote_branch = vim.fn.input({
+                prompt = "Enter remote branch name: ",
+                default = local_branch,
+                highlight = function(input)
+                  return {{0, #input, "String"}}
+                end
+              })
+              vim.notify(string.format("Pushing '%s' to '%s:%s' ...", local_branch, remote, remote_branch), 1)
+              cmd = string.format("git push %s %s:%s", remote, local_branch, remote_branch)
+              vim.fn.system(cmd)
+            else
+              vim.notify("[Octo] Aborting PR creation", 2)
+            end
+          end
+
           vim.fn.inputsave()
           local repo_idx = 1
           if #repo_candidates > 1 then
             repo_idx = vim.fn.inputlist(repo_candidates_entries)
           end
+          local last_commit = string.gsub(vim.fn.system("git log -1 --pretty=%B"), "%s+$", "")
           local title = vim.fn.input({
             prompt = "Enter title: ",
+            default = last_commit,
             highlight = function(input)
               return {{0, #input, "String"}}
             end
@@ -677,7 +708,7 @@ function M.create_pr(is_draft)
           -- namespace head_ref_name with a user like this: username:branch.
           local head_ref_name = vim.fn.input({
             prompt = "Enter HEAD branch: ",
-            default = local_branch,
+            default = remote_branch,
             highlight = function(input)
               return {{0, #input, "String"}}
             end

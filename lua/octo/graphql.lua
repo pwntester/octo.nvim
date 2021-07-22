@@ -2548,6 +2548,11 @@ query {
       name
       color
     }
+    refs(last:100, refPrefix: "refs/heads/") {
+      nodes {
+        name
+      }
+    }
     languages(first:100) {
       nodes {
         name
