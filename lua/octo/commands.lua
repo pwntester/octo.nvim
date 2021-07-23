@@ -688,9 +688,20 @@ function M.create_pr(is_draft)
             repo_idx = vim.fn.inputlist(repo_candidates_entries)
           end
           local last_commit = string.gsub(vim.fn.system("git log -1 --pretty=%B"), "%s+$", "")
-          local title = vim.fn.input({
+          local last_commit_lines = vim.split(last_commit, "\n")
+          local title = last_commit
+          local body = last_commit
+          if #last_commit_lines > 1 then
+            title = last_commit_lines[1]
+            if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
+              body = table.concat(vim.list_slice(last_commit_lines, 3, #last_commit_lines), "\n")
+            else
+              body = table.concat(vim.list_slice(last_commit_lines, 2, #last_commit_lines), "\n")
+            end
+          end
+          title = vim.fn.input({
             prompt = "Enter title: ",
-            default = last_commit,
+            default = title,
             highlight = function(input)
               return {{0, #input, "String"}}
             end
@@ -719,7 +730,7 @@ function M.create_pr(is_draft)
           vim.fn.inputrestore()
 
           local repo_id = utils.get_repo_id(repo_candidates[repo_idx])
-          local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, constants.NO_BODY_MSG, is_draft)
+          local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, body, is_draft)
 
           -- print(vim.inspect({
           --   base_ref_name = base_ref_name,
