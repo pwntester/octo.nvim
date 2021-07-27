@@ -261,11 +261,7 @@ local function checkout_pull_request(repo)
   return function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local tmp_table = vim.split(selection.value, "\t")
-    if vim.tbl_isempty(tmp_table) then
-      return
-    end
-    local number = tmp_table[1]
+    local number = selection.value
     local args = {"pr", "checkout", number, "-R", repo}
     if repo == "" then
       args = {"pr", "checkout", number}
