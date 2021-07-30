@@ -3,7 +3,6 @@ local action_state = require "telescope.actions.state"
 local action_set = require "telescope.actions.set"
 local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
-local ts_utils = require "telescope.utils"
 local conf = require "telescope.config".values
 local sorters = require "telescope.sorters"
 local previewers = require "octo.telescope.previewers"
@@ -859,7 +858,7 @@ function M.select_user(cb)
             return
           end
 
-          local query = graphql("user_query", prompt, prompt)
+          local query = graphql("user_query", prompt)
           gh.run(
             {
               args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
