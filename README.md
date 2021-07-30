@@ -18,8 +18,8 @@
             src="https://img.shields.io/badge/say-thanks-modal.svg"
             alt="Say thanks"/></a>    
     <a href="https://github.com/pwntester/octo.nvim/commits/main"><img
-			         src="https://img.shields.io/github/last-commit/pwntester/octo.nvim"
-			         alt="Latest commit"/></a>
+            src="https://img.shields.io/github/last-commit/pwntester/octo.nvim"
+            alt="Latest commit"/></a>
     <a href="https://github.com/pwntester/octo.nvim/stargazers"><img
             src="https://img.shields.io/github/stars/pwntester/octo.nvim"
             alt="Repository's starts"/></a>
@@ -283,6 +283,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 2. In-menu mappings:
 - `<CR>`: Edit PR
 - `<C-b>`: Opens PR in the browser
+- `<C-o>`: Checkout PR
 - `<C-y>`: Copies URL to system clipboard 
 [Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
