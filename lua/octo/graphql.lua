@@ -2006,6 +2006,7 @@ query($endCursor: String) {
         number
         title
         url
+        headRefName
       }
       pageInfo {
         hasNextPage

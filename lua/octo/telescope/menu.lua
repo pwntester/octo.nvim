@@ -256,24 +256,12 @@ end
 -- PULL REQUESTS
 --
 
-local function checkout_pull_request(repo)
+local function checkout_pull_request()
   return function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local number = selection.value
-    local args = {"pr", "checkout", number, "-R", repo}
-    if repo == "" then
-      args = {"pr", "checkout", number}
-    end
-    gh.run(
-      {
-        args = args,
-        cb = function(output)
-          vim.notify(output, 1)
-          vim.notify(string.format("Checked out PR %d", number), 1)
-        end
-      }
-    )
+    local headRefName = selection.pull_request.headRefName
+    utils.checkout_pr(headRefName)
   end
 end
 
@@ -331,7 +319,7 @@ function M.pull_requests(opts)
                 action_set.select:replace(function(prompt_bufnr, type)
                   open(opts.repo, "pull_request", type)(prompt_bufnr)
                 end)
-                map("i", "<c-o>", checkout_pull_request(opts.repo))
+                map("i", "<c-o>", checkout_pull_request())
                 map("i", "<c-b>", open_in_browser("pr", opts.repo))
                 map("i", "<c-y>", copy_url("pull_request"))
                 return true
