@@ -12,10 +12,10 @@ end
 
 M.keypress_event_cbs = {
   close_issue = function()
-    require"octo.commands".change_issue_state('closed')
+    require"octo.commands".change_state('CLOSED')
   end,
   reopen_issue = function()
-    require"octo.commands".change_issue_state('open')
+    require"octo.commands".change_state('OPEN')
   end,
   list_issues = function()
     local bufnr = vim.api.nvim_get_current_buf()
