@@ -24,7 +24,7 @@ M.keypress_event_cbs = {
     if repo then require"octo.telescope.menu".issues(repo) end
   end,
   checkout_pr = function()
-    require"octo.commands".checkout_pr()
+    require"octo.commands".commands.pr.checkout()
   end,
   list_commits = function()
     require"octo.telescope.menu".commits()
