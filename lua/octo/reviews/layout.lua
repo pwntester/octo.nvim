@@ -1,9 +1,9 @@
 -- Heavily derived from `diffview.nvim`:
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/view.lua
 --
-local FilePanel = require'octo.reviews.file-panel'.FilePanel
-local utils = require'octo.utils'
-local file_entry = require'octo.reviews.file-entry'
+local FilePanel = require("octo.reviews.file-panel").FilePanel
+local utils = require "octo.utils"
+local file_entry = require "octo.reviews.file-entry"
 
 local M = {}
 
@@ -12,7 +12,7 @@ M._views = {}
 local win_reset_opts = {
   diff = false,
   cursorbind = false,
-  scrollbind = false
+  scrollbind = false,
 }
 
 ---@class Layout
@@ -38,7 +38,7 @@ function Layout:new(opt)
     files = opt.files,
     file_idx = 1,
     nulled = false,
-    ready = false
+    ready = false,
   }
   this.file_panel = FilePanel:new(this.files)
   setmetatable(this, self)
@@ -46,9 +46,9 @@ function Layout:new(opt)
 end
 
 function Layout:open(review)
-  vim.cmd("tab split")
+  vim.cmd "tab split"
   self.tabpage = vim.api.nvim_get_current_tabpage()
-  require"octo.reviews".reviews[tostring(self.tabpage)] = review
+  require("octo.reviews").reviews[tostring(self.tabpage)] = review
   self:init_layout()
 
   local file = self:cur_file()
@@ -75,7 +75,7 @@ end
 
 function Layout:init_layout()
   self.left_winid = vim.api.nvim_get_current_win()
-  vim.cmd("belowright vsp")
+  vim.cmd "belowright vsp"
   self.right_winid = vim.api.nvim_get_current_win()
   self.file_panel:open()
 end
@@ -89,13 +89,17 @@ end
 
 function Layout:next_file()
   self:ensure_layout()
-  if self:file_safeguard() then return end
+  if self:file_safeguard() then
+    return
+  end
 
   if #self.files > 1 or self.nulled then
     local cur = self:cur_file()
-    if cur then cur:detach_buffers() end
-    self.file_idx = (self.file_idx) % #self.files + 1
-    vim.cmd("diffoff!")
+    if cur then
+      cur:detach_buffers()
+    end
+    self.file_idx = self.file_idx % #self.files + 1
+    vim.cmd "diffoff!"
     self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid) -- << Load file diffs in layout wins
     self.file_panel:highlight_file(self:cur_file())
     self.nulled = false
@@ -104,13 +108,17 @@ end
 
 function Layout:prev_file()
   self:ensure_layout()
-  if self:file_safeguard() then return end
+  if self:file_safeguard() then
+    return
+  end
 
   if #self.files > 1 or self.nulled then
     local cur = self:cur_file()
-    if cur then cur:detach_buffers() end
+    if cur then
+      cur:detach_buffers()
+    end
     self.file_idx = (self.file_idx - 2) % #self.files + 1
-    vim.cmd("diffoff!")
+    vim.cmd "diffoff!"
     self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid)
     self.file_panel:highlight_file(self:cur_file())
     self.nulled = false
@@ -119,14 +127,18 @@ end
 
 function Layout:set_file(file, focus)
   self:ensure_layout()
-  if self:file_safeguard() or not file then return end
+  if self:file_safeguard() or not file then
+    return
+  end
 
   for i, f in ipairs(self.files) do
     if f == file then
       local cur = self:cur_file()
-      if cur then cur:detach_buffers() end
+      if cur then
+        cur:detach_buffers()
+      end
       self.file_idx = i
-      vim.cmd("diffoff!")
+      vim.cmd "diffoff!"
       self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid)
       self.file_panel:highlight_file(self:cur_file())
       self.nulled = false
@@ -177,7 +189,7 @@ function Layout:validate_layout()
   local state = {
     tabpage = vim.api.nvim_tabpage_is_valid(self.tabpage),
     left_win = vim.api.nvim_win_is_valid(self.left_winid),
-    right_win = vim.api.nvim_win_is_valid(self.right_winid)
+    right_win = vim.api.nvim_win_is_valid(self.right_winid),
   }
   state.valid = state.tabpage and state.left_win and state.right_win
   return state
@@ -188,7 +200,7 @@ end
 function Layout:recover_layout(state)
   self.ready = false
   if not state.tabpage then
-    vim.cmd("tab split")
+    vim.cmd "tab split"
     self.tabpage = vim.api.nvim_get_current_tabpage()
     self.file_panel:close()
     self:init_layout()
@@ -201,17 +213,15 @@ function Layout:recover_layout(state)
 
   if not state.left_win and not state.right_win then
     self:init_layout()
-
   elseif not state.left_win then
     vim.api.nvim_set_current_win(self.right_winid)
-    vim.cmd("aboveleft vsp")
+    vim.cmd "aboveleft vsp"
     self.left_winid = vim.api.nvim_get_current_win()
     self.file_panel:open()
     self:set_file(self:cur_file(), "right")
-
   elseif not state.right_win then
     vim.api.nvim_set_current_win(self.left_winid)
-    vim.cmd("belowright vsp")
+    vim.cmd "belowright vsp"
     self.right_winid = vim.api.nvim_get_current_win()
     self.file_panel:open()
     self:set_file(self:cur_file(), "left")
@@ -233,7 +243,9 @@ end
 function Layout:file_safeguard()
   if #self.files == 0 then
     local cur = self:cur_file()
-    if cur then cur:detach_buffers() end
+    if cur then
+      cur:detach_buffers()
+    end
     file_entry.load_null_buffer(self.left_winid)
     file_entry.load_null_buffer(self.right_winid)
     self.nulled = true
@@ -243,15 +255,21 @@ function Layout:file_safeguard()
 end
 
 function Layout:on_enter()
-  if self.ready then self:update_files() end
+  if self.ready then
+    self:update_files()
+  end
 
   local file = self:cur_file()
-  if file then file:attach_buffers() end
+  if file then
+    file:attach_buffers()
+  end
 end
 
 function Layout:on_leave()
   local file = self:cur_file()
-  if file then file:detach_buffers() end
+  if file then
+    file:detach_buffers()
+  end
 end
 
 function Layout:on_win_leave()
@@ -264,10 +282,7 @@ end
 function Layout:fix_foreign_windows()
   local win_ids = vim.api.nvim_tabpage_list_wins(self.tabpage)
   for _, id in ipairs(win_ids) do
-    if not (
-        id == self.file_panel.winid
-        or id == self.left_winid
-        or id == self.right_winid) then
+    if not (id == self.file_panel.winid or id == self.left_winid or id == self.right_winid) then
       for k, v in pairs(win_reset_opts) do
         vim.api.nvim_win_set_option(id, k, v)
       end

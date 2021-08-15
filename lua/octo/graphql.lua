@@ -1,8 +1,7 @@
 local M = {}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addreaction
-M.add_reaction_mutation =
-  [[
+M.add_reaction_mutation = [[
   mutation {
     addReaction(input: {subjectId: "%s", content: %s}) {
       subject {
@@ -19,8 +18,7 @@ M.add_reaction_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#removereaction
-M.remove_reaction_mutation =
-  [[
+M.remove_reaction_mutation = [[
   mutation {
     removeReaction(input: {subjectId: "%s", content: %s}) {
       subject {
@@ -37,8 +35,7 @@ M.remove_reaction_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
-M.resolve_review_thread_mutation =
-  [[
+M.resolve_review_thread_mutation = [[
   mutation {
     resolveReviewThread(input: {threadId: "%s"}) {
       thread {
@@ -99,8 +96,7 @@ M.resolve_review_thread_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
-M.unresolve_review_thread_mutation =
-  [[
+M.unresolve_review_thread_mutation = [[
   mutation {
     unresolveReviewThread(input: {threadId: "%s"}) {
       thread {
@@ -161,8 +157,7 @@ M.unresolve_review_thread_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
-M.start_review_mutation =
-  [[
+M.start_review_mutation = [[
   mutation {
     addPullRequestReview(input: {pullRequestId: "%s"}) {
       pullRequestReview {
@@ -220,8 +215,7 @@ M.start_review_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
-M.mark_file_as_viewed_mutation =
-  [[
+M.mark_file_as_viewed_mutation = [[
   mutation {
     markFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
       pullRequest {
@@ -237,8 +231,7 @@ M.mark_file_as_viewed_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#unmarkfileasviewed
-M.unmark_file_as_viewed_mutation =
-  [[
+M.unmark_file_as_viewed_mutation = [[
   mutation {
     unmarkFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
       pullRequest {
@@ -254,8 +247,7 @@ M.unmark_file_as_viewed_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
-M.submit_pull_request_review_mutation =
-  [[
+M.submit_pull_request_review_mutation = [[
   mutation {
     submitPullRequestReview(input: {pullRequestReviewId: "%s", event: %s, body: "%s"}) {
       pullRequestReview {
@@ -266,8 +258,7 @@ M.submit_pull_request_review_mutation =
   }
 ]]
 
-M.delete_pull_request_review_mutation =
-[[
+M.delete_pull_request_review_mutation = [[
 mutation { 
   deletePullRequestReview(input: {pullRequestReviewId: "%s"}) { 
     pullRequestReview {
@@ -279,8 +270,7 @@ mutation {
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
-M.add_pull_request_review_thread_mutation =
-[[
+M.add_pull_request_review_thread_mutation = [[
 mutation { 
   addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) { 
     thread {
@@ -366,8 +356,7 @@ mutation {
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
-M.add_pull_request_review_multiline_thread_mutation =
-[[
+M.add_pull_request_review_multiline_thread_mutation = [[
 mutation { 
   addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) { 
     thread {
@@ -453,8 +442,7 @@ mutation {
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
-M.add_issue_comment_mutation =
-[[
+M.add_issue_comment_mutation = [[
   mutation {
     addComment(input: {subjectId: "%s", body: "%s"}) {
       commentEdge {
@@ -468,8 +456,7 @@ M.add_issue_comment_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#updateissuecomment
-M.update_issue_comment_mutation =
-[[
+M.update_issue_comment_mutation = [[
   mutation {
     updateIssueComment(input: {id: "%s", body: "%s"}) {
       issueComment {
@@ -481,8 +468,7 @@ M.update_issue_comment_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreviewcomment
-M.update_pull_request_review_comment_mutation =
-[[
+M.update_pull_request_review_comment_mutation = [[
   mutation {
     updatePullRequestReviewComment(input: {pullRequestReviewCommentId: "%s", body: "%s"}) {
       pullRequestReviewComment {
@@ -540,8 +526,7 @@ M.update_pull_request_review_comment_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
-M.update_pull_request_review_mutation =
-[[
+M.update_pull_request_review_mutation = [[
   mutation {
     updatePullRequestReview(input: {pullRequestReviewId: "%s", body: "%s"}) {
       pullRequestReview {
@@ -554,8 +539,7 @@ M.update_pull_request_review_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
-M.add_pull_request_review_comment_mutation =
-[[
+M.add_pull_request_review_comment_mutation = [[
   mutation {
     addPullRequestReviewComment(input: {inReplyTo: "%s", body: "%s", pullRequestReviewId: "%s"}) {
       comment {
@@ -625,8 +609,7 @@ M.add_pull_request_review_comment_mutation =
 -- ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#deleteissuecomment
-M.delete_issue_comment_mutation =
-  [[
+M.delete_issue_comment_mutation = [[
   mutation {
     deleteIssueComment(input: {id: "%s"}) {
       clientMutationId
@@ -635,8 +618,7 @@ M.delete_issue_comment_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#deletepullrequestreviewcomment
-M.delete_pull_request_review_comment_mutation =
-  [[
+M.delete_pull_request_review_comment_mutation = [[
   mutation {
     deletePullRequestReviewComment(input: {id: "%s"}) {
       pullRequestReview {
@@ -694,8 +676,7 @@ M.delete_pull_request_review_comment_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
-M.update_issue_mutation =
-  [[
+M.update_issue_mutation = [[
   mutation {
     updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
       issue {
@@ -709,8 +690,7 @@ M.update_issue_mutation =
   }
 ]]
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
-M.create_issue_mutation =
-  [[
+M.create_issue_mutation = [[
   mutation {
     createIssue(input: {repositoryId: "%s", title: "%s", body: "%s"}) {
       issue {
@@ -845,8 +825,7 @@ M.create_issue_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
-M.update_issue_mutation =
-  [[
+M.update_issue_mutation = [[
   mutation {
     updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
       issue {
@@ -861,8 +840,7 @@ M.update_issue_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
-M.update_issue_state_mutation =
-  [[
+M.update_issue_state_mutation = [[
   mutation {
     updateIssue(input: {id: "%s", state: %s}) {
       issue {
@@ -1001,8 +979,7 @@ M.update_issue_state_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
-M.update_pull_request_mutation =
-  [[
+M.update_pull_request_mutation = [[
   mutation {
     updatePullRequest(input: {pullRequestId: "%s", title: "%s", body: "%s"}) {
       pullRequest {
@@ -1017,8 +994,7 @@ M.update_pull_request_mutation =
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
-M.update_pull_request_state_mutation =
-  [[
+M.update_pull_request_state_mutation = [[
   mutation {
     updatePullRequest(input: {pullRequestId: "%s", state: %s}) {
       pullRequest {
@@ -1301,8 +1277,7 @@ M.update_pull_request_state_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
-M.pending_review_threads_query =
-[[
+M.pending_review_threads_query = [[
 query { 
   repository(owner:"%s", name:"%s") {
     pullRequest (number: %d){
@@ -1362,8 +1337,7 @@ query {
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
-M.review_threads_query =
-  [[
+M.review_threads_query = [[
 query($endCursor: String) {
   repository(owner:"%s", name:"%s") {
     pullRequest(number:%d) {
@@ -1424,8 +1398,7 @@ query($endCursor: String) {
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
-M.pull_request_query =
-  [[
+M.pull_request_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequest(number: %d) {
@@ -1768,8 +1741,7 @@ query($endCursor: String) {
 ]]
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
-M.issue_query =
-  [[
+M.issue_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issue(number: %d) {
@@ -1908,8 +1880,7 @@ query($endCursor: String) {
 ]]
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
-M.issue_kind_query =
-  [[
+M.issue_kind_query = [[
 query { 
   repository(owner: "%s", name: "%s") {
     issueOrPullRequest(number: %d) {
@@ -1920,8 +1891,7 @@ query {
 ]]
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
-M.issue_summary_query =
-  [[
+M.issue_summary_query = [[
 query { 
   repository(owner: "%s", name: "%s") {
     issueOrPullRequest(number: %d) {
@@ -1979,8 +1949,7 @@ query {
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issueorder
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters
 -- filter eg: labels: ["help wanted", "bug"]
-M.issues_query =
-  [[
+M.issues_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issues(first: 100, after: $endCursor, filterBy: {%s}) {
@@ -1997,8 +1966,7 @@ query($endCursor: String) {
   }
 }
 ]]
-M.pull_requests_query =
-  [[
+M.pull_requests_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequests(first: 100, after: $endCursor, %s) {
@@ -2017,8 +1985,7 @@ query($endCursor: String) {
 }
 ]]
 
-M.search_issues_query =
-  [[
+M.search_issues_query = [[
 query {
   search(query: "repo:%s is:issue %s", type: ISSUE, last: 100) {
     nodes {
@@ -2031,8 +1998,7 @@ query {
 }
 ]]
 
-M.search_pull_requests_query =
-  [[
+M.search_pull_requests_query = [[
 query {
   search(query: "repo:%s is:pr %s", type: ISSUE, last: 100) {
     nodes {
@@ -2046,8 +2012,7 @@ query {
 ]]
 
 -- https://docs.github.com/en/graphql/reference/objects#project
-M.projects_query =
-  [[
+M.projects_query = [[
 query {
   repository(owner: "%s", name: "%s") {
     projects(first: 100) {
@@ -2095,8 +2060,7 @@ query {
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addprojectcard
-M.add_project_card_mutation =
-  [[
+M.add_project_card_mutation = [[
   mutation {
     addProjectCard(input: {contentId: "%s", projectColumnId: "%s"}) {
       cardEdge {
@@ -2109,8 +2073,7 @@ M.add_project_card_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#moveprojectcard
-M.move_project_card_mutation =
-  [[
+M.move_project_card_mutation = [[
   mutation {
     moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
       cardEdge {
@@ -2123,8 +2086,7 @@ M.move_project_card_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#deleteprojectcard
-M.delete_project_card_mutation =
-  [[
+M.delete_project_card_mutation = [[
   mutation {
     deleteProjectCard(input: {cardId: "%s"}) {
       deletedCardId
@@ -2134,8 +2096,7 @@ M.delete_project_card_mutation =
 
 -- https://docs.github.com/en/graphql/reference/mutations#createlabel
 -- requires application/vnd.github.bane-preview+json
-M.create_label_mutation =
-  [[
+M.create_label_mutation = [[
   mutation {
     createLabel(input: {repositoryId: "%s", name: "%s", description: "%s", color: "%s"}) {
       label {
@@ -2146,10 +2107,8 @@ M.create_label_mutation =
   }
 ]]
 
-
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
-M.add_labels_mutation =
-  [[
+M.add_labels_mutation = [[
   mutation {
     addLabelsToLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
       labelable {
@@ -2165,8 +2124,7 @@ M.add_labels_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
-M.remove_labels_mutation =
-  [[
+M.remove_labels_mutation = [[
   mutation {
     removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
       labelable {
@@ -2182,8 +2140,7 @@ M.remove_labels_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/objects#label
-M.labels_query =
-  [[
+M.labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       labels(first: 100) {
@@ -2197,8 +2154,7 @@ M.labels_query =
   }
 ]]
 
-M.issue_labels_query =
-  [[
+M.issue_labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       issue(number: %d) {
@@ -2214,8 +2170,7 @@ M.issue_labels_query =
   }
 ]]
 
-M.pull_request_labels_query =
-  [[
+M.pull_request_labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       pullRequest(number: %d) {
@@ -2231,8 +2186,7 @@ M.pull_request_labels_query =
   }
 ]]
 
-M.issue_assignees_query =
-  [[
+M.issue_assignees_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       issue(number: %d) {
@@ -2248,8 +2202,7 @@ M.issue_assignees_query =
   }
 ]]
 
-M.pull_request_assignees_query =
-  [[
+M.pull_request_assignees_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       pullRequest(number: %d) {
@@ -2266,8 +2219,7 @@ M.pull_request_assignees_query =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
-M.add_assignees_mutation =
-  [[
+M.add_assignees_mutation = [[
   mutation {
     addAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: ["%s"]}) {
       assignable {
@@ -2283,8 +2235,7 @@ M.add_assignees_mutation =
 ]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#removeassigneestoassignable
-M.remove_assignees_mutation =
-  [[
+M.remove_assignees_mutation = [[
   mutation {
     removeAssigneesFromAssignable(input: {assignableId: "%s", assigneeIds: ["%s"]}) {
       assignable {
@@ -2301,8 +2252,7 @@ M.remove_assignees_mutation =
 
 -- https://docs.github.com/en/graphql/reference/mutations#requestreviews
 -- for teams use `teamIds`
-M.request_reviews_mutation =
-  [[
+M.request_reviews_mutation = [[
   mutation {
     requestReviews(input: {pullRequestId: "%s", userIds: ["%s"]}) {
       pullRequest {
@@ -2312,8 +2262,7 @@ M.request_reviews_mutation =
   }
 ]]
 
-M.user_profile_query =
-  [[
+M.user_profile_query = [[
 query {
   user(login: "%s") {
     login
@@ -2350,8 +2299,7 @@ query {
 }
 ]]
 
-M.changed_files_query =
-  [[
+M.changed_files_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequest(number: %d) {
@@ -2371,8 +2319,7 @@ query($endCursor: String) {
 }
 ]]
 
-M.file_content_query =
-  [[
+M.file_content_query = [[
 query {
   repository(owner: "%s", name: "%s") {
     object(expression: "%s:%s") {
@@ -2384,8 +2331,7 @@ query {
 }
 ]]
 
-M.reactions_for_object_query =
-  [[
+M.reactions_for_object_query = [[
 query {
   node(id: "%s") {
     ... on Issue {
@@ -2442,8 +2388,7 @@ query {
 }
 ]]
 
-M.user_query =
-  [[
+M.user_query = [[
 query($endCursor: String) {
   search(query: "%s", type: USER, first: 100) {
     nodes {
@@ -2471,8 +2416,7 @@ query($endCursor: String) {
 }
 ]]
 
-M.repos_query =
-  [[
+M.repos_query = [[
 query($endCursor: String) {
   repositoryOwner(login: "%s") {
     repositories(first: 100, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
@@ -2506,8 +2450,7 @@ query($endCursor: String) {
 }
 ]]
 
-M.repo_query =
-  [[
+M.repo_query = [[
 query {
   repository(owner: "%s", name: "%s") {
     id
@@ -2556,8 +2499,7 @@ query {
 }
 ]]
 
-M.gists_query =
-  [[
+M.gists_query = [[
 query($endCursor: String) {
   viewer {
     gists(first: 100, privacy: %s, after: $endCursor) {
@@ -2586,27 +2528,23 @@ query($endCursor: String) {
 ]]
 
 local function escape_chars(string)
-  local escaped, _ = string.gsub(
-    string,
-    '["\\]',
-    {
-      ['"'] = '\\"',
-      ['\\'] = '\\\\',
-    }
-  )
+  local escaped, _ = string.gsub(string, '["\\]', {
+    ['"'] = '\\"',
+    ["\\"] = "\\\\",
+  })
   return escaped
 end
 
 return function(query, ...)
   local opts = { escape = true }
-  for _, v in ipairs{...} do
+  for _, v in ipairs { ... } do
     if type(v) == "table" then
       opts = vim.tbl_deep_extend("force", opts, v)
       break
     end
   end
   local escaped = {}
-  for _, v in ipairs{...} do
+  for _, v in ipairs { ... } do
     if type(v) == "string" and opts.escape then
       local encoded = escape_chars(v)
       table.insert(escaped, encoded)
@@ -2616,4 +2554,3 @@ return function(query, ...)
   end
   return string.format(M[query], unpack(escaped))
 end
-

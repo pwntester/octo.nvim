@@ -1,21 +1,21 @@
 local M = {}
 
 M.defaults = {
-  default_remote = {"upstream", "origin"};
-  reaction_viewer_hint_icon = "";
-  user_icon = " ";
-  comment_icon = " ";
-  outdated_icon = " ";
-  resolved_icon = " ";
-  timeline_marker = "";
-  timeline_indent = "2";
-  right_bubble_delimiter = "";
-  left_bubble_delimiter = "";
-  github_hostname = "";
-  snippet_context_lines = 4;
+  default_remote = { "upstream", "origin" },
+  reaction_viewer_hint_icon = "",
+  user_icon = " ",
+  comment_icon = " ",
+  outdated_icon = " ",
+  resolved_icon = " ",
+  timeline_marker = "",
+  timeline_indent = "2",
+  right_bubble_delimiter = "",
+  left_bubble_delimiter = "",
+  github_hostname = "",
+  snippet_context_lines = 4,
   file_panel = {
     size = 10,
-    use_icons = true
+    use_icons = true,
   },
   mappings = {
     issue = {
@@ -43,7 +43,6 @@ M.defaults = {
       react_rocket = "<space>rr",
       react_laugh = "<space>rl",
       react_confused = "<space>rc",
-
     },
     pull_request = {
       checkout_pr = "<space>po",
@@ -98,8 +97,7 @@ M.defaults = {
       react_confused = "<space>rc",
       close_review_tab = "<C-c>",
     },
-    repo = {
-    },
+    repo = {},
     submit_win = {
       close_review_win = "<C-c>",
       approve_review = "<C-a>",
@@ -129,8 +127,8 @@ M.defaults = {
       toggle_files = "<leader>b",
       close_review_tab = "<C-c>",
       toggle_viewed = "<leader><space>",
-    }
-  }
+    },
+  },
 }
 
 M._config = M.defaults
@@ -141,30 +139,18 @@ end
 
 function M.setup(user_config)
   user_config = user_config or {}
-  M._config = require"octo.utils".tbl_deep_clone(M.defaults)
-  require"octo.utils".tbl_soft_extend(M._config, user_config)
+  M._config = require("octo.utils").tbl_deep_clone(M.defaults)
+  require("octo.utils").tbl_soft_extend(M._config, user_config)
 
-  M._config.file_panel = vim.tbl_deep_extend(
-    "force", M.defaults.file_panel, user_config.file_panel or {}
-  )
+  M._config.file_panel = vim.tbl_deep_extend("force", M.defaults.file_panel, user_config.file_panel or {})
 
   -- If the user provides key bindings: use only the user bindings.
   if user_config.mappings then
-    M._config.mappings.issue = (
-      user_config.mappings.issue or M._config.mappings.issue
-    )
-    M._config.mappings.pull_request = (
-      user_config.mappings.pull_request or M._config.mappings.pull_request
-    )
-    M._config.mappings.review_thread = (
-      user_config.mappings.review_thread or M._config.mappings.review_thread
-    )
-    M._config.mappings.review = (
-      user_config.mappings.review or M._config.mappings.review
-    )
-    M._config.mappings.file_panel = (
-      user_config.mappings.file_panel or M._config.mappings.file_panel
-    )
+    M._config.mappings.issue = (user_config.mappings.issue or M._config.mappings.issue)
+    M._config.mappings.pull_request = (user_config.mappings.pull_request or M._config.mappings.pull_request)
+    M._config.mappings.review_thread = (user_config.mappings.review_thread or M._config.mappings.review_thread)
+    M._config.mappings.review = (user_config.mappings.review or M._config.mappings.review)
+    M._config.mappings.file_panel = (user_config.mappings.file_panel or M._config.mappings.file_panel)
   end
 end
 

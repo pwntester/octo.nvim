@@ -12,172 +12,186 @@ end
 
 M.keypress_event_cbs = {
   close_issue = function()
-    require"octo.commands".change_state('CLOSED')
+    require("octo.commands").change_state "CLOSED"
   end,
   reopen_issue = function()
-    require"octo.commands".change_state('OPEN')
+    require("octo.commands").change_state "OPEN"
   end,
   list_issues = function()
     local bufnr = vim.api.nvim_get_current_buf()
     local buffer = octo_buffers[bufnr]
     local repo = buffer.repo
-    if repo then require"octo.telescope.menu".issues(repo) end
+    if repo then
+      require("octo.telescope.menu").issues(repo)
+    end
   end,
   checkout_pr = function()
-    require"octo.commands".commands.pr.checkout()
+    require("octo.commands").commands.pr.checkout()
   end,
   list_commits = function()
-    require"octo.telescope.menu".commits()
+    require("octo.telescope.menu").commits()
   end,
   list_changed_files = function()
-    require"octo.telescope.menu".files()
+    require("octo.telescope.menu").files()
   end,
   show_pr_diff = function()
-    require"octo.commands".show_pr_diff()
+    require("octo.commands").show_pr_diff()
   end,
   merge_pr = function()
-    require"octo.commands".merge_pr("commit")
+    require("octo.commands").merge_pr "commit"
   end,
   add_reviewer = function()
-    require"octo.commands".add_user('reviewer')
+    require("octo.commands").add_user "reviewer"
   end,
   remove_reviewer = function()
-    require"octo.commands".remove_user('reviewer')
+    require("octo.commands").remove_user "reviewer"
   end,
   reload = function()
-    require"octo.commands".reload()
+    require("octo.commands").reload()
   end,
   open_in_browser = function()
-    require"octo.navigation".open_in_browser()
+    require("octo.navigation").open_in_browser()
   end,
   copy_url = function()
-    require"octo.commands".copy_url()
+    require("octo.commands").copy_url()
   end,
   create_label = function()
-    require"octo.commands".add_create()
+    require("octo.commands").add_create()
   end,
   add_label = function()
-    require"octo.commands".add_label()
+    require("octo.commands").add_label()
   end,
   remove_label = function()
-    require"octo.commands".remove_label()
+    require("octo.commands").remove_label()
   end,
   add_assignee = function()
-    require"octo.commands".add_user('assignee')
+    require("octo.commands").add_user "assignee"
   end,
   remove_assignee = function()
-    require"octo.commands".remove_user('assignee')
+    require("octo.commands").remove_user "assignee"
   end,
   goto_issue = function()
-    require"octo.navigation".go_to_issue()
+    require("octo.navigation").go_to_issue()
   end,
   goto_file = function()
-    require"octo.navigation".go_to_file()
+    require("octo.navigation").go_to_file()
   end,
   next_comment = function()
-    require"octo.navigation".next_comment()
+    require("octo.navigation").next_comment()
   end,
   prev_comment = function()
-    require"octo.navigation".prev_comment()
+    require("octo.navigation").prev_comment()
   end,
   add_comment = function()
-    require"octo.commands".add_comment()
+    require("octo.commands").add_comment()
   end,
   delete_comment = function()
-    require"octo.commands".delete_comment()
+    require("octo.commands").delete_comment()
   end,
   react_hooray = function()
-    require"octo.commands".reaction_action('hooray')
+    require("octo.commands").reaction_action "hooray"
   end,
   react_heart = function()
-    require"octo.commands".reaction_action('heart')
+    require("octo.commands").reaction_action "heart"
   end,
   react_eyes = function()
-    require"octo.commands".reaction_action('eyes')
+    require("octo.commands").reaction_action "eyes"
   end,
   react_thumbs_up = function()
-    require"octo.commands".reaction_action('+1')
+    require("octo.commands").reaction_action "+1"
   end,
   react_thumbs_down = function()
-    require"octo.commands".reaction_action('-1')
+    require("octo.commands").reaction_action "-1"
   end,
   react_rocket = function()
-    require"octo.commands".reaction_action('rocket')
+    require("octo.commands").reaction_action "rocket"
   end,
   react_laugh = function()
-    require"octo.commands".reaction_action('laugh')
+    require("octo.commands").reaction_action "laugh"
   end,
   react_confused = function()
-    require"octo.commands".reaction_action('confused')
+    require("octo.commands").reaction_action "confused"
   end,
   add_review_comment = function()
-    require"octo.reviews".add_review_comment(false)
+    require("octo.reviews").add_review_comment(false)
   end,
   add_review_suggestion = function()
-    require"octo.reviews".add_review_comment(true)
+    require("octo.reviews").add_review_comment(true)
   end,
   close_review_tab = function()
-    require"octo.reviews".close()
+    require("octo.reviews").close()
   end,
   next_thread = function()
-    require"octo.reviews.file-panel".next_thread()
+    require("octo.reviews.file-panel").next_thread()
   end,
   prev_thread = function()
-    require"octo.reviews.file-panel".prev_thread()
+    require("octo.reviews.file-panel").prev_thread()
   end,
-  select_next_entry = function ()
+  select_next_entry = function()
     local layout = M.get_current_layout()
-    if layout then layout:next_file() end
+    if layout then
+      layout:next_file()
+    end
   end,
-  select_prev_entry = function ()
+  select_prev_entry = function()
     local layout = M.get_current_layout()
-    if layout then layout:prev_file() end
+    if layout then
+      layout:prev_file()
+    end
   end,
-  next_entry = function ()
+  next_entry = function()
     local layout = M.get_current_layout()
     if layout and layout.file_panel:is_open() then
       layout.file_panel:highlight_next_file()
     end
   end,
-  prev_entry = function ()
+  prev_entry = function()
     local layout = M.get_current_layout()
     if layout and layout.file_panel:is_open() then
       layout.file_panel:highlight_prev_file()
     end
   end,
-  select_entry = function ()
+  select_entry = function()
     local layout = M.get_current_layout()
     if layout and layout.file_panel:is_open() then
       local file = layout.file_panel:get_file_at_cursor()
-      if file then layout:set_file(file, true) end
+      if file then
+        layout:set_file(file, true)
+      end
     end
   end,
-  focus_files = function ()
+  focus_files = function()
     local layout = M.get_current_layout()
-    if layout then layout.file_panel:focus(true) end
+    if layout then
+      layout.file_panel:focus(true)
+    end
   end,
-  toggle_files = function ()
+  toggle_files = function()
     local layout = M.get_current_layout()
-    if layout then layout.file_panel:toggle() end
+    if layout then
+      layout.file_panel:toggle()
+    end
   end,
-  refresh_files = function ()
+  refresh_files = function()
     local layout = M.get_current_layout()
-    if layout then layout:update_files() end
+    if layout then
+      layout:update_files()
+    end
   end,
   close_review_win = function()
     vim.api.nvim_win_close(vim.api.nvim_get_current_win(), 1)
   end,
   approve_review = function()
-    local current_review = require"octo.reviews".get_current_review()
-    current_review:submit('APPROVE')
+    local current_review = require("octo.reviews").get_current_review()
+    current_review:submit "APPROVE"
   end,
   comment_review = function()
-    local current_review = require"octo.reviews".get_current_review()
-    current_review:submit('COMMENT')
+    local current_review = require("octo.reviews").get_current_review()
+    current_review:submit "COMMENT"
   end,
   request_changes = function()
-    local current_review = require"octo.reviews".get_current_review()
-    current_review:submit('REQUEST_CHANGES')
+    local current_review = require("octo.reviews").get_current_review()
+    current_review:submit "REQUEST_CHANGES"
   end,
   toggle_viewed = function()
     local layout = M.get_current_layout()
@@ -188,8 +202,10 @@ M.keypress_event_cbs = {
 }
 
 function M.get_current_layout()
-  local current_review = require"octo.reviews".get_current_review()
-  if current_review then return current_review.layout end
+  local current_review = require("octo.reviews").get_current_review()
+  if current_review then
+    return current_review.layout
+  end
 end
 
 return M

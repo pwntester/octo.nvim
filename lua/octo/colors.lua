@@ -2,10 +2,14 @@ local M = {}
 
 local function get_hl_attr(hl_group_name, attr)
   local id = vim.api.nvim_get_hl_id_by_name(hl_group_name)
-  if not id then return end
+  if not id then
+    return
+  end
 
   local value = vim.fn.synIDattr(id, attr)
-  if not value or value == "" then return end
+  if not value or value == "" then
+    return
+  end
 
   return value
 end
@@ -16,21 +20,20 @@ end
 
 local function get_colors()
   return {
-    white       = "#ffffff",
-    grey        = "#d7dadf",
-    black       = "#000000",
-    red         = "#fdb8c0",
-    dark_red    = "#da3633",
-    green       = "#acf2bd",
-    dark_green  = "#238636",
-    yellow      = "#d3c846",
+    white = "#ffffff",
+    grey = "#d7dadf",
+    black = "#000000",
+    red = "#fdb8c0",
+    dark_red = "#da3633",
+    green = "#acf2bd",
+    dark_green = "#238636",
+    yellow = "#d3c846",
     dark_yellow = "#735c0f",
-    blue        = "#58A6FF",
-    dark_blue   = "#0366d6",
-    purple      = "#6f42c1",
+    blue = "#58A6FF",
+    dark_blue = "#0366d6",
+    purple = "#6f42c1",
   }
 end
-
 
 local function get_hl_groups()
   local colors = get_colors()
@@ -38,10 +41,10 @@ local function get_hl_groups()
   return {
     Green = { fg = colors.dark_green },
     Red = { fg = colors.dark_red },
-    Purple  = { fg = colors.purple },
+    Purple = { fg = colors.purple },
     Yellow = { fg = colors.yellow },
     Blue = { fg = colors.blue },
-    Grey = { fg = colors.grey},
+    Grey = { fg = colors.grey },
     BubbleGreen = { fg = colors.green, bg = colors.dark_green },
     BubbleRed = { fg = colors.red, bg = colors.dark_red },
     BubblePurple = { fg = colors.white, bg = colors.purple },
@@ -51,9 +54,9 @@ local function get_hl_groups()
     BubbleDelimiterRed = { fg = colors.dark_red },
     BubbleDelimiterYellow = { fg = colors.dark_yellow },
     BubbleDelimiterBlue = { fg = colors.dark_blue },
-    FilePanelTitle = { fg = get_fg("Directory") or colors.blue, gui = "bold" },
-    FilePanelCounter = { fg = get_fg("Identifier") or colors.purple, gui = "bold" },
-    NormalFront = { fg = get_fg("Normal") or colors.white },
+    FilePanelTitle = { fg = get_fg "Directory" or colors.blue, gui = "bold" },
+    FilePanelCounter = { fg = get_fg "Identifier" or colors.purple, gui = "bold" },
+    NormalFront = { fg = get_fg "Normal" or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
   }
 end
@@ -131,12 +134,12 @@ local HIGHLIGHT_NAME_PREFIX = "octo"
 local HIGHLIGHT_CACHE = {}
 local HIGHLIGHT_MODE_NAMES = {
   background = "mb",
-  foreground = "mf"
+  foreground = "mf",
 }
 
 -- from https://github.com/norcalli/nvim-colorizer.lua
 local function make_highlight_name(rgb, mode)
-  return table.concat({HIGHLIGHT_NAME_PREFIX, HIGHLIGHT_MODE_NAMES[mode], rgb}, "_")
+  return table.concat({ HIGHLIGHT_NAME_PREFIX, HIGHLIGHT_MODE_NAMES[mode], rgb }, "_")
 end
 
 local function color_is_bright(r, g, b)
@@ -152,7 +155,9 @@ end
 function M.get_background_color_of_highlight_group(highlight_group_name)
   local highlight_group = vim.api.nvim_get_hl_by_name(highlight_group_name, true)
   local highlight_group_normal = vim.api.nvim_get_hl_by_name("Normal", true)
-  local background_color = highlight_group.background or highlight_group_normal.background or highlight_group_normal.foreground
+  local background_color = highlight_group.background
+    or highlight_group_normal.background
+    or highlight_group_normal.foreground
   local background_color_as_hex = "#" .. string.format("%06x", background_color)
   return background_color_as_hex
 end
@@ -162,15 +167,14 @@ function M.create_highlight(rgb_hex, options)
   local mode = options.mode or "background"
   rgb_hex = rgb_hex:lower()
   rgb_hex = string.gsub(rgb_hex, "^#", "")
-  local cache_key = table.concat({HIGHLIGHT_MODE_NAMES[mode], rgb_hex}, "_")
+  local cache_key = table.concat({ HIGHLIGHT_MODE_NAMES[mode], rgb_hex }, "_")
   local highlight_name = HIGHLIGHT_CACHE[cache_key]
   if not highlight_name then
     if #rgb_hex == 3 then
-      rgb_hex =
-        table.concat {
+      rgb_hex = table.concat {
         rgb_hex:sub(1, 1):rep(2),
         rgb_hex:sub(2, 2):rep(2),
-        rgb_hex:sub(3, 3):rep(2)
+        rgb_hex:sub(3, 3):rep(2),
       }
     end
     -- Create the highlight

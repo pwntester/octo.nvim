@@ -17,7 +17,7 @@ function ThreadMetadata:new(opts)
     replyTo = opts.replyTo,
     reviewId = opts.reviewId,
     path = opts.path,
-    line = opts.line
+    line = opts.line,
   }
   setmetatable(this, self)
   return this

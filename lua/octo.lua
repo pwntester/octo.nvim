@@ -1,4 +1,4 @@
-local OctoBuffer = require'octo.model.octo-buffer'.OctoBuffer
+local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local gh = require "octo.gh"
 local signs = require "octo.signs"
 local constants = require "octo.constants"
@@ -49,7 +49,9 @@ function M.load_buffer(bufnr)
   local repo, kind, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
   if not repo then
     repo = string.match(bufname, "octo://(.+)/repo")
-    if repo then kind = "repo" end
+    if repo then
+      kind = "repo"
+    end
   end
   if (kind == "issue" or kind == "pull") and not repo and not number then
     vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
@@ -75,26 +77,24 @@ function M.load(repo, kind, number, cb)
   elseif kind == "repo" then
     query = graphql("repo_query", owner, name)
   end
-  gh.run(
-    {
-      args = {"api", "graphql", "--paginate", "-f", string.format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          if kind == "pull" or kind == "issue" then
-            local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
-            local obj = resp.data.repository[key]
-            cb(obj)
-          elseif kind == "repo" then
-            local resp = vim.fn.json_decode(output)
-            local obj = resp.data.repository
-            cb(obj)
-          end
+  gh.run {
+    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.api.nvim_err_writeln(stderr)
+      elseif output then
+        if kind == "pull" or kind == "issue" then
+          local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+          local obj = resp.data.repository[key]
+          cb(obj)
+        elseif kind == "repo" then
+          local resp = vim.fn.json_decode(output)
+          local obj = resp.data.repository
+          cb(obj)
         end
       end
-    }
-  )
+    end,
+  }
 end
 
 function M.render_signcolumn()
@@ -106,43 +106,43 @@ end
 function M.on_cursor_hold()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  if not buffer then return end
+  if not buffer then
+    return
+  end
 
   -- reactions popup
   local id = utils.reactions_at_cursor()
   if id then
     local query = graphql("reactions_for_object_query", id)
-    gh.run(
-      {
-        args = {"api", "graphql", "-f", string.format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            vim.api.nvim_err_writeln(stderr)
-          elseif output then
-            local resp = vim.fn.json_decode(output)
-            local reactions = {}
-            local reactionGroups = resp.data.node.reactionGroups
-            for _, reactionGroup in ipairs(reactionGroups) do
-              local users = reactionGroup.users.nodes
-              local logins = {}
-              for _, user in ipairs(users) do
-                table.insert(logins, user.login)
-              end
-              if #logins > 0 then
-                reactions[reactionGroup.content] = logins
-              end
+    gh.run {
+      args = { "api", "graphql", "-f", string.format("query=%s", query) },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = vim.fn.json_decode(output)
+          local reactions = {}
+          local reactionGroups = resp.data.node.reactionGroups
+          for _, reactionGroup in ipairs(reactionGroups) do
+            local users = reactionGroup.users.nodes
+            local logins = {}
+            for _, user in ipairs(users) do
+              table.insert(logins, user.login)
             end
-            local popup_bufnr = vim.api.nvim_create_buf(false, true)
-            local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
-            window.create_popup({
-              bufnr = popup_bufnr,
-              width = 4 + max_length,
-              height = 2 + lines_count
-            })
+            if #logins > 0 then
+              reactions[reactionGroup.content] = logins
+            end
           end
+          local popup_bufnr = vim.api.nvim_create_buf(false, true)
+          local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
+          window.create_popup {
+            bufnr = popup_bufnr,
+            width = 4 + max_length,
+            height = 2 + lines_count,
+          }
         end
-      }
-    )
+      end,
+    }
     return
   end
 
@@ -150,26 +150,24 @@ function M.on_cursor_hold()
   local login = utils.extract_pattern_at_cursor(constants.USER_PATTERN)
   if login then
     local query = graphql("user_profile_query", login)
-    gh.run(
-      {
-        args = {"api", "graphql", "-f", string.format("query=%s", query)},
-        cb = function(output, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            vim.api.nvim_err_writeln(stderr)
-          elseif output then
-            local resp = vim.fn.json_decode(output)
-            local user = resp.data.user
-            local popup_bufnr = vim.api.nvim_create_buf(false, true)
-            local lines, max_length = writers.write_user_profile(popup_bufnr, user)
-            window.create_popup({
-              bufnr = popup_bufnr,
-              width = 4 + max_length,
-              height = 2 + lines
-            })
-          end
+    gh.run {
+      args = { "api", "graphql", "-f", string.format("query=%s", query) },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = vim.fn.json_decode(output)
+          local user = resp.data.user
+          local popup_bufnr = vim.api.nvim_create_buf(false, true)
+          local lines, max_length = writers.write_user_profile(popup_bufnr, user)
+          window.create_popup {
+            bufnr = popup_bufnr,
+            width = 4 + max_length,
+            height = 2 + lines,
+          }
         end
-      }
-    )
+      end,
+    }
     return
   end
 
@@ -182,30 +180,30 @@ function M.on_cursor_hold()
   if not repo or not number then
     repo, _, number = utils.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
   end
-  if not repo or not number then return end
+  if not repo or not number then
+    return
+  end
   local owner, name = utils.split_repo(repo)
   local query = graphql("issue_summary_query", owner, name, number)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", string.format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          local issue = resp.data.repository.issueOrPullRequest
-          local popup_bufnr = vim.api.nvim_create_buf(false, true)
-          local max_length = 80
-          local lines = writers.write_issue_summary(popup_bufnr, issue, {max_length = max_length})
-          window.create_popup({
-            bufnr = popup_bufnr,
-            width = max_length,
-            height = 2 + lines
-          })
-        end
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.api.nvim_err_writeln(stderr)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        local issue = resp.data.repository.issueOrPullRequest
+        local popup_bufnr = vim.api.nvim_create_buf(false, true)
+        local max_length = 80
+        local lines = writers.write_issue_summary(popup_bufnr, issue, { max_length = max_length })
+        window.create_popup {
+          bufnr = popup_bufnr,
+          width = max_length,
+          height = 2 + lines,
+        }
       end
-    }
-  )
+    end,
+  }
 end
 
 function M.create_buffer(kind, obj, repo, create)
@@ -223,12 +221,12 @@ function M.create_buffer(kind, obj, repo, create)
     bufnr = vim.api.nvim_get_current_buf()
   end
 
-  local octo_buffer = OctoBuffer:new({
+  local octo_buffer = OctoBuffer:new {
     bufnr = bufnr,
     number = obj.number,
     repo = repo,
-    node = obj
-  })
+    node = obj,
+  }
 
   octo_buffer:configure()
   if kind == "repo" then

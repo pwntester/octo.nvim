@@ -11,17 +11,16 @@ function M.gen_from_issue(max_number)
     end
 
     local columns = {
-      {entry.issue.number, "TelescopeResultsNumber"},
-      {entry.issue.title}
+      { entry.issue.number, "TelescopeResultsNumber" },
+      { entry.issue.title },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {width = max_number},
-        {remaining = true}
-      }
+        { width = max_number },
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -36,7 +35,7 @@ function M.gen_from_issue(max_number)
       value = issue.number,
       ordinal = issue.number .. " " .. issue.title,
       display = make_display,
-      issue = issue
+      issue = issue,
     }
   end
 end
@@ -48,17 +47,16 @@ function M.gen_from_pull_request(max_number)
     end
 
     local columns = {
-      {entry.pull_request.number, "TelescopeResultsNumber"},
-      {entry.pull_request.title}
+      { entry.pull_request.number, "TelescopeResultsNumber" },
+      { entry.pull_request.title },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {width = max_number},
-        {remaining = true}
-      }
+        { width = max_number },
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -73,25 +71,24 @@ function M.gen_from_pull_request(max_number)
       value = pull_request.number,
       ordinal = pull_request.number .. " " .. pull_request.title,
       display = make_display,
-      pull_request = pull_request
+      pull_request = pull_request,
     }
   end
 end
 
 function M.gen_from_git_commits()
-  local displayer =
-    entry_display.create {
+  local displayer = entry_display.create {
     separator = " ",
     items = {
-      {width = 8},
-      {remaining = true}
-    }
+      { width = 8 },
+      { remaining = true },
+    },
   }
 
   local make_display = function(entry)
     return displayer {
-      {entry.value:sub(1, 7), "TelescopeResultsNumber"},
-      vim.split(entry.msg, "\n")[1]
+      { entry.value:sub(1, 7), "TelescopeResultsNumber" },
+      vim.split(entry.msg, "\n")[1],
     }
   end
 
@@ -106,31 +103,30 @@ function M.gen_from_git_commits()
       msg = entry.commit.message,
       display = make_display,
       author = string.format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
-      date = entry.commit.author.date
+      date = entry.commit.author.date,
     }
   end
 end
 
 function M.gen_from_git_changed_files()
-  local displayer =
-    entry_display.create {
+  local displayer = entry_display.create {
     separator = " ",
     items = {
-      {width = 8},
-      {width = string.len("modified")},
-      {width = 5},
-      {width = 5},
-      {remaining = true}
-    }
+      { width = 8 },
+      { width = string.len "modified" },
+      { width = 5 },
+      { width = 5 },
+      { remaining = true },
+    },
   }
 
   local make_display = function(entry)
     return displayer {
-      {entry.value:sub(1, 7), "TelescopeResultsNumber"},
-      {entry.change.status, "OctoDetailsLabel"},
-      {string.format("+%d", entry.change.additions), "OctoPullAdditions"},
-      {string.format("-%d", entry.change.deletions), "OctoPullDeletions"},
-      vim.split(entry.msg, "\n")[1]
+      { entry.value:sub(1, 7), "TelescopeResultsNumber" },
+      { entry.change.status, "OctoDetailsLabel" },
+      { string.format("+%d", entry.change.additions), "OctoPullAdditions" },
+      { string.format("-%d", entry.change.deletions), "OctoPullDeletions" },
+      vim.split(entry.msg, "\n")[1],
     }
   end
 
@@ -144,31 +140,32 @@ function M.gen_from_git_changed_files()
       ordinal = entry.sha .. " " .. entry.filename,
       msg = entry.filename,
       display = make_display,
-      change = entry
+      change = entry,
     }
   end
 end
 
 function M.gen_from_review_thread(linenr_length)
   local make_display = function(entry)
-    if not entry then return nil end
+    if not entry then
+      return nil
+    end
 
     local columns = {
-      {entry.thread.path, "TelescopeResultsNumber"},
-      {entry.thread.diffSide},
-      {entry.thread.startLine},
-      {entry.thread.line}
+      { entry.thread.path, "TelescopeResultsNumber" },
+      { entry.thread.diffSide },
+      { entry.thread.startLine },
+      { entry.thread.line },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {remaining = true},
-        {width = 5},
-        {width = linenr_length},
-        {width = linenr_length}
-      }
+        { remaining = true },
+        { width = 5 },
+        { width = linenr_length },
+        { width = linenr_length },
+      },
     }
     return displayer(columns)
   end
@@ -179,10 +176,10 @@ function M.gen_from_review_thread(linenr_length)
     end
 
     return {
-      value = thread.path..":"..thread.startLine..":"..thread.line,
-      ordinal = thread.path..":"..thread.startLine..":"..thread.line,
+      value = thread.path .. ":" .. thread.startLine .. ":" .. thread.line,
+      ordinal = thread.path .. ":" .. thread.startLine .. ":" .. thread.line,
       display = make_display,
-      thread = thread
+      thread = thread,
     }
   end
 end
@@ -194,15 +191,14 @@ function M.gen_from_project()
     end
 
     local columns = {
-      {entry.project.name}
+      { entry.project.name },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {remaining = true}
-      }
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -215,27 +211,28 @@ function M.gen_from_project()
 
     return {
       value = project.id,
-      ordinal = project.id.. " " .. project.name,
+      ordinal = project.id .. " " .. project.name,
       display = make_display,
-      project = project
+      project = project,
     }
   end
 end
 
 function M.gen_from_project_column()
   local make_display = function(entry)
-    if not entry then return nil end
+    if not entry then
+      return nil
+    end
 
     local columns = {
-      {entry.column.name}
+      { entry.column.name },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {remaining = true}
-      }
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -247,9 +244,9 @@ function M.gen_from_project_column()
     end
     return {
       value = column.id,
-      ordinal = column.id.. " " .. column.name,
+      ordinal = column.id .. " " .. column.name,
       display = make_display,
-      column = column
+      column = column,
     }
   end
 end
@@ -261,17 +258,16 @@ function M.gen_from_project_card()
     end
 
     local columns = {
-      {entry.card.column.name},
-      {string.format(" (%s)", entry.card.project.name), "OctoDetailsValue"},
+      { entry.card.column.name },
+      { string.format(" (%s)", entry.card.project.name), "OctoDetailsValue" },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {width = 5},
-        {remaining = true}
-      }
+        { width = 5 },
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -286,7 +282,7 @@ function M.gen_from_project_card()
       value = card.id,
       ordinal = card.project.name .. " " .. card.column.name,
       display = make_display,
-      card = card
+      card = card,
     }
   end
 end
@@ -297,19 +293,15 @@ function M.gen_from_label()
       return nil
     end
 
-    local columns = bubbles.make_label_bubble(
-      entry.label.name,
-      entry.label.color
-    )
+    local columns = bubbles.make_label_bubble(entry.label.name, entry.label.color)
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = "",
       items = {
-        {width = 1},
-        {remaining = true},
-        {width = 1}
-      }
+        { width = 1 },
+        { remaining = true },
+        { width = 1 },
+      },
     }
 
     return displayer(columns)
@@ -324,7 +316,7 @@ function M.gen_from_label()
       value = label.id,
       ordinal = label.name,
       display = make_display,
-      label = label
+      label = label,
     }
   end
 end
@@ -336,15 +328,14 @@ function M.gen_from_team()
     end
 
     local columns = {
-      {entry.team.name},
+      { entry.team.name },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = "",
       items = {
-        {remaining = true},
-      }
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -359,7 +350,7 @@ function M.gen_from_team()
       value = team.id,
       ordinal = team.name,
       display = make_display,
-      team = team
+      team = team,
     }
   end
 end
@@ -371,15 +362,14 @@ function M.gen_from_user()
     end
 
     local columns = {
-      {entry.user.login}
+      { entry.user.login },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = "",
       items = {
-        {remaining = true},
-      }
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -394,7 +384,7 @@ function M.gen_from_user()
       value = user.id,
       ordinal = user.login,
       display = make_display,
-      user = user
+      user = user,
     }
   end
 end
@@ -416,29 +406,28 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
     end
 
     local columns = {
-      {string.sub(entry.repo.nameWithOwner, 1, 50), "TelescopeResultsNumber"},
-      {"s:", "TelescopeResultsNumber"},
-      {entry.repo.stargazerCount},
-      {"f:", "TelescopeResultsNumber"},
-      {entry.repo.forkCount},
-      {access_str},
-      {fork_str},
-      {entry.repo.description}
+      { string.sub(entry.repo.nameWithOwner, 1, 50), "TelescopeResultsNumber" },
+      { "s:", "TelescopeResultsNumber" },
+      { entry.repo.stargazerCount },
+      { "f:", "TelescopeResultsNumber" },
+      { entry.repo.forkCount },
+      { access_str },
+      { fork_str },
+      { entry.repo.description },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {width = math.min(max_nameWithOwner, 50)},
-        {width = 2},
-        {width = max_stargazerCount},
-        {width = 2},
-        {width = max_forkCount},
-        {width = vim.fn.len("private")},
-        {width = vim.fn.len("fork")},
-        {remaining = true},
-      }
+        { width = math.min(max_nameWithOwner, 50) },
+        { width = 2 },
+        { width = max_stargazerCount },
+        { width = 2 },
+        { width = max_forkCount },
+        { width = vim.fn.len "private" },
+        { width = vim.fn.len "fork" },
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -457,14 +446,16 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
       value = repo.nameWithOwner,
       ordinal = repo.nameWithOwner .. " " .. repo.description,
       display = make_display,
-      repo = repo
+      repo = repo,
     }
   end
 end
 
 function M.gen_from_gist()
   local make_display = function(entry)
-    if not entry then return end
+    if not entry then
+      return
+    end
 
     local fork_str = ""
     if entry.gist.isFork then
@@ -482,26 +473,27 @@ function M.gen_from_gist()
     end
 
     local columns = {
-      {access_str},
-      {fork_str},
-      {description, "TelescopeResultsNumber"},
+      { access_str },
+      { fork_str },
+      { description, "TelescopeResultsNumber" },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = " ",
       items = {
-        {width = vim.fn.len("private")},
-        {width = vim.fn.len("fork")},
-        {remaining = true},
-      }
+        { width = vim.fn.len "private" },
+        { width = vim.fn.len "fork" },
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
   end
 
   return function(gist)
-    if not gist or vim.tbl_isempty(gist) then return end
+    if not gist or vim.tbl_isempty(gist) then
+      return
+    end
 
     if gist.description == vim.NIL then
       gist.description = ""
@@ -511,7 +503,7 @@ function M.gen_from_gist()
       value = gist.name,
       ordinal = gist.name .. " " .. gist.description,
       display = make_display,
-      gist = gist
+      gist = gist,
     }
   end
 end
