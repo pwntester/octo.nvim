@@ -65,6 +65,12 @@ M.commands = {
       if not utils.in_pr_repo() then return end
       utils.checkout_pr(buffer.node.headRefName)
     end,
+    create = function(...)
+      M.create_pr(...)
+    end,
+    create = function(...)
+      M.create_pr(...)
+    end,
     commits = function()
       menu.commits()
     end,
@@ -609,6 +615,306 @@ function M.create_issue(repo)
           require"octo".create_buffer("issue", resp.data.createIssue.issue, repo, true)
           vim.fn.execute("normal! Gk")
           vim.fn.execute("startinsert")
+        end
+      end
+    }
+  )
+end
+
+function M.create_pr(is_draft)
+  is_draft = "draft" == is_draft and true or false
+  local repo = utils.get_remote_name()
+  if not repo then
+    vim.notify("[Octo] Cant find repo name", 1)
+    return
+  end
+
+  local owner, name = utils.split_repo(repo)
+  local repo_query = graphql("repository_query", owner, name)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", string.format("query=%s", repo_query)},
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.notify(stderr, 2)
+        elseif output then
+          local resp = vim.fn.json_decode(output)
+          local node = resp.data.repository
+
+          -- repo candidates = self + parent (in case of fork)
+          local repo_candidates_entries = { "Seleect target repo", "1. " ..repo }
+          local repo_candidates = { repo }
+          if node.isFork then
+            table.insert(repo_candidates_entries, "2. " .. node.parent.nameWithOwner)
+            table.insert(repo_candidates, node.parent.nameWithOwner)
+          end
+
+          -- get current local branch
+          local cmd = "git rev-parse --abbrev-ref HEAD"
+          local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+
+          -- get repo default branch
+          local default_branch = node.defaultBranchRef.name
+
+          -- get remote branches
+          local remote_branches = node.refs.nodes
+
+          local remote_branch_exists = false
+          for _, remote_branch in ipairs(remote_branches) do
+            if local_branch == remote_branch.name then
+              remote_branch_exists = true
+            end
+          end
+          local remote_branch = local_branch
+          if not remote_branch_exists then
+            local choice = vim.fn.confirm("Remote branch '"..local_branch.."' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+            if choice == 1 then
+              local remote = "origin"
+              remote_branch = vim.fn.input({
+                prompt = "Enter remote branch name: ",
+                default = local_branch,
+                highlight = function(input)
+                  return {{0, #input, "String"}}
+                end
+              })
+              vim.notify(string.format("Pushing '%s' to '%s:%s' ...", local_branch, remote, remote_branch), 1)
+              cmd = string.format("git push %s %s:%s", remote, local_branch, remote_branch)
+              vim.fn.system(cmd)
+            else
+              vim.notify("[Octo] Aborting PR creation", 2)
+            end
+          end
+
+          vim.fn.inputsave()
+          local repo_idx = 1
+          if #repo_candidates > 1 then
+            repo_idx = vim.fn.inputlist(repo_candidates_entries)
+          end
+          local last_commit = string.gsub(vim.fn.system("git log -1 --pretty=%B"), "%s+$", "")
+          local last_commit_lines = vim.split(last_commit, "\n")
+          local title = last_commit
+          local body = last_commit
+          if #last_commit_lines > 1 then
+            title = last_commit_lines[1]
+            if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
+              body = table.concat(vim.list_slice(last_commit_lines, 3, #last_commit_lines), "\n")
+            else
+              body = table.concat(vim.list_slice(last_commit_lines, 2, #last_commit_lines), "\n")
+            end
+          end
+          title = vim.fn.input({
+            prompt = "Enter title: ",
+            default = title,
+            highlight = function(input)
+              return {{0, #input, "String"}}
+            end
+          })
+          -- The name of the branch you want your changes pulled into. This should be an existing branch on the current repository.
+          -- You cannot update the base branch on a pull request to point to another repository.
+          local base_ref_name = vim.fn.input({
+            prompt = "Enter BASE branch: ",
+            default = default_branch,
+            highlight = function(input)
+              return {{0, #input, "String"}}
+            end
+          })
+          -- The name of the branch where your changes are implemented. For cross-repository pull requests in the same network,
+          -- namespace head_ref_name with a user like this: username:branch.
+          local head_ref_name = vim.fn.input({
+            prompt = "Enter HEAD branch: ",
+            default = remote_branch,
+            highlight = function(input)
+              return {{0, #input, "String"}}
+            end
+          })
+          if node.isFork and repo_candidates[repo_idx] == node.parent.nameWithOwner then
+            head_ref_name = vim.g.octo_viewer .. ":" .. head_ref_name
+          end
+          vim.fn.inputrestore()
+
+          local repo_id = utils.get_repo_id(repo_candidates[repo_idx])
+          local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, body, is_draft)
+
+          -- print(vim.inspect({
+          --   base_ref_name = base_ref_name,
+          --   head_ref_name = head_ref_name,
+          --   repo_id = repo_id,
+          --   title = title,
+          --   is_draft = is_draft,
+          --   candidates = repo_candidates,
+          --   repo = repo_candidates[repo_idx]
+          -- }))
+
+          local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
+          if choice == 1 then
+            gh.run(
+              {
+                args = {"api", "graphql", "-f", string.format("query=%s", query)},
+                cb = function(output, stderr)
+                  if stderr and not utils.is_blank(stderr) then
+                    vim.notify(stderr, 2)
+                  elseif output then
+                    local resp2 = vim.fn.json_decode(output)
+                    local node2 = resp2.data.createPullRequest.pullRequest
+                    vim.notify(string.format("[Octo] #%d - `%s` created successfully", node2.number, node2.title), 1)
+                    require"octo".create_buffer("pull", node2, repo, true)
+                    vim.fn.execute("normal! Gk")
+                    vim.fn.execute("startinsert")
+                  end
+                end
+              }
+            )
+          end
+        end
+      end
+    }
+  )
+end
+
+function M.create_pr(is_draft)
+  is_draft = "draft" == is_draft and true or false
+  local repo = utils.get_remote_name()
+  if not repo then
+    vim.notify("[Octo] Cant find repo name", 1)
+    return
+  end
+
+  local owner, name = utils.split_repo(repo)
+  local repo_query = graphql("repository_query", owner, name)
+  gh.run(
+    {
+      args = {"api", "graphql", "-f", string.format("query=%s", repo_query)},
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.notify(stderr, 2)
+        elseif output then
+          local resp = vim.fn.json_decode(output)
+          local node = resp.data.repository
+
+          -- repo candidates = self + parent (in case of fork)
+          local repo_candidates_entries = { "Seleect target repo", "1. " ..repo }
+          local repo_candidates = { repo }
+          if node.isFork then
+            table.insert(repo_candidates_entries, "2. " .. node.parent.nameWithOwner)
+            table.insert(repo_candidates, node.parent.nameWithOwner)
+          end
+
+          -- get current local branch
+          local cmd = "git rev-parse --abbrev-ref HEAD"
+          local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+
+          -- get repo default branch
+          local default_branch = node.defaultBranchRef.name
+
+          -- get remote branches
+          local remote_branches = node.refs.nodes
+
+          local remote_branch_exists = false
+          for _, remote_branch in ipairs(remote_branches) do
+            if local_branch == remote_branch.name then
+              remote_branch_exists = true
+            end
+          end
+          local remote_branch = local_branch
+          if not remote_branch_exists then
+            local choice = vim.fn.confirm("Remote branch '"..local_branch.."' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+            if choice == 1 then
+              local remote = "origin"
+              remote_branch = vim.fn.input({
+                prompt = "Enter remote branch name: ",
+                default = local_branch,
+                highlight = function(input)
+                  return {{0, #input, "String"}}
+                end
+              })
+              vim.notify(string.format("Pushing '%s' to '%s:%s' ...", local_branch, remote, remote_branch), 1)
+              cmd = string.format("git push %s %s:%s", remote, local_branch, remote_branch)
+              vim.fn.system(cmd)
+            else
+              vim.notify("[Octo] Aborting PR creation", 2)
+            end
+          end
+
+          vim.fn.inputsave()
+          local repo_idx = 1
+          if #repo_candidates > 1 then
+            repo_idx = vim.fn.inputlist(repo_candidates_entries)
+          end
+          local last_commit = string.gsub(vim.fn.system("git log -1 --pretty=%B"), "%s+$", "")
+          local last_commit_lines = vim.split(last_commit, "\n")
+          local title = last_commit
+          local body = last_commit
+          if #last_commit_lines > 1 then
+            title = last_commit_lines[1]
+            if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
+              body = table.concat(vim.list_slice(last_commit_lines, 3, #last_commit_lines), "\n")
+            else
+              body = table.concat(vim.list_slice(last_commit_lines, 2, #last_commit_lines), "\n")
+            end
+          end
+          title = vim.fn.input({
+            prompt = "Enter title: ",
+            default = title,
+            highlight = function(input)
+              return {{0, #input, "String"}}
+            end
+          })
+          -- The name of the branch you want your changes pulled into. This should be an existing branch on the current repository.
+          -- You cannot update the base branch on a pull request to point to another repository.
+          local base_ref_name = vim.fn.input({
+            prompt = "Enter BASE branch: ",
+            default = default_branch,
+            highlight = function(input)
+              return {{0, #input, "String"}}
+            end
+          })
+          -- The name of the branch where your changes are implemented. For cross-repository pull requests in the same network,
+          -- namespace head_ref_name with a user like this: username:branch.
+          local head_ref_name = vim.fn.input({
+            prompt = "Enter HEAD branch: ",
+            default = remote_branch,
+            highlight = function(input)
+              return {{0, #input, "String"}}
+            end
+          })
+          if node.isFork and repo_candidates[repo_idx] == node.parent.nameWithOwner then
+            head_ref_name = vim.g.octo_viewer .. ":" .. head_ref_name
+          end
+          vim.fn.inputrestore()
+
+          local repo_id = utils.get_repo_id(repo_candidates[repo_idx])
+          local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, body, is_draft)
+
+          -- print(vim.inspect({
+          --   base_ref_name = base_ref_name,
+          --   head_ref_name = head_ref_name,
+          --   repo_id = repo_id,
+          --   title = title,
+          --   is_draft = is_draft,
+          --   candidates = repo_candidates,
+          --   repo = repo_candidates[repo_idx]
+          -- }))
+
+          local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
+          if choice == 1 then
+            gh.run(
+              {
+                args = {"api", "graphql", "-f", string.format("query=%s", query)},
+                cb = function(output, stderr)
+                  if stderr and not utils.is_blank(stderr) then
+                    vim.notify(stderr, 2)
+                  elseif output then
+                    local resp2 = vim.fn.json_decode(output)
+                    local node2 = resp2.data.createPullRequest.pullRequest
+                    vim.notify(string.format("[Octo] #%d - `%s` created successfully", node2.number, node2.title), 1)
+                    require"octo".create_buffer("pull", node2, repo, true)
+                    vim.fn.execute("normal! Gk")
+                    vim.fn.execute("startinsert")
+                  end
+                end
+              }
+            )
+          end
         end
       end
     }

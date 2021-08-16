@@ -2506,12 +2506,11 @@ query($endCursor: String) {
 }
 ]]
 
-M.repo_query =
+M.repository_query =
   [[
 query {
   repository(owner: "%s", name: "%s") {
     id
-
     nameWithOwner
     description
     forkCount
@@ -2521,6 +2520,9 @@ query {
     updatedAt
     pushedAt
     isFork
+    defaultBranchRef {
+      name
+    }
     parent {
       nameWithOwner
     }
@@ -2545,6 +2547,11 @@ query {
     primaryLanguage {
       name
       color
+    }
+    refs(last:100, refPrefix: "refs/heads/") {
+      nodes {
+        name
+      }
     }
     languages(first:100) {
       nodes {
@@ -2583,6 +2590,346 @@ query($endCursor: String) {
     }
   }
 }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#createpullrequest
+M.create_pr_mutation =
+[[
+	mutation {
+		createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: "%s", body: "%s", draft: %s}) {
+      pullRequest {
+        id
+        number
+        state
+        title
+        body
+        createdAt
+        closedAt
+        updatedAt
+        url
+        files(first:100) {
+          nodes {
+            path
+            viewerViewedState 
+          } 
+        }
+        merged
+        mergedBy {
+          ... on Organization { name }
+          ... on Bot { login }
+          ... on User {
+            login
+            isViewer
+          }
+          ... on Mannequin { login }
+        }
+        participants(first:10) {
+          nodes {
+            login
+          }
+        }
+        additions
+        deletions
+        commits {
+          totalCount
+        }
+        changedFiles
+        headRefName
+        headRefOid
+        baseRefName
+        baseRefOid
+        baseRepository {
+          name
+          nameWithOwner
+        }
+        milestone {
+          title
+          state
+        }
+        author {
+          login
+        }
+        viewerDidAuthor
+        viewerCanUpdate
+        reactionGroups {
+          content
+          viewerHasReacted
+          users {
+            totalCount
+          }
+        }
+        projectCards(last: 20) {
+          nodes {
+            id
+            state
+            column {
+              name
+            }
+            project {
+              name
+            }
+          }
+        }
+        timelineItems(first: 100) {
+          nodes {
+            __typename
+            ... on LabeledEvent {
+              actor {
+                login
+              }
+              createdAt
+              label {
+                color
+                name
+              }
+            }
+            ... on UnlabeledEvent {
+              actor {
+                login
+              }
+              createdAt
+              label {
+                color
+                name
+              }
+            }
+            ... on AssignedEvent {
+              actor {
+                login
+              }
+              assignee {
+                ... on Organization { name }
+                ... on Bot { login }
+                ... on User {
+                  login
+                  isViewer
+                }
+                ... on Mannequin { login }
+              }
+              createdAt
+            }
+            ... on PullRequestCommit {
+              commit {
+                messageHeadline
+                committedDate
+                abbreviatedOid
+                changedFiles
+                additions
+                deletions
+                committer {
+                  user {
+                    login
+                  }
+                }
+              }          
+            }
+            ... on MergedEvent {
+              createdAt
+              actor {
+                login
+              }
+              commit {
+                abbreviatedOid
+              }
+              mergeRefName
+            }
+            ... on ClosedEvent {
+              createdAt
+              actor {
+                login
+              }
+            }
+            ... on ReopenedEvent {
+              createdAt
+              actor {
+                login
+              }
+            }
+            ... on ReviewRequestedEvent {
+              createdAt
+              actor {
+                login
+              }
+              requestedReviewer {
+                ... on User {
+                  login
+                  isViewer
+                }
+                ... on Mannequin { login }
+                ... on Team { name }
+              }
+            }
+            ... on ReviewRequestRemovedEvent {
+              createdAt
+              actor {
+                login
+              }
+              requestedReviewer {
+                ... on User {
+                  login
+                  isViewer
+                }
+                ... on Mannequin {
+                  login
+                }
+                ... on Team {
+                  name
+                }
+              }
+            }
+            ... on ReviewDismissedEvent {
+              createdAt
+              actor {
+                login
+              }
+              dismissalMessage
+            }
+            ... on IssueComment {
+              id
+              body
+              createdAt
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
+              }
+              author {
+                login
+              }
+              viewerDidAuthor
+              viewerCanUpdate
+              viewerCanDelete
+            }
+            ... on PullRequestReview {
+              id
+              body
+              createdAt
+              viewerCanUpdate
+              viewerCanDelete
+              reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                  totalCount
+                }
+              }
+              author {
+                login
+              }
+              viewerDidAuthor
+              state
+              comments(last:100) {
+                totalCount
+                nodes{
+                  id
+                  replyTo { id }
+                  body
+                  commit {
+                    oid
+                  }
+                  author { login }
+                  createdAt
+                  lastEditedAt
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  originalPosition
+                  position
+                  state
+                  outdated
+                  diffHunk
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        reviewDecision
+        reviewThreads(last:100) {
+          nodes {
+            id
+            isResolved
+            isCollapsed
+            isOutdated
+            path
+            resolvedBy { login }
+            line
+            originalLine
+            startLine
+            originalStartLine
+            diffSide
+            comments(first: 100) {
+              nodes{
+                id
+                body
+                createdAt
+                lastEditedAt
+                replyTo { id }
+                state
+                commit {
+                  oid
+                }
+                pullRequestReview {
+                  id
+                  state
+                }
+                path
+                author { login }
+                authorAssociation
+                viewerDidAuthor
+                viewerCanUpdate
+                viewerCanDelete
+                outdated
+                diffHunk
+                reactionGroups {
+                  content
+                  viewerHasReacted
+                  users {
+                    totalCount
+                  }
+                }
+              }
+            }
+          }
+        }
+        labels(first: 20) {
+          nodes {
+            color
+            name
+          }
+        }
+        assignees(first: 20) {
+          nodes {
+            id
+            login
+            isViewer
+          }
+        }
+        reviewRequests(first: 20) {
+          totalCount
+          nodes {
+            requestedReviewer {
+              ... on User {
+                login
+                isViewer
+              }
+              ... on Mannequin { login }
+              ... on Team { name }
+            }
+          }
+        }
+      }
+    }
+	}
 ]]
 
 local function escape_chars(string)
