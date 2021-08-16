@@ -75,7 +75,7 @@ function M.load(repo, kind, number, cb)
     query = graphql("issue_query", owner, name, number)
     key = "issue"
   elseif kind == "repo" then
-    query = graphql("repo_query", owner, name)
+    query = graphql("repository_query", owner, name)
   end
   gh.run {
     args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },

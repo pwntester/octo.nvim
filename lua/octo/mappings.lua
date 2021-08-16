@@ -22,7 +22,7 @@ M.keypress_event_cbs = {
     local buffer = octo_buffers[bufnr]
     local repo = buffer.repo
     if repo then
-      require("octo.telescope.menu").issues(repo)
+      require("octo.telescope.menu").issues { repo = repo }
     end
   end,
   checkout_pr = function()
@@ -47,7 +47,7 @@ M.keypress_event_cbs = {
     require("octo.commands").remove_user "reviewer"
   end,
   reload = function()
-    require("octo.commands").reload()
+    vim.cmd [[e!]]
   end,
   open_in_browser = function()
     require("octo.navigation").open_in_browser()
@@ -56,7 +56,7 @@ M.keypress_event_cbs = {
     require("octo.commands").copy_url()
   end,
   create_label = function()
-    require("octo.commands").add_create()
+    require("octo.commands").create_label()
   end,
   add_label = function()
     require("octo.commands").add_label()
