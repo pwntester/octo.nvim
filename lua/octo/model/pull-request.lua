@@ -1,4 +1,4 @@
-local utils = require"octo.utils"
+local utils = require "octo.utils"
 
 local M = {}
 
@@ -24,7 +24,7 @@ function PullRequest:new(opts)
     right = opts.right,
     local_right = false,
     local_left = false,
-    bufnr = opts.bufnr
+    bufnr = opts.bufnr,
   }
   this.files = {}
   for _, file in ipairs(opts.files) do

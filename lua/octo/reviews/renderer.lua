@@ -23,7 +23,7 @@ function RenderData:new(ns_name)
   local this = {
     lines = {},
     hl = {},
-    namespace = vim.api.nvim_create_namespace(ns_name)
+    namespace = vim.api.nvim_create_namespace(ns_name),
   }
   setmetatable(this, self)
   return this
@@ -31,11 +31,11 @@ end
 
 function RenderData:add_hl(group, line_idx, first, last)
   table.insert(self.hl, {
-      group = group,
-      line_idx = line_idx,
-      first = first,
-      last = last
-    })
+    group = group,
+    line_idx = line_idx,
+    first = first,
+    last = last,
+  })
 end
 
 function RenderData:clear()
@@ -47,7 +47,9 @@ end
 ---@param bufid integer
 ---@param data RenderData
 function M.render(bufid, data)
-  if not vim.api.nvim_buf_is_loaded(bufid) then return end
+  if not vim.api.nvim_buf_is_loaded(bufid) then
+    return
+  end
 
   local was_modifiable = vim.api.nvim_buf_get_option(bufid, "modifiable")
   vim.api.nvim_buf_set_option(bufid, "modifiable", true)
@@ -81,7 +83,9 @@ end
 
 function M.get_file_icon(name, ext, render_data, line_idx, offset)
   --if not config.get_config().file_panel.use_icons then return " " end
-  if not web_devicons then web_devicons = require'nvim-web-devicons' end
+  if not web_devicons then
+    web_devicons = require "nvim-web-devicons"
+  end
 
   local icon, hl = web_devicons.get_icon(name, ext)
 
@@ -97,4 +101,3 @@ end
 
 M.RenderData = RenderData
 return M
-

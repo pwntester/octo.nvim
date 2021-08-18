@@ -18,7 +18,7 @@ function TitleMetadata:new(opts)
     savedBody = opts.savedBody or "",
     body = opts.body or "",
     dirty = opts.dirty or false,
-    extmark = opts.extmark or nil
+    extmark = opts.extmark or nil,
   }
 
   setmetatable(this, self)

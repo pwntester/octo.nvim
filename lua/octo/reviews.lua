@@ -1,12 +1,12 @@
-local FileEntry = require'octo.reviews.file-entry'.FileEntry
-local OctoBuffer = require'octo.model.octo-buffer'.OctoBuffer
-local Layout = require'octo.reviews.layout'.Layout
+local FileEntry = require("octo.reviews.file-entry").FileEntry
+local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
+local Layout = require("octo.reviews.layout").Layout
 local utils = require "octo.utils"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local window = require "octo.window"
-local config = require'octo.config'
-local mappings = require'octo.mappings'
+local config = require "octo.config"
+local mappings = require "octo.mappings"
 
 local M = {}
 
@@ -54,7 +54,7 @@ function Review:new(pull_request)
     pull_request = pull_request,
     id = -1,
     threads = {},
-    files = {}
+    files = {},
   }
   setmetatable(this, self)
   return this
@@ -62,19 +62,17 @@ end
 
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", string.format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.notify(stderr, 2)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          callback(resp)
-        end
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.notify(stderr, 2)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        callback(resp)
       end
-    }
-  )
+    end,
+  }
 end
 
 function Review:start()
@@ -87,137 +85,141 @@ function Review:start()
 end
 
 function Review:resume()
-  local query = graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", string.format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.notify(stderr, 2)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-            vim.notify("[Octo] No pending reviews found", 2)
-            return
-          end
-
-          -- There can only be one pending review for a given user
-          for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
-            if review.viewerDidAuthor then
-              self.id = review.id
-              break
-            end
-          end
-
-          if not self.id then
-            vim.notify("[Octo] No pending reviews found for viewer", 2)
-            return
-          end
-
-          local threads = resp.data.repository.pullRequest.reviewThreads.nodes
-          self:update_threads(threads)
-          self:initiate()
-        end
-      end
-    }
+  local query = graphql(
+    "pending_review_threads_query",
+    self.pull_request.owner,
+    self.pull_request.name,
+    self.pull_request.number
   )
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.notify(stderr, 2)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+          vim.notify("[Octo] No pending reviews found", 2)
+          return
+        end
+
+        -- There can only be one pending review for a given user
+        for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
+          if review.viewerDidAuthor then
+            self.id = review.id
+            break
+          end
+        end
+
+        if not self.id then
+          vim.notify("[Octo] No pending reviews found for viewer", 2)
+          return
+        end
+
+        local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+        self:update_threads(threads)
+        self:initiate()
+      end
+    end,
+  }
 end
 
 function Review:initiate()
   local pr = self.pull_request
-  self.layout = Layout:new({
+  self.layout = Layout:new {
     left = pr.left,
     right = pr.right,
-    files = {}
-  })
+    files = {},
+  }
   self.layout:open(self)
 
   local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
-  gh.run(
-    {
-      args = {"api", "--paginate", url},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.notify(stderr, 2)
-        elseif output then
-          local status_map = {
-            modified = "M",
-            added = "A",
-            deleted = "D",
-            renamed = "R",
+  gh.run {
+    args = { "api", "--paginate", url },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.notify(stderr, 2)
+      elseif output then
+        local status_map = {
+          modified = "M",
+          added = "A",
+          deleted = "D",
+          renamed = "R",
+        }
+        local results = vim.fn.json_decode(output)
+        local files = {}
+        for _, result in ipairs(results) do
+          local entry = FileEntry:new {
+            path = result.filename,
+            patch = result.patch,
+            pull_request = pr,
+            status = status_map[result.status],
+            stats = {
+              additions = result.additions,
+              deletions = result.deletions,
+              changes = result.changes,
+            },
           }
-          local results = vim.fn.json_decode(output)
-          local files = {}
-          for _, result in ipairs(results) do
-            local entry = FileEntry:new({
-              path = result.filename,
-              patch = result.patch,
-              pull_request = pr,
-              status = status_map[result.status],
-              stats = {
-                additions = result.additions,
-                deletions = result.deletions,
-                changes = result.changes
-              }
-            })
-            entry:fetch()
-            table.insert(files, entry)
-          end
-
-          self.layout.files = files
-          self.layout:update_files()
+          entry:fetch()
+          table.insert(files, entry)
         end
+
+        self.layout.files = files
+        self.layout:update_files()
       end
-    }
-  )
+    end,
+  }
 end
 
 function Review:discard()
-  local query = graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", string.format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.notify(stderr, 2)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-            vim.notify("No pending reviews found", 2)
-            return
-          end
-          self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
+  local query = graphql(
+    "pending_review_threads_query",
+    self.pull_request.owner,
+    self.pull_request.name,
+    self.pull_request.number
+  )
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.notify(stderr, 2)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+          vim.notify("No pending reviews found", 2)
+          return
+        end
+        self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
 
-          local choice = vim.fn.confirm("All pending comments will get deleted, are you sure?", "&Yes\n&No\n&Cancel", 2)
-          if choice == 1 then
-            local delete_query = graphql("delete_pull_request_review_mutation", self.id)
-            gh.run(
-              {
-                args = {"api", "graphql", "-f", string.format("query=%s", delete_query)},
-                cb = function(output, stderr)
-                  if stderr and not utils.is_blank(stderr) then
-                    vim.notify(stderr, 2)
-                  elseif output then
-                    self.id = -1
-                    self.threads = {}
-                    self.files= {}
-                    vim.notify("[Octo] Pending review discarded", 1)
-                    vim.cmd [[tabclose]]
-                  end
-                end
-              }
-            )
-          end
+        local choice = vim.fn.confirm("All pending comments will get deleted, are you sure?", "&Yes\n&No\n&Cancel", 2)
+        if choice == 1 then
+          local delete_query = graphql("delete_pull_request_review_mutation", self.id)
+          gh.run {
+            args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
+            cb = function(output, stderr)
+              if stderr and not utils.is_blank(stderr) then
+                vim.notify(stderr, 2)
+              elseif output then
+                self.id = -1
+                self.threads = {}
+                self.files = {}
+                vim.notify("[Octo] Pending review discarded", 1)
+                vim.cmd [[tabclose]]
+              end
+            end,
+          }
         end
       end
-    }
-  )
+    end,
+  }
 end
 
 function Review:update_threads(threads)
   self.threads = {}
   for _, thread in ipairs(threads) do
-    if thread.line == vim.NIL then thread.line = thread.originalLine end
+    if thread.line == vim.NIL then
+      thread.line = thread.originalLine
+    end
     if thread.startLine == vim.NIL then
       thread.startLine = thread.line
       thread.startDiffSide = thread.diffSide
@@ -241,13 +243,14 @@ function Review:collect_submit_info()
   end
 
   local conf = config.get_config()
-  local winid, bufnr = window.create_centered_float({
-    header = string.format("Press %s to approve, %s to comment or %s to request changes",
+  local winid, bufnr = window.create_centered_float {
+    header = string.format(
+      "Press %s to approve, %s to comment or %s to request changes",
       conf.mappings.submit_win.approve_review,
       conf.mappings.submit_win.comment_review,
       conf.mappings.submit_win.request_changes
-    )
-  })
+    ),
+  }
   vim.api.nvim_set_current_win(winid)
   vim.api.nvim_buf_set_option(bufnr, "syntax", "octo")
   for rhs, lhs in pairs(conf.mappings.submit_win) do
@@ -261,21 +264,19 @@ function Review:submit(event)
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local body = utils.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
-  local query = graphql("submit_pull_request_review_mutation", self.id, event, body, {escape = false})
-  gh.run(
-    {
-      args = {"api", "graphql", "-f", string.format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.notify(stderr, 2)
-        elseif output then
-          vim.notify("[Octo] Review was submitted successfully!", 1)
-          vim.api.nvim_win_close(winid, 1)
-          self.layout:close()
-        end
+  local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = false })
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.notify(stderr, 2)
+      elseif output then
+        vim.notify("[Octo] Review was submitted successfully!", 1)
+        vim.api.nvim_win_close(winid, 1)
+        self.layout:close()
       end
-    }
-  )
+    end,
+  }
 end
 
 M.Review = Review
@@ -312,11 +313,15 @@ function M.hide_review_threads()
   -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
-  if not split or not path then return end
+  if not split or not path then
+    return
+  end
 
   local review = M.get_current_review()
   local file = review.layout:cur_file()
-  if not file then return end
+  if not file then
+    return
+  end
 
   local alt_buf = file:get_alternative_buf(split)
   local alt_win = file:get_alternative_win(split)
@@ -327,7 +332,7 @@ function M.hide_review_threads()
       vim.api.nvim_win_set_buf(alt_win, alt_buf)
       -- Scroll to trigger the scrollbind and sync the windows. This works more
       -- consistently than calling `:syncbind`.
-      vim.cmd([[exec "normal! \<c-y>"]])
+      vim.cmd [[exec "normal! \<c-y>"]]
     end
   end
 end
@@ -337,11 +342,15 @@ function M.show_review_threads()
   -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
-  if not split or not path then return end
+  if not split or not path then
+    return
+  end
 
   local review = M.get_current_review()
   local file = review.layout:cur_file()
-  if not file then return end
+  if not file then
+    return
+  end
 
   local pr = file.pull_request
   local threads = vim.tbl_values(review.threads)
@@ -354,7 +363,9 @@ function M.show_review_threads()
     end
   end
 
-  if #threads_at_cursor == 0 then return end
+  if #threads_at_cursor == 0 then
+    return
+  end
 
   review.layout:ensure_layout()
   local alt_win = file:get_alternative_win(split)
@@ -375,24 +386,26 @@ end
 
 function M._create_thread_buffer(threads, repo, number, side, path, line)
   local current_review = M.get_current_review()
-  if not vim.startswith(path, "/") then path = "/"..path end
+  if not vim.startswith(path, "/") then
+    path = "/" .. path
+  end
   local bufname = string.format("octo://%s/review/%s/threads/%s%s:%d", repo, current_review.id, side, path, line)
   local bufnr = vim.fn.bufnr(bufname)
   local buffer
   if bufnr == -1 then
     bufnr = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_name(bufnr, bufname)
-    buffer = OctoBuffer:new({
+    buffer = OctoBuffer:new {
       bufnr = bufnr,
       number = number,
-      repo = repo
-    })
+      repo = repo,
+    }
     buffer:render_threads(threads)
     buffer:render_signcolumn()
   elseif vim.api.nvim_buf_is_loaded(bufnr) then
     buffer = octo_buffers[bufnr]
   else
-    vim.api.nvim_buf_delete(bufnr, {force = true})
+    vim.api.nvim_buf_delete(bufnr, { force = true })
   end
   return buffer
 end
@@ -400,11 +413,15 @@ end
 function M.add_review_comment(isSuggestion)
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
-  if not split or not path then return end
+  if not split or not path then
+    return
+  end
 
   local review = M.get_current_review()
   local file = review.layout:cur_file()
-  if not file then return end
+  if not file then
+    return
+  end
 
   -- get visual selected line range
   local line1, line2
@@ -439,48 +456,52 @@ function M.add_review_comment(isSuggestion)
     return
   end
   if not vim.startswith(diff_hunk, "@@") then
-    diff_hunk = "@@ "..diff_hunk
+    diff_hunk = "@@ " .. diff_hunk
   end
 
   review.layout:ensure_layout()
   local alt_win = file:get_alternative_win(split)
   if vim.api.nvim_win_is_valid(alt_win) then
     local pr = file.pull_request
-    local threads = {{
-      originalStartLine = line1,
-      originalLine = line2,
-      path = file.path,
-      isOutdated = false,
-      isResolved = false,
-      diffSide = split,
-      isCollapsed = false,
-      id = -1,
-      comments = {
-        nodes = {{
-          id = -1,
-          author = {login = vim.g.octo_viewer},
-          state = "PENDING",
-          replyTo = vim.NIL,
-          diffHunk = diff_hunk,
-          createdAt = vim.fn.strftime("%FT%TZ"),
-          body = " ",
-          viewerCanUpdate = true,
-          viewerCanDelete = true,
-          viewerDidAuthor = true,
-          pullRequestReview = { id = review.id} ,
-          reactionGroups = {
-            { content = "THUMBS_UP", users = { totalCount = 0 } },
-            { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-            { content = "LAUGH", users = { totalCount = 0 } },
-            { content = "HOORAY", users = { totalCount = 0 } },
-            { content = "CONFUSED", users = { totalCount = 0 } },
-            { content = "HEART", users = { totalCount = 0 } },
-            { content = "ROCKET", users = { totalCount = 0 } },
-            { content = "EYES", users = { totalCount = 0 } }
-          }
-        }}
-      }
-    }}
+    local threads = {
+      {
+        originalStartLine = line1,
+        originalLine = line2,
+        path = file.path,
+        isOutdated = false,
+        isResolved = false,
+        diffSide = split,
+        isCollapsed = false,
+        id = -1,
+        comments = {
+          nodes = {
+            {
+              id = -1,
+              author = { login = vim.g.octo_viewer },
+              state = "PENDING",
+              replyTo = vim.NIL,
+              diffHunk = diff_hunk,
+              createdAt = vim.fn.strftime "%FT%TZ",
+              body = " ",
+              viewerCanUpdate = true,
+              viewerCanDelete = true,
+              viewerDidAuthor = true,
+              pullRequestReview = { id = review.id },
+              reactionGroups = {
+                { content = "THUMBS_UP", users = { totalCount = 0 } },
+                { content = "THUMBS_DOWN", users = { totalCount = 0 } },
+                { content = "LAUGH", users = { totalCount = 0 } },
+                { content = "HOORAY", users = { totalCount = 0 } },
+                { content = "CONFUSED", users = { totalCount = 0 } },
+                { content = "HEART", users = { totalCount = 0 } },
+                { content = "ROCKET", users = { totalCount = 0 } },
+                { content = "EYES", users = { totalCount = 0 } },
+              },
+            },
+          },
+        },
+      },
+    }
     -- TODO: if there are threads for that line, there should be a buffer already showing them
     -- or maybe not if the user is very quick
     local thread_buffer = M._create_thread_buffer(threads, pr.repo, pr.number, split, file.path, line1)
@@ -489,8 +510,8 @@ function M.add_review_comment(isSuggestion)
       vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
       vim.api.nvim_set_current_win(alt_win)
       if isSuggestion then
-        local lines = vim.api.nvim_buf_get_lines(current_bufnr, line1-1, line2, false)
-        local suggestion = {"```suggestion"}
+        local lines = vim.api.nvim_buf_get_lines(current_bufnr, line1 - 1, line2, false)
+        local suggestion = { "```suggestion" }
         vim.list_extend(suggestion, lines)
         table.insert(suggestion, "```")
         vim.api.nvim_buf_set_lines(thread_buffer.bufnr, -3, -2, false, suggestion)
@@ -530,7 +551,7 @@ function M.show_pending_comments()
     vim.notify("[Octo] No pending comments found", 2)
     return
   else
-    require"octo.telescope.menu".pending_threads(pending_threads)
+    require("octo.telescope.menu").pending_threads(pending_threads)
   end
 end
 
@@ -540,7 +561,7 @@ function M.jump_to_pending_review_thread(thread)
     if thread.path == file.path then
       current_review.layout:set_file(file)
       local win = file:get_win(thread.diffSide)
-      vim.api.nvim_win_set_cursor(win, {thread.startLine, 0})
+      vim.api.nvim_win_set_cursor(win, { thread.startLine, 0 })
       break
     end
   end

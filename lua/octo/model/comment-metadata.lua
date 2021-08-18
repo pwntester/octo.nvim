@@ -47,7 +47,7 @@ function CommentMetadata:new(opts)
     path = opts.path,
     diffSide = opts.diffSide,
     snippetStartLine = opts.snippetStartLine,
-    snippetEndLine = opts.snippetEndLine
+    snippetEndLine = opts.snippetEndLine,
   }
   setmetatable(this, self)
   return this

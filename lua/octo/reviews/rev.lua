@@ -16,7 +16,7 @@ Rev.__index = Rev
 function Rev:new(commit, head)
   local this = {
     commit = commit,
-    head = head or false
+    head = head or false,
   }
   setmetatable(this, self)
   return this
@@ -32,4 +32,3 @@ end
 M.Rev = Rev
 
 return M
-

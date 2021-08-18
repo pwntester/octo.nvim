@@ -1,5 +1,5 @@
-local config = require'octo.config'
-local _, Job = pcall(require,'plenary.job')
+local config = require "octo.config"
+local _, Job = pcall(require, "plenary.job")
 
 local headers = {
   "application/vnd.github.v3+json",
@@ -17,20 +17,22 @@ local env_vars = {
   AppData = vim.env["AppData"],
   LocalAppData = vim.env["LocalAppData"],
   HOME = vim.env["HOME"],
-  NO_COLOR = 1
+  NO_COLOR = 1,
 }
 
 local function run(opts)
-  if not Job then return end
+  if not Job then
+    return
+  end
 
   -- Lazy load viewer name on the first gh command
   if not vim.g.octo_viewer then
-    local job = Job:new( {
+    local job = Job:new {
       enable_recording = true,
       command = "gh",
-      args = {"auth", "status"},
-      env = env_vars
-    })
+      args = { "auth", "status" },
+      env = env_vars,
+    }
     job:sync()
     local stderr = table.concat(job:stderr_result(), "\n")
     local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
@@ -46,8 +48,8 @@ local function run(opts)
   local mode = opts.mode or "async"
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
-    table.insert(opts.args, "Accept: "..table.concat(headers, ";"))
-    if not require"octo.utils".is_blank(conf.github_hostname) then
+    table.insert(opts.args, "Accept: " .. table.concat(headers, ";"))
+    if not require("octo.utils").is_blank(conf.github_hostname) then
       table.insert(opts.args, "--hostname")
       table.insert(opts.args, conf.github_hostname)
     end
@@ -60,24 +62,19 @@ local function run(opts)
     end
   end
 
-  local job =
-    Job:new(
-    {
-      enable_recording = true,
-      command = "gh",
-      args = opts.args,
-      on_exit = vim.schedule_wrap(
-        function(j_self, _, _)
-          if mode == "async" and opts.cb then
-            local output = table.concat(j_self:result(), "\n")
-            local stderr = table.concat(j_self:stderr_result(), "\n")
-            opts.cb(output, stderr)
-          end
-        end
-      ),
-      env = env_vars
-    }
-  )
+  local job = Job:new {
+    enable_recording = true,
+    command = "gh",
+    args = opts.args,
+    on_exit = vim.schedule_wrap(function(j_self, _, _)
+      if mode == "async" and opts.cb then
+        local output = table.concat(j_self:result(), "\n")
+        local stderr = table.concat(j_self:stderr_result(), "\n")
+        opts.cb(output, stderr)
+      end
+    end),
+    env = env_vars,
+  }
   if mode == "sync" then
     job:sync()
     return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
@@ -87,5 +84,5 @@ local function run(opts)
 end
 
 return {
-  run = run
+  run = run,
 }
