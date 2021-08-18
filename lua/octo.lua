@@ -210,7 +210,7 @@ end
 
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
-    vim.api.nvim_err_writeln("[Octo] Cannot find " .. repo)
+    utils.notify("Cannot find " .. repo)
     return
   end
 
@@ -255,7 +255,7 @@ end
 --
 --   local key = vim.api.nvim_replace_termcodes("<esc>", true, false, true)
 --   vim.api.nvim_feedkeys(key, "m", true)
---   vim.notify("[Octo] Cannot make changes to non-editable regions", 1)
+--   utils.notify("Cannot make changes to non-editable regions", 1)
 -- end
 
 return M

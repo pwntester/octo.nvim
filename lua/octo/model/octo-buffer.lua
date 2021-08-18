@@ -397,7 +397,7 @@ function M.do_save_title_and_body(buffer)
             end
 
             buffer:render_signcolumn()
-            vim.notify("[Octo] Saved!", 1)
+            utils.notify("Saved!", 1)
           end
         end
       }

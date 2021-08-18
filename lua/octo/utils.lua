@@ -199,15 +199,15 @@ end
 function M.in_pr_repo()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  if not buffer then vim.notify("[Octo] Not in Octo buffer", 2) return end
+  if not buffer then M.notify("Not in Octo buffer", 2) return end
   if not buffer:isPullRequest() then
-    vim.notify("[Octo] Not in Octo PR buffer", 2)
+    M.notify("Not in Octo PR buffer", 2)
     return
   end
 
   local local_repo = M.get_remote_name()
   if buffer.node.baseRepository.nameWithOwner ~= local_repo then
-    vim.notify(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo), 2)
+    M.notify(string.format("Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo), 2)
     return false
   else
     return true
@@ -219,7 +219,7 @@ function M.in_pr_branch(bufnr)
   local buffer = octo_buffers[bufnr]
   if not buffer then return end
   if not buffer:isPullRequest() then
-    --vim.notify("[Octo] Not in Octo PR buffer", 2)
+    --M.notify("Not in Octo PR buffer", 2)
     return false
   end
 
@@ -234,11 +234,11 @@ function M.in_pr_branch(bufnr)
   if buffer.node.baseRepository.nameWithOwner == local_repo and buffer.node.headRefName == local_branch then
     return true
   elseif buffer.node.baseRepository.nameWithOwner ~= local_repo then
-    --vim.notify(string.format("[Octo] Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo), 2)
+    --M.notify(string.format("Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo), 2)
     return false
   elseif buffer.node.headRefName ~= local_branch then
     -- TODO: suggest to checkout the branch
-    --vim.notify(string.format("[Octo] Not in PR branch. Expected %s, got %s", buffer.node.headRefName, local_branch), 2)
+    --M.notify(string.format("Not in PR branch. Expected %s, got %s", buffer.node.headRefName, local_branch), 2)
     return false
   else
     return false
@@ -256,11 +256,11 @@ function M.checkout_pr(headRefName)
         local stderr = table.concat(j_self:stderr_result(), "\n")
         for _, line in ipairs(vim.fn.split(stderr, "\n")) do
           if line:match("Switched to") or line:match("Already on") then
-            vim.notify("[Octo] " .. line, 1)
+            M.notify("" .. line, 1)
             return
           end
         end
-        vim.notify("[Octo] " .. stderr, 2)
+        M.notify("" .. stderr, 2)
       end
     )
   }):start()
@@ -270,11 +270,11 @@ function M.get_current_pr()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
-    vim.notify("[Octo] Not in an active Octo buffer", 2)
+    M.notify("Not in an active Octo buffer", 2)
     return
   end
   if not buffer:isPullRequest() then
-    vim.notify("[Octo] Not in a PR buffer", 2)
+    M.notify("Not in a PR buffer", 2)
     return
   end
 
@@ -498,7 +498,7 @@ function M.get_repo_number_from_varargs(...)
   local repo, number
   local args = table.pack(...)
   if args.n == 0 then
-    vim.notify("[Octo] Missing arguments", 1)
+    M.notify("Missing arguments", 1)
     return
   elseif args.n == 1 then
     repo = M.get_remote_name()
@@ -507,15 +507,15 @@ function M.get_repo_number_from_varargs(...)
     repo = args[1]
     number = tonumber(args[2])
   else
-    vim.notify("[Octo] Unexpected arguments", 1)
+    M.notify("Unexpected arguments", 1)
     return
   end
   if not repo then
-    vim.notify("[Octo] Cant find repo name", 1)
+    M.notify("Cant find repo name", 1)
     return
   end
   if not number then
-    vim.notify("[Octo] Missing issue/pr number", 1)
+    M.notify("Missing issue/pr number", 1)
     return
   end
   return repo, number
@@ -552,7 +552,7 @@ function M.get_file_contents(repo, commit, path, cb)
       args = {"api", "graphql", "-f", string.format("query=%s", query)},
       cb = function(output, stderr)
         if stderr and not M.is_blank(stderr) then
-          vim.notify(stderr, 2)
+          M.notify(stderr, 2)
         elseif output then
           local resp = vim.fn.json_decode(output)
           local blob = resp.data.repository.object
@@ -931,8 +931,12 @@ function M.fork_repo()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isRepo() then return end
-  vim.notify(string.format("[Octo] Cloning %s. It can take a few minutes", buffer.repo), 1)
-  vim.notify(vim.fn.system('echo "n" | gh repo fork ' .. buffer.repo .. ' 2>&1 | cat '), 1)
+  M.notify(string.format("Cloning %s. It can take a few minutes", buffer.repo), 1)
+  M.notify(vim.fn.system('echo "n" | gh repo fork ' .. buffer.repo .. ' 2>&1 | cat '), 1)
+end
+
+function M.notify(msg, kind)
+  vim.notify(msg, kind, {title = "Octo.nvim"})
 end
 
 return M

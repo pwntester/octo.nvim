@@ -37,7 +37,7 @@ local function run(opts)
     if name then
       vim.g.octo_viewer = name
     else
-      vim.notify(stderr, 2)
+      require"octo.utils".notify(stderr, 2)
     end
   end
 
