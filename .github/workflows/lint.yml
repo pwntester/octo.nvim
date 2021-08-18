@@ -12,4 +12,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # TODO don't ignore octo-buffer.lua when the issue with stylua is fixed
-          args:  stylua -g \!*octo-buffer.lua --color always --check lua/
+          args:  stylua -g \!lua/octo/model/octo-buffer.lua --color always --check lua/
