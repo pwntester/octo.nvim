@@ -973,7 +973,7 @@ function M.fork_repo()
 end
 
 function M.notify(msg, kind)
-  vim.notify(msg, kind, {title = "Octo.nvim"})
+  vim.notify(msg, kind, { title = "Octo.nvim" })
 end
 
 return M

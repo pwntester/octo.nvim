@@ -62,17 +62,16 @@ end
 
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
-  gh.run
-    {
-      args = {"api", "graphql", "-f", string.format("query=%s", query)},
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.notify(stderr, 2)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          callback(resp)
-        end
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.notify(stderr, 2)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        callback(resp)
       end
+    end,
   }
 end
 

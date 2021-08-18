@@ -189,13 +189,10 @@ local function makedayfrc(h, r, s, t)
 end
 -- time from day fraction
 local function breakdayfrc(df)
-  return mod(floor(df / TICKSPERHOUR), HOURPERDAY), mod(floor(df / TICKSPERMIN), MINPERHOUR), mod(
-    floor(df / TICKSPERSEC),
-    SECPERMIN
-  ), mod(
-    df,
-    TICKSPERSEC
-  )
+  return mod(floor(df / TICKSPERHOUR), HOURPERDAY),
+    mod(floor(df / TICKSPERMIN), MINPERHOUR),
+    mod(floor(df / TICKSPERSEC), SECPERMIN),
+    mod(df, TICKSPERSEC)
 end
 -- weekday sunday = 0, monday = 1 ...
 local function weekday(dn)
@@ -555,10 +552,8 @@ local function date_fromtable(v)
   if (y or m or d) and not (y and m and d) then
     return error "incomplete table"
   end
-  return (y or h or r or s or t) and date_new(
-    y and makedaynum(y, m, d) or DAYNUM_DEF,
-    makedayfrc(h or 0, r or 0, s or 0, t or 0)
-  )
+  return (y or h or r or s or t)
+    and date_new(y and makedaynum(y, m, d) or DAYNUM_DEF, makedayfrc(h or 0, r or 0, s or 0, t or 0))
 end
 local tmap = {
   ["number"] = function(v)
