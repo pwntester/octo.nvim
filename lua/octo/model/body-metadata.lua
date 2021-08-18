@@ -24,7 +24,7 @@ function BodyMetadata:new(opts)
     extmark = opts.extmark or nil,
     viewerCanUpdate = opts.viewerCanUpdate or false,
     reactionLine = opts.reactionLine or false,
-    reactionGroups = opts.reactionGroups or {}
+    reactionGroups = opts.reactionGroups or {},
   }
   setmetatable(this, self)
   return this

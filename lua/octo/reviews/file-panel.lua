@@ -1,11 +1,11 @@
 -- Heavily derived from `diffview.nvim`: https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-panel.lua
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-panel.lua
 --
-local utils = require'octo.utils'
-local config = require'octo.config'
-local mappings = require'octo.mappings'
-local constants = require'octo.constants'
-local renderer = require'octo.reviews.renderer'
+local utils = require "octo.utils"
+local config = require "octo.config"
+local mappings = require "octo.mappings"
+local constants = require "octo.constants"
+local renderer = require "octo.reviews.renderer"
 local M = {}
 
 local name_counter = 1
@@ -30,29 +30,29 @@ FilePanel.winopts = {
   spell = false,
   wrap = false,
   cursorline = true,
-  signcolumn = 'yes',
-  foldmethod = 'manual',
-  foldcolumn = '0',
+  signcolumn = "yes",
+  foldmethod = "manual",
+  foldcolumn = "0",
   scrollbind = false,
   cursorbind = false,
   diff = false,
   winhl = table.concat({
-    'EndOfBuffer:OctoEndOfBuffer',
-    'Normal:OctoNormal',
+    "EndOfBuffer:OctoEndOfBuffer",
+    "Normal:OctoNormal",
     --'CursorLine:OctoCursorLine',
-    'VertSplit:OctoVertSplit',
-    'SignColumn:OctoNormal',
-    'StatusLine:OctoStatusLine',
-    'StatusLineNC:OctoStatuslineNC'
-  }, ',')
+    "VertSplit:OctoVertSplit",
+    "SignColumn:OctoNormal",
+    "StatusLine:OctoStatusLine",
+    "StatusLineNC:OctoStatuslineNC",
+  }, ","),
 }
 
 FilePanel.bufopts = {
   swapfile = false,
-  buftype = 'nofile';
-  modifiable = false;
-  filetype = 'octo_panel';
-  bufhidden = 'hide';
+  buftype = "nofile",
+  modifiable = false,
+  filetype = "octo_panel",
+  bufhidden = "hide",
 }
 
 ---FilePanel constructor.
@@ -62,7 +62,7 @@ function FilePanel:new(files)
   local conf = config.get_config()
   local this = {
     files = files,
-    size = conf.file_panel.size
+    size = conf.file_panel.size,
   }
 
   setmetatable(this, self)
@@ -71,7 +71,9 @@ end
 
 function FilePanel:is_open()
   local valid = self.winid and vim.api.nvim_win_is_valid(self.winid)
-  if not valid then self.winid = nil end
+  if not valid then
+    self.winid = nil
+  end
   return valid
 end
 
@@ -88,16 +90,20 @@ function FilePanel:focus(open_if_closed)
 end
 
 function FilePanel:open()
-  if not self:buf_loaded() then self:init_buffer() end
-  if self:is_open() then return end
+  if not self:buf_loaded() then
+    self:init_buffer()
+  end
+  if self:is_open() then
+    return
+  end
 
   local conf = config.get_config()
   self.size = conf.file_panel.size
   --vim.cmd("wincmd H")
   --vim.cmd("vsp")
   --vim.cmd("vertical resize " .. self.width)
-  vim.cmd("sp")
-  vim.cmd("wincmd J")
+  vim.cmd "sp"
+  vim.cmd "wincmd J"
   vim.cmd("resize " .. self.size)
   self.winid = vim.api.nvim_get_current_win()
 
@@ -106,7 +112,7 @@ function FilePanel:open()
   end
 
   vim.cmd("buffer " .. self.bufid)
-  vim.cmd(":wincmd =")
+  vim.cmd ":wincmd ="
 end
 
 function FilePanel:close()
@@ -165,7 +171,9 @@ function FilePanel:init_buffer()
 end
 
 function FilePanel:get_file_at_cursor()
-  if not (self:is_open() and self:buf_loaded()) then return end
+  if not (self:is_open() and self:buf_loaded()) then
+    return
+  end
 
   local cursor = vim.api.nvim_win_get_cursor(self.winid)
   local line = cursor[1]
@@ -173,11 +181,13 @@ function FilePanel:get_file_at_cursor()
 end
 
 function FilePanel:highlight_file(file)
-  if not (self:is_open() and self:buf_loaded()) then return end
+  if not (self:is_open() and self:buf_loaded()) then
+    return
+  end
 
   for i, f in ipairs(self.files) do
     if f == file then
-      pcall(vim.api.nvim_win_set_cursor, self.winid, {i + header_size, 0})
+      pcall(vim.api.nvim_win_set_cursor, self.winid, { i + header_size, 0 })
       vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", i + header_size - 1, 0, -1)
     end
@@ -185,13 +195,15 @@ function FilePanel:highlight_file(file)
 end
 
 function FilePanel:highlight_prev_file()
-  if not (self:is_open() and self:buf_loaded()) or #self.files == 0 then return end
+  if not (self:is_open() and self:buf_loaded()) or #self.files == 0 then
+    return
+  end
 
   local cur = self:get_file_at_cursor()
   for i, f in ipairs(self.files) do
     if f == cur then
       local line = utils.clamp(i + header_size - 1, header_size + 1, #self.files + header_size)
-      pcall(vim.api.nvim_win_set_cursor, self.winid, {line, 0})
+      pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
       vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
@@ -199,13 +211,15 @@ function FilePanel:highlight_prev_file()
 end
 
 function FilePanel:highlight_next_file()
-  if not (self:is_open() and self:buf_loaded()) or #self.files == 0 then return end
+  if not (self:is_open() and self:buf_loaded()) or #self.files == 0 then
+    return
+  end
 
   local cur = self:get_file_at_cursor()
   for i, f in ipairs(self.files) do
     if f == cur then
       local line = utils.clamp(i + header_size + 1, header_size, #self.files + header_size)
-      pcall(vim.api.nvim_win_set_cursor, self.winid, {line, 0})
+      pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
       vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
@@ -213,25 +227,37 @@ function FilePanel:highlight_next_file()
 end
 
 function FilePanel:render()
-  if not self.render_data then return end
+  if not self.render_data then
+    return
+  end
 
   self.render_data:clear()
   local line_idx = 0
   local lines = self.render_data.lines
-  local add_hl = function (...)
+  local add_hl = function(...)
     self.render_data:add_hl(...)
   end
 
-  local current_review = require"octo.reviews".get_current_review()
+  local current_review = require("octo.reviews").get_current_review()
   local conf = config.get_config()
   local strlen = vim.fn.strlen
   local s = "Files changed"
   add_hl("OctoFilePanelTitle", line_idx, 0, #s)
   local change_count = string.format("%s%d%s", conf.left_bubble_delimiter, #self.files, conf.right_bubble_delimiter)
   add_hl("OctoBubbleDelimiterYellow", line_idx, strlen(s) + 1, strlen(s) + 1 + strlen(conf.left_bubble_delimiter))
-  add_hl("OctoBubbleYellow", line_idx, strlen(s) + 1 + strlen(conf.left_bubble_delimiter), strlen(s) + 1 + strlen(change_count) - strlen(conf.right_bubble_delimiter))
-  add_hl("OctoBubbleDelimiterYellow", line_idx, strlen(s) + 1 + strlen(change_count) - strlen(conf.right_bubble_delimiter), strlen(s) + 1 + strlen(change_count))
-  s =  s .. " " .. change_count
+  add_hl(
+    "OctoBubbleYellow",
+    line_idx,
+    strlen(s) + 1 + strlen(conf.left_bubble_delimiter),
+    strlen(s) + 1 + strlen(change_count) - strlen(conf.right_bubble_delimiter)
+  )
+  add_hl(
+    "OctoBubbleDelimiterYellow",
+    line_idx,
+    strlen(s) + 1 + strlen(change_count) - strlen(conf.right_bubble_delimiter),
+    strlen(s) + 1 + strlen(change_count)
+  )
+  s = s .. " " .. change_count
   table.insert(lines, s)
   line_idx = line_idx + 1
 
@@ -256,18 +282,18 @@ function FilePanel:render()
       offset = #s
       if diffstat.additions > 0 then
         s = s .. string.rep("■", diffstat.additions)
-        add_hl("OctoDiffstatAdditions", line_idx, offset, offset + (3*diffstat.additions))
-        offset = offset + (3*diffstat.additions)
+        add_hl("OctoDiffstatAdditions", line_idx, offset, offset + (3 * diffstat.additions))
+        offset = offset + (3 * diffstat.additions)
       end
       if diffstat.deletions > 0 then
         s = s .. string.rep("■", diffstat.deletions)
-        add_hl("OctoDiffstatDeletions", line_idx, offset, offset + (3*diffstat.deletions))
-        offset = offset + (3*diffstat.deletions)
+        add_hl("OctoDiffstatDeletions", line_idx, offset, offset + (3 * diffstat.deletions))
+        offset = offset + (3 * diffstat.deletions)
       end
       if diffstat.neutral > 0 then
         s = s .. string.rep("■", diffstat.neutral)
-        add_hl("OctoDiffstatNeutral", line_idx, offset, offset + (3*diffstat.neutral))
-        offset = offset + (3*diffstat.neutral)
+        add_hl("OctoDiffstatNeutral", line_idx, offset, offset + (3 * diffstat.neutral))
+        offset = offset + (3 * diffstat.neutral)
       end
     end
 
@@ -299,19 +325,50 @@ function FilePanel:render()
       s = s .. string.rep(" ", max_path_length + 1 - string.len(file.path))
     end
     local segments = {
-      {count = active, prefix = "active: ", center_hl = "OctoBubbleBlue", delimiter_hl = "OctoBubbleDelimiterBlue"},
-      {count = pending, prefix = "pending: ", center_hl = "OctoBubbleYellow", delimiter_hl = "OctoBubbleDelimiterYellow"},
-      {count = resolved, prefix = "resolved: ", center_hl = "OctoBubbleGreen", delimiter_hl = "OctoBubbleDelimiterGreen"},
-      {count = outdated, prefix = "outdated: ", center_hl = "OctoBubbleRed", delimiter_hl = "OctoBubbleDelimiterRed"},
+      { count = active, prefix = "active: ", center_hl = "OctoBubbleBlue", delimiter_hl = "OctoBubbleDelimiterBlue" },
+      {
+        count = pending,
+        prefix = "pending: ",
+        center_hl = "OctoBubbleYellow",
+        delimiter_hl = "OctoBubbleDelimiterYellow",
+      },
+      {
+        count = resolved,
+        prefix = "resolved: ",
+        center_hl = "OctoBubbleGreen",
+        delimiter_hl = "OctoBubbleDelimiterGreen",
+      },
+      { count = outdated, prefix = "outdated: ", center_hl = "OctoBubbleRed", delimiter_hl = "OctoBubbleDelimiterRed" },
     }
     for _, segment in ipairs(segments) do
       if segment.count > 0 then
         offset = #s + 1
-        local str = string.format("%s%s%d%s", segment.prefix, conf.left_bubble_delimiter, segment.count, conf.right_bubble_delimiter)
-        add_hl("OctoMissingDetails", line_idx, offset,  offset + string.len(segment.prefix))
-        add_hl(segment.delimiter_hl, line_idx, offset + strlen(segment.prefix), offset + strlen(segment.prefix) + strlen(conf.left_bubble_delimiter))
-        add_hl(segment.center_hl, line_idx, offset + strlen(segment.prefix) + strlen(conf.left_bubble_delimiter), offset + strlen(str) - strlen(conf.right_bubble_delimiter))
-        add_hl(segment.delimiter_hl, line_idx, offset + strlen(str) - strlen(conf.right_bubble_delimiter), offset + strlen(str))
+        local str = string.format(
+          "%s%s%d%s",
+          segment.prefix,
+          conf.left_bubble_delimiter,
+          segment.count,
+          conf.right_bubble_delimiter
+        )
+        add_hl("OctoMissingDetails", line_idx, offset, offset + string.len(segment.prefix))
+        add_hl(
+          segment.delimiter_hl,
+          line_idx,
+          offset + strlen(segment.prefix),
+          offset + strlen(segment.prefix) + strlen(conf.left_bubble_delimiter)
+        )
+        add_hl(
+          segment.center_hl,
+          line_idx,
+          offset + strlen(segment.prefix) + strlen(conf.left_bubble_delimiter),
+          offset + strlen(str) - strlen(conf.right_bubble_delimiter)
+        )
+        add_hl(
+          segment.delimiter_hl,
+          line_idx,
+          offset + strlen(str) - strlen(conf.right_bubble_delimiter),
+          offset + strlen(str)
+        )
         s = s .. " " .. str
       end
     end
@@ -340,15 +397,19 @@ function FilePanel:render()
 end
 
 function FilePanel:redraw()
-  if not self.render_data then return end
+  if not self.render_data then
+    return
+  end
   renderer.render(self.bufid, self.render_data)
 end
 
 M.FilePanel = FilePanel
 
 function M.threads_for_path(path)
-  local current_review = require"octo.reviews".get_current_review()
-  if not current_review then return {} end
+  local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return {}
+  end
   local threads = {}
   for _, thread in pairs(current_review.threads) do
     if path == thread.path then
@@ -387,7 +448,7 @@ end
 function M.next_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local _, path = utils.get_split_and_path(bufnr)
-  local current_line = vim.fn.line(".")
+  local current_line = vim.fn.line "."
   local candidate = math.huge
   if path then
     for _, thread in ipairs(M.threads_for_path(path)) do
@@ -397,14 +458,14 @@ function M.next_thread()
     end
   end
   if candidate < math.huge then
-    vim.cmd(":"..candidate)
+    vim.cmd(":" .. candidate)
   end
 end
 
 function M.prev_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local _, path = utils.get_split_and_path(bufnr)
-  local current_line = vim.fn.line(".")
+  local current_line = vim.fn.line "."
   local candidate = -1
   if path then
     for _, thread in ipairs(M.threads_for_path(path)) do
@@ -414,9 +475,8 @@ function M.prev_thread()
     end
   end
   if candidate > -1 then
-    vim.cmd(":"..candidate)
+    vim.cmd(":" .. candidate)
   end
 end
 
 return M
-

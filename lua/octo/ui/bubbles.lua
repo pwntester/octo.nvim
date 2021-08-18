@@ -1,5 +1,5 @@
 local colors = require "octo.colors"
-local config = require"octo.config"
+local config = require "octo.config"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
 -- Sometimes they are also called Chips in WebUI framworks. After all they wrap
@@ -17,13 +17,10 @@ local function make_bubble(content, highlight_group, opts)
   local right_padding = string.rep(" ", opts.right_padding_width or 0)
   local left_padding = string.rep(" ", opts.left_padding_width or 0)
   local body = left_padding .. padding .. content .. padding .. right_padding
-  local left_delimiter = (left_margin .. margin) .. (conf.left_bubble_delimiter)
-  local right_delimiter = (conf.right_bubble_delimiter) .. (right_margin .. margin)
+  local left_delimiter = (left_margin .. margin) .. conf.left_bubble_delimiter
+  local right_delimiter = conf.right_bubble_delimiter .. (right_margin .. margin)
   local delimiter_color = colors.get_background_color_of_highlight_group(highlight_group)
-  local delimiter_highlight_group = colors.create_highlight(
-    delimiter_color,
-    { mode = "foreground" }
-  )
+  local delimiter_highlight_group = colors.create_highlight(delimiter_color, { mode = "foreground" })
 
   return {
     { left_delimiter, delimiter_highlight_group },
@@ -51,7 +48,7 @@ end
 local function make_reaction_bubble(icon, includes_viewer, opts)
   local conf = config.get_config()
   local highlight = includes_viewer and "OctoReactionViewer" or "OctoReaction"
-  local hint_for_viewer = includes_viewer and (conf.reaction_viewer_hint_icon) or ""
+  local hint_for_viewer = includes_viewer and conf.reaction_viewer_hint_icon or ""
   local content = icon .. hint_for_viewer
   return make_bubble(content, highlight, opts)
 end

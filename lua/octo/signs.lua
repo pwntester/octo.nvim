@@ -1,4 +1,4 @@
-local config = require'octo.config'
+local config = require "octo.config"
 
 local M = {}
 
@@ -25,17 +25,21 @@ end
 
 function M.place(name, bufnr, line)
   -- 0-index based wrapper
-  if not line then return end
-  pcall(vim.fn.sign_place, 0, "octo_ns", name, bufnr, {lnum = line + 1})
+  if not line then
+    return
+  end
+  pcall(vim.fn.sign_place, 0, "octo_ns", name, bufnr, { lnum = line + 1 })
 end
 
 function M.unplace(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
-  pcall(vim.fn.sign_unplace, "octo_ns", {buffer = bufnr})
+  pcall(vim.fn.sign_unplace, "octo_ns", { buffer = bufnr })
 end
 
 function M.place_signs(bufnr, start_line, end_line, is_dirty)
-  if not start_line or not end_line then return end
+  if not start_line or not end_line then
+    return
+  end
   local dirty_mod = is_dirty and "dirty" or "clean"
 
   if start_line == end_line or end_line < start_line then
