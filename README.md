@@ -16,7 +16,7 @@
             alt="License"/></a><br />
     <a href="https://saythanks.io/to/alvaro%40pwntester.com"><img
             src="https://img.shields.io/badge/say-thanks-modal.svg"
-            alt="Say thanks"/></a>    
+            alt="Say thanks"/></a>
     <a href="https://github.com/pwntester/octo.nvim/commits/main"><img
             src="https://img.shields.io/github/last-commit/pwntester/octo.nvim"
             alt="Latest commit"/></a>
@@ -62,12 +62,12 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 - Install [GitHub CLI](https://cli.github.com/)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 - Install [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons)
- 
-## 📦 Installation 
+
+## 📦 Installation
 
 Use your favourite plugin manager to install it. eg:
 
-```
+```lua
 use {'pwntester/octo.nvim', config=function()
   require"octo".setup()
 end}
@@ -75,7 +75,7 @@ end}
 
 ## ⚙️ Configuration
 
-```
+```lua
 use {'pwntester/octo.nvim', config=function()
   require"octo".setup({
   default_remote = {"upstream", "origin"}; -- order to try remotes
@@ -211,7 +211,7 @@ Just edit the issue title, body or comments as a regular buffer and use `:w(rite
 
 ## 🤖 Commands
 
-There is only an `Octo <object> <action> [arguments]` command: 
+There is only an `Octo <object> <action> [arguments]` command:
 If no command is passed, the argument to `Octo` is treated as a URL from where an issue or pr repo and number are extracted
 
 | Object | Action | Arguments|
@@ -277,20 +277,20 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 1. In-menu mappings:
 - `<CR>`: Edit Issue
 - `<C-b>`: Opens issue in the browser
-- `<C-y>`: Copies URL to system clipboard 
+- `<C-y>`: Copies URL to system clipboard
 [Available filter keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
 2. In-menu mappings:
 - `<CR>`: Edit PR
 - `<C-b>`: Opens PR in the browser
 - `<C-o>`: Checkout PR
-- `<C-y>`: Copies URL to system clipboard 
+- `<C-y>`: Copies URL to system clipboard
 [Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
 3. In-menu mappings:
 - `<CR>`: View repo
 - `<C-b>`: Opens repo in the browser
-- `<C-y>`: Copies URL to system clipboard 
+- `<C-y>`: Copies URL to system clipboard
 
 4. In-menu mappings:
 - `<CR>`: Append Gist to buffer
@@ -314,7 +314,7 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 
 - Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
 - Start a review with `Octo review start` or resume a pending review with `Octo review resume`
-- Quickfix will be populated with the PR changed files 
+- Quickfix will be populated with the PR changed files
 - Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
 - Add comments with `<space>ca` or suggestions with `<space>sa` on single or multiple visual-selected lines
   - A new buffer will appear in the alternate diff window. Cursor will be positioned in the new buffer
@@ -322,7 +322,7 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
   - Move back to the diff window and move the cursor, the thread buffer will hide
 - Hold the cursor on a line with a comment to show a thread buffer with all the thread comments
   - To modify, delete, react or reply to a comment, move to the window containing the thread buffer
-  - Perform any operations as if you were in a regular issue buffer 
+  - Perform any operations as if you were in a regular issue buffer
 - Review pending comments with `Octo review comments`
   - Use <CR> to jump to the selected pending comment
 - When ready, submit the review with `Octo review submit`
@@ -398,4 +398,3 @@ The PR review panel is heavily inspired in [diffview.nvim](https://github.com/si
 ## 📜 License
 
 [MIT](https://choosealicense.com/licenses/mit/)
-
