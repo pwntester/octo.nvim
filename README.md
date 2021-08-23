@@ -345,7 +345,7 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 | *OctoTimelineItemHeading*   | Comment         |
 | *OctoDetailsLabel*          | Title           |
 | *OctoMissingDetails*        | Comment         |
-| *OctoDetailsValue *         | Identifier      |
+| *OctoDetailsValue*          | Identifier      |
 | *OctoDiffHunkPosition*      | NormalFloat     |
 | *OctoCommentLine*           | TabLineSel      |
 | *OctoEditable*              | NormalFloat     |
