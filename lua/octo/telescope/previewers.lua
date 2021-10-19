@@ -1,3 +1,4 @@
+require "octo"
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local previewers = require "telescope.previewers"
 local utils = require "octo.utils"
