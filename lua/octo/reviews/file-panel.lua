@@ -342,7 +342,7 @@ function FilePanel:render()
         count = outdated,
         prefix = "outdated: ",
         center_hl = "OctoBubbleRed",
-        delimiter_hl = "OctoBubbleDelimiterRed"
+        delimiter_hl = "OctoBubbleDelimiterRed",
       },
     }
     for _, segment in ipairs(segments) do
