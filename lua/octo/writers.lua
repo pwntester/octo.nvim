@@ -630,9 +630,13 @@ local function get_lnum_chunks(opts)
     }
   elseif opts.right_line and opts.left_line then
     return {
-      { string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.left_line))) .. tostring(opts.left_line) },
+      {
+        string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.left_line))) .. tostring(opts.left_line)
+      },
       { " " },
-      { string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.right_line))) .. tostring(opts.right_line) },
+      {
+        string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.right_line))) .. tostring(opts.right_line)
+      },
       { " " },
     }
   end
