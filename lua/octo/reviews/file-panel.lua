@@ -338,7 +338,12 @@ function FilePanel:render()
         center_hl = "OctoBubbleGreen",
         delimiter_hl = "OctoBubbleDelimiterGreen",
       },
-      { count = outdated, prefix = "outdated: ", center_hl = "OctoBubbleRed", delimiter_hl = "OctoBubbleDelimiterRed" },
+      {
+        count = outdated,
+        prefix = "outdated: ",
+        center_hl = "OctoBubbleRed",
+        delimiter_hl = "OctoBubbleDelimiterRed"
+      },
     }
     for _, segment in ipairs(segments) do
       if segment.count > 0 then
