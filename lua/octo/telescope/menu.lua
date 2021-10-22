@@ -939,7 +939,11 @@ end
 function M.repos(opts)
   opts = opts or {}
   if not opts.login then
-    opts.login = vim.g.octo_viewer
+    if vim.g.octo_viewer then
+      opts.login = vim.g.octo_viewer
+    else
+      opts.login = require("octo.gh").get_user_name()
+    end
   end
 
   local query = graphql("repos_query", opts.login)
