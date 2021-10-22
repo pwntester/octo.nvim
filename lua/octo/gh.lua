@@ -1,6 +1,8 @@
 local config = require "octo.config"
 local _, Job = pcall(require, "plenary.job")
 
+local M = {}
+
 local headers = {
   "application/vnd.github.v3+json",
   "application/vnd.github.squirrel-girl-preview+json",
@@ -20,27 +22,32 @@ local env_vars = {
   NO_COLOR = 1,
 }
 
-local function run(opts)
+-- uses GH to get the name of the authenticated user
+function M.get_user_name()
+  local job = Job:new {
+    enable_recording = true,
+    command = "gh",
+    args = { "auth", "status" },
+    env = env_vars,
+  }
+  job:sync()
+  local stderr = table.concat(job:stderr_result(), "\n")
+  local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
+  if name then
+    return name
+  else
+    require'utils'.notify(stderr, 2)
+  end
+end
+
+function M.run(opts)
   if not Job then
     return
   end
 
   -- Lazy load viewer name on the first gh command
   if not vim.g.octo_viewer then
-    local job = Job:new {
-      enable_recording = true,
-      command = "gh",
-      args = { "auth", "status" },
-      env = env_vars,
-    }
-    job:sync()
-    local stderr = table.concat(job:stderr_result(), "\n")
-    local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
-    if name then
-      vim.g.octo_viewer = name
-    else
-      require("octo.utils").notify(stderr, 2)
-    end
+    vim.g.octo_viewer = M.get_user_name()
   end
 
   opts = opts or {}
@@ -83,6 +90,4 @@ local function run(opts)
   end
 end
 
-return {
-  run = run,
-}
+return M
