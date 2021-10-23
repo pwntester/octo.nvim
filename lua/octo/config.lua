@@ -1,6 +1,7 @@
 local M = {}
 
 M.defaults = {
+  picker = "telescope",
   default_remote = { "upstream", "origin" },
   reaction_viewer_hint_icon = "",
   user_icon = " ",

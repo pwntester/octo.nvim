@@ -2,12 +2,11 @@ local gh = require "octo.gh"
 local utils = require "octo.utils"
 local navigation = require "octo.navigation"
 local window = require "octo.window"
-local menu = require "octo.telescope.menu"
+local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local graphql = require "octo.graphql"
 local constants = require "octo.constants"
 local writers = require "octo.writers"
-local _, Job = pcall(require, "plenary.job")
 
 local M = {}
 
@@ -28,11 +27,11 @@ M.commands = {
     end,
     list = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
-      menu.issues(opts)
+      picker.issues(opts)
     end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
-      menu.issue_search(opts)
+      picker.live_issues(opts)
     end,
     reload = function()
       M.reload()
@@ -56,7 +55,7 @@ M.commands = {
     end,
     list = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
-      menu.pull_requests(opts)
+      picker.prs(opts)
     end,
     checkout = function()
       local bufnr = vim.api.nvim_get_current_buf()
@@ -72,14 +71,11 @@ M.commands = {
     create = function(...)
       M.create_pr(...)
     end,
-    create = function(...)
-      M.create_pr(...)
-    end,
     commits = function()
-      menu.commits()
+      picker.commits()
     end,
     changes = function()
-      menu.changed_files()
+      picker.changed_files()
     end,
     diff = function()
       M.show_pr_diff()
@@ -95,7 +91,7 @@ M.commands = {
     end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
-      menu.pull_request_search(opts)
+      picker.live_prs(opts)
     end,
     reload = function()
       M.reload()
@@ -109,7 +105,7 @@ M.commands = {
   },
   repo = {
     list = function(login)
-      menu.repos { login = login }
+      picker.repos { login = login }
     end,
     view = function(repo)
       utils.get_repo(nil, repo)
@@ -157,7 +153,7 @@ M.commands = {
         local kv = vim.split(args[i], "=")
         opts[kv[1]] = kv[2]
       end
-      menu.gists(opts)
+      picker.gists(opts)
     end,
   },
   thread = {
@@ -1162,8 +1158,8 @@ function M.add_project_card()
     return
   end
 
-  -- show column selection menu
-  menu.select_target_project_column(function(column_id)
+  -- show column selection picker
+  picker.project_columns(function(column_id)
     -- add new card
     local query = graphql("add_project_card_mutation", buffer.node.id, column_id)
     gh.run {
@@ -1190,8 +1186,8 @@ function M.remove_project_card()
     return
   end
 
-  -- show card selection menu
-  menu.select_project_card(function(card)
+  -- show card selection picker
+  picker.project_cards(function(card)
     -- delete card
     local query = graphql("delete_project_card_mutation", card)
     gh.run {
@@ -1218,9 +1214,9 @@ function M.move_project_card()
     return
   end
 
-  menu.select_project_card(function(source_card)
-    -- show project column selection menu
-    menu.select_target_project_column(function(target_column)
+  picker.project_cards(function(source_card)
+    -- show project column selection picker
+    picker.project_columns(function(target_column)
       -- move card to selected column
       local query = graphql("move_project_card_mutation", source_card, target_column)
       gh.run {
@@ -1298,7 +1294,7 @@ function M.add_label()
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  menu.select_label(function(label_id)
+  picker.labels(function(label_id)
     local query = graphql("add_labels_mutation", iid, label_id)
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -1328,7 +1324,7 @@ function M.remove_label()
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  menu.select_assigned_label(function(label_id)
+  picker.assigned_labels(function(label_id)
     local query = graphql("remove_labels_mutation", iid, label_id)
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -1358,7 +1354,7 @@ function M.add_user(subject)
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  menu.select_user(function(user_id)
+  picker.users(function(user_id)
     local query
     if subject == "assignee" then
       query = graphql("add_assignees_mutation", iid, user_id)
@@ -1393,7 +1389,7 @@ function M.remove_assignee()
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  menu.select_assignee(function(user_id)
+  picker.picker_assignees(function(user_id)
     local query = graphql("remove_assignees_mutation", iid, user_id)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },

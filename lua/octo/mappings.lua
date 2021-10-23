@@ -22,17 +22,17 @@ M.keypress_event_cbs = {
     local buffer = octo_buffers[bufnr]
     local repo = buffer.repo
     if repo then
-      require("octo.telescope.menu").issues { repo = repo }
+      require("octo.picker").issues { repo = repo }
     end
   end,
   checkout_pr = function()
     require("octo.commands").commands.pr.checkout()
   end,
   list_commits = function()
-    require("octo.telescope.menu").commits()
+    require("octo.picker").commits()
   end,
   list_changed_files = function()
-    require("octo.telescope.menu").files()
+    require("octo.picker").changed_files()
   end,
   show_pr_diff = function()
     require("octo.commands").show_pr_diff()
