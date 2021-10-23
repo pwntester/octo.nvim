@@ -286,6 +286,30 @@ function M.start_review()
   if pull_request then
     local current_review = Review:new(pull_request)
     current_review:start()
+  else
+    -- gh pr status --json number
+    gh.run {
+      args = { "pr", "status", "--json", "number" },
+      cb = function(output)
+        local resp = vim.fn.json_decode(output)
+        if resp.currentBranch and resp.currentBranch.number then
+          print(vim.inspect(resp))
+          local Rev = require("octo.reviews.rev").Rev
+          local PullRequest = require("octo.model.pull-request").PullRequest
+          pull_request = PullRequest:new {
+            bufnr = bufnr,
+            repo = buffer.repo,
+            number = buffer.number,
+            id = buffer.node.id,
+            left = Rev:new(buffer.node.baseRefOid),
+            right = Rev:new(buffer.node.headRefOid),
+            files = buffer.node.files.nodes,
+          }
+          local current_review = Review:new(pull_request)
+          current_review:start()
+        end
+      end
+    }
   end
 end
 
