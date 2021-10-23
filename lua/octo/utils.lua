@@ -993,12 +993,15 @@ function M.get_pull_request_for_current_branch(cb)
             if stderr and not M.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
-              local resp = M.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", "pullRequest"))
+              local resp = M.aggregate_pages(
+                output,
+                string.format("data.repository.%s.timelineItems.nodes", "pullRequest")
+              )
               local obj = resp.data.repository.pullRequest
               local Rev = require("octo.reviews.rev").Rev
               local PullRequest = require("octo.model.pull-request").PullRequest
               local pull_request = PullRequest:new {
-                repo = owner.."/"..name,
+                repo = owner .. "/" .. name,
                 number = number,
                 id = id,
                 left = Rev:new(obj.baseRefOid),
@@ -1010,7 +1013,7 @@ function M.get_pull_request_for_current_branch(cb)
           end,
         }
       end
-    end
+    end,
   }
 end
 
