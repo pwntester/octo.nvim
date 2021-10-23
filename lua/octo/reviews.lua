@@ -289,24 +289,39 @@ function M.start_review()
   else
     -- gh pr status --json number
     gh.run {
-      args = { "pr", "status", "--json", "number" },
+      args = { "pr", "status", "--json", "number,headRepositoryOwner,headRepository" },
       cb = function(output)
-        local resp = vim.fn.json_decode(output)
-        if resp.currentBranch and resp.currentBranch.number then
-          print(vim.inspect(resp))
-          local Rev = require("octo.reviews.rev").Rev
-          local PullRequest = require("octo.model.pull-request").PullRequest
-          pull_request = PullRequest:new {
-            bufnr = bufnr,
-            repo = buffer.repo,
-            number = buffer.number,
-            id = buffer.node.id,
-            left = Rev:new(buffer.node.baseRefOid),
-            right = Rev:new(buffer.node.headRefOid),
-            files = buffer.node.files.nodes,
+        local pr = vim.fn.json_decode(output)
+        if pr.currentBranch and pr.currentBranch.number then
+          print(vim.inspect(pr))
+          local number = pr.currentBranch.number
+          local id = pr.currentBranch.id
+          local owner = pr.currentBranch.headRepositoryOwner.login
+          local name = pr.currentBranch.headRepository.name
+          local query = graphql("pull_request_query", owner, name, number)
+          gh.run {
+            args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+            cb = function(output, stderr)
+              if stderr and not utils.is_blank(stderr) then
+                vim.api.nvim_err_writeln(stderr)
+              elseif output then
+                local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", "pullRequest"))
+                local obj = resp.data.repository.pullRequest
+                local Rev = require("octo.reviews.rev").Rev
+                local PullRequest = require("octo.model.pull-request").PullRequest
+                pull_request = PullRequest:new {
+                  repo = owner.."/"..name,
+                  number = number,
+                  id = id,
+                  left = Rev:new(obj.baseRefOid),
+                  right = Rev:new(obj.headRefOid),
+                  files = obj.files.nodes,
+                }
+                local current_review = Review:new(pull_request)
+                current_review:start()
+              end
+            end,
           }
-          local current_review = Review:new(pull_request)
-          current_review:start()
         end
       end
     }
