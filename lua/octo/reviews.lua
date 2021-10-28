@@ -286,6 +286,11 @@ function M.start_review()
   if pull_request then
     local current_review = Review:new(pull_request)
     current_review:start()
+  else
+    pull_request = utils.get_pull_request_for_current_branch(function(pull_request)
+      local current_review = Review:new(pull_request)
+      current_review:start()
+    end)
   end
 end
 
@@ -294,6 +299,11 @@ function M.resume_review()
   if pull_request then
     local current_review = Review:new(pull_request)
     current_review:resume()
+  else
+    pull_request = utils.get_pull_request_for_current_branch(function(pull_request)
+      local current_review = Review:new(pull_request)
+      current_review:resume()
+    end)
   end
 end
 

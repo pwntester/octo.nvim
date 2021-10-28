@@ -976,4 +976,45 @@ function M.notify(msg, kind)
   vim.notify(msg, kind, { title = "Octo.nvim" })
 end
 
+function M.get_pull_request_for_current_branch(cb)
+  gh.run {
+    args = { "pr", "status", "--json", "id,number,headRepositoryOwner,headRepository" },
+    cb = function(output)
+      local pr = vim.fn.json_decode(output)
+      if pr.currentBranch and pr.currentBranch.number then
+        local number = pr.currentBranch.number
+        local id = pr.currentBranch.id
+        local owner = pr.currentBranch.headRepositoryOwner.login
+        local name = pr.currentBranch.headRepository.name
+        local query = graphql("pull_request_query", owner, name, number)
+        gh.run {
+          args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+          cb = function(output, stderr)
+            if stderr and not M.is_blank(stderr) then
+              vim.api.nvim_err_writeln(stderr)
+            elseif output then
+              local resp = M.aggregate_pages(
+                output,
+                string.format("data.repository.%s.timelineItems.nodes", "pullRequest")
+              )
+              local obj = resp.data.repository.pullRequest
+              local Rev = require("octo.reviews.rev").Rev
+              local PullRequest = require("octo.model.pull-request").PullRequest
+              local pull_request = PullRequest:new {
+                repo = owner .. "/" .. name,
+                number = number,
+                id = id,
+                left = Rev:new(obj.baseRefOid),
+                right = Rev:new(obj.headRefOid),
+                files = obj.files.nodes,
+              }
+              cb(pull_request)
+            end
+          end,
+        }
+      end
+    end,
+  }
+end
+
 return M
