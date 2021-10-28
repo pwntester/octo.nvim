@@ -36,7 +36,7 @@ function M.get_user_name()
   if name then
     return name
   else
-    require("utils").notify(stderr, 2)
+    require("octo.utils").notify(stderr, 2)
   end
 end
 
