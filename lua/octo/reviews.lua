@@ -551,7 +551,7 @@ function M.show_pending_comments()
     utils.notify("No pending comments found", 2)
     return
   else
-    require("octo.telescope.menu").pending_threads(pending_threads)
+    require("octo.picker").pending_threads(pending_threads)
   end
 end
 

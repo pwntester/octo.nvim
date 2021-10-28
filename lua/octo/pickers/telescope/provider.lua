@@ -5,13 +5,13 @@ local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local conf = require("telescope.config").values
 local sorters = require "telescope.sorters"
-local previewers = require "octo.telescope.previewers"
 local reviews = require "octo.reviews"
 local gh = require "octo.gh"
 local utils = require "octo.utils"
 local navigation = require "octo.navigation"
 local graphql = require "octo.graphql"
-local entry_maker = require "octo.telescope.entry_maker"
+local previewers = require "octo.pickers.telescope.previewers"
+local entry_maker = require "octo.pickers.telescope.entry_maker"
 
 local M = {}
 
@@ -991,5 +991,23 @@ function M.repos(opts)
     end,
   }
 end
+
+M.picker = {
+  issues = M.issues,
+  prs = M.pull_requests,
+  gists = M.gists,
+  commits = M.commits,
+  changed_files = M.changed_files,
+  pending_threads = M.pending_threads,
+  project_cards = M.select_project_card,
+  project_columns = M.select_target_project_column,
+  labels = M.select_label,
+  assigned_labels = M.select_assigned_label,
+  users = M.select_user,
+  assignees = M.select_assignee,
+  repos = M.repos,
+  live_issues = M.issue_search,
+  live_prs = M.pull_request_search,
+}
 
 return M
