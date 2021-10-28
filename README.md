@@ -384,6 +384,20 @@ Each text-object that makes use of a bubble (except labels) do use their own hig
 
 The title, body and comments of an issue or PR are special as they get special highlighting applied and is an editable section. Due to the latter property it gets the `OctoEditable` highlighting via a special signs `linehl` setting. This takes precedence over the buffer internal highlights. To only get the background highlighted by the editable section, set `OctoEditable` to a highlight with a background color definition only.
 
+**Why am I getting authentication error from gh?**
+
+This means that are either using a GITHUB_TOKEN to authenticate or `gh` is not authenticated.
+
+In case of the former, run:
+
+```
+GITHUB_TOKEN= gh auth login
+```
+
+... and choose a method to authorise access for `gh`.
+
+`gh` must store the creds so it can work in a subshell.
+
 ## ✋ Contributing
 
 Contributions are always welcome!
