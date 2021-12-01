@@ -11,10 +11,10 @@ local reviews = require "octo.reviews"
 require "octo.completion"
 require "octo.folds"
 
-local M = {}
-
 _G.octo_repo_issues = {}
 _G.octo_buffers = {}
+
+local M = {}
 
 function M.setup(user_config)
   signs.setup()
