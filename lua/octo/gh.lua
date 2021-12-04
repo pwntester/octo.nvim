@@ -20,6 +20,8 @@ local env_vars = {
   LocalAppData = vim.env["LocalAppData"],
   HOME = vim.env["HOME"],
   NO_COLOR = 1,
+  http_proxy = vim.env["http_proxy"],
+  https_proxy = vim.env['https_proxy'],
 }
 
 -- uses GH to get the name of the authenticated user
