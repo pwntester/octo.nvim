@@ -23,10 +23,6 @@ local dropdown_opts = require("telescope.themes").get_dropdown {
   prompt_title = false,
   results_title = false,
   previewer = false,
-  borderchars = {
-    results = { "▔", "▕", "▁", "▏", "🭽", "🭾", "🭿", "🭼" },
-    prompt = { "▔", "▕", "▁", "▏", "🭽", "🭾", "🭿", "🭼" },
-  },
 }
 
 local function get_filter(opts, kind)
@@ -408,57 +404,36 @@ function M.issue_search(opts)
     utils.notify("Cannot find repo", 2)
     return
   end
-  local queue = {}
+  local get_issue_requester = function()
+    return function(prompt)
+      if utils.is_blank(prompt) then
+        return {}
+      end
+      local query = graphql("search_issues_query", opts.repo, prompt)
+      local output = gh.run {
+        args = { "api", "graphql", "-f", string.format("query=%s", query) },
+        mode = "sync",
+      }
+      if output then
+        local resp = vim.fn.json_decode(output)
+        local results = {}
+        for _, issue in ipairs(resp.data.search.nodes) do
+          table.insert(results, issue)
+        end
+        return results
+      else
+        return {}
+      end
+    end
+  end
   opts.preview_title = opts.preview_title or ""
   opts.prompt_title = opts.prompt_title or ""
   opts.results_title = opts.results_title or ""
   pickers.new(opts, {
-    finder = function(prompt, process_result, process_complete)
-      if not prompt or prompt == "" then
-        return nil
-      end
-      prompt = prompt
-
-      -- skip requests for empty prompts
-      if utils.is_blank(prompt) then
-        process_complete()
-        return
-      end
-
-      -- store prompt in request queue
-      table.insert(queue, prompt)
-
-      -- defer api call so that finder finishes and takes more keystrokes
-      vim.defer_fn(function()
-        -- do not process response, if this is not the last request we sent
-        if prompt ~= queue[#queue] then
-          process_complete()
-          return
-        end
-
-        local query = graphql("search_issues_query", opts.repo, prompt)
-        gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
-            -- do not process response, if this is not the last request we sent
-            if prompt ~= queue[#queue] then
-              process_complete()
-              return
-            end
-
-            if stderr and not utils.is_blank(stderr) then
-              utils.notify(stderr, 2)
-            elseif output then
-              local resp = vim.fn.json_decode(output)
-              for _, issue in ipairs(resp.data.search.nodes) do
-                process_result(entry_maker.gen_from_issue(6)(issue))
-              end
-              process_complete()
-            end
-          end,
-        }
-      end, 500)
-    end,
+    finder = finders.new_dynamic {
+      entry_maker = entry_maker.gen_from_issue(6),
+      fn = get_issue_requester(),
+    },
     sorter = conf.generic_sorter(opts),
     previewer = previewers.issue.new(opts),
     attach_mappings = function(_, map)
@@ -482,57 +457,36 @@ function M.pull_request_search(opts)
     utils.notify("Cannot find repo", 2)
     return
   end
-  local queue = {}
+  local get_pr_requester = function()
+    return function(prompt)
+      if utils.is_blank(prompt) then
+        return {}
+      end
+      local query = graphql("search_pull_requests_query", opts.repo, prompt)
+      local output = gh.run {
+        args = { "api", "graphql", "-f", string.format("query=%s", query) },
+        mode = "sync",
+      }
+      if output then
+        local resp = vim.fn.json_decode(output)
+        local results = {}
+        for _, pull_request in ipairs(resp.data.search.nodes) do
+          table.insert(results, pull_request)
+        end
+        return results
+      else
+        return {}
+      end
+    end
+  end
   opts.preview_title = opts.preview_title or ""
   opts.prompt_title = opts.prompt_title or ""
   opts.results_title = opts.results_title or ""
   pickers.new(opts, {
-    finder = function(prompt, process_result, process_complete)
-      if not prompt or prompt == "" then
-        return nil
-      end
-      prompt = prompt
-
-      -- skip requests for empty prompts
-      if utils.is_blank(prompt) then
-        process_complete()
-        return
-      end
-
-      -- store prompt in request queue
-      table.insert(queue, prompt)
-
-      -- defer api call so that finder finishes and takes more keystrokes
-      vim.defer_fn(function()
-        -- do not process response, if this is not the last request we sent
-        if prompt ~= queue[#queue] then
-          process_complete()
-          return
-        end
-
-        local query = graphql("search_pull_requests_query", opts.repo, prompt)
-        gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
-            -- do not process response, if this is not the last request we sent
-            if prompt ~= queue[#queue] then
-              process_complete()
-              return
-            end
-
-            if stderr and not utils.is_blank(stderr) then
-              utils.notify(stderr, 2)
-            elseif output then
-              local resp = vim.fn.json_decode(output)
-              for _, pull_request in ipairs(resp.data.search.nodes) do
-                process_result(entry_maker.gen_from_pull_request(6)(pull_request))
-              end
-              process_complete()
-            end
-          end,
-        }
-      end, 500)
-    end,
+    finder = finders.new_dynamic {
+      entry_maker = entry_maker.gen_from_pull_request(6),
+      fn = get_pr_requester(),
+    },
     sorter = conf.generic_sorter(opts),
     previewer = previewers.pull_request.new(opts),
     attach_mappings = function(_, map)
