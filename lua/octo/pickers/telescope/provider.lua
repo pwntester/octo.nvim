@@ -764,94 +764,68 @@ function M.select_user(cb)
     height = 15,
   }
 
-  local queue = {}
-  pickers.new(opts, {
-    finder = function(prompt, process_result, process_complete)
-      if not prompt or prompt == "" then
-        return nil
+  --local queue = {}
+  local function get_user_requester()
+    return function(prompt)
+      -- skip empty queries
+      if not prompt or prompt == "" or utils.is_blank(prompt) then
+        return {}
       end
-      prompt = "repos:>10 " .. prompt
-
-      -- skip requests for empty prompts
-      if utils.is_blank(prompt) then
-        process_complete()
-        return
-      end
-
-      -- store prompt in request queue
-      table.insert(queue, prompt)
-
-      -- defer api call so that finder finishes and takes more keystrokes
-      vim.defer_fn(function()
-        -- do not process response, if this is not the last request we sent
-        if prompt ~= queue[#queue] then
-          process_complete()
-          return
+      local query = graphql("user_query", prompt)
+      local output = gh.run {
+        args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+        mode = "sync",
+      }
+      if output then
+        local users = {}
+        local orgs = {}
+        local responses = utils.get_pages(output)
+        for _, resp in ipairs(responses) do
+          for _, user in ipairs(resp.data.search.nodes) do
+            if not user.teams then
+              -- regular user
+              if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
+                users[user.login] = {
+                  id = user.id,
+                  login = user.login,
+                }
+              end
+            elseif user.teams and user.teams.totalCount > 0 then
+              -- organization, collect all teams
+              if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
+                orgs[user.login] = {
+                  id = user.id,
+                  login = user.login,
+                  teams = user.teams.nodes,
+                }
+              else
+                vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+              end
+            end
+          end
         end
 
-        local query = graphql("user_query", prompt)
-        gh.run {
-          args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
-            if stderr and not utils.is_blank(stderr) then
-              utils.notify(stderr, 2)
-            elseif output then
-              -- do not process response, if this is not the last request we sent
-              if prompt ~= queue[#queue] then
-                process_complete()
-                return
-              end
-              local users = {}
-              local orgs = {}
-              local responses = utils.get_pages(output)
-              for _, resp in ipairs(responses) do
-                for _, user in ipairs(resp.data.search.nodes) do
-                  if not user.teams then
-                    -- regular user
-                    if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
-                      users[user.login] = {
-                        value = user.id,
-                        text = user.login,
-                        display = user.login,
-                        ordinal = user.login,
-                      }
-                    end
-                  elseif user.teams and user.teams.totalCount > 0 then
-                    -- organization, collect all teams
-                    if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
-                      orgs[user.login] = {
-                        value = user.id,
-                        text = user.login,
-                        display = user.login,
-                        ordinal = user.login,
-                        teams = user.teams.nodes,
-                      }
-                    else
-                      vim.list_extend(orgs[user.login].teams, user.teams.nodes)
-                    end
-                  end
-                end
-              end
+        local results = {}
+        -- process orgs with teams
+        for _, user in pairs(users) do
+          table.insert(results, user)
+        end
+        for _, org in pairs(orgs) do
+          org.login = string.format("%s (%d)", org.login, #org.teams)
+          table.insert(results, org)
+        end
+        return results
+      else
+        return {}
+      end
+    end
+  end
 
-              -- process users
-              for _, user in pairs(users) do
-                process_result(user)
-              end
-
-              -- process orgs with teams
-              for _, org in pairs(orgs) do
-                org.display = string.format("%s (%d)", org.text, #org.teams)
-                process_result(org)
-              end
-
-              -- call it done for the day
-              process_complete()
-              return
-            end
-          end,
-        }
-      end, 500)
-    end,
+  pickers.new(opts, {
+    finder = finders.new_dynamic {
+      entry_maker = entry_maker.gen_from_user(),
+      fn = get_user_requester(),
+    },
     sorter = sorters.get_fuzzy_file(opts),
     attach_mappings = function()
       actions.select_default:replace(function(prompt_bufnr)

@@ -1370,6 +1370,7 @@ function M.add_user(subject)
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(bufnr, obj, true)
+            vim.cmd [[stopinsert]]
           end)
         end
       end,
@@ -1389,7 +1390,7 @@ function M.remove_assignee()
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  picker.picker_assignees(function(user_id)
+  picker.assignees(function(user_id)
     local query = graphql("remove_assignees_mutation", iid, user_id)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
