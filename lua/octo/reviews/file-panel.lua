@@ -116,8 +116,8 @@ function FilePanel:open()
 end
 
 function FilePanel:close()
-  if self:is_open() then
-    vim.api.nvim_win_hide(self.winid)
+  if self:is_open() and #vim.api.nvim_tabpage_list_wins(0) > 1 then
+    pcall(vim.api.nvim_win_hide, self.winid)
   end
 end
 

@@ -1,3 +1,5 @@
+local config = require "octo.config"
+
 local M = {}
 
 local function get_hl_attr(hl_group_name, attr)
@@ -19,24 +21,13 @@ local function get_fg(hl_group_name)
 end
 
 local function get_colors()
-  return {
-    white = "#ffffff",
-    grey = "#d7dadf",
-    black = "#000000",
-    red = "#fdb8c0",
-    dark_red = "#da3633",
-    green = "#acf2bd",
-    dark_green = "#238636",
-    yellow = "#d3c846",
-    dark_yellow = "#735c0f",
-    blue = "#58A6FF",
-    dark_blue = "#0366d6",
-    purple = "#6f42c1",
-  }
+  local conf = config.get_config()
+  return conf.colors
 end
 
 local function get_hl_groups()
   local colors = get_colors()
+  local float_bg = M.get_background_color_of_highlight_group "NormalFloat"
 
   return {
     Green = { fg = colors.dark_green },
@@ -45,11 +36,19 @@ local function get_hl_groups()
     Yellow = { fg = colors.yellow },
     Blue = { fg = colors.blue },
     Grey = { fg = colors.grey },
-    BubbleGreen = { fg = colors.green, bg = colors.dark_green },
-    BubbleRed = { fg = colors.red, bg = colors.dark_red },
+
+    GreenFloat = { fg = colors.dark_green, bg = float_bg },
+    RedFloat = { fg = colors.dark_red, bg = float_bg },
+    PurpleFloat = { fg = colors.purple, bg = float_bg },
+    YellowFloat = { fg = colors.yellow, bg = float_bg },
+    BlueFloat = { fg = colors.blue, bg = float_bg },
+    GreyFloat = { fg = colors.grey, bg = float_bg },
+
+    BubbleGreen = { fg = colors.grey, bg = colors.dark_green },
+    BubbleRed = { fg = colors.grey, bg = colors.dark_red },
     BubblePurple = { fg = colors.white, bg = colors.purple },
-    BubbleYellow = { fg = colors.yellow, bg = colors.dark_yellow },
-    BubbleBlue = { fg = colors.blue, bg = colors.dark_blue },
+    BubbleYellow = { fg = colors.grey, bg = colors.dark_yellow },
+    BubbleBlue = { fg = colors.grey, bg = colors.blue },
     BubbleDelimiterGreen = { fg = colors.dark_green },
     BubbleDelimiterRed = { fg = colors.dark_red },
     BubbleDelimiterYellow = { fg = colors.dark_yellow },
@@ -83,9 +82,8 @@ local function get_hl_links()
     StatusDeleted = "OctoRed",
     StatusBroken = "OctoRed",
     Dirty = "OctoRed",
-    IssueId = "Question",
+    IssueId = "NormalFlat",
     IssueTitle = "PreProc",
-    Empty = "Comment",
     Float = "NormalFloat",
     TimelineItemHeading = "Comment",
     TimelineMarker = "Identifier",
@@ -95,6 +93,7 @@ local function get_hl_links()
     DetailsValue = "Identifier",
     MissingDetails = "Comment",
     Editable = "NormalFloat",
+    Empty = "NormalFloat",
     Bubble = "NormalFloat",
     User = "OctoBubble",
     UserViewer = "OctoViewer",
@@ -105,15 +104,25 @@ local function get_hl_links()
     DiffstatAdditions = "OctoGreen ",
     DiffstatDeletions = "OctoRed ",
     DiffstatNeutral = "OctoGrey",
+
     StateOpen = "OctoGreen",
     StateClosed = "OctoRed",
     StateMerged = "OctoPurple",
     StatePending = "OctoYellow",
-    StateApproved = "OctoStateOpen",
-    StateChangesRequested = "OctoStateClosed",
-    StateCommented = "Normal",
-    StateDismissed = "OctoStateClosed",
-    StateSubmitted = "OctoBubbleGreen",
+    StateApproved = "OctoGreen",
+    StateChangesRequested = "OctoRed",
+    StateDismissed = "OctoRed",
+    StateCommented = "OctoBlue",
+    StateSubmitted = "OctoGreen",
+
+    StateDismissedBubble = "OctoBubbleRed",
+    StateCommentedBubble = "OctoBubbleBlue",
+    StateSubmittedBubble = "OctoBubbleGreen",
+
+    StateOpenFloat = "OctoGreenFloat",
+    StateClosedFloat = "OctoRedFloat",
+    StateMergedFloat = "OctoPurpleFloat",
+    StateDraftFloat = "OctoGreyFloat",
   }
 end
 

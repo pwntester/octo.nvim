@@ -183,13 +183,13 @@ function M.write_state(bufnr, state, number)
   -- title virtual text
   local title_vt = {
     { tostring(number), "OctoIssueId" },
-    { string.format(" [%s] ", state), utils.state_hl_map[state] },
+    { string.format(" [%s] ", state), utils.state_hl_map[state] .. "Float" },
   }
 
   -- PR virtual text
   if buffer and buffer:isPullRequest() then
     if buffer.node.isDraft then
-      table.insert(title_vt, { "[DRAFT] ", "OctoIssueId" })
+      table.insert(title_vt, { "[DRAFT] ", "OctoStateDraftFloat" })
     end
   end
   vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
@@ -469,11 +469,14 @@ function M.write_comment(bufnr, comment, kind, line)
 
   if kind == "PullRequestReview" then
     -- Review top-level comments
-    local state_bubble = bubbles.make_bubble(utils.state_msg_map[comment.state], utils.state_hl_map[comment.state])
+    local state_bubble = bubbles.make_bubble(
+      utils.state_msg_map[comment.state],
+      utils.state_hl_map[comment.state] .. "Bubble"
+    )
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
     --vim.list_extend(header_vt, author_bubble)
-    table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
+    table.insert(header_vt, { comment.author.login .. " ", comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     vim.list_extend(header_vt, state_bubble)
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
     if not comment.viewerCanUpdate then
@@ -483,7 +486,7 @@ function M.write_comment(bufnr, comment, kind, line)
     -- Review thread comments
     local state_bubble = bubbles.make_bubble(
       comment.state:lower(),
-      utils.state_hl_map[comment.state],
+      utils.state_hl_map[comment.state] .. "Bubble",
       { margin_width = 1 }
     )
     table.insert(

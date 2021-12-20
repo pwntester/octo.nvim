@@ -272,7 +272,7 @@ function Review:submit(event)
         utils.notify(stderr, 2)
       elseif output then
         utils.notify("Review was submitted successfully!", 1)
-        vim.api.nvim_win_close(winid, 1)
+        pcall(vim.api.nvim_win_close, winid, 0)
         self.layout:close()
       end
     end,

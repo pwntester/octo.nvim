@@ -65,7 +65,7 @@ function Layout:close()
     file:destroy()
   end
 
-  self.file_panel:destroy()
+  --self.file_panel:destroy()
 
   if self.tabpage and vim.api.nvim_tabpage_is_valid(self.tabpage) then
     local pagenr = vim.api.nvim_tabpage_get_number(self.tabpage)
