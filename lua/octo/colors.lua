@@ -62,6 +62,7 @@ local function get_hl_groups()
     FilePanelCounter = { fg = get_fg "Identifier" or colors.purple, gui = "bold" },
     NormalFront = { fg = get_fg "Normal" or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
+    Editable = { bg = float_bg },
   }
 end
 
@@ -97,7 +98,6 @@ local function get_hl_links()
     DetailsLabel = "Title",
     DetailsValue = "Identifier",
     MissingDetails = "Comment",
-    Editable = "NormalFloat",
     Empty = "NormalFloat",
     Bubble = "NormalFloat",
     User = "OctoBubble",

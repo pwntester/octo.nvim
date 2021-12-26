@@ -348,7 +348,7 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 | *OctoDetailsValue*          | Identifier      |
 | *OctoDiffHunkPosition*      | NormalFloat     |
 | *OctoCommentLine*           | TabLineSel      |
-| *OctoEditable*              | NormalFloat     |
+| *OctoEditable*              | NormalFloat bg  |
 | *OctoViewer*                | GitHub color    |
 | *OctoBubble*                | NormalFloat     |
 | *OctoBubbleGreen*           | GitHub color    |

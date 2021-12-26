@@ -580,9 +580,9 @@ function M.do_update_comment(buffer, comment)
             review:update_threads(threads)
           end
         elseif comment.kind == "PullRequestReview" then
-          comment = resp.data.updatePullRequestReview.pullRequestReview
+          resp_comment = resp.data.updatePullRequestReview.pullRequestReview
         end
-        if vim.fn.trim(comment.body) == vim.fn.trim(resp_comment.body) then
+        if resp_comment and vim.fn.trim(comment.body) == vim.fn.trim(resp_comment.body) then
           local comments = buffer.commentsMetadata
           for i, c in ipairs(comments) do
             if c.id == comment.id then
