@@ -168,20 +168,18 @@ function OctoBuffer:render_issue()
       end
 
       -- skip reviews with no threads and empty body
-      if #threads == 0 and utils.is_blank(item.body) then
-        goto continue
-      end
+      if #threads > 0 or not utils.is_blank(item.body) then
+        -- print review header and top level comment
+        local review_start, review_end = writers.write_comment(self.bufnr, item, "PullRequestReview")
 
-      -- print review header and top level comment
-      local review_start, review_end = writers.write_comment(self.bufnr, item, "PullRequestReview")
-
-      -- print threads
-      if #threads > 0 then
-        review_end = writers.write_threads(self.bufnr, threads, review_start, review_end)
-        folds.create(self.bufnr, review_start + 1, review_end, true)
+        -- print threads
+        if #threads > 0 then
+          review_end = writers.write_threads(self.bufnr, threads, review_start, review_end)
+          folds.create(self.bufnr, review_start + 1, review_end, true)
+        end
+        writers.write_block(self.bufnr, { "" })
+        prev_is_event = false
       end
-      writers.write_block(self.bufnr, { "" })
-      prev_is_event = false
     elseif item.__typename == "AssignedEvent" then
       writers.write_assigned_event(self.bufnr, item, prev_is_event)
       prev_is_event = true
@@ -211,7 +209,6 @@ function OctoBuffer:render_issue()
       writers.write_review_dismissed_event(self.bufnr, item, "removed", prev_is_event)
       prev_is_event = true
     end
-    ::continue::
   end
   if prev_is_event then
     writers.write_block(self.bufnr, { "" })
