@@ -398,6 +398,15 @@ GITHUB_TOKEN= gh auth login
 
 `gh` must store the creds so it can work in a subshell.
 
+**Can I use treesitter markdown parser with octo buffers?**
+
+Just add the following lines to your TreeSitter config:
+
+```lua
+local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
+parser_config.markdown.used_by = "octo"
+```
+
 ## ✋ Contributing
 
 Contributions are always welcome!
