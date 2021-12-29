@@ -146,9 +146,16 @@ function M.get_remote_name()
   local conf = config.get_config()
   local candidates = conf.default_remote
   for _, candidate in ipairs(candidates) do
-    local cmd = string.format("git remote get-url %s 2>/dev/null", candidate)
-    local url = string.gsub(vim.fn.system(cmd), "%s+", "")
-    if not M.is_blank(url) then
+    local job = Job:new {
+      command = "git",
+      args = { "remote", "get-url", candidate },
+    }
+    job:sync()
+
+    local url = table.concat(job:result(), "\n")
+    local stderr = table.concat(job:stderr_result(), "\n")
+
+    if M.is_blank(stderr) then
       local owner, name
       if #vim.split(url, "://") == 2 then
         owner = vim.split(url, "/")[#vim.split(url, "/") - 1]
