@@ -60,6 +60,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 ## ⚡️Requirements
 
 - Install [GitHub CLI](https://cli.github.com/)
+- Install [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 - Install [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons)
 
@@ -68,16 +69,23 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 Use your favourite plugin manager to install it. eg:
 
 ```lua
-use {'pwntester/octo.nvim', config=function()
-  require"octo".setup()
-end}
+use {
+  'pwntester/octo.nvim',
+  requires = {
+    'nvim-lua/plenary.nvim',
+    'nvim-telescope/telescope.nvim',
+    'kyazdani42/nvim-web-devicons',
+  },
+  config = function ()
+    require"octo".setup()
+  end
+}
 ```
 
 ## ⚙️ Configuration
 
 ```lua
-use {'pwntester/octo.nvim', config=function()
-  require"octo".setup({
+require"octo".setup({
   default_remote = {"upstream", "origin"}; -- order to try remotes
   reaction_viewer_hint_icon = "";         -- marker for user reactions
   user_icon = " ";                        -- user icon
@@ -202,7 +210,6 @@ use {'pwntester/octo.nvim', config=function()
     }
   }
 })
-end}
 ```
 
 ## 🚀 Usage
