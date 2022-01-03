@@ -1,0 +1,307 @@
+*octo.txt*  Octo.nvim
+
+Author:  Alvaro Muñoz <https://github.com/pwntester>
+License: MIT License
+
+
+INTRODUCTION                                    *octo*
+
+Edit and review GitHub issues and pull requests from the comfort of your
+favorite editor.
+
+Use `gO` to access the contents of this helpfile.
+
+
+USAGE                                           *octo-usage*
+
+Edit the issue title, body, or comments, as a regular buffer and use `:w(rite)`
+to sync the issue with GitHub.
+
+
+COMMANDS                                        *octo-commands*
+
+There is only one main command: `Octo <object> <action> [args]` command. If no
+command is passed, the argument to `Octo` is treated as URL from where an
+issue or PR number and repo are extracted.
+
+Mappings for many of the commands can be easily configured - see |octo-config|.
+
+See |octo-command-examples| for examples.
+
+
+:Octo issue [action] {args}                     *octo-commands-issue*
+
+  close                 Close the current issue.
+  reopen                Reopen the current issue.
+  create {repo}         Creates a new issue in the current or specified repo.
+  edit [number] {repo}  Edits issue/PR with the given number in the current or
+                        specified repo.
+  list [repo] {key=val} Lists all issues satisfying a given filter.
+                        In-menu mappings: 
+                          <CR>    Edit issue.
+                          <C-b>   Open issue in browser.
+                          <C-y>   Copy URL to system clipboard.
+                        Available filter keys: see <https://docs.github.com/en/graphql/reference/input-objects#issuefilters>
+  search                Live issue search.
+  reload                Reload issue. Same as doing `e!`.
+  browser               Open current issue in the browser.
+  url                   Copies the URL of the currently opened issue to the
+                        system clipboard.
+
+
+:Octo pr [action] {args}                        *octo-commands-pr*
+
+  list [repo] {key=val} Lists all PRs satisfying a given filter.
+                        In-menu mappings: 
+                          <CR>    Edit PR.
+                          <C-b>   Open PR in browser.
+                          <C-o>   Checkout PR.
+                          <C-y>   Copy URL to system clipboard.
+                        Available filter keys: see <https://docs.github.com/en/graphql/reference/input-objects#issuefilters>
+  search                Live PR search.
+  edit [number] {repo}  Edits issue/PR with the given number in the current or
+                        specified repo. 
+  reopen                Reopen the current PR.
+  close                 Close the current PR.
+  checkout              Checkout the PR.
+  commits               List all PR commits.
+  changes               Show all PR changes (diff hunks).
+  diff                  Show PR diff.
+  merge [strategy]      Merge the current PR using the specified strategy.
+                        Strategies: `commit`, `rebase`, `squash`, `delete`
+  ready                 Mark a draft PR as ready for review.          
+  checks                Show the status of all checks run on the PR.
+  reload                Reload PR. Same as doing `e!`.
+  browser               Open current PR in the browser.
+  url                   Copies the URL of the currently opened PR to the
+                        system clipboard.
+
+
+:Octo repo [action]                             *octo-commands-repo*
+
+  list                  Lists repos the user owns, contributes, or belongs to.
+  fork                  Fork repo.
+  browser               Open current PR in the browser.
+  url                   Copies the URL of the current repo to the system 
+                        clipboard.
+
+
+:Octo gist [action]                             *octo-commands-gist*
+
+  list [repo] {key=val} Lists user gists.
+                        In-menu mappings: 
+                          <CR>    Append Gist to buffer.
+                        Available filter keys: `repo`, `public` `secret`.
+
+
+:Octo comment [action]                          *octo-commands-comment*
+
+  add                   Add a new comment.
+  delete                Delete a comment.
+
+
+:Octo thread [action]                           *octo-commands-thread*
+
+  resolve               Mark a review thread as resolved.
+  unresolve             Mark a review thread as unresolved.
+
+
+:Octo label [action]                            *octo-commands-label*
+
+  add                   Add a label from the available label menu.
+  remove                Remove a label.
+  create                Create a new label.
+
+
+:Octo assignees [action]                        *octo-commands-assignees*
+
+  add                   Assign a user.
+  remove                Unassign a user
+
+
+:Octo reviewer [action]                         *octo-commands-reviewer*
+
+  add                   Assign a PR reviewer.
+
+
+:Octo reaction [reaction]                       *octo-commands-reaction*
+
+  thumbs_up, +1         Add 👍 reaction.
+  thumbs_down, -1       Add 👎 reaction.
+  eyes                  Add 👀 reaction.
+  laugh                 Add 😄 reaction.
+  confused              Add 😕 reaction.
+  rocket                Add 🚀 reaction.
+  heart                 Add ❤️ reaction.
+  hooray, party, tada   Add 🎉 reaction.
+
+
+:Octo card [action]                             *octo-commands-card*
+
+  add                   Assign issue/PR to a project new card.
+  remove                Delete project card.
+  move                  Move project card to different project/column.
+
+
+:Octo review [action]                           *octo-commands-review*
+
+  start                 Start a new review.
+  submit                Submit the review.
+  resume                Edit a pending review for the current PR.
+  discard               Deletes a pending review for the current PR, if any.
+  comments              View pending review comments.
+
+
+COMMAND EXAMPLES                                *octo-command-examples*
+>
+  Octo https://github.com/pwntester/octo.nvim/issues/12
+  Octo issue create
+  Octo issue create pwntester/octo.nvim
+  Octo comment add
+  Octo reaction add hooray
+  Octo issue edit pwntester/octo.nvim 1
+  Octo issue edit 1
+  Octo issue list createdBy=pwntester
+  Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
+<
+
+
+CONFIGURATION                                   *octo-config*
+
+See the README (<https://github.com/pwntester/octo.nvim>) for an example
+configuration in Lua.
+
+
+PR REVIEW                                       *octo-pr-review*
+
+* Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
+* Start a review with `Octo review start` or resume a pending review with
+  `Octo review resume`
+* Quickfix will be populated with the PR changed files
+* Change quickfix entries with `]q` and `[q` or by selecting an entry in the
+  quickfix window
+* Add comments with `<space>ca` or suggestions with `<space>sa` on single or
+  multiple visual-selected lines
+  * A new buffer will appear in the alternate diff window. Cursor will be
+    positioned in the new buffer
+  * When ready, save the buffer to commit changes to GitHub
+  * Move back to the diff window and move the cursor, the thread buffer will
+    hide
+* Hold the cursor on a line with a comment to show a thread buffer with all
+  the thread comments
+  * To modify, delete, react or reply to a comment, move to the window
+    containing the thread buffer
+  * Perform any operations as if you were in a regular issue buffer
+* Review pending comments with `Octo review comments`
+  * Use <CR> to jump to the selected pending comment
+* When ready, submit the review with `Octo review submit`
+* A new float window will pop up. Enter the top level review comment and exit
+  to normal mode. Then press <C-m> to submit a comment, <C-a> to approve
+  it or <C-r> to request changes
+
+
+COMPLETION                                      *octo-completion*
+
+* Issue/PR number completion (#)
+* User completion (@)
+
+
+HIGHLIGHT GROUPS                                *octo-highlights*
+
+  Highlight group             Defaults to~
+
+  `OctoDirty`                   `ErrorMsg`         
+  `OctoIssueTitle`              `PreProc`          
+  `OctoIssueId`                 `Question`         
+  `OctoEmpty`                   `Comment`          
+  `OctoFloat`                   `NormalNC`         
+  `OctoDate`                    `Comment`          
+  `OctoSymbol`                  `Comment`          
+  `OctoTimelineItemHeading`     `Comment`          
+  `OctoDetailsLabel`            `Title`            
+  `OctoMissingDetails`          `Comment`          
+  `OctoDetailsValue`            `Identifier`       
+  `OctoDiffHunkPosition`        `NormalFloat`      
+  `OctoCommentLine`             `TabLineSel`       
+  `OctoEditable`                `NormalFloat` bg   
+  `OctoViewer`                  GitHub color     
+  `OctoBubble`                  `NormalFloat`      
+  `OctoBubbleGreen`             GitHub color     
+  `OctoBubbleRed`               GitHub color     
+  `OctoUser`                    `OctoBubble`       
+  `OctoUserViewer`              `OctoViewer`       
+  `OctoReaction`                `OctoBubble`       
+  `OctoReactionViewer`          `OctoViewer`       
+  `OctoPassingTest`             GitHub color     
+  `OctoFailingTest`             GitHub color     
+  `OctoPullAdditions`           GitHub color     
+  `OctoPullDeletions`           GitHub color     
+  `OctoPullModifications`       GitHub color     
+  `OctoStateOpen`               GitHub color     
+  `OctoStateClosed`             GitHub color     
+  `OctoStateMerge`              GitHub color     
+  `OctoStatePending`            GitHub color     
+  `OctoStateApproved`           `OctoStateOpen`    
+  `OctoStateChangesRequested`   `OctoStateClosed`  
+  `OctoStateCommented`          `Normal`           
+  `OctoStateDismissed`          `OctoStateClosed`  
+
+The term "GitHub color" refers to the colors used in the WebUI.
+
+The (addition) "viewer" means the user of the plugin or more precisely the
+user authenticated via the `gh` CLI tool used to retrieve the data from
+GitHub.
+
+
+FAQ                                             *octo-faq*
+
+How can I disable bubbles for XYZ?~
+
+  Each text-object that makes use of a bubble (except labels) do use their own
+  highlight group that linkes per default to the main bubble highlight group.
+  To disable most bubbles at once you can simply link `OctoBubble` to
+  `Normal`. To only disable them for a certain plain do the same for the
+  specific sub-group (e.g. `OctoUser`).
+
+Why do my issue titles or markdown syntax do not get highlighted properly?~
+
+  The title, body and comments of an issue or PR are special as they get
+  special highlighting applied and is an editable section. Due to the latter
+  property it gets the `OctoEditable` highlighting via a special signs
+  `linehl` setting. This takes precedence over the buffer internal highlights.
+  To only get the background highlighted by the editable section, set
+  `OctoEditable` to a highlight with a background color definition only.
+
+Why am I getting authentication error from gh?~
+
+  This means that are either using a GITHUB_TOKEN to authenticate or `gh` is
+  not authenticated.
+
+  In case of the former, run:
+>
+  GITHUB_TOKEN= gh auth login
+<  
+  ...and choose a method to authorise access for `gh`.
+  `gh` must store the creds so it can work in a subshell.
+
+Can I use treesitter markdown parser with octo buffers?~
+
+  Just add the following lines to your TreeSitter config:
+>
+  local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
+  parser_config.markdown.used_by = "octo"
+<
+
+
+CREDITS                                         *octo-credits*
+
+The PR review panel is heavily inspired by diffview.nvim: 
+<https://github.com/sindrets/diffview.nvim>
+
+
+LICENSE                                         *octo-license*
+
+MIT license.
+
+
+ vim:tw=78:et:ft=help:norl:
