@@ -13,6 +13,7 @@ local headers = {
 local env_vars = {
   PATH = vim.env["PATH"],
   GH_CONFIG_DIR = vim.env["GH_CONFIG_DIR"],
+  GITHUB_TOKEN = vim.env["GITHUB_TOKEN"],
   XDG_CONFIG_HOME = vim.env["XDG_CONFIG_HOME"],
   XDG_DATA_HOME = vim.env["XDG_DATA_HOME"],
   XDG_STATE_HOME = vim.env["XDG_STATE_HOME"],
