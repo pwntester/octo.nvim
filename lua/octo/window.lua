@@ -1,3 +1,4 @@
+local utils = require "octo.utils"
 local M = {}
 
 function M.create_border_header_float(opts)
@@ -139,6 +140,7 @@ function M.try_close_wins(...)
 end
 
 function M.create_popup(opts)
+  local current_bufnr = vim.api.nvim_get_current_buf()
   opts = opts or {}
   if not opts.width then
     opts.width = 30
@@ -158,7 +160,6 @@ function M.create_popup(opts)
     width = opts.width - 2 * border_width,
     height = opts.height - 2 * border_width,
   })
-  vim.lsp.util.close_preview_autocmd({ "CursorMoved", "CursorMovedI", "WinLeave" }, popup_winid)
 
   local border = {}
   table.insert(border, string.format("┌%s┐", string.rep("─", opts.width - 2 * border_width)))
@@ -182,7 +183,9 @@ function M.create_popup(opts)
   vim.api.nvim_win_set_option(border_winid, "signcolumn", "no")
   vim.api.nvim_win_set_option(border_winid, "number", false)
   vim.api.nvim_win_set_option(border_winid, "relativenumber", false)
-  vim.lsp.util.close_preview_autocmd({ "CursorMoved", "CursorMovedI", "WinLeave" }, border_winid)
+
+  utils.close_preview_autocmd({ "CursorMoved", "CursorMovedI", "WinLeave" }, border_winid, { current_bufnr })
+  utils.close_preview_autocmd({ "CursorMoved", "CursorMovedI", "WinLeave" }, popup_winid, { current_bufnr })
 end
 
 return M

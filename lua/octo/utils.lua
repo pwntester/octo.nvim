@@ -1024,4 +1024,41 @@ function M.get_pull_request_for_current_branch(cb)
   }
 end
 
+--- Creates autocommands to close a preview window when events happen.
+---
+---@param events table list of events
+---@param winnr number window id of preview window
+---@param bufnrs table list of buffers where the preview window will remain visible
+---@see |autocmd-events|
+function M.close_preview_autocmd(events, winnr, bufnrs)
+  local augroup = "preview_window_" .. winnr
+
+  -- close the preview window when entered a buffer that is not
+  -- the floating window buffer or the buffer that spawned it
+  vim.cmd(string.format(
+    [[
+    augroup %s
+      autocmd!
+      autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
+    augroup end
+  ]],
+    augroup,
+    winnr,
+    table.concat(bufnrs, ",")
+  ))
+
+  if #events > 0 then
+    vim.cmd(string.format(
+      [[
+      augroup %s
+        autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
+      augroup end
+    ]],
+      augroup,
+      table.concat(events, ","),
+      winnr
+    ))
+  end
+end
+
 return M
