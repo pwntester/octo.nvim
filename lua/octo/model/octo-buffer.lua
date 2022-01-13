@@ -281,11 +281,13 @@ function OctoBuffer:async_fetch_taggable_users()
   gh.run {
     args = { "api", string.format("repos/%s/contributors", self.repo) },
     cb = function(response)
-      local resp = vim.fn.json_decode(response)
-      for _, contributor in ipairs(resp) do
-        table.insert(users, contributor.login)
+      if not utils.is_blank(response) then
+        local resp = vim.fn.json_decode(response)
+        for _, contributor in ipairs(resp) do
+          table.insert(users, contributor.login)
+        end
+        self.taggable_users = users
       end
-      self.taggable_users = users
     end,
   }
 end
