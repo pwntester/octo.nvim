@@ -147,7 +147,7 @@ function Review:initiate()
           renamed = "R",
         }
 
-        local results = utils.get_pages(output)
+        local results = utils.get_flatten_pages(output)
         local files = {}
         for _, result in ipairs(results) do
           local entry = FileEntry:new {

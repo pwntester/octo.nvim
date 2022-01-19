@@ -488,6 +488,18 @@ function M.get_pages(text)
   return results
 end
 
+function M.get_flatten_pages(text)
+  local results = {}
+  local page_outputs = vim.split(text, "\n")
+  for _, page in ipairs(page_outputs) do
+    local decoded_page = vim.fn.json_decode(page)
+    for _, result in ipairs(decoded_page) do
+      table.insert(results, result)
+    end
+  end
+  return results
+end
+
 function M.aggregate_pages(text, aggregation_key)
   -- aggregation key can be at any level (eg: comments)
   -- take the first response and extend it with elements from the
