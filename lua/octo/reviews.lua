@@ -146,15 +146,8 @@ function Review:initiate()
           deleted = "D",
           renamed = "R",
         }
-        local results = {}
-        local page_outputs = vim.split(output, "\n")
-        for _, text in ipairs(page_outputs) do
-          local page_result = vim.fn.json_decode(text)
-          for _, result in ipairs(page_result) do
-            table.insert(results, result)
-          end
-        end
 
+        local results = utils.get_pages(output)
         local files = {}
         for _, result in ipairs(results) do
           local entry = FileEntry:new {
