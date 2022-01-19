@@ -508,4 +508,40 @@ function M.gen_from_gist()
   end
 end
 
+function M.gen_from_octo_commands(commands)
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      {entry.value.object, "TelescopeResultsNumber"},
+      {entry.value.name}
+    }
+
+    local displayer =
+      entry_display.create {
+      separator = "",
+      items = {
+        {width = 12},
+        {remaining = true}
+      }
+    }
+
+    return displayer(columns)
+  end
+
+  return function(command)
+    if not command or vim.tbl_isempty(command) then
+      return nil
+    end
+
+    return {
+      value = command,
+      ordinal = command.object .. " " .. command.name,
+      display = make_display
+    }
+  end
+end
+
 return M
