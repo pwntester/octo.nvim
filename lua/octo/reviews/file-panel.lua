@@ -303,6 +303,9 @@ function FilePanel:render()
     offset = #s
 
     -- viewer viewed state
+    if not file.viewed_state then
+      file.viewed_state = "UNVIEWED"
+    end
     local viewerViewedStateIcon = utils.viewed_state_map[file.viewed_state].icon
     local viewerViewedStateHl = utils.viewed_state_map[file.viewed_state].hl
     s = s .. " " .. viewerViewedStateIcon
