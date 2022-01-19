@@ -135,7 +135,7 @@ function M.issues(opts)
   local query = graphql("issues_query", owner, name, filter, { escape = false })
   print "Fetching issues (this may take a while) ..."
   gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       print " "
       if stderr and not utils.is_blank(stderr) then
@@ -210,7 +210,7 @@ function M.gists(opts)
   end
   local query = graphql("gists_query", privacy)
   gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.notify(stderr, 2)
@@ -269,7 +269,7 @@ function M.pull_requests(opts)
   local query = graphql("pull_requests_query", owner, name, filter, { escape = false })
   print "Fetching pull requests (this may take a while) ..."
   gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       print " "
       if stderr and not utils.is_blank(stderr) then
@@ -877,7 +877,7 @@ function M.repos(opts)
   local query = graphql("repos_query", opts.login)
   print "Fetching repositories (this may take a while) ..."
   gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       print " "
       if stderr and not utils.is_blank(stderr) then

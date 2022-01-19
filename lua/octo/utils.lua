@@ -479,18 +479,13 @@ function M.get_repo_id(repo)
 end
 
 function M.get_pages(text)
-  local responses = {}
-  while true do
-    local idx = string.find(text, '}{"data"')
-    if not idx then
-      table.insert(responses, vim.fn.json_decode(text))
-      break
-    end
-    local resp = string.sub(text, 0, idx)
-    table.insert(responses, vim.fn.json_decode(resp))
-    text = string.sub(text, idx + 1)
+  local results = {}
+  local page_outputs = vim.split(text, "\n")
+  for _, page in ipairs(page_outputs) do
+    local decoded_page = vim.fn.json_decode(page)
+    table.insert(results, decoded_page)
   end
-  return responses
+  return results
 end
 
 function M.aggregate_pages(text, aggregation_key)
@@ -1001,7 +996,7 @@ function M.get_pull_request_for_current_branch(cb)
         local name = pr.currentBranch.headRepository.name
         local query = graphql("pull_request_query", owner, name, number)
         gh.run {
-          args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+          args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
           cb = function(output, stderr)
             if stderr and not M.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
