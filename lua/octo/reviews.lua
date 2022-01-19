@@ -135,7 +135,7 @@ function Review:initiate()
 
   local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
   gh.run {
-    args = { "api", "--paginate", url },
+    args = { 'api', '--paginate', url, '--jq', '.' },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.notify(stderr, 2)
@@ -146,7 +146,16 @@ function Review:initiate()
           deleted = "D",
           renamed = "R",
         }
-        local results = vim.fn.json_decode(output)
+
+        local results = {}
+        local page_outputs = vim.split(output, '\n')
+        for _, text in ipairs(page_outputs) do
+          local page_result = vim.fn.json_decode(text)
+          for _, result in ipairs(page_result) do
+            table.insert(results, result)
+          end
+        end
+
         local files = {}
         for _, result in ipairs(results) do
           local entry = FileEntry:new {
