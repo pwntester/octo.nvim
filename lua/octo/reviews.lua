@@ -135,7 +135,7 @@ function Review:initiate()
 
   local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
   gh.run {
-    args = { 'api', '--paginate', url, '--jq', '.' },
+    args = { "api",  "--paginate", url, "--jq",  "." },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.notify(stderr, 2)
