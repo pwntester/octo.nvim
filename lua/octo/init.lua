@@ -78,7 +78,7 @@ function M.load(repo, kind, number, cb)
     query = graphql("repository_query", owner, name)
   end
   gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
