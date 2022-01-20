@@ -190,22 +190,28 @@ function M.commit_exists(commit, cb)
     :start()
 end
 
+local last_get_file_job = nil
+
 function M.get_file_at_commit(path, commit, cb)
   if not Job then
     return
   end
-  Job
-    :new({
-      enable_recording = true,
-      command = "git",
-      args = { "show", string.format("%s:%s", commit, path) },
-      on_exit = vim.schedule_wrap(function(j_self, _, _)
-        local output = table.concat(j_self:result(), "\n")
-        local stderr = table.concat(j_self:stderr_result(), "\n")
-        cb(vim.split(output, "\n"), vim.split(stderr, "\n"))
-      end),
-    })
-    :start()
+  local job = Job:new {
+    enable_recording = true,
+    command = "git",
+    args = { "show", string.format("%s:%s", commit, path) },
+    on_exit = vim.schedule_wrap(function(j_self, _, _)
+      local output = table.concat(j_self:result(), "\n")
+      local stderr = table.concat(j_self:stderr_result(), "\n")
+      cb(vim.split(output, "\n"), vim.split(stderr, "\n"))
+    end),
+  }
+  if last_get_file_job ~= nil then
+    last_get_file_job:and_then(job)
+  else
+    job:start()
+  end
+  last_get_file_job = job
 end
 
 function M.in_pr_repo()
@@ -478,6 +484,18 @@ function M.get_pages(text)
   for _, page in ipairs(page_outputs) do
     local decoded_page = vim.fn.json_decode(page)
     table.insert(results, decoded_page)
+  end
+  return results
+end
+
+function M.get_flatten_pages(text)
+  local results = {}
+  local page_outputs = vim.split(text, "\n")
+  for _, page in ipairs(page_outputs) do
+    local decoded_page = vim.fn.json_decode(page)
+    for _, result in ipairs(decoded_page) do
+      table.insert(results, result)
+    end
   end
   return results
 end
