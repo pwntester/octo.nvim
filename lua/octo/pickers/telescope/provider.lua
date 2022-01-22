@@ -921,9 +921,9 @@ function M.repos(opts)
 end
 
 --
--- OCTO COMMANDS
+-- OCTO
 --
-function M.commands(commands)
+function M.octo_actions(flattened_actions)
   local opts = {
     preview_title = "",
     prompt_title = "",
@@ -934,8 +934,8 @@ function M.commands(commands)
     opts,
     {
       finder = finders.new_table {
-        results = commands,
-        entry_maker = entry_maker.gen_from_octo_commands(commands)
+        results = flattened_actions,
+        entry_maker = entry_maker.gen_from_octo_actions()
       },
       sorter = conf.generic_sorter(opts),
       attach_mappings = function()
@@ -943,7 +943,7 @@ function M.commands(commands)
           function(prompt_bufnr)
             local selected_command = action_state.get_selected_entry(prompt_bufnr)
             actions.close(prompt_bufnr)
-            selected_command.value.fun()
+            selected_command.action.fun()
           end
         )
         return true
@@ -968,7 +968,7 @@ M.picker = {
   repos = M.repos,
   live_issues = M.issue_search,
   live_prs = M.pull_request_search,
-  commands = M.commands
+  octo_actions = M.octo_actions
 }
 
 return M

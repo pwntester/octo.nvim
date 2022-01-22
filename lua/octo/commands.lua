@@ -12,9 +12,11 @@ local M = {}
 
 -- supported commands
 M.commands = {
-  commands = function()
-    M.octo_commands()
-  end,
+  octo = {
+    actions = function()
+      M.octo_actions()
+    end,
+  },
   issue = {
     create = function(repo)
       M.create_issue(repo)
@@ -282,11 +284,6 @@ function M.octo(object, action, ...)
       return
     end
   else
-    if type(o) == "function" then
-      o(...)
-      return
-    end
-
     local a = o[action]
     if not a then
       utils.notify("Incorrect action, valid actions are:" .. vim.inspect(vim.tbl_keys(o)), 1)
@@ -1427,25 +1424,23 @@ function M.copy_url()
   utils.notify("Copied URL '" .. url .. "' to the system clipboard (+ register)", 1)
 end
 
-function M.octo_commands()
-  local flattened_commands = {}
+function M.octo_actions()
+  local flattened_actions = {}
 
   for object, commands in pairs(M.commands) do
-    if (object ~= "commands") then
-      for name, fun in pairs(commands) do
-        table.insert(
-          flattened_commands,
-          {
-            object = object,
-            name = name,
-            fun = fun
-          }
-        )
-      end
+    for name, fun in pairs(commands) do
+      table.insert(
+        flattened_actions,
+        {
+          object = object,
+          name = name,
+          fun = fun
+        }
+      )
     end
   end
 
-  picker.commands(flattened_commands)
+  picker.octo_actions(flattened_actions)
 end
 
 return M
