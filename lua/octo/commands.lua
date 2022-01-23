@@ -12,11 +12,9 @@ local M = {}
 
 -- supported commands
 M.commands = {
-  octo = {
-    actions = function()
-      M.octo_actions()
-    end,
-  },
+  actions = function()
+    M.octo_actions()
+  end,
   issue = {
     create = function(repo)
       M.create_issue(repo)
@@ -284,6 +282,11 @@ function M.octo(object, action, ...)
       return
     end
   else
+    if type(o) == "function" then
+      o(...)
+      return
+    end
+
     local a = o[action]
     if not a then
       utils.notify("Incorrect action, valid actions are:" .. vim.inspect(vim.tbl_keys(o)), 1)
@@ -1428,15 +1431,17 @@ function M.octo_actions()
   local flattened_actions = {}
 
   for object, commands in pairs(M.commands) do
-    for name, fun in pairs(commands) do
-      table.insert(
-        flattened_actions,
-        {
-          object = object,
-          name = name,
-          fun = fun
-        }
-      )
+    if object ~= 'actions' then
+      for name, fun in pairs(commands) do
+        table.insert(
+          flattened_actions,
+          {
+            object = object,
+            name = name,
+            fun = fun
+          }
+        )
+      end
     end
   end
 
