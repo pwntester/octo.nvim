@@ -278,6 +278,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | resume| Edit a pending review for current PR |
 | | discard| Deletes a pending review for current PR if any |
 | | comments| View pending review comments |
+| actions |  | Lists all available Octo actions|
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

@@ -508,4 +508,40 @@ function M.gen_from_gist()
   end
 end
 
+function M.gen_from_octo_actions()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      { entry.action.object, "TelescopeResultsNumber" },
+      { entry.action.name },
+    }
+
+    local displayer = entry_display.create {
+      separator = "",
+      items = {
+        { width = 12 },
+        { remaining = true },
+      },
+    }
+
+    return displayer(columns)
+  end
+
+  return function(action)
+    if not action or vim.tbl_isempty(action) then
+      return nil
+    end
+
+    return {
+      value = action.name,
+      ordinal = action.object .. " " .. action.name,
+      display = make_display,
+      action = action,
+    }
+  end
+end
+
 return M

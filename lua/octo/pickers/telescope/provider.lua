@@ -920,6 +920,33 @@ function M.repos(opts)
   }
 end
 
+--
+-- OCTO
+--
+function M.octo_actions(flattened_actions)
+  local opts = {
+    preview_title = "",
+    prompt_title = "",
+    results_title = "",
+  }
+
+  pickers.new(opts, {
+    finder = finders.new_table {
+      results = flattened_actions,
+      entry_maker = entry_maker.gen_from_octo_actions(),
+    },
+    sorter = conf.generic_sorter(opts),
+    attach_mappings = function()
+      actions.select_default:replace(function(prompt_bufnr)
+        local selected_command = action_state.get_selected_entry(prompt_bufnr)
+        actions.close(prompt_bufnr)
+        selected_command.action.fun()
+      end)
+      return true
+    end,
+  }):find()
+end
+
 M.picker = {
   issues = M.issues,
   prs = M.pull_requests,
@@ -936,6 +963,7 @@ M.picker = {
   repos = M.repos,
   live_issues = M.issue_search,
   live_prs = M.pull_request_search,
+  octo_actions = M.octo_actions,
 }
 
 return M
