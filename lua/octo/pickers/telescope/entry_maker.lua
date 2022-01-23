@@ -515,17 +515,16 @@ function M.gen_from_octo_actions()
     end
 
     local columns = {
-      {entry.action.object, "TelescopeResultsNumber"},
-      {entry.action.name}
+      { entry.action.object, "TelescopeResultsNumber" },
+      { entry.action.name },
     }
 
-    local displayer =
-      entry_display.create {
+    local displayer = entry_display.create {
       separator = "",
       items = {
-        {width = 12},
-        {remaining = true}
-      }
+        { width = 12 },
+        { remaining = true },
+      },
     }
 
     return displayer(columns)
@@ -540,7 +539,7 @@ function M.gen_from_octo_actions()
       value = action.name,
       ordinal = action.object .. " " .. action.name,
       display = make_display,
-      action = action
+      action = action,
     }
   end
 end

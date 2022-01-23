@@ -1431,16 +1431,13 @@ function M.octo_actions()
   local flattened_actions = {}
 
   for object, commands in pairs(M.commands) do
-    if object ~= 'actions' then
+    if object ~= "actions" then
       for name, fun in pairs(commands) do
-        table.insert(
-          flattened_actions,
-          {
-            object = object,
-            name = name,
-            fun = fun
-          }
-        )
+        table.insert(flattened_actions, {
+          object = object,
+          name = name,
+          fun = fun,
+        })
       end
     end
   end
