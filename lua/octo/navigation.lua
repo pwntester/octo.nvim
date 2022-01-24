@@ -11,6 +11,11 @@ function M.open_in_browser(kind, repo, number)
     local bufnr = vim.api.nvim_get_current_buf()
     local buffer = octo_buffers[bufnr]
     if not buffer then
+      utils.get_pull_request_for_current_branch(function(pr)
+        if pr ~= nil then
+          M.open_in_browser("pr", pr.repo, pr.number)
+        end
+      end)
       return
     end
     if buffer:isPullRequest() then
