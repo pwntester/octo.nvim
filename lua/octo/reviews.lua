@@ -146,7 +146,10 @@ function Review:initiate()
           deleted = "D",
           renamed = "R",
         }
-
+        -- "status":"renamed"
+        -- there is "filename" and "previous_filename"
+        -- "patch" is optional and only present when there are changes in addition to the rename
+        print(output)
         local results = utils.get_flatten_pages(output)
         local files = {}
         for _, result in ipairs(results) do
