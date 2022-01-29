@@ -657,7 +657,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   --- right_side_lines
   --- left_side_lines
   local diff_directive = diffhunk_lines[1]
-  local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+),%d+%s@@")
+  local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
   local right_side_lines = {}
   local left_side_lines = {}
   local right_side_line = right_offset

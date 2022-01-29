@@ -909,6 +909,13 @@ end
 
 -- calculate valid comment ranges
 function M.process_patch(patch)
+  -- @@ -from,no-of-lines in the file before  +from,no-of-lines in the file after @@
+  -- The no-of-lines values may not be immediately obvious.
+  -- The 'before' value is the sum of the 3 lead context lines, the number of - lines, and the 3 trailing context lines
+  -- The 'after' values is the sum of 3 lead context lines, the number of + lines and the 3 trailing lines.
+  -- In some cases there are additional intermediate context lines which are also added to those numbers.
+  -- So the total number of lines displayed is commonly neither of the no-of-lines values!
+
   if not patch then
     return
   end
@@ -920,12 +927,20 @@ function M.process_patch(patch)
     local header = vim.split(hunk, "\n")[1]
     local found, _, left_start, left_length, right_start, right_length = string.find(
       header,
-      "^%s%-(%d+),(%d+)%s%+(%d+),(%d+)%s@@"
+      "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@"
     )
     if found then
       table.insert(hunks, hunk)
-      table.insert(left_ranges, { tonumber(left_start), left_start + left_length - 1 })
-      table.insert(right_ranges, { tonumber(right_start), right_start + right_length - 1 })
+      table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
+      table.insert(right_ranges, { tonumber(right_start), math.max(right_start + right_length - 1, 0) })
+    else
+      found, _, left_start, left_length, right_start = string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+)%s*@@")
+      if found then
+        right_length = right_start + 1
+        table.insert(hunks, hunk)
+        table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
+        table.insert(right_ranges, { tonumber(right_start), math.max(right_start + right_length - 1, 0) })
+      end
     end
   end
   return hunks, left_ranges, right_ranges
