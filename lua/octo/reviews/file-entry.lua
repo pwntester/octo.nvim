@@ -9,8 +9,8 @@ local signs = require "octo.signs"
 local mappings = require "octo.mappings"
 local M = {}
 
----@type integer|nil
-M._null_buffer = nil
+---@type table
+M._null_buffer = {}
 
 ---@class GitStats
 ---@field additions integer
@@ -53,6 +53,7 @@ function FileEntry:new(opt)
 
   local this = {
     path = opt.path,
+    previous_path = opt.previous_path,
     patch = opt.patch,
     basename = utils.path_basename(opt.path),
     extension = utils.path_extension(opt.path),
@@ -109,9 +110,7 @@ end
 function FileEntry:destroy()
   self:detach_buffers()
   for _, bn in ipairs(self.associated_bufs) do
-    if bn ~= M._null_buffer then
-      pcall(vim.api.nvim_buf_delete, bn, { force = true })
-    end
+    pcall(vim.api.nvim_buf_delete, bn, { force = true })
   end
 end
 
@@ -161,21 +160,30 @@ end
 
 ---Fetch file content locally or from GitHub.
 function FileEntry:fetch()
+  local right_path = self.path
+  local left_path = self.path
+  if self.status == "R" and self.previous_path then
+    left_path = self.previous_path
+  end
+
+  -- right
   if self.pull_request.local_right then
-    utils.get_file_at_commit(self.path, self.pull_request.right.commit, function(lines)
+    utils.get_file_at_commit(right_path, self.pull_request.right.commit, function(lines)
       self.right_lines = lines
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, self.pull_request.right:abbrev(), self.path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, self.pull_request.right:abbrev(), right_path, function(lines)
       self.right_lines = lines
     end)
   end
+
+  -- left
   if self.pull_request.local_left then
-    utils.get_file_at_commit(self.path, self.pull_request.left.commit, function(lines)
+    utils.get_file_at_commit(left_path, self.pull_request.left.commit, function(lines)
       self.left_lines = lines
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, self.pull_request.left:abbrev(), self.path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, self.pull_request.left:abbrev(), left_path, function(lines)
       self.left_lines = lines
     end)
   end
@@ -212,6 +220,8 @@ function FileEntry:load_buffers(left_winid, right_winid)
 
       -- create buffer
       split.bufid = M._create_buffer {
+        status = self.status,
+        show_diff = self.patch ~= nil,
         path = self.path,
         split = split.pos,
         binary = split.binary,
@@ -336,28 +346,6 @@ function FileEntry:place_signs()
   end
 end
 
----Get the bufid of the null buffer. Create it if it's not loaded.
----@return integer
-function M._get_null_buffer()
-  if not (M._null_buffer and vim.api.nvim_buf_is_loaded(M._null_buffer)) then
-    local bn = vim.api.nvim_create_buf(false, false)
-    vim.api.nvim_buf_set_lines(bn, 0, -1, false, { "Loading ..." })
-    local bufname = utils.path_join { "octo", "null" }
-    vim.api.nvim_buf_set_option(bn, "modified", false)
-    vim.api.nvim_buf_set_option(bn, "modifiable", false)
-
-    local ok = pcall(vim.api.nvim_buf_set_name, bn, bufname)
-    if not ok then
-      utils.wipe_named_buffer(bufname)
-      vim.api.nvim_buf_set_name(bn, bufname)
-    end
-
-    M._null_buffer = bn
-  end
-
-  return M._null_buffer
-end
-
 function M._create_buffer(opts)
   if opts.binary then
     return M._get_null_buffer()
@@ -376,7 +364,10 @@ function M._create_buffer(opts)
       opts.path
     )
     vim.api.nvim_buf_set_name(bufnr, bufname)
-    if opts.lines then
+    if opts.status == "R" and not opts.show_diff then
+      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
+    elseif opts.lines then
       vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
     end
@@ -390,10 +381,36 @@ function M._create_buffer(opts)
   return bufnr
 end
 
+function M.load_null_buffers(left_winid, right_winid)
+  M.load_null_buffer(left_winid)
+  M.load_null_buffer(right_winid)
+end
+
 function M.load_null_buffer(winid)
   local bn = M._get_null_buffer()
-  vim.api.nvim_win_set_buf(winid, bn)
+  if vim.api.nvim_win_is_valid(winid) then
+    vim.api.nvim_win_set_buf(winid, bn)
+  end
   M._configure_buffer(bn)
+end
+
+function M._get_null_buffer()
+  local msg = "Loading ..."
+  local bn = M._null_buffer[msg]
+  if not bn or vim.api.nvim_buf_is_loaded(bn) then
+    local nbn = vim.api.nvim_create_buf(false, false)
+    vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
+    local bufname = utils.path_join { "octo", "null" }
+    vim.api.nvim_buf_set_option(nbn, "modified", false)
+    vim.api.nvim_buf_set_option(nbn, "modifiable", false)
+    local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
+    if not ok then
+      utils.wipe_named_buffer(bufname)
+      vim.api.nvim_buf_set_name(nbn, bufname)
+    end
+    M._null_buffer[msg] = nbn
+  end
+  return M._null_buffer[msg]
 end
 
 function M._configure_windows(left_winid, right_winid)

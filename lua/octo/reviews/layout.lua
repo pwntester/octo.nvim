@@ -24,7 +24,6 @@ local win_reset_opts = {
 ---@field right_winid integer
 ---@field files FileEntry[]
 ---@field file_idx integer
----@field nulled boolean
 ---@field ready boolean
 local Layout = {}
 Layout.__index = Layout
@@ -37,7 +36,6 @@ function Layout:new(opt)
     right = opt.right,
     files = opt.files,
     file_idx = 1,
-    nulled = false,
     ready = false,
   }
   this.file_panel = FilePanel:new(this.files)
@@ -93,16 +91,16 @@ function Layout:next_file()
     return
   end
 
-  if #self.files > 1 or self.nulled then
+  if #self.files > 1 then
     local cur = self:cur_file()
     if cur then
       cur:detach_buffers()
     end
     self.file_idx = self.file_idx % #self.files + 1
     vim.cmd "diffoff!"
-    self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid) -- << Load file diffs in layout wins
+    -- Load file diffs in layout wins
+    self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid)
     self.file_panel:highlight_file(self:cur_file())
-    self.nulled = false
   end
 end
 
@@ -112,7 +110,7 @@ function Layout:prev_file()
     return
   end
 
-  if #self.files > 1 or self.nulled then
+  if #self.files > 1 then
     local cur = self:cur_file()
     if cur then
       cur:detach_buffers()
@@ -121,7 +119,6 @@ function Layout:prev_file()
     vim.cmd "diffoff!"
     self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid)
     self.file_panel:highlight_file(self:cur_file())
-    self.nulled = false
   end
 end
 
@@ -130,26 +127,32 @@ function Layout:set_file(file, focus)
   if self:file_safeguard() or not file then
     return
   end
-
+  local found = false
   for i, f in ipairs(self.files) do
     if f == file then
-      local cur = self:cur_file()
-      if cur then
-        cur:detach_buffers()
-      end
+      found = true
       self.file_idx = i
-      vim.cmd "diffoff!"
-      self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid)
-      self.file_panel:highlight_file(self:cur_file())
-      self.nulled = false
+      break
+    end
+  end
+  if found then
+    local cur = self:cur_file()
+    if cur then
+      cur:detach_buffers()
+    end
+    vim.cmd "diffoff!"
+    local selected_file = self.files[self.file_idx]
 
-      if focus == "right" then
-        vim.api.nvim_set_current_win(self.right_winid)
-      elseif focus == "left" then
-        vim.api.nvim_set_current_win(self.left_winid)
-      else
-        vim.api.nvim_set_current_win(self.left_winid)
-      end
+    selected_file:load_buffers(self.left_winid, self.right_winid)
+
+    -- highlight file in file panel
+    self.file_panel:highlight_file(self:cur_file())
+
+    -- set focus on specified window
+    if focus == "right" then
+      vim.api.nvim_set_current_win(self.right_winid)
+    else
+      vim.api.nvim_set_current_win(self.left_winid)
     end
   end
 end
@@ -218,13 +221,13 @@ function Layout:recover_layout(state)
     vim.cmd "aboveleft vsp"
     self.left_winid = vim.api.nvim_get_current_win()
     self.file_panel:open()
-    self:set_file(self:cur_file(), "right")
+    --self:set_file(self:cur_file(), "right")
   elseif not state.right_win then
     vim.api.nvim_set_current_win(self.left_winid)
     vim.cmd "belowright vsp"
     self.right_winid = vim.api.nvim_get_current_win()
     self.file_panel:open()
-    self:set_file(self:cur_file(), "left")
+    --self:set_file(self:cur_file(), "left")
   end
 
   self.ready = true
@@ -246,9 +249,7 @@ function Layout:file_safeguard()
     if cur then
       cur:detach_buffers()
     end
-    file_entry.load_null_buffer(self.left_winid)
-    file_entry.load_null_buffer(self.right_winid)
-    self.nulled = true
+    file_entry.load_null_buffers(self.left_winid, self.right_winid)
     return true
   end
   return false

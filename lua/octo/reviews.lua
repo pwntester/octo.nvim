@@ -146,12 +146,12 @@ function Review:initiate()
           deleted = "D",
           renamed = "R",
         }
-
         local results = utils.get_flatten_pages(output)
         local files = {}
         for _, result in ipairs(results) do
           local entry = FileEntry:new {
             path = result.filename,
+            previous_path = result.previous_filename,
             patch = result.patch,
             pull_request = pr,
             status = status_map[result.status],
