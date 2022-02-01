@@ -645,8 +645,12 @@ local function get_lnum_chunks(opts)
   end
 end
 
-function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side, path)
+function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
   start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
+
+  if not diffhunk then
+    return start_line, start_line
+  end
 
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, start_line - 2, -1)
@@ -1281,12 +1285,15 @@ function M.write_threads(bufnr, threads)
       -- augment comment details
       comment.path = thread.path
       comment.diffSide = thread.diffSide
+
       -- review thread header
       if comment.replyTo == vim.NIL then
         local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
         local end_line = thread.originalLine
         comment.start_line = start_line
         comment.end_line = end_line
+
+        -- write thread header
         M.write_review_thread_header(bufnr, {
           path = thread.path,
           start_line = start_line,
@@ -1295,8 +1302,9 @@ function M.write_threads(bufnr, threads)
           isResolved = thread.isResolved,
         })
 
+        -- write empty line
         M.write_block(bufnr, { "" })
-        --M.write_block(bufnr, {""}, line)
+
         -- write snippet
         thread_start, thread_end = M.write_thread_snippet(
           bufnr,
@@ -1304,8 +1312,7 @@ function M.write_threads(bufnr, threads)
           nil,
           start_line,
           end_line,
-          thread.diffSide,
-          thread.path
+          thread.diffSide
         )
       end
 
