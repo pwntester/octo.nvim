@@ -146,12 +146,12 @@ function Review:initiate()
           deleted = "D",
           renamed = "R",
         }
-
         local results = utils.get_flatten_pages(output)
         local files = {}
         for _, result in ipairs(results) do
           local entry = FileEntry:new {
             path = result.filename,
+            previous_path = result.previous_filename,
             patch = result.patch,
             pull_request = pr,
             status = status_map[result.status],
@@ -454,23 +454,26 @@ function M.add_review_comment(isSuggestion)
     return
   end
 
-  -- check we are in a valid comment range
   local diff_hunk
-  for i, range in ipairs(comment_ranges) do
-    if range[1] <= line1 and range[2] >= line2 then
-      diff_hunk = file.diffhunks[i]
-      break
+  -- for non-added files, check we are in a valid comment range
+  if file.status ~= "A" then
+    for i, range in ipairs(comment_ranges) do
+      if range[1] <= line1 and range[2] >= line2 then
+        diff_hunk = file.diffhunks[i]
+        break
+      end
     end
-  end
-  if not diff_hunk then
-    utils.notify("Cannot place comments outside diff hunks", 2)
-    return
-  end
-  if not vim.startswith(diff_hunk, "@@") then
-    diff_hunk = "@@ " .. diff_hunk
+    if not diff_hunk then
+      utils.notify("Cannot place comments outside diff hunks", 2)
+      return
+    end
+    if not vim.startswith(diff_hunk, "@@") then
+      diff_hunk = "@@ " .. diff_hunk
+    end
   end
 
   review.layout:ensure_layout()
+
   local alt_win = file:get_alternative_win(split)
   if vim.api.nvim_win_is_valid(alt_win) then
     local pr = file.pull_request
