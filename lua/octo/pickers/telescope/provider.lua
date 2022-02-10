@@ -393,8 +393,48 @@ end
 ---
 -- SEARCH
 ---
-local function search(opts, kind, requester, maker, previewer)
+local function search(opts)
   opts = opts or {}
+
+  local q, maker, previewer
+  if opts.kind == "issue" then
+    q = "search_issues_query"
+    maker = entry_maker.gen_from_issue
+    previewer = previewers.issue
+  elseif opts.kind == "pull_request" then
+    q = "search_pull_requests_query"
+    maker = entry_maker.gen_from_pull_request
+    previewer = previewers.pull_request
+  end
+
+  local requester = function()
+    return function(prompt)
+      if not opts.prompt and utils.is_blank(prompt) then
+        return {}
+      end
+      if opts.prompt then
+        prompt = string.format("%s %s", opts.prompt, prompt)
+      end
+      if opts.repo then
+        prompt = string.format("repo:%s %s", opts.repo, prompt)
+      end
+      local query = graphql(q, prompt)
+      local output = gh.run {
+        args = { "api", "graphql", "-f", string.format("query=%s", query) },
+        mode = "sync",
+      }
+      if output then
+        local resp = vim.fn.json_decode(output)
+        local results = {}
+        for _, issue in ipairs(resp.data.search.nodes) do
+          table.insert(results, issue)
+        end
+        return results
+      else
+        return {}
+      end
+    end
+  end
   local finder = finders.new_dynamic {
     fn = requester(),
     entry_maker = maker(6),
@@ -415,79 +455,23 @@ local function search(opts, kind, requester, maker, previewer)
     previewer = previewer.new(opts),
     attach_mappings = function(_, map)
       action_set.select:replace(function(prompt_bufnr, type)
-        open(kind, type)(prompt_bufnr)
+        open(opts.kind, type)(prompt_bufnr)
       end)
-      map("i", "<c-b>", open_in_browser(kind))
-      map("i", "<c-y>", copy_url(kind))
+      map("i", "<c-b>", open_in_browser(opts.kind))
+      map("i", "<c-y>", copy_url(opts.kind))
       return true
     end,
   }):find()
 end
 
 function M.issue_search(opts)
-  opts = opts or {}
-  local get_issue_requester = function()
-    return function(prompt)
-      if not opts.prompt and utils.is_blank(prompt) then
-        return {}
-      end
-      if opts.prompt then
-        prompt = string.format("%s %s", opts.prompt, prompt)
-      end
-      if opts.repo then
-        prompt = string.format("repo:%s %s", opts.repo, prompt)
-      end
-      local query = graphql("search_issues_query", prompt)
-      local output = gh.run {
-        args = { "api", "graphql", "-f", string.format("query=%s", query) },
-        mode = "sync",
-      }
-      if output then
-        local resp = vim.fn.json_decode(output)
-        local results = {}
-        for _, issue in ipairs(resp.data.search.nodes) do
-          table.insert(results, issue)
-        end
-        return results
-      else
-        return {}
-      end
-    end
-  end
-  search(opts, "issue", get_issue_requester, entry_maker.gen_from_issue, previewers.issue)
+  opts.kind = "issue"
+  search(opts)
 end
 
 function M.pull_request_search(opts)
-  opts = opts or {}
-  local get_pr_requester = function()
-    return function(prompt)
-      if not opts.prompt and utils.is_blank(prompt) then
-        return {}
-      end
-      if opts.prompt then
-        prompt = string.format("%s %s", opts.prompt, prompt)
-      end
-      if opts.repo then
-        prompt = string.format("repo:%s %s", opts.repo, prompt)
-      end
-      local query = graphql("search_pull_requests_query", prompt)
-      local output = gh.run {
-        args = { "api", "graphql", "-f", string.format("query=%s", query) },
-        mode = "sync",
-      }
-      if output then
-        local resp = vim.fn.json_decode(output)
-        local results = {}
-        for _, pull_request in ipairs(resp.data.search.nodes) do
-          table.insert(results, pull_request)
-        end
-        return results
-      else
-        return {}
-      end
-    end
-  end
-  search(opts, "pull_request", get_pr_requester, entry_maker.gen_from_pull_request, previewers.pull_request)
+  opts.kind = "pull_request"
+  search(opts)
 end
 
 ---

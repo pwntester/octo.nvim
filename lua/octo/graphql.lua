@@ -2031,6 +2031,27 @@ query {
 }
 ]]
 
+M.search_query = [[
+query {
+  search(query: "%s", type: ISSUE, last: 100) {
+    nodes {
+      ... on Issue{
+        number
+        url
+        title
+        repository { nameWithOwner }
+      }
+      ... on PullRequest {
+        number
+        title
+        url
+        repository { nameWithOwner }
+      }
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
 query {
