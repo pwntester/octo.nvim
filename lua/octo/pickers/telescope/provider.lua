@@ -55,7 +55,7 @@ local function get_filter(opts, kind)
   return filter
 end
 
-local function open(repo, what, command)
+local function open(what, command)
   return function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
@@ -68,7 +68,7 @@ local function open(repo, what, command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
-    vim.cmd(string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], what, repo, selection.value))
+    vim.cmd(string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], what, selection.repo, selection.value))
   end
 end
 
@@ -90,13 +90,12 @@ local function open_preview_buffer(command)
   end
 end
 
-local function open_in_browser(kind, repo)
+local function open_in_browser(kind)
   return function(prompt_bufnr)
     local entry = action_state.get_selected_entry(prompt_bufnr)
     local number
-    if kind == "repo" then
-      repo = entry.repo.nameWithOwner
-    else
+    local repo = entry.repo
+    if kind ~= "repo" then
       number = entry.value
     end
     actions.close(prompt_bufnr)
@@ -165,9 +164,9 @@ function M.issues(opts)
           previewer = previewers.issue.new(opts),
           attach_mappings = function(_, map)
             action_set.select:replace(function(prompt_bufnr, type)
-              open(opts.repo, "issue", type)(prompt_bufnr)
+              open("issue", type)(prompt_bufnr)
             end)
-            map("i", "<c-b>", open_in_browser("issue", opts.repo))
+            map("i", "<c-b>", open_in_browser "issue")
             map("i", "<c-y>", copy_url "issue")
             return true
           end,
@@ -299,10 +298,10 @@ function M.pull_requests(opts)
           previewer = previewers.pull_request.new(opts),
           attach_mappings = function(_, map)
             action_set.select:replace(function(prompt_bufnr, type)
-              open(opts.repo, "pull_request", type)(prompt_bufnr)
+              open("pull_request", type)(prompt_bufnr)
             end)
             map("i", "<c-o>", checkout_pull_request())
-            map("i", "<c-b>", open_in_browser("pr", opts.repo))
+            map("i", "<c-b>", open_in_browser "pull_request")
             map("i", "<c-y>", copy_url "pull_request")
             return true
           end,
@@ -394,22 +393,51 @@ end
 ---
 -- SEARCH
 ---
+local function search(opts, kind, requester, maker, previewer)
+  opts = opts or {}
+  local finder = finders.new_dynamic {
+    fn = requester(),
+    entry_maker = maker(6),
+  }
+  if opts.static then
+    local results = requester() ""
+    finder = finders.new_table {
+      results = results,
+      entry_maker = maker(6, true),
+    }
+  end
+  opts.preview_title = opts.preview_title or ""
+  opts.prompt_title = opts.prompt_title or ""
+  opts.results_title = opts.results_title or ""
+  pickers.new(opts, {
+    finder = finder,
+    sorter = conf.generic_sorter(opts),
+    previewer = previewer.new(opts),
+    attach_mappings = function(_, map)
+      action_set.select:replace(function(prompt_bufnr, type)
+        open(kind, type)(prompt_bufnr)
+      end)
+      map("i", "<c-b>", open_in_browser(kind))
+      map("i", "<c-y>", copy_url(kind))
+      return true
+    end,
+  }):find()
+end
+
 function M.issue_search(opts)
   opts = opts or {}
-
-  if not opts.repo or opts.repo == vim.NIL then
-    opts.repo = utils.get_remote_name()
-  end
-  if not opts.repo then
-    utils.notify("Cannot find repo", 2)
-    return
-  end
   local get_issue_requester = function()
     return function(prompt)
-      if utils.is_blank(prompt) then
+      if not opts.prompt and utils.is_blank(prompt) then
         return {}
       end
-      local query = graphql("search_issues_query", opts.repo, prompt)
+      if opts.prompt then
+        prompt = string.format("%s %s", opts.prompt, prompt)
+      end
+      if opts.repo then
+        prompt = string.format("repo:%s %s", opts.repo, prompt)
+      end
+      local query = graphql("search_issues_query", prompt)
       local output = gh.run {
         args = { "api", "graphql", "-f", string.format("query=%s", query) },
         mode = "sync",
@@ -426,43 +454,23 @@ function M.issue_search(opts)
       end
     end
   end
-  opts.preview_title = opts.preview_title or ""
-  opts.prompt_title = opts.prompt_title or ""
-  opts.results_title = opts.results_title or ""
-  pickers.new(opts, {
-    finder = finders.new_dynamic {
-      entry_maker = entry_maker.gen_from_issue(6),
-      fn = get_issue_requester(),
-    },
-    sorter = conf.generic_sorter(opts),
-    previewer = previewers.issue.new(opts),
-    attach_mappings = function(_, map)
-      action_set.select:replace(function(prompt_bufnr, type)
-        open(opts.repo, "issue", type)(prompt_bufnr)
-      end)
-      map("i", "<c-b>", open_in_browser("issue", opts.repo))
-      map("i", "<c-y>", copy_url "issue")
-      return true
-    end,
-  }):find()
+  search(opts, "issue", get_issue_requester, entry_maker.gen_from_issue, previewers.issue)
 end
 
 function M.pull_request_search(opts)
   opts = opts or {}
-
-  if not opts.repo or opts.repo == vim.NIL then
-    opts.repo = utils.get_remote_name()
-  end
-  if not opts.repo then
-    utils.notify("Cannot find repo", 2)
-    return
-  end
   local get_pr_requester = function()
     return function(prompt)
-      if utils.is_blank(prompt) then
+      if not opts.prompt and utils.is_blank(prompt) then
         return {}
       end
-      local query = graphql("search_pull_requests_query", opts.repo, prompt)
+      if opts.prompt then
+        prompt = string.format("%s %s", opts.prompt, prompt)
+      end
+      if opts.repo then
+        prompt = string.format("repo:%s %s", opts.repo, prompt)
+      end
+      local query = graphql("search_pull_requests_query", prompt)
       local output = gh.run {
         args = { "api", "graphql", "-f", string.format("query=%s", query) },
         mode = "sync",
@@ -479,25 +487,7 @@ function M.pull_request_search(opts)
       end
     end
   end
-  opts.preview_title = opts.preview_title or ""
-  opts.prompt_title = opts.prompt_title or ""
-  opts.results_title = opts.results_title or ""
-  pickers.new(opts, {
-    finder = finders.new_dynamic {
-      entry_maker = entry_maker.gen_from_pull_request(6),
-      fn = get_pr_requester(),
-    },
-    sorter = conf.generic_sorter(opts),
-    previewer = previewers.pull_request.new(opts),
-    attach_mappings = function(_, map)
-      action_set.select:replace(function(prompt_bufnr, type)
-        open(opts.repo, "pull_request", type)(prompt_bufnr)
-      end)
-      map("i", "<c-b>", open_in_browser("pr", opts.repo))
-      map("i", "<c-y>", copy_url "pull_request")
-      return true
-    end,
-  }):find()
+  search(opts, "pull_request", get_pr_requester, entry_maker.gen_from_pull_request, previewers.pull_request)
 end
 
 ---
@@ -908,7 +898,7 @@ function M.repos(opts)
           sorter = conf.generic_sorter(opts),
           attach_mappings = function(_, map)
             action_set.select:replace(function(prompt_bufnr, type)
-              open(opts.repo, "repo", type)(prompt_bufnr)
+              open("repo", type)(prompt_bufnr)
             end)
             map("i", "<c-b>", open_in_browser "repo")
             map("i", "<c-y>", copy_url "repo")

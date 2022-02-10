@@ -21,7 +21,7 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh repo view --web %s", buffer.repo)
     end
   else
-    if kind == "pr" then
+    if kind == "pr" or kind == "pull_request" then
       cmd = string.format("gh pr view --web -R %s %d", repo, number)
     elseif kind == "issue" then
       cmd = string.format("gh issue view --web -R %s %d", repo, number)

@@ -685,6 +685,7 @@ M.update_issue_mutation = [[
         state
         title
         body
+        repository { nameWithOwner }
       }
     }
   }
@@ -735,6 +736,9 @@ M.create_issue_mutation = [[
               name
             }
           }
+        }
+        repository {
+          nameWithOwner
         }
         timelineItems(first: 100) {
           nodes {
@@ -834,6 +838,9 @@ M.update_issue_mutation = [[
         state
         title
         body
+        repository {
+          nameWithOwner
+        }
       }
     }
   }
@@ -853,6 +860,9 @@ M.update_issue_state_mutation = [[
         closedAt
         updatedAt
         url
+        repository {
+          nameWithOwner
+        }
         milestone {
           title
           state
@@ -1411,6 +1421,7 @@ query($endCursor: String) {
       closedAt
       updatedAt
       url
+      repository { nameWithOwner }
       files(first:100) {
         nodes {
           path
@@ -1756,6 +1767,9 @@ query($endCursor: String) {
       url
       viewerDidAuthor
       viewerCanUpdate
+      repository {
+        nameWithOwner
+      }
       milestone {
         title
         state
@@ -1957,6 +1971,7 @@ query($endCursor: String) {
         number
         title
         url
+        repository { nameWithOwner }
       }
       pageInfo {
         hasNextPage
@@ -1974,6 +1989,7 @@ query($endCursor: String) {
         number
         title
         url
+        repository { nameWithOwner }
         headRefName
       }
       pageInfo {
@@ -1987,11 +2003,13 @@ query($endCursor: String) {
 
 M.search_issues_query = [[
 query {
-  search(query: "repo:%s is:issue %s", type: ISSUE, last: 100) {
+  search(query: "is:issue %s", type: ISSUE, last: 100) {
     nodes {
       ... on Issue{
         number
+        url
         title
+        repository { nameWithOwner }
       }
     }
   }
@@ -2000,11 +2018,13 @@ query {
 
 M.search_pull_requests_query = [[
 query {
-  search(query: "repo:%s is:pr %s", type: ISSUE, last: 100) {
+  search(query: "is:pr %s", type: ISSUE, last: 100) {
     nodes {
       ... on PullRequest {
         number
         title
+        url
+        repository { nameWithOwner }
       }
     }
   }

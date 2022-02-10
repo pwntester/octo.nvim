@@ -34,6 +34,13 @@ M.commands = {
     end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
+      if not opts.repo or opts.repo == vim.NIL then
+        opts.repo = utils.get_remote_name()
+      end
+      if not opts.repo then
+        utils.notify("Cannot find repo", 2)
+        return
+      end
       picker.live_issues(opts)
     end,
     reload = function()
@@ -94,6 +101,14 @@ M.commands = {
     end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
+
+      if not opts.repo or opts.repo == vim.NIL then
+        opts.repo = utils.get_remote_name()
+      end
+      if not opts.repo then
+        utils.notify("Cannot find repo", 2)
+        return
+      end
       picker.live_prs(opts)
     end,
     reload = function()

@@ -4,24 +4,42 @@ local utils = require "octo.utils"
 
 local M = {}
 
-function M.gen_from_issue(max_number)
+function M.gen_from_issue(max_number, print_repo)
   local make_display = function(entry)
     if not entry then
       return nil
     end
 
-    local columns = {
-      { entry.issue.number, "TelescopeResultsNumber" },
-      { entry.issue.title },
-    }
+    local layout, columns
+    if print_repo then
+      columns = {
+        { entry.issue.number, "TelescopeResultsNumber" },
+        { entry.repo, "OctoDetailsLabel" },
+        { entry.issue.title },
+      }
+      layout = {
+        separator = " ",
+        items = {
+          { width = max_number },
+          { width = 25 },
+          { remaining = true },
+        },
+      }
+    else
+      columns = {
+        { entry.issue.number, "TelescopeResultsNumber" },
+        { entry.issue.title },
+      }
+      layout = {
+        separator = " ",
+        items = {
+          { width = max_number },
+          { remaining = true },
+        },
+      }
+    end
 
-    local displayer = entry_display.create {
-      separator = " ",
-      items = {
-        { width = max_number },
-        { remaining = true },
-      },
-    }
+    local displayer = entry_display.create(layout)
 
     return displayer(columns)
   end
@@ -36,29 +54,47 @@ function M.gen_from_issue(max_number)
       ordinal = issue.number .. " " .. issue.title,
       display = make_display,
       issue = issue,
+      repo = issue.repository.nameWithOwner,
     }
   end
 end
 
-function M.gen_from_pull_request(max_number)
+function M.gen_from_pull_request(max_number, print_repo)
   local make_display = function(entry)
     if not entry then
       return nil
     end
 
-    local columns = {
-      { entry.pull_request.number, "TelescopeResultsNumber" },
-      { entry.pull_request.title },
-    }
+    local layout, columns
+    if print_repo then
+      columns = {
+        { entry.pull_request.number, "TelescopeResultsNumber" },
+        { entry.repo, "OctoDetailsLabel" },
+        { entry.pull_request.title },
+      }
+      layout = {
+        separator = " ",
+        items = {
+          { width = max_number },
+          { width = 25 },
+          { remaining = true },
+        },
+      }
+    else
+      columns = {
+        { entry.pull_request.number, "TelescopeResultsNumber" },
+        { entry.pull_request.title },
+      }
+      layout = {
+        separator = " ",
+        items = {
+          { width = max_number },
+          { remaining = true },
+        },
+      }
+    end
 
-    local displayer = entry_display.create {
-      separator = " ",
-      items = {
-        { width = max_number },
-        { remaining = true },
-      },
-    }
-
+    local displayer = entry_display.create(layout)
     return displayer(columns)
   end
 
@@ -72,6 +108,7 @@ function M.gen_from_pull_request(max_number)
       ordinal = pull_request.number .. " " .. pull_request.title,
       display = make_display,
       pull_request = pull_request,
+      repo = pull_request.repository.nameWithOwner,
     }
   end
 end
@@ -446,7 +483,7 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
       value = repo.nameWithOwner,
       ordinal = repo.nameWithOwner .. " " .. repo.description,
       display = make_display,
-      repo = repo,
+      repo = repo.nameWithOwner,
     }
   end
 end
