@@ -41,7 +41,7 @@ M.commands = {
         utils.notify("Cannot find repo", 2)
         return
       end
-      picker.live_issues(opts)
+      picker.search_issues(opts)
     end,
     reload = function()
       M.reload()
@@ -109,7 +109,7 @@ M.commands = {
         utils.notify("Cannot find repo", 2)
         return
       end
-      picker.live_prs(opts)
+      picker.search_prs(opts)
     end,
     reload = function()
       M.reload()

@@ -951,8 +951,8 @@ M.picker = {
   users = M.select_user,
   assignees = M.select_assignee,
   repos = M.repos,
-  live_issues = M.issue_search,
-  live_prs = M.pull_request_search,
+  search_issues = M.issue_search,
+  search_prs = M.pull_request_search,
   octo_actions = M.octo_actions,
 }
 
