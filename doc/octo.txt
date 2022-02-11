@@ -151,6 +151,13 @@ See |octo-command-examples| for examples.
   discard               Deletes a pending review for the current PR, if any.
   comments              View pending review comments.
 
+:Octo actions                                   *octo-commands-actions*
+
+  Lists all available Octo actions
+  
+:Octo search [query]                            *octo-commands-search*
+
+  Search GitHub for issues and PRs matching the query (https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests)
 
 COMMAND EXAMPLES                                *octo-command-examples*
 >
@@ -163,6 +170,7 @@ COMMAND EXAMPLES                                *octo-command-examples*
   Octo issue edit 1
   Octo issue list createdBy=pwntester
   Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
+  Octo search assignee:pwntester is:pr
 <
 
 

@@ -279,6 +279,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | discard| Deletes a pending review for current PR if any |
 | | comments| View pending review comments |
 | actions |  | Lists all available Octo actions|
+| search | <query> | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
@@ -316,6 +317,7 @@ Octo issue edit pwntester/octo.nvim 1
 Octo issue edit 1
 Octo issue list createdBy=pwntester
 Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
+Octo search assignee:pwntester is:pr
 ```
 
 ## 📋 PR review
