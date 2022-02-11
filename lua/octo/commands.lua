@@ -1456,12 +1456,14 @@ function M.actions()
 
   for object, commands in pairs(M.commands) do
     if object ~= "actions" then
-      for name, fun in pairs(commands) do
-        table.insert(flattened_actions, {
-          object = object,
-          name = name,
-          fun = fun,
-        })
+      if type(commands) == "table" then
+        for name, fun in pairs(commands) do
+          table.insert(flattened_actions, {
+            object = object,
+            name = name,
+            fun = fun,
+          })
+        end
       end
     end
   end
