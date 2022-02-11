@@ -1,6 +1,5 @@
 local constants = require "octo.constants"
 local date = require "octo.date"
-local base64 = require "octo.base64"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local config = require "octo.config"
@@ -453,12 +452,6 @@ function M.format_date(date_string)
   else
     return string.format("%s %s %d", d:getyear(), d:fmt "%b", d:getday())
   end
-end
-
-function M.graph2rest(id)
-  local decoded = base64.decode(id)
-  local _, _, rest_id = string.find(decoded, "(%d+)$")
-  return rest_id
 end
 
 function M.get_repo_id(repo)
