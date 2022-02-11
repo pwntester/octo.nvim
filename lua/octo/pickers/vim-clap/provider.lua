@@ -20,8 +20,8 @@ M.picker = {
   users = M.not_implemented,
   assignees = M.not_implemented,
   repos = M.not_implemented,
-  search_issues = M.not_implemented,
-  search_prs = M.not_implemented,
+  search = M.not_implemented,
+  actions = M.not_implemented,
 }
 
 return M

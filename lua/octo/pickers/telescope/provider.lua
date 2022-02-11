@@ -55,7 +55,7 @@ local function get_filter(opts, kind)
   return filter
 end
 
-local function open(what, command)
+local function open(command)
   return function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
@@ -68,7 +68,9 @@ local function open(what, command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
-    vim.cmd(string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], what, selection.repo, selection.value))
+    vim.cmd(
+      string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], selection.kind, selection.repo, selection.value)
+    )
   end
 end
 
@@ -90,23 +92,23 @@ local function open_preview_buffer(command)
   end
 end
 
-local function open_in_browser(kind)
+local function open_in_browser()
   return function(prompt_bufnr)
     local entry = action_state.get_selected_entry(prompt_bufnr)
     local number
     local repo = entry.repo
-    if kind ~= "repo" then
+    if entry.kind ~= "repo" then
       number = entry.value
     end
     actions.close(prompt_bufnr)
-    navigation.open_in_browser(kind, repo, number)
+    navigation.open_in_browser(entry.kind, repo, number)
   end
 end
 
-local function copy_url(kind)
+local function copy_url()
   return function(prompt_bufnr)
     local entry = action_state.get_selected_entry(prompt_bufnr)
-    local url = entry[kind].url
+    local url = entry.obj.url
     vim.fn.setreg("+", url, "c")
     utils.notify("Copied '" .. url .. "' to the system clipboard (+ register)", 1)
   end
@@ -164,10 +166,10 @@ function M.issues(opts)
           previewer = previewers.issue.new(opts),
           attach_mappings = function(_, map)
             action_set.select:replace(function(prompt_bufnr, type)
-              open("issue", type)(prompt_bufnr)
+              open(type)(prompt_bufnr)
             end)
-            map("i", "<c-b>", open_in_browser "issue")
-            map("i", "<c-y>", copy_url "issue")
+            map("i", "<c-b>", open_in_browser())
+            map("i", "<c-y>", copy_url())
             return true
           end,
         }):find()
@@ -292,17 +294,17 @@ function M.pull_requests(opts)
         pickers.new(opts, {
           finder = finders.new_table {
             results = pull_requests,
-            entry_maker = entry_maker.gen_from_pull_request(max_number),
+            entry_maker = entry_maker.gen_from_issue(max_number),
           },
           sorter = conf.generic_sorter(opts),
-          previewer = previewers.pull_request.new(opts),
+          previewer = previewers.issue.new(opts),
           attach_mappings = function(_, map)
             action_set.select:replace(function(prompt_bufnr, type)
-              open("pull_request", type)(prompt_bufnr)
+              open(type)(prompt_bufnr)
             end)
             map("i", "<c-o>", checkout_pull_request())
-            map("i", "<c-b>", open_in_browser "pull_request")
-            map("i", "<c-y>", copy_url "pull_request")
+            map("i", "<c-b>", open_in_browser())
+            map("i", "<c-y>", copy_url())
             return true
           end,
         }):find()
@@ -393,19 +395,8 @@ end
 ---
 -- SEARCH
 ---
-local function search(opts)
+function M.search(opts)
   opts = opts or {}
-
-  local q, maker, previewer
-  if opts.kind == "issue" then
-    q = "search_issues_query"
-    maker = entry_maker.gen_from_issue
-    previewer = previewers.issue
-  elseif opts.kind == "pull_request" then
-    q = "search_pull_requests_query"
-    maker = entry_maker.gen_from_pull_request
-    previewer = previewers.pull_request
-  end
 
   local requester = function()
     return function(prompt)
@@ -418,7 +409,7 @@ local function search(opts)
       if opts.repo then
         prompt = string.format("repo:%s %s", opts.repo, prompt)
       end
-      local query = graphql(q, prompt)
+      local query = graphql("search_query", prompt)
       local output = gh.run {
         args = { "api", "graphql", "-f", string.format("query=%s", query) },
         mode = "sync",
@@ -437,13 +428,13 @@ local function search(opts)
   end
   local finder = finders.new_dynamic {
     fn = requester(),
-    entry_maker = maker(6),
+    entry_maker = entry_maker.gen_from_issue(6),
   }
   if opts.static then
     local results = requester() ""
     finder = finders.new_table {
       results = results,
-      entry_maker = maker(6, true),
+      entry_maker = entry_maker.gen_from_issue(6, true),
     }
   end
   opts.preview_title = opts.preview_title or ""
@@ -452,26 +443,16 @@ local function search(opts)
   pickers.new(opts, {
     finder = finder,
     sorter = conf.generic_sorter(opts),
-    previewer = previewer.new(opts),
+    previewer = previewers.issue.new(opts),
     attach_mappings = function(_, map)
       action_set.select:replace(function(prompt_bufnr, type)
-        open(opts.kind, type)(prompt_bufnr)
+        open(type)(prompt_bufnr)
       end)
-      map("i", "<c-b>", open_in_browser(opts.kind))
-      map("i", "<c-y>", copy_url(opts.kind))
+      map("i", "<c-b>", open_in_browser())
+      map("i", "<c-y>", copy_url())
       return true
     end,
   }):find()
-end
-
-function M.issue_search(opts)
-  opts.kind = "issue"
-  search(opts)
-end
-
-function M.pull_request_search(opts)
-  opts.kind = "pull_request"
-  search(opts)
 end
 
 ---
@@ -882,10 +863,10 @@ function M.repos(opts)
           sorter = conf.generic_sorter(opts),
           attach_mappings = function(_, map)
             action_set.select:replace(function(prompt_bufnr, type)
-              open("repo", type)(prompt_bufnr)
+              open(type)(prompt_bufnr)
             end)
-            map("i", "<c-b>", open_in_browser "repo")
-            map("i", "<c-y>", copy_url "repo")
+            map("i", "<c-b>", open_in_browser())
+            map("i", "<c-y>", copy_url())
             return true
           end,
         }):find()
@@ -897,7 +878,7 @@ end
 --
 -- OCTO
 --
-function M.octo_actions(flattened_actions)
+function M.actions(flattened_actions)
   local opts = {
     preview_title = "",
     prompt_title = "",
@@ -935,9 +916,8 @@ M.picker = {
   users = M.select_user,
   assignees = M.select_assignee,
   repos = M.repos,
-  search_issues = M.issue_search,
-  search_prs = M.pull_request_search,
-  octo_actions = M.octo_actions,
+  search = M.search,
+  actions = M.actions,
 }
 
 return M

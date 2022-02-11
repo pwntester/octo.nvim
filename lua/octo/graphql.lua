@@ -1968,6 +1968,7 @@ query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issues(first: 100, after: $endCursor, filterBy: {%s}) {
       nodes {
+        __typename
         number
         title
         url
@@ -1986,6 +1987,7 @@ query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequests(first: 100, after: $endCursor, %s) {
       nodes {
+        __typename
         number
         title
         url
@@ -2001,47 +2003,19 @@ query($endCursor: String) {
 }
 ]]
 
-M.search_issues_query = [[
-query {
-  search(query: "is:issue %s", type: ISSUE, last: 100) {
-    nodes {
-      ... on Issue{
-        number
-        url
-        title
-        repository { nameWithOwner }
-      }
-    }
-  }
-}
-]]
-
-M.search_pull_requests_query = [[
-query {
-  search(query: "is:pr %s", type: ISSUE, last: 100) {
-    nodes {
-      ... on PullRequest {
-        number
-        title
-        url
-        repository { nameWithOwner }
-      }
-    }
-  }
-}
-]]
-
 M.search_query = [[
 query {
   search(query: "%s", type: ISSUE, last: 100) {
     nodes {
       ... on Issue{
+        __typename
         number
         url
         title
         repository { nameWithOwner }
       }
       ... on PullRequest {
+        __typename
         number
         title
         url

@@ -13,7 +13,10 @@ local M = {}
 -- supported commands
 M.commands = {
   actions = function()
-    M.octo_actions()
+    M.actions()
+  end,
+  search = function(...)
+    M.search(...)
   end,
   issue = {
     create = function(repo)
@@ -41,7 +44,8 @@ M.commands = {
         utils.notify("Cannot find repo", 2)
         return
       end
-      picker.search_issues(opts)
+      opts.prompt = "is:issue "
+      picker.search(opts)
     end,
     reload = function()
       M.reload()
@@ -109,7 +113,8 @@ M.commands = {
         utils.notify("Cannot find repo", 2)
         return
       end
-      picker.search_prs(opts)
+      opts.prompt = "is:pr "
+      picker.search(opts)
     end,
     reload = function()
       M.reload()
@@ -298,7 +303,11 @@ function M.octo(object, action, ...)
     end
   else
     if type(o) == "function" then
-      o(...)
+      if object == "search" then
+        o(action, ...)
+      else
+        o(...)
+      end
       return
     end
 
@@ -1442,7 +1451,7 @@ function M.copy_url()
   utils.notify("Copied URL '" .. url .. "' to the system clipboard (+ register)", 1)
 end
 
-function M.octo_actions()
+function M.actions()
   local flattened_actions = {}
 
   for object, commands in pairs(M.commands) do
@@ -1457,7 +1466,14 @@ function M.octo_actions()
     end
   end
 
-  picker.octo_actions(flattened_actions)
+  picker.actions(flattened_actions)
+end
+
+function M.search(...)
+  local args = table.pack(...)
+  picker.search {
+    prompt = table.concat(args, " "),
+  }
 end
 
 return M
