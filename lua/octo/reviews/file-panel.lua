@@ -1,6 +1,6 @@
 -- Heavily derived from `diffview.nvim`: https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-panel.lua
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-panel.lua
---
+
 local utils = require "octo.utils"
 local config = require "octo.config"
 local mappings = require "octo.mappings"

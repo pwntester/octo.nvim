@@ -8,6 +8,13 @@ local window = require "octo.window"
 local config = require "octo.config"
 local mappings = require "octo.mappings"
 
+local status_map = {
+  modified = "M",
+  added = "A",
+  deleted = "D",
+  renamed = "R",
+}
+
 local M = {}
 
 M.reviews = {}
@@ -126,6 +133,8 @@ end
 
 function Review:initiate()
   local pr = self.pull_request
+
+  -- create the layout
   self.layout = Layout:new {
     left = pr.left,
     right = pr.right,
@@ -133,6 +142,7 @@ function Review:initiate()
   }
   self.layout:open(self)
 
+  -- fetch the changed files
   local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
   gh.run {
     args = { "api", "--paginate", url, "--jq", "." },
@@ -140,15 +150,9 @@ function Review:initiate()
       if stderr and not utils.is_blank(stderr) then
         utils.notify(stderr, 2)
       elseif output then
-        local status_map = {
-          modified = "M",
-          added = "A",
-          deleted = "D",
-          renamed = "R",
-        }
         local results = utils.get_flatten_pages(output)
         local files = {}
-        for _, result in ipairs(results) do
+        for i, result in ipairs(results) do
           local entry = FileEntry:new {
             path = result.filename,
             previous_path = result.previous_filename,
@@ -161,11 +165,15 @@ function Review:initiate()
               changes = result.changes,
             },
           }
-          entry:fetch()
           table.insert(files, entry)
+          -- pre-fetch the first file
+          if i == 1 then
+            entry:fetch()
+          end
         end
-
         self.layout.files = files
+
+        -- update the file list
         self.layout:update_files()
       end
     end,

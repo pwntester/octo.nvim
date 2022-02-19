@@ -122,6 +122,7 @@ function Layout:prev_file()
   end
 end
 
+-- sets selected file
 function Layout:set_file(file, focus)
   self:ensure_layout()
   if self:file_safeguard() or not file then
@@ -136,6 +137,13 @@ function Layout:set_file(file, focus)
     end
   end
   if found then
+    if not file.left_lines or not file.right_lines then
+      local result = file:fetch()
+      if not result then
+        vim.api.nvim_err_writeln("Timeout fetching " .. file.path)
+        return
+      end
+    end
     local cur = self:cur_file()
     if cur then
       cur:detach_buffers()
@@ -162,28 +170,9 @@ function Layout:update_files()
   self.file_panel.files = self.files
   self.file_panel:render()
   self.file_panel:redraw()
-
-  local status = vim.wait(10000, function()
-    local loaded = false
-    for i, file in ipairs(self.files) do
-      if file.right_lines and file.left_lines then
-        self.file_idx = i
-        loaded = true
-        break
-      end
-    end
-    return loaded
-  end)
-
-  if status == true then
-    --self.file_idx = utils.clamp(self.file_idx, 1, #self.files)
-    local file = self:cur_file()
-    self:set_file(file)
-    self.update_needed = false
-  else
-    utils.notify("Timeout waiting for file contents from GitHub", 2)
-    --vim.cmd [[ ]q ]]
-  end
+  local file = self:cur_file()
+  self:set_file(file)
+  self.update_needed = false
 end
 
 ---Checks the state of the view layout.

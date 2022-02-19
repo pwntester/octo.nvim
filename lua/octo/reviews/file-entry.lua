@@ -167,11 +167,13 @@ end
 function FileEntry:fetch()
   local right_path = self.path
   local left_path = self.path
+
+  -- handle renamed files
   if self.status == "R" and self.previous_path then
     left_path = self.previous_path
   end
 
-  -- right
+  -- fetch right version
   if self.pull_request.local_right then
     utils.get_file_at_commit(right_path, self.pull_request.right.commit, function(lines)
       self.right_lines = lines
@@ -182,7 +184,7 @@ function FileEntry:fetch()
     end)
   end
 
-  -- left
+  -- fetch left version
   if self.pull_request.local_left then
     utils.get_file_at_commit(left_path, self.pull_request.left.commit, function(lines)
       self.left_lines = lines
@@ -192,6 +194,11 @@ function FileEntry:fetch()
       self.left_lines = lines
     end)
   end
+
+  -- wait until we have both versions
+  return vim.wait(5000, function()
+    return self.left_lines and self.right_lines
+  end)
 end
 
 ---Load the buffers.
