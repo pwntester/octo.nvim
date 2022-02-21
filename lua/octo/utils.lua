@@ -189,8 +189,6 @@ function M.commit_exists(commit, cb)
     :start()
 end
 
-local last_get_file_job = nil
-
 function M.get_file_at_commit(path, commit, cb)
   if not Job then
     return
@@ -205,12 +203,7 @@ function M.get_file_at_commit(path, commit, cb)
       cb(vim.split(output, "\n"), vim.split(stderr, "\n"))
     end),
   }
-  if last_get_file_job ~= nil then
-    last_get_file_job:and_then(job)
-  else
-    job:start()
-  end
-  last_get_file_job = job
+  job:start()
 end
 
 function M.in_pr_repo()
