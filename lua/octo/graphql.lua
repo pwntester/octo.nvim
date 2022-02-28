@@ -2897,6 +2897,20 @@ query {
 }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
+M.repo_labels_query = [[
+query { 
+  repository(owner:"%s", name:"%s") {
+    labels(first: 100) {
+      nodes {
+        id
+        name
+      }
+    }
+  }
+}
+]]
+
 local function escape_chars(string)
   local escaped, _ = string.gsub(string, '["\\]', {
     ['"'] = '\\"',

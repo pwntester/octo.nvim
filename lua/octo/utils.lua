@@ -1089,4 +1089,30 @@ function M.get_user_id(login)
   end
 end
 
+function M.get_label_id(label)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then
+    M.notify("Not in Octo buffer", 2)
+    return
+  end
+
+  local owner, name = M.split_repo(buffer.repo)
+  local query = graphql("repo_labels_query", owner, name)
+  local output = gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    mode = "sync",
+  }
+  if output then
+    local resp = vim.fn.json_decode(output)
+    if resp.data.repository.labels.nodes and resp.data.repository.labels.nodes ~= vim.NIL then
+      for _, l in ipairs(resp.data.repository.labels.nodes) do
+        if l.name == label then
+          return l.id
+        end
+      end
+    end
+  end
+end
+
 return M

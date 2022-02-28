@@ -196,14 +196,14 @@ M.commands = {
     end,
   },
   label = {
-    create = function()
-      M.create_label()
+    create = function(label)
+      M.create_label(label)
     end,
-    add = function()
-      M.add_label()
+    add = function(label)
+      M.add_label(label)
     end,
-    remove = function()
-      M.remove_label()
+    remove = function(label)
+      M.remove_label(label)
     end,
   },
   assignee = {
@@ -1278,7 +1278,7 @@ function M.reload(bufnr)
   require("octo").load_buffer(buffer.repo, buffer.kind, buffer.number)
 end
 
-function M.create_label()
+function M.create_label(label)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1287,12 +1287,25 @@ function M.create_label()
 
   local repo_id = utils.get_repo_id(buffer.repo)
 
-  vim.fn.inputsave()
-  local name = vim.fn.input(string.format("Creating label for %s. Enter title: ", buffer.repo))
-  local color = vim.fn.input "Enter color (RGB): "
-  local description = vim.fn.input "Enter description: "
-  vim.fn.inputrestore()
-  color = string.gsub(color, "#", "")
+  local name, color, description
+  if label then
+    name = label
+    description = ""
+    local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
+    math.randomseed(os.time())
+    color = {}
+    for _ = 1, 6 do
+      table.insert(color, chars[math.random(1, 16)])
+    end
+    color = table.concat(color, "")
+  else
+    vim.fn.inputsave()
+    name = vim.fn.input(string.format("Creating label for %s. Enter title: ", buffer.repo))
+    color = vim.fn.input "Enter color (RGB): "
+    description = vim.fn.input "Enter description: "
+    vim.fn.inputrestore()
+    color = string.gsub(color, "#", "")
+  end
 
   local query = graphql("create_label_mutation", repo_id, name, description, color)
   gh.run {
@@ -1314,7 +1327,7 @@ function M.create_label()
   }
 end
 
-function M.add_label()
+function M.add_label(label)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1326,7 +1339,7 @@ function M.add_label()
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  picker.labels(function(label_id)
+  local cb = function(label_id)
     local query = graphql("add_labels_mutation", iid, label_id)
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -1341,10 +1354,20 @@ function M.add_label()
         end
       end,
     }
-  end)
+  end
+  if label then
+    local label_id = utils.get_label_id(label)
+    if label_id then
+      cb(label_id)
+    else
+      utils.notify("Cannot find label: " .. label, 2)
+    end
+  else
+    picker.labels(cb)
+  end
 end
 
-function M.remove_label()
+function M.remove_label(label)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1356,7 +1379,7 @@ function M.remove_label()
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  picker.assigned_labels(function(label_id)
+  local cb = function(label_id)
     local query = graphql("remove_labels_mutation", iid, label_id)
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -1371,7 +1394,18 @@ function M.remove_label()
         end
       end,
     }
-  end)
+  end
+
+  if label then
+    local label_id = utils.get_label_id(label)
+    if label_id then
+      cb(label_id)
+    else
+      utils.notify("Cannot find label: " .. label, 2)
+    end
+  else
+    picker.assigned_labels(cb)
+  end
 end
 
 function M.add_user(subject, login)
