@@ -1075,4 +1075,18 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
   end
 end
 
+function M.get_user_id(login)
+  local query = graphql("user_query", login)
+  local output = gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    mode = "sync",
+  }
+  if output then
+    local resp = vim.fn.json_decode(output)
+    if resp.data.user and resp.data.user ~= vim.NIL then
+      return resp.data.user.id
+    end
+  end
+end
+
 return M

@@ -115,13 +115,13 @@ See |octo-command-examples| for examples.
 
 :Octo assignees [action]                        *octo-commands-assignees*
 
-  add                   Assign a user.
-  remove                Unassign a user
+  add [login]           Assign a user.
+  remove [login]        Unassign a user
 
 
 :Octo reviewer [action]                         *octo-commands-reviewer*
 
-  add                   Assign a PR reviewer.
+  add [login]           Assign a PR reviewer.
 
 
 :Octo reaction [reaction]                       *octo-commands-reaction*

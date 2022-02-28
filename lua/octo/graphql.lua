@@ -2403,7 +2403,7 @@ query {
 }
 ]]
 
-M.user_query = [[
+M.users_query = [[
 query($endCursor: String) {
   search(query: "%s", type: USER, first: 100) {
     nodes {
@@ -2886,6 +2886,15 @@ M.create_pr_mutation = [[
       }
     }
 	}
+]]
+
+-- https://docs.github.com/en/graphql/reference/queries#user
+M.user_query = [[
+query { 
+  user(login:"%s") {
+    id
+  }
+}
 ]]
 
 local function escape_chars(string)

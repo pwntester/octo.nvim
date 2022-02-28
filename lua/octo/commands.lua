@@ -207,16 +207,16 @@ M.commands = {
     end,
   },
   assignee = {
-    add = function()
-      M.add_user "assignee"
+    add = function(login)
+      M.add_user("assignee", login)
     end,
-    remove = function()
-      M.remove_assignee()
+    remove = function(login)
+      M.remove_assignee(login)
     end,
   },
   reviewer = {
-    add = function()
-      M.add_user "reviewer"
+    add = function(login)
+      M.add_user("reviewer", login)
     end,
   },
   reaction = {
@@ -1374,7 +1374,7 @@ function M.remove_label()
   end)
 end
 
-function M.add_user(subject)
+function M.add_user(subject, login)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1386,7 +1386,8 @@ function M.add_user(subject)
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  picker.users(function(user_id)
+  local cb = function(user_id)
+    print(user_id)
     local query
     if subject == "assignee" then
       query = graphql("add_assignees_mutation", iid, user_id)
@@ -1407,10 +1408,20 @@ function M.add_user(subject)
         end
       end,
     }
-  end)
+  end
+  if login then
+    local user_id = utils.get_user_id(login)
+    if user_id then
+      cb(user_id)
+    else
+      utils.notify("User not found", 2)
+    end
+  else
+    picker.users(cb)
+  end
 end
 
-function M.remove_assignee()
+function M.remove_assignee(login)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1422,7 +1433,7 @@ function M.remove_assignee()
     utils.notify("Cannot get issue/pr id", 2)
   end
 
-  picker.assignees(function(user_id)
+  local cb = function(user_id)
     local query = graphql("remove_assignees_mutation", iid, user_id)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
@@ -1437,7 +1448,17 @@ function M.remove_assignee()
         end
       end,
     }
-  end)
+  end
+  if login then
+    local user_id = utils.get_user_id(login)
+    if user_id then
+      cb(user_id)
+    else
+      utils.notify("User not found", 2)
+    end
+  else
+    picker.assignees()
+  end
 end
 
 function M.copy_url()

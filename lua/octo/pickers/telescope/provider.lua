@@ -680,7 +680,7 @@ function M.select_user(cb)
       if not prompt or prompt == "" or utils.is_blank(prompt) then
         return {}
       end
-      local query = graphql("user_query", prompt)
+      local query = graphql("users_query", prompt)
       local output = gh.run {
         args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
         mode = "sync",

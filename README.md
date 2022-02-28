@@ -259,9 +259,9 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | label | add | Add a label from available label menu |
 | | remove | Remove a label |
 | | create | Create a new label |
-| assignees| add | Assign a user |
-| | remove | Unassign a user |
-| reviewer | add | Assign a PR reviewer |
+| assignees| add [login] | Assign a user |
+| | remove [login] | Unassign a user |
+| reviewer | add [login] | Assign a PR reviewer |
 | reaction | `thumbs_up` \| `+1` | Add 👍 reaction|
 | | `thumbs_down` \| `-1` | Add 👎 reaction|
 | | `eyes` | Add 👀 reaction|
