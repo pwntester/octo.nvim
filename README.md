@@ -256,9 +256,9 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | delete | Delete a comment |
 | thread | resolve| Mark a review thread as resolved |
 | | unresolve | Mark a review thread as unresolved |
-| label | add | Add a label from available label menu |
-| | remove | Remove a label |
-| | create | Create a new label |
+| label | add [label] | Add a label from available label menu |
+| | remove [label] | Remove a label |
+| | create [label] | Create a new label |
 | assignees| add [login] | Assign a user |
 | | remove [login] | Unassign a user |
 | reviewer | add [login] | Assign a PR reviewer |

@@ -108,9 +108,9 @@ See |octo-command-examples| for examples.
 
 :Octo label [action]                            *octo-commands-label*
 
-  add                   Add a label from the available label menu.
-  remove                Remove a label.
-  create                Create a new label.
+  add [label]           Add specified label or from the available label menu.
+  remove [label]        Remove the specified label or from the menu.
+  create [label]        Create a new label.
 
 
 :Octo assignees [action]                        *octo-commands-assignees*
