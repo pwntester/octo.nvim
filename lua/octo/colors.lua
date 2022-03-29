@@ -88,7 +88,7 @@ local function get_hl_links()
     StatusDeleted = "OctoRed",
     StatusBroken = "OctoRed",
     Dirty = "OctoRed",
-    IssueId = "NormalFlat",
+    IssueId = "NormalFloat",
     IssueTitle = "PreProc",
     Float = "NormalFloat",
     TimelineItemHeading = "Comment",
