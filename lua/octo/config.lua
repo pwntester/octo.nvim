@@ -166,6 +166,7 @@ function M.setup(user_config)
     M._config.mappings.review_thread = (user_config.mappings.review_thread or M._config.mappings.review_thread)
     M._config.mappings.review = (user_config.mappings.review or M._config.mappings.review)
     M._config.mappings.file_panel = (user_config.mappings.file_panel or M._config.mappings.file_panel)
+    M._config.mappings.submit_win = (user_config.mappings.submit_win or M._config.mappings.submit_win)
   end
 end
 
