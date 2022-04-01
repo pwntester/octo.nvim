@@ -98,7 +98,7 @@ function M.next_comment()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = utils.get_sorted_comment_lines()
+    local lines = utils.get_sorted_comment_lines(bufnr)
     if not buffer:isReviewThread() then
       -- skil title and body
       lines = utils.tbl_slice(lines, 3, #lines)
@@ -131,7 +131,7 @@ function M.prev_comment()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = utils.get_sorted_comment_lines()
+    local lines = utils.get_sorted_comment_lines(bufnr)
     lines = utils.tbl_slice(lines, 3, #lines)
     if not lines or not current_line then
       return
