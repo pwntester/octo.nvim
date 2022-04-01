@@ -62,6 +62,7 @@ M.defaults = {
     pull_request = {
       checkout_pr = "<space>po",
       merge_pr = "<space>pm",
+      squash_and_merge_pr = "<space>psm",
       list_commits = "<space>pc",
       list_changed_files = "<space>pf",
       show_pr_diff = "<space>pd",

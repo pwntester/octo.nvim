@@ -128,7 +128,8 @@ require"octo".setup({
     },
     pull_request = {
       checkout_pr = "<space>po",           -- checkout PR
-      merge_pr = "<space>pm",              -- merge PR
+      merge_pr = "<space>pm",              -- merge commit PR
+      squash_and_merge_pr = "<space>psm",  -- squash and merge PR
       list_commits = "<space>pc",          -- list PR commits
       list_changed_files = "<space>pf",    -- list PR changed files
       show_pr_diff = "<space>pd",          -- show PR diff

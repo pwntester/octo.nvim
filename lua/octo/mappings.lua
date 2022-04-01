@@ -40,6 +40,9 @@ M.keypress_event_cbs = {
   merge_pr = function()
     require("octo.commands").merge_pr "commit"
   end,
+  squash_and_merge_pr = function()
+    require("octo.commands").merge_pr "squash"
+  end,
   add_reviewer = function()
     require("octo.commands").add_user "reviewer"
   end,
