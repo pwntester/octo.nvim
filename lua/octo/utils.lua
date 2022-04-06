@@ -550,18 +550,33 @@ function M.get_repo_number_from_varargs(...)
   return repo, number
 end
 
+--- Get the URI for a repository
+function M.get_repo_uri(_, repo)
+  return string.format("octo://%s/repo", repo)
+end
+
+--- Get the URI for an issue
+function M.get_issue_uri(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+  return string.format("octo://%s/issue/%s", repo, number)
+end
+
+--- Get the URI for an pull request
+function M.get_pull_request_uri(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+  return string.format("octo://%s/pull/%s", repo, number)
+end
+
 function M.get_repo(_, repo)
-  vim.cmd(string.format("edit octo://%s/repo", repo))
+  vim.cmd("edit " .. M.get_repo_uri(_, repo))
 end
 
 function M.get_issue(...)
-  local repo, number = M.get_repo_number_from_varargs(...)
-  vim.cmd(string.format("edit octo://%s/issue/%s", repo, number))
+  vim.cmd("edit " .. M.get_issue_uri(...))
 end
 
 function M.get_pull_request(...)
-  local repo, number = M.get_repo_number_from_varargs(...)
-  vim.cmd(string.format("edit octo://%s/pull/%s", repo, number))
+  vim.cmd("edit " .. M.get_pull_request_uri(...))
 end
 
 function M.parse_url(url)
