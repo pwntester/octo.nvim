@@ -63,11 +63,9 @@ local function add_details_line(details, label, value, kind)
       vim.list_extend(vt, bubbles.make_label_bubble(value.name, value.color, { right_margin_width = 1 }))
     elseif kind == "labels" then
       for _, v in ipairs(value) do
-
         if v ~= vim.NIL and v ~= nil then
-            vim.list_extend(vt, bubbles.make_label_bubble(v.name, v.color, { right_margin_width = 1 }))
+          vim.list_extend(vt, bubbles.make_label_bubble(v.name, v.color, { right_margin_width = 1 }))
         end
-
       end
     else
       vim.list_extend(vt, { { tostring(value), "OctoDetailsValue" } })

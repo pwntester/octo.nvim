@@ -57,7 +57,7 @@ local function make_label_bubble(name, color, opts)
   -- provide a default highlight group incase color is nil.
   local highlight = "NormalFloat"
   if color ~= vim.NIL and color ~= nil then
-      highlight = colors.create_highlight(color)
+    highlight = colors.create_highlight(color)
   end
   return make_bubble(name, highlight, opts)
 end
