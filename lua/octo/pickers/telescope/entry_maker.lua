@@ -48,8 +48,16 @@ function M.gen_from_issue(max_number, print_repo)
     if not obj or vim.tbl_isempty(obj) then
       return nil
     end
+    local kind = obj.__typename == "Issue" and "issue" or "pull_request"
+    local filename
+    if kind == "issue" then
+      filename = utils.get_issue_uri(obj.repository.nameWithOwner, obj.number)
+    else
+      filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+    end
     return {
-      kind = obj.__typename == "Issue" and "issue" or "pull_request",
+      filename = filename,
+      kind = kind,
       value = obj.number,
       ordinal = obj.number .. " " .. obj.title,
       display = make_display,
@@ -426,6 +434,7 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
     end
 
     return {
+      filename = utils.get_repo_uri(_, repo),
       kind = "repo",
       value = repo.nameWithOwner,
       ordinal = repo.nameWithOwner .. " " .. repo.description,
