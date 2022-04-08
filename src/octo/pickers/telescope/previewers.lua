@@ -7,7 +7,21 @@ local pv_utils = require "telescope.previewers.utils"
 local writers = require "octo.writers"
 local graphql = require "octo.graphql"
 local gh = require "octo.gh"
+local host = require "octo.host.provider"
 local defaulter = ts_utils.make_default_callable
+
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
 
 local issue = defaulter(function(opts)
   return previewers.new_buffer_previewer {
@@ -19,26 +33,10 @@ local issue = defaulter(function(opts)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
         local number = entry.value
-        local owner, name = utils.split_repo(entry.repo)
-        local query
-        if entry.kind == "issue" then
-          query = graphql("issue_query", owner, name, number)
-        elseif entry.kind == "pull_request" then
-          query = graphql("pull_request_query", owner, name, number)
-        end
-        gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
+        local cb = function(obj, stderr)
             if stderr and not utils.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
-            elseif output and vim.api.nvim_buf_is_valid(bufnr) then
-              local result = vim.fn.json_decode(output)
-              local obj
-              if entry.kind == "issue" then
-                obj = result.data.repository.issue
-              elseif entry.kind == "pull_request" then
-                obj = result.data.repository.pullRequest
-              end
+            elseif obj and vim.api.nvim_buf_is_valid(bufnr) then
               writers.write_title(bufnr, obj.title, 1)
               writers.write_details(bufnr, obj)
               writers.write_body(bufnr, obj)
@@ -48,8 +46,15 @@ local issue = defaulter(function(opts)
               writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
               vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
             end
-          end,
-        }
+          end
+
+
+        if entry.kind == "issue" then
+          host:get_issue(entry.repo, entry.value, cb)
+        elseif entry.kind == "pull_request" then
+          -- TODO
+          print("TODO")
+        end
       end
     end,
   }
@@ -97,7 +102,7 @@ local commit = defaulter(function(opts)
         vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
 
         local url = string.format("/repos/%s/commits/%s", opts.repo, entry.value)
-        pv_utils.job_maker({ "gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff" }, self.state.bufnr, {
+        pv_utils.job_maker({ "glab", "api", url, "-H", "Accept: application/vnd.github.v3.diff" }, self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,
           mode = "append",

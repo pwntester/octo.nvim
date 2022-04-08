@@ -13,6 +13,11 @@ M.defaults = {
   right_bubble_delimiter = "",
   left_bubble_delimiter = "",
   github_hostname = "",
+  git_hosts = {
+    ["github.com"] = "github",
+    ["gitlab.com"] = "gitlab",
+    ["gitlab.fabmation.info"] = "gitlab",
+  },
   snippet_context_lines = 4,
   file_panel = {
     size = 10,

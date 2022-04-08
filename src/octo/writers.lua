@@ -176,8 +176,8 @@ end
 function M.write_state(bufnr, state, number)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  state = state or buffer.node.state
-  number = number or buffer.number
+  state = state or buffer.state
+  number = number or buffer.id
 
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
@@ -198,7 +198,7 @@ function M.write_state(bufnr, state, number)
 end
 
 function M.write_body(bufnr, issue, line)
-  local body = vim.fn.trim(issue.body)
+  local body = vim.fn.trim(issue.description)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
     body = " "
   end
@@ -251,20 +251,20 @@ function M.write_details(bufnr, issue, update)
   if buffer then
     local repo_vt = {
       { "Repo: ", "OctoDetailsLabel" },
-      { " " .. buffer.repo, "OctoDetailsValue" },
+      { " " .. buffer.repo, "OctoDetailsValue" }, -- TODO: Support different icons
     }
     table.insert(details, repo_vt)
   end
 
   -- author
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
-  local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor)
+  local author_bubble = bubbles.make_user_bubble(issue.author.username, issue.viewerDidAuthor)
 
   vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
 
   add_details_line(details, "Created", issue.createdAt, "date")
-  if issue.state == "CLOSED" then
+  if issue.state == "closed" then
     add_details_line(details, "Closed", issue.closedAt, "date")
   else
     add_details_line(details, "Updated", issue.updatedAt, "date")
@@ -274,9 +274,9 @@ function M.write_details(bufnr, issue, update)
   local assignees_vt = {
     { "Assignees: ", "OctoDetailsLabel" },
   }
-  if issue.assignees and #issue.assignees.nodes > 0 then
-    for _, assignee in ipairs(issue.assignees.nodes) do
-      local user_bubble = bubbles.make_user_bubble(assignee.login, assignee.isViewer, { margin_width = 1 })
+  if issue.assignees and #issue.assignees > 0 then
+    for _, assignee in ipairs(issue.assignees) do
+      local user_bubble = bubbles.make_user_bubble(assignee.username, assignee.isViewer, { margin_width = 1 })
       vim.list_extend(assignees_vt, user_bubble)
     end
   else
@@ -319,8 +319,8 @@ function M.write_details(bufnr, issue, update)
   local labels_vt = {
     { "Labels: ", "OctoDetailsLabel" },
   }
-  if #issue.labels.nodes > 0 then
-    for _, label in ipairs(issue.labels.nodes) do
+  if #issue.labels > 0 then
+    for _, label in ipairs(issue.labels) do
       local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
       vim.list_extend(labels_vt, label_bubble)
     end

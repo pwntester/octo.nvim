@@ -48,21 +48,22 @@ function M.gen_from_issue(max_number, print_repo)
     if not obj or vim.tbl_isempty(obj) then
       return nil
     end
-    local kind = obj.__typename == "Issue" and "issue" or "pull_request"
+    local kind = obj.__typename == "Issue" and "issue" or "pull_request" -- migrate to teal ('is' keyword)
     local filename
     if kind == "issue" then
-      filename = utils.get_issue_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_issue_obj_uri(obj)
     else
-      filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+      filename = "PULL_REQUEST"
+      -- filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.iid) -- TODO: Refactor me
     end
     return {
       filename = filename,
       kind = kind,
-      value = obj.number,
-      ordinal = obj.number .. " " .. obj.title,
+      value = obj.id,
+      ordinal = obj.id .. " " .. obj.title,
       display = make_display,
       obj = obj,
-      repo = obj.repository.nameWithOwner,
+      repo = obj.repo,
     }
   end
 end

@@ -1,0 +1,27 @@
+local record M
+  OCTO_COMMENT_NS: any
+  OCTO_HIGHLIGHT_NS: any
+  OCTO_THREAD_NS: any
+  OCTO_FILE_PANEL_NS: any
+
+  OCTO_TITLE_VT_NS: any
+  OCTO_REPO_VT_NS: any
+  OCTO_REACTIONS_VT_NS: any
+  OCTO_DETAILS_VT_NS: any
+  OCTO_DIFFHUNK_VT_NS: any
+  OCTO_PROFILE_VT_NS: any
+  OCTO_SUMMARY_VT_NS: any
+  OCTO_EMPTY_MSG_VT_NS: any
+  OCTO_THREAD_HEADER_VT_NS: any
+  OCTO_EVENT_VT_NS: any
+
+  NO_BODY_MSG: string
+
+  LONG_ISSUE_PATTERN: string
+  SHORT_ISSUE_PATTERN: string
+  URL_ISSUE_PATTERN: string
+
+  USER_PATTERN: string
+end
+
+return M

@@ -35,6 +35,9 @@ M.state_hl_map = {
   PENDING = "OctoStatePending",
   REVIEW_REQUIRED = "OctoStatePending",
   SUBMITTED = "OctoStateSubmitted",
+
+  OPENED = "OctoStateOpen",
+  ACTIVE = "OctoStateActive",
 }
 
 M.state_icon_map = {
@@ -59,6 +62,9 @@ M.state_message_map = {
   DISMISSED = "Dismissed",
   PENDING = "Awaiting required review",
   REVIEW_REQUIRED = "Awaiting required review",
+
+  ACTIVE = "Open",
+  CLOSE = "Closed",
 }
 
 function M.calculate_strongest_review_state(states)
@@ -141,7 +147,45 @@ function M.is_blank(s)
   return not (s ~= nil and s ~= vim.NIL and string.match(s, "%S") ~= nil)
 end
 
-function M.get_remote_name()
+-- Return: Repository
+function M.get_repository()
+  local conf = config.get_config()
+  local candidates = conf.default_remote
+  local repo = {}
+
+  for _, candidate in ipairs(candidates) do
+    local job = Job:new {
+      command = "git",
+      args = { "remote", "get-url", candidate },
+    }
+    job:sync()
+
+    local url = table.concat(job:result(), "\n")
+    local stderr = table.concat(job:stderr_result(), "\n")
+
+    if M.is_blank(stderr) then
+      if #vim.split(url, "://") == 2 then
+        local hostname, owner, name = string.match(url, '%a+://([^/]+)/(.+)/(.+)')
+        name = string.gsub(name, ".git$", "")
+
+        repo.hostname = hostname
+        repo.owner = owner
+        repo.name = name
+      elseif #vim.split(url, "@") == 2 then
+        -- TODO: GitLab does currently not support suchs URIs
+        local segment = vim.split(url, ":")[2]
+        repo.hostname = "github.com" -- TODO: Defaulting to GitHub
+        repo.owner = vim.split(segment, "/")[1]
+        repo.name = string.gsub(vim.split(segment, "/")[2], ".git$", "")
+      end
+
+      repo.full_path = string.format("%s/%s", repo.owner, repo.name)
+      return repo
+    end
+  end
+end
+
+function M.split_remote_url()
   local conf = config.get_config()
   local candidates = conf.default_remote
   for _, candidate in ipairs(candidates) do
@@ -155,18 +199,31 @@ function M.get_remote_name()
     local stderr = table.concat(job:stderr_result(), "\n")
 
     if M.is_blank(stderr) then
-      local owner, name
+      local hostname, owner, name
       if #vim.split(url, "://") == 2 then
-        owner = vim.split(url, "/")[#vim.split(url, "/") - 1]
-        name = string.gsub(vim.split(url, "/")[#vim.split(url, "/")], ".git$", "")
+        hostname, owner, name = string.match(url, '%a+://([^/]+)/([^/]+)/(.+)')
+        name = string.gsub(name, ".git$", "")
       elseif #vim.split(url, "@") == 2 then
         local segment = vim.split(url, ":")[2]
         owner = vim.split(segment, "/")[1]
         name = string.gsub(vim.split(segment, "/")[2], ".git$", "")
+        hostname = ""
+        -- TODO: Find hostname
       end
-      return string.format("%s/%s", owner, name)
+
+      return hostname, owner, name
     end
   end
+end
+
+function M.get_remote_hostname()
+  hostname, _, _ = M.split_remote_url()
+  return hostname
+end
+
+function M.get_remote_name()
+  _, owner, name = M.split_remote_url()
+  return string.format("%s/%s", owner, name)
 end
 
 function M.commit_exists(commit, cb)
@@ -555,6 +612,10 @@ function M.get_repo_uri(_, repo)
   return string.format("octo://%s/repo", repo)
 end
 
+function M.get_issue_obj_uri(issue)
+  return string.format("octo://%s/issue/%s", issue.repo.full_path, tostring(issue.id))
+end
+
 --- Get the URI for an issue
 function M.get_issue_uri(...)
   local repo, number = M.get_repo_number_from_varargs(...)
@@ -641,9 +702,20 @@ function M.cursor_in_col_range(start_col, end_col)
   return false
 end
 
+function M.sum_array(arr, start_index)
+  local str = {}
+
+  for k, v in ipairs(arr) do
+    if k >= start_index then
+      strs[k] = v
+    end
+  end
+
+  return str
+end
+
 function M.split_repo(repo)
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local owner, name = string.match(repo, '[^/]+/([^/]+)/(.+)')
   return owner, name
 end
 
