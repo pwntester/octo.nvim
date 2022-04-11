@@ -244,10 +244,9 @@ end
 
 local function checkout_pull_request()
   return function(prompt_bufnr)
-    local selection = action_state.get_selected_entry(prompt_bufnr)
+    local sel = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    local headRefName = selection.pull_request.headRefName
-    utils.checkout_pr(headRefName)
+    utils.checkout_pr(sel.obj.number)
   end
 end
 

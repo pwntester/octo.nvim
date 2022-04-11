@@ -263,15 +263,15 @@ function M.in_pr_branch(bufnr)
   end
 end
 
-function M.checkout_pr(headRefName)
+function M.checkout_pr(pr_number)
   if not Job then
     return
   end
   Job
     :new({
       enable_recording = true,
-      command = "git",
-      args = { "checkout", headRefName },
+      command = "gh",
+      args = { "pr", "checkout", pr_number},
       on_exit = vim.schedule_wrap(function(j_self, _, _)
         local stderr = table.concat(j_self:stderr_result(), "\n")
         for _, line in ipairs(vim.fn.split(stderr, "\n")) do

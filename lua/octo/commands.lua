@@ -80,7 +80,7 @@ M.commands = {
       if not utils.in_pr_repo() then
         return
       end
-      utils.checkout_pr(buffer.node.headRefName)
+      utils.checkout_pr(buffer.node.number)
     end,
     create = function(...)
       M.create_pr(...)
