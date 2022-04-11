@@ -256,7 +256,6 @@ function M.pull_requests(opts)
     opts.states = "OPEN"
   end
   local filter = get_filter(opts, "pull_request")
-
   if not opts.repo or opts.repo == vim.NIL then
     opts.repo = utils.get_remote_name()
   end

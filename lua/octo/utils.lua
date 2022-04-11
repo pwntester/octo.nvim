@@ -271,7 +271,7 @@ function M.checkout_pr(pr_number)
     :new({
       enable_recording = true,
       command = "gh",
-      args = { "pr", "checkout", pr_number},
+      args = { "pr", "checkout", pr_number },
       on_exit = vim.schedule_wrap(function(j_self, _, _)
         local stderr = table.concat(j_self:stderr_result(), "\n")
         for _, line in ipairs(vim.fn.split(stderr, "\n")) do
