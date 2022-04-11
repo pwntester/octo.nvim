@@ -28,6 +28,10 @@ function M:list_issues(repo: Repository, filter: string, cb: function(output: st
   provider:list_issues(repo, filter, cb)
 end
 
+function M:create_note(id: string, body: string, cb: function(note: Note, stderr: string))
+  provider:create_note(id, body, cb)
+end
+
 function M:get_issue(repo: Repository, number: integer,  cb: function(issue: Issue, stderr: string))
   provider:get_issue(repo, number, cb)
 end

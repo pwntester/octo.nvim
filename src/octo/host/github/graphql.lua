@@ -1,5 +1,19 @@
 local M = {}
 
+-- https://docs.github.com/en/graphql/reference/mutations#addcomment
+M.add_issue_comment_mutation = [[
+  mutation {
+    addComment(input: {subjectId: "%s", body: "%s"}) {
+      commentEdge {
+        node {
+          id
+          body
+        }
+      }
+    }
+  }
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
 query($endCursor: String) {

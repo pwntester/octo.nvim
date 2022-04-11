@@ -25,6 +25,8 @@ global type RepoHost = record
   end
   util: Util
 
+  create_note: function(self: RepoHost, id: string, body: string, cb: function(note: Note, stderr: string))
+
   get_user_name: function(self: RepoHost, hostname: string): string
   get_user: function(self: RepoHost): string
   set_provider: function(self: RepoHost, hostname: string)

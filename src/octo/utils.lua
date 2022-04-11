@@ -4,6 +4,7 @@ local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local config = require "octo.config"
 local _, Job = pcall(require, "plenary.job")
+local log = require("octo.log")
 
 local M = {}
 
@@ -712,6 +713,12 @@ function M.sum_array(arr, start_index)
   end
 
   return str
+end
+
+-- This splits the Hostname, Repo Path (owner/group) and project name.
+function M.full_split_repo(repo)
+  local hostname, owner, name = string.match(repo, '([^/]+)/(.+)/(.+)')
+  return hostname, owner, name
 end
 
 function M.split_repo(repo)

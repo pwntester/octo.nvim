@@ -441,20 +441,6 @@ mutation {
 }
 ]]
 
--- https://docs.github.com/en/graphql/reference/mutations#addcomment
-M.add_issue_comment_mutation = [[
-  mutation {
-    addComment(input: {subjectId: "%s", body: "%s"}) {
-      commentEdge {
-        node {
-          id
-          body
-        }
-      }
-    }
-  }
-]]
-
 -- https://docs.github.com/en/graphql/reference/mutations#updateissuecomment
 M.update_issue_comment_mutation = [[
   mutation {

@@ -47,10 +47,28 @@ local record GitHubReactionGroup
   users: Users
 end
 
+local record GitHubNoteMutation
+  record Data
+    record AddComment
+      record CommentEdge
+        record Note
+          id: string
+          body: string
+        end
+        note: Note
+      end
+      commentEdge: CommentEdge
+    end
+    addComment: AddComment
+  end
+  data: Data
+end
+
 local record GitHubIssueQuery
   record Data
     record Project
-      record GitLabIssue
+      record GitHubIssue
+        id: string
         number: integer
         title: string
         body: string
@@ -95,15 +113,11 @@ local record GitHubIssueQuery
         timelineItems: TimelineItems
 
         record LabelNode
-          record GitLabLabel
-            textColor: string
-            title: string
-          end
-          nodes: {GitLabLabel}
+          nodes: {Label}
         end
         labels: LabelNode
       end
-      issue: GitLabIssue
+      issue: GitHubIssue
     end
     repository: Project
   end
@@ -162,6 +176,7 @@ function M:get_issue(repo: Repository, number: integer,  cb: function(issue: Iss
       local obj = result.data.repository.issue
       local issue: Issue = {}
 
+      issue.uid = obj.id
       issue.title = obj.title
       issue.author = convertToUser(obj.author)
       issue.participants = convertToUsers(obj.participants.nodes)
@@ -198,6 +213,25 @@ function M:get_issue(repo: Repository, number: integer,  cb: function(issue: Iss
       end
 
       cb(issue, stderr)
+    end,
+  }
+end
+
+function M:create_note(id: string, body: string, cb: function(note: Note, stderr: string))
+  local add_query = graphql.g("add_issue_comment_mutation", id, body)
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", add_query) },
+    cb = function(output: string, stderr: string)
+      if stderr and not utils.is_blank(stderr) then
+        cb(nil, stderr)
+        return
+      end
+
+      local result = vim.fn.json_decode(output) as GitHubNoteMutation
+      local obj = result.data.addComment.commentEdge.note
+      local note: Note = obj as Note
+
+      cb(note, stderr)
     end,
   }
 end

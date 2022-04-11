@@ -66,6 +66,8 @@ global type Issue = record
   -- Is the ID of the Issue within the repository/ project.
   -- For GitLab repos it's the IID.
   id: integer
+  -- Is the unique ID of the issue.
+  uid: string | integer
   title: string
   author: User
   milestone: Milestone
@@ -118,4 +120,12 @@ global type Milestone = record
     "close"
   end
   state: MilestoneStateEnum
+end
+
+global type Note = record
+  -- Is the global ID, which also can be used to response to the given note.
+  id: string
+  body: string
+
+  dirty: boolean
 end

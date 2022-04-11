@@ -9,7 +9,7 @@ local record GitLabIssuesQuery
     record Project
       record Node
         record GitLabIssue
-          id: integer
+          id: string
           iid: integer
           title: string
         end
@@ -26,7 +26,7 @@ local record GitLabIssueQuery
   record Data
     record Project
       record GitLabIssue
-        id: integer
+        id: string
         iid: integer
         title: string
 
@@ -66,6 +66,33 @@ local record GitLabIssueQuery
   data: Data
 end
 
+local record GitLabNoteMutation
+  record Data
+    record CreateNote
+      record Note
+        id: string
+        body: string
+      end
+      note: Note
+    end
+    createNote: CreateNote
+  end
+  data: Data
+end
+
+local record Data
+  hostname: string
+
+  set_hostname: function(self: Data, hostname: string)
+end
+local data: Data = {}
+
+function data:set_hostname(hostname: string)
+  if self.hostname == nil then
+    self.hostname = hostname
+  end
+end
+
 local M: RepoHost = {
   util = {}
 }
@@ -91,6 +118,8 @@ function M:list_issues(repo: Repository, filter: string, cb: function(output: st
     filter = ""
   end
 
+  data:set_hostname(repo.hostname)
+
   local query = graphql.g("issues_query", repo.full_path, filter, { escape = false })
   glab.run {
     hostname = repo.hostname,
@@ -100,6 +129,8 @@ function M:list_issues(repo: Repository, filter: string, cb: function(output: st
 end
 
 function M:get_issue(repo: Repository, number: integer,  cb: function(issue: Issue, stderr: string))
+  data:set_hostname(repo.hostname)
+
   local query = graphql.g("issue_query", repo.full_path, number)
   glab.run {
     hostname = repo.hostname,
@@ -114,6 +145,7 @@ function M:get_issue(repo: Repository, number: integer,  cb: function(issue: Iss
       local obj = result.data.project.issue
       local issue: Issue = {}
 
+      issue.uid = obj.id
       issue.title = obj.title
       issue.author = obj.author
       issue.milestone = obj.milestone
@@ -126,6 +158,8 @@ function M:get_issue(repo: Repository, number: integer,  cb: function(issue: Iss
       issue.state = obj.state
       issue.reactionGroups = {}
       issue.url = obj.webUrl
+      issue.timelineItems = {} -- TODO: Implement me
+      issue.participants = {} -- TODO: Implement me
 
       issue.assignees = {}
       if obj.assignees and #obj.assignees.nodes > 0 then
@@ -144,6 +178,25 @@ function M:get_issue(repo: Repository, number: integer,  cb: function(issue: Iss
       end
 
       cb(issue, stderr)
+    end,
+  }
+end
+
+function M:create_note(id: string, body: string, cb: function(note: Note, stderr: string))
+  local query = graphql.g("add_simple_note", id, body)
+  glab.run {
+    hostname = data.hostname,
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
+    cb = function(output: string, stderr: string)
+      if stderr and not utils.is_blank(stderr) then
+        cb(nil, stderr)
+        return
+      end
+
+      local result = vim.fn.json_decode(output) as GitLabNoteMutation
+      local obj = result.data.createNote.note
+      local note: Note = obj as Note
+      cb(note, stderr)
     end,
   }
 end

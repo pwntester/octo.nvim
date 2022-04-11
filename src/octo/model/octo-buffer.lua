@@ -9,6 +9,8 @@ local folds = require "octo.folds"
 local signs = require "octo.signs"
 local graphql = require "octo.graphql"
 local gh = require "octo.gh"
+local log = require("octo.log")
+local host = require "octo.host.provider"
 
 local M = {}
 
@@ -39,16 +41,18 @@ function OctoBuffer:new(opts)
     commentsMetadata = opts.commentsMetadata or {},
     threadsMetadata = opts.threadsMetadata or {},
   }
+
+  log.debug("Creating new buffer", this.id, this.node)
   if this.repo then
     this.owner, this.name = utils.split_repo(this.repo)
   end
   if this.node and this.node.commits then
     this.kind = "pull"
     this.taggable_users = { this.node.author.login }
-  elseif this.node and this.number then
+  elseif this.node and this.id then
     this.kind = "issue"
-    this.taggable_users = { this.node.author.login }
-  elseif this.node and not this.number then
+    this.taggable_users = { this.node.author.username }
+  elseif this.node and not this.id then
     this.kind = "repo"
   else
     this.kind = "reviewthread"
@@ -71,6 +75,7 @@ function OctoBuffer:apply_mappings()
     kind = "review_thread"
   end
 
+  log.debug("Applying mappings of kind", kind)
   for rhs, lhs in pairs(conf.mappings[kind]) do
     vim.api.nvim_buf_set_keymap(self.bufnr, "n", lhs, mappings.callback(rhs), mapping_opts)
   end
@@ -104,6 +109,8 @@ end
 function OctoBuffer:render_issue()
   self:clear()
 
+  log.debug("Rendering issue")
+
   -- write title
   writers.write_title(self.bufnr, self.node.title, 1)
 
@@ -130,7 +137,7 @@ function OctoBuffer:render_issue()
   local unrendered_labeled_events = {}
   local unrendered_unlabeled_events = {}
   local prev_is_event = false
-  for _, item in ipairs(self.node.timelineItems.nodes) do
+  for _, item in ipairs(self.node.timelineItems) do
     if item.__typename ~= "LabeledEvent" and #unrendered_labeled_events > 0 then
       writers.write_labeled_events(self.bufnr, unrendered_labeled_events, "added", prev_is_event)
       unrendered_labeled_events = {}
@@ -158,9 +165,9 @@ function OctoBuffer:render_issue()
 
       -- A review can have 0+ threads
       local threads = {}
-      for _, comment in ipairs(item.comments.nodes) do
-        for _, reviewThread in ipairs(self.node.reviewThreads.nodes) do
-          if comment.id == reviewThread.comments.nodes[1].id then
+      for _, comment in ipairs(item.comments) do
+        for _, reviewThread in ipairs(self.node.reviewThreads) do
+          if comment.id == reviewThread.comments[1].id then
             -- found a thread for the current review
             table.insert(threads, reviewThread)
           end
@@ -397,33 +404,34 @@ function M.do_save_title_and_body(buffer)
 end
 
 function M.do_add_issue_comment(buffer, comment)
+  log.debug("Creating new issue comment", buffer.node)
   -- create new issue comment
-  local id = buffer.node.id
-  local add_query = graphql("add_issue_comment_mutation", id, comment.body)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", add_query) },
-    cb = function(output, stderr)
+  local id = buffer.node.uid
+  host:create_note(
+    id,
+    comment.body,
+    function(note, stderr)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local respBody = resp.data.addComment.commentEdge.node.body
-        local respId = resp.data.addComment.commentEdge.node.id
-        if vim.fn.trim(comment.body) == vim.fn.trim(respBody) then
-          local comments = buffer.commentsMetadata
-          for i, c in ipairs(comments) do
-            if tonumber(c.id) == -1 then
-              comments[i].id = respId
-              comments[i].savedBody = respBody
-              comments[i].dirty = false
-              break
-            end
-          end
-          buffer:render_signcolumn()
-        end
+      elseif not output then
+        return
       end
-    end,
-  }
+      local respBody = note.body
+      local respId = note.id
+      if vim.fn.trim(comment.body) == vim.fn.trim(respBody) then
+        local comments = buffer.commentsMetadata
+        for i, c in ipairs(comments) do
+          if tonumber(c.id) == -1 then
+            comments[i].id = respId
+            comments[i].savedBody = respBody
+            comments[i].dirty = false
+            break
+          end
+        end
+        buffer:render_signcolumn()
+      end
+    end
+  )
 end
 
 function M.do_add_thread_comment(buffer, comment)

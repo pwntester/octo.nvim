@@ -76,8 +76,10 @@ local function open(command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
+
+    local repoPath = selection.repo.hostname.."/"..selection.repo.full_path
     vim.cmd(
-      string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], selection.kind, selection.repo, selection.value)
+      string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], selection.kind, repoPath, selection.value)
     )
   end
 end
@@ -171,39 +173,6 @@ function M.issues(opts)
       }):find()
     end
   )
-
-  -- local query = graphql("issues_query", opts.repo, filter, { escape = false })
-  -- print "Fetching issues (this may take a while) SUPER ..."
-  -- print(query)
-
-  -- gh.run {
-  --   args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-  --   cb = function(output, stderr)
-  --     print " "
-  --     if stderr and not utils.is_blank(stderr) then
-  --       utils.notify(stderr, 2)
-  --     elseif output then
-
-
-  --       pickers.new(opts, {
-  --         finder = finders.new_table {
-  --           results = issues,
-  --           entry_maker = entry_maker.gen_from_issue(max_number),
-  --         },
-  --         sorter = conf.generic_sorter(opts),
-  --         previewer = previewers.issue.new(opts),
-  --         attach_mappings = function(_, map)
-  --           action_set.select:replace(function(prompt_bufnr, type)
-  --             open(type)(prompt_bufnr)
-  --           end)
-  --           map("i", "<c-b>", open_in_browser())
-  --           map("i", "<c-y>", copy_url())
-  --           return true
-  --         end,
-  --       }):find()
-  --     end
-  --   end,
-  -- }
 end
 
 --

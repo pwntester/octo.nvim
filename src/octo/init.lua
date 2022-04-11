@@ -11,6 +11,8 @@ local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local window = require "octo.window"
 local reviews = require "octo.reviews"
+local host = require "octo.host.provider"
+local log = require("octo.log")
 require "octo.completion"
 require "octo.folds"
 
@@ -76,8 +78,47 @@ function M.load_buffer(bufnr)
   end)
 end
 
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
 function M.load(repo, kind, number, cb)
-  local owner, name = utils.split_repo(repo)
+  local hostname, owner, name = utils.full_split_repo(repo)
+  host:set_provider(hostname)
+
+  -- TODO: We may create a utility function which grabs all the repo information.
+  local repo = {}
+  repo.hostname = hostname
+  repo.full_path = owner .. "/" .. name
+  repo.owner = owner
+  repo.name = name
+
+  if kind == "issue" then
+    host:get_issue(repo, number, function(obj, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        log.error("Unable to get issue", obj, stderr)
+        vim.api.nvim_err_writeln(stderr)
+      elseif not obj then
+        log.error("No object", obj)
+        return
+      end
+
+      cb(obj)
+    end)
+  end
+
+
+  -- TODO: Migrate the rest
+
   local query
   local key
 
@@ -220,7 +261,8 @@ function M.on_cursor_hold()
 end
 
 function M.create_buffer(kind, obj, repo, create)
-  if not obj.id then
+  log.debug("Creating buffer", obj.uid)
+  if not obj.uid then
     utils.notify("Cannot find " .. repo)
     return
   end
@@ -233,14 +275,14 @@ function M.create_buffer(kind, obj, repo, create)
   if create then
     bufnr = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_set_current_buf(bufnr)
-    vim.cmd(string.format("file octo://%s/%s/%d", repo, kind, obj.number))
+    vim.cmd(string.format("file octo://%s/%s/%d", repo, kind, obj.id))
   else
     bufnr = vim.api.nvim_get_current_buf()
   end
 
   local octo_buffer = BOctoBuffer:new {
     bufnr = bufnr,
-    number = obj.number,
+    number = obj.id,
     repo = repo,
     node = obj,
   }

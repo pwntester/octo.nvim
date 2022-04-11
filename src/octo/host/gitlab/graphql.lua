@@ -1,5 +1,17 @@
 local M = {}
 
+-- https://docs.gitlab.com/ee/api/graphql/reference/#mutationcreatenote
+M.add_simple_note = [[
+mutation {
+  createNote(input:{noteableId:"%s", body:"%s"}) {
+    note {
+      id
+      body
+    }
+  }
+}
+]]
+
 -- NOTE: Filters, like the one working for GitHub do NOT work 1:1 for GitLab!!
 -- I. e., you can write: filterBy: { assignee: "USERNAME" }
 -- this request would be an extra field for GitLab!!
@@ -36,6 +48,7 @@ M.issue_query = [[
 query($endCursor: String) {
   project(fullPath: "%s") {
     issue(iid: "%d") {
+      id
       iid
       state
       title
