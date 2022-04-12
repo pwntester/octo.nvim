@@ -272,15 +272,8 @@ function M.checkout_pr(pr_number)
       enable_recording = true,
       command = "gh",
       args = { "pr", "checkout", pr_number },
-      on_exit = vim.schedule_wrap(function(j_self, _, _)
-        local stderr = table.concat(j_self:stderr_result(), "\n")
-        for _, line in ipairs(vim.fn.split(stderr, "\n")) do
-          if line:match "Switched to" or line:match "Already on" then
-            M.notify("" .. line, 1)
-            return
-          end
-        end
-        M.notify("" .. stderr, 2)
+      on_exit = vim.schedule_wrap(function()
+        vim.notify("Switched to " .. vim.fn.system("git branch --show-current"))
       end),
     })
     :start()
