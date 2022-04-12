@@ -288,14 +288,28 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `<CR>`: Edit Issue
 - `<C-b>`: Opens issue in the browser
 - `<C-y>`: Copies URL to system clipboard
+
 [Available filter keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
+- since
+- createdBy
+- assignee
+- mentioned
+- labels
+- milestone
+- states
+
 
 2. In-menu mappings:
 - `<CR>`: Edit PR
 - `<C-b>`: Opens PR in the browser
 - `<C-o>`: Checkout PR
 - `<C-y>`: Copies URL to system clipboard
-[Available keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
+
+[Available filter keys](https://github.com/pwntester/octo.nvim/blob/master/lua/octo/pickers/telescope/provider.lua#L34)
+- baseRefName
+- headRefName
+- labels
+- states
 
 3. In-menu mappings:
 - `<CR>`: View repo
@@ -417,6 +431,21 @@ Just add the following lines to your TreeSitter config:
 local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
 parser_config.markdown.filetype_to_parsername = "octo"
 ```
+
+**How can I filter PRs by filter keys that aren't available?**
+
+You can use the search command `:Octo search [query]`.
+The [search syntax](https://docs.github.com/en/search-github/getting-started-with-searching-on-github/understanding-the-search-syntax)
+and available search terms are available in [GitHub documentation](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests#search-by-author).
+
+For example to search for PRs with author you can use this command:
+
+```
+:Octo search is:pr author:pwntester repo:github/codeql
+```
+
+Note: You need to provide the `repo`, otherwise it will search for every PR by that user.
+
 
 ## ✋ Contributing
 
