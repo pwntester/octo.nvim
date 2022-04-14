@@ -132,14 +132,22 @@ M.keypress_event_cbs = {
   end,
   select_next_entry = function()
     local layout = M.get_current_layout()
-    if layout then
-      layout:next_file()
+    if layout and layout.file_panel:is_open() then
+      local file_idx = layout.file_idx % #layout.files + 1
+      local file = layout.files[file_idx]
+      if file then
+        layout:set_file(file, true)
+      end
     end
   end,
   select_prev_entry = function()
     local layout = M.get_current_layout()
-    if layout then
-      layout:prev_file()
+    if layout and layout.file_panel:is_open() then
+      local file_idx = (layout.file_idx - 2) % #layout.files + 1
+      local file = layout.files[file_idx]
+      if file then
+        layout:set_file(file, true)
+      end
     end
   end,
   next_entry = function()

@@ -85,43 +85,6 @@ function Layout:cur_file()
   return nil
 end
 
-function Layout:next_file()
-  self:ensure_layout()
-  if self:file_safeguard() then
-    return
-  end
-
-  if #self.files > 1 then
-    local cur = self:cur_file()
-    if cur then
-      cur:detach_buffers()
-    end
-    self.file_idx = self.file_idx % #self.files + 1
-    vim.cmd "diffoff!"
-    -- Load file diffs in layout wins
-    self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid)
-    self.file_panel:highlight_file(self:cur_file())
-  end
-end
-
-function Layout:prev_file()
-  self:ensure_layout()
-  if self:file_safeguard() then
-    return
-  end
-
-  if #self.files > 1 then
-    local cur = self:cur_file()
-    if cur then
-      cur:detach_buffers()
-    end
-    self.file_idx = (self.file_idx - 2) % #self.files + 1
-    vim.cmd "diffoff!"
-    self.files[self.file_idx]:load_buffers(self.left_winid, self.right_winid)
-    self.file_panel:highlight_file(self:cur_file())
-  end
-end
-
 -- sets selected file
 function Layout:set_file(file, focus)
   self:ensure_layout()
