@@ -189,7 +189,12 @@ M.commands = {
   },
   comment = {
     add = function()
-      M.add_comment()
+      local bufnr = vim.api.nvim_get_current_buf()
+      if utils.get_split_and_path(bufnr) then
+        require("octo.reviews").add_review_comment(false)
+      else
+        M.add_comment()
+      end
     end,
     delete = function()
       M.delete_comment()
