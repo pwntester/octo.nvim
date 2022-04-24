@@ -210,6 +210,7 @@ PR REVIEW                                       *octo-pr-review*
 
 COMPLETION                                      *octo-completion*
 
+Omnifunc completion(`<C-x><X-o`):
 * Issue/PR number completion (#)
 * User completion (@)
 
@@ -300,6 +301,27 @@ Can I use treesitter markdown parser with octo buffers?~
   parser_config.markdown.filetype_to_parsername = "octo"
 <
 
+*How can I filter PRs by filter keys that aren't available?~
+
+  You can use the search command `:Octo search [query]`.
+  The [search syntax](https://docs.github.com/en/search-github/getting-started-with-searching-on-github/understanding-the-search-syntax) and available search terms are available in [GitHub documentation](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests#search-by-author).
+
+  For example to search for PRs with author you can use this command:
+
+>
+  :Octo search is:pr author:pwntester repo:github/codeql
+<
+
+  Note: You need to provide the `repo`, otherwise it will search for every PR by that user.
+
+*How to enable autocompletion for issues/prs (`#`) and users (`@`)?~
+
+  Add the following mappings for `octo-buffer` file type:
+
+>
+  `vim.api.nvim_buf_set_keymap(0, "i", "@", "@<C-x><C-o>", { silent = true, noremap = true })
+  `vim.api.nvim_buf_set_keymap(0, "i", "#", "#<C-x><C-o>", { silent = true, noremap = true })
+<
 
 CREDITS                                         *octo-credits*
 

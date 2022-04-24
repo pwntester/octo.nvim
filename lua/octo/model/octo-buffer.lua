@@ -74,10 +74,6 @@ function OctoBuffer:apply_mappings()
   for rhs, lhs in pairs(conf.mappings[kind]) do
     vim.api.nvim_buf_set_keymap(self.bufnr, "n", lhs, mappings.callback(rhs), mapping_opts)
   end
-
-  -- autocomplete
-  vim.api.nvim_buf_set_keymap(self.bufnr, "i", "@", "@<C-x><C-o>", mapping_opts)
-  vim.api.nvim_buf_set_keymap(self.bufnr, "i", "#", "#<C-x><C-o>", mapping_opts)
 end
 
 function OctoBuffer:clear()

@@ -354,6 +354,7 @@ Octo search assignee:pwntester is:pr
 - A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
 
 ## 🍞 Completion
+Omnifunc completion(`<C-x><X-o`):
 - Issue/PR id completion (#)
 - User completion (@)
 
@@ -446,6 +447,11 @@ For example to search for PRs with author you can use this command:
 
 Note: You need to provide the `repo`, otherwise it will search for every PR by that user.
 
+**How to enable autocompletion for issues/prs (`#`) and users (`@`)?**
+
+Add the following mappings for `octo-buffer` file type:
+- `vim.api.nvim_buf_set_keymap(0, "i", "@", "@<C-x><C-o>", { silent = true, noremap = true })`
+- `vim.api.nvim_buf_set_keymap(0, "i", "#", "#<C-x><C-o>", { silent = true, noremap = true })`
 
 ## ✋ Contributing
 
