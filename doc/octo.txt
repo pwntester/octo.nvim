@@ -210,9 +210,7 @@ PR REVIEW                                       *octo-pr-review*
 
 COMPLETION                                      *octo-completion*
 
-Omnifunc completion(`<C-x><X-o`):
-* Issue/PR number completion (#)
-* User completion (@)
+Octo provides a built-in omnifunc completion for issues, PRs and users that you can trigger using `<C-x><C-o>`. Alternately, if you use [`nvim-cmp`](https://github.com/hrsh7th/nvim-cmp) for completion, you can use the [`cmp-git`](https://github.com/petertriho/cmp-git/) source to provide issues, PRs, commits and users completion.
 
 
 HIGHLIGHT GROUPS                                *octo-highlights*

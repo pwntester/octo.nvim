@@ -354,9 +354,7 @@ Octo search assignee:pwntester is:pr
 - A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
 
 ## 🍞 Completion
-Omnifunc completion(`<C-x><X-o`):
-- Issue/PR id completion (#)
-- User completion (@)
+Octo provides a built-in omnifunc completion for issues, PRs and users that you can trigger using `<C-x><C-o>`. Alternately, if you use [`nvim-cmp`](https://github.com/hrsh7th/nvim-cmp) for completion, you can use the [`cmp-git`](https://github.com/petertriho/cmp-git/) source to provide issues, PRs, commits and users completion.
 
 ## 🎨 Colors
 | Highlight Group             | Defaults to     |
