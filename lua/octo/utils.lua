@@ -274,7 +274,7 @@ function M.checkout_pr(pr_number)
       command = "gh",
       args = { "pr", "checkout", pr_number },
       on_exit = vim.schedule_wrap(function()
-        vim.notify("Switched to " .. vim.fn.system("git branch --show-current"))
+        vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
       end),
     })
     :start()

@@ -316,7 +316,7 @@ Can I use treesitter markdown parser with octo buffers?~
 
 *How to enable autocompletion for issues/prs (`#`) and users (`@`)?~
 
-  Add the following mappings for `octo-buffer` file type:
+  Add the following mappings for `octo` file type:
 
 >
   `vim.api.nvim_buf_set_keymap(0, "i", "@", "@<C-x><C-o>", { silent = true, noremap = true })
