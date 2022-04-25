@@ -156,16 +156,17 @@ function M.get_remote_name()
     local stderr = table.concat(job:stderr_result(), "\n")
 
     if M.is_blank(stderr) then
-      local owner, name
+      local sep
       if #vim.split(url, "://") == 2 then
-        owner = vim.split(url, "/")[#vim.split(url, "/") - 1]
-        name = string.gsub(vim.split(url, "/")[#vim.split(url, "/")], ".git$", "")
-      elseif #vim.split(url, "@") == 2 then
-        local segment = vim.split(url, ":")[2]
-        owner = vim.split(segment, "/")[1]
-        name = string.gsub(vim.split(segment, "/")[2], ".git$", "")
+        sep = "://"
+      elseif #vim.split(url, ":/") == 2 then
+        sep = ":/"
+      elseif #vim.split(url, ":") == 2 then
+        sep = ":"
+      else
+        return
       end
-      return string.format("%s/%s", owner, name)
+      return string.gsub(vim.split(url, sep)[2], ".git$", "")
     end
   end
 end
