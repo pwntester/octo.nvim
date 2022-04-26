@@ -148,7 +148,7 @@ function M.get_remote_name()
     local job = Job:new {
       command = "git",
       args = { "remote", "get-url", candidate },
-      cwd = vim.fn.getcwd()
+      cwd = vim.fn.getcwd(),
     }
     job:sync()
 
