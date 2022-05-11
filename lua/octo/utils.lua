@@ -166,7 +166,9 @@ function M.get_remote_name()
       else
         return
       end
-      return string.gsub(vim.split(url, sep)[2], ".git$", "")
+      return table.concat({
+        unpack(vim.split(string.gsub(vim.split(url, sep)[2], ".git$", ""), "/"), 2)
+      }, "/")
     end
   end
 end
