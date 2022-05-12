@@ -156,17 +156,20 @@ function M.get_remote_name()
     local stderr = table.concat(job:stderr_result(), "\n")
 
     if M.is_blank(stderr) then
-      local sep
-      if #vim.split(url, "://") == 2 then
-        sep = "://"
-      elseif #vim.split(url, ":/") == 2 then
-        sep = ":/"
-      elseif #vim.split(url, ":") == 2 then
-        sep = ":"
+      local repo
+      -- https://github.com/pwntester/octo.nvim.git
+      if vim.startswith(url, "http") then
+        local chunks = vim.split(url, "/")
+        repo = chunks[4] .. "/" .. chunks[5]
+        -- git@github.com:pwntester/octo.nvim.git
+      elseif vim.startswith(url, "git@") then
+        local parts = vim.split(url, ":")
+        local chunks = vim.split(parts[2], "/")
+        repo = chunks[1] .. "/" .. chunks[2]
       else
         return
       end
-      return string.gsub(vim.split(url, sep)[2], ".git$", "")
+      return string.gsub(repo, ".git$", "")
     end
   end
 end
@@ -176,19 +179,19 @@ function M.commit_exists(commit, cb)
     return
   end
   Job
-    :new({
-      enable_recording = true,
-      command = "git",
-      args = { "cat-file", "-t", commit },
-      on_exit = vim.schedule_wrap(function(j_self, _, _)
-        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
-          cb(true)
-        else
-          cb(false)
-        end
-      end),
-    })
-    :start()
+      :new({
+        enable_recording = true,
+        command = "git",
+        args = { "cat-file", "-t", commit },
+        on_exit = vim.schedule_wrap(function(j_self, _, _)
+          if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+            cb(true)
+          else
+            cb(false)
+          end
+        end),
+      })
+      :start()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -270,15 +273,15 @@ function M.checkout_pr(pr_number)
     return
   end
   Job
-    :new({
-      enable_recording = true,
-      command = "gh",
-      args = { "pr", "checkout", pr_number },
-      on_exit = vim.schedule_wrap(function()
-        vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
-      end),
-    })
-    :start()
+      :new({
+        enable_recording = true,
+        command = "gh",
+        args = { "pr", "checkout", pr_number },
+        on_exit = vim.schedule_wrap(function()
+          vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
+        end),
+      })
+      :start()
 end
 
 function M.get_current_pr()
@@ -1065,7 +1068,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       autocmd!
       autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
     augroup end
-  ]],
+  ]] ,
     augroup,
     winnr,
     table.concat(bufnrs, ",")
@@ -1077,7 +1080,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       augroup %s
         autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
       augroup end
-    ]],
+    ]] ,
       augroup,
       table.concat(events, ","),
       winnr
