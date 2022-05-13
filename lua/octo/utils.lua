@@ -158,7 +158,10 @@ function M.get_remote_name()
     if M.is_blank(stderr) then
       local repo
       -- https://github.com/pwntester/octo.nvim.git
-      if vim.startswith(url, "http") then
+      -- ssh://git@github.com/pwntester/octo.nvim.git
+      if vim.startswith(url, "http://") or
+          vim.startswith(url, "https://") or
+          vim.startswith(url, "ssh://") then
         local chunks = vim.split(url, "/")
         repo = chunks[4] .. "/" .. chunks[5]
         -- git@github.com:pwntester/octo.nvim.git
