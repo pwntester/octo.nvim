@@ -170,6 +170,11 @@ end
 function FileEntry:fetch()
   local right_path = self.path
   local left_path = self.path
+  local current_review = require("octo.reviews").get_current_review()
+  local right_sha = current_review.layout.right.commit
+  local left_sha = current_review.layout.left.commit
+  local right_abbrev = current_review.layout.right:abbrev()
+  local left_abbrev = current_review.layout.left:abbrev()
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
@@ -178,22 +183,22 @@ function FileEntry:fetch()
 
   -- fetch right version
   if self.pull_request.local_right then
-    utils.get_file_at_commit(right_path, self.pull_request.right.commit, function(lines)
+    utils.get_file_at_commit(right_path, right_sha, function(lines)
       self.right_lines = lines
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, self.pull_request.right:abbrev(), right_path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, right_abbrev, right_path, function(lines)
       self.right_lines = lines
     end)
   end
 
   -- fetch left version
   if self.pull_request.local_left then
-    utils.get_file_at_commit(left_path, self.pull_request.left.commit, function(lines)
+    utils.get_file_at_commit(left_path, left_sha, function(lines)
       self.left_lines = lines
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, self.pull_request.left:abbrev(), left_path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, left_abbrev, left_path, function(lines)
       self.left_lines = lines
     end)
   end

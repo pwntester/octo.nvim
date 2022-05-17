@@ -394,7 +394,7 @@ function M.review_commits(callback)
             entry_maker = entry_maker.gen_from_git_commits(),
           },
           sorter = conf.generic_sorter {},
-          previewer = previewers.commit.new { repo = current_review.repo },
+          previewer = previewers.commit.new { repo = current_review.pull_request.repo },
           attach_mappings = function()
             action_set.select:replace(function(prompt_bufnr)
               local commit = action_state.get_selected_entry(prompt_bufnr)
