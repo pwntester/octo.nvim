@@ -164,16 +164,16 @@ function M.get_remote()
     else
       local host
       local repo
-      -- https://github.com/pwntester/octo.nvim.git
-      -- ssh://git@github.com/pwntester/octo.nvim.git
       if vim.startswith(url, "http://") or
           vim.startswith(url, "https://") or
           vim.startswith(url, "ssh://") then
+        -- eg: https://github.com/pwntester/octo.nvim.git
+        -- eg: ssh://git@github.com/pwntester/octo.nvim.git
         local chunks = vim.split(url, "/")
         host = chunks[3]
         repo = chunks[4] .. "/" .. chunks[5]
-        -- git@github.com:pwntester/octo.nvim.git
       elseif vim.startswith(url, "git@") then
+        -- eg: git@github.com:pwntester/octo.nvim.git
         local parts = vim.split(url, ":")
         host = vim.split(parts[1], "@")[2]
         local repo_chunks = vim.split(parts[2], "/")
@@ -182,7 +182,7 @@ function M.get_remote()
         goto continue
       end
       return {
-        host = host,
+        host = vim.split(host, "@")[#vim.split(host, "@")],
         repo = string.gsub(repo, ".git$", ""),
       }
     end
