@@ -11,6 +11,8 @@ local M = {}
 ---@field bufnr integer
 ---@field left Rev
 ---@field right Rev
+---@field local_right boolean
+---@field local_left boolean
 ---@field files table
 local PullRequest = {}
 PullRequest.__index = PullRequest

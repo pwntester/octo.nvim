@@ -692,6 +692,11 @@ function M.parse_url(url)
   end
 end
 
+---Fetch file from GitHub repo at a given commit
+---@param repo string
+---@param commit string
+---@param path string
+---@param cb function
 function M.get_file_contents(repo, commit, path, cb)
   local owner, name = M.split_repo(repo)
   local query = graphql("file_content_query", owner, name, commit, path)

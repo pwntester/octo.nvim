@@ -19,6 +19,7 @@ M._null_buffer = {}
 
 ---@class FileEntry
 ---@field path string
+---@field previous_path string
 ---@field basename string
 ---@field extension string
 ---@field pull_request PullRequest
@@ -31,6 +32,8 @@ M._null_buffer = {}
 ---@field right_bufid integer
 ---@field left_lines string[]
 ---@field right_lines string[]
+---@field left_winid number
+---@field right_winid number
 ---@field left_comment_ranges table
 ---@field right_comment_ranges table
 ---@field associated_bufs integer[]
