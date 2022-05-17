@@ -37,10 +37,7 @@ M.commands = {
     end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
-      if not opts.repo or opts.repo == vim.NIL then
-        opts.repo = utils.get_remote_name()
-      end
-      if not opts.repo then
+      if utils.is_blank(opts.repo) then
         utils.notify("Cannot find repo", 2)
         return
       end
@@ -105,11 +102,7 @@ M.commands = {
     end,
     search = function(repo, ...)
       local opts = M.process_varargs(repo, ...)
-
-      if not opts.repo or opts.repo == vim.NIL then
-        opts.repo = utils.get_remote_name()
-      end
-      if not opts.repo then
+      if utils.is_blank(opts.repo) then
         utils.notify("Cannot find repo", 2)
         return
       end
@@ -274,7 +267,7 @@ M.commands = {
 
 function M.process_varargs(repo, ...)
   local args = table.pack(...)
-  if not repo then
+  if utils.is_blank(repo) then
     repo = utils.get_remote_name()
   elseif #vim.split(repo, "/") ~= 2 then
     table.insert(args, repo)

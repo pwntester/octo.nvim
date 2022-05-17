@@ -56,12 +56,21 @@ function M.run(opts)
   opts = opts or {}
   local conf = config.get_config()
   local mode = opts.mode or "async"
+  local hostname = ""
+  local remote_hostname = require("octo.utils").get_remote_host()
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
     table.insert(opts.args, "Accept: " .. table.concat(headers, ";"))
-    if not require("octo.utils").is_blank(conf.github_hostname) then
+    if not require("octo.utils").is_blank(opts.hostname) then
+      hostname = opts.hostname
+    elseif not require("octo.utils").is_blank(conf.github_hostname) then
+      hostname = conf.github_hostname
+    elseif not require("octo.utils").is_blank(remote_hostname) then
+      hostname = remote_hostname
+    end
+    if not require("octo.utils").is_blank(hostname) and hostname ~= "github.com" then
       table.insert(opts.args, "--hostname")
-      table.insert(opts.args, conf.github_hostname)
+      table.insert(opts.args, hostname)
     end
   end
 

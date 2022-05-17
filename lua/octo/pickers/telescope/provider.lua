@@ -124,7 +124,7 @@ function M.issues(opts)
   end
   local filter = get_filter(opts, "issue")
 
-  if not opts.repo or opts.repo == vim.NIL then
+  if not require("octo.utils").is_blank(opts.repo) then
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then

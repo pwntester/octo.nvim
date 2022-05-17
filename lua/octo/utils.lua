@@ -141,9 +141,13 @@ function M.is_blank(s)
   return not (s ~= nil and s ~= vim.NIL and string.match(s, "%S") ~= nil)
 end
 
-function M.get_remote_name()
+function M.get_remote()
   local conf = config.get_config()
   local candidates = conf.default_remote
+  local default_remote = {
+    host = "github.com",
+    repo = "",
+  }
   for _, candidate in ipairs(candidates) do
     local job = Job:new {
       command = "git",
@@ -155,7 +159,10 @@ function M.get_remote_name()
     local url = table.concat(job:result(), "\n")
     local stderr = table.concat(job:stderr_result(), "\n")
 
-    if M.is_blank(stderr) then
+    if not M.is_blank(stderr) then
+      goto continue
+    else
+      local host
       local repo
       -- https://github.com/pwntester/octo.nvim.git
       -- ssh://git@github.com/pwntester/octo.nvim.git
@@ -163,18 +170,34 @@ function M.get_remote_name()
           vim.startswith(url, "https://") or
           vim.startswith(url, "ssh://") then
         local chunks = vim.split(url, "/")
+        host = chunks[3]
         repo = chunks[4] .. "/" .. chunks[5]
         -- git@github.com:pwntester/octo.nvim.git
       elseif vim.startswith(url, "git@") then
         local parts = vim.split(url, ":")
-        local chunks = vim.split(parts[2], "/")
-        repo = chunks[1] .. "/" .. chunks[2]
+        host = vim.split(parts[1], "@")[2]
+        local repo_chunks = vim.split(parts[2], "/")
+        repo = repo_chunks[1] .. "/" .. repo_chunks[2]
       else
-        return
+        goto continue
       end
-      return string.gsub(repo, ".git$", "")
+      return {
+        host = vim.split(host, "@")[#vim.split(host, "@")],
+        repo = string.gsub(repo, ".git$", ""),
+      }
     end
+    ::continue::
   end
+  require("octo.utils").notify("Unable to parse a git remote.", 2)
+  return default_remote
+end
+
+function M.get_remote_name()
+  return M.get_remote().repo
+end
+
+function M.get_remote_host()
+  return M.get_remote().host
 end
 
 function M.commit_exists(commit, cb)
