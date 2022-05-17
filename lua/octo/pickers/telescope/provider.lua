@@ -351,6 +351,66 @@ function M.commits()
   }
 end
 
+function M.review_commits(callback)
+  local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    utils.notify("No review in progress", 2)
+    return
+  end
+  -- TODO: graphql
+  local url = string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
+  gh.run {
+    args = { "api", url },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.notify(stderr, 2)
+      elseif output then
+        local results = vim.fn.json_decode(output)
+
+        -- add a fake entry to represent the entire pull request
+        table.insert(results, {
+          sha = current_review.pull_request.right.commit,
+          commit = {
+            message = "[[ENTIRE PULL REQUEST]]",
+            author = {
+              name = "",
+              email = "",
+              date = "",
+            },
+          },
+          parents = {
+            {
+              sha = current_review.pull_request.left.commit,
+            }
+          }
+        })
+
+        pickers.new({}, {
+          prompt_title = false,
+          results_title = false,
+          preview_title = false,
+          finder = finders.new_table {
+            results = results,
+            entry_maker = entry_maker.gen_from_git_commits(),
+          },
+          sorter = conf.generic_sorter {},
+          previewer = previewers.commit.new { repo = current_review.repo },
+          attach_mappings = function()
+            action_set.select:replace(function(prompt_bufnr)
+              local commit = action_state.get_selected_entry(prompt_bufnr)
+              local right = commit.value
+              local left = commit.parent
+              actions.close(prompt_bufnr)
+              callback(right, left)
+            end)
+            return true
+          end,
+        }):find()
+      end
+    end,
+  }
+end
+
 --
 -- FILES
 --
@@ -905,6 +965,7 @@ M.picker = {
   prs = M.pull_requests,
   gists = M.gists,
   commits = M.commits,
+  review_commits = M.review_commits,
   changed_files = M.changed_files,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,

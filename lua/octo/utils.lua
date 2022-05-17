@@ -61,6 +61,13 @@ M.state_message_map = {
   REVIEW_REQUIRED = "Awaiting required review",
 }
 
+M.file_status_map = {
+  modified = "M",
+  added = "A",
+  deleted = "D",
+  renamed = "R",
+}
+
 function M.calculate_strongest_review_state(states)
   if vim.tbl_contains(states, "APPROVED") then
     return "APPROVED"
@@ -332,6 +339,79 @@ function M.get_current_pr()
     left = Rev:new(buffer.node.baseRefOid),
     right = Rev:new(buffer.node.headRefOid),
     files = buffer.node.files.nodes,
+  }
+end
+
+-- fetch the PR changed files
+function M.get_pr_changed_files(pr, callback)
+  -- TODO: Move to GraphQL query when available
+  local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
+  gh.run {
+    args = { "api", "--paginate", url, "--jq", "." },
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.notify(stderr, 2)
+      elseif output then
+        local FileEntry = require("octo.reviews.file-entry").FileEntry
+        --local results = M.get_flatten_pages(output)
+        local results = vim.fn.json_decode(output)
+        local files = {}
+        for _, result in ipairs(results) do
+          local entry = FileEntry:new {
+            path = result.filename,
+            previous_path = result.previous_filename,
+            patch = result.patch,
+            pull_request = pr,
+            status = M.file_status_map[result.status],
+            stats = {
+              additions = result.additions,
+              deletions = result.deletions,
+              changes = result.changes,
+            },
+          }
+          table.insert(files, entry)
+        end
+        callback(files)
+      end
+    end,
+  }
+end
+
+-- fetch the commit changed files
+function M.get_commit_changed_files(pr, rev, callback)
+  -- TODO: Move to GraphQL query when available
+  local url = string.format("repos/%s/commits/%s", pr.repo, rev.commit)
+  print(url)
+  gh.run {
+    args = { "api", "--paginate", url, "--jq", "." },
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.notify(stderr, 2)
+      elseif output then
+        local FileEntry = require("octo.reviews.file-entry").FileEntry
+        --local results = M.get_flatten_pages(output)
+        local results = vim.fn.json_decode(output)
+        local files = {}
+        if results.files then
+          for _, result in ipairs(results.files) do
+            local entry = FileEntry:new {
+              path = result.filename,
+              previous_path = result.previous_filename,
+              patch = result.patch,
+              pull_request = pr,
+              status = M.file_status_map[result.status],
+              stats = {
+                additions = result.additions,
+                deletions = result.deletions,
+                changes = result.changes,
+              },
+            }
+            table.insert(files, entry)
+          end
+          callback(files)
+        end
+      end
+    end,
   }
 end
 

@@ -144,20 +144,34 @@ M.commands = {
       reviews.resume_review()
     end,
     comments = function()
-      reviews.show_pending_comments()
+      local current_review = reviews.get_current_review()
+      if current_review then
+        current_review:show_pending_comments()
+      end
     end,
     submit = function()
-      local current_review = require("octo.reviews").get_current_review()
+      local current_review = reviews.get_current_review()
       if current_review then
         current_review:collect_submit_info()
       end
     end,
     discard = function()
-      reviews.discard_review()
+      local current_review = reviews.get_current_review()
+      if current_review then
+        current_review:discard()
+      end
     end,
     close = function()
-      if reviews.get_current_review() and reviews.get_current_review() then
+      if reviews.get_current_review() then
         reviews.get_current_review().layout:close()
+      end
+    end,
+    commit = function()
+      local current_review = reviews.get_current_review()
+      if current_review then
+        picker.review_commits(function(right, left)
+          current_review:focus_commit(right, left)
+        end)
       end
     end,
   },

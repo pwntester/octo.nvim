@@ -1,47 +1,12 @@
-local FileEntry = require("octo.reviews.file-entry").FileEntry
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local Layout = require("octo.reviews.layout").Layout
+local Rev = require("octo.reviews.rev").Rev
 local utils = require "octo.utils"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local window = require "octo.window"
 local config = require "octo.config"
 local mappings = require "octo.mappings"
-
-local status_map = {
-  modified = "M",
-  added = "A",
-  deleted = "D",
-  renamed = "R",
-}
-
-local M = {}
-
-M.reviews = {}
-
-function M.on_tab_leave()
-  local current_review = M.get_current_review()
-  if current_review and current_review.layout then
-    current_review.layout:on_leave()
-  end
-end
-
-function M.on_win_leave()
-  local current_review = M.get_current_review()
-  if current_review and current_review.layout then
-    current_review.layout:on_win_leave()
-  end
-end
-
-function M.close(tabpage)
-  if tabpage then
-    local review = M.reviews[tostring(tabpage)]
-    if review and review.layout then
-      review.layout:close()
-    end
-    M.reviews[tostring(tabpage)] = nil
-  end
-end
 
 ---@class Review
 ---@field repo string
@@ -67,6 +32,7 @@ function Review:new(pull_request)
   return this
 end
 
+-- Creates a new review
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
   gh.run {
@@ -82,6 +48,7 @@ function Review:create(callback)
   }
 end
 
+-- Starts a new review
 function Review:start()
   self:create(function(resp)
     self.id = resp.data.addPullRequestReview.pullRequestReview.id
@@ -91,7 +58,8 @@ function Review:start()
   end)
 end
 
-function Review:resume()
+-- Retrieves existing review
+function Review:retrieve(callback)
   local query = graphql(
     "pending_review_threads_query",
     self.pull_request.owner,
@@ -105,79 +73,95 @@ function Review:resume()
         utils.notify(stderr, 2)
       elseif output then
         local resp = vim.fn.json_decode(output)
-        if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-          utils.notify("No pending reviews found", 2)
-          return
-        end
-
-        -- There can only be one pending review for a given user
-        for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
-          if review.viewerDidAuthor then
-            self.id = review.id
-            break
-          end
-        end
-
-        if not self.id then
-          vim.notify("[Octo] No pending reviews found for viewer", 2)
-          return
-        end
-
-        local threads = resp.data.repository.pullRequest.reviewThreads.nodes
-        self:update_threads(threads)
-        self:initiate()
+        callback(resp)
       end
     end,
   }
 end
 
-function Review:initiate()
+-- Resumes an existing review
+function Review:resume()
+  self:retrieve(function(resp)
+    if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+      utils.notify("No pending reviews found", 2)
+      return
+    end
+
+    -- There can only be one pending review for a given user
+    for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
+      if review.viewerDidAuthor then
+        self.id = review.id
+        break
+      end
+    end
+
+    if not self.id then
+      vim.notify("[Octo] No pending reviews found for viewer", 2)
+      return
+    end
+
+    local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+    self:update_threads(threads)
+    self:initiate()
+  end)
+end
+
+-- Updates layout to focus on a single commit
+function Review:focus_commit(right, left)
+  local pr = self.pull_request
+  self.layout:close()
+  self.layout = Layout:new {
+    right = Rev:new(right),
+    left = Rev:new(left),
+    files = {},
+  }
+  self.layout:open(self)
+  local cb = function(files)
+    -- pre-fetch the first file
+    if #files > 0 then
+      files[1]:fetch()
+    end
+    self.layout.files = files
+    self.layout:update_files()
+  end
+  if right == self.pull_request.right.commit and left == self.pull_request.left.commit then
+    utils.get_pr_changed_files(pr, cb)
+  else
+    utils.get_commit_changed_files(pr, self.layout.right, cb)
+  end
+end
+
+-- Initiates (starts/resumes) a review
+-- Review's pull request is used to get the right/left OIDs
+-- TODO: to support commit-wise reviews, we need to be able to change these OIDs
+--  on comment:
+--    - use review's pull_request OIDs and commits OIDs to figure out if we are commenting at commit level or file level
+--    - submit comments accordingly
+--  on submit review:
+--    - use review's pull_request OIDs and commits OIDs to figure out if we are submitting at commit level or file level
+--    - submit review accordingly
+--  we need new function `get_review_level(review, layout) -> "pr" | "commit_xxxxx"`
+function Review:initiate(opts)
+  opts = opts or {}
   local pr = self.pull_request
 
   -- create the layout
   self.layout = Layout:new {
-    left = pr.left,
-    right = pr.right,
+    -- TODO: rename to left_rev and right_rev
+    left = opts.left or pr.left,
+    right = opts.right or pr.right,
     files = {},
   }
   self.layout:open(self)
 
-  -- fetch the changed files
-  local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
-  gh.run {
-    args = { "api", "--paginate", url, "--jq", "." },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
-      elseif output then
-        local results = utils.get_flatten_pages(output)
-        local files = {}
-        for i, result in ipairs(results) do
-          local entry = FileEntry:new {
-            path = result.filename,
-            previous_path = result.previous_filename,
-            patch = result.patch,
-            pull_request = pr,
-            status = status_map[result.status],
-            stats = {
-              additions = result.additions,
-              deletions = result.deletions,
-              changes = result.changes,
-            },
-          }
-          table.insert(files, entry)
-          -- pre-fetch the first file
-          if i == 1 then
-            entry:fetch()
-          end
-        end
-        self.layout.files = files
-
-        -- update the file list
-        self.layout:update_files()
-      end
-    end,
-  }
+  utils.get_pr_changed_files(pr, function(files)
+    -- pre-fetch the first file
+    if #files > 0 then
+      files[1]:fetch()
+    end
+    self.layout.files = files
+    self.layout:update_files()
+  end)
 end
 
 function Review:discard()
@@ -288,44 +272,33 @@ function Review:submit(event)
   }
 end
 
+function Review:show_pending_comments()
+  local pending_threads = {}
+  for _, thread in ipairs(vim.tbl_values(self.threads)) do
+    for _, comment in ipairs(thread.comments.nodes) do
+      if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(vim.fn.trim(comment.body)) then
+        table.insert(pending_threads, thread)
+      end
+    end
+  end
+  if #pending_threads == 0 then
+    utils.notify("No pending comments found", 2)
+    return
+  else
+    require("octo.picker").pending_threads(pending_threads)
+  end
+end
+
+local M = {}
+
+M.reviews = {}
+
 M.Review = Review
-
-function M.start_review()
-  local pull_request = utils.get_current_pr()
-  if pull_request then
-    local current_review = Review:new(pull_request)
-    current_review:start()
-  else
-    pull_request = utils.get_pull_request_for_current_branch(function(pull_request)
-      local current_review = Review:new(pull_request)
-      current_review:start()
-    end)
-  end
-end
-
-function M.resume_review()
-  local pull_request = utils.get_current_pr()
-  if pull_request then
-    local current_review = Review:new(pull_request)
-    current_review:resume()
-  else
-    pull_request = utils.get_pull_request_for_current_branch(function(pull_request)
-      local current_review = Review:new(pull_request)
-      current_review:resume()
-    end)
-  end
-end
-
-function M.discard_review()
-  local current_review = M.get_current_review()
-  if current_review then
-    current_review:discard()
-  end
-end
 
 ------------
 --- THREADS
 ------------
+-- TODO: Move all the thread commands to a separate file
 
 function M.hide_review_threads()
   -- This function is called from a very broad CursorMoved
@@ -555,28 +528,6 @@ function M.get_current_review()
   return M.reviews[tostring(current_tabpage)]
 end
 
-function M.show_pending_comments()
-  local current_review = M.get_current_review()
-  if not current_review then
-    utils.notify("No review in progress", 2)
-    return
-  end
-  local pending_threads = {}
-  for _, thread in ipairs(vim.tbl_values(current_review.threads)) do
-    for _, comment in ipairs(thread.comments.nodes) do
-      if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(vim.fn.trim(comment.body)) then
-        table.insert(pending_threads, thread)
-      end
-    end
-  end
-  if #pending_threads == 0 then
-    utils.notify("No pending comments found", 2)
-    return
-  else
-    require("octo.picker").pending_threads(pending_threads)
-  end
-end
-
 function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
   for _, file in ipairs(current_review.layout.files) do
@@ -586,6 +537,56 @@ function M.jump_to_pending_review_thread(thread)
       vim.api.nvim_win_set_cursor(win, { thread.startLine, 0 })
       break
     end
+  end
+end
+
+function M.on_tab_leave()
+  local current_review = M.get_current_review()
+  if current_review and current_review.layout then
+    current_review.layout:on_leave()
+  end
+end
+
+function M.on_win_leave()
+  local current_review = M.get_current_review()
+  if current_review and current_review.layout then
+    current_review.layout:on_win_leave()
+  end
+end
+
+function M.close(tabpage)
+  if tabpage then
+    local review = M.reviews[tostring(tabpage)]
+    if review and review.layout then
+      review.layout:close()
+    end
+    M.reviews[tostring(tabpage)] = nil
+  end
+end
+
+function M.start_review()
+  local pull_request = utils.get_current_pr()
+  if pull_request then
+    local current_review = Review:new(pull_request)
+    current_review:start()
+  else
+    pull_request = utils.get_pull_request_for_current_branch(function(pr)
+      local current_review = Review:new(pr)
+      current_review:start()
+    end)
+  end
+end
+
+function M.resume_review()
+  local pull_request = utils.get_current_pr()
+  if pull_request then
+    local current_review = Review:new(pull_request)
+    current_review:resume()
+  else
+    pull_request = utils.get_pull_request_for_current_branch(function(pr)
+      local current_review = Review:new(pr)
+      current_review:resume()
+    end)
   end
 end
 

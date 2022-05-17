@@ -90,6 +90,7 @@ function M.gen_from_git_commits()
 
     return {
       value = entry.sha,
+      parent = entry.parents[1].sha,
       ordinal = entry.sha .. " " .. entry.commit.message,
       msg = entry.commit.message,
       display = make_display,

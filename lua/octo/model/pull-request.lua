@@ -4,6 +4,8 @@ local M = {}
 
 ---@class PullRequest
 ---@field repo string
+---@field owner string
+---@field name string
 ---@field number integer
 ---@field id string
 ---@field bufnr integer
@@ -17,8 +19,11 @@ PullRequest.__index = PullRequest
 ---@return PullRequest
 function PullRequest:new(opts)
   local this = {
+    -- TODO: rename to nwo
     repo = opts.repo,
     number = opts.number,
+    owner = "",
+    name = "",
     id = opts.id,
     left = opts.left,
     right = opts.right,
