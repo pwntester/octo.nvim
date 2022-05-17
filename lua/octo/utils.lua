@@ -182,7 +182,7 @@ function M.get_remote()
         goto continue
       end
       return {
-        host = host,
+        host = vim.split(host, "@")[#vim.split(host, "@")],
         repo = string.gsub(repo, ".git$", ""),
       }
     end
