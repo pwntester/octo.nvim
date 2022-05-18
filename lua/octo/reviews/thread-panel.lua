@@ -58,18 +58,14 @@ function M.show_review_threads()
     if review_level == "PR" and utils.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine == line then
       table.insert(threads_at_cursor, thread)
     elseif review_level == "COMMIT" then
-      print "review_level == COMMIT"
       local commit
       if split == "LEFT" then
         commit = review.layout.left.commit
       else
         commit = review.layout.right.commit
       end
-      print("commit: " .. commit)
       for _, comment in ipairs(thread.comments.nodes) do
-        print("comment for : " .. comment.originalCommit.abbreviatedOid .. " line " .. thread.originalLine)
         if commit == comment.originalCommit.oid and thread.originalLine == line then
-          print "Adding thread at cursor"
           table.insert(threads_at_cursor, thread)
           break
         end
@@ -77,7 +73,6 @@ function M.show_review_threads()
     end
   end
 
-  print("number of threads at cursor: " .. #threads_at_cursor)
   if #threads_at_cursor == 0 then
     return
   end

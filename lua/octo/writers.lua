@@ -1358,9 +1358,6 @@ function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   elseif mode == "vt" then
     ok = pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
   end
-  --if not ok then
-  --print(vim.inspect(chunks))
-  --end
 end
 
 return M

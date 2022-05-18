@@ -196,7 +196,7 @@ M.commands = {
   },
   comment = {
     add = function()
-      local current_review = require("reviews").get_current_review()
+      local current_review = require("octo.reviews").get_current_review()
       if current_review and utils.in_diff_window() then
         current_review:add_comment(false)
       else
@@ -793,16 +793,6 @@ function M.create_pr(is_draft)
         local repo_id = utils.get_repo_id(repo_candidates[repo_idx])
         local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, body, is_draft)
 
-        -- print(vim.inspect({
-        --   base_ref_name = base_ref_name,
-        --   head_ref_name = head_ref_name,
-        --   repo_id = repo_id,
-        --   title = title,
-        --   is_draft = is_draft,
-        --   candidates = repo_candidates,
-        --   repo = repo_candidates[repo_idx]
-        -- }))
-
         local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
         if choice == 1 then
           gh.run {
@@ -943,16 +933,6 @@ function M.create_pr(is_draft)
         local repo_id = utils.get_repo_id(repo_candidates[repo_idx])
         local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, body, is_draft)
 
-        -- print(vim.inspect({
-        --   base_ref_name = base_ref_name,
-        --   head_ref_name = head_ref_name,
-        --   repo_id = repo_id,
-        --   title = title,
-        --   is_draft = is_draft,
-        --   candidates = repo_candidates,
-        --   repo = repo_candidates[repo_idx]
-        -- }))
-
         local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
         if choice == 1 then
           gh.run {
@@ -985,7 +965,8 @@ function M.pr_ready_for_review()
   gh.run {
     args = { "pr", "ready", tostring(buffer.number) },
     cb = function(output, stderr)
-      utils.notify("[Octo]", output, stderr, 1)
+      utils.notify(output, 1)
+      utils.notify(stderr, 2)
       writers.write_state(bufnr)
     end,
   }

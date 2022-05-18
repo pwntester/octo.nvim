@@ -128,12 +128,12 @@ function OctoBuffer:render_issue()
   local prev_is_event = false
   for _, item in ipairs(self.node.timelineItems.nodes) do
     if item.__typename ~= "LabeledEvent" and #unrendered_labeled_events > 0 then
-      writers.write_labeled_events(self.bufnr, unrendered_labeled_events, "added", prev_is_event)
+      writers.write_labeled_events(self.bufnr, unrendered_labeled_events, "added")
       unrendered_labeled_events = {}
       prev_is_event = true
     end
     if item.__typename ~= "UnlabeledEvent" and #unrendered_unlabeled_events > 0 then
-      writers.write_labeled_events(self.bufnr, unrendered_unlabeled_events, "removed", prev_is_event)
+      writers.write_labeled_events(self.bufnr, unrendered_unlabeled_events, "removed")
       unrendered_unlabeled_events = {}
       prev_is_event = true
     end
@@ -170,39 +170,39 @@ function OctoBuffer:render_issue()
 
         -- print threads
         if #threads > 0 then
-          review_end = writers.write_threads(self.bufnr, threads, review_start, review_end)
+          review_end = writers.write_threads(self.bufnr, threads)
           folds.create(self.bufnr, review_start + 1, review_end, true)
         end
         writers.write_block(self.bufnr, { "" })
         prev_is_event = false
       end
     elseif item.__typename == "AssignedEvent" then
-      writers.write_assigned_event(self.bufnr, item, prev_is_event)
+      writers.write_assigned_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "PullRequestCommit" then
-      writers.write_commit_event(self.bufnr, item, prev_is_event)
+      writers.write_commit_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "MergedEvent" then
-      writers.write_merged_event(self.bufnr, item, prev_is_event)
+      writers.write_merged_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ClosedEvent" then
-      writers.write_closed_event(self.bufnr, item, prev_is_event)
+      writers.write_closed_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ReopenedEvent" then
-      writers.write_reopened_event(self.bufnr, item, prev_is_event)
+      writers.write_reopened_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "LabeledEvent" then
       table.insert(unrendered_labeled_events, item)
     elseif item.__typename == "UnlabeledEvent" then
       table.insert(unrendered_unlabeled_events, item)
     elseif item.__typename == "ReviewRequestedEvent" then
-      writers.write_review_requested_event(self.bufnr, item, "removed", prev_is_event)
+      writers.write_review_requested_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ReviewRequestRemovedEvent" then
-      writers.write_review_request_removed_event(self.bufnr, item, "removed", prev_is_event)
+      writers.write_review_request_removed_event(self.bufnr, item)
       prev_is_event = true
     elseif item.__typename == "ReviewDismissedEvent" then
-      writers.write_review_dismissed_event(self.bufnr, item, "removed", prev_is_event)
+      writers.write_review_dismissed_event(self.bufnr, item)
       prev_is_event = true
     end
   end
@@ -630,7 +630,7 @@ function OctoBuffer:do_update_comment(comment)
         elseif comment.kind == "PullRequestReviewComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
-            resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
+          resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
           local review = require("octo.reviews").get_current_review()
           if review then
             review:update_threads(threads)

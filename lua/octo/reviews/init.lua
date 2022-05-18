@@ -344,6 +344,15 @@ function Review:add_comment(isSuggestion)
     local pr = file.pull_request
 
     -- create a thread stub representing the new comment
+
+    local commit, commit_abbrev
+    if split == "LEFT" then
+      commit = self.layout.left.commit
+      commit_abbrev = self.layout.left:abbrev()
+    elseif split == "RIGHT" then
+      commit = self.layout.right.commit
+      commit_abbrev = self.layout.right:abbrev()
+    end
     local threads = {
       {
         originalStartLine = line1,
@@ -363,6 +372,7 @@ function Review:add_comment(isSuggestion)
               replyTo = vim.NIL,
               diffHunk = diff_hunk,
               createdAt = vim.fn.strftime "%FT%TZ",
+              originalCommit = { oid = commit, abbreviatedOid = commit_abbrev },
               body = " ",
               viewerCanUpdate = true,
               viewerCanDelete = true,
