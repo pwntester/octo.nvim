@@ -381,7 +381,6 @@ end
 function M.get_commit_changed_files(pr, rev, callback)
   -- TODO: Move to GraphQL query when available
   local url = string.format("repos/%s/commits/%s", pr.repo, rev.commit)
-  print(url)
   gh.run {
     args = { "api", "--paginate", url, "--jq", "." },
     cb = function(output, stderr)

@@ -65,7 +65,10 @@ M.resolve_review_thread_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
@@ -124,7 +127,10 @@ M.unresolve_review_thread_mutation = [[
                   id
                   body
                   diffHunk
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   createdAt
                   lastEditedAt
                   author {login}
@@ -184,7 +190,10 @@ M.start_review_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
@@ -282,7 +291,10 @@ mutation {
           diffHunk
           createdAt
           lastEditedAt
-          commit { abbreviatedOid }
+          commit {
+            oid
+            abbreviatedOid
+          }
           author {login}
           authorAssociation
           viewerDidAuthor
@@ -325,7 +337,10 @@ mutation {
                 diffHunk
                 createdAt
                 lastEditedAt
-                commit { abbreviatedOid }
+                originalCommit {
+                  oid
+                  abbreviatedOid
+                }
                 author {login}
                 authorAssociation
                 viewerDidAuthor
@@ -368,7 +383,10 @@ mutation {
           diffHunk
           createdAt
           lastEditedAt
-          commit { abbreviatedOid }
+          commit {
+            oid
+            abbreviatedOid
+          }
           author {login}
           authorAssociation
           viewerDidAuthor
@@ -411,7 +429,10 @@ mutation {
                 diffHunk
                 createdAt
                 lastEditedAt
-                commit { abbreviatedOid }
+                originalCommit {
+                  oid
+                  abbreviatedOid
+                }
                 author {login}
                 authorAssociation
                 viewerDidAuthor
@@ -495,7 +516,10 @@ M.update_pull_request_review_comment_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
@@ -566,7 +590,10 @@ M.add_pull_request_review_comment_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
@@ -624,7 +651,10 @@ M.add_pull_request_review_commit_thread_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
@@ -703,7 +733,10 @@ M.delete_pull_request_review_comment_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
@@ -1191,6 +1224,7 @@ M.update_pull_request_state_mutation = [[
               commit {
                 messageHeadline
                 committedDate
+                oid
                 abbreviatedOid
                 changedFiles
                 additions
@@ -1208,6 +1242,7 @@ M.update_pull_request_state_mutation = [[
                 login
               }
               commit {
+                oid
                 abbreviatedOid
               }
               mergeRefName
@@ -1303,6 +1338,7 @@ M.update_pull_request_state_mutation = [[
                   body
                   commit {
                     oid
+                    abbreviatedOid
                   }
                   author { login }
                   authorAssociation
@@ -1375,7 +1411,10 @@ query {
               diffHunk
               createdAt
               lastEditedAt
-              commit { abbreviatedOid }
+              originalCommit {
+                oid
+                abbreviatedOid
+              }
               author {login}
               authorAssociation
               viewerDidAuthor
@@ -1429,8 +1468,9 @@ query($endCursor: String) {
               createdAt
               lastEditedAt
               state
-              commit {
+              originalCommit {
                 oid
+                abbreviatedOid
               }
               pullRequestReview {
                 id
@@ -1589,6 +1629,7 @@ query($endCursor: String) {
             commit {
               messageHeadline
               committedDate
+              oid
               abbreviatedOid
               changedFiles
               additions
@@ -1606,6 +1647,7 @@ query($endCursor: String) {
               login
             }
             commit {
+              oid
               abbreviatedOid
             }
             mergeRefName
@@ -1705,6 +1747,7 @@ query($endCursor: String) {
                 body
                 commit {
                   oid
+                  abbreviatedOid
                 }
                 author { login }
                 createdAt
@@ -1752,8 +1795,9 @@ query($endCursor: String) {
               lastEditedAt
               replyTo { id }
               state
-              commit {
+              originalCommit {
                 oid
+                abbreviatedOid
               }
               pullRequestReview {
                 id
@@ -2726,6 +2770,7 @@ M.create_pr_mutation = [[
               commit {
                 messageHeadline
                 committedDate
+                oid
                 abbreviatedOid
                 changedFiles
                 additions
@@ -2743,6 +2788,7 @@ M.create_pr_mutation = [[
                 login
               }
               commit {
+                oid
                 abbreviatedOid
               }
               mergeRefName
@@ -2842,6 +2888,7 @@ M.create_pr_mutation = [[
                   body
                   commit {
                     oid
+                    abbreviatedOid
                   }
                   author { login }
                   createdAt
@@ -2889,8 +2936,9 @@ M.create_pr_mutation = [[
                 lastEditedAt
                 replyTo { id }
                 state
-                commit {
+                originalCommit {
                   oid
+                  abbreviatedOid
                 }
                 pullRequestReview {
                   id
