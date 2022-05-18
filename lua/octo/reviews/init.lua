@@ -458,6 +458,8 @@ function M.add_review_comment(isSuggestion)
   local alt_win = file:get_alternative_win(split)
   if vim.api.nvim_win_is_valid(alt_win) then
     local pr = file.pull_request
+
+    -- create a thread stub representing the new comment
     local threads = {
       {
         originalStartLine = line1,
