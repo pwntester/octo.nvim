@@ -873,15 +873,13 @@ function M.get_sorted_comment_lines(bufnr)
   return lines
 end
 
-function M.is_thread_placed_in_buffer(comment, bufnr)
+function M.is_thread_placed_in_buffer(thread, bufnr)
   local split, path = M.get_split_and_path(bufnr)
-  if not split or not path then
+  if split == thread.diffSide and path == thread.path then
+    return true
+  else
     return false
   end
-  if split == comment.diffSide and path == comment.path then
-    return true
-  end
-  return false
 end
 
 function M.get_split_and_path(bufnr)
@@ -889,6 +887,15 @@ function M.get_split_and_path(bufnr)
   if ok and props then
     return props.split, props.path
   end
+end
+
+function M.in_diff_window(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  local ok, props = pcall(vim.api.nvim_buf_get_var, bufnr, "octo_diff_props")
+  if ok and props then
+    return true
+  end
+  return false
 end
 
 -- clear buffer undo history
