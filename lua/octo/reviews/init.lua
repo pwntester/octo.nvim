@@ -1,6 +1,6 @@
-local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
+local thread_panel = require("octo.reviews.thread-panel")
 local utils = require "octo.utils"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
@@ -134,13 +134,10 @@ end
 -- Initiates (starts/resumes) a review
 -- Review's pull request is used to get the right/left OIDs
 -- TODO: to support commit-wise reviews, we need to be able to change these OIDs
---  on comment:
---    - use review's pull_request OIDs and commits OIDs to figure out if we are commenting at commit level or file level
---    - submit comments accordingly
---  on submit review:
---    - use review's pull_request OIDs and commits OIDs to figure out if we are submitting at commit level or file level
---    - submit review accordingly
---  we need new function `get_review_level(review, layout) -> "pr" | "commit_xxxxx"`
+--  support reply comment:
+-- diff hunks should be calculated based on the commit shown
+-- diff hunk line should be adjusted based on the commit shown
+
 function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
@@ -289,128 +286,16 @@ function Review:show_pending_comments()
   end
 end
 
-local M = {}
+function Review:add_comment(isSuggestion)
 
-M.reviews = {}
-
-M.Review = Review
-
-------------
---- THREADS
-------------
--- TODO: Move all the thread commands to a separate file
-
-function M.hide_review_threads()
-  -- This function is called from a very broad CursorMoved
-  -- Check if we are in a diff buffer and otherwise return early
+  -- check if we are on the diff layout and return early if not
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
   if not split or not path then
     return
   end
 
-  local review = M.get_current_review()
-  local file = review.layout:cur_file()
-  if not file then
-    return
-  end
-
-  local alt_buf = file:get_alternative_buf(split)
-  local alt_win = file:get_alternative_win(split)
-  if vim.api.nvim_win_is_valid(alt_win) and vim.api.nvim_buf_is_valid(alt_buf) then
-    local current_alt_bufnr = vim.api.nvim_win_get_buf(alt_win)
-    if current_alt_bufnr ~= alt_buf then
-      -- if we are not showing the corresponging alternative diff buffer, do so
-      vim.api.nvim_win_set_buf(alt_win, alt_buf)
-      -- Scroll to trigger the scrollbind and sync the windows. This works more
-      -- consistently than calling `:syncbind`.
-      vim.cmd [[exec "normal! \<c-y>"]]
-    end
-  end
-end
-
-function M.show_review_threads()
-  -- This function is called from a very broad CursorHold
-  -- Check if we are in a diff buffer and otherwise return early
-  local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = utils.get_split_and_path(bufnr)
-  if not split or not path then
-    return
-  end
-
-  local review = M.get_current_review()
-  local file = review.layout:cur_file()
-  if not file then
-    return
-  end
-
-  local pr = file.pull_request
-  local threads = vim.tbl_values(review.threads)
-  local line = vim.api.nvim_win_get_cursor(0)[1]
-  local threads_at_cursor = {}
-  for _, thread in ipairs(threads) do
-    --if utils.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine <= line and thread.line >= line then
-    if utils.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine == line then
-      table.insert(threads_at_cursor, thread)
-    end
-  end
-
-  if #threads_at_cursor == 0 then
-    return
-  end
-
-  review.layout:ensure_layout()
-  local alt_win = file:get_alternative_win(split)
-  if vim.api.nvim_win_is_valid(alt_win) then
-    local thread_buffer = M._create_thread_buffer(threads_at_cursor, pr.repo, pr.number, split, file.path, line)
-    if thread_buffer then
-      table.insert(file.associated_bufs, thread_buffer.bufnr)
-      vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
-      thread_buffer:configure()
-      vim.api.nvim_buf_call(thread_buffer.bufnr, function()
-        -- TODO: remove first line but only if its empty and if it has no virtualtext
-        --vim.cmd [[normal ggdd]]
-        pcall(vim.cmd, "normal ]c")
-      end)
-    end
-  end
-end
-
-function M._create_thread_buffer(threads, repo, number, side, path, line)
-  local current_review = M.get_current_review()
-  if not vim.startswith(path, "/") then
-    path = "/" .. path
-  end
-  local bufname = string.format("octo://%s/review/%s/threads/%s%s:%d", repo, current_review.id, side, path, line)
-  local bufnr = vim.fn.bufnr(bufname)
-  local buffer
-  if bufnr == -1 then
-    bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_name(bufnr, bufname)
-    buffer = OctoBuffer:new {
-      bufnr = bufnr,
-      number = number,
-      repo = repo,
-    }
-    buffer:render_threads(threads)
-    buffer:render_signcolumn()
-  elseif vim.api.nvim_buf_is_loaded(bufnr) then
-    buffer = octo_buffers[bufnr]
-  else
-    vim.api.nvim_buf_delete(bufnr, { force = true })
-  end
-  return buffer
-end
-
-function M.add_review_comment(isSuggestion)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local split, path = utils.get_split_and_path(bufnr)
-  if not split or not path then
-    return
-  end
-
-  local review = M.get_current_review()
-  local file = review.layout:cur_file()
+  local file = self.layout:cur_file()
   if not file then
     return
   end
@@ -453,7 +338,7 @@ function M.add_review_comment(isSuggestion)
     end
   end
 
-  review.layout:ensure_layout()
+  self.layout:ensure_layout()
 
   local alt_win = file:get_alternative_win(split)
   if vim.api.nvim_win_is_valid(alt_win) then
@@ -483,7 +368,7 @@ function M.add_review_comment(isSuggestion)
               viewerCanUpdate = true,
               viewerCanDelete = true,
               viewerDidAuthor = true,
-              pullRequestReview = { id = review.id },
+              pullRequestReview = { id = self.id },
               reactionGroups = {
                 { content = "THUMBS_UP", users = { totalCount = 0 } },
                 { content = "THUMBS_DOWN", users = { totalCount = 0 } },
@@ -499,9 +384,10 @@ function M.add_review_comment(isSuggestion)
         },
       },
     }
+
     -- TODO: if there are threads for that line, there should be a buffer already showing them
     -- or maybe not if the user is very quick
-    local thread_buffer = M._create_thread_buffer(threads, pr.repo, pr.number, split, file.path, line1)
+    local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path, line1)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)
       vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
@@ -525,9 +411,15 @@ function M.add_review_comment(isSuggestion)
   end
 end
 
-function M.get_current_review()
-  local current_tabpage = vim.api.nvim_get_current_tabpage()
-  return M.reviews[tostring(current_tabpage)]
+local M = {}
+
+M.reviews = {}
+
+M.Review = Review
+
+function M.add_review_comment(isSuggestion)
+  local review = M.get_current_review()
+  review:add_comment(isSuggestion)
 end
 
 function M.jump_to_pending_review_thread(thread)
@@ -540,6 +432,11 @@ function M.jump_to_pending_review_thread(thread)
       break
     end
   end
+end
+
+function M.get_current_review()
+  local current_tabpage = vim.api.nvim_get_current_tabpage()
+  return M.reviews[tostring(current_tabpage)]
 end
 
 function M.on_tab_leave()

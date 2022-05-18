@@ -196,9 +196,9 @@ M.commands = {
   },
   comment = {
     add = function()
-      local bufnr = vim.api.nvim_get_current_buf()
-      if utils.get_split_and_path(bufnr) then
-        require("octo.reviews").add_review_comment(false)
+      local current_review = require("reviews").get_current_review()
+      if current_review and utils.in_diff_window() then
+        current_review:add_comment(false)
       else
         M.add_comment()
       end
