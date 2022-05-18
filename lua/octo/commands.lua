@@ -1052,7 +1052,7 @@ function M.merge_pr(...)
   gh.run {
     args = args,
     cb = function(output, stderr)
-      utils.notify("[Octo]", output, stderr, 1)
+      utils.notify("[Octo] " .. output .. " " .. stderr, 1)
       writers.write_state(bufnr)
     end,
   }
