@@ -381,29 +381,33 @@ end
 function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
   local bufnr
-  if opts.use_local then
-    bufnr = vim.fn.bufadd(opts.path)
-  else
-    bufnr = vim.api.nvim_create_buf(false, false)
-    local bufname = string.format(
-      "octo://%s/review/%s/file/%s/%s",
-      opts.repo,
-      current_review.id,
-      string.upper(opts.split),
-      opts.path
-    )
-    vim.api.nvim_buf_set_name(bufnr, bufname)
-    if opts.binary then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Binary file" })
-    elseif opts.status == "R" and not opts.show_diff then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
-    elseif opts.lines then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
-    end
+  --if opts.use_local then
+  -- TODO: should we use the file from the file system
+  -- Pros: LSP powered
+  -- Cons: we need to change to the commit branch
+  -- For now, lets just load the contents from git object (`git show commit:path`)
+  --bufnr = vim.fn.bufadd(opts.path)
+  --else
+  bufnr = vim.api.nvim_create_buf(false, false)
+  local bufname = string.format(
+    "octo://%s/review/%s/file/%s/%s",
+    opts.repo,
+    current_review.id,
+    string.upper(opts.split),
+    opts.path
+  )
+  vim.api.nvim_buf_set_name(bufnr, bufname)
+  if opts.binary then
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Binary file" })
+  elseif opts.status == "R" and not opts.show_diff then
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
+  elseif opts.lines then
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
   end
+  --end
   vim.api.nvim_buf_set_option(bufnr, "modified", false)
   vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
   vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
