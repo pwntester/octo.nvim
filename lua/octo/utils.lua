@@ -173,9 +173,7 @@ function M.get_remote()
       local repo
       -- https://github.com/pwntester/octo.nvim.git
       -- ssh://git@github.com/pwntester/octo.nvim.git
-      if vim.startswith(url, "http://") or
-          vim.startswith(url, "https://") or
-          vim.startswith(url, "ssh://") then
+      if vim.startswith(url, "http://") or vim.startswith(url, "https://") or vim.startswith(url, "ssh://") then
         local chunks = vim.split(url, "/")
         host = chunks[3]
         repo = chunks[4] .. "/" .. chunks[5]
@@ -212,19 +210,19 @@ function M.commit_exists(commit, cb)
     return
   end
   Job
-      :new({
-        enable_recording = true,
-        command = "git",
-        args = { "cat-file", "-t", commit },
-        on_exit = vim.schedule_wrap(function(j_self, _, _)
-          if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
-            cb(true)
-          else
-            cb(false)
-          end
-        end),
-      })
-      :start()
+    :new({
+      enable_recording = true,
+      command = "git",
+      args = { "cat-file", "-t", commit },
+      on_exit = vim.schedule_wrap(function(j_self, _, _)
+        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+          cb(true)
+        else
+          cb(false)
+        end
+      end),
+    })
+    :start()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -306,15 +304,15 @@ function M.checkout_pr(pr_number)
     return
   end
   Job
-      :new({
-        enable_recording = true,
-        command = "gh",
-        args = { "pr", "checkout", pr_number },
-        on_exit = vim.schedule_wrap(function()
-          vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
-        end),
-      })
-      :start()
+    :new({
+      enable_recording = true,
+      command = "gh",
+      args = { "pr", "checkout", pr_number },
+      on_exit = vim.schedule_wrap(function()
+        vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
+      end),
+    })
+    :start()
 end
 
 function M.get_current_pr()
@@ -1185,7 +1183,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       autocmd!
       autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
     augroup end
-  ]] ,
+  ]],
     augroup,
     winnr,
     table.concat(bufnrs, ",")
@@ -1197,7 +1195,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       augroup %s
         autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
       augroup end
-    ]] ,
+    ]],
       augroup,
       table.concat(events, ","),
       winnr

@@ -358,7 +358,11 @@ function M.review_commits(callback)
     return
   end
   -- TODO: graphql
-  local url = string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
+  local url = string.format(
+    "repos/%s/pulls/%d/commits",
+    current_review.pull_request.repo,
+    current_review.pull_request.number
+  )
   gh.run {
     args = { "api", url },
     cb = function(output, stderr)
@@ -381,8 +385,8 @@ function M.review_commits(callback)
           parents = {
             {
               sha = current_review.pull_request.left.commit,
-            }
-          }
+            },
+          },
         })
 
         pickers.new({}, {

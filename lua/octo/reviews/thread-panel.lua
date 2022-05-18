@@ -1,5 +1,5 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
-local utils = require 'octo.utils'
+local utils = require "octo.utils"
 
 local M = {}
 
@@ -48,19 +48,17 @@ function M.show_review_threads()
   end
   local pr = file.pull_request
   local review_level = "COMMIT"
-  if review.layout.left.commit == pr.left.commit and
-      review.layout.right.commit == pr.right.commit then
+  if review.layout.left.commit == pr.left.commit and review.layout.right.commit == pr.right.commit then
     review_level = "PR"
   end
   local threads = vim.tbl_values(review.threads)
   local line = vim.api.nvim_win_get_cursor(0)[1]
   local threads_at_cursor = {}
   for _, thread in ipairs(threads) do
-
     if review_level == "PR" and utils.is_thread_placed_in_buffer(thread, bufnr) and thread.startLine == line then
       table.insert(threads_at_cursor, thread)
     elseif review_level == "COMMIT" then
-      print("review_level == COMMIT")
+      print "review_level == COMMIT"
       local commit
       if split == "LEFT" then
         commit = review.layout.left.commit
@@ -71,7 +69,7 @@ function M.show_review_threads()
       for _, comment in ipairs(thread.comments.nodes) do
         print("comment for : " .. comment.originalCommit.abbreviatedOid .. " line " .. thread.originalLine)
         if commit == comment.originalCommit.oid and thread.originalLine == line then
-          print("Adding thread at cursor")
+          print "Adding thread at cursor"
           table.insert(threads_at_cursor, thread)
           break
         end

@@ -1,6 +1,6 @@
 local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
-local thread_panel = require("octo.reviews.thread-panel")
+local thread_panel = require "octo.reviews.thread-panel"
 local utils = require "octo.utils"
 local gh = require "octo.gh"
 local graphql = require "octo.graphql"
@@ -287,7 +287,6 @@ function Review:show_pending_comments()
 end
 
 function Review:add_comment(isSuggestion)
-
   -- check if we are on the diff layout and return early if not
   local bufnr = vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)

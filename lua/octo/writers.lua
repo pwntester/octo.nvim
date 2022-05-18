@@ -651,7 +651,6 @@ local function get_lnum_chunks(opts)
 end
 
 function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
-
   -- this function will print a diff snippet from the diff hunk.
   -- we need to use the original positions for comment_start and comment_end
   -- since the diff hunk always use the original positions.

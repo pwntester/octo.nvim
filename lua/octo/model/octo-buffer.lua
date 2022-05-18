@@ -501,8 +501,7 @@ function OctoBuffer:do_add_new_thread(comment)
   local layout = review.layout
   local pr = review.pull_request
   local review_level = "COMMIT"
-  if layout.left.commit == pr.left.commit and
-      layout.right.commit == pr.right.commit then
+  if layout.left.commit == pr.left.commit and layout.right.commit == pr.right.commit then
     review_level = "PR"
   end
   local isMultiline = true
@@ -538,7 +537,7 @@ function OctoBuffer:do_add_new_thread(comment)
     utils.notify("Can't create a multiline comment at the commit level", 2)
     return
   elseif not isMultiline and review_level == "COMMIT" then
-    print("single line commit comment")
+    print "single line commit comment"
     query = graphql(
       "add_pull_request_review_commit_thread_mutation",
       layout.right.commit,
@@ -631,7 +630,7 @@ function OctoBuffer:do_update_comment(comment)
         elseif comment.kind == "PullRequestReviewComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
-          resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
+            resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
           local review = require("octo.reviews").get_current_review()
           if review then
             review:update_threads(threads)

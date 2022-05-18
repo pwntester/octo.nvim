@@ -323,14 +323,21 @@ function FileEntry:place_signs()
   local layout = current_review.layout
   local pr = current_review.pull_request
   local review_level = "COMMIT"
-  if layout.left.commit == pr.left.commit and
-      layout.right.commit == pr.right.commit then
+  if layout.left.commit == pr.left.commit and layout.right.commit == pr.right.commit then
     review_level = "PR"
   end
 
   local splits = {
-    { bufnr = self.left_bufid, comment_ranges = self.left_comment_ranges, commit = current_review.layout.left:abbrev() },
-    { bufnr = self.right_bufid, comment_ranges = self.right_comment_ranges, commit = current_review.layout.right:abbrev() },
+    {
+      bufnr = self.left_bufid,
+      comment_ranges = self.left_comment_ranges,
+      commit = current_review.layout.left:abbrev(),
+    },
+    {
+      bufnr = self.right_bufid,
+      comment_ranges = self.right_comment_ranges,
+      commit = current_review.layout.right:abbrev(),
+    },
   }
   for _, split in ipairs(splits) do
     signs.unplace(split.bufnr)
@@ -359,13 +366,14 @@ function FileEntry:place_signs()
         sign = sign .. "_resolved"
       end
 
-
       for _, comment in ipairs(thread.comments.nodes) do
         if comment.state == "PENDING" then
           sign = sign .. "_pending"
         end
-        if review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr) or
-            review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid then
+        if
+          review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr)
+          or review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid
+        then
           -- sign
           signs.place(sign, split.bufnr, line - 1)
           -- virtual text
