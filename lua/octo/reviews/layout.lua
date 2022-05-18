@@ -112,9 +112,8 @@ function Layout:set_file(file, focus)
       cur:detach_buffers()
     end
     vim.cmd "diffoff!"
-    local selected_file = self.files[self.file_idx]
-
-    selected_file:load_buffers(self.left_winid, self.right_winid)
+    self.files[self.file_idx] = file
+    file:load_buffers(self.left_winid, self.right_winid)
 
     -- highlight file in file panel
     self.file_panel:highlight_file(self:cur_file())

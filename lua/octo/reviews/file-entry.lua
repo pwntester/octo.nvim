@@ -319,9 +319,18 @@ end
 
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
+  local current_review = require("octo.reviews").get_current_review()
+  local layout = current_review.layout
+  local pr = current_review.pull_request
+  local review_level = "COMMIT"
+  if layout.left.commit == pr.left.commit and
+      layout.right.commit == pr.right.commit then
+    review_level = "PR"
+  end
+
   local splits = {
-    { bufnr = self.left_bufid, comment_ranges = self.left_comment_ranges },
-    { bufnr = self.right_bufid, comment_ranges = self.right_comment_ranges },
+    { bufnr = self.left_bufid, comment_ranges = self.left_comment_ranges, commit = current_review.layout.left:abbrev() },
+    { bufnr = self.right_bufid, comment_ranges = self.right_comment_ranges, commit = current_review.layout.right:abbrev() },
   }
   for _, split in ipairs(splits) do
     signs.unplace(split.bufnr)
@@ -336,33 +345,34 @@ function FileEntry:place_signs()
     end
 
     -- place thread comments signs and virtual text
-    local threads = vim.tbl_values(require("octo.reviews").get_current_review().threads)
+    local threads = vim.tbl_values(current_review.threads)
     for _, thread in ipairs(threads) do
-      if utils.is_thread_placed_in_buffer(thread, split.bufnr) then
-        local line = thread.startLine
-        --for line = thread.startLine, thread.line do
-        local sign = "octo_thread"
+      local line = thread.line
+      if review_level == "COMMIT" then
+        line = thread.originalLine
+      end
 
-        if thread.isOutdated then
-          sign = sign .. "_outdated"
-        elseif thread.isResolved then
-          sign = sign .. "_resolved"
+      local sign = "octo_thread"
+      if thread.isOutdated then
+        sign = sign .. "_outdated"
+      elseif thread.isResolved then
+        sign = sign .. "_resolved"
+      end
+
+
+      for _, comment in ipairs(thread.comments.nodes) do
+        if comment.state == "PENDING" then
+          sign = sign .. "_pending"
         end
-
-        for _, comment in ipairs(thread.comments.nodes) do
-          if comment.state == "PENDING" then
-            sign = sign .. "_pending"
-            break
-          end
+        if review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr) or
+            review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid then
+          -- sign
+          signs.place(sign, split.bufnr, line - 1)
+          -- virtual text
+          local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
+          local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
+          vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, line - 1, { { vt_msg, "Comment" } }, {})
         end
-
-        signs.place(sign, split.bufnr, line - 1)
-
-        local last_comment = thread.comments.nodes[#thread.comments.nodes]
-        local last_date = last_comment.lastEditedAt ~= vim.NIL and last_comment.lastEditedAt or last_comment.createdAt
-        local vt_msg = string.format("%d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
-        vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, line - 1, { { vt_msg, "Comment" } }, {})
-        --end
       end
     end
   end
