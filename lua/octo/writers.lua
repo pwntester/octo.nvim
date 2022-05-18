@@ -651,8 +651,12 @@ local function get_lnum_chunks(opts)
 end
 
 function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
-  start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
 
+  -- this function will print a diff snippet from the diff hunk.
+  -- we need to use the original positions for comment_start and comment_end
+  -- since the diff hunk always use the original positions.
+
+  start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
   if not diffhunk then
     return start_line, start_line
   end
@@ -719,7 +723,6 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       end
     end
   end
-
   if not snippet_end then
     -- could not find comment end line in the diff hunk,
     -- defaulting to last diff hunk line
@@ -825,6 +828,8 @@ function M.write_review_thread_header(bufnr, opts, line)
     { "[", "OctoSymbol" },
     { opts.path .. " ", "OctoDetailsLabel" },
     { tostring(opts.start_line) .. ":" .. tostring(opts.end_line), "OctoDetailsValue" },
+    { "] [Commit: ", "OctoSymbol" },
+    { opts.commit, "OctoDetailsLabel" },
     { "] ", "OctoSymbol" },
   }
   if opts.isOutdated then
@@ -1305,6 +1310,7 @@ function M.write_threads(bufnr, threads)
           end_line = end_line,
           isOutdated = thread.isOutdated,
           isResolved = thread.isResolved,
+          commit = comment.originalCommit.abbreviatedOid,
         })
 
         -- write empty line
