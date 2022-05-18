@@ -596,6 +596,64 @@ M.add_pull_request_review_comment_mutation = [[
   }
 ]]
 
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
+M.add_pull_request_review_commit_thread_mutation = [[
+  mutation {
+    addPullRequestReviewComment(input: {commitOID: "%s", body: "%s", pullRequestReviewId: "%s", path: "%s", position: %d }) {
+      comment {
+        id
+        body
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              originalLine
+              startLine
+              originalStartLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  createdAt
+                  lastEditedAt
+                  commit { abbreviatedOid }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  replyTo { id }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]]
+
 -- M.add_pull_request_review_comment_mutation =
 -- [[
 --   mutation {
