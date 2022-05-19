@@ -659,8 +659,21 @@ function M.create_issue(repo)
   local title = vim.fn.input(string.format("Creating issue in %s. Enter title: ", repo))
   vim.fn.inputrestore()
 
+  local body
+  local choice = vim.fn.confirm(
+    "Do you want to use the content of the current buffer as the body for the new issue?",
+    "&Yes\n&No\n&Cancel",
+    2
+  )
+  if choice == 1 then
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+    body = utils.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
+  else
+    body = constants.NO_BODY_MSG
+  end
+
   local repo_id = utils.get_repo_id(repo)
-  local query = graphql("create_issue_mutation", repo_id, title, constants.NO_BODY_MSG)
+  local query = graphql("create_issue_mutation", repo_id, title, body)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
