@@ -320,13 +320,7 @@ end
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
   local current_review = require("octo.reviews").get_current_review()
-  local layout = current_review.layout
-  local pr = current_review.pull_request
-  local review_level = "COMMIT"
-  if layout.left.commit == pr.left.commit and layout.right.commit == pr.right.commit then
-    review_level = "PR"
-  end
-
+  local review_level = current_review:get_level()
   local splits = {
     {
       bufnr = self.left_bufid,

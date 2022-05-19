@@ -510,10 +510,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
     utils.notify("No file selected", 1)
     return
   end
-  local review_level = "COMMIT"
-  if layout.left.commit == pr.left.commit and layout.right.commit == pr.right.commit then
-    review_level = "PR"
-  end
+  local review_level = review:get_level()
   local isMultiline = true
   if comment_metadata.snippetStartLine == comment_metadata.snippetEndLine then
     isMultiline = false

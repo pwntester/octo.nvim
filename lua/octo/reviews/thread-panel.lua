@@ -47,10 +47,7 @@ function M.show_review_threads()
     return
   end
   local pr = file.pull_request
-  local review_level = "COMMIT"
-  if review.layout.left.commit == pr.left.commit and review.layout.right.commit == pr.right.commit then
-    review_level = "PR"
-  end
+  local review_level = review:get_level()
   local threads = vim.tbl_values(review.threads)
   local line = vim.api.nvim_win_get_cursor(0)[1]
   local threads_at_cursor = {}

@@ -420,6 +420,14 @@ function Review:add_comment(isSuggestion)
   end
 end
 
+function Review:get_level()
+  local review_level = "COMMIT"
+  if self.layout.left.commit == self.pull_request.left.commit and self.layout.right.commit == self.pull_request.right.commit then
+    review_level = "PR"
+  end
+  return review_level
+end
+
 local M = {}
 
 M.reviews = {}
