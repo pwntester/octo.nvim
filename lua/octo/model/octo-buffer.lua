@@ -427,7 +427,12 @@ end
 
 function OctoBuffer:do_add_thread_comment(comment_metadata)
   -- create new thread reply
-  local query = graphql("add_pull_request_review_comment_mutation", comment_metadata.replyTo, comment_metadata.body, comment_metadata.reviewId)
+  local query = graphql(
+    "add_pull_request_review_comment_mutation",
+    comment_metadata.replyTo,
+    comment_metadata.body,
+    comment_metadata.reviewId
+  )
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
@@ -570,7 +575,6 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
       utils.notify("Can't create a multiline comment at the commit level", 2)
       return
     else
-
       -- get comment line
       local line
       for _, thread in ipairs(vim.tbl_values(self.threadsMetadata)) do
@@ -659,7 +663,6 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
       }
     end
   end
-
 end
 
 function OctoBuffer:do_update_comment(comment_metadata)
@@ -685,7 +688,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
-          resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
+            resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
           local review = require("octo.reviews").get_current_review()
           if review then
             review:update_threads(threads)

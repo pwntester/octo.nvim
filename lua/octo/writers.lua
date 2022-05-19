@@ -663,7 +663,6 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, start_line - 2, -1)
 
-
   -- generate maps from diffhunk line to code line:
   local diffhunk_lines = vim.split(diffhunk, "\n")
   local map = utils.generate_position2line_map(diffhunk)
@@ -769,7 +768,11 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       local vt_line = { { "│" } }
       vim.list_extend(
         vt_line,
-        get_lnum_chunks { left_line = map.left_side_lines[i], right_line = map.right_side_lines[i], max_lnum = max_lnum }
+        get_lnum_chunks {
+          left_line = map.left_side_lines[i],
+          right_line = map.right_side_lines[i],
+          max_lnum = max_lnum,
+        }
       )
       vim.list_extend(vt_line, {
         { line },
