@@ -435,9 +435,15 @@ function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
   for _, file in ipairs(current_review.layout.files) do
     if thread.path == file.path then
+      current_review.layout:ensure_layout()
       current_review.layout:set_file(file)
       local win = file:get_win(thread.diffSide)
-      vim.api.nvim_win_set_cursor(win, { thread.startLine, 0 })
+      if vim.api.nvim_win_is_valid(win) then
+        vim.api.nvim_set_current_win(win)
+        vim.api.nvim_win_set_cursor(win, { thread.startLine, 0 })
+      else
+        utils.notify("Cannot find diff window", 2)
+      end
       break
     end
   end
