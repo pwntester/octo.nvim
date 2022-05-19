@@ -422,8 +422,9 @@ end
 
 function Review:get_level()
   local review_level = "COMMIT"
-  if self.layout.left.commit == self.pull_request.left.commit
-      and self.layout.right.commit == self.pull_request.right.commit
+  if
+    self.layout.left.commit == self.pull_request.left.commit
+    and self.layout.right.commit == self.pull_request.right.commit
   then
     review_level = "PR"
   end

@@ -155,51 +155,43 @@ end
 
 function M.get_remote()
   local conf = config.get_config()
-  local candidates = conf.default_remote
-  local default_remote = {
-    host = "github.com",
-    repo = "",
-  }
-  for _, candidate in ipairs(candidates) do
+  for _, candidate in ipairs(conf.default_remote) do
     local job = Job:new {
       command = "git",
       args = { "remote", "get-url", candidate },
       cwd = vim.fn.getcwd(),
     }
     job:sync()
-
     local url = table.concat(job:result(), "\n")
     local stderr = table.concat(job:stderr_result(), "\n")
-
-    if not M.is_blank(stderr) then
-      goto continue
-    else
-      local host
-      local repo
-      -- https://github.com/pwntester/octo.nvim.git
-      -- ssh://git@github.com/pwntester/octo.nvim.git
+    if M.is_blank(stderr) then
+      local host, repo
       if vim.startswith(url, "http://") or vim.startswith(url, "https://") or vim.startswith(url, "ssh://") then
+        -- https://github.com/pwntester/octo.nvim.git
+        -- ssh://git@github.com/pwntester/octo.nvim.git
         local chunks = vim.split(url, "/")
         host = chunks[3]
         repo = chunks[4] .. "/" .. chunks[5]
-        -- git@github.com:pwntester/octo.nvim.git
       elseif vim.startswith(url, "git@") then
+        -- git@github.com:pwntester/octo.nvim.git
         local parts = vim.split(url, ":")
         host = vim.split(parts[1], "@")[2]
         local repo_chunks = vim.split(parts[2], "/")
         repo = repo_chunks[1] .. "/" .. repo_chunks[2]
-      else
-        goto continue
       end
-      return {
-        host = vim.split(host, "@")[#vim.split(host, "@")],
-        repo = string.gsub(repo, ".git$", ""),
-      }
+      if not M.is_blank(host) and not M.is_blank(repo) then
+        return {
+          host = vim.split(host, "@")[#vim.split(host, "@")],
+          repo = string.gsub(repo, ".git$", ""),
+        }
+      end
     end
-    ::continue::
   end
-  require("octo.utils").notify("Unable to parse a git remote.", 2)
-  return default_remote
+  -- return github.com as default host
+  return {
+    host = "github.com",
+    repo = nil,
+  }
 end
 
 function M.get_remote_name()
@@ -495,7 +487,6 @@ function M.get_thread_at_line(bufnr, line)
       end
     end
   end
-  return
 end
 
 function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
