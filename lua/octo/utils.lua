@@ -145,7 +145,12 @@ function table.pack(...)
 end
 
 function M.is_blank(s)
-  return not (s ~= nil and s ~= vim.NIL and string.match(s, "%S") ~= nil)
+  return (
+      s == nil or
+          s == vim.NIL or
+          (type(s) == "string" and string.match(s, "%S") == nil) or
+          (type(s) == "table" and next(s) == nil)
+      )
 end
 
 function M.get_remote()
@@ -210,19 +215,19 @@ function M.commit_exists(commit, cb)
     return
   end
   Job
-    :new({
-      enable_recording = true,
-      command = "git",
-      args = { "cat-file", "-t", commit },
-      on_exit = vim.schedule_wrap(function(j_self, _, _)
-        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
-          cb(true)
-        else
-          cb(false)
-        end
-      end),
-    })
-    :start()
+      :new({
+        enable_recording = true,
+        command = "git",
+        args = { "cat-file", "-t", commit },
+        on_exit = vim.schedule_wrap(function(j_self, _, _)
+          if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+            cb(true)
+          else
+            cb(false)
+          end
+        end),
+      })
+      :start()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -304,15 +309,15 @@ function M.checkout_pr(pr_number)
     return
   end
   Job
-    :new({
-      enable_recording = true,
-      command = "gh",
-      args = { "pr", "checkout", pr_number },
-      on_exit = vim.schedule_wrap(function()
-        vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
-      end),
-    })
-    :start()
+      :new({
+        enable_recording = true,
+        command = "gh",
+        args = { "pr", "checkout", pr_number },
+        on_exit = vim.schedule_wrap(function()
+          vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
+        end),
+      })
+      :start()
 end
 
 function M.get_current_pr()
@@ -340,9 +345,24 @@ function M.get_current_pr()
   }
 end
 
+-- fetch the PR diff
+function M.get_pr_diff(pr)
+  local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
+  gh.run {
+    args = { "api", url },
+    headers = { "Accept: application/vnd.github.v3.diff" },
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.notify(stderr, 2)
+      elseif output then
+        pr.diff = output
+      end
+    end,
+  }
+end
+
 -- fetch the PR changed files
 function M.get_pr_changed_files(pr, callback)
-  -- TODO: Move to GraphQL query when available
   local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
   gh.run {
     args = { "api", "--paginate", url, "--jq", "." },
@@ -377,7 +397,6 @@ end
 
 -- fetch the commit changed files
 function M.get_commit_changed_files(pr, rev, callback)
-  -- TODO: Move to GraphQL query when available
   local url = string.format("repos/%s/commits/%s", pr.repo, rev.commit)
   gh.run {
     args = { "api", "--paginate", url, "--jq", "." },
@@ -1021,7 +1040,38 @@ function M.path_join(paths)
   return table.concat(paths, path_sep)
 end
 
--- calculate valid comment ranges
+--- Extract diffhunks from a diff file
+function M.extract_diffhunks_from_diff(diff)
+  local lines = vim.split(diff, "\n")
+  local diffhunks = {}
+  local current_diffhunk = {}
+  local current_path
+  local state
+  for _, line in ipairs(lines) do
+    if vim.startswith(line, "diff --git ") then
+      if #current_diffhunk > 0 then
+        diffhunks[current_path] = table.concat(current_diffhunk, "\n")
+        current_diffhunk = {}
+      end
+      state = "diff"
+    elseif vim.startswith(line, "index ") and state == "diff" then
+      state = "index"
+    elseif vim.startswith(line, "--- a/") and state == "index" then
+      state = "fileA"
+    elseif vim.startswith(line, "+++ b/") and state == "fileA" then
+      current_path = string.sub(line, 7)
+      state = "fileB"
+    elseif vim.startswith(line, "@@") and state == "fileB" then
+      state = "diffhunk"
+      table.insert(current_diffhunk, line)
+    elseif state == "diffhunk" then
+      table.insert(current_diffhunk, line)
+    end
+  end
+  return diffhunks
+end
+
+--- Calculate valid comment ranges
 function M.process_patch(patch)
   -- @@ -from,no-of-lines in the file before  +from,no-of-lines in the file after @@
   -- The no-of-lines values may not be immediately obvious.
@@ -1183,7 +1233,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       autocmd!
       autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
     augroup end
-  ]],
+  ]] ,
     augroup,
     winnr,
     table.concat(bufnrs, ",")
@@ -1195,7 +1245,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       augroup %s
         autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
       augroup end
-    ]],
+    ]] ,
       augroup,
       table.concat(events, ","),
       winnr
@@ -1241,6 +1291,56 @@ function M.get_label_id(label)
       end
     end
   end
+end
+
+--- Generate maps from diffhunk line to code line:
+function M.generate_position2line_map(diffhunk)
+  local diffhunk_lines = vim.split(diffhunk, "\n")
+  local diff_directive = diffhunk_lines[1]
+  local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
+  local right_side_lines = {}
+  local left_side_lines = {}
+  local right_side_line = right_offset
+  local left_side_line = left_offset
+  for i = 2, #diffhunk_lines do
+    local line = diffhunk_lines[i]
+    if vim.startswith(line, "+") then
+      right_side_lines[i] = right_side_line
+      right_side_line = right_side_line + 1
+    elseif vim.startswith(line, "-") then
+      left_side_lines[i] = left_side_line
+      left_side_line = left_side_line + 1
+    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
+      right_side_lines[i] = right_side_line
+      left_side_lines[i] = left_side_line
+      right_side_line = right_side_line + 1
+      left_side_line = left_side_line + 1
+    end
+  end
+  return {
+    left_side_lines = left_side_lines,
+    right_side_lines = right_side_lines,
+    right_offset = right_offset,
+    left_offset = left_offset,
+  }
+end
+
+--- Generates map from buffer line to diffhunk position
+function M.generate_line2position_map(diffhunk)
+  local map = M.generate_position2line_map(diffhunk)
+  local left_side_lines, right_side_lines = {}, {}
+  for k, v in pairs(map.left_side_lines) do
+    left_side_lines[tostring(v)] = k
+  end
+  for k, v in pairs(map.right_side_lines) do
+    right_side_lines[tostring(v)] = k
+  end
+  return {
+    left_side_lines = left_side_lines,
+    right_side_lines = right_side_lines,
+    right_offset = map.right_offset,
+    left_offset = map.left_offset,
+  }
 end
 
 return M

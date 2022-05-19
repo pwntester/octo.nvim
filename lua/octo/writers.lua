@@ -663,45 +663,23 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DIFFHUNK_VT_NS, start_line - 2, -1)
 
-  local diffhunk_lines = vim.split(diffhunk, "\n")
 
   -- generate maps from diffhunk line to code line:
-  --- right_side_lines
-  --- left_side_lines
-  local diff_directive = diffhunk_lines[1]
-  local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
-  local right_side_lines = {}
-  local left_side_lines = {}
-  local right_side_line = right_offset
-  local left_side_line = left_offset
-  for i = 2, #diffhunk_lines do
-    local line = diffhunk_lines[i]
-    if vim.startswith(line, "+") then
-      right_side_lines[i] = right_side_line
-      right_side_line = right_side_line + 1
-    elseif vim.startswith(line, "-") then
-      left_side_lines[i] = left_side_line
-      left_side_line = left_side_line + 1
-    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
-      right_side_lines[i] = right_side_line
-      left_side_lines[i] = left_side_line
-      right_side_line = right_side_line + 1
-      left_side_line = left_side_line + 1
-    end
-  end
+  local diffhunk_lines = vim.split(diffhunk, "\n")
+  local map = utils.generate_position2line_map(diffhunk)
 
   -- calculate length of the higher line number
   local max_lnum = math.max(
-    vim.fn.strdisplaywidth(tostring(right_offset + #diffhunk_lines)),
-    vim.fn.strdisplaywidth(tostring(left_offset + #diffhunk_lines))
+    vim.fn.strdisplaywidth(tostring(map.right_offset + #diffhunk_lines)),
+    vim.fn.strdisplaywidth(tostring(map.left_offset + #diffhunk_lines))
   )
 
   -- calculate diffhunk subrange to show
   local side_lines
   if comment_side == "RIGHT" then
-    side_lines = right_side_lines
+    side_lines = map.right_side_lines
   elseif comment_side == "LEFT" then
-    side_lines = left_side_lines
+    side_lines = map.left_side_lines
   end
   local snippet_start, snippet_end
   if comment_side and comment_start ~= comment_end then
@@ -771,7 +749,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       })
     elseif vim.startswith(line, "+") then
       local vt_line = { { "│" } }
-      vim.list_extend(vt_line, get_lnum_chunks { right_line = right_side_lines[i], max_lnum = max_lnum })
+      vim.list_extend(vt_line, get_lnum_chunks { right_line = map.right_side_lines[i], max_lnum = max_lnum })
       vim.list_extend(vt_line, {
         { line:gsub("^.", " "), "DiffAdd" },
         { string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2 * max_lnum), "DiffAdd" },
@@ -780,7 +758,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       table.insert(vt_lines, vt_line)
     elseif vim.startswith(line, "-") then
       local vt_line = { { "│" } }
-      vim.list_extend(vt_line, get_lnum_chunks { left_line = left_side_lines[i], max_lnum = max_lnum })
+      vim.list_extend(vt_line, get_lnum_chunks { left_line = map.left_side_lines[i], max_lnum = max_lnum })
       vim.list_extend(vt_line, {
         { line:gsub("^.", " "), "DiffDelete" },
         { string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2 * max_lnum), "DiffDelete" },
@@ -791,7 +769,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
       local vt_line = { { "│" } }
       vim.list_extend(
         vt_line,
-        get_lnum_chunks { left_line = left_side_lines[i], right_line = right_side_lines[i], max_lnum = max_lnum }
+        get_lnum_chunks { left_line = map.left_side_lines[i], right_line = map.right_side_lines[i], max_lnum = max_lnum }
       )
       vim.list_extend(vt_line, {
         { line },

@@ -46,6 +46,8 @@ function CommentMetadata:new(opts)
     reviewId = opts.pullRequestReview,
     path = opts.path,
     diffSide = opts.diffSide,
+    startLine = opts.startLine,
+    endLine = opts.endLine,
     snippetStartLine = opts.snippetStartLine,
     snippetEndLine = opts.snippetEndLine,
   }

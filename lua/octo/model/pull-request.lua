@@ -14,6 +14,7 @@ local M = {}
 ---@field local_right boolean
 ---@field local_left boolean
 ---@field files table
+---@field diff string
 local PullRequest = {}
 PullRequest.__index = PullRequest
 
@@ -32,6 +33,7 @@ function PullRequest:new(opts)
     local_right = false,
     local_left = false,
     bufnr = opts.bufnr,
+    diff = "",
   }
   this.files = {}
   for _, file in ipairs(opts.files) do
@@ -46,6 +48,10 @@ function PullRequest:new(opts)
   end)
 
   setmetatable(this, self)
+
+  -- fetch PR diff asynchronously
+  utils.get_pr_diff(this)
+
   return this
 end
 

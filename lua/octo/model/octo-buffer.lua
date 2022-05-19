@@ -316,24 +316,24 @@ function OctoBuffer:save()
   end
 
   -- comments
-  for _, comment in ipairs(self.commentsMetadata) do
-    if comment.body ~= comment.savedBody then
-      if comment.id == -1 then
+  for _, comment_metadata in ipairs(self.commentsMetadata) do
+    if comment_metadata.body ~= comment_metadata.savedBody then
+      if comment_metadata.id == -1 then
         -- we use -1 as a placeholder for new comments
-        if comment.kind == "IssueComment" then
-          self:do_add_issue_comment(comment)
-        elseif comment.kind == "PullRequestReviewComment" then
-          if comment.replyTo and comment.replyTo ~= vim.NIL then
+        if comment_metadata.kind == "IssueComment" then
+          self:do_add_issue_comment(comment_metadata)
+        elseif comment_metadata.kind == "PullRequestReviewComment" then
+          if comment_metadata.replyTo and comment_metadata.replyTo ~= vim.NIL then
             -- comment is a reply to a thread comment
-            self:do_add_thread_comment(comment)
+            self:do_add_thread_comment(comment_metadata)
           else
             -- comment starts a new thread of comments
-            self:do_add_new_thread(comment)
+            self:do_add_new_thread(comment_metadata)
           end
         end
       else
         -- comment is an existing comment
-        self:do_update_comment(comment)
+        self:do_update_comment(comment_metadata)
       end
     end
   end
@@ -395,10 +395,10 @@ function OctoBuffer:do_save_title_and_body()
   end
 end
 
-function OctoBuffer:do_add_issue_comment(comment)
+function OctoBuffer:do_add_issue_comment(comment_metadata)
   -- create new issue comment
   local id = self.node.id
-  local add_query = graphql("add_issue_comment_mutation", id, comment.body)
+  local add_query = graphql("add_issue_comment_mutation", id, comment_metadata.body)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", add_query) },
     cb = function(output, stderr)
@@ -408,7 +408,7 @@ function OctoBuffer:do_add_issue_comment(comment)
         local resp = vim.fn.json_decode(output)
         local respBody = resp.data.addComment.commentEdge.node.body
         local respId = resp.data.addComment.commentEdge.node.id
-        if vim.fn.trim(comment.body) == vim.fn.trim(respBody) then
+        if vim.fn.trim(comment_metadata.body) == vim.fn.trim(respBody) then
           local comments = self.commentsMetadata
           for i, c in ipairs(comments) do
             if tonumber(c.id) == -1 then
@@ -425,9 +425,9 @@ function OctoBuffer:do_add_issue_comment(comment)
   }
 end
 
-function OctoBuffer:do_add_thread_comment(comment)
+function OctoBuffer:do_add_thread_comment(comment_metadata)
   -- create new thread reply
-  local query = graphql("add_pull_request_review_comment_mutation", comment.replyTo, comment.body, comment.reviewId)
+  local query = graphql("add_pull_request_review_comment_mutation", comment_metadata.replyTo, comment_metadata.body, comment_metadata.reviewId)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
@@ -437,7 +437,7 @@ function OctoBuffer:do_add_thread_comment(comment)
         local resp = vim.fn.json_decode(output)
         local resp_comment = resp.data.addPullRequestReviewComment.comment
         local comment_end
-        if vim.fn.trim(comment.body) == vim.fn.trim(resp_comment.body) then
+        if vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp_comment.body) then
           local comments = self.commentsMetadata
           for i, c in ipairs(comments) do
             if tonumber(c.id) == -1 then
@@ -494,7 +494,7 @@ function OctoBuffer:do_add_thread_comment(comment)
   }
 end
 
-function OctoBuffer:do_add_new_thread(comment)
+function OctoBuffer:do_add_new_thread(comment_metadata)
   --TODO: How to create a new thread on a line where there is already one
 
   local review = require("octo.reviews").get_current_review()
@@ -505,117 +505,172 @@ function OctoBuffer:do_add_new_thread(comment)
     review_level = "PR"
   end
   local isMultiline = true
-  if comment.snippetStartLine == comment.snippetEndLine then
+  if comment_metadata.snippetStartLine == comment_metadata.snippetEndLine then
     isMultiline = false
   end
 
   -- create new thread
-  local query
-  if isMultiline and review_level == "PR" then
-    -- multi line PR comment
-    query = graphql(
-      "add_pull_request_review_multiline_thread_mutation",
-      comment.reviewId,
-      comment.body,
-      comment.path,
-      comment.diffSide,
-      comment.diffSide,
-      comment.snippetStartLine,
-      comment.snippetEndLine
-    )
-  elseif not isMultiline and review_level == "PR" then
-    -- single line PR comment
-    query = graphql(
-      "add_pull_request_review_thread_mutation",
-      comment.reviewId,
-      comment.body,
-      comment.path,
-      comment.diffSide,
-      comment.snippetStartLine
-    )
-  elseif isMultiline and review_level == "COMMIT" then
-    utils.notify("Can't create a multiline comment at the commit level", 2)
-    return
-  elseif not isMultiline and review_level == "COMMIT" then
-    print "single line commit comment"
-    query = graphql(
-      "add_pull_request_review_commit_thread_mutation",
-      layout.right.commit,
-      comment.body,
-      comment.reviewId,
-      comment.path,
-      -- TODO: we should pass the diff hunk position, not the abosulte line
-      comment.snippetStartLine
-    )
-  end
+  if review_level == "PR" then
+    local query
+    if isMultiline then
+      query = graphql(
+        "add_pull_request_review_multiline_thread_mutation",
+        comment_metadata.reviewId,
+        comment_metadata.body,
+        comment_metadata.path,
+        comment_metadata.diffSide,
+        comment_metadata.diffSide,
+        comment_metadata.snippetStartLine,
+        comment_metadata.snippetEndLine
+      )
+    else
+      query = graphql(
+        "add_pull_request_review_thread_mutation",
+        comment_metadata.reviewId,
+        comment_metadata.body,
+        comment_metadata.path,
+        comment_metadata.diffSide,
+        comment_metadata.snippetStartLine
+      )
+    end
+    gh.run {
+      args = { "api", "graphql", "-f", string.format("query=%s", query) },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+        elseif output then
+          local resp = vim.fn.json_decode(output).data.addPullRequestReviewThread
+          if not utils.is_blank(resp.thread) then
+            local new_comment = resp.thread.comments.nodes[1]
+            if vim.fn.trim(comment_metadata.body) == vim.fn.trim(new_comment.body) then
+              local comments = self.commentsMetadata
+              for i, c in ipairs(comments) do
+                if tonumber(c.id) == -1 then
+                  comments[i].id = new_comment.id
+                  comments[i].savedBody = new_comment.body
+                  comments[i].dirty = false
+                  break
+                end
+              end
+              local threads = resp.thread.pullRequest.reviewThreads.nodes
+              if review then
+                review:update_threads(threads)
+              end
+              self:render_signcolumn()
+            end
+          else
+            utils.notify("Failed to create thread", 2)
+            return
+          end
+        end
+      end,
+    }
+  elseif review_level == "COMMIT" then
+    if isMultiline then
+      utils.notify("Can't create a multiline comment at the commit level", 2)
+      return
+    else
 
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local r = vim.fn.json_decode(output)
-        local resp = r.data.addPullRequestReviewThread
-        if not resp then
-          resp = r.data.addPullRequestReviewComment
-        end
-        if not resp then
-          utils.notify("Failed to create thread", 2)
-          return
-        end
-        local resp_thread = resp.thread
-        local resp_comment = resp.comment
-        if resp_comment then
-          if vim.fn.trim(comment.body) == vim.fn.trim(resp_comment.body) then
-            local comments = self.commentsMetadata
-            for i, c in ipairs(comments) do
-              if tonumber(c.id) == -1 then
-                comments[i].id = resp_comment.id
-                comments[i].savedBody = resp_comment.body
-                comments[i].dirty = false
-                break
-              end
-            end
-            local threads = resp_comment.pullRequest.reviewThreads.nodes
-            if review then
-              review:update_threads(threads)
-            end
-            self:render_signcolumn()
-          end
-        elseif resp_thread then
-          local new_comment = resp_thread.comments.nodes[1]
-          if vim.fn.trim(comment.body) == vim.fn.trim(new_comment.body) then
-            local comments = self.commentsMetadata
-            for i, c in ipairs(comments) do
-              if tonumber(c.id) == -1 then
-                comments[i].id = new_comment.id
-                comments[i].savedBody = new_comment.body
-                comments[i].dirty = false
-                break
-              end
-            end
-            local threads = resp_thread.pullRequest.reviewThreads.nodes
-            if review then
-              review:update_threads(threads)
-            end
-            self:render_signcolumn()
-          end
+      -- get comment line
+      local line
+      for _, thread in ipairs(vim.tbl_values(self.threadsMetadata)) do
+        if thread.threadId == -1 then
+          line = thread.line
         end
       end
-    end,
-  }
+
+      local diffhunks = {}
+      local diffhunk = ""
+      local left_comment_ranges, right_comment_ranges = {}, {}
+      if not utils.is_blank(pr.diff) then
+        local diffhunks_map = utils.extract_diffhunks_from_diff(pr.diff)
+        local file_diffhunks = diffhunks_map[comment_metadata.path]
+        diffhunks, left_comment_ranges, right_comment_ranges = utils.process_patch(file_diffhunks)
+      end
+      local comment_ranges
+      if comment_metadata.diffSide == "RIGHT" then
+        comment_ranges = right_comment_ranges
+      elseif comment_metadata.diffSide == "LEFT" then
+        comment_ranges = left_comment_ranges
+      end
+      local idx, offset = 0, 0
+      for i, range in ipairs(comment_ranges) do
+        if range[1] <= line and range[2] >= line then
+          diffhunk = diffhunks[i]
+          idx = i
+          break
+        end
+      end
+      for i, hunk in ipairs(diffhunks) do
+        if i < idx then
+          offset = offset + #vim.split(hunk, "\n")
+        end
+      end
+      if not vim.startswith(diffhunk, "@@") then
+        diffhunk = "@@ " .. diffhunk
+      end
+
+      local map = utils.generate_line2position_map(diffhunk)
+      local position
+      if comment_metadata.diffSide == "RIGHT" then
+        position = map.right_side_lines[tostring(line)]
+      elseif comment_metadata.diffSide == "LEFT" then
+        position = map.left_side_lines[tostring(line)]
+      end
+      local query = graphql(
+        "add_pull_request_review_commit_thread_mutation",
+        layout.right.commit,
+        comment_metadata.body,
+        comment_metadata.reviewId,
+        comment_metadata.path,
+        position + offset - 1
+      )
+      gh.run {
+        args = { "api", "graphql", "-f", string.format("query=%s", query) },
+        cb = function(output, stderr)
+          if stderr and not utils.is_blank(stderr) then
+            vim.api.nvim_err_writeln(stderr)
+          elseif output then
+            local r = vim.fn.json_decode(output)
+            local resp = r.data.addPullRequestReviewComment
+            if not utils.is_blank(resp.comment) then
+              if vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp.comment.body) then
+                local comments = self.commentsMetadata
+                for i, c in ipairs(comments) do
+                  if tonumber(c.id) == -1 then
+                    comments[i].id = resp.comment.id
+                    comments[i].savedBody = resp.comment.body
+                    comments[i].dirty = false
+                    break
+                  end
+                end
+                local threads = resp.comment.pullRequest.reviewThreads.nodes
+                if review then
+                  review:update_threads(threads)
+                end
+                self:render_signcolumn()
+              end
+            else
+              utils.notify("Failed to create thread", 2)
+              return
+            end
+          end
+        end,
+      }
+    end
+  end
+
 end
 
-function OctoBuffer:do_update_comment(comment)
+function OctoBuffer:do_update_comment(comment_metadata)
   -- update comment/reply
   local update_query
-  if comment.kind == "IssueComment" then
-    update_query = graphql("update_issue_comment_mutation", comment.id, comment.body)
-  elseif comment.kind == "PullRequestReviewComment" then
-    update_query = graphql("update_pull_request_review_comment_mutation", comment.id, comment.body)
-  elseif comment.kind == "PullRequestReview" then
-    update_query = graphql("update_pull_request_review_mutation", comment.id, comment.body)
+  if comment_metadata.kind == "IssueComment" then
+    update_query = graphql("update_issue_comment_mutation", comment_metadata.id, comment_metadata.body)
+  elseif comment_metadata.kind == "PullRequestReviewComment" then
+    update_query = graphql("update_pull_request_review_comment_mutation", comment_metadata.id, comment_metadata.body)
+  elseif comment_metadata.kind == "PullRequestReview" then
+    update_query = graphql("update_pull_request_review_mutation", comment_metadata.id, comment_metadata.body)
   end
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", update_query) },
@@ -625,9 +680,9 @@ function OctoBuffer:do_update_comment(comment)
       elseif output then
         local resp = vim.fn.json_decode(output)
         local resp_comment
-        if comment.kind == "IssueComment" then
+        if comment_metadata.kind == "IssueComment" then
           resp_comment = resp.data.updateIssueComment.issueComment
-        elseif comment.kind == "PullRequestReviewComment" then
+        elseif comment_metadata.kind == "PullRequestReviewComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
           resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
@@ -635,14 +690,14 @@ function OctoBuffer:do_update_comment(comment)
           if review then
             review:update_threads(threads)
           end
-        elseif comment.kind == "PullRequestReview" then
+        elseif comment_metadata.kind == "PullRequestReview" then
           resp_comment = resp.data.updatePullRequestReview.pullRequestReview
         end
-        if resp_comment and vim.fn.trim(comment.body) == vim.fn.trim(resp_comment.body) then
+        if resp_comment and vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp_comment.body) then
           local comments = self.commentsMetadata
           for i, c in ipairs(comments) do
-            if c.id == comment.id then
-              comments[i].savedBody = comment.body
+            if c.id == comment_metadata.id then
+              comments[i].savedBody = comment_metadata.body
               comments[i].dirty = false
               break
             end
