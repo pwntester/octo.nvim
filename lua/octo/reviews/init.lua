@@ -422,7 +422,9 @@ end
 
 function Review:get_level()
   local review_level = "COMMIT"
-  if self.layout.left.commit == self.pull_request.left.commit and self.layout.right.commit == self.pull_request.right.commit then
+  if self.layout.left.commit == self.pull_request.left.commit
+      and self.layout.right.commit == self.pull_request.right.commit
+  then
     review_level = "PR"
   end
   return review_level
@@ -447,8 +449,13 @@ function M.jump_to_pending_review_thread(thread)
       current_review.layout:set_file(file)
       local win = file:get_win(thread.diffSide)
       if vim.api.nvim_win_is_valid(win) then
+        local review_level = current_review:get_level()
+        -- jumping to the original position in case we are reviewing any commit
+        -- jumping to the PR position if we are reviewing the last commit
+        -- This may result in a jump to the wrong line when the review is neither in the last commit or the original one
+        local line = review_level == "COMMIT" and thread.originalStartLine or thread.startLine
         vim.api.nvim_set_current_win(win)
-        vim.api.nvim_win_set_cursor(win, { thread.startLine, 0 })
+        vim.api.nvim_win_set_cursor(win, { line, 0 })
       else
         utils.notify("Cannot find diff window", 2)
       end
