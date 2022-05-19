@@ -505,6 +505,11 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
   local review = require("octo.reviews").get_current_review()
   local layout = review.layout
   local pr = review.pull_request
+  local file = layout:cur_file()
+  if not file then
+    utils.notify("No file selected", 1)
+    return
+  end
   local review_level = "COMMIT"
   if layout.left.commit == pr.left.commit and layout.right.commit == pr.right.commit then
     review_level = "PR"
@@ -575,7 +580,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
       utils.notify("Can't create a multiline comment at the commit level", 2)
       return
     else
-      -- get comment line
+      -- get the line number the comment is on
       local line
       for _, thread in ipairs(vim.tbl_values(self.threadsMetadata)) do
         if thread.threadId == -1 then
@@ -583,51 +588,57 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         end
       end
 
-      local diffhunks = {}
-      local diffhunk = ""
-      local left_comment_ranges, right_comment_ranges = {}, {}
-      if not utils.is_blank(pr.diff) then
-        local diffhunks_map = utils.extract_diffhunks_from_diff(pr.diff)
-        local file_diffhunks = diffhunks_map[comment_metadata.path]
-        diffhunks, left_comment_ranges, right_comment_ranges = utils.process_patch(file_diffhunks)
-      end
-      local comment_ranges
-      if comment_metadata.diffSide == "RIGHT" then
-        comment_ranges = right_comment_ranges
-      elseif comment_metadata.diffSide == "LEFT" then
-        comment_ranges = left_comment_ranges
-      end
-      local idx, offset = 0, 0
-      for i, range in ipairs(comment_ranges) do
-        if range[1] <= line and range[2] >= line then
-          diffhunk = diffhunks[i]
-          idx = i
-          break
+      -- we need to convert the line number to a diff line number (position)
+      local position = line
+      if file.status ~= "A" then
+        -- for non-added files (modified), check we are in a valid comment range
+        local diffhunks = {}
+        local diffhunk = ""
+        local left_comment_ranges, right_comment_ranges = {}, {}
+        if not utils.is_blank(pr.diff) then
+          local diffhunks_map = utils.extract_diffhunks_from_diff(pr.diff)
+          local file_diffhunks = diffhunks_map[comment_metadata.path]
+          diffhunks, left_comment_ranges, right_comment_ranges = utils.process_patch(file_diffhunks)
         end
-      end
-      for i, hunk in ipairs(diffhunks) do
-        if i < idx then
-          offset = offset + #vim.split(hunk, "\n")
+        local comment_ranges
+        if comment_metadata.diffSide == "RIGHT" then
+          comment_ranges = right_comment_ranges
+        elseif comment_metadata.diffSide == "LEFT" then
+          comment_ranges = left_comment_ranges
         end
-      end
-      if not vim.startswith(diffhunk, "@@") then
-        diffhunk = "@@ " .. diffhunk
+        local idx, offset = 0, 0
+        for i, range in ipairs(comment_ranges) do
+          if range[1] <= line and range[2] >= line then
+            diffhunk = diffhunks[i]
+            idx = i
+            break
+          end
+        end
+        for i, hunk in ipairs(diffhunks) do
+          if i < idx then
+            offset = offset + #vim.split(hunk, "\n")
+          end
+        end
+        if not vim.startswith(diffhunk, "@@") then
+          diffhunk = "@@ " .. diffhunk
+        end
+
+        local map = utils.generate_line2position_map(diffhunk)
+        if comment_metadata.diffSide == "RIGHT" then
+          position = map.right_side_lines[tostring(line)]
+        elseif comment_metadata.diffSide == "LEFT" then
+          position = map.left_side_lines[tostring(line)]
+        end
+        position = position + offset - 1
       end
 
-      local map = utils.generate_line2position_map(diffhunk)
-      local position
-      if comment_metadata.diffSide == "RIGHT" then
-        position = map.right_side_lines[tostring(line)]
-      elseif comment_metadata.diffSide == "LEFT" then
-        position = map.left_side_lines[tostring(line)]
-      end
       local query = graphql(
         "add_pull_request_review_commit_thread_mutation",
         layout.right.commit,
         comment_metadata.body,
         comment_metadata.reviewId,
         comment_metadata.path,
-        position + offset - 1
+        position
       )
       gh.run {
         args = { "api", "graphql", "-f", string.format("query=%s", query) },
