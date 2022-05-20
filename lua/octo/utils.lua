@@ -312,6 +312,8 @@ function M.checkout_pr(pr_number)
     :start()
 end
 
+--- Gets the PR object for the current octo buffer
+--- TODO: Move to an OctoBuffer method
 function M.get_current_pr()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -337,7 +339,8 @@ function M.get_current_pr()
   }
 end
 
--- fetch the PR diff
+--- Fetch the diff of the PR
+--- TODO:: Move to an PullRequest method
 function M.get_pr_diff(pr)
   local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
   gh.run {
@@ -353,7 +356,8 @@ function M.get_pr_diff(pr)
   }
 end
 
--- fetch the PR changed files
+--- Fetch the changed files for a given PR
+--- TODO:: Move to an PullRequest method
 function M.get_pr_changed_files(pr, callback)
   local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
   gh.run {
@@ -387,7 +391,8 @@ function M.get_pr_changed_files(pr, callback)
   }
 end
 
--- fetch the commit changed files
+--- Fetch the changed files at a given commit
+--- TODO:: Move to an PullRequest method
 function M.get_commit_changed_files(pr, rev, callback)
   local url = string.format("repos/%s/commits/%s", pr.repo, rev.commit)
   gh.run {
@@ -423,11 +428,15 @@ function M.get_commit_changed_files(pr, rev, callback)
   }
 end
 
+--- Get a issue/PR comment at cursor (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_comment_at_cursor(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   return M.get_comment_at_line(bufnr, cursor[1])
 end
 
+--- Get a issue/PR comment at a given line (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_comment_at_line(bufnr, line)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -448,6 +457,8 @@ function M.get_comment_at_line(bufnr, line)
   end
 end
 
+--- Get the issue/PR body at cursor (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_body_at_cursor(bufnr)
   local buffer = octo_buffers[bufnr]
   local cursor = vim.api.nvim_win_get_cursor(0)
@@ -466,11 +477,15 @@ function M.get_body_at_cursor(bufnr)
   return nil
 end
 
+--- Gets the review thread at cursor (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_thread_at_cursor(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   return M.get_thread_at_line(bufnr, cursor[1])
 end
 
+--- Gets the review thread at a given line (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_thread_at_line(bufnr, line)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -489,6 +504,30 @@ function M.get_thread_at_line(bufnr, line)
   end
 end
 
+--- Gets the reactions groups at cursor (if any)
+--- TODO: Move to an OctoBuffer method
+function M.reactions_at_cursor()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local body_reaction_line = buffer.bodyMetadata.reactionLine
+  if body_reaction_line and body_reaction_line == cursor[1] then
+    return buffer.node.id
+  end
+
+  local comments_metadata = buffer.commentsMetadata
+  if comments_metadata then
+    for _, c in pairs(comments_metadata) do
+      if c.reactionLine and c.reactionLine == cursor[1] then
+        return c.id
+      end
+    end
+  end
+  return nil
+end
+
+--- Updates the reactions groups at cursor (if any)
+--- TODO: Move to an OctoBuffer method
 function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local buffer = octo_buffers[bufnr]
@@ -536,6 +575,7 @@ function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
   end
 end
 
+--- Formats a string as a date
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   local d = date(date_string):addminutes(time_bias)
@@ -575,6 +615,7 @@ function M.get_repo_id(repo)
   end
 end
 
+--- Helper method to aggregate an API paginated response
 function M.get_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
@@ -585,6 +626,7 @@ function M.get_pages(text)
   return results
 end
 
+--- Helper method to aggregate an API paginated response
 function M.get_flatten_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
@@ -597,6 +639,7 @@ function M.get_flatten_pages(text)
   return results
 end
 
+--- Helper method to aggregate an API paginated response
 function M.aggregate_pages(text, aggregation_key)
   -- aggregation key can be at any level (eg: comments)
   -- take the first response and extend it with elements from the
@@ -613,6 +656,7 @@ function M.aggregate_pages(text, aggregation_key)
   return base_resp
 end
 
+--- Helper method to aggregate an API paginated response
 function M.get_nested_prop(obj, prop)
   while true do
     local parts = vim.split(prop, "%.")
@@ -627,13 +671,15 @@ function M.get_nested_prop(obj, prop)
   return obj[prop]
 end
 
-function M.escape_chars(string)
+--- Escapes a characters on a string to be used as a JSON string
+function M.escape_char(string)
   return string.gsub(string, '["\\]', {
     ['"'] = '\\"',
     ["\\"] = "\\\\",
   })
 end
 
+--- Extracts repo and number from Octo command varargs
 function M.get_repo_number_from_varargs(...)
   local repo, number
   local args = table.pack(...)
@@ -641,9 +687,11 @@ function M.get_repo_number_from_varargs(...)
     M.notify("Missing arguments", 1)
     return
   elseif args.n == 1 then
+    -- eg: Octo issue 1
     repo = M.get_remote_name()
     number = tonumber(args[1])
   elseif args.n == 2 then
+    -- eg: Octo issue pwntester/octo.nvim 1
     repo = args[1]
     number = tonumber(args[2])
   else
@@ -655,7 +703,7 @@ function M.get_repo_number_from_varargs(...)
     return
   end
   if not number then
-    M.notify("Missing issue/pr number", 1)
+    M.notify("Missing issue/PR number", 1)
     return
   end
   return repo, number
@@ -699,7 +747,7 @@ function M.parse_url(url)
   end
 end
 
----Fetch file from GitHub repo at a given commit
+--- Fetch file from GitHub repo at a given commit
 ---@param repo string
 ---@param commit string
 ---@param path string
@@ -761,26 +809,6 @@ function M.split_repo(repo)
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
   return owner, name
-end
-
-function M.reactions_at_cursor()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local body_reaction_line = buffer.bodyMetadata.reactionLine
-  if body_reaction_line and body_reaction_line == cursor[1] then
-    return buffer.node.id
-  end
-
-  local comments_metadata = buffer.commentsMetadata
-  if comments_metadata then
-    for _, c in pairs(comments_metadata) do
-      if c.reactionLine and c.reactionLine == cursor[1] then
-        return c.id
-      end
-    end
-  end
-  return nil
 end
 
 function M.extract_pattern_at_cursor(pattern)
