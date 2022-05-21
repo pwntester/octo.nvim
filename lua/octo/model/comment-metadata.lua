@@ -17,6 +17,7 @@ local M = {}
 ---@field viewerDidAuthor boolean
 ---@field kind string
 ---@field replyTo string
+---@field replyToRest string
 ---@field reviewId string
 ---@field path string
 ---@field diffSide string
@@ -43,6 +44,7 @@ function CommentMetadata:new(opts)
     reactionGroups = opts.reactionGroups,
     kind = opts.kind,
     replyTo = opts.replyTo,
+    replyToRest = opts.replyToRest,
     reviewId = opts.pullRequestReview,
     path = opts.path,
     diffSide = opts.diffSide,

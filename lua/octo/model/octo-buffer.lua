@@ -323,13 +323,15 @@ function OctoBuffer:save()
         if comment_metadata.kind == "IssueComment" then
           self:do_add_issue_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReviewComment" then
-          if comment_metadata.replyTo and comment_metadata.replyTo ~= vim.NIL then
+          if not utils.is_blank(comment_metadata.replyTo) then
             -- comment is a reply to a thread comment
             self:do_add_thread_comment(comment_metadata)
           else
             -- comment starts a new thread of comments
             self:do_add_new_thread(comment_metadata)
           end
+        elseif comment_metadata.kind == "PullRequestComment" then
+          self:do_add_pull_request_comment(comment_metadata)
         end
       else
         -- comment is an existing comment
@@ -656,8 +658,8 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
                     break
                   end
                 end
-                local threads = resp.comment.pullRequest.reviewThreads.nodes
                 if review then
+                  local threads = resp.comment.pullRequest.reviewThreads.nodes
                   review:update_threads(threads)
                 end
                 self:render_signcolumn()
@@ -671,6 +673,52 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
       }
     end
   end
+end
+
+function OctoBuffer:do_add_pull_request_comment(comment_metadata)
+  local current_review = require("octo.reviews").get_current_review()
+  if not utils.is_blank(current_review) then
+    utils.notify("Please submit or discard the current review before adding a comment", 2)
+    return
+  end
+  gh.run {
+    args = {
+      "api",
+      "--method",
+      "POST",
+      string.format("/repos/%s/pulls/%d/comments/%s/replies", self.repo, self.number, comment_metadata.replyToRest),
+      "-f",
+      string.format([[body=%s]], utils.escape_char(comment_metadata.body)),
+      "--jq",
+      ".",
+    },
+    headers = { "Accept: application/vnd.github.v3+json" },
+    cb = function(output, stderr)
+      if not utils.is_blank(stderr) then
+        M.notify(stderr, 2)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        print(vim.inspect(resp))
+        if not utils.is_blank(resp) then
+          if vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp.body) then
+            local comments = self.commentsMetadata
+            for i, c in ipairs(comments) do
+              if tonumber(c.id) == -1 then
+                comments[i].id = resp.id
+                comments[i].savedBody = resp.body
+                comments[i].dirty = false
+                break
+              end
+            end
+            self:render_signcolumn()
+          end
+        else
+          utils.notify("Failed to create thread", 2)
+          return
+        end
+      end
+    end,
+  }
 end
 
 function OctoBuffer:do_update_comment(comment_metadata)

@@ -1362,4 +1362,14 @@ function M.generate_line2position_map(diffhunk)
   }
 end
 
+--- Extract REST Id from comment
+function M.extract_rest_id(comment_url)
+  local rest_id = ""
+  local sep = "_r"
+  for i in string.gmatch(comment_url, "([^" .. sep .. "]+)") do
+    rest_id = i
+  end
+  return rest_id
+end
+
 return M

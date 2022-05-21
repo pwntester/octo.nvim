@@ -75,7 +75,8 @@ M.resolve_review_thread_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -139,7 +140,8 @@ M.unresolve_review_thread_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -200,7 +202,8 @@ M.start_review_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -301,7 +304,8 @@ mutation {
           viewerCanUpdate
           viewerCanDelete
           state
-          replyTo { id }
+          url
+          replyTo { id url }
           pullRequestReview {
             id
             state
@@ -347,7 +351,8 @@ mutation {
                 viewerCanUpdate
                 viewerCanDelete
                 state
-                replyTo { id }
+                url
+                replyTo { id url }
                 pullRequestReview {
                   id
                   state
@@ -393,7 +398,8 @@ mutation {
           viewerCanUpdate
           viewerCanDelete
           state
-          replyTo { id }
+          url
+          replyTo { id url }
           pullRequestReview {
             id
             state
@@ -439,7 +445,8 @@ mutation {
                 viewerCanUpdate
                 viewerCanDelete
                 state
-                replyTo { id }
+                url
+                replyTo { id url }
                 pullRequestReview {
                   id
                   state
@@ -526,7 +533,8 @@ M.update_pull_request_review_comment_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -600,7 +608,8 @@ M.add_pull_request_review_comment_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -661,7 +670,8 @@ M.add_pull_request_review_commit_thread_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -743,7 +753,8 @@ M.delete_pull_request_review_comment_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -1334,7 +1345,8 @@ M.update_pull_request_state_mutation = [[
                 totalCount
                 nodes{
                   id
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   body
                   commit {
                     oid
@@ -1421,7 +1433,8 @@ query {
               viewerCanUpdate
               viewerCanDelete
               state
-              replyTo { id }
+              url
+              replyTo { id url }
               pullRequestReview {
                 id
                 state
@@ -1477,7 +1490,8 @@ query($endCursor: String) {
                 state
               }
               path
-              replyTo { id }
+              url
+              replyTo { id url }
               author { login }
               authorAssociation
               viewerDidAuthor
@@ -1743,7 +1757,8 @@ query($endCursor: String) {
               totalCount
               nodes{
                 id
-                replyTo { id }
+                url
+                replyTo { id url }
                 body
                 commit {
                   oid
@@ -1793,7 +1808,8 @@ query($endCursor: String) {
               body
               createdAt
               lastEditedAt
-              replyTo { id }
+              url
+              replyTo { id url }
               state
               originalCommit {
                 oid
@@ -2884,7 +2900,8 @@ M.create_pr_mutation = [[
                 totalCount
                 nodes{
                   id
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   body
                   commit {
                     oid
@@ -2934,7 +2951,8 @@ M.create_pr_mutation = [[
                 body
                 createdAt
                 lastEditedAt
-                replyTo { id }
+                url
+                replyTo { id url }
                 state
                 originalCommit {
                   oid

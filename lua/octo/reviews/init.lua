@@ -131,13 +131,7 @@ function Review:focus_commit(right, left)
   end
 end
 
--- Initiates (starts/resumes) a review
--- Review's pull request is used to get the right/left OIDs
--- TODO: to support commit-wise reviews, we need to be able to change these OIDs
---  support reply comment:
--- diff hunks should be calculated based on the commit shown
--- diff hunk line should be adjusted based on the commit shown
-
+---Initiates (starts/resumes) a review
 function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request

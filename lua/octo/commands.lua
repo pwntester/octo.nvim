@@ -333,6 +333,7 @@ function M.octo(object, action, ...)
   end
 end
 
+--- Adds a new comment to an issue/PR
 function M.add_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -340,40 +341,15 @@ function M.add_comment()
     return
   end
 
-  local comment_kind, review_id
-  if buffer:isReviewThread() then
-    comment_kind = "PullRequestReviewComment"
-    review_id = reviews.get_current_review().id
-  else
-    comment_kind = "IssueComment"
-  end
-
-  local replyTo, thread_id, thread_end_line
-  local _thread = utils.get_thread_at_cursor(bufnr)
-  if _thread then
-    thread_id = _thread.threadId
-    replyTo = _thread.replyTo
-    thread_end_line = _thread.bufferEndLine
-  end
-
-  if thread_id and not buffer:isReviewThread() then
-    utils.notify("Start a new review to reply to a thread", 2)
-    return
-  elseif not thread_id and buffer:isReviewThread() then
-    return
-  end
-
+  local comment_kind
   local comment = {
     id = -1,
     author = { login = vim.g.octo_viewer },
-    state = "PENDING",
     createdAt = vim.fn.strftime "%FT%TZ",
     body = " ",
-    replyTo = replyTo,
     viewerCanUpdate = true,
     viewerCanDelete = true,
     viewerDidAuthor = true,
-    pullRequestReview = { id = review_id or -1 },
     reactionGroups = {
       { content = "THUMBS_UP", users = { totalCount = 0 } },
       { content = "THUMBS_DOWN", users = { totalCount = 0 } },
@@ -386,17 +362,32 @@ function M.add_comment()
     },
   }
 
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  if not utils.is_blank(_thread) and buffer:isReviewThread() then
+    comment_kind = "PullRequestReviewComment"
+    comment.pullRequestReview = { id = reviews.get_current_review().id }
+    comment.state = "PENDING"
+    comment.replyTo = _thread.replyTo
+    comment.replyToRest = _thread.replyToRest
+  elseif not utils.is_blank(_thread) and not buffer:isReviewThread() then
+    comment_kind = "PullRequestComment"
+    comment.state = ""
+    comment.replyTo = _thread.replyTo
+    comment.replyToRest = _thread.replyToRest
+  elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
+    comment_kind = "IssueComment"
+  elseif utils.is_blank(_thread) and buffer:isReviewThread() then
+    utils.notify("Error adding a comment to a review thread", 1)
+  end
+
   if comment_kind == "IssueComment" then
-    -- just place it at the bottom
     writers.write_comment(bufnr, comment, comment_kind)
-    --vim.fn.execute("normal! Gk")
-    --vim.fn.execute("startinsert")
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
-  elseif comment_kind == "PullRequestReviewComment" then
-    vim.api.nvim_buf_set_lines(bufnr, thread_end_line, thread_end_line, false, { "x", "x", "x", "x" })
-    writers.write_comment(bufnr, comment, comment_kind, thread_end_line + 1)
-    vim.fn.execute(":" .. thread_end_line + 3)
+  elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
+    vim.api.nvim_buf_set_lines(bufnr, _thread.bufferEndLine, _thread.bufferEndLine, false, { "x", "x", "x", "x" })
+    writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1)
+    vim.fn.execute(":" .. _thread.bufferEndLine + 3)
     vim.cmd [[startinsert]]
   end
 

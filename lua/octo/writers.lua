@@ -1,3 +1,4 @@
+local CommentMetadata = require("octo.model.comment-metadata").CommentMetadata
 local ThreadMetadata = require("octo.model.thread-metadata").ThreadMetadata
 local BodyMetadata = require("octo.model.body-metadata").BodyMetadata
 local TitleMetadata = require("octo.model.title-metadata").TitleMetadata
@@ -453,6 +454,7 @@ function M.write_comment(bufnr, comment, kind, line)
   ---- IssueComment
   ---- PullRequestReview
   ---- PullRequestReviewComment
+  ---- PullRequestComment (regular comment (not associated to any review) to a PR review comment)
 
   local buffer = octo_buffers[bufnr]
   local conf = config.get_config()
@@ -499,11 +501,22 @@ function M.write_comment(bufnr, comment, kind, line)
       { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker" }
     )
     table.insert(header_vt, { "THREAD COMMENT: ", "OctoTimelineItemHeading" })
-    --vim.list_extend(header_vt, author_bubble)
     table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     if comment.state ~= "SUBMITTED" then
       vim.list_extend(header_vt, state_bubble)
     end
+    table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    if not comment.viewerCanUpdate then
+      table.insert(header_vt, { " ", "OctoRed" })
+    end
+  elseif kind == "PullRequestComment" then
+    -- Regular comment for a review thread comments
+    table.insert(
+      header_vt,
+      { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker" }
+    )
+    table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
+    table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
     if not comment.viewerCanUpdate then
       table.insert(header_vt, { " ", "OctoRed" })
@@ -551,27 +564,31 @@ function M.write_comment(bufnr, comment, kind, line)
 
   -- update metadata
   local comments_metadata = buffer.commentsMetadata
-  table.insert(comments_metadata, {
-    author = comment.author ~= vim.NIL and comment.author.name or "",
-    id = comment.id,
-    dirty = false,
-    savedBody = comment_body,
-    body = comment_body,
-    extmark = comment_mark,
-    namespace = comment_vt_ns,
-    reactionLine = reaction_line,
-    viewerCanUpdate = comment.viewerCanUpdate,
-    viewerCanDelete = comment.viewerCanDelete,
-    viewerDidAuthor = comment.viewerDidAuthor,
-    reactionGroups = comment.reactionGroups,
-    kind = kind,
-    replyTo = comment.replyTo,
-    reviewId = comment.pullRequestReview and comment.pullRequestReview.id,
-    path = comment.path,
-    diffSide = comment.diffSide,
-    snippetStartLine = comment.start_line,
-    snippetEndLine = comment.end_line,
-  })
+  table.insert(
+    comments_metadata,
+    CommentMetadata:new {
+      author = comment.author ~= vim.NIL and comment.author.name or "",
+      id = comment.id,
+      dirty = false,
+      savedBody = comment_body,
+      body = comment_body,
+      extmark = comment_mark,
+      namespace = comment_vt_ns,
+      reactionLine = reaction_line,
+      viewerCanUpdate = comment.viewerCanUpdate,
+      viewerCanDelete = comment.viewerCanDelete,
+      viewerDidAuthor = comment.viewerDidAuthor,
+      reactionGroups = comment.reactionGroups,
+      kind = kind,
+      replyTo = comment.replyTo,
+      replyToRest = comment.replyToRest,
+      reviewId = comment.pullRequestReview and comment.pullRequestReview.id,
+      path = comment.path,
+      diffSide = comment.diffSide,
+      snippetStartLine = comment.start_line,
+      snippetEndLine = comment.end_line,
+    }
+  )
 
   return start_line, line - 1
 end
@@ -1277,8 +1294,9 @@ function M.write_threads(bufnr, threads)
       comment.diffSide = thread.diffSide
 
       -- review thread header
-      if comment.replyTo == vim.NIL then
-        local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+      if utils.is_blank(comment.replyTo) then
+        local start_line = not utils.is_blank(thread.originalStartLine) and thread.originalStartLine
+          or thread.originalLine
         local end_line = thread.originalLine
         comment.start_line = start_line
         comment.end_line = end_line
@@ -1319,9 +1337,11 @@ function M.write_threads(bufnr, threads)
       end_col = 0,
     })
     local buffer = octo_buffers[bufnr]
+    -- store thread info in the octo buffer for later reference
     buffer.threadsMetadata[tostring(thread_mark_id)] = ThreadMetadata:new {
       threadId = thread.id,
       replyTo = thread.comments.nodes[1].id,
+      replyToRest = utils.extract_rest_id(thread.comments.nodes[1].url),
       reviewId = thread.comments.nodes[1].pullRequestReview.id,
       path = thread.path,
       line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine,
@@ -1333,11 +1353,10 @@ end
 
 function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   mode = mode or "extmark"
-  local ok
   if mode == "extmark" then
-    ok = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, { virt_text = chunks, virt_text_pos = "overlay" })
+    pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, { virt_text = chunks, virt_text_pos = "overlay" })
   elseif mode == "vt" then
-    ok = pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
+    pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
   end
 end
 
