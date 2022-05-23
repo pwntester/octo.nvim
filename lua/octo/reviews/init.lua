@@ -247,7 +247,7 @@ function Review:submit(event)
   local bufnr = vim.api.nvim_get_current_buf()
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local body = utils.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
+  local body = utils.escape_char(vim.fn.trim(table.concat(lines, "\n")))
   local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = false })
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -416,9 +416,8 @@ end
 
 function Review:get_level()
   local review_level = "COMMIT"
-  if
-    self.layout.left.commit == self.pull_request.left.commit
-    and self.layout.right.commit == self.pull_request.right.commit
+  if self.layout.left.commit == self.pull_request.left.commit
+      and self.layout.right.commit == self.pull_request.right.commit
   then
     review_level = "PR"
   end
