@@ -61,6 +61,13 @@ M.state_message_map = {
   REVIEW_REQUIRED = "Awaiting required review",
 }
 
+M.file_status_map = {
+  modified = "M",
+  added = "A",
+  deleted = "D",
+  renamed = "R",
+}
+
 function M.calculate_strongest_review_state(states)
   if vim.tbl_contains(states, "APPROVED") then
     return "APPROVED"
@@ -138,58 +145,53 @@ function table.pack(...)
 end
 
 function M.is_blank(s)
-  return not (s ~= nil and s ~= vim.NIL and string.match(s, "%S") ~= nil)
+  return (
+    s == nil
+    or s == vim.NIL
+    or (type(s) == "string" and string.match(s, "%S") == nil)
+    or (type(s) == "table" and next(s) == nil)
+  )
 end
 
 function M.get_remote()
   local conf = config.get_config()
-  local candidates = conf.default_remote
-  local default_remote = {
-    host = "github.com",
-    repo = "",
-  }
-  for _, candidate in ipairs(candidates) do
+  for _, candidate in ipairs(conf.default_remote) do
     local job = Job:new {
       command = "git",
       args = { "remote", "get-url", candidate },
       cwd = vim.fn.getcwd(),
     }
     job:sync()
-
     local url = table.concat(job:result(), "\n")
     local stderr = table.concat(job:stderr_result(), "\n")
-
-    if not M.is_blank(stderr) then
-      goto continue
-    else
-      local host
-      local repo
-      -- https://github.com/pwntester/octo.nvim.git
-      -- ssh://git@github.com/pwntester/octo.nvim.git
-      if vim.startswith(url, "http://") or
-          vim.startswith(url, "https://") or
-          vim.startswith(url, "ssh://") then
+    if M.is_blank(stderr) then
+      local host, repo
+      if vim.startswith(url, "http://") or vim.startswith(url, "https://") or vim.startswith(url, "ssh://") then
+        -- https://github.com/pwntester/octo.nvim.git
+        -- ssh://git@github.com/pwntester/octo.nvim.git
         local chunks = vim.split(url, "/")
         host = chunks[3]
         repo = chunks[4] .. "/" .. chunks[5]
-        -- git@github.com:pwntester/octo.nvim.git
       elseif vim.startswith(url, "git@") then
+        -- git@github.com:pwntester/octo.nvim.git
         local parts = vim.split(url, ":")
         host = vim.split(parts[1], "@")[2]
         local repo_chunks = vim.split(parts[2], "/")
         repo = repo_chunks[1] .. "/" .. repo_chunks[2]
-      else
-        goto continue
       end
-      return {
-        host = vim.split(host, "@")[#vim.split(host, "@")],
-        repo = string.gsub(repo, ".git$", ""),
-      }
+      if not M.is_blank(host) and not M.is_blank(repo) then
+        return {
+          host = vim.split(host, "@")[#vim.split(host, "@")],
+          repo = string.gsub(repo, ".git$", ""),
+        }
+      end
     end
-    ::continue::
   end
-  require("octo.utils").notify("Unable to parse a git remote.", 2)
-  return default_remote
+  -- return github.com as default host
+  return {
+    host = "github.com",
+    repo = nil,
+  }
 end
 
 function M.get_remote_name()
@@ -205,19 +207,19 @@ function M.commit_exists(commit, cb)
     return
   end
   Job
-      :new({
-        enable_recording = true,
-        command = "git",
-        args = { "cat-file", "-t", commit },
-        on_exit = vim.schedule_wrap(function(j_self, _, _)
-          if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
-            cb(true)
-          else
-            cb(false)
-          end
-        end),
-      })
-      :start()
+    :new({
+      enable_recording = true,
+      command = "git",
+      args = { "cat-file", "-t", commit },
+      on_exit = vim.schedule_wrap(function(j_self, _, _)
+        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+          cb(true)
+        else
+          cb(false)
+        end
+      end),
+    })
+    :start()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -299,17 +301,19 @@ function M.checkout_pr(pr_number)
     return
   end
   Job
-      :new({
-        enable_recording = true,
-        command = "gh",
-        args = { "pr", "checkout", pr_number },
-        on_exit = vim.schedule_wrap(function()
-          vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
-        end),
-      })
-      :start()
+    :new({
+      enable_recording = true,
+      command = "gh",
+      args = { "pr", "checkout", pr_number },
+      on_exit = vim.schedule_wrap(function()
+        vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
+      end),
+    })
+    :start()
 end
 
+--- Gets the PR object for the current octo buffer
+--- TODO: Move to an OctoBuffer method
 function M.get_current_pr()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -335,11 +339,104 @@ function M.get_current_pr()
   }
 end
 
+--- Fetch the diff of the PR
+--- TODO:: Move to an PullRequest method
+function M.get_pr_diff(pr)
+  local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
+  gh.run {
+    args = { "api", url },
+    headers = { "Accept: application/vnd.github.v3.diff" },
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.notify(stderr, 2)
+      elseif output then
+        pr.diff = output
+      end
+    end,
+  }
+end
+
+--- Fetch the changed files for a given PR
+--- TODO:: Move to an PullRequest method
+function M.get_pr_changed_files(pr, callback)
+  local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
+  gh.run {
+    args = { "api", "--paginate", url, "--jq", "." },
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.notify(stderr, 2)
+      elseif output then
+        local FileEntry = require("octo.reviews.file-entry").FileEntry
+        --local results = M.get_flatten_pages(output)
+        local results = vim.fn.json_decode(output)
+        local files = {}
+        for _, result in ipairs(results) do
+          local entry = FileEntry:new {
+            path = result.filename,
+            previous_path = result.previous_filename,
+            patch = result.patch,
+            pull_request = pr,
+            status = M.file_status_map[result.status],
+            stats = {
+              additions = result.additions,
+              deletions = result.deletions,
+              changes = result.changes,
+            },
+          }
+          table.insert(files, entry)
+        end
+        callback(files)
+      end
+    end,
+  }
+end
+
+--- Fetch the changed files at a given commit
+--- TODO:: Move to an PullRequest method
+function M.get_commit_changed_files(pr, rev, callback)
+  local url = string.format("repos/%s/commits/%s", pr.repo, rev.commit)
+  gh.run {
+    args = { "api", "--paginate", url, "--jq", "." },
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.notify(stderr, 2)
+      elseif output then
+        local FileEntry = require("octo.reviews.file-entry").FileEntry
+        --local results = M.get_flatten_pages(output)
+        local results = vim.fn.json_decode(output)
+        local files = {}
+        if results.files then
+          for _, result in ipairs(results.files) do
+            local entry = FileEntry:new {
+              path = result.filename,
+              previous_path = result.previous_filename,
+              patch = result.patch,
+              pull_request = pr,
+              status = M.file_status_map[result.status],
+              stats = {
+                additions = result.additions,
+                deletions = result.deletions,
+                changes = result.changes,
+              },
+            }
+            table.insert(files, entry)
+          end
+          callback(files)
+        end
+      end
+    end,
+  }
+end
+
+--- Get a issue/PR comment at cursor (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_comment_at_cursor(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   return M.get_comment_at_line(bufnr, cursor[1])
 end
 
+--- Get a issue/PR comment at a given line (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_comment_at_line(bufnr, line)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -360,6 +457,8 @@ function M.get_comment_at_line(bufnr, line)
   end
 end
 
+--- Get the issue/PR body at cursor (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_body_at_cursor(bufnr)
   local buffer = octo_buffers[bufnr]
   local cursor = vim.api.nvim_win_get_cursor(0)
@@ -378,11 +477,15 @@ function M.get_body_at_cursor(bufnr)
   return nil
 end
 
+--- Gets the review thread at cursor (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_thread_at_cursor(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   return M.get_thread_at_line(bufnr, cursor[1])
 end
 
+--- Gets the review thread at a given line (if any)
+--- TODO:: Move to an OctoBuffer method
 function M.get_thread_at_line(bufnr, line)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -399,9 +502,32 @@ function M.get_thread_at_line(bufnr, line)
       end
     end
   end
-  return
 end
 
+--- Gets the reactions groups at cursor (if any)
+--- TODO: Move to an OctoBuffer method
+function M.reactions_at_cursor()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local body_reaction_line = buffer.bodyMetadata.reactionLine
+  if body_reaction_line and body_reaction_line == cursor[1] then
+    return buffer.node.id
+  end
+
+  local comments_metadata = buffer.commentsMetadata
+  if comments_metadata then
+    for _, c in pairs(comments_metadata) do
+      if c.reactionLine and c.reactionLine == cursor[1] then
+        return c.id
+      end
+    end
+  end
+  return nil
+end
+
+--- Updates the reactions groups at cursor (if any)
+--- TODO: Move to an OctoBuffer method
 function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local buffer = octo_buffers[bufnr]
@@ -449,6 +575,7 @@ function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
   end
 end
 
+--- Formats a string as a date
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   local d = date(date_string):addminutes(time_bias)
@@ -488,6 +615,7 @@ function M.get_repo_id(repo)
   end
 end
 
+--- Helper method to aggregate an API paginated response
 function M.get_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
@@ -498,6 +626,7 @@ function M.get_pages(text)
   return results
 end
 
+--- Helper method to aggregate an API paginated response
 function M.get_flatten_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
@@ -510,6 +639,7 @@ function M.get_flatten_pages(text)
   return results
 end
 
+--- Helper method to aggregate an API paginated response
 function M.aggregate_pages(text, aggregation_key)
   -- aggregation key can be at any level (eg: comments)
   -- take the first response and extend it with elements from the
@@ -526,6 +656,7 @@ function M.aggregate_pages(text, aggregation_key)
   return base_resp
 end
 
+--- Helper method to aggregate an API paginated response
 function M.get_nested_prop(obj, prop)
   while true do
     local parts = vim.split(prop, "%.")
@@ -540,13 +671,15 @@ function M.get_nested_prop(obj, prop)
   return obj[prop]
 end
 
-function M.escape_chars(string)
+--- Escapes a characters on a string to be used as a JSON string
+function M.escape_char(string)
   return string.gsub(string, '["\\]', {
     ['"'] = '\\"',
     ["\\"] = "\\\\",
   })
 end
 
+--- Extracts repo and number from Octo command varargs
 function M.get_repo_number_from_varargs(...)
   local repo, number
   local args = table.pack(...)
@@ -554,9 +687,11 @@ function M.get_repo_number_from_varargs(...)
     M.notify("Missing arguments", 1)
     return
   elseif args.n == 1 then
+    -- eg: Octo issue 1
     repo = M.get_remote_name()
     number = tonumber(args[1])
   elseif args.n == 2 then
+    -- eg: Octo issue pwntester/octo.nvim 1
     repo = args[1]
     number = tonumber(args[2])
   else
@@ -568,7 +703,7 @@ function M.get_repo_number_from_varargs(...)
     return
   end
   if not number then
-    M.notify("Missing issue/pr number", 1)
+    M.notify("Missing issue/PR number", 1)
     return
   end
   return repo, number
@@ -612,6 +747,11 @@ function M.parse_url(url)
   end
 end
 
+--- Fetch file from GitHub repo at a given commit
+---@param repo string
+---@param commit string
+---@param path string
+---@param cb function
 function M.get_file_contents(repo, commit, path, cb)
   local owner, name = M.split_repo(repo)
   local query = graphql("file_content_query", owner, name, commit, path)
@@ -669,26 +809,6 @@ function M.split_repo(repo)
   local owner = vim.split(repo, "/")[1]
   local name = vim.split(repo, "/")[2]
   return owner, name
-end
-
-function M.reactions_at_cursor()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local body_reaction_line = buffer.bodyMetadata.reactionLine
-  if body_reaction_line and body_reaction_line == cursor[1] then
-    return buffer.node.id
-  end
-
-  local comments_metadata = buffer.commentsMetadata
-  if comments_metadata then
-    for _, c in pairs(comments_metadata) do
-      if c.reactionLine and c.reactionLine == cursor[1] then
-        return c.id
-      end
-    end
-  end
-  return nil
 end
 
 function M.extract_pattern_at_cursor(pattern)
@@ -788,15 +908,13 @@ function M.get_sorted_comment_lines(bufnr)
   return lines
 end
 
-function M.is_thread_placed_in_buffer(comment, bufnr)
+function M.is_thread_placed_in_buffer(thread, bufnr)
   local split, path = M.get_split_and_path(bufnr)
-  if not split or not path then
+  if split == thread.diffSide and path == thread.path then
+    return true
+  else
     return false
   end
-  if split == comment.diffSide and path == comment.path then
-    return true
-  end
-  return false
 end
 
 function M.get_split_and_path(bufnr)
@@ -804,6 +922,15 @@ function M.get_split_and_path(bufnr)
   if ok and props then
     return props.split, props.path
   end
+end
+
+function M.in_diff_window(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  local ok, props = pcall(vim.api.nvim_buf_get_var, bufnr, "octo_diff_props")
+  if ok and props then
+    return true
+  end
+  return false
 end
 
 -- clear buffer undo history
@@ -932,7 +1059,38 @@ function M.path_join(paths)
   return table.concat(paths, path_sep)
 end
 
--- calculate valid comment ranges
+--- Extract diffhunks from a diff file
+function M.extract_diffhunks_from_diff(diff)
+  local lines = vim.split(diff, "\n")
+  local diffhunks = {}
+  local current_diffhunk = {}
+  local current_path
+  local state
+  for _, line in ipairs(lines) do
+    if vim.startswith(line, "diff --git ") then
+      if #current_diffhunk > 0 then
+        diffhunks[current_path] = table.concat(current_diffhunk, "\n")
+        current_diffhunk = {}
+      end
+      state = "diff"
+    elseif vim.startswith(line, "index ") and state == "diff" then
+      state = "index"
+    elseif vim.startswith(line, "--- a/") and state == "index" then
+      state = "fileA"
+    elseif vim.startswith(line, "+++ b/") and state == "fileA" then
+      current_path = string.sub(line, 7)
+      state = "fileB"
+    elseif vim.startswith(line, "@@") and state == "fileB" then
+      state = "diffhunk"
+      table.insert(current_diffhunk, line)
+    elseif state == "diffhunk" then
+      table.insert(current_diffhunk, line)
+    end
+  end
+  return diffhunks
+end
+
+--- Calculate valid comment ranges
 function M.process_patch(patch)
   -- @@ -from,no-of-lines in the file before  +from,no-of-lines in the file after @@
   -- The no-of-lines values may not be immediately obvious.
@@ -1094,7 +1252,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       autocmd!
       autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
     augroup end
-  ]] ,
+  ]],
     augroup,
     winnr,
     table.concat(bufnrs, ",")
@@ -1106,7 +1264,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       augroup %s
         autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
       augroup end
-    ]] ,
+    ]],
       augroup,
       table.concat(events, ","),
       winnr
@@ -1152,6 +1310,69 @@ function M.get_label_id(label)
       end
     end
   end
+end
+
+--- Generate maps from diffhunk line to code line:
+function M.generate_position2line_map(diffhunk)
+  local diffhunk_lines = vim.split(diffhunk, "\n")
+  local diff_directive = diffhunk_lines[1]
+  local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
+  local right_side_lines = {}
+  local left_side_lines = {}
+  local right_side_line = right_offset
+  local left_side_line = left_offset
+  for i = 2, #diffhunk_lines do
+    local line = diffhunk_lines[i]
+    if vim.startswith(line, "+") then
+      right_side_lines[i] = right_side_line
+      right_side_line = right_side_line + 1
+    elseif vim.startswith(line, "-") then
+      left_side_lines[i] = left_side_line
+      left_side_line = left_side_line + 1
+    elseif not vim.startswith(line, "-") and not vim.startswith(line, "+") then
+      right_side_lines[i] = right_side_line
+      left_side_lines[i] = left_side_line
+      right_side_line = right_side_line + 1
+      left_side_line = left_side_line + 1
+    end
+  end
+  return {
+    left_side_lines = left_side_lines,
+    right_side_lines = right_side_lines,
+    right_offset = right_offset,
+    left_offset = left_offset,
+  }
+end
+
+--- Generates map from buffer line to diffhunk position
+function M.generate_line2position_map(diffhunk)
+  local map = M.generate_position2line_map(diffhunk)
+  local left_side_lines, right_side_lines = {}, {}
+  for k, v in pairs(map.left_side_lines) do
+    left_side_lines[tostring(v)] = k
+  end
+  for k, v in pairs(map.right_side_lines) do
+    right_side_lines[tostring(v)] = k
+  end
+  return {
+    left_side_lines = left_side_lines,
+    right_side_lines = right_side_lines,
+    right_offset = map.right_offset,
+    left_offset = map.left_offset,
+  }
+end
+
+--- Extract REST Id from comment
+function M.extract_rest_id(comment_url)
+  if M.is_blank(comment_url) then
+    return
+  end
+  local rest_id = ""
+  local sep = "_r"
+  for i in string.gmatch(comment_url, "([^" .. sep .. "]+)") do
+    rest_id = i
+  end
+  return rest_id
 end
 
 return M

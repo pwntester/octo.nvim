@@ -17,6 +17,7 @@ local M = {}
 ---@field viewerDidAuthor boolean
 ---@field kind string
 ---@field replyTo string
+---@field replyToRest string
 ---@field reviewId string
 ---@field path string
 ---@field diffSide string
@@ -32,7 +33,7 @@ function CommentMetadata:new(opts)
     author = opts.author,
     id = opts.id,
     dirty = opts.dirty or false,
-    savedBody = opts.body,
+    savedBody = opts.savedBody,
     body = opts.body,
     extmark = opts.extmark,
     namespace = opts.namespace,
@@ -43,9 +44,12 @@ function CommentMetadata:new(opts)
     reactionGroups = opts.reactionGroups,
     kind = opts.kind,
     replyTo = opts.replyTo,
-    reviewId = opts.pullRequestReview,
+    replyToRest = opts.replyToRest,
+    reviewId = opts.reviewId,
     path = opts.path,
     diffSide = opts.diffSide,
+    startLine = opts.startLine,
+    endLine = opts.endLine,
     snippetStartLine = opts.snippetStartLine,
     snippetEndLine = opts.snippetEndLine,
   }

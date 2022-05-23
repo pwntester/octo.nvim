@@ -63,7 +63,7 @@ function Layout:close()
     file:destroy()
   end
 
-  --self.file_panel:destroy()
+  self.file_panel:destroy()
 
   if self.tabpage and vim.api.nvim_tabpage_is_valid(self.tabpage) then
     local pagenr = vim.api.nvim_tabpage_get_number(self.tabpage)
@@ -112,9 +112,8 @@ function Layout:set_file(file, focus)
       cur:detach_buffers()
     end
     vim.cmd "diffoff!"
-    local selected_file = self.files[self.file_idx]
-
-    selected_file:load_buffers(self.left_winid, self.right_winid)
+    self.files[self.file_idx] = file
+    file:load_buffers(self.left_winid, self.right_winid)
 
     -- highlight file in file panel
     self.file_panel:highlight_file(self:cur_file())

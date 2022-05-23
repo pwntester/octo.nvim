@@ -65,14 +65,18 @@ M.resolve_review_thread_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -124,7 +128,10 @@ M.unresolve_review_thread_mutation = [[
                   id
                   body
                   diffHunk
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   createdAt
                   lastEditedAt
                   author {login}
@@ -133,7 +140,8 @@ M.unresolve_review_thread_mutation = [[
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -184,14 +192,18 @@ M.start_review_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -282,14 +294,18 @@ mutation {
           diffHunk
           createdAt
           lastEditedAt
-          commit { abbreviatedOid }
+          commit {
+            oid
+            abbreviatedOid
+          }
           author {login}
           authorAssociation
           viewerDidAuthor
           viewerCanUpdate
           viewerCanDelete
           state
-          replyTo { id }
+          url
+          replyTo { id url }
           pullRequestReview {
             id
             state
@@ -325,14 +341,18 @@ mutation {
                 diffHunk
                 createdAt
                 lastEditedAt
-                commit { abbreviatedOid }
+                originalCommit {
+                  oid
+                  abbreviatedOid
+                }
                 author {login}
                 authorAssociation
                 viewerDidAuthor
                 viewerCanUpdate
                 viewerCanDelete
                 state
-                replyTo { id }
+                url
+                replyTo { id url }
                 pullRequestReview {
                   id
                   state
@@ -368,14 +388,18 @@ mutation {
           diffHunk
           createdAt
           lastEditedAt
-          commit { abbreviatedOid }
+          commit {
+            oid
+            abbreviatedOid
+          }
           author {login}
           authorAssociation
           viewerDidAuthor
           viewerCanUpdate
           viewerCanDelete
           state
-          replyTo { id }
+          url
+          replyTo { id url }
           pullRequestReview {
             id
             state
@@ -411,14 +435,18 @@ mutation {
                 diffHunk
                 createdAt
                 lastEditedAt
-                commit { abbreviatedOid }
+                originalCommit {
+                  oid
+                  abbreviatedOid
+                }
                 author {login}
                 authorAssociation
                 viewerDidAuthor
                 viewerCanUpdate
                 viewerCanDelete
                 state
-                replyTo { id }
+                url
+                replyTo { id url }
                 pullRequestReview {
                   id
                   state
@@ -495,14 +523,18 @@ M.update_pull_request_review_comment_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -566,14 +598,80 @@ M.add_pull_request_review_comment_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
+                  pullRequestReview {
+                    id
+                    state
+                  }
+                  path
+                  reactionGroups {
+                    content
+                    viewerHasReacted
+                    users {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
+M.add_pull_request_review_commit_thread_mutation = [[
+  mutation {
+    addPullRequestReviewComment(input: {commitOID: "%s", body: "%s", pullRequestReviewId: "%s", path: "%s", position: %d }) {
+      comment {
+        id
+        body
+        pullRequest {
+          reviewThreads(last:100) {
+            nodes {	
+              id
+              path
+              diffSide
+              startDiffSide
+              line
+              originalLine
+              startLine
+              originalStartLine
+              isResolved
+              isCollapsed
+              isOutdated
+              comments(first:100) {
+                nodes {
+                  id
+                  body
+                  diffHunk
+                  createdAt
+                  lastEditedAt
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
+                  author {login}
+                  authorAssociation
+                  viewerDidAuthor
+                  viewerCanUpdate
+                  viewerCanDelete
+                  state
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -645,14 +743,18 @@ M.delete_pull_request_review_comment_mutation = [[
                   diffHunk
                   createdAt
                   lastEditedAt
-                  commit { abbreviatedOid }
+                  originalCommit {
+                    oid
+                    abbreviatedOid
+                  }
                   author {login}
                   authorAssociation
                   viewerDidAuthor
                   viewerCanUpdate
                   viewerCanDelete
                   state
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   pullRequestReview {
                     id
                     state
@@ -1133,6 +1235,7 @@ M.update_pull_request_state_mutation = [[
               commit {
                 messageHeadline
                 committedDate
+                oid
                 abbreviatedOid
                 changedFiles
                 additions
@@ -1150,6 +1253,7 @@ M.update_pull_request_state_mutation = [[
                 login
               }
               commit {
+                oid
                 abbreviatedOid
               }
               mergeRefName
@@ -1241,10 +1345,12 @@ M.update_pull_request_state_mutation = [[
                 totalCount
                 nodes{
                   id
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   body
                   commit {
                     oid
+                    abbreviatedOid
                   }
                   author { login }
                   authorAssociation
@@ -1317,14 +1423,18 @@ query {
               diffHunk
               createdAt
               lastEditedAt
-              commit { abbreviatedOid }
+              originalCommit {
+                oid
+                abbreviatedOid
+              }
               author {login}
               authorAssociation
               viewerDidAuthor
               viewerCanUpdate
               viewerCanDelete
               state
-              replyTo { id }
+              url
+              replyTo { id url }
               pullRequestReview {
                 id
                 state
@@ -1371,15 +1481,17 @@ query($endCursor: String) {
               createdAt
               lastEditedAt
               state
-              commit {
+              originalCommit {
                 oid
+                abbreviatedOid
               }
               pullRequestReview {
                 id
                 state
               }
               path
-              replyTo { id }
+              url
+              replyTo { id url }
               author { login }
               authorAssociation
               viewerDidAuthor
@@ -1531,6 +1643,7 @@ query($endCursor: String) {
             commit {
               messageHeadline
               committedDate
+              oid
               abbreviatedOid
               changedFiles
               additions
@@ -1548,6 +1661,7 @@ query($endCursor: String) {
               login
             }
             commit {
+              oid
               abbreviatedOid
             }
             mergeRefName
@@ -1643,10 +1757,12 @@ query($endCursor: String) {
               totalCount
               nodes{
                 id
-                replyTo { id }
+                url
+                replyTo { id url }
                 body
                 commit {
                   oid
+                  abbreviatedOid
                 }
                 author { login }
                 createdAt
@@ -1692,10 +1808,12 @@ query($endCursor: String) {
               body
               createdAt
               lastEditedAt
-              replyTo { id }
+              url
+              replyTo { id url }
               state
-              commit {
+              originalCommit {
                 oid
+                abbreviatedOid
               }
               pullRequestReview {
                 id
@@ -2668,6 +2786,7 @@ M.create_pr_mutation = [[
               commit {
                 messageHeadline
                 committedDate
+                oid
                 abbreviatedOid
                 changedFiles
                 additions
@@ -2685,6 +2804,7 @@ M.create_pr_mutation = [[
                 login
               }
               commit {
+                oid
                 abbreviatedOid
               }
               mergeRefName
@@ -2780,10 +2900,12 @@ M.create_pr_mutation = [[
                 totalCount
                 nodes{
                   id
-                  replyTo { id }
+                  url
+                  replyTo { id url }
                   body
                   commit {
                     oid
+                    abbreviatedOid
                   }
                   author { login }
                   createdAt
@@ -2829,10 +2951,12 @@ M.create_pr_mutation = [[
                 body
                 createdAt
                 lastEditedAt
-                replyTo { id }
+                url
+                replyTo { id url }
                 state
-                commit {
+                originalCommit {
                   oid
+                  abbreviatedOid
                 }
                 pullRequestReview {
                   id
@@ -2911,7 +3035,7 @@ query {
 }
 ]]
 
-local function escape_chars(string)
+local function escape_char(string)
   local escaped, _ = string.gsub(string, '["\\]', {
     ['"'] = '\\"',
     ["\\"] = "\\\\",
@@ -2930,7 +3054,7 @@ return function(query, ...)
   local escaped = {}
   for _, v in ipairs { ... } do
     if type(v) == "string" and opts.escape then
-      local encoded = escape_chars(v)
+      local encoded = escape_char(v)
       table.insert(escaped, encoded)
     else
       table.insert(escaped, v)

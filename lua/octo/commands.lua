@@ -144,20 +144,34 @@ M.commands = {
       reviews.resume_review()
     end,
     comments = function()
-      reviews.show_pending_comments()
+      local current_review = reviews.get_current_review()
+      if current_review then
+        current_review:show_pending_comments()
+      end
     end,
     submit = function()
-      local current_review = require("octo.reviews").get_current_review()
+      local current_review = reviews.get_current_review()
       if current_review then
         current_review:collect_submit_info()
       end
     end,
     discard = function()
-      reviews.discard_review()
+      local current_review = reviews.get_current_review()
+      if current_review then
+        current_review:discard()
+      end
     end,
     close = function()
-      if reviews.get_current_review() and reviews.get_current_review() then
+      if reviews.get_current_review() then
         reviews.get_current_review().layout:close()
+      end
+    end,
+    commit = function()
+      local current_review = reviews.get_current_review()
+      if current_review then
+        picker.review_commits(function(right, left)
+          current_review:focus_commit(right, left)
+        end)
       end
     end,
   },
@@ -182,9 +196,9 @@ M.commands = {
   },
   comment = {
     add = function()
-      local bufnr = vim.api.nvim_get_current_buf()
-      if utils.get_split_and_path(bufnr) then
-        require("octo.reviews").add_review_comment(false)
+      local current_review = require("octo.reviews").get_current_review()
+      if current_review and utils.in_diff_window() then
+        current_review:add_comment(false)
       else
         M.add_comment()
       end
@@ -319,6 +333,7 @@ function M.octo(object, action, ...)
   end
 end
 
+--- Adds a new comment to an issue/PR
 function M.add_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -326,40 +341,15 @@ function M.add_comment()
     return
   end
 
-  local comment_kind, review_id
-  if buffer:isReviewThread() then
-    comment_kind = "PullRequestReviewComment"
-    review_id = reviews.get_current_review().id
-  else
-    comment_kind = "IssueComment"
-  end
-
-  local replyTo, thread_id, thread_end_line
-  local _thread = utils.get_thread_at_cursor(bufnr)
-  if _thread then
-    thread_id = _thread.threadId
-    replyTo = _thread.replyTo
-    thread_end_line = _thread.bufferEndLine
-  end
-
-  if thread_id and not buffer:isReviewThread() then
-    utils.notify("Start a new review to reply to a thread", 2)
-    return
-  elseif not thread_id and buffer:isReviewThread() then
-    return
-  end
-
+  local comment_kind
   local comment = {
     id = -1,
     author = { login = vim.g.octo_viewer },
-    state = "PENDING",
     createdAt = vim.fn.strftime "%FT%TZ",
     body = " ",
-    replyTo = replyTo,
     viewerCanUpdate = true,
     viewerCanDelete = true,
     viewerDidAuthor = true,
-    pullRequestReview = { id = review_id or -1 },
     reactionGroups = {
       { content = "THUMBS_UP", users = { totalCount = 0 } },
       { content = "THUMBS_DOWN", users = { totalCount = 0 } },
@@ -372,17 +362,32 @@ function M.add_comment()
     },
   }
 
+  local _thread = utils.get_thread_at_cursor(bufnr)
+  if not utils.is_blank(_thread) and buffer:isReviewThread() then
+    comment_kind = "PullRequestReviewComment"
+    comment.pullRequestReview = { id = reviews.get_current_review().id }
+    comment.state = "PENDING"
+    comment.replyTo = _thread.replyTo
+    comment.replyToRest = _thread.replyToRest
+  elseif not utils.is_blank(_thread) and not buffer:isReviewThread() then
+    comment_kind = "PullRequestComment"
+    comment.state = ""
+    comment.replyTo = _thread.replyTo
+    comment.replyToRest = _thread.replyToRest
+  elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
+    comment_kind = "IssueComment"
+  elseif utils.is_blank(_thread) and buffer:isReviewThread() then
+    utils.notify("Error adding a comment to a review thread", 1)
+  end
+
   if comment_kind == "IssueComment" then
-    -- just place it at the bottom
     writers.write_comment(bufnr, comment, comment_kind)
-    --vim.fn.execute("normal! Gk")
-    --vim.fn.execute("startinsert")
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
-  elseif comment_kind == "PullRequestReviewComment" then
-    vim.api.nvim_buf_set_lines(bufnr, thread_end_line, thread_end_line, false, { "x", "x", "x", "x" })
-    writers.write_comment(bufnr, comment, comment_kind, thread_end_line + 1)
-    vim.fn.execute(":" .. thread_end_line + 3)
+  elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
+    vim.api.nvim_buf_set_lines(bufnr, _thread.bufferEndLine, _thread.bufferEndLine, false, { "x", "x", "x", "x" })
+    writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1)
+    vim.fn.execute(":" .. _thread.bufferEndLine + 3)
     vim.cmd [[startinsert]]
   end
 
@@ -441,7 +446,7 @@ function M.delete_comment()
           end
           buffer.commentsMetadata = updated
         else
-          utils.notify("ERROR", bufnr, 1)
+          utils.notify("ERROR deleting buffer" .. tostring(bufnr), 1)
         end
 
         if comment.kind == "PullRequestReviewComment" then
@@ -645,8 +650,21 @@ function M.create_issue(repo)
   local title = vim.fn.input(string.format("Creating issue in %s. Enter title: ", repo))
   vim.fn.inputrestore()
 
+  local body
+  local choice = vim.fn.confirm(
+    "Do you want to use the content of the current buffer as the body for the new issue?",
+    "&Yes\n&No\n&Cancel",
+    2
+  )
+  if choice == 1 then
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+    body = utils.escape_char(vim.fn.trim(table.concat(lines, "\n")))
+  else
+    body = constants.NO_BODY_MSG
+  end
+
   local repo_id = utils.get_repo_id(repo)
-  local query = graphql("create_issue_mutation", repo_id, title, constants.NO_BODY_MSG)
+  local query = graphql("create_issue_mutation", repo_id, title, body)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
@@ -779,166 +797,6 @@ function M.create_pr(is_draft)
         local repo_id = utils.get_repo_id(repo_candidates[repo_idx])
         local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, body, is_draft)
 
-        -- print(vim.inspect({
-        --   base_ref_name = base_ref_name,
-        --   head_ref_name = head_ref_name,
-        --   repo_id = repo_id,
-        --   title = title,
-        --   is_draft = is_draft,
-        --   candidates = repo_candidates,
-        --   repo = repo_candidates[repo_idx]
-        -- }))
-
-        local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
-        if choice == 1 then
-          gh.run {
-            args = { "api", "graphql", "-f", string.format("query=%s", query) },
-            cb = function(output, stderr)
-              if stderr and not utils.is_blank(stderr) then
-                utils.notify(stderr, 2)
-              elseif output then
-                local resp2 = vim.fn.json_decode(output)
-                local node2 = resp2.data.createPullRequest.pullRequest
-                utils.notify(string.format("#%d - `%s` created successfully", node2.number, node2.title), 1)
-                require("octo").create_buffer("pull", node2, repo, true)
-                vim.fn.execute "normal! Gk"
-                vim.fn.execute "startinsert"
-              end
-            end,
-          }
-        end
-      end
-    end,
-  }
-end
-
-function M.create_pr(is_draft)
-  is_draft = "draft" == is_draft and true or false
-  local repo = utils.get_remote_name()
-  if not repo then
-    utils.notify("Cant find repo name", 1)
-    return
-  end
-
-  local owner, name = utils.split_repo(repo)
-  local repo_query = graphql("repository_query", owner, name)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", repo_query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local node = resp.data.repository
-
-        -- repo candidates = self + parent (in case of fork)
-        local repo_candidates_entries = { "Seleect target repo", "1. " .. repo }
-        local repo_candidates = { repo }
-        if node.isFork then
-          table.insert(repo_candidates_entries, "2. " .. node.parent.nameWithOwner)
-          table.insert(repo_candidates, node.parent.nameWithOwner)
-        end
-
-        -- get current local branch
-        local cmd = "git rev-parse --abbrev-ref HEAD"
-        local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
-
-        -- get repo default branch
-        local default_branch = node.defaultBranchRef.name
-
-        -- get remote branches
-        local remote_branches = node.refs.nodes
-
-        local remote_branch_exists = false
-        for _, remote_branch in ipairs(remote_branches) do
-          if local_branch == remote_branch.name then
-            remote_branch_exists = true
-          end
-        end
-        local remote_branch = local_branch
-        if not remote_branch_exists then
-          local choice = vim.fn.confirm(
-            "Remote branch '" .. local_branch .. "' does not exist. Push local one?",
-            "&Yes\n&No\n&Cancel",
-            2
-          )
-          if choice == 1 then
-            local remote = "origin"
-            remote_branch = vim.fn.input {
-              prompt = "Enter remote branch name: ",
-              default = local_branch,
-              highlight = function(input)
-                return { { 0, #input, "String" } }
-              end,
-            }
-            utils.notify(string.format("Pushing '%s' to '%s:%s' ...", local_branch, remote, remote_branch), 1)
-            cmd = string.format("git push %s %s:%s", remote, local_branch, remote_branch)
-            vim.fn.system(cmd)
-          else
-            utils.notify("Aborting PR creation", 2)
-          end
-        end
-
-        vim.fn.inputsave()
-        local repo_idx = 1
-        if #repo_candidates > 1 then
-          repo_idx = vim.fn.inputlist(repo_candidates_entries)
-        end
-        local last_commit = string.gsub(vim.fn.system "git log -1 --pretty=%B", "%s+$", "")
-        local last_commit_lines = vim.split(last_commit, "\n")
-        local title = last_commit
-        local body = last_commit
-        if #last_commit_lines > 1 then
-          title = last_commit_lines[1]
-          if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
-            body = table.concat(vim.list_slice(last_commit_lines, 3, #last_commit_lines), "\n")
-          else
-            body = table.concat(vim.list_slice(last_commit_lines, 2, #last_commit_lines), "\n")
-          end
-        end
-        title = vim.fn.input {
-          prompt = "Enter title: ",
-          default = title,
-          highlight = function(input)
-            return { { 0, #input, "String" } }
-          end,
-        }
-        -- The name of the branch you want your changes pulled into. This should be an existing branch on the current repository.
-        -- You cannot update the base branch on a pull request to point to another repository.
-        local base_ref_name = vim.fn.input {
-          prompt = "Enter BASE branch: ",
-          default = default_branch,
-          highlight = function(input)
-            return { { 0, #input, "String" } }
-          end,
-        }
-        -- The name of the branch where your changes are implemented. For cross-repository pull requests in the same network,
-        -- namespace head_ref_name with a user like this: username:branch.
-        local head_ref_name = vim.fn.input {
-          prompt = "Enter HEAD branch: ",
-          default = remote_branch,
-          highlight = function(input)
-            return { { 0, #input, "String" } }
-          end,
-        }
-        if node.isFork and repo_candidates[repo_idx] == node.parent.nameWithOwner then
-          head_ref_name = vim.g.octo_viewer .. ":" .. head_ref_name
-        end
-        vim.fn.inputrestore()
-
-        local repo_id = utils.get_repo_id(repo_candidates[repo_idx])
-        local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, title, body, is_draft)
-
-        -- print(vim.inspect({
-        --   base_ref_name = base_ref_name,
-        --   head_ref_name = head_ref_name,
-        --   repo_id = repo_id,
-        --   title = title,
-        --   is_draft = is_draft,
-        --   candidates = repo_candidates,
-        --   repo = repo_candidates[repo_idx]
-        -- }))
-
         local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
         if choice == 1 then
           gh.run {
@@ -971,7 +829,8 @@ function M.pr_ready_for_review()
   gh.run {
     args = { "pr", "ready", tostring(buffer.number) },
     cb = function(output, stderr)
-      utils.notify("[Octo]", output, stderr, 1)
+      utils.notify(output, 1)
+      utils.notify(stderr, 2)
       writers.write_state(bufnr)
     end,
   }
@@ -1057,7 +916,7 @@ function M.merge_pr(...)
   gh.run {
     args = args,
     cb = function(output, stderr)
-      utils.notify("[Octo]", output, stderr, 1)
+      utils.notify("[Octo] " .. output .. " " .. stderr, 1)
       writers.write_state(bufnr)
     end,
   }

@@ -97,7 +97,8 @@ local commit = defaulter(function(opts)
         vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
 
         local url = string.format("/repos/%s/commits/%s", opts.repo, entry.value)
-        pv_utils.job_maker({ "gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff" }, self.state.bufnr, {
+        local cmd = { "gh", "api", url, "-H", "Accept: application/vnd.github.v3.diff" }
+        pv_utils.job_maker(cmd, self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,
           mode = "append",

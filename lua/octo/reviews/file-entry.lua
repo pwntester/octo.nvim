@@ -19,6 +19,7 @@ M._null_buffer = {}
 
 ---@class FileEntry
 ---@field path string
+---@field previous_path string
 ---@field basename string
 ---@field extension string
 ---@field pull_request PullRequest
@@ -31,6 +32,8 @@ M._null_buffer = {}
 ---@field right_bufid integer
 ---@field left_lines string[]
 ---@field right_lines string[]
+---@field left_winid number
+---@field right_winid number
 ---@field left_comment_ranges table
 ---@field right_comment_ranges table
 ---@field associated_bufs integer[]
@@ -167,6 +170,11 @@ end
 function FileEntry:fetch()
   local right_path = self.path
   local left_path = self.path
+  local current_review = require("octo.reviews").get_current_review()
+  local right_sha = current_review.layout.right.commit
+  local left_sha = current_review.layout.left.commit
+  local right_abbrev = current_review.layout.right:abbrev()
+  local left_abbrev = current_review.layout.left:abbrev()
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
@@ -175,22 +183,22 @@ function FileEntry:fetch()
 
   -- fetch right version
   if self.pull_request.local_right then
-    utils.get_file_at_commit(right_path, self.pull_request.right.commit, function(lines)
+    utils.get_file_at_commit(right_path, right_sha, function(lines)
       self.right_lines = lines
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, self.pull_request.right:abbrev(), right_path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, right_abbrev, right_path, function(lines)
       self.right_lines = lines
     end)
   end
 
   -- fetch left version
   if self.pull_request.local_left then
-    utils.get_file_at_commit(left_path, self.pull_request.left.commit, function(lines)
+    utils.get_file_at_commit(left_path, left_sha, function(lines)
       self.left_lines = lines
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, self.pull_request.left:abbrev(), left_path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, left_abbrev, left_path, function(lines)
       self.left_lines = lines
     end)
   end
@@ -311,9 +319,19 @@ end
 
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
+  local current_review = require("octo.reviews").get_current_review()
+  local review_level = current_review:get_level()
   local splits = {
-    { bufnr = self.left_bufid, comment_ranges = self.left_comment_ranges },
-    { bufnr = self.right_bufid, comment_ranges = self.right_comment_ranges },
+    {
+      bufnr = self.left_bufid,
+      comment_ranges = self.left_comment_ranges,
+      commit = current_review.layout.left:abbrev(),
+    },
+    {
+      bufnr = self.right_bufid,
+      comment_ranges = self.right_comment_ranges,
+      commit = current_review.layout.right:abbrev(),
+    },
   }
   for _, split in ipairs(splits) do
     signs.unplace(split.bufnr)
@@ -328,33 +346,35 @@ function FileEntry:place_signs()
     end
 
     -- place thread comments signs and virtual text
-    local threads = vim.tbl_values(require("octo.reviews").get_current_review().threads)
+    local threads = vim.tbl_values(current_review.threads)
     for _, thread in ipairs(threads) do
-      if utils.is_thread_placed_in_buffer(thread, split.bufnr) then
-        local line = thread.startLine
-        --for line = thread.startLine, thread.line do
-        local sign = "octo_thread"
+      local line = thread.line
+      if review_level == "COMMIT" then
+        line = thread.originalLine
+      end
 
-        if thread.isOutdated then
-          sign = sign .. "_outdated"
-        elseif thread.isResolved then
-          sign = sign .. "_resolved"
+      local sign = "octo_thread"
+      if thread.isOutdated then
+        sign = sign .. "_outdated"
+      elseif thread.isResolved then
+        sign = sign .. "_resolved"
+      end
+
+      for _, comment in ipairs(thread.comments.nodes) do
+        if comment.state == "PENDING" then
+          sign = sign .. "_pending"
         end
-
-        for _, comment in ipairs(thread.comments.nodes) do
-          if comment.state == "PENDING" then
-            sign = sign .. "_pending"
-            break
-          end
+        if
+          review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr)
+          or review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid
+        then
+          -- sign
+          signs.place(sign, split.bufnr, line - 1)
+          -- virtual text
+          local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
+          local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
+          vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, line - 1, { { vt_msg, "Comment" } }, {})
         end
-
-        signs.place(sign, split.bufnr, line - 1)
-
-        local last_comment = thread.comments.nodes[#thread.comments.nodes]
-        local last_date = last_comment.lastEditedAt ~= vim.NIL and last_comment.lastEditedAt or last_comment.createdAt
-        local vt_msg = string.format("%d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
-        vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, line - 1, { { vt_msg, "Comment" } }, {})
-        --end
       end
     end
   end
@@ -363,29 +383,33 @@ end
 function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
   local bufnr
-  if opts.use_local then
-    bufnr = vim.fn.bufadd(opts.path)
-  else
-    bufnr = vim.api.nvim_create_buf(false, false)
-    local bufname = string.format(
-      "octo://%s/review/%s/file/%s/%s",
-      opts.repo,
-      current_review.id,
-      string.upper(opts.split),
-      opts.path
-    )
-    vim.api.nvim_buf_set_name(bufnr, bufname)
-    if opts.binary then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Binary file" })
-    elseif opts.status == "R" and not opts.show_diff then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
-    elseif opts.lines then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
-    end
+  --if opts.use_local then
+  -- TODO: should we use the file from the file system
+  -- Pros: LSP powered
+  -- Cons: we need to change to the commit branch
+  -- For now, lets just load the contents from git object (`git show commit:path`)
+  --bufnr = vim.fn.bufadd(opts.path)
+  --else
+  bufnr = vim.api.nvim_create_buf(false, false)
+  local bufname = string.format(
+    "octo://%s/review/%s/file/%s/%s",
+    opts.repo,
+    current_review.id,
+    string.upper(opts.split),
+    opts.path
+  )
+  vim.api.nvim_buf_set_name(bufnr, bufname)
+  if opts.binary then
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Binary file" })
+  elseif opts.status == "R" and not opts.show_diff then
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
+  elseif opts.lines then
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
   end
+  --end
   vim.api.nvim_buf_set_option(bufnr, "modified", false)
   vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
   vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
