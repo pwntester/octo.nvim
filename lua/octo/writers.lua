@@ -1296,7 +1296,7 @@ function M.write_threads(bufnr, threads)
       -- review thread header
       if utils.is_blank(comment.replyTo) then
         local start_line = not utils.is_blank(thread.originalStartLine) and thread.originalStartLine
-            or thread.originalLine
+          or thread.originalLine
         local end_line = thread.originalLine
         comment.start_line = start_line
         comment.end_line = end_line

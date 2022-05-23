@@ -146,11 +146,11 @@ end
 
 function M.is_blank(s)
   return (
-      s == nil
-          or s == vim.NIL
-          or (type(s) == "string" and string.match(s, "%S") == nil)
-          or (type(s) == "table" and next(s) == nil)
-      )
+    s == nil
+    or s == vim.NIL
+    or (type(s) == "string" and string.match(s, "%S") == nil)
+    or (type(s) == "table" and next(s) == nil)
+  )
 end
 
 function M.get_remote()
@@ -207,19 +207,19 @@ function M.commit_exists(commit, cb)
     return
   end
   Job
-      :new({
-        enable_recording = true,
-        command = "git",
-        args = { "cat-file", "-t", commit },
-        on_exit = vim.schedule_wrap(function(j_self, _, _)
-          if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
-            cb(true)
-          else
-            cb(false)
-          end
-        end),
-      })
-      :start()
+    :new({
+      enable_recording = true,
+      command = "git",
+      args = { "cat-file", "-t", commit },
+      on_exit = vim.schedule_wrap(function(j_self, _, _)
+        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+          cb(true)
+        else
+          cb(false)
+        end
+      end),
+    })
+    :start()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -301,15 +301,15 @@ function M.checkout_pr(pr_number)
     return
   end
   Job
-      :new({
-        enable_recording = true,
-        command = "gh",
-        args = { "pr", "checkout", pr_number },
-        on_exit = vim.schedule_wrap(function()
-          vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
-        end),
-      })
-      :start()
+    :new({
+      enable_recording = true,
+      command = "gh",
+      args = { "pr", "checkout", pr_number },
+      on_exit = vim.schedule_wrap(function()
+        vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
+      end),
+    })
+    :start()
 end
 
 --- Gets the PR object for the current octo buffer
@@ -1252,7 +1252,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       autocmd!
       autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
     augroup end
-  ]] ,
+  ]],
     augroup,
     winnr,
     table.concat(bufnrs, ",")
@@ -1264,7 +1264,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       augroup %s
         autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
       augroup end
-    ]] ,
+    ]],
       augroup,
       table.concat(events, ","),
       winnr
