@@ -658,7 +658,7 @@ function M.create_issue(repo)
   )
   if choice == 1 then
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-    body = utils.escape_chars(vim.fn.trim(table.concat(lines, "\n")))
+    body = utils.escape_char(vim.fn.trim(table.concat(lines, "\n")))
   else
     body = constants.NO_BODY_MSG
   end

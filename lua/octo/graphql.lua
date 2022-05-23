@@ -3035,7 +3035,7 @@ query {
 }
 ]]
 
-local function escape_chars(string)
+local function escape_char(string)
   local escaped, _ = string.gsub(string, '["\\]', {
     ['"'] = '\\"',
     ["\\"] = "\\\\",
@@ -3054,7 +3054,7 @@ return function(query, ...)
   local escaped = {}
   for _, v in ipairs { ... } do
     if type(v) == "string" and opts.escape then
-      local encoded = escape_chars(v)
+      local encoded = escape_char(v)
       table.insert(escaped, encoded)
     else
       table.insert(escaped, v)

@@ -364,6 +364,7 @@ function Review:add_comment(isSuggestion)
               author = { login = vim.g.octo_viewer },
               state = "PENDING",
               replyTo = vim.NIL,
+              url = vim.NIL,
               diffHunk = diff_hunk,
               createdAt = vim.fn.strftime "%FT%TZ",
               originalCommit = { oid = commit, abbreviatedOid = commit_abbrev },
