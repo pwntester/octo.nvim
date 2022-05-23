@@ -43,7 +43,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 * [🚀 Usage](#-usage)
 * [🤖 Commands](#-commands)
 * [🔥 Examples](#-examples)
-* [📋 PR review](#-pr-review)
+* [📋 PR reviews](#-pr-reviews)
 * [🍞 Completion](#-completion)
 * [🎨 Colors](#-colors)
 * [🙋 FAQ](#-faq)
@@ -279,6 +279,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | resume| Edit a pending review for current PR |
 | | discard| Deletes a pending review for current PR if any |
 | | comments| View pending review comments |
+| | commit | Pick a specific commit to review |
 | actions |  | Lists all available Octo actions|
 | search | <query> | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
 
@@ -337,12 +338,12 @@ Octo search assignee:pwntester is:pr
 
 ## 📋 PR review
 
-- Open the PR (eg: `Octo pr list` or `Octo pr edit XXX`)
+- Open the PR (eg: `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`)
 - Start a review with `Octo review start` or resume a pending review with `Octo review resume`
-- Quickfix will be populated with the PR changed files
-- Change quickfix entries with `]q` and `[q` or by selecting an entry in the quickfix window
+- A new tab will show a panel with changed files and two windows showing the diff on any of them.
+- Change panel entries with `]q` and `[q` or by selecting an entry in the window
 - Add comments with `<space>ca` or suggestions with `<space>sa` on single or multiple visual-selected lines
-  - A new buffer will appear in the alternate diff window. Cursor will be positioned in the new buffer
+  - A new buffer will appear in the alternate diff window. The cursor will be positioned in the new buffer
   - When ready, save the buffer to commit changes to GitHub
   - Move back to the diff window and move the cursor, the thread buffer will hide
 - Hold the cursor on a line with a comment to show a thread buffer with all the thread comments
@@ -350,6 +351,7 @@ Octo search assignee:pwntester is:pr
   - Perform any operations as if you were in a regular issue buffer
 - Review pending comments with `Octo review comments`
   - Use <CR> to jump to the selected pending comment
+- If you want to review a specific commit, use `Octo review commit` to pick a commit. The file panel will get filtered to show only files changed by that commit. Any comments placed on these files will be applied at that specific commit level and will be added to the pending review.
 - When ready, submit the review with `Octo review submit`
 - A new float window will pop up. Enter the top level review comment and exit to normal mode. Then press `<C-m>` to submit a comment, `<C-a>` to approve it or `<C-r>` to request changes
 
