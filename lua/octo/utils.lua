@@ -146,11 +146,11 @@ end
 
 function M.is_blank(s)
   return (
-    s == nil
-    or s == vim.NIL
-    or (type(s) == "string" and string.match(s, "%S") == nil)
-    or (type(s) == "table" and next(s) == nil)
-  )
+      s == nil
+          or s == vim.NIL
+          or (type(s) == "string" and string.match(s, "%S") == nil)
+          or (type(s) == "table" and next(s) == nil)
+      )
 end
 
 function M.get_remote()
@@ -207,19 +207,19 @@ function M.commit_exists(commit, cb)
     return
   end
   Job
-    :new({
-      enable_recording = true,
-      command = "git",
-      args = { "cat-file", "-t", commit },
-      on_exit = vim.schedule_wrap(function(j_self, _, _)
-        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
-          cb(true)
-        else
-          cb(false)
-        end
-      end),
-    })
-    :start()
+      :new({
+        enable_recording = true,
+        command = "git",
+        args = { "cat-file", "-t", commit },
+        on_exit = vim.schedule_wrap(function(j_self, _, _)
+          if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+            cb(true)
+          else
+            cb(false)
+          end
+        end),
+      })
+      :start()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -296,286 +296,25 @@ function M.in_pr_branch(bufnr)
   end
 end
 
+---Checks out a PR b number
 function M.checkout_pr(pr_number)
   if not Job then
     return
   end
   Job
-    :new({
-      enable_recording = true,
-      command = "gh",
-      args = { "pr", "checkout", pr_number },
-      on_exit = vim.schedule_wrap(function()
-        vim.notify("Switched to " .. vim.fn.system "git branch --show-current")
-      end),
-    })
-    :start()
+      :new({
+        enable_recording = true,
+        command = "gh",
+        args = { "pr", "checkout", pr_number },
+        on_exit = vim.schedule_wrap(function()
+          local output = vim.fn.system "git branch --show-current"
+          vim.notify("Switched to " .. output)
+        end),
+      })
+      :start()
 end
 
---- Gets the PR object for the current octo buffer
---- TODO: Move to an OctoBuffer method
-function M.get_current_pr()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    M.notify("Not in an active Octo buffer", 2)
-    return
-  end
-  if not buffer:isPullRequest() then
-    M.notify("Not in a PR buffer", 2)
-    return
-  end
-
-  local Rev = require("octo.reviews.rev").Rev
-  local PullRequest = require("octo.model.pull-request").PullRequest
-  return PullRequest:new {
-    bufnr = bufnr,
-    repo = buffer.repo,
-    number = buffer.number,
-    id = buffer.node.id,
-    left = Rev:new(buffer.node.baseRefOid),
-    right = Rev:new(buffer.node.headRefOid),
-    files = buffer.node.files.nodes,
-  }
-end
-
---- Fetch the diff of the PR
---- TODO:: Move to an PullRequest method
-function M.get_pr_diff(pr)
-  local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
-  gh.run {
-    args = { "api", url },
-    headers = { "Accept: application/vnd.github.v3.diff" },
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.notify(stderr, 2)
-      elseif output then
-        pr.diff = output
-      end
-    end,
-  }
-end
-
---- Fetch the changed files for a given PR
---- TODO:: Move to an PullRequest method
-function M.get_pr_changed_files(pr, callback)
-  local url = string.format("repos/%s/pulls/%d/files", pr.repo, pr.number)
-  gh.run {
-    args = { "api", "--paginate", url, "--jq", "." },
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.notify(stderr, 2)
-      elseif output then
-        local FileEntry = require("octo.reviews.file-entry").FileEntry
-        --local results = M.get_flatten_pages(output)
-        local results = vim.fn.json_decode(output)
-        local files = {}
-        for _, result in ipairs(results) do
-          local entry = FileEntry:new {
-            path = result.filename,
-            previous_path = result.previous_filename,
-            patch = result.patch,
-            pull_request = pr,
-            status = M.file_status_map[result.status],
-            stats = {
-              additions = result.additions,
-              deletions = result.deletions,
-              changes = result.changes,
-            },
-          }
-          table.insert(files, entry)
-        end
-        callback(files)
-      end
-    end,
-  }
-end
-
---- Fetch the changed files at a given commit
---- TODO:: Move to an PullRequest method
-function M.get_commit_changed_files(pr, rev, callback)
-  local url = string.format("repos/%s/commits/%s", pr.repo, rev.commit)
-  gh.run {
-    args = { "api", "--paginate", url, "--jq", "." },
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.notify(stderr, 2)
-      elseif output then
-        local FileEntry = require("octo.reviews.file-entry").FileEntry
-        --local results = M.get_flatten_pages(output)
-        local results = vim.fn.json_decode(output)
-        local files = {}
-        if results.files then
-          for _, result in ipairs(results.files) do
-            local entry = FileEntry:new {
-              path = result.filename,
-              previous_path = result.previous_filename,
-              patch = result.patch,
-              pull_request = pr,
-              status = M.file_status_map[result.status],
-              stats = {
-                additions = result.additions,
-                deletions = result.deletions,
-                changes = result.changes,
-              },
-            }
-            table.insert(files, entry)
-          end
-          callback(files)
-        end
-      end
-    end,
-  }
-end
-
---- Get a issue/PR comment at cursor (if any)
---- TODO:: Move to an OctoBuffer method
-function M.get_comment_at_cursor(bufnr)
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  return M.get_comment_at_line(bufnr, cursor[1])
-end
-
---- Get a issue/PR comment at a given line (if any)
---- TODO:: Move to an OctoBuffer method
-function M.get_comment_at_line(bufnr, line)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  for _, comment in ipairs(buffer.commentsMetadata) do
-    local mark = vim.api.nvim_buf_get_extmark_by_id(
-      bufnr,
-      constants.OCTO_COMMENT_NS,
-      comment.extmark,
-      { details = true }
-    )
-    local start_line = mark[1] + 1
-    local end_line = mark[3]["end_row"] + 1
-    if start_line + 1 <= line and end_line - 2 >= line then
-      comment.bufferStartLine = start_line
-      comment.bufferEndLine = end_line
-      return comment
-    end
-  end
-end
-
---- Get the issue/PR body at cursor (if any)
---- TODO:: Move to an OctoBuffer method
-function M.get_body_at_cursor(bufnr)
-  local buffer = octo_buffers[bufnr]
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local metadata = buffer.bodyMetadata
-  local mark = vim.api.nvim_buf_get_extmark_by_id(
-    bufnr,
-    constants.OCTO_COMMENT_NS,
-    metadata.extmark,
-    { details = true }
-  )
-  local start_line = mark[1] + 1
-  local end_line = mark[3]["end_row"] + 1
-  if start_line + 1 <= cursor[1] and end_line - 2 >= cursor[1] then
-    return metadata, start_line, end_line
-  end
-  return nil
-end
-
---- Gets the review thread at cursor (if any)
---- TODO:: Move to an OctoBuffer method
-function M.get_thread_at_cursor(bufnr)
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  return M.get_thread_at_line(bufnr, cursor[1])
-end
-
---- Gets the review thread at a given line (if any)
---- TODO:: Move to an OctoBuffer method
-function M.get_thread_at_line(bufnr, line)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  local thread_marks = vim.api.nvim_buf_get_extmarks(bufnr, constants.OCTO_THREAD_NS, 0, -1, { details = true })
-  for _, mark in ipairs(thread_marks) do
-    local thread = buffer.threadsMetadata[tostring(mark[1])]
-    if thread then
-      local startLine = mark[2] - 1
-      local endLine = mark[4].end_row
-      if startLine <= line and endLine >= line then
-        thread.bufferStartLine = startLine
-        thread.bufferEndLine = endLine
-        return thread
-      end
-    end
-  end
-end
-
---- Gets the reactions groups at cursor (if any)
---- TODO: Move to an OctoBuffer method
-function M.reactions_at_cursor()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local body_reaction_line = buffer.bodyMetadata.reactionLine
-  if body_reaction_line and body_reaction_line == cursor[1] then
-    return buffer.node.id
-  end
-
-  local comments_metadata = buffer.commentsMetadata
-  if comments_metadata then
-    for _, c in pairs(comments_metadata) do
-      if c.reactionLine and c.reactionLine == cursor[1] then
-        return c.id
-      end
-    end
-  end
-  return nil
-end
-
---- Updates the reactions groups at cursor (if any)
---- TODO: Move to an OctoBuffer method
-function M.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local buffer = octo_buffers[bufnr]
-  local reactions_count = 0
-  for _, group in ipairs(reaction_groups) do
-    if group.users.totalCount > 0 then
-      reactions_count = reactions_count + 1
-    end
-  end
-
-  local comments = buffer.commentsMetadata
-  for i, comment in ipairs(comments) do
-    local mark = vim.api.nvim_buf_get_extmark_by_id(
-      bufnr,
-      constants.OCTO_COMMENT_NS,
-      comment.extmark,
-      { details = true }
-    )
-    local start_line = mark[1] + 1
-    local end_line = mark[3].end_row + 1
-    if start_line <= cursor[1] and end_line >= cursor[1] then
-      --  cursor located in the body of a comment
-      --  update reaction groups
-      comments[i].reactionGroups = reaction_groups
-
-      -- update reaction line
-      if not comments[i].reactionLine and reactions_count > 0 then
-        comments[i].reactionLine = reaction_line
-      elseif reactions_count == 0 then
-        comments[i].reactionLine = nil
-      end
-
-      return
-    end
-  end
-
-  -- cursor not located at any comment, so updating issue
-  --  update reaction groups
-  buffer.bodyMetadata.reactionGroups = reaction_groups
-  local body_reaction_line = buffer.bodyMetadata.reactionLine
-  if not body_reaction_line and reactions_count > 0 then
-    buffer.bodyMetadata.reactionLine = reaction_line
-  elseif reactions_count == 0 then
-    buffer.bodyMetadata.reactionLine = nil
-  end
-end
-
---- Formats a string as a date
+---Formats a string as a date
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
   local d = date(date_string):addminutes(time_bias)
@@ -598,6 +337,7 @@ function M.format_date(date_string)
   end
 end
 
+---Gets repo internal GitHub ID
 function M.get_repo_id(repo)
   if repo_id_cache[repo] then
     return repo_id_cache[repo]
@@ -615,7 +355,7 @@ function M.get_repo_id(repo)
   end
 end
 
---- Helper method to aggregate an API paginated response
+---Helper method to aggregate an API paginated response
 function M.get_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
@@ -724,6 +464,17 @@ end
 function M.get_pull_request_uri(...)
   local repo, number = M.get_repo_number_from_varargs(...)
   return string.format("octo://%s/pull/%s", repo, number)
+end
+
+---Helper method opening octo buffers
+function M.get(kind, ...)
+  if kind == "issue" then
+    M.get_issue(...)
+  elseif kind == "pull_request" then
+    M.get_pull_request(...)
+  elseif kind == "repo" then
+    M.get_repo(...)
+  end
 end
 
 function M.get_repo(_, repo)
@@ -1252,7 +1003,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       autocmd!
       autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
     augroup end
-  ]],
+  ]] ,
     augroup,
     winnr,
     table.concat(bufnrs, ",")
@@ -1264,7 +1015,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       augroup %s
         autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
       augroup end
-    ]],
+    ]] ,
       augroup,
       table.concat(events, ","),
       winnr

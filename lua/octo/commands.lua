@@ -362,7 +362,7 @@ function M.add_comment()
     },
   }
 
-  local _thread = utils.get_thread_at_cursor(bufnr)
+  local _thread = buffer:get_thread_at_cursor()
   if not utils.is_blank(_thread) and buffer:isReviewThread() then
     comment_kind = "PullRequestReviewComment"
     comment.pullRequestReview = { id = reviews.get_current_review().id }
@@ -401,7 +401,7 @@ function M.delete_comment()
   if not buffer then
     return
   end
-  local comment = utils.get_comment_at_cursor(bufnr)
+  local comment = buffer:get_comment_at_cursor()
   local start_line = comment.bufferStartLine
   local end_line = comment.bufferEndLine
   if not comment then
@@ -413,7 +413,7 @@ function M.delete_comment()
     query = graphql("delete_issue_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReviewComment" then
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
-    local _thread = utils.get_thread_at_cursor(bufnr)
+    local _thread = buffer:get_thread_at_cursor()
     threadId = _thread.threadId
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
@@ -510,7 +510,7 @@ function M.resolve_thread()
   if not buffer then
     return
   end
-  local _thread = utils.get_thread_at_cursor(bufnr)
+  local _thread = buffer:get_thread_at_cursor()
   if not _thread then
     return
   end
@@ -554,7 +554,7 @@ function M.unresolve_thread()
   if not buffer then
     return
   end
-  local _thread = utils.get_thread_at_cursor(bufnr)
+  local _thread = buffer:get_thread_at_cursor()
   if not _thread then
     return
   end
@@ -955,7 +955,7 @@ end
 
 local function get_reaction_info(bufnr, buffer)
   local reaction_groups, reaction_line, insert_line, id
-  local comment = utils.get_comment_at_cursor(bufnr)
+  local comment = buffer:get_comment_at_cursor()
   if comment then
     -- found a comment at cursor
     id = comment.id
@@ -1024,7 +1024,7 @@ function M.reaction_action(reaction)
           reaction_groups = resp.data.removeReaction.subject.reactionGroups
         end
 
-        utils.update_reactions_at_cursor(bufnr, reaction_groups, reaction_line)
+        buffer:update_reactions_at_cursor(reaction_groups, reaction_line)
         if action == "remove" and utils.count_reactions(reaction_groups) == 0 then
           -- delete lines
           vim.api.nvim_buf_set_lines(bufnr, reaction_line - 1, reaction_line + 1, false, {})

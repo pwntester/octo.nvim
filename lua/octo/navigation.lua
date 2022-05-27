@@ -41,7 +41,7 @@ function M.go_to_file()
   if not buffer:isPullRequest() then
     return
   end
-  local _thread = utils.get_thread_at_cursor(bufnr)
+  local _thread = buffer:get_thread_at_cursor()
   local stat = vim.loop.fs_stat(utils.path_join { vim.fn.getcwd(), _thread.path })
   if stat and stat.type then
     vim.cmd("e " .. _thread.path)

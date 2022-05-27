@@ -68,9 +68,7 @@ local function open(command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
-    vim.cmd(
-      string.format([[ lua require'octo.utils'.get_%s('%s', '%s') ]], selection.kind, selection.repo, selection.value)
-    )
+    utils.get(selection.kind, selection.repo, selection.value)
   end
 end
 
@@ -123,8 +121,7 @@ function M.issues(opts)
     opts.states = "OPEN"
   end
   local filter = get_filter(opts, "issue")
-
-  if not require("octo.utils").is_blank(opts.repo) then
+  if utils.is_blank(opts.repo) then
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then
@@ -256,7 +253,7 @@ function M.pull_requests(opts)
     opts.states = "OPEN"
   end
   local filter = get_filter(opts, "pull_request")
-  if not opts.repo or opts.repo == vim.NIL then
+  if utils.is_blank(opts.repo) then
     opts.repo = utils.get_remote_name()
   end
   if not opts.repo then

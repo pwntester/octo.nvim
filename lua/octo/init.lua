@@ -111,7 +111,7 @@ function M.on_cursor_hold()
   end
 
   -- reactions popup
-  local id = utils.reactions_at_cursor()
+  local id = buffer:get_reactions_at_cursor()
   if id then
     local query = graphql("reactions_for_object_query", id)
     gh.run {
@@ -237,23 +237,5 @@ function M.create_buffer(kind, obj, repo, create)
     octo_buffer:async_fetch_issues()
   end
 end
-
--- function M.check_editable()
---   local bufnr = vim.api.nvim_get_current_buf()
---
---   local body = utils.get_body_at_cursor(bufnr)
---   if body and body.viewerCanUpdate then
---     return
---   end
---
---   local comment = utils.get_comment_at_cursor(bufnr)
---   if comment and comment.viewerCanUpdate then
---     return
---   end
---
---   local key = vim.api.nvim_replace_termcodes("<esc>", true, false, true)
---   vim.api.nvim_feedkeys(key, "m", true)
---   utils.notify("Cannot make changes to non-editable regions", 1)
--- end
 
 return M

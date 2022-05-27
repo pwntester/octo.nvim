@@ -125,9 +125,9 @@ function Review:focus_commit(right, left)
     self.layout:update_files()
   end
   if right == self.pull_request.right.commit and left == self.pull_request.left.commit then
-    utils.get_pr_changed_files(pr, cb)
+    pr:get_changed_files(cb)
   else
-    utils.get_commit_changed_files(pr, self.layout.right, cb)
+    pr:get_commit_changed_files(self.layout.right, cb)
   end
 end
 
@@ -145,7 +145,7 @@ function Review:initiate(opts)
   }
   self.layout:open(self)
 
-  utils.get_pr_changed_files(pr, function(files)
+  pr:get_changed_files(function(files)
     -- pre-fetch the first file
     if #files > 0 then
       files[1]:fetch()
@@ -417,9 +417,8 @@ end
 
 function Review:get_level()
   local review_level = "COMMIT"
-  if
-    self.layout.left.commit == self.pull_request.left.commit
-    and self.layout.right.commit == self.pull_request.right.commit
+  if self.layout.left.commit == self.pull_request.left.commit
+      and self.layout.right.commit == self.pull_request.right.commit
   then
     review_level = "PR"
   end
@@ -490,7 +489,9 @@ function M.close(tabpage)
 end
 
 function M.start_review()
-  local pull_request = utils.get_current_pr()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  local pull_request = buffer:get_pr()
   if pull_request then
     local current_review = Review:new(pull_request)
     current_review:start()
@@ -503,7 +504,9 @@ function M.start_review()
 end
 
 function M.resume_review()
-  local pull_request = utils.get_current_pr()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  local pull_request = buffer:get_pr()
   if pull_request then
     local current_review = Review:new(pull_request)
     current_review:resume()
