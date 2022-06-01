@@ -3,6 +3,7 @@ local M = {}
 M.defaults = {
   picker = "telescope",
   default_remote = { "upstream", "origin" },
+  ssh_aliases = {},
   reaction_viewer_hint_icon = "",
   user_icon = " ",
   comment_icon = " ",

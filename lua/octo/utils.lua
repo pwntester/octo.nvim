@@ -153,8 +153,39 @@ function M.is_blank(s)
       )
 end
 
+function M.parse_remote_url(url, aliases)
+  -- remove trailing ".git"
+  url = string.gsub(url, ".git$", "")
+  -- remove protocol scheme
+  url = string.gsub(url, "^[^:]+://", "")
+  -- remove user
+  url = string.gsub(url, "^[^@]+@", "")
+  -- if url contains two slashes
+  local segments = vim.split(url, "/")
+  local host, repo
+  if #segments == 3 then
+    host = segments[1]
+    repo = segments[2] .. "/" .. segments[3]
+  elseif #segments == 2 then
+    local chunks = vim.split(url, ":")
+    host = chunks[1]
+    repo = chunks[#chunks]
+  end
+
+  if aliases[host] then
+    host = aliases[host]
+  end
+  if not M.is_blank(host) and not M.is_blank(repo) then
+    return {
+      host = host,
+      repo = repo
+    }
+  end
+end
+
 function M.get_remote()
   local conf = config.get_config()
+  local aliases = conf.ssh_aliases
   for _, candidate in ipairs(conf.default_remote) do
     local job = Job:new {
       command = "git",
@@ -165,26 +196,7 @@ function M.get_remote()
     local url = table.concat(job:result(), "\n")
     local stderr = table.concat(job:stderr_result(), "\n")
     if M.is_blank(stderr) then
-      local host, repo
-      if vim.startswith(url, "http://") or vim.startswith(url, "https://") or vim.startswith(url, "ssh://") then
-        -- https://github.com/pwntester/octo.nvim.git
-        -- ssh://git@github.com/pwntester/octo.nvim.git
-        local chunks = vim.split(url, "/")
-        host = chunks[3]
-        repo = chunks[4] .. "/" .. chunks[5]
-      elseif vim.startswith(url, "git@") then
-        -- git@github.com:pwntester/octo.nvim.git
-        local parts = vim.split(url, ":")
-        host = vim.split(parts[1], "@")[2]
-        local repo_chunks = vim.split(parts[2], "/")
-        repo = repo_chunks[1] .. "/" .. repo_chunks[2]
-      end
-      if not M.is_blank(host) and not M.is_blank(repo) then
-        return {
-          host = vim.split(host, "@")[#vim.split(host, "@")],
-          repo = string.gsub(repo, ".git$", ""),
-        }
-      end
+      return M.parse_remote_url(url, aliases)
     end
   end
   -- return github.com as default host
@@ -1124,6 +1136,37 @@ function M.extract_rest_id(comment_url)
     rest_id = i
   end
   return rest_id
+end
+
+function M.test_remotes()
+  local remote_urls = {
+    "https://github.com/pwntester/octo.nvim.git",
+    "ssh://git@github.com/pwntester/octo.nvim.git",
+    "git@github.com:pwntester/octo.nvim.git",
+    "git@github.com:pwntester/octo.nvim.git",
+    "hub.com:pwntester/octo.nvim.git",
+  }
+  local aliases = {
+    ["hub.com"] = "github.com",
+  }
+  local passing = true
+  for _, url in ipairs(remote_urls) do
+    local remote = M.parse_remote_url(url, aliases)
+    print(url, vim.inspect(remote))
+    if not remote then
+      passing = false
+      break
+    end
+    if remote.host ~= "github.com" then
+      passing = false
+      break
+    end
+    if remote.repo ~= "pwntester/octo.nvim" then
+      passing = false
+      break
+    end
+  end
+  return passing
 end
 
 return M
