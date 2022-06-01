@@ -3,6 +3,7 @@
 --
 local M = {}
 local web_devicons
+local config = require "octo.config"
 
 ---@class HlData
 ---@field group string
@@ -82,7 +83,11 @@ function M.get_git_hl(status)
 end
 
 function M.get_file_icon(name, ext, render_data, line_idx, offset)
-  --if not config.get_config().file_panel.use_icons then return " " end
+  local use_icons = config.get_config().file_panel.use_icons
+  if not use_icons then
+    return " "
+  end
+
   if not web_devicons then
     web_devicons = require "nvim-web-devicons"
   end
