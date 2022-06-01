@@ -8,6 +8,7 @@ local graphql = require "octo.graphql"
 local writers = require "octo.writers"
 local window = require "octo.window"
 local reviews = require "octo.reviews"
+local colors = require "octo.colors"
 require "octo.completion"
 require "octo.folds"
 
@@ -17,8 +18,9 @@ _G.octo_buffers = {}
 local M = {}
 
 function M.setup(user_config)
-  signs.setup()
   config.setup(user_config or {})
+  signs.setup()
+  colors.setup()
 end
 
 function M.configure_octo_buffer(bufnr)

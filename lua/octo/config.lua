@@ -148,32 +148,28 @@ M.defaults = {
   },
 }
 
-M._config = M.defaults
+local config = {}
 
 function M.get_config()
-  return M._config
+  return config or M.defaults
 end
 
 function M.setup(user_config)
   user_config = user_config or {}
-  M._config = require("octo.utils").tbl_deep_clone(M.defaults)
-  require("octo.utils").tbl_soft_extend(M._config, user_config)
-
-  M._config.file_panel = vim.tbl_deep_extend("force", M.defaults.file_panel, user_config.file_panel or {})
-
-  if user_config.ssh_aliases then
-    M._config.ssh_aliases = (user_config.ssh_aliases or {})
-  end
+  config = vim.tbl_deep_extend("force", M.defaults, user_config)
 
   -- If the user provides key bindings: use only the user bindings.
   if user_config.mappings then
-    M._config.mappings.issue = (user_config.mappings.issue or M._config.mappings.issue)
-    M._config.mappings.pull_request = (user_config.mappings.pull_request or M._config.mappings.pull_request)
-    M._config.mappings.review_thread = (user_config.mappings.review_thread or M._config.mappings.review_thread)
-    M._config.mappings.review = (user_config.mappings.review or M._config.mappings.review)
-    M._config.mappings.file_panel = (user_config.mappings.file_panel or M._config.mappings.file_panel)
-    M._config.mappings.submit_win = (user_config.mappings.submit_win or M._config.mappings.submit_win)
+    config.mappings.issue = (user_config.mappings.issue or M.defaults.mappings.issue)
+    config.mappings.pull_request = (user_config.mappings.pull_request or M.defaults.mappings.pull_request)
+    config.mappings.review_thread = (user_config.mappings.review_thread or M.defaults.mappings.review_thread)
+    config.mappings.review = (user_config.mappings.review or M.defaults.mappings.review)
+    config.mappings.file_panel = (user_config.mappings.file_panel or M.defaults.mappings.file_panel)
+    config.mappings.submit_win = (user_config.mappings.submit_win or M.defaults.mappings.submit_win)
+    config.mappings.repo = (user_config.mappings.repo or M.defaults.mappings.repo)
   end
+
+  return config
 end
 
 return M

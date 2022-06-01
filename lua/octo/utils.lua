@@ -93,33 +93,6 @@ M.reaction_map = {
   ["EYES"] = "👀",
 }
 
-function M.tbl_soft_extend(a, b)
-  for k, v in pairs(a) do
-    if type(v) ~= "table" then
-      if b[k] ~= nil then
-        a[k] = b[k]
-      end
-    end
-  end
-end
-
-function M.tbl_deep_clone(t)
-  if not t then
-    return
-  end
-  local clone = {}
-
-  for k, v in pairs(t) do
-    if type(v) == "table" then
-      clone[k] = M.tbl_deep_clone(v)
-    else
-      clone[k] = v
-    end
-  end
-
-  return clone
-end
-
 function M.tbl_slice(tbl, first, last, step)
   local sliced = {}
   for i = first or 1, last or #tbl, step or 1 do
@@ -1136,37 +1109,6 @@ function M.extract_rest_id(comment_url)
     rest_id = i
   end
   return rest_id
-end
-
-function M.test_remotes()
-  local remote_urls = {
-    "https://github.com/pwntester/octo.nvim.git",
-    "ssh://git@github.com/pwntester/octo.nvim.git",
-    "git@github.com:pwntester/octo.nvim.git",
-    "git@github.com:pwntester/octo.nvim.git",
-    "hub.com:pwntester/octo.nvim.git",
-  }
-  local aliases = {
-    ["hub.com"] = "github.com",
-  }
-  local passing = true
-  for _, url in ipairs(remote_urls) do
-    local remote = M.parse_remote_url(url, aliases)
-    print(url, vim.inspect(remote))
-    if not remote then
-      passing = false
-      break
-    end
-    if remote.host ~= "github.com" then
-      passing = false
-      break
-    end
-    if remote.repo ~= "pwntester/octo.nvim" then
-      passing = false
-      break
-    end
-  end
-  return passing
 end
 
 return M

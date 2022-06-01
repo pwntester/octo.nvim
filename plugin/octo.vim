@@ -1,5 +1,5 @@
 if !executable('gh') | echom "[Octo] Cannot find `gh` command" | finish | endif
-if !has('nvim-0.5') | echom "[Octo] Octo.nvim requires neovim 0.5+" | finish | endif
+if !has('nvim-0.7') | echom "[Octo] Octo.nvim requires neovim 0.7+" | finish | endif
 if exists('g:loaded_octo') | finish | endif
 
 command! -complete=customlist,v:lua.octo_command_complete -nargs=* Octo lua require"octo.commands".octo(<f-args>)
@@ -18,7 +18,5 @@ augroup octo_autocmds
   au TabLeave * lua require'octo.reviews'.on_tab_leave()
   au WinLeave * lua require'octo.reviews'.on_win_leave()
 augroup END
-
-lua require'octo.colors'.setup()
 
 let g:loaded_octo = 1
