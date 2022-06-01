@@ -161,6 +161,10 @@ function M.setup(user_config)
 
   M._config.file_panel = vim.tbl_deep_extend("force", M.defaults.file_panel, user_config.file_panel or {})
 
+  if user_config.ssh_aliases then
+    M._config.ssh_aliases = (user_config.ssh_aliases or {})
+  end
+
   -- If the user provides key bindings: use only the user bindings.
   if user_config.mappings then
     M._config.mappings.issue = (user_config.mappings.issue or M._config.mappings.issue)
