@@ -3,7 +3,6 @@
 
 local utils = require "octo.utils"
 local config = require "octo.config"
-local mappings = require "octo.mappings"
 local constants = require "octo.constants"
 local renderer = require "octo.reviews.renderer"
 local M = {}
@@ -158,8 +157,11 @@ function FilePanel:init_buffer()
   end
 
   local conf = config.get_config()
-  for rhs, lhs in pairs(conf.mappings.file_panel) do
-    vim.api.nvim_buf_set_keymap(bn, "n", lhs, mappings.callback(rhs), { noremap = true, silent = true })
+
+  for action, value in pairs(conf.mappings.file_panel) do
+    local mappings = require "octo.mappings"
+    local mapping_opts = { silent = true, noremap = true, buffer = bn, desc = value.desc }
+    vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
   end
 
   self.bufid = bn

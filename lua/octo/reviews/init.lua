@@ -6,7 +6,6 @@ local gh = require "octo.gh"
 local graphql = require "octo.graphql"
 local window = require "octo.window"
 local config = require "octo.config"
-local mappings = require "octo.mappings"
 
 ---@class Review
 ---@field repo string
@@ -237,8 +236,10 @@ function Review:collect_submit_info()
   }
   vim.api.nvim_set_current_win(winid)
   vim.api.nvim_buf_set_option(bufnr, "syntax", "octo")
-  for rhs, lhs in pairs(conf.mappings.submit_win) do
-    vim.api.nvim_buf_set_keymap(bufnr, "n", lhs, mappings.callback(rhs), { noremap = true, silent = true })
+  for action, value in pairs(conf.mappings.submit_win) do
+    local mappings = require "octo.mappings"
+    local mapping_opts = { silent = true, noremap = true, buffer = bufnr, desc = value.desc }
+    vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
   end
   vim.cmd [[normal G]]
 end
@@ -417,8 +418,9 @@ end
 
 function Review:get_level()
   local review_level = "COMMIT"
-  if self.layout.left.commit == self.pull_request.left.commit
-      and self.layout.right.commit == self.pull_request.right.commit
+  if
+    self.layout.left.commit == self.pull_request.left.commit
+    and self.layout.right.commit == self.pull_request.right.commit
   then
     review_level = "PR"
   end
@@ -462,6 +464,13 @@ end
 function M.get_current_review()
   local current_tabpage = vim.api.nvim_get_current_tabpage()
   return M.reviews[tostring(current_tabpage)]
+end
+
+function M.get_current_layout()
+  local current_review = M.get_current_review()
+  if current_review then
+    return current_review.layout
+  end
 end
 
 function M.on_tab_leave()

@@ -121,15 +121,10 @@ function M.create_centered_float(opts)
   vim.cmd(aucmd)
 
   -- mappings
-  local mapping_opts = { script = true, silent = true, noremap = true }
-  vim.api.nvim_buf_set_keymap(
-    bufnr,
-    "n",
-    "<C-c>",
-    string.format("<cmd>lua require'octo.window'.try_close_wins(%d, %d)<CR>", winid, outer_winid),
-    mapping_opts
-  )
-
+  local mapping_opts = { script = true, silent = true, noremap = true, buffer = bufnr, desc = "Close window" }
+  vim.keymap.set("n", "<C-c>", function()
+    require("octo.window").try_close_wins(winid, outer_winid)
+  end, mapping_opts)
   return winid, bufnr
 end
 

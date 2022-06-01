@@ -1,7 +1,6 @@
 local BodyMetadata = require("octo.model.body-metadata").BodyMetadata
 local TitleMetadata = require("octo.model.title-metadata").TitleMetadata
 local utils = require "octo.utils"
-local mappings = require "octo.mappings"
 local constants = require "octo.constants"
 local config = require "octo.config"
 local writers = require "octo.writers"
@@ -62,7 +61,6 @@ M.OctoBuffer = OctoBuffer
 
 ---Apply the buffer mappings
 function OctoBuffer:apply_mappings()
-  local mapping_opts = { silent = true, noremap = true }
   local conf = config.get_config()
 
   local kind = self.kind
@@ -72,8 +70,10 @@ function OctoBuffer:apply_mappings()
     kind = "review_thread"
   end
 
-  for rhs, lhs in pairs(conf.mappings[kind]) do
-    vim.api.nvim_buf_set_keymap(self.bufnr, "n", lhs, mappings.callback(rhs), mapping_opts)
+  for action, value in pairs(conf.mappings[kind]) do
+    local mappings = require "octo.mappings"
+    local mapping_opts = { silent = true, noremap = true, buffer = self.bufnr, desc = value.desc }
+    vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
   end
 end
 
@@ -756,7 +756,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
-          resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
+            resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
           local review = require("octo.reviews").get_current_review()
           if review then
             review:update_threads(threads)

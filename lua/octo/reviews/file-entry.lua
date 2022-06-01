@@ -6,7 +6,6 @@ local graphql = require "octo.graphql"
 local gh = require "octo.gh"
 local config = require "octo.config"
 local signs = require "octo.signs"
-local mappings = require "octo.mappings"
 local M = {}
 
 ---@type table
@@ -461,9 +460,12 @@ end
 
 function M._configure_buffer(bufid)
   local conf = config.get_config()
-  for rhs, lhs in pairs(conf.mappings.review_diff) do
-    vim.api.nvim_buf_set_keymap(bufid, "n", lhs, mappings.callback(rhs), { noremap = true, silent = true })
+  for action, value in pairs(conf.mappings.review_diff) do
+    local mappings = require "octo.mappings"
+    local mapping_opts = { silent = true, noremap = true, buffer = bufid, desc = value.desc }
+    vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
   end
+  -- TODO: use vim.keymap.set
   vim.cmd(string.format("nnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
   vim.cmd(string.format("vnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
   vim.cmd(string.format("nnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
@@ -473,7 +475,7 @@ end
 function M._detach_buffer(bufid)
   local conf = config.get_config()
   for _, lhs in pairs(conf.mappings.review_diff) do
-    pcall(vim.api.nvim_buf_del_keymap, bufid, "n", lhs)
+    pcall(vim.keymap.del, "n", lhs, { buffer = bufid })
   end
 end
 

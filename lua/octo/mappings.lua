@@ -1,16 +1,6 @@
-local M = {}
+local reviews = require "octo.reviews"
 
-function M.callback(cb_name)
-  return string.format(":lua require'octo.mappings'.on_keypress('%s')<CR>", cb_name)
-end
-
-function M.on_keypress(event_name)
-  if M.keypress_event_cbs[event_name] then
-    M.keypress_event_cbs[event_name]()
-  end
-end
-
-M.keypress_event_cbs = {
+return {
   close_issue = function()
     require("octo.commands").change_state "CLOSED"
   end,
@@ -131,7 +121,7 @@ M.keypress_event_cbs = {
     require("octo.reviews.file-panel").prev_thread()
   end,
   select_next_entry = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
       local file_idx = layout.file_idx % #layout.files + 1
       local file = layout.files[file_idx]
@@ -141,7 +131,7 @@ M.keypress_event_cbs = {
     end
   end,
   select_prev_entry = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
       local file_idx = (layout.file_idx - 2) % #layout.files + 1
       local file = layout.files[file_idx]
@@ -151,19 +141,19 @@ M.keypress_event_cbs = {
     end
   end,
   next_entry = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
       layout.file_panel:highlight_next_file()
     end
   end,
   prev_entry = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
       layout.file_panel:highlight_prev_file()
     end
   end,
   select_entry = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
       local file = layout.file_panel:get_file_at_cursor()
       if file then
@@ -172,19 +162,19 @@ M.keypress_event_cbs = {
     end
   end,
   focus_files = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout then
       layout.file_panel:focus(true)
     end
   end,
   toggle_files = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout then
       layout.file_panel:toggle()
     end
   end,
   refresh_files = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout then
       layout:update_files()
     end
@@ -205,18 +195,9 @@ M.keypress_event_cbs = {
     current_review:submit "REQUEST_CHANGES"
   end,
   toggle_viewed = function()
-    local layout = M.get_current_layout()
+    local layout = reviews.get_current_layout()
     if layout then
       layout.file_panel:get_file_at_cursor():toggle_viewed()
     end
   end,
 }
-
-function M.get_current_layout()
-  local current_review = require("octo.reviews").get_current_review()
-  if current_review then
-    return current_review.layout
-  end
-end
-
-return M
