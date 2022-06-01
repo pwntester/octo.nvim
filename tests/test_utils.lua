@@ -1,4 +1,5 @@
 local utils = require('octo.utils')
+local log = require('octo.log')
 
 ------------------
 -- Helper methods
@@ -152,10 +153,10 @@ _G.Test_withfile = function(test_data, cb)
         { pos_before.linenr, pos_before.colnr - 1 }
       )
       if type(value.key) == "function" then
-        --log.debug("call key")
+        log.debug("call key")
         value.key()
       else
-        --log.debug('insert:' .. value.key)
+        log.debug('insert:' .. value.key)
         helpers.insert(value.key, value.not_replace_term_code)
         vim.wait(2)
         helpers.feed('<esc>')

@@ -1,16 +1,12 @@
-local has_plenary_log, _ = pcall(require, "plenary.log")
-if not has_plenary_log then
-  return {
-    trace = print,
-    warn = print,
-    debug = print,
-    info = print,
-    error = print,
-    fatal = print,
+if _G.__is_log then
+  return require("plenary.log").new {
+    plugin = "octo.nvim",
+    level = (_G.__is_log == true and "debug") or "warn",
   }
 else
-  return require("plenary.log").new {
-    plugin = "octo",
-    level = (vim.loop.os_getenv "USER" == "pwntester" and "debug") or "warn",
+  return {
+    debug = function(_) end,
+    info = function(_) end,
+    error = function(_) end,
   }
 end
