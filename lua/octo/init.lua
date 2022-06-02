@@ -1,16 +1,19 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
-local gh = require "octo.gh"
-local signs = require "octo.signs"
-local constants = require "octo.constants"
+local autocmds = require "octo.autocmds"
 local config = require "octo.config"
-local utils = require "octo.utils"
-local graphql = require "octo.graphql"
-local writers = require "octo.writers"
-local window = require "octo.window"
+local constants = require "octo.constants"
+local commands = require "octo.commands"
+local completion = require "octo.completion"
+local folds = require "octo.folds"
+local gh = require "octo.gh"
+local graphql = require "octo.gh.graphql"
+local picker = require "octo.picker"
 local reviews = require "octo.reviews"
-local colors = require "octo.colors"
-require "octo.completion"
-require "octo.folds"
+local colors = require "octo.ui.colors"
+local signs = require "octo.ui.signs"
+local window = require "octo.ui.window"
+local writers = require "octo.ui.writers"
+local utils = require "octo.utils"
 
 _G.octo_repo_issues = {}
 _G.octo_buffers = {}
@@ -18,9 +21,22 @@ _G.octo_buffers = {}
 local M = {}
 
 function M.setup(user_config)
+  if not vim.fn.executable "gh" then
+    print "octo: gh executable not found"
+    return
+  end
+  if not vim.fn.has "nvim-0.7" then
+    print "octo: octo.nvim requires neovim 0.7+"
+    return
+  end
   config.setup(user_config or {})
   signs.setup()
+  picker.setup()
   colors.setup()
+  completion.setup()
+  folds.setup()
+  autocmds.setup()
+  commands.setup()
 end
 
 function M.configure_octo_buffer(bufnr)

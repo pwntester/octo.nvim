@@ -1,12 +1,21 @@
 local config = require "octo.config"
 local utils = require "octo.utils"
 
-local provider_name = config.get_config().picker
+local M = {}
 
-local ok, provider = pcall(require, string.format("octo.pickers.%s.provider", provider_name))
-if ok then
-  local picker = provider.picker
-  return picker
-else
-  utils.notify("Error loading " .. provider_name, 2)
+function M.setup()
+  local provider_name = config.get_config().picker
+  if utils.is_blank(provider_name) then
+    provider_name = "telescope"
+  end
+  local ok, provider = pcall(require, string.format("octo.pickers.%s.provider", provider_name))
+  if ok then
+    for k, v in pairs(provider.picker) do
+      M[k] = v
+    end
+  else
+    utils.notify("Error loading picker provider " .. provider_name, 2)
+  end
 end
+
+return M

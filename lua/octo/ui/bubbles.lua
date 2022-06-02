@@ -1,5 +1,5 @@
-local colors = require "octo.colors"
 local config = require "octo.config"
+local colors = require "octo.ui.colors"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
 -- Sometimes they are also called Chips in WebUI framworks. After all they wrap

@@ -1,13 +1,14 @@
 local BodyMetadata = require("octo.model.body-metadata").BodyMetadata
 local TitleMetadata = require("octo.model.title-metadata").TitleMetadata
-local utils = require "octo.utils"
-local constants = require "octo.constants"
+local autocmds = require "octo.autocmds"
 local config = require "octo.config"
-local writers = require "octo.writers"
+local constants = require "octo.constants"
 local folds = require "octo.folds"
-local signs = require "octo.signs"
-local graphql = require "octo.graphql"
 local gh = require "octo.gh"
+local graphql = require "octo.gh.graphql"
+local signs = require "octo.ui.signs"
+local writers = require "octo.ui.writers"
+local utils = require "octo.utils"
 
 local M = {}
 
@@ -248,12 +249,7 @@ function OctoBuffer:configure()
     vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
     vim.cmd [[setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀]]
 
-    -- autocmds
-    vim.cmd [[ augroup octo_buffer_autocmds ]]
-    vim.cmd(string.format([[ au! * <buffer=%d> ]], self.bufnr))
-    vim.cmd(string.format([[ au TextChanged <buffer=%d> lua require"octo".render_signcolumn() ]], self.bufnr))
-    vim.cmd(string.format([[ au TextChangedI <buffer=%d> lua require"octo".render_signcolumn() ]], self.bufnr))
-    vim.cmd [[ augroup END ]]
+    autocmds.octo_buffer(self.bufnr)
   end)
 
   self:apply_mappings()

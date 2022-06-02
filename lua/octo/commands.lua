@@ -1,283 +1,298 @@
-local gh = require "octo.gh"
-local utils = require "octo.utils"
+local constants = require "octo.constants"
 local navigation = require "octo.navigation"
-local window = require "octo.window"
+local gh = require "octo.gh"
+local graphql = require "octo.gh.graphql"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
-local graphql = require "octo.graphql"
-local constants = require "octo.constants"
-local writers = require "octo.writers"
+local window = require "octo.ui.window"
+local writers = require "octo.ui.writers"
+local utils = require "octo.utils"
 
 local M = {}
 
--- supported commands
-M.commands = {
-  actions = function()
-    M.actions()
-  end,
-  search = function(...)
-    M.search(...)
-  end,
-  issue = {
-    create = function(repo)
-      M.create_issue(repo)
+function M.setup()
+  -- command! -complete=customlist,v:lua.octo_command_complete -nargs=* Octo lua require"octo.commands".octo(<f-args>)
+  vim.api.nvim_create_user_command("Octo", function(opts)
+    require("octo.commands").octo(unpack(opts.fargs))
+  end, { complete = require("octo.completion").octo_command_complete, nargs = "*" })
+  -- command! -range OctoAddReviewComment lua require"octo.reviews".add_review_comment(false)
+  vim.api.nvim_create_user_command("OctoAddReviewComment", function()
+    require("octo.reviews").add_review_comment(false)
+  end, { range = true })
+  -- command! -range OctoAddReviewSuggestion lua require"octo.reviews".add_review_comment(true)
+  vim.api.nvim_create_user_command("OctoAddReviewSuggestion", function()
+    require("octo.reviews").add_review_comment(true)
+  end, { range = true })
+
+  -- supported commands
+  M.commands = {
+    actions = function()
+      M.actions()
     end,
-    edit = function(...)
-      utils.get_issue(...)
+    search = function(...)
+      M.search(...)
     end,
-    close = function()
-      M.change_state "CLOSED"
-    end,
-    reopen = function()
-      M.change_state "OPEN"
-    end,
-    list = function(repo, ...)
-      local opts = M.process_varargs(repo, ...)
-      picker.issues(opts)
-    end,
-    search = function(repo, ...)
-      local opts = M.process_varargs(repo, ...)
-      if utils.is_blank(opts.repo) then
-        utils.notify("Cannot find repo", 2)
-        return
-      end
-      opts.prompt = "is:issue "
-      picker.search(opts)
-    end,
-    reload = function()
-      M.reload()
-    end,
-    browser = function()
-      navigation.open_in_browser()
-    end,
-    url = function()
-      M.copy_url()
-    end,
-  },
-  pr = {
-    edit = function(...)
-      utils.get_pull_request(...)
-    end,
-    close = function()
-      M.change_state "CLOSED"
-    end,
-    reopen = function()
-      M.change_state "OPEN"
-    end,
-    list = function(repo, ...)
-      local opts = M.process_varargs(repo, ...)
-      picker.prs(opts)
-    end,
-    checkout = function()
-      local bufnr = vim.api.nvim_get_current_buf()
-      local buffer = octo_buffers[bufnr]
-      if not buffer or not buffer:isPullRequest() then
-        return
-      end
-      if not utils.in_pr_repo() then
-        return
-      end
-      utils.checkout_pr(buffer.node.number)
-    end,
-    create = function(...)
-      M.create_pr(...)
-    end,
-    commits = function()
-      picker.commits()
-    end,
-    changes = function()
-      picker.changed_files()
-    end,
-    diff = function()
-      M.show_pr_diff()
-    end,
-    merge = function(...)
-      M.merge_pr(...)
-    end,
-    checks = function()
-      M.pr_checks()
-    end,
-    ready = function()
-      M.pr_ready_for_review()
-    end,
-    search = function(repo, ...)
-      local opts = M.process_varargs(repo, ...)
-      if utils.is_blank(opts.repo) then
-        utils.notify("Cannot find repo", 2)
-        return
-      end
-      opts.prompt = "is:pr "
-      picker.search(opts)
-    end,
-    reload = function()
-      M.reload()
-    end,
-    browser = function()
-      navigation.open_in_browser()
-    end,
-    url = function()
-      M.copy_url()
-    end,
-  },
-  repo = {
-    list = function(login)
-      picker.repos { login = login }
-    end,
-    view = function(repo)
-      utils.get_repo(nil, repo)
-    end,
-    fork = function()
-      utils.fork_repo()
-    end,
-    browser = function()
-      navigation.open_in_browser()
-    end,
-    url = function()
-      M.copy_url()
-    end,
-  },
-  review = {
-    start = function()
-      reviews.start_review()
-    end,
-    resume = function()
-      reviews.resume_review()
-    end,
-    comments = function()
-      local current_review = reviews.get_current_review()
-      if current_review then
-        current_review:show_pending_comments()
-      end
-    end,
-    submit = function()
-      local current_review = reviews.get_current_review()
-      if current_review then
-        current_review:collect_submit_info()
-      end
-    end,
-    discard = function()
-      local current_review = reviews.get_current_review()
-      if current_review then
-        current_review:discard()
-      end
-    end,
-    close = function()
-      if reviews.get_current_review() then
-        reviews.get_current_review().layout:close()
-      end
-    end,
-    commit = function()
-      local current_review = reviews.get_current_review()
-      if current_review then
-        picker.review_commits(function(right, left)
-          current_review:focus_commit(right, left)
-        end)
-      end
-    end,
-  },
-  gist = {
-    list = function(...)
-      local args = table.pack(...)
-      local opts = {}
-      for i = 1, args.n do
-        local kv = vim.split(args[i], "=")
-        opts[kv[1]] = kv[2]
-      end
-      picker.gists(opts)
-    end,
-  },
-  thread = {
-    resolve = function()
-      M.resolve_thread()
-    end,
-    unresolve = function()
-      M.unresolve_thread()
-    end,
-  },
-  comment = {
-    add = function()
-      local current_review = require("octo.reviews").get_current_review()
-      if current_review and utils.in_diff_window() then
-        current_review:add_comment(false)
-      else
-        M.add_comment()
-      end
-    end,
-    delete = function()
-      M.delete_comment()
-    end,
-  },
-  label = {
-    create = function(label)
-      M.create_label(label)
-    end,
-    add = function(label)
-      M.add_label(label)
-    end,
-    remove = function(label)
-      M.remove_label(label)
-    end,
-  },
-  assignee = {
-    add = function(login)
-      M.add_user("assignee", login)
-    end,
-    remove = function(login)
-      M.remove_assignee(login)
-    end,
-  },
-  reviewer = {
-    add = function(login)
-      M.add_user("reviewer", login)
-    end,
-  },
-  reaction = {
-    thumbs_up = function()
-      M.reaction_action "THUMBS_UP"
-    end,
-    ["+1"] = function()
-      M.reaction_action "THUMBS_UP"
-    end,
-    thumbs_down = function()
-      M.reaction_action "THUMBS_DOWN"
-    end,
-    ["-1"] = function()
-      M.reaction_action "THUMBS_DOWN"
-    end,
-    eyes = function()
-      M.reaction_action "EYES"
-    end,
-    laugh = function()
-      M.reaction_action "LAUGH"
-    end,
-    confused = function()
-      M.reaction_action "CONFUSED"
-    end,
-    hooray = function()
-      M.reaction_action "HOORAY"
-    end,
-    party = function()
-      M.reaction_action "HOORAY"
-    end,
-    tada = function()
-      M.reaction_action "HOORAY"
-    end,
-    rocket = function()
-      M.reaction_action "ROCKET"
-    end,
-  },
-  card = {
-    add = function()
-      M.add_project_card()
-    end,
-    move = function()
-      M.move_project_card()
-    end,
-    remove = function()
-      M.remove_project_card()
-    end,
-  },
-}
+    issue = {
+      create = function(repo)
+        M.create_issue(repo)
+      end,
+      edit = function(...)
+        utils.get_issue(...)
+      end,
+      close = function()
+        M.change_state "CLOSED"
+      end,
+      reopen = function()
+        M.change_state "OPEN"
+      end,
+      list = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        picker.issues(opts)
+      end,
+      search = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        if utils.is_blank(opts.repo) then
+          utils.notify("Cannot find repo", 2)
+          return
+        end
+        opts.prompt = "is:issue "
+        picker.search(opts)
+      end,
+      reload = function()
+        M.reload()
+      end,
+      browser = function()
+        navigation.open_in_browser()
+      end,
+      url = function()
+        M.copy_url()
+      end,
+    },
+    pr = {
+      edit = function(...)
+        utils.get_pull_request(...)
+      end,
+      close = function()
+        M.change_state "CLOSED"
+      end,
+      reopen = function()
+        M.change_state "OPEN"
+      end,
+      list = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        picker.prs(opts)
+      end,
+      checkout = function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local buffer = octo_buffers[bufnr]
+        if not buffer or not buffer:isPullRequest() then
+          return
+        end
+        if not utils.in_pr_repo() then
+          return
+        end
+        utils.checkout_pr(buffer.node.number)
+      end,
+      create = function(...)
+        M.create_pr(...)
+      end,
+      commits = function()
+        picker.commits()
+      end,
+      changes = function()
+        picker.changed_files()
+      end,
+      diff = function()
+        M.show_pr_diff()
+      end,
+      merge = function(...)
+        M.merge_pr(...)
+      end,
+      checks = function()
+        M.pr_checks()
+      end,
+      ready = function()
+        M.pr_ready_for_review()
+      end,
+      search = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        if utils.is_blank(opts.repo) then
+          utils.notify("Cannot find repo", 2)
+          return
+        end
+        opts.prompt = "is:pr "
+        picker.search(opts)
+      end,
+      reload = function()
+        M.reload()
+      end,
+      browser = function()
+        navigation.open_in_browser()
+      end,
+      url = function()
+        M.copy_url()
+      end,
+    },
+    repo = {
+      list = function(login)
+        picker.repos { login = login }
+      end,
+      view = function(repo)
+        utils.get_repo(nil, repo)
+      end,
+      fork = function()
+        utils.fork_repo()
+      end,
+      browser = function()
+        navigation.open_in_browser()
+      end,
+      url = function()
+        M.copy_url()
+      end,
+    },
+    review = {
+      start = function()
+        reviews.start_review()
+      end,
+      resume = function()
+        reviews.resume_review()
+      end,
+      comments = function()
+        local current_review = reviews.get_current_review()
+        if current_review then
+          current_review:show_pending_comments()
+        end
+      end,
+      submit = function()
+        local current_review = reviews.get_current_review()
+        if current_review then
+          current_review:collect_submit_info()
+        end
+      end,
+      discard = function()
+        local current_review = reviews.get_current_review()
+        if current_review then
+          current_review:discard()
+        end
+      end,
+      close = function()
+        if reviews.get_current_review() then
+          reviews.get_current_review().layout:close()
+        end
+      end,
+      commit = function()
+        local current_review = reviews.get_current_review()
+        if current_review then
+          picker.review_commits(function(right, left)
+            current_review:focus_commit(right, left)
+          end)
+        end
+      end,
+    },
+    gist = {
+      list = function(...)
+        local args = table.pack(...)
+        local opts = {}
+        for i = 1, args.n do
+          local kv = vim.split(args[i], "=")
+          opts[kv[1]] = kv[2]
+        end
+        picker.gists(opts)
+      end,
+    },
+    thread = {
+      resolve = function()
+        M.resolve_thread()
+      end,
+      unresolve = function()
+        M.unresolve_thread()
+      end,
+    },
+    comment = {
+      add = function()
+        local current_review = require("octo.reviews").get_current_review()
+        if current_review and utils.in_diff_window() then
+          current_review:add_comment(false)
+        else
+          M.add_comment()
+        end
+      end,
+      delete = function()
+        M.delete_comment()
+      end,
+    },
+    label = {
+      create = function(label)
+        M.create_label(label)
+      end,
+      add = function(label)
+        M.add_label(label)
+      end,
+      remove = function(label)
+        M.remove_label(label)
+      end,
+    },
+    assignee = {
+      add = function(login)
+        M.add_user("assignee", login)
+      end,
+      remove = function(login)
+        M.remove_assignee(login)
+      end,
+    },
+    reviewer = {
+      add = function(login)
+        M.add_user("reviewer", login)
+      end,
+    },
+    reaction = {
+      thumbs_up = function()
+        M.reaction_action "THUMBS_UP"
+      end,
+      ["+1"] = function()
+        M.reaction_action "THUMBS_UP"
+      end,
+      thumbs_down = function()
+        M.reaction_action "THUMBS_DOWN"
+      end,
+      ["-1"] = function()
+        M.reaction_action "THUMBS_DOWN"
+      end,
+      eyes = function()
+        M.reaction_action "EYES"
+      end,
+      laugh = function()
+        M.reaction_action "LAUGH"
+      end,
+      confused = function()
+        M.reaction_action "CONFUSED"
+      end,
+      hooray = function()
+        M.reaction_action "HOORAY"
+      end,
+      party = function()
+        M.reaction_action "HOORAY"
+      end,
+      tada = function()
+        M.reaction_action "HOORAY"
+      end,
+      rocket = function()
+        M.reaction_action "ROCKET"
+      end,
+    },
+    card = {
+      add = function()
+        M.add_project_card()
+      end,
+      move = function()
+        M.move_project_card()
+      end,
+      remove = function()
+        M.remove_project_card()
+      end,
+    },
+  }
+end
 
 function M.process_varargs(repo, ...)
   local args = table.pack(...)

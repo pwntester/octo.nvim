@@ -1,17 +1,18 @@
-local actions = require "telescope.actions"
-local action_state = require "telescope.actions.state"
-local action_set = require "telescope.actions.set"
-local finders = require "telescope.finders"
-local pickers = require "telescope.pickers"
-local conf = require("telescope.config").values
-local sorters = require "telescope.sorters"
-local reviews = require "octo.reviews"
 local gh = require "octo.gh"
-local utils = require "octo.utils"
+local graphql = require "octo.gh.graphql"
 local navigation = require "octo.navigation"
-local graphql = require "octo.graphql"
 local previewers = require "octo.pickers.telescope.previewers"
 local entry_maker = require "octo.pickers.telescope.entry_maker"
+local reviews = require "octo.reviews"
+local utils = require "octo.utils"
+
+local actions = require "telescope.actions"
+local action_set = require "telescope.actions.set"
+local action_state = require "telescope.actions.state"
+local conf = require("telescope.config").values
+local finders = require "telescope.finders"
+local pickers = require "telescope.pickers"
+local sorters = require "telescope.sorters"
 
 local M = {}
 

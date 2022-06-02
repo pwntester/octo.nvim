@@ -1,11 +1,11 @@
 local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
-local thread_panel = require "octo.reviews.thread-panel"
-local utils = require "octo.utils"
-local gh = require "octo.gh"
-local graphql = require "octo.graphql"
-local window = require "octo.window"
 local config = require "octo.config"
+local gh = require "octo.gh"
+local graphql = require "octo.gh.graphql"
+local thread_panel = require "octo.reviews.thread-panel"
+local window = require "octo.ui.window"
+local utils = require "octo.utils"
 
 ---@class Review
 ---@field repo string

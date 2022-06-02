@@ -1,12 +1,11 @@
-require "octo"
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
-local previewers = require "telescope.previewers"
-local utils = require "octo.utils"
-local ts_utils = require "telescope.utils"
-local pv_utils = require "telescope.previewers.utils"
-local writers = require "octo.writers"
-local graphql = require "octo.graphql"
 local gh = require "octo.gh"
+local graphql = require "octo.gh.graphql"
+local writers = require "octo.ui.writers"
+local utils = require "octo.utils"
+local previewers = require "telescope.previewers"
+local pv_utils = require "telescope.previewers.utils"
+local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
 
 local issue = defaulter(function(opts)

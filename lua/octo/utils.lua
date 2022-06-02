@@ -1,8 +1,8 @@
+local config = require "octo.config"
 local constants = require "octo.constants"
 local date = require "octo.date"
 local gh = require "octo.gh"
-local graphql = require "octo.graphql"
-local config = require "octo.config"
+local graphql = require "octo.gh.graphql"
 local _, Job = pcall(require, "plenary.job")
 
 local M = {}

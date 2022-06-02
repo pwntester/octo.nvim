@@ -1,11 +1,12 @@
 -- Heavily derived from `diffview.nvim`:
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-entry.lua
---
-local utils = require "octo.utils"
-local graphql = require "octo.graphql"
-local gh = require "octo.gh"
+
 local config = require "octo.config"
-local signs = require "octo.signs"
+local gh = require "octo.gh"
+local graphql = require "octo.gh.graphql"
+local signs = require "octo.ui.signs"
+local utils = require "octo.utils"
+
 local M = {}
 
 ---@type table
