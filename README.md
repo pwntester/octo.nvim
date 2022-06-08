@@ -239,6 +239,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | search | Live issue search |
 | | edit [repo] <number> | Edit PR `<number>` in current or specified repo|
 | | reopen | Reopen the current PR|
+| | create | Creates a new PR for the current branch|
 | | close | Close the current PR|
 | | checkout | Checkout PR|
 | | commits | List all PR commits|
