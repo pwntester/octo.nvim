@@ -78,6 +78,9 @@ return {
   add_comment = function()
     require("octo.commands").add_comment()
   end,
+  add_suggestion = function()
+    require("octo.commands").add_suggestion()
+  end,
   delete_comment = function()
     require("octo.commands").delete_comment()
   end,
