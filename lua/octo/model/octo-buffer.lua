@@ -62,20 +62,13 @@ M.OctoBuffer = OctoBuffer
 
 ---Apply the buffer mappings
 function OctoBuffer:apply_mappings()
-  local conf = config.get_config()
-
   local kind = self.kind
   if self.kind == "pull" then
     kind = "pull_request"
   elseif self.kind == "reviewthread" then
     kind = "review_thread"
   end
-
-  for action, value in pairs(conf.mappings[kind]) do
-    local mappings = require "octo.mappings"
-    local mapping_opts = { silent = true, noremap = true, buffer = self.bufnr, desc = value.desc }
-    vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
-  end
+  utils.apply_mappings(kind, self.bufnr)
 end
 
 ---Clears the buffer

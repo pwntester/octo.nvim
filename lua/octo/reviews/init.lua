@@ -229,18 +229,14 @@ function Review:collect_submit_info()
   local winid, bufnr = window.create_centered_float {
     header = string.format(
       "Press %s to approve, %s to comment or %s to request changes",
-      conf.mappings.submit_win.approve_review,
-      conf.mappings.submit_win.comment_review,
-      conf.mappings.submit_win.request_changes
+      conf.mappings.submit_win.approve_review.lhs,
+      conf.mappings.submit_win.comment_review.lhs,
+      conf.mappings.submit_win.request_changes.lhs
     ),
   }
   vim.api.nvim_set_current_win(winid)
   vim.api.nvim_buf_set_option(bufnr, "syntax", "octo")
-  for action, value in pairs(conf.mappings.submit_win) do
-    local mappings = require "octo.mappings"
-    local mapping_opts = { silent = true, noremap = true, buffer = bufnr, desc = value.desc }
-    vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
-  end
+  utils.apply_mappings("submit_win", bufnr)
   vim.cmd [[normal G]]
 end
 

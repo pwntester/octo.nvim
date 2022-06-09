@@ -1111,4 +1111,24 @@ function M.extract_rest_id(comment_url)
   return rest_id
 end
 
+--- Apply mappings to a buffer
+function M.apply_mappings(kind, bufnr)
+  local mappings = require "octo.mappings"
+  local conf = config.get_config()
+  for action, value in pairs(conf.mappings[kind]) do
+    if
+      not M.is_blank(value)
+      and not M.is_blank(action)
+      and not M.is_blank(value.lhs)
+      and not M.is_blank(mappings[action])
+    then
+      if M.is_blank(value.desc) then
+        value.desc = ""
+      end
+      local mapping_opts = { silent = true, noremap = true, buffer = bufnr, desc = value.desc }
+      vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
+    end
+  end
+end
+
 return M
