@@ -698,7 +698,6 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
         utils.notify(stderr, 2)
       elseif output then
         local resp = vim.fn.json_decode(output)
-        print(vim.inspect(resp))
         if not utils.is_blank(resp) then
           if vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp.body) then
             local comments = self.commentsMetadata
