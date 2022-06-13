@@ -155,17 +155,9 @@ function FilePanel:init_buffer()
     utils.wipe_named_buffer(bufname)
     vim.api.nvim_buf_set_name(bn, bufname)
   end
-
-  local conf = config.get_config()
-
-  for action, value in pairs(conf.mappings.file_panel) do
-    local mappings = require "octo.mappings"
-    local mapping_opts = { silent = true, noremap = true, buffer = bn, desc = value.desc }
-    vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
-  end
-
   self.bufid = bn
   self.render_data = renderer.RenderData:new(bufname)
+  utils.apply_mappings("file_panel", self.bufid)
   self:render()
   self:redraw()
 
