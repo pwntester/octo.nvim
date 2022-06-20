@@ -35,18 +35,11 @@ function M.setup()
       require("octo").on_cursor_hold()
     end,
   })
-  define({ "CursorHold" }, {
-    group = "octo_autocmds",
-    pattern = { "*" },
-    callback = function()
-      require("octo.reviews.thread-panel").show_review_threads()
-    end,
-  })
   define({ "CursorMoved" }, {
     group = "octo_autocmds",
     pattern = { "*" },
     callback = function()
-      require("octo.reviews.thread-panel").hide_review_threads()
+      require("octo.reviews.thread-panel").show_review_threads()
     end,
   })
   define({ "TabClosed" }, {

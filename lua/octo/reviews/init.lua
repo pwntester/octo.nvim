@@ -291,14 +291,8 @@ function Review:add_comment(isSuggestion)
   end
 
   -- get visual selected line range
-  local line1, line2
-  if vim.fn.getpos("'<")[2] == vim.fn.getcurpos()[2] then
-    line1 = vim.fn.getpos("'<")[2]
-    line2 = vim.fn.getpos("'>")[2]
-  else
-    line1 = vim.fn.getcurpos()[2]
-    line2 = vim.fn.getcurpos()[2]
-  end
+  local line1, line2 = utils.get_lines_from_context "visual"
+
   local comment_ranges, current_bufnr
   if split == "RIGHT" then
     comment_ranges = file.right_comment_ranges
@@ -326,6 +320,10 @@ function Review:add_comment(isSuggestion)
     if not vim.startswith(diff_hunk, "@@") then
       diff_hunk = "@@ " .. diff_hunk
     end
+  else
+    -- not printing diff hunk for added files
+    -- we will get the right diff hunk from the server when updating the threads
+    -- TODO: trigger a thread update?
   end
 
   self.layout:ensure_layout()
@@ -388,7 +386,7 @@ function Review:add_comment(isSuggestion)
 
     -- TODO: if there are threads for that line, there should be a buffer already showing them
     -- or maybe not if the user is very quick
-    local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path, line1)
+    local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)
       vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
@@ -402,9 +400,8 @@ function Review:add_comment(isSuggestion)
         vim.api.nvim_buf_set_option(thread_buffer.bufnr, "modified", false)
       end
       thread_buffer:configure()
-      -- TODO: remove first line but only if its empty and if it has no virtualtext
-      --vim.cmd [[normal ggdd]]
-      vim.cmd [[normal Gk]]
+      vim.cmd [[diffoff!]]
+      vim.cmd [[normal vvGk]]
       vim.cmd [[startinsert]]
     end
   else
@@ -496,6 +493,10 @@ end
 function M.start_review()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
+  if not buffer then
+    print "No Octo buffer found"
+    return
+  end
   local pull_request = buffer:get_pr()
   if pull_request then
     local current_review = Review:new(pull_request)
@@ -511,6 +512,10 @@ end
 function M.resume_review()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
+  if not buffer then
+    print "No Octo buffer found"
+    return
+  end
   local pull_request = buffer:get_pr()
   if pull_request then
     local current_review = Review:new(pull_request)

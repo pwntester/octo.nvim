@@ -348,9 +348,10 @@ function FileEntry:place_signs()
     -- place thread comments signs and virtual text
     local threads = vim.tbl_values(current_review.threads)
     for _, thread in ipairs(threads) do
-      local line = thread.line
+      local startLine, endLine = thread.startLine, thread.line
       if review_level == "COMMIT" then
-        line = thread.originalLine
+        startLine = thread.originalLine
+        endLine = thread.originalLine
       end
 
       local sign = "octo_thread"
@@ -365,15 +366,18 @@ function FileEntry:place_signs()
           sign = sign .. "_pending"
         end
         if
-          review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr)
-          or review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid
+          (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
+          or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
         then
-          -- sign
-          signs.place(sign, split.bufnr, line - 1)
-          -- virtual text
+          -- for lines between startLine and endLine, place the sign
+          for line = startLine, endLine do
+            signs.place(sign, split.bufnr, line - 1)
+          end
+
+          -- place the virtual text only on first line
           local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
           local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
-          vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, line - 1, { { vt_msg, "Comment" } }, {})
+          vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
         end
       end
     end
@@ -461,12 +465,11 @@ end
 
 function M._configure_buffer(bufid)
   utils.apply_mappings("review_diff", bufid)
-  -- TODO: use vim.keymap.set
-  local conf = config.get_config()
-  vim.cmd(string.format("nnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
-  vim.cmd(string.format("vnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
-  vim.cmd(string.format("nnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
-  vim.cmd(string.format("vnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
+  -- local conf = config.get_config()
+  -- vim.cmd(string.format("nnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
+  -- vim.cmd(string.format("vnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
+  -- vim.cmd(string.format("nnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
+  -- vim.cmd(string.format("vnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
 end
 
 function M._detach_buffer(bufid)

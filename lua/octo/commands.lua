@@ -11,18 +11,9 @@ local utils = require "octo.utils"
 local M = {}
 
 function M.setup()
-  -- command! -complete=customlist,v:lua.octo_command_complete -nargs=* Octo lua require"octo.commands".octo(<f-args>)
   vim.api.nvim_create_user_command("Octo", function(opts)
     require("octo.commands").octo(unpack(opts.fargs))
   end, { complete = require("octo.completion").octo_command_complete, nargs = "*" })
-  -- command! -range OctoAddReviewComment lua require"octo.reviews".add_review_comment(false)
-  vim.api.nvim_create_user_command("OctoAddReviewComment", function()
-    require("octo.reviews").add_review_comment(false)
-  end, { range = true })
-  -- command! -range OctoAddReviewSuggestion lua require"octo.reviews".add_review_comment(true)
-  vim.api.nvim_create_user_command("OctoAddReviewSuggestion", function()
-    require("octo.reviews").add_review_comment(true)
-  end, { range = true })
 
   -- supported commands
   M.commands = {
@@ -1293,7 +1284,6 @@ function M.add_user(subject, login)
   end
 
   local cb = function(user_id)
-    print(user_id)
     local query
     if subject == "assignee" then
       query = graphql("add_assignees_mutation", iid, user_id)

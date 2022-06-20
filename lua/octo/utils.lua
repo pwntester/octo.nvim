@@ -648,9 +648,8 @@ function M.is_thread_placed_in_buffer(thread, bufnr)
   local split, path = M.get_split_and_path(bufnr)
   if split == thread.diffSide and path == thread.path then
     return true
-  else
-    return false
   end
+  return false
 end
 
 function M.get_split_and_path(bufnr)
@@ -1127,8 +1126,29 @@ function M.apply_mappings(kind, bufnr)
       end
       local mapping_opts = { silent = true, noremap = true, buffer = bufnr, desc = value.desc }
       vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
+      -- TODO: These should probably be part of the config
+      if action == "add_review_comment" or action == "add_review_suggestion" then
+        vim.keymap.set("x", value.lhs, mappings[action], mapping_opts)
+      end
     end
   end
+end
+
+-- Returns the starting and ending lines to be commented based on the calling context.
+function M.get_lines_from_context(calling_context)
+  local line_number_start = nil
+  local line_number_end = nil
+  if calling_context == "line" then
+    line_number_start = vim.fn.line "."
+    line_number_end = line_number_start
+  elseif calling_context == "visual" then
+    line_number_start = vim.fn.line "v"
+    line_number_end = vim.fn.line "."
+  elseif calling_context == "motion" then
+    line_number_start = vim.fn.getpos("'[")[2]
+    line_number_end = vim.fn.getpos("']")[2]
+  end
+  return line_number_start, line_number_end
 end
 
 return M
