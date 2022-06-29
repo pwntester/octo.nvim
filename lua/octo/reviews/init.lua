@@ -401,7 +401,7 @@ function Review:add_comment(isSuggestion)
       end
       thread_buffer:configure()
       vim.cmd [[diffoff!]]
-      vim.cmd [[normal vvGk]]
+      vim.cmd [[normal! vvGk]]
       vim.cmd [[startinsert]]
     end
   else
