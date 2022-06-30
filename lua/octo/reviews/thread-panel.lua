@@ -67,7 +67,7 @@ function M.show_review_threads()
         vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
         thread_buffer:configure()
         vim.api.nvim_buf_call(thread_buffer.bufnr, function()
-          vim.cmd [[diffoff]]
+          vim.cmd [[diffoff!]]
           pcall(vim.cmd, "normal ]c")
         end)
       end
@@ -82,15 +82,9 @@ function M.show_review_threads()
       if current_alt_bufnr ~= alt_buf then
         -- if we are not showing the corresponging alternative diff buffer, do so
         vim.api.nvim_win_set_buf(alt_win, alt_buf)
-        -- Scroll to trigger the scrollbind and sync the windows. This works more
-        -- consistently than calling `:syncbind`.
-        vim.cmd [[exec "normal! \<c-y>"]]
-        local lines = vim.api.nvim_buf_get_lines(alt_buf, 0, -1, false)
-        if utils.is_blank(table.concat(lines, "")) then
-          vim.cmd [[diffoff!]]
-          vim.api.nvim_win_set_option(alt_win, "diff", true)
-          vim.api.nvim_win_set_option(cur_win, "diff", true)
-        end
+
+        -- show the diff
+        file:show_diff()
       end
     end
   end

@@ -111,7 +111,7 @@ function Layout:set_file(file, focus)
     if cur then
       cur:detach_buffers()
     end
-    vim.cmd "diffoff!"
+    vim.cmd [[diffoff!]]
     self.files[self.file_idx] = file
     file:load_buffers(self.left_winid, self.right_winid)
 

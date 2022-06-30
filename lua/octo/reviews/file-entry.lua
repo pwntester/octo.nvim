@@ -267,9 +267,13 @@ function FileEntry:load_buffers(left_winid, right_winid)
   -- configure windows
   M._configure_windows(left_winid, right_winid)
 
-  -- activate diff
-  for _, split in ipairs(splits) do
-    vim.api.nvim_buf_call(split.bufid, function()
+  self:show_diff()
+end
+
+-- activate the diff between right and left panels
+function FileEntry:show_diff()
+  for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
+    vim.api.nvim_buf_call(bufid, function()
       vim.cmd [[filetype detect]]
       vim.cmd [[doau BufEnter]]
       vim.cmd [[diffthis]]

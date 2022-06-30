@@ -439,7 +439,7 @@ function M.thread_counts(path)
     end
     for _, comment in ipairs(thread.comments.nodes) do
       local review = comment.pullRequestReview
-      if review.state == "PENDING" and not utils.is_blank(vim.fn.trim(comment.body)) then
+      if not utils.is_blank(review) and review.state == "PENDING" and not utils.is_blank(vim.fn.trim(comment.body)) then
         pending = pending + 1
       end
     end
