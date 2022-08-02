@@ -655,18 +655,18 @@ function M.create_issue(repo)
   local templates = utils.get_repo_templates(repo)
   if not utils.is_blank(templates) and #templates.issueTemplates > 0 then
     require("octo.picker").issue_templates(templates.issueTemplates, function(selected)
-      M.save_issue({
+      M.save_issue {
         repo = repo,
         base_title = selected.title,
-        base_body = selected.body
-      })
+        base_body = selected.body,
+      }
     end)
   else
-    M.save_issue({
+    M.save_issue {
       repo = repo,
       base_title = "",
-      base_body = ""
-    })
+      base_body = "",
+    }
   end
 end
 
@@ -771,7 +771,7 @@ function M.create_pr(is_draft)
         local stderr = table.concat(job:stderr_result(), "\n")
         if not utils.is_blank(stderr) then
           print(stderr)
-          print("")
+          print ""
         end
       else
         utils.notify("Aborting PR creation", 2)
@@ -788,7 +788,7 @@ function M.create_pr(is_draft)
   if not utils.is_blank(templates) and #templates.pullRequestTemplates > 0 then
     base_body = templates.pullRequestTemplates[1].body
   end
-  M.save_pr({
+  M.save_pr {
     repo = repo,
     base_title = "",
     base_body = base_body,
@@ -796,8 +796,8 @@ function M.create_pr(is_draft)
     candidate_entries = repo_candidates_entries,
     is_draft = is_draft,
     info = info,
-    remote_branch = remote_branch
-  })
+    remote_branch = remote_branch,
+  }
 end
 
 function M.save_pr(opts)
@@ -860,7 +860,15 @@ function M.save_pr(opts)
   vim.fn.inputrestore()
 
   local repo_id = utils.get_repo_id(opts.candidates[repo_idx])
-  local query = graphql("create_pr_mutation", base_ref_name, head_ref_name, repo_id, utils.escape_char(title), utils.escape_char(body), opts.is_draft)
+  local query = graphql(
+    "create_pr_mutation",
+    base_ref_name,
+    head_ref_name,
+    repo_id,
+    utils.escape_char(title),
+    utils.escape_char(body),
+    opts.is_draft
+  )
 
   local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
