@@ -73,14 +73,12 @@ function M.run(opts)
       table.insert(opts.args, hostname)
     end
   end
-
   if opts.headers then
     for _, header in ipairs(opts.headers) do
       table.insert(opts.args, "-H")
       table.insert(opts.args, header)
     end
   end
-
   local job = Job:new {
     enable_recording = true,
     command = "gh",

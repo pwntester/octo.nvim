@@ -46,7 +46,7 @@ M.resolve_review_thread_mutation = [[
         path
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes { 
               id
               path
               diffSide
@@ -111,7 +111,7 @@ M.unresolve_review_thread_mutation = [[
         path
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes { 
               id
               path
               diffSide
@@ -173,7 +173,7 @@ M.start_review_mutation = [[
         state
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes { 
               id
               path
               line
@@ -322,7 +322,7 @@ mutation {
       }
       pullRequest {
         reviewThreads(last:100) {
-          nodes {	
+          nodes { 
             id
             path
             diffSide
@@ -416,7 +416,7 @@ mutation {
       }
       pullRequest {
         reviewThreads(last:100) {
-          nodes {	
+          nodes { 
             id
             path
             diffSide
@@ -504,7 +504,7 @@ M.update_pull_request_review_comment_mutation = [[
         body
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes { 
               id
               path
               diffSide
@@ -579,7 +579,7 @@ M.add_pull_request_review_comment_mutation = [[
         body
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes { 
               id
               path
               diffSide
@@ -641,7 +641,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
         body
         pullRequest {
           reviewThreads(last:100) {
-            nodes {	
+            nodes { 
               id
               path
               diffSide
@@ -724,7 +724,7 @@ M.delete_pull_request_review_comment_mutation = [[
         pullRequest {
           id
           reviewThreads(last:100) {
-            nodes {	
+            nodes { 
               id
               path
               diffSide
@@ -1404,7 +1404,7 @@ query {
         }
       }
       reviewThreads(last:100) {
-        nodes {	
+        nodes { 
           id
           path
           diffSide
@@ -2077,6 +2077,18 @@ query {
 }
 ]]
 
+-- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
+-- https://docs.github.com/en/graphql/reference/objects#issuetemplate
+-- https://docs.github.com/en/graphql/reference/objects#pullrequesttemplate
+M.repository_templates_query = [[
+query {
+  repository(owner: "%s", name: "%s") {
+    issueTemplates { body about name title  }
+    pullRequestTemplates { body filename }
+  }
+}
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issueorder
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters
@@ -2669,8 +2681,8 @@ query($endCursor: String) {
 
 -- https://docs.github.com/en/graphql/reference/mutations#createpullrequest
 M.create_pr_mutation = [[
-	mutation {
-		createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: "%s", body: "%s", draft: %s}) {
+  mutation {
+    createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: "%s", body: "%s", draft: %s}) {
       pullRequest {
         id
         number
@@ -3009,7 +3021,7 @@ M.create_pr_mutation = [[
         }
       }
     }
-	}
+  }
 ]]
 
 -- https://docs.github.com/en/graphql/reference/queries#user

@@ -962,6 +962,34 @@ function M.actions(flattened_actions)
   }):find()
 end
 
+--
+-- Issue templates
+--
+function M.issue_templates(templates, cb)
+  local opts = {
+    preview_title = "",
+    prompt_title = "Issue templates",
+    results_title = "",
+  }
+
+  pickers.new(opts, {
+    finder = finders.new_table {
+      results = templates,
+      entry_maker = entry_maker.gen_from_issue_templates(),
+    },
+    sorter = conf.generic_sorter(opts),
+    previewer = previewers.issue_template.new {},
+    attach_mappings = function()
+      actions.select_default:replace(function(prompt_bufnr)
+        local selected_template = action_state.get_selected_entry(prompt_bufnr)
+        actions.close(prompt_bufnr)
+        cb(selected_template.template)
+      end)
+      return true
+    end,
+  }):find()
+end
+
 M.picker = {
   issues = M.issues,
   prs = M.pull_requests,
@@ -979,6 +1007,7 @@ M.picker = {
   repos = M.repos,
   search = M.search,
   actions = M.actions,
+  issue_templates = M.issue_templates,
 }
 
 return M
