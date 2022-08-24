@@ -407,7 +407,7 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
         local resp = vim.fn.json_decode(output)
         local respBody = resp.data.addComment.commentEdge.node.body
         local respId = resp.data.addComment.commentEdge.node.id
-        if vim.fn.trim(comment_metadata.body) == vim.fn.trim(respBody) then
+        if vim.trim(comment_metadata.body) == vim.trim(respBody) then
           local comments = self.commentsMetadata
           for i, c in ipairs(comments) do
             if tonumber(c.id) == -1 then
@@ -442,7 +442,7 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
         local resp = vim.fn.json_decode(output)
         local resp_comment = resp.data.addPullRequestReviewComment.comment
         local comment_end
-        if vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp_comment.body) then
+        if vim.trim(comment_metadata.body) == vim.trim(resp_comment.body) then
           local comments = self.commentsMetadata
           for i, c in ipairs(comments) do
             if tonumber(c.id) == -1 then
@@ -550,7 +550,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
           local resp = vim.fn.json_decode(output).data.addPullRequestReviewThread
           if not utils.is_blank(resp.thread) then
             local new_comment = resp.thread.comments.nodes[1]
-            if vim.fn.trim(comment_metadata.body) == vim.fn.trim(new_comment.body) then
+            if vim.trim(comment_metadata.body) == vim.trim(new_comment.body) then
               local comments = self.commentsMetadata
               for i, c in ipairs(comments) do
                 if tonumber(c.id) == -1 then
@@ -647,7 +647,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
             local r = vim.fn.json_decode(output)
             local resp = r.data.addPullRequestReviewComment
             if not utils.is_blank(resp.comment) then
-              if vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp.comment.body) then
+              if vim.trim(comment_metadata.body) == vim.trim(resp.comment.body) then
                 local comments = self.commentsMetadata
                 for i, c in ipairs(comments) do
                   if tonumber(c.id) == -1 then
@@ -699,7 +699,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
       elseif output then
         local resp = vim.fn.json_decode(output)
         if not utils.is_blank(resp) then
-          if vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp.body) then
+          if vim.trim(comment_metadata.body) == vim.trim(resp.body) then
             local comments = self.commentsMetadata
             for i, c in ipairs(comments) do
               if tonumber(c.id) == -1 then
@@ -752,7 +752,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReview" then
           resp_comment = resp.data.updatePullRequestReview.pullRequestReview
         end
-        if resp_comment and vim.fn.trim(comment_metadata.body) == vim.fn.trim(resp_comment.body) then
+        if resp_comment and vim.trim(comment_metadata.body) == vim.trim(resp_comment.body) then
           local comments = self.commentsMetadata
           for i, c in ipairs(comments) do
             if c.id == comment_metadata.id then
@@ -793,7 +793,7 @@ function OctoBuffer:update_metadata()
     metadata.body = text
     metadata.startLine = start_line
     metadata.endLine = end_line
-    metadata.dirty = vim.fn.trim(metadata.body) ~= vim.fn.trim(metadata.savedBody) and true or false
+    metadata.dirty = vim.trim(metadata.body) ~= vim.trim(metadata.savedBody) and true or false
   end
 end
 

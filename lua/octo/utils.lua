@@ -197,7 +197,7 @@ function M.commit_exists(commit, cb)
       command = "git",
       args = { "cat-file", "-t", commit },
       on_exit = vim.schedule_wrap(function(j_self, _, _)
-        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+        if "commit" == vim.trim(table.concat(j_self:result(), "\n")) then
           cb(true)
         else
           cb(false)
