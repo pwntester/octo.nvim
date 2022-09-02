@@ -199,7 +199,7 @@ function M.write_state(bufnr, state, number)
 end
 
 function M.write_body(bufnr, issue, line)
-  local body = vim.trim(issue.body)
+  local body = utils.trim(issue.body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
     body = " "
   end
@@ -544,7 +544,7 @@ function M.write_comment(bufnr, comment, kind, line)
 
   -- body
   line = line + 2
-  local comment_body = vim.trim(string.gsub(comment.body, "\r\n", "\n"))
+  local comment_body = utils.trim(string.gsub(comment.body, "\r\n", "\n"))
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or utils.is_blank(comment_body) then
     comment_body = " "
   end
@@ -1296,7 +1296,7 @@ function M.write_threads(bufnr, threads)
       -- review thread header
       if utils.is_blank(comment.replyTo) then
         local start_line = not utils.is_blank(thread.originalStartLine) and thread.originalStartLine
-          or thread.originalLine
+            or thread.originalLine
         local end_line = thread.originalLine
         comment.start_line = start_line
         comment.end_line = end_line
