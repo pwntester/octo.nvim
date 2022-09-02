@@ -68,6 +68,16 @@ M.file_status_map = {
   renamed = "R",
 }
 
+function M.trim(str)
+  if type(vim.fn.trim) == "function" then
+    return vim.fn.trim(str)
+  elseif type(vim.trim) == "function" then
+    return vim.trim(str)
+  else
+    return str:gsub("^%s*(.-)%s*$", "%1")
+  end
+end
+
 function M.calculate_strongest_review_state(states)
   if vim.tbl_contains(states, "APPROVED") then
     return "APPROVED"
@@ -197,7 +207,7 @@ function M.commit_exists(commit, cb)
       command = "git",
       args = { "cat-file", "-t", commit },
       on_exit = vim.schedule_wrap(function(j_self, _, _)
-        if "commit" == vim.fn.trim(table.concat(j_self:result(), "\n")) then
+        if "commit" == M.trim(table.concat(j_self:result(), "\n")) then
           cb(true)
         else
           cb(false)
