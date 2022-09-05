@@ -476,9 +476,7 @@ end
 
 function M.parse_url(url)
   local repo, kind, number = string.match(url, constants.URL_ISSUE_PATTERN)
-  if repo and number and kind == "issues" then
-    return repo, number, "issue"
-  elseif repo and number and kind == "pull" then
+  if repo and number and kind then
     return repo, number, kind
   end
 end
