@@ -249,13 +249,11 @@ function M.write_details(bufnr, issue, update)
   local buffer = octo_buffers[bufnr]
 
   -- repo
-  if buffer then
-    local repo_vt = {
-      { "Repo: ", "OctoDetailsLabel" },
-      { " " .. buffer.repo, "OctoDetailsValue" },
-    }
-    table.insert(details, repo_vt)
-  end
+  local repo_vt = {
+    { "Repo: ", "OctoDetailsLabel" },
+    { " " .. utils.parse_url(issue.url), "OctoDetailsValue" },
+  }
+  table.insert(details, repo_vt)
 
   -- author
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
