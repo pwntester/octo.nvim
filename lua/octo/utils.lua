@@ -8,6 +8,8 @@ local _, Job = pcall(require, "plenary.job")
 local M = {}
 
 local repo_id_cache = {}
+local repo_templates_cache = {}
+local repo_info_cache = {}
 local path_sep = package.config:sub(1, 1)
 
 M.viewed_state_map = {
@@ -201,20 +203,18 @@ function M.commit_exists(commit, cb)
   if not Job then
     return
   end
-  Job
-    :new({
-      enable_recording = true,
-      command = "git",
-      args = { "cat-file", "-t", commit },
-      on_exit = vim.schedule_wrap(function(j_self, _, _)
-        if "commit" == M.trim(table.concat(j_self:result(), "\n")) then
-          cb(true)
-        else
-          cb(false)
-        end
-      end),
-    })
-    :start()
+  Job:new({
+    enable_recording = true,
+    command = "git",
+    args = { "cat-file", "-t", commit },
+    on_exit = vim.schedule_wrap(function(j_self, _, _)
+      if "commit" == M.trim(table.concat(j_self:result(), "\n")) then
+        cb(true)
+      else
+        cb(false)
+      end
+    end),
+  }):start()
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -296,17 +296,15 @@ function M.checkout_pr(pr_number)
   if not Job then
     return
   end
-  Job
-    :new({
-      enable_recording = true,
-      command = "gh",
-      args = { "pr", "checkout", pr_number },
-      on_exit = vim.schedule_wrap(function()
-        local output = vim.fn.system "git branch --show-current"
-        vim.notify("Switched to " .. output)
-      end),
-    })
-    :start()
+  Job:new({
+    enable_recording = true,
+    command = "gh",
+    args = { "pr", "checkout", pr_number },
+    on_exit = vim.schedule_wrap(function()
+      local output = vim.fn.system "git branch --show-current"
+      vim.notify("Switched to " .. output)
+    end),
+  }):start()
 end
 
 ---Formats a string as a date
@@ -347,6 +345,51 @@ function M.get_repo_id(repo)
     local id = resp.data.repository.id
     repo_id_cache[repo] = id
     return id
+  end
+end
+
+---Gets repo info
+function M.get_repo_info(repo)
+  if repo_info_cache[repo] then
+    return repo_info_cache[repo]
+  else
+    local owner, name = M.split_repo(repo)
+    local query = graphql("repository_query", owner, name)
+    local output = gh.run {
+      args = { "api", "graphql", "-f", string.format("query=%s", query) },
+      mode = "sync",
+    }
+    local resp = vim.fn.json_decode(output)
+    local info = resp.data.repository
+    repo_info_cache[repo] = info
+    return info
+  end
+end
+
+---Gets repo's templates
+function M.get_repo_templates(repo)
+  if repo_templates_cache[repo] then
+    return repo_templates_cache[repo]
+  else
+    local owner, name = M.split_repo(repo)
+    local query = graphql("repository_templates_query", owner, name)
+    local output = gh.run {
+      args = { "api", "graphql", "-f", string.format("query=%s", query) },
+      mode = "sync",
+    }
+    local resp = vim.fn.json_decode(output)
+    local templates = resp.data.repository
+
+    -- add an option to not use a template
+    table.insert(templates.issueTemplates, {
+      name = "DO NOT USE A TEMPLATE",
+      about = "Create issue with no template",
+      title = "",
+      body = "",
+    })
+
+    repo_templates_cache[repo] = templates
+    return templates
   end
 end
 
@@ -853,10 +896,8 @@ function M.process_patch(patch)
   local hunk_strings = vim.split(patch:gsub("^@@", ""), "\n@@")
   for _, hunk in ipairs(hunk_strings) do
     local header = vim.split(hunk, "\n")[1]
-    local found, _, left_start, left_length, right_start, right_length = string.find(
-      header,
-      "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@"
-    )
+    local found, _, left_start, left_length, right_start, right_length =
+      string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
     if found then
       table.insert(hunks, hunk)
       table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
@@ -956,10 +997,8 @@ function M.get_pull_request_for_current_branch(cb)
             if stderr and not M.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
-              local resp = M.aggregate_pages(
-                output,
-                string.format("data.repository.%s.timelineItems.nodes", "pullRequest")
-              )
+              local resp =
+                M.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", "pullRequest"))
               local obj = resp.data.repository.pullRequest
               local Rev = require("octo.reviews.rev").Rev
               local PullRequest = require("octo.model.pull-request").PullRequest

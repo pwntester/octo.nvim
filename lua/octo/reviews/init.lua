@@ -59,12 +59,8 @@ end
 
 -- Retrieves existing review
 function Review:retrieve(callback)
-  local query = graphql(
-    "pending_review_threads_query",
-    self.pull_request.owner,
-    self.pull_request.name,
-    self.pull_request.number
-  )
+  local query =
+    graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
@@ -155,12 +151,8 @@ function Review:initiate(opts)
 end
 
 function Review:discard()
-  local query = graphql(
-    "pending_review_threads_query",
-    self.pull_request.owner,
-    self.pull_request.name,
-    self.pull_request.number
-  )
+  local query =
+    graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)

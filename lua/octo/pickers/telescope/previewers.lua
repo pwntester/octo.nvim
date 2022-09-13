@@ -155,10 +155,29 @@ local review_thread = defaulter(function(opts)
   }
 end, {})
 
+local issue_template = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    title = opts.preview_title,
+    get_buffer_by_name = function(_, entry)
+      return entry.value
+    end,
+    define_preview = function(self, entry)
+      if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        local template = entry.template.body
+        if template then
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(template, "\n"))
+          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "markdown")
+        end
+      end
+    end,
+  }
+end, {})
+
 return {
   issue = issue,
   gist = gist,
   commit = commit,
   changed_files = changed_files,
   review_thread = review_thread,
+  issue_template = issue_template,
 }

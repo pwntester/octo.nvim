@@ -538,4 +538,40 @@ function M.gen_from_octo_actions()
   end
 end
 
+function M.gen_from_issue_templates()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      { entry.template.name, "TelescopeResultsNumber" },
+      { entry.template.about },
+    }
+
+    local displayer = entry_display.create {
+      separator = "",
+      items = {
+        { width = 25 },
+        { remaining = true },
+      },
+    }
+
+    return displayer(columns)
+  end
+
+  return function(template)
+    if not template or vim.tbl_isempty(template) then
+      return nil
+    end
+
+    return {
+      value = template.name,
+      ordinal = template.name .. " " .. template.about,
+      display = make_display,
+      template = template,
+    }
+  end
+end
+
 return M

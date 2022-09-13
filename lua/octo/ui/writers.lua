@@ -473,10 +473,8 @@ function M.write_comment(bufnr, comment, kind, line)
 
   if kind == "PullRequestReview" then
     -- Review top-level comments
-    local state_bubble = bubbles.make_bubble(
-      utils.state_msg_map[comment.state],
-      utils.state_hl_map[comment.state] .. "Bubble"
-    )
+    local state_bubble =
+      bubbles.make_bubble(utils.state_msg_map[comment.state], utils.state_hl_map[comment.state] .. "Bubble")
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
     --vim.list_extend(header_vt, author_bubble)
@@ -491,11 +489,8 @@ function M.write_comment(bufnr, comment, kind, line)
     end
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
-    local state_bubble = bubbles.make_bubble(
-      comment.state:lower(),
-      utils.state_hl_map[comment.state] .. "Bubble",
-      { margin_width = 1 }
-    )
+    local state_bubble =
+      bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
     table.insert(
       header_vt,
       { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker" }
@@ -1315,14 +1310,8 @@ function M.write_threads(bufnr, threads)
         M.write_block(bufnr, { "" })
 
         -- write snippet
-        thread_start, thread_end = M.write_thread_snippet(
-          bufnr,
-          comment.diffHunk,
-          nil,
-          start_line,
-          end_line,
-          thread.diffSide
-        )
+        thread_start, thread_end =
+          M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
       end
 
       comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")

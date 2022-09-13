@@ -23,6 +23,7 @@ M.picker = {
   repos = M.not_implemented,
   search = M.not_implemented,
   actions = M.not_implemented,
+  issue_templates = M.not_implemented,
 }
 
 return M
