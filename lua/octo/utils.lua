@@ -131,11 +131,11 @@ end
 
 function M.is_blank(s)
   return (
-      s == nil
-          or s == vim.NIL
-          or (type(s) == "string" and string.match(s, "%S") == nil)
-          or (type(s) == "table" and next(s) == nil)
-      )
+    s == nil
+    or s == vim.NIL
+    or (type(s) == "string" and string.match(s, "%S") == nil)
+    or (type(s) == "table" and next(s) == nil)
+  )
 end
 
 function M.parse_remote_url(url, aliases)
@@ -897,7 +897,7 @@ function M.process_patch(patch)
   for _, hunk in ipairs(hunk_strings) do
     local header = vim.split(hunk, "\n")[1]
     local found, _, left_start, left_length, right_start, right_length =
-    string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
+      string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
     if found then
       table.insert(hunks, hunk)
       table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
@@ -998,7 +998,7 @@ function M.get_pull_request_for_current_branch(cb)
               vim.api.nvim_err_writeln(stderr)
             elseif output then
               local resp =
-              M.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", "pullRequest"))
+                M.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", "pullRequest"))
               local obj = resp.data.repository.pullRequest
               local Rev = require("octo.reviews.rev").Rev
               local PullRequest = require("octo.model.pull-request").PullRequest
@@ -1036,7 +1036,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       autocmd!
       autocmd BufEnter * lua vim.lsp.util._close_preview_window(%d, {%s})
     augroup end
-  ]] ,
+  ]],
     augroup,
     winnr,
     table.concat(bufnrs, ",")
@@ -1048,7 +1048,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
       augroup %s
         autocmd %s <buffer> lua vim.lsp.util._close_preview_window(%d)
       augroup end
-    ]] ,
+    ]],
       augroup,
       table.concat(events, ","),
       winnr
@@ -1164,10 +1164,11 @@ function M.apply_mappings(kind, bufnr)
   local mappings = require "octo.mappings"
   local conf = config.get_config()
   for action, value in pairs(conf.mappings[kind]) do
-    if not M.is_blank(value)
-        and not M.is_blank(action)
-        and not M.is_blank(value.lhs)
-        and not M.is_blank(mappings[action])
+    if
+      not M.is_blank(value)
+      and not M.is_blank(action)
+      and not M.is_blank(value.lhs)
+      and not M.is_blank(mappings[action])
     then
       if M.is_blank(value.desc) then
         value.desc = ""
