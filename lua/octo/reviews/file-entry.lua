@@ -399,13 +399,8 @@ function M._create_buffer(opts)
   --bufnr = vim.fn.bufadd(opts.path)
   --else
   bufnr = vim.api.nvim_create_buf(false, false)
-  local bufname = string.format(
-    "octo://%s/review/%s/file/%s/%s",
-    opts.repo,
-    current_review.id,
-    string.upper(opts.split),
-    opts.path
-  )
+  local bufname =
+    string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
   vim.api.nvim_buf_set_name(bufnr, bufname)
   if opts.binary then
     vim.api.nvim_buf_set_option(bufnr, "modifiable", true)

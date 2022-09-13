@@ -9,10 +9,8 @@ function M.create_border_header_float(opts)
   table.insert(outer, string.format("┌%s┐", line_fill))
   if opts.header then
     local trimmed_header = string.sub(opts.header, 1, opts.width - 2 * opts.border_width - 2 * opts.padding)
-    local fill = string.rep(
-      " ",
-      opts.width - 2 * opts.padding - 2 * opts.border_width - vim.fn.strdisplaywidth(trimmed_header)
-    )
+    local fill =
+      string.rep(" ", opts.width - 2 * opts.padding - 2 * opts.border_width - vim.fn.strdisplaywidth(trimmed_header))
     table.insert(outer, string.format("│ %s%s │", trimmed_header, fill))
     table.insert(outer, string.format("├%s┤", line_fill))
     for _ = 1, opts.height - 2 * opts.border_width - 2 * opts.header_height do
