@@ -236,7 +236,7 @@ function Review:submit(event)
   local bufnr = vim.api.nvim_get_current_buf()
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local body = utils.escape_char(vim.fn.trim(table.concat(lines, "\n")))
+  local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
   local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = false })
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -256,7 +256,7 @@ function Review:show_pending_comments()
   local pending_threads = {}
   for _, thread in ipairs(vim.tbl_values(self.threads)) do
     for _, comment in ipairs(thread.comments.nodes) do
-      if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(vim.fn.trim(comment.body)) then
+      if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(utils.trim(comment.body)) then
         table.insert(pending_threads, thread)
       end
     end

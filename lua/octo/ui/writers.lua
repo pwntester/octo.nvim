@@ -199,7 +199,7 @@ function M.write_state(bufnr, state, number)
 end
 
 function M.write_body(bufnr, issue, line)
-  local body = vim.fn.trim(issue.body)
+  local body = utils.trim(issue.body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
     body = " "
   end
@@ -539,7 +539,7 @@ function M.write_comment(bufnr, comment, kind, line)
 
   -- body
   line = line + 2
-  local comment_body = vim.fn.trim(string.gsub(comment.body, "\r\n", "\n"))
+  local comment_body = utils.trim(string.gsub(comment.body, "\r\n", "\n"))
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or utils.is_blank(comment_body) then
     comment_body = " "
   end
