@@ -26,9 +26,10 @@ function M.gen_from_issue(max_number, print_repo)
         },
       }
     else
+      local icon = entry.kind == "issue" and "" or ""
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        { entry.obj.title },
+        { icon .. " " .. entry.obj.title },
       }
       layout = {
         separator = " ",
