@@ -470,7 +470,7 @@ function M.search(opts)
         opts.prompt = {opts.prompt}
       end
       local results = {}
-      for _, val in pairs(opts.prompt) do
+      for _, val in ipairs(opts.prompt) do
         local _prompt = prompt
         if val then
           _prompt = string.format("%s %s", val, _prompt)
