@@ -472,27 +472,31 @@ function M.search(opts)
       if not opts.prompt and utils.is_blank(prompt) then
         return {}
       end
-      if opts.prompt then
-        prompt = string.format("%s %s", opts.prompt, prompt)
-      end
       if opts.repo then
         prompt = string.format("repo:%s %s", opts.repo, prompt)
       end
-      local query = graphql("search_query", prompt)
-      local output = gh.run {
-        args = { "api", "graphql", "-f", string.format("query=%s", query) },
-        mode = "sync",
-      }
-      if output then
-        local resp = vim.fn.json_decode(output)
-        local results = {}
-        for _, issue in ipairs(resp.data.search.nodes) do
-          table.insert(results, issue)
-        end
-        return results
-      else
-        return {}
+      if type(opts.prompt) == "string" then
+        opts.prompt = {opts.prompt}
       end
+      local results = {}
+      for _, val in ipairs(opts.prompt) do
+        local _prompt = prompt
+        if val then
+          _prompt = string.format("%s %s", val, _prompt)
+        end
+        local query = graphql("search_query", _prompt)
+        local output = gh.run {
+          args = { "api", "graphql", "-f", string.format("query=%s", query) },
+          mode = "sync",
+        }
+        if output then
+          local resp = vim.fn.json_decode(output)
+          for _, issue in ipairs(resp.data.search.nodes) do
+            table.insert(results, issue)
+          end
+        end
+      end
+      return results
     end
   end
   local finder = finders.new_dynamic {
