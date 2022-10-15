@@ -476,7 +476,7 @@ function M.search(opts)
         prompt = string.format("repo:%s %s", opts.repo, prompt)
       end
       if type(opts.prompt) == "string" then
-        opts.prompt = {opts.prompt}
+        opts.prompt = { opts.prompt }
       end
       local results = {}
       for _, val in ipairs(opts.prompt) do

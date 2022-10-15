@@ -719,7 +719,7 @@ function M.create_pr(is_draft)
   local repo
   if select then
     local remotes = utils.get_all_remotes()
-    local remote_entries = {"Select base repo,",}
+    local remote_entries = { "Select base repo," }
     for idx, remote in ipairs(remotes) do
       table.insert(remote_entries, idx .. ". " .. remote.repo)
     end
@@ -739,7 +739,6 @@ function M.create_pr(is_draft)
       return
     end
   end
-
 
   -- get repo info
   local info = utils.get_repo_info(repo)
@@ -768,7 +767,7 @@ function M.create_pr(is_draft)
   local remote_branch = local_branch
   if not remote_branch_exists then
     local choice =
-    vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+      vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
     if choice == 1 then
       local remote = "origin"
       remote_branch = vim.fn.input {

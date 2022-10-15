@@ -169,19 +169,19 @@ function M.parse_remote_url(url, aliases)
 end
 
 function M.get_url_from_remote_name(name)
-    local conf = config.get_config()
-    local aliases = conf.ssh_aliases
-    local job = Job:new {
-        command = "git",
-        args = { "remote", "get-url", name },
-        cwd = vim.fn.getcwd(),
-    }
-    job:sync()
-    local url = table.concat(job:result(), "\n")
-    local stderr = table.concat(job:stderr_result(), "\n")
-    if M.is_blank(stderr) then
-        return M.parse_remote_url(url, aliases)
-    end
+  local conf = config.get_config()
+  local aliases = conf.ssh_aliases
+  local job = Job:new {
+    command = "git",
+    args = { "remote", "get-url", name },
+    cwd = vim.fn.getcwd(),
+  }
+  job:sync()
+  local url = table.concat(job:result(), "\n")
+  local stderr = table.concat(job:stderr_result(), "\n")
+  if M.is_blank(stderr) then
+    return M.parse_remote_url(url, aliases)
+  end
 end
 
 function M.get_remote()
@@ -189,7 +189,7 @@ function M.get_remote()
   for _, candidate in ipairs(conf.default_remote) do
     local url = M.get_url_from_remote_name(candidate)
     if url then
-        return url
+      return url
     end
   end
   -- return github.com as default host
@@ -200,22 +200,22 @@ function M.get_remote()
 end
 
 function M.get_all_remotes()
-    local job = Job:new {
-        command = "git",
-        args = { "remote", "show"},
-        cwd = vim.fn.getcwd(),
-    }
-    job:sync()
-    local remotes = table.concat(job:result(), "\n")
-    local stderr = table.concat(job:stderr_result(), "\n")
-    if M.is_blank(stderr) then
-        local urls = {}
-        for _,  name in ipairs(vim.split(remotes, "\n", {trimempty=true})) do
-            table.insert(urls, M.get_url_from_remote_name(name))
-        end
-        return urls
+  local job = Job:new {
+    command = "git",
+    args = { "remote", "show" },
+    cwd = vim.fn.getcwd(),
+  }
+  job:sync()
+  local remotes = table.concat(job:result(), "\n")
+  local stderr = table.concat(job:stderr_result(), "\n")
+  if M.is_blank(stderr) then
+    local urls = {}
+    for _, name in ipairs(vim.split(remotes, "\n", { trimempty = true })) do
+      table.insert(urls, M.get_url_from_remote_name(name))
     end
-    --notif
+    return urls
+  end
+  --notif
 end
 
 function M.get_remote_name()
