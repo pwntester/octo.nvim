@@ -789,8 +789,7 @@ function M.create_pr(is_draft)
         --local stdout = table.concat(job:result(), "\n")
         local stderr = table.concat(job:stderr_result(), "\n")
         if not utils.is_blank(stderr) then
-          print(stderr)
-          print ""
+          utils.notify(stderr, 2)
         end
       else
         utils.notify("Aborting PR creation", 2)

@@ -486,7 +486,7 @@ function M.start_review()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
-    print "No Octo buffer found"
+    utils.notify("No Octo buffer found", 2)
     return
   end
   local pull_request = buffer:get_pr()
@@ -505,7 +505,7 @@ function M.resume_review()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
-    print "No Octo buffer found"
+    utils.notify("No Octo buffer found", 2)
     return
   end
   local pull_request = buffer:get_pr()

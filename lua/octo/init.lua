@@ -22,11 +22,11 @@ local M = {}
 
 function M.setup(user_config)
   if not vim.fn.executable "gh" then
-    print "octo: gh executable not found"
+    utils.notify "octo: gh executable not found"
     return
   end
   if not vim.fn.has "nvim-0.7" then
-    print "octo: octo.nvim requires neovim 0.7+"
+    utils.notify "octo: octo.nvim requires neovim 0.7+"
     return
   end
   config.setup(user_config or {})
