@@ -433,8 +433,8 @@ GITHUB_TOKEN= gh auth login
 Just add the following lines to your TreeSitter config:
 
 ```lua
-local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
-parser_config.markdown.filetype_to_parsername = "octo"
+local ft_to_parser = require "nvim-treesitter.parsers".filetype_to_parsername
+ft_to_parser.octo = "markdown"
 ```
 
 **How can I filter PRs by filter keys that aren't available?**
