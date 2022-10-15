@@ -7,6 +7,7 @@ local reviews = require "octo.reviews"
 local window = require "octo.ui.window"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
+local config = require "octo.config"
 
 local M = {}
 
@@ -712,11 +713,33 @@ end
 
 function M.create_pr(is_draft)
   is_draft = "draft" == is_draft and true or false
-  local repo = utils.get_remote_name()
-  if not repo then
-    utils.notify("Cant find repo name", 1)
-    return
+  local conf = config.get_config()
+  local select = conf.always_select_remote or false
+
+  local repo
+  if select then
+    local remotes = utils.get_all_remotes()
+    local remote_entries = {"Select base repo,",}
+    for idx, remote in ipairs(remotes) do
+      table.insert(remote_entries, idx .. ". " .. remote.repo)
+    end
+    local remote_idx = vim.fn.inputlist(remote_entries)
+    if remote_idx < 1 then
+      utils.notify("Aborting PR creation", 2)
+      return
+    elseif remote_idx > #remotes then
+      utils.notify("Invaild index.", 2)
+      return
+    end
+    repo = remotes[remote_idx].repo
+  else
+    repo = utils.get_remote_name()
+    if not repo then
+      utils.notify("Cant find repo name", 1)
+      return
+    end
   end
+
 
   -- get repo info
   local info = utils.get_repo_info(repo)

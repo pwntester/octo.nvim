@@ -15,6 +15,7 @@ M.defaults = {
   left_bubble_delimiter = "",
   github_hostname = "",
   snippet_context_lines = 4,
+  always_select_remote = false,
   file_panel = {
     size = 10,
     use_icons = true,

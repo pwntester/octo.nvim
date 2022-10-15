@@ -87,6 +87,7 @@ use {
 ```lua
 require"octo".setup({
   default_remote = {"upstream", "origin"}; -- order to try remotes
+  always_select_remote = "false"	   -- always give prompt to select base remote repo when creating PRs
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`
   reaction_viewer_hint_icon = "";         -- marker for user reactions
   user_icon = " ";                        -- user icon
