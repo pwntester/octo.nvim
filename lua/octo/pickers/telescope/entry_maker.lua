@@ -441,7 +441,7 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
       value = repo.nameWithOwner,
       ordinal = repo.nameWithOwner .. " " .. repo.description,
       display = make_display,
-      repo = repo.nameWithOwner,
+      repo = repo,
     }
   end
 end
