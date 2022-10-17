@@ -38,7 +38,7 @@ function Review:create(callback)
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
+        utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
         callback(resp)
@@ -65,7 +65,7 @@ function Review:retrieve(callback)
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
+        utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
         callback(resp)
@@ -78,7 +78,7 @@ end
 function Review:resume()
   self:retrieve(function(resp)
     if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-      utils.notify("No pending reviews found", 2)
+      utils.error "No pending reviews found"
       return
     end
 
@@ -91,7 +91,7 @@ function Review:resume()
     end
 
     if not self.id then
-      vim.notify("[Octo] No pending reviews found for viewer", 2)
+      vim.error "No pending reviews found for viewer"
       return
     end
 
@@ -157,11 +157,11 @@ function Review:discard()
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        vim.notify(stderr, 2)
+        vim.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-          utils.notify("No pending reviews found", 2)
+          utils.error "No pending reviews found"
           return
         end
         self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
@@ -173,12 +173,12 @@ function Review:discard()
             args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
             cb = function(output, stderr)
               if stderr and not utils.is_blank(stderr) then
-                vim.notify(stderr, 2)
+                vim.error(stderr)
               elseif output then
                 self.id = -1
                 self.threads = {}
                 self.files = {}
-                utils.notify("Pending review discarded", 1)
+                utils.info "Pending review discarded"
                 vim.cmd [[tabclose]]
               end
             end,
@@ -213,7 +213,7 @@ end
 
 function Review:collect_submit_info()
   if self.id == -1 then
-    utils.notify("No review in progress", 2)
+    utils.error "No review in progress"
     return
   end
 
@@ -242,9 +242,9 @@ function Review:submit(event)
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
+        utils.error(stderr)
       elseif output then
-        utils.notify("Review was submitted successfully!", 1)
+        utils.info "Review was submitted successfully!"
         pcall(vim.api.nvim_win_close, winid, 0)
         self.layout:close()
       end
@@ -262,7 +262,7 @@ function Review:show_pending_comments()
     end
   end
   if #pending_threads == 0 then
-    utils.notify("No pending comments found", 2)
+    utils.error "No pending comments found"
     return
   else
     require("octo.picker").pending_threads(pending_threads)
@@ -306,7 +306,7 @@ function Review:add_comment(isSuggestion)
       end
     end
     if not diff_hunk then
-      utils.notify("Cannot place comments outside diff hunks", 2)
+      utils.error "Cannot place comments outside diff hunks"
       return
     end
     if not vim.startswith(diff_hunk, "@@") then
@@ -397,7 +397,7 @@ function Review:add_comment(isSuggestion)
       vim.cmd [[startinsert]]
     end
   else
-    utils.notify("Cannot find diff window", 2)
+    utils.error "Cannot find diff window"
   end
 end
 
@@ -439,7 +439,7 @@ function M.jump_to_pending_review_thread(thread)
         vim.api.nvim_set_current_win(win)
         vim.api.nvim_win_set_cursor(win, { line, 0 })
       else
-        utils.notify("Cannot find diff window", 2)
+        utils.error "Cannot find diff window"
       end
       break
     end
@@ -486,7 +486,7 @@ function M.start_review()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
-    utils.notify("No Octo buffer found", 2)
+    utils.error "No Octo buffer found"
     return
   end
   local pull_request = buffer:get_pr()
@@ -505,7 +505,7 @@ function M.resume_review()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
-    utils.notify("No Octo buffer found", 2)
+    utils.error "No Octo buffer found"
     return
   end
   local pull_request = buffer:get_pr()

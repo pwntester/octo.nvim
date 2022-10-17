@@ -183,7 +183,7 @@ return {
     end
   end,
   close_review_win = function()
-    vim.api.nvim_win_close(vim.api.nvim_get_current_win(), 1)
+    vim.api.nvim_win_close(vim.api.nvim_get_current_win())
   end,
   approve_review = function()
     local current_review = require("octo.reviews").get_current_review()

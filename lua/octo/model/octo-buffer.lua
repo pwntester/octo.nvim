@@ -386,7 +386,7 @@ function OctoBuffer:do_save_title_and_body()
           end
 
           self:render_signcolumn()
-          utils.notify("Saved!", 1)
+          utils.info "Saved!"
         end
       end,
     }
@@ -508,7 +508,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
   local pr = review.pull_request
   local file = layout:cur_file()
   if not file then
-    utils.notify("No file selected", 1)
+    utils.error "No file selected"
     return
   end
   local review_level = review:get_level()
@@ -567,7 +567,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
               self:render_signcolumn()
             end
           else
-            utils.notify("Failed to create thread", 2)
+            utils.error "Failed to create thread"
             return
           end
         end
@@ -575,7 +575,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
     }
   elseif review_level == "COMMIT" then
     if isMultiline then
-      utils.notify("Can't create a multiline comment at the commit level", 2)
+      utils.error "Can't create a multiline comment at the commit level"
       return
     else
       -- get the line number the comment is on
@@ -664,7 +664,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
                 self:render_signcolumn()
               end
             else
-              utils.notify("Failed to create thread", 2)
+              utils.error "Failed to create thread"
               return
             end
           end
@@ -678,7 +678,7 @@ end
 function OctoBuffer:do_add_pull_request_comment(comment_metadata)
   local current_review = require("octo.reviews").get_current_review()
   if not utils.is_blank(current_review) then
-    utils.notify("Please submit or discard the current review before adding a comment", 2)
+    utils.error "Please submit or discard the current review before adding a comment"
     return
   end
   gh.run {
@@ -695,7 +695,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
     headers = { "Accept: application/vnd.github.v3+json" },
     cb = function(output, stderr)
       if not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
+        utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
         if not utils.is_blank(resp) then
@@ -712,7 +712,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
             self:render_signcolumn()
           end
         else
-          utils.notify("Failed to create thread", 2)
+          utils.error "Failed to create thread"
           return
         end
       end
@@ -883,7 +883,7 @@ end
 ---Gets the PR object for the current octo buffer
 function OctoBuffer:get_pr()
   if not self:isPullRequest() then
-    utils.notify("Not in a PR buffer", 2)
+    utils.error "Not in a PR buffer"
     return
   end
 

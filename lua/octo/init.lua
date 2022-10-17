@@ -22,11 +22,11 @@ local M = {}
 
 function M.setup(user_config)
   if not vim.fn.executable "gh" then
-    utils.notify "octo: gh executable not found"
+    utils.error "gh executable not found"
     return
   end
   if not vim.fn.has "nvim-0.7" then
-    utils.notify "octo: octo.nvim requires neovim 0.7+"
+    utils.error "octo.nvim requires neovim 0.7+"
     return
   end
   config.setup(user_config or {})
@@ -226,7 +226,7 @@ end
 
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
-    utils.notify("Cannot find " .. repo)
+    utils.error("Cannot find " .. repo)
     return
   end
 

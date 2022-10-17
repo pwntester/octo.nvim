@@ -65,7 +65,7 @@ function PullRequest:get_diff(pr)
     headers = { "Accept: application/vnd.github.v3.diff" },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
+        utils.error(stderr)
       elseif output then
         pr.diff = output
       end
@@ -80,7 +80,7 @@ function PullRequest:get_changed_files(callback)
     args = { "api", "--paginate", url, "--jq", "." },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
+        utils.error(stderr)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
         local results = vim.fn.json_decode(output)
@@ -113,7 +113,7 @@ function PullRequest:get_commit_changed_files(rev, callback)
     args = { "api", "--paginate", url, "--jq", "." },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        utils.notify(stderr, 2)
+        utils.error(stderr)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
         local results = vim.fn.json_decode(output)

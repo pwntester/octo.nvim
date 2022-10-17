@@ -47,7 +47,7 @@ function M.go_to_file()
     vim.cmd("e " .. _thread.path)
     vim.api.nvim_win_set_cursor(0, { _thread.line, 0 })
   else
-    utils.notify("[Octo] Cannot find file in CWD", 2)
+    utils.error "Cannot find file in CWD"
   end
 end
 

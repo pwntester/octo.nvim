@@ -3,7 +3,7 @@ local utils = require "octo.utils"
 local M = {}
 
 function M.not_implemented()
-  utils.notify("Not implemented yet", 2)
+  utils.error "Not implemented yet"
 end
 
 M.picker = {

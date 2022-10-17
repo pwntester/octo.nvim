@@ -14,7 +14,7 @@ function M.setup()
       M[k] = v
     end
   else
-    utils.notify("Error loading picker provider " .. provider_name, 2)
+    utils.error("Error loading picker provider " .. provider_name)
   end
 end
 
