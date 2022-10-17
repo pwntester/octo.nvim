@@ -15,7 +15,19 @@ M.defaults = {
   left_bubble_delimiter = "",
   github_hostname = "",
   snippet_context_lines = 4,
-  always_select_remote = false,
+  issues = {
+    order_by = {
+      field = "CREATED_AT",
+      direction = "DESC",
+    },
+  },
+  pull_requests = {
+    order_by = {
+      field = "CREATED_AT",
+      direction = "DESC",
+    },
+    always_select_remote_on_create = false,
+  },
   file_panel = {
     size = 10,
     use_icons = true,

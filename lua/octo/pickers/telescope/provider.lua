@@ -5,6 +5,7 @@ local previewers = require "octo.pickers.telescope.previewers"
 local entry_maker = require "octo.pickers.telescope.entry_maker"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
+local octo_config = require "octo.config"
 
 local actions = require "telescope.actions"
 local action_set = require "telescope.actions.set"
@@ -131,7 +132,9 @@ function M.issues(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local query = graphql("issues_query", owner, name, filter, { escape = false })
+  local cfg = octo_config.get_config()
+  local order_by = cfg.issues.order_by
+  local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
   utils.info "Fetching issues (this may take a while) ..."
   gh.run {
     args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
@@ -266,7 +269,10 @@ function M.pull_requests(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local query = graphql("pull_requests_query", owner, name, filter, { escape = false })
+  local cfg = octo_config.get_config()
+  local order_by = cfg.pull_requests.order_by
+  local query =
+    graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
   utils.info "Fetching pull requests (this may take a while) ..."
   gh.run {
     args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
