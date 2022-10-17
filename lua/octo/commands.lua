@@ -317,7 +317,7 @@ function M.octo(object, action, ...)
     elseif repo and number and kind == "pull" then
       utils.get_pull_request(repo, number)
     else
-      utils.error("Incorrect argument, valid objects are:" .. vim.inspect(vim.tbl_keys(M.commands)))
+      utils.error("Incorrect argument: " .. object)
       return
     end
   else
@@ -332,7 +332,7 @@ function M.octo(object, action, ...)
 
     local a = o[action]
     if not a then
-      utils.error("Incorrect action, valid actions are:" .. vim.inspect(vim.tbl_keys(o)))
+      utils.error("Incorrect action: " .. action)
       return
     else
       a(...)
