@@ -4,8 +4,9 @@ function M.octo_command_complete(argLead, cmdLine)
   -- ArgLead		the leading portion of the argument currently being completed on
   -- CmdLine		the entire command line
   -- CursorPos	the cursor position in it (byte index)
-  local command_keys = vim.tbl_keys(require("octo.commands").commands)
-  local parts = vim.split(cmdLine, " ")
+  local octo_commands = require("octo.commands")
+  local command_keys = vim.tbl_keys(octo_commands.commands)
+  local parts = vim.split(vim.trim(cmdLine), " ")
 
   local get_options = function(options)
     local valid_options = {}
@@ -17,14 +18,15 @@ function M.octo_command_complete(argLead, cmdLine)
     return valid_options
   end
 
-  if #parts == 2 then
+  if #parts == 1 then
+    return command_keys
+  elseif #parts == 2 then
     return get_options(command_keys)
   elseif #parts == 3 then
-    local o = require("octo.commands").commands[parts[2]]
-    if not o then
-      return
+    local obj = octo_commands.commands[parts[2]]
+    if obj then
+      return get_options(vim.tbl_keys(obj))
     end
-    return get_options(vim.tbl_keys(o))
   end
 end
 
