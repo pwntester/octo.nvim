@@ -1,6 +1,9 @@
 local M = {}
 
 function M.octo_command_complete(argLead, cmdLine)
+  -- ArgLead		the leading portion of the argument currently being completed on
+  -- CmdLine		the entire command line
+  -- CursorPos	the cursor position in it (byte index)
   local command_keys = vim.tbl_keys(require("octo.commands").commands)
   local parts = vim.split(cmdLine, " ")
 
