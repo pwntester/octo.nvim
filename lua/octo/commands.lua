@@ -714,7 +714,7 @@ end
 function M.create_pr(is_draft)
   is_draft = "draft" == is_draft and true or false
   local conf = config.get_config()
-  local select = conf.always_select_remote or false
+  local select = conf.pull_requests.always_select_remote_on_create or false
 
   local repo
   if select then
