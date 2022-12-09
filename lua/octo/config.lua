@@ -15,6 +15,7 @@ M.defaults = {
   left_bubble_delimiter = "",
   github_hostname = "",
   snippet_context_lines = 4,
+  get_env = nil,
   issues = {
     order_by = {
       field = "CREATED_AT",
