@@ -234,10 +234,8 @@ function FileEntry:load_buffers(left_winid, right_winid)
   -- configure diff buffers
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
-      local use_local = false
-      if split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr) then
-        use_local = true
-      end
+      local conf = config.get_config()
+      local use_local = conf.use_localfs and split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr)
 
       -- create buffer
       split.bufid = M._create_buffer {
@@ -392,10 +390,9 @@ function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
   local bufnr
   if opts.use_local then
-    -- TODO: should we use the file from the file system
+    -- Use the file from the file system
     -- Pros: LSP powered
     -- Cons: we need to change to the commit branch
-    -- For now, lets just load the contents from git object (`git show commit:path`)
     bufnr = vim.fn.bufadd(opts.path)
   else
     bufnr = vim.api.nvim_create_buf(false, false)

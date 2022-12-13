@@ -14,6 +14,7 @@ M.defaults = {
   right_bubble_delimiter = "",
   left_bubble_delimiter = "",
   github_hostname = "",
+  use_localfs = false,
   snippet_context_lines = 4,
   gh_env = {},
   issues = {

@@ -86,6 +86,7 @@ use {
 
 ```lua
 require"octo".setup({
+  use_localfs = false,                     -- use local fs on right side if in pr branch
   default_remote = {"upstream", "origin"}; -- order to try remotes
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`
   reaction_viewer_hint_icon = "";         -- marker for user reactions
