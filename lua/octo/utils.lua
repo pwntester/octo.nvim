@@ -331,6 +331,21 @@ function M.checkout_pr(pr_number)
   }):start()
 end
 
+function M.checkout_pr_sync(pr_number)
+  if not Job then
+    return
+  end
+  Job:new({
+    enable_recording = true,
+    command = "gh",
+    args = { "pr", "checkout", pr_number },
+    on_exit = vim.schedule_wrap(function()
+      local output = vim.fn.system "git branch --show-current"
+      M.info("Switched to " .. output)
+    end),
+  }):sync()
+end
+
 ---Formats a string as a date
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
