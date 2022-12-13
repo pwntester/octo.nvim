@@ -25,13 +25,28 @@ local env_vars = {
   https_proxy = vim.env["https_proxy"],
 }
 
+local function get_env()
+  local env = env_vars
+  local gh_env = config.get_config().gh_env
+  if type(gh_env) == "function" then
+    local computed_env = gh_env()
+    if type(computed_env) == "table" then
+      env = vim.tbl_deep_extend("force", env, computed_env)
+    end
+  elseif type(gh_env) == "table" then
+    env = vim.tbl_deep_extend("force", env, gh_env)
+  end
+
+  return env
+end
+
 -- uses GH to get the name of the authenticated user
 function M.get_user_name()
   local job = Job:new {
     enable_recording = true,
     command = "gh",
     args = { "auth", "status" },
-    env = env_vars,
+    env = get_env(),
   }
   job:sync()
   local stderr = table.concat(job:stderr_result(), "\n")
@@ -90,7 +105,7 @@ function M.run(opts)
         opts.cb(output, stderr)
       end
     end),
-    env = env_vars,
+    env = get_env(),
   }
   if mode == "sync" then
     job:sync()
