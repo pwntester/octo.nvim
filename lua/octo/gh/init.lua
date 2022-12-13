@@ -27,11 +27,14 @@ local env_vars = {
 
 local function get_env()
   local env = env_vars
-  if type(config.get_config().get_env) == 'function' then
-    local computed_env = config.get_config().get_env()
-    if type(computed_env) == 'table' then
-      env = vim.tbl_deep_extend('force', env, computed_env)
+  local gh_env = config.get_config().gh_env
+  if type(gh_env) == "function" then
+    local computed_env = gh_env()
+    if type(computed_env) == "table" then
+      env = vim.tbl_deep_extend("force", env, computed_env)
     end
+  elseif type(gh_env) == "table" then
+    env = vim.tbl_deep_extend("force", env, gh_env)
   end
 
   return env

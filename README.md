@@ -96,6 +96,7 @@ require"octo".setup({
   left_bubble_delimiter = "";             -- bubble delimiter
   github_hostname = "";                    -- GitHub Enterprise host
   snippet_context_lines = 4;               -- number or lines around commented lines
+  gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
   issues = {
     order_by = {                           -- criteria to sort results of `Octo issue list`
       field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
