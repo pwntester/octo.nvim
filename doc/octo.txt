@@ -82,7 +82,7 @@ See |octo-command-examples| for examples.
 
   list                  Lists repos the user owns, contributes, or belongs to.
   fork                  Fork repo.
-  browser               Open current PR in the browser.
+  browser               Open current repo in the browser.
   url                   Copies the URL of the current repo to the system 
                         clipboard.
 
@@ -114,7 +114,7 @@ See |octo-command-examples| for examples.
   create [label]        Create a new label.
 
 
-:Octo assignees [action]                        *octo-commands-assignees*
+:Octo assignee [action]                         *octo-commands-assignee*
 
   add [login]           Assign a user.
   remove [login]        Unassign a user
