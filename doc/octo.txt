@@ -85,6 +85,7 @@ See |octo-command-examples| for examples.
   browser               Open current repo in the browser.
   url                   Copies the URL of the current repo to the system 
                         clipboard.
+  view                  Open a repo by path ({organization}/{name}).
 
 
 :Octo gist [action]                             *octo-commands-gist*
@@ -152,6 +153,7 @@ See |octo-command-examples| for examples.
   discard               Deletes a pending review for the current PR, if any.
   comments              View pending review comments.
   commit                Pick a specific commit to review.
+  close                 Close the review window and return to the PR.
 
 :Octo actions                                   *octo-commands-actions*
 
