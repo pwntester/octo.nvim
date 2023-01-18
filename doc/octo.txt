@@ -82,9 +82,10 @@ See |octo-command-examples| for examples.
 
   list                  Lists repos the user owns, contributes, or belongs to.
   fork                  Fork repo.
-  browser               Open current PR in the browser.
+  browser               Open current repo in the browser.
   url                   Copies the URL of the current repo to the system 
                         clipboard.
+  view                  Open a repo by path ({organization}/{name}).
 
 
 :Octo gist [action]                             *octo-commands-gist*
@@ -114,7 +115,7 @@ See |octo-command-examples| for examples.
   create [label]        Create a new label.
 
 
-:Octo assignees [action]                        *octo-commands-assignees*
+:Octo assignee [action]                         *octo-commands-assignee*
 
   add [login]           Assign a user.
   remove [login]        Unassign a user
@@ -152,6 +153,7 @@ See |octo-command-examples| for examples.
   discard               Deletes a pending review for the current PR, if any.
   comments              View pending review comments.
   commit                Pick a specific commit to review.
+  close                 Close the review window and return to the PR.
 
 :Octo actions                                   *octo-commands-actions*
 
