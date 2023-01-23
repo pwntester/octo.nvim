@@ -5,7 +5,7 @@ local constants = require "octo.constants"
 local commands = require "octo.commands"
 local completion = require "octo.completion"
 local folds = require "octo.folds"
-local gh = require "octo.gh"
+local backend = require "octo.backend.model"
 local graphql = require "octo.gh.graphql"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
@@ -21,8 +21,8 @@ _G.octo_buffers = {}
 local M = {}
 
 function M.setup(user_config)
-  if not vim.fn.executable "gh" then
-    utils.error "gh executable not found"
+  if backend.available_executables == 0 then
+    utils.error "gh and glab executable cli not found"
     return
   end
   if not vim.fn.has "nvim-0.7" then
@@ -84,35 +84,16 @@ function M.load_buffer(bufnr)
 end
 
 function M.load(repo, kind, number, cb)
-  local owner, name = utils.split_repo(repo)
-  local query, key
-  if kind == "pull" then
-    query = graphql("pull_request_query", owner, name, number)
-    key = "pullRequest"
-  elseif kind == "issue" then
-    query = graphql("issue_query", owner, name, number)
-    key = "issue"
-  elseif kind == "repo" then
-    query = graphql("repository_query", owner, name)
-  end
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        if kind == "pull" or kind == "issue" then
-          local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
-          local obj = resp.data.repository[key]
-          cb(obj)
-        elseif kind == "repo" then
-          local resp = vim.fn.json_decode(output)
-          local obj = resp.data.repository
-          cb(obj)
-        end
-      end
-    end,
+  -- local owner, name = utils.split_repo(repo)
+
+  local tmap = {
+    ["pull"] = "pull_request_query",
+    ["pullRequest"] = "issue_query",
+    ["repo"] = "repository_query",
   }
+
+  local query_result = backend.run(tmap[kind])
+  cb(query_result)
 end
 
 function M.render_signcolumn()
