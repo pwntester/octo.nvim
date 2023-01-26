@@ -271,6 +271,9 @@ function M.setup()
       rocket = function()
         M.reaction_action "ROCKET"
       end,
+      heart = function()
+        M.reaction_action "HEART"
+      end,
     },
     card = {
       add = function()

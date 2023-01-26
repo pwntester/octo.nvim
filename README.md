@@ -96,6 +96,7 @@ require"octo".setup({
   left_bubble_delimiter = "";             -- bubble delimiter
   github_hostname = "";                    -- GitHub Enterprise host
   snippet_context_lines = 4;               -- number or lines around commented lines
+  gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
   issues = {
     order_by = {                           -- criteria to sort results of `Octo issue list`
       field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
@@ -268,6 +269,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | fork | Fork repo |
 | | browser | Open current repo in the browser|
 | | url | Copies the URL of the current repo to the system clipboard|
+| | view | Open a repo by path ({organization}/{name})|
 | gist | list [repo] [key=value] (4) | List user gists |
 | comment | add | Add a new comment |
 | | delete | Delete a comment |
@@ -276,7 +278,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | label | add [label] | Add a label from available label menu |
 | | remove [label] | Remove a label |
 | | create [label] | Create a new label |
-| assignees| add [login] | Assign a user |
+| assignee| add [login] | Assign a user |
 | | remove [login] | Unassign a user |
 | reviewer | add [login] | Assign a PR reviewer |
 | reaction | `thumbs_up` \| `+1` | Add 👍 reaction|
@@ -296,6 +298,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | discard| Deletes a pending review for current PR if any |
 | | comments| View pending review comments |
 | | commit | Pick a specific commit to review |
+| | close | Close the review window and return to the PR |
 | actions |  | Lists all available Octo actions|
 | search | <query> | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
 

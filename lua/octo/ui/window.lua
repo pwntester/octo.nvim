@@ -95,6 +95,9 @@ function M.create_centered_float(opts)
     else
       opts.height = math.min(vim_height, 2 * opts.border_width + #opts.content) + 1
     end
+
+    opts.width = math.floor(opts.width)
+    opts.height = math.floor(opts.height)
   else
     opts.width = math.floor(vim_width * opts.x_percent)
     opts.height = math.floor(vim_height * opts.y_percent)
