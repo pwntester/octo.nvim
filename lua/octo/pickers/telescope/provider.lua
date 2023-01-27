@@ -470,14 +470,10 @@ end
 ---
 function M.search(opts)
   opts = opts or {}
-
   local requester = function()
     return function(prompt)
       if not opts.prompt and utils.is_blank(prompt) then
         return {}
-      end
-      if opts.repo then
-        prompt = string.format("repo:%s %s", opts.repo, prompt)
       end
       if type(opts.prompt) == "string" then
         opts.prompt = { opts.prompt }

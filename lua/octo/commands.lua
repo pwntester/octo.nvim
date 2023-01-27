@@ -48,7 +48,7 @@ function M.setup()
           return
         end
         local prompt = "is:issue "
-        for k,v in pairs(opts) do
+        for k, v in pairs(opts) do
           prompt = prompt .. k .. ":" .. v .. " "
         end
         opts.prompt = prompt
@@ -117,7 +117,7 @@ function M.setup()
           return
         end
         local prompt = "is:pr "
-        for k,v in pairs(opts) do
+        for k, v in pairs(opts) do
           prompt = prompt .. k .. ":" .. v .. " "
         end
         opts.prompt = prompt
@@ -785,7 +785,7 @@ function M.create_pr(is_draft)
   local remote_branch = local_branch
   if not remote_branch_exists then
     local choice =
-    vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+      vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
     if choice == 1 then
       local remote = "origin"
       remote_branch = vim.fn.input {
