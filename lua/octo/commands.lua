@@ -47,7 +47,11 @@ function M.setup()
           utils.error "Cannot find repo"
           return
         end
-        opts.prompt = "is:issue "
+        local prompt = "is:issue "
+        for k,v in pairs(opts) do
+          prompt = prompt .. k .. ":" .. v .. " "
+        end
+        opts.prompt = prompt
         picker.search(opts)
       end,
       reload = function()
@@ -112,7 +116,11 @@ function M.setup()
           utils.error "Cannot find repo"
           return
         end
-        opts.prompt = "is:pr "
+        local prompt = "is:pr "
+        for k,v in pairs(opts) do
+          prompt = prompt .. k .. ":" .. v .. " "
+        end
+        opts.prompt = prompt
         picker.search(opts)
       end,
       reload = function()
@@ -301,7 +309,14 @@ function M.process_varargs(repo, ...)
   local opts = {}
   for i = 1, args.n do
     local kv = vim.split(args[i], "=")
-    opts[kv[1]] = kv[2]
+    if #kv == 2 then
+      opts[kv[1]] = kv[2]
+    else
+      kv = vim.split(args[i], ":")
+      if #kv == 2 then
+        opts[kv[1]] = kv[2]
+      end
+    end
   end
   opts.repo = repo
   return opts
