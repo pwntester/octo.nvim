@@ -228,21 +228,26 @@ end
 function OctoBuffer:configure()
   -- configure buffer
   vim.api.nvim_buf_call(self.bufnr, function()
+    local use_signcolumn = config.get_config().ui.use_signcolumn
+    local use_foldcolumn = config.get_config().ui.use_foldcolumn
     --options
     vim.cmd [[setlocal filetype=octo]]
     vim.cmd [[setlocal buftype=acwrite]]
     vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
     vim.cmd [[setlocal conceallevel=2]]
-    vim.cmd [[setlocal signcolumn=yes]]
-    vim.cmd [[setlocal foldenable]]
-    vim.cmd [[setlocal foldtext=v:lua.octo_foldtext()]]
-    vim.cmd [[setlocal foldmethod=manual]]
-    vim.cmd [[setlocal foldcolumn=3]]
-    vim.cmd [[setlocal foldlevelstart=99]]
     vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
-    vim.cmd [[setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀]]
-
-    autocmds.octo_buffer(self.bufnr)
+    if use_signcolumn then
+      vim.cmd [[setlocal signcolumn=yes]]
+      autocmds.update_signcolumn(self.bufnr)
+    end
+    if use_foldcolumn then
+      vim.cmd [[setlocal foldenable]]
+      vim.cmd [[setlocal foldtext=v:lua.octo_foldtext()]]
+      vim.cmd [[setlocal foldmethod=manual]]
+      vim.cmd [[setlocal foldcolumn=3]]
+      vim.cmd [[setlocal foldlevelstart=99]]
+      vim.cmd [[setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀]]
+    end
   end)
 
   self:apply_mappings()
@@ -298,7 +303,7 @@ function OctoBuffer:async_fetch_issues()
   }
 end
 
----Saves the Octo buffer and syncs all the comments/title/body with GitHub
+---Syncs all the comments/title/body with GitHub
 function OctoBuffer:save()
   local bufnr = vim.api.nvim_get_current_buf()
 
@@ -314,7 +319,7 @@ function OctoBuffer:save()
   for _, comment_metadata in ipairs(self.commentsMetadata) do
     if comment_metadata.body ~= comment_metadata.savedBody then
       if comment_metadata.id == -1 then
-        -- we use -1 as a placeholder for new comments
+        -- we use -1 as an indicator for new comments for which we dont currently have a GH id
         if comment_metadata.kind == "IssueComment" then
           self:do_add_issue_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReviewComment" then
@@ -795,9 +800,11 @@ end
 
 ---Renders the signcolumn
 function OctoBuffer:render_signcolumn()
-  if not self.ready then
+  local use_signcolumn = config.get_config().ui.use_signcolumn
+  if not use_signcolumn or not self.ready then
     return
   end
+
   local issue_dirty = false
 
   -- update comment metadata (lines, etc.)

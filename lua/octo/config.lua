@@ -16,6 +16,10 @@ M.defaults = {
   github_hostname = "",
   snippet_context_lines = 4,
   gh_env = {},
+  ui = {
+    use_signcolumn = true,
+    use_foldcolumn = true,
+  },
   issues = {
     order_by = {
       field = "CREATED_AT",
