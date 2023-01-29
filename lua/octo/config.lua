@@ -18,7 +18,6 @@ M.defaults = {
   gh_env = {},
   ui = {
     use_signcolumn = true,
-    use_foldcolumn = true,
   },
   issues = {
     order_by = {

@@ -99,7 +99,6 @@ require"octo".setup({
   gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
   ui = {
     use_signcolumn = true,                 -- show "modified" marks on the sign column
-    use_foldcolumn = true,                 -- enable folding
   },
   issues = {
     order_by = {                           -- criteria to sort results of `Octo issue list`
