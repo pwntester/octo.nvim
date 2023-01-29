@@ -229,18 +229,11 @@ function OctoBuffer:configure()
   -- configure buffer
   vim.api.nvim_buf_call(self.bufnr, function()
     local use_signcolumn = config.get_config().ui.use_signcolumn
-    --options
     vim.cmd [[setlocal filetype=octo]]
     vim.cmd [[setlocal buftype=acwrite]]
     vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
     vim.cmd [[setlocal conceallevel=2]]
     vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
-    vim.cmd [[setlocal foldenable]]
-    vim.cmd [[setlocal foldtext=v:lua.octo_foldtext()]]
-    vim.cmd [[setlocal foldmethod=manual]]
-    vim.cmd [[setlocal foldcolumn=3]]
-    vim.cmd [[setlocal foldlevelstart=99]]
-    vim.cmd [[setlocal fillchars=fold:⠀,foldopen:⠀,foldclose:⠀,foldsep:⠀]]
     if use_signcolumn then
       vim.cmd [[setlocal signcolumn=yes]]
       autocmds.update_signcolumn(self.bufnr)
