@@ -124,7 +124,15 @@ function OctoBuffer:render_issue()
   local unrendered_labeled_events = {}
   local unrendered_unlabeled_events = {}
   local prev_is_event = false
+
+  local timeline_nodes = {}
   for _, item in ipairs(self.node.timelineItems.nodes) do
+    if item ~= vim.NIL then
+      table.insert(timeline_nodes, item)
+    end
+  end
+
+  for _, item in ipairs(timeline_nodes) do
     if item.__typename ~= "LabeledEvent" and #unrendered_labeled_events > 0 then
       writers.write_labeled_events(self.bufnr, unrendered_labeled_events, "added")
       unrendered_labeled_events = {}
