@@ -30,8 +30,6 @@ function M.pull(opts, cb)
 end
 
 function M.issue(opts, cb)
-    vim.notify("calling issue")
-
     local repo = opts["repo"]
     local number = opts["number"]
 
