@@ -41,7 +41,7 @@ function M.configure_octo_buffer(bufnr)
   local split, path = utils.get_split_and_path(bufnr)
   local buffer = octo_buffers[bufnr]
   if split and path then
-    -- review diff buffer
+    -- review diff buffers
     local current_review = reviews.get_current_review()
     if current_review and #current_review.threads > 0 then
       current_review.layout:cur_file():place_signs()
@@ -83,7 +83,6 @@ end
 function M.load(repo, kind, number, cb)
   local opts = { repo=repo, number=number }
   backend.run(kind, opts, cb)
-  -- cb(query_result)
 end
 
 function M.render_signcolumn()
