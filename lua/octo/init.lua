@@ -5,15 +5,11 @@ local constants = require "octo.constants"
 local commands = require "octo.commands"
 local completion = require "octo.completion"
 local folds = require "octo.folds"
-local gh = require "octo.gh"
-local backend = require "octo.backend.model"
-local graphql = require "octo.gh.graphql"
+local backend = require "octo.backend"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local colors = require "octo.ui.colors"
 local signs = require "octo.ui.signs"
-local window = require "octo.ui.window"
-local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 
 _G.octo_repo_issues = {}
@@ -22,7 +18,7 @@ _G.octo_buffers = {}
 local M = {}
 
 function M.setup(user_config)
-  if backend.available_executables() == false then
+  if backend.available_executables() == 0 then
     utils.error "gh and glab executable cli not found"
     return
   end
@@ -45,7 +41,7 @@ function M.configure_octo_buffer(bufnr)
   local split, path = utils.get_split_and_path(bufnr)
   local buffer = octo_buffers[bufnr]
   if split and path then
-    -- review diff buffers
+    -- review diff buffer
     local current_review = reviews.get_current_review()
     if current_review and #current_review.threads > 0 then
       current_review.layout:cur_file():place_signs()
@@ -85,43 +81,8 @@ function M.load_buffer(bufnr)
 end
 
 function M.load(repo, kind, number, cb)
-  local owner, name = utils.split_repo(repo)
-  local query, key
-  if kind == "pull" then
-    query = graphql("pull_request_query", owner, name, number)
-    key = "pullRequest"
-  elseif kind == "issue" then
-    query = graphql("issue_query", owner, name, number)
-    key = "issue"
-  elseif kind == "repo" then
-    query = graphql("repository_query", owner, name)
-  end
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        if kind == "pull" or kind == "issue" then
-          local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
-          local obj = resp.data.repository[key]
-          cb(obj)
-        elseif kind == "repo" then
-          local resp = vim.fn.json_decode(output)
-          local obj = resp.data.repository
-          cb(obj)
-        end
-      end
-    end,
-  }
-
-  -- local tmap = {
-  --   ["pull"] = "pull_request_query",
-  --   ["pullRequest"] = "issue_query",
-  --   ["repo"] = "repository_query",
-  -- }
-
-  -- local query_result = backend.run(tmap[kind])
+  local opts = { repo=repo, number=number }
+  backend.run(kind, opts, cb)
   -- cb(query_result)
 end
 
@@ -141,61 +102,14 @@ function M.on_cursor_hold()
   -- reactions popup
   local id = buffer:get_reactions_at_cursor()
   if id then
-    local query = graphql("reactions_for_object_query", id)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          local reactions = {}
-          local reactionGroups = resp.data.node.reactionGroups
-          for _, reactionGroup in ipairs(reactionGroups) do
-            local users = reactionGroup.users.nodes
-            local logins = {}
-            for _, user in ipairs(users) do
-              table.insert(logins, user.login)
-            end
-            if #logins > 0 then
-              reactions[reactionGroup.content] = logins
-            end
-          end
-          local popup_bufnr = vim.api.nvim_create_buf(false, true)
-          local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
-          window.create_popup {
-            bufnr = popup_bufnr,
-            width = 4 + max_length,
-            height = 2 + lines_count,
-          }
-        end
-      end,
-    }
+    backend.run("reactions_popup", { id = id })
     return
   end
 
   -- user popup
   local login = utils.extract_pattern_at_cursor(constants.USER_PATTERN)
   if login then
-    local query = graphql("user_profile_query", login)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          local user = resp.data.user
-          local popup_bufnr = vim.api.nvim_create_buf(false, true)
-          local lines, max_length = writers.write_user_profile(popup_bufnr, user)
-          window.create_popup {
-            bufnr = popup_bufnr,
-            width = 4 + max_length,
-            height = 2 + lines,
-          }
-        end
-      end,
-    }
+    backend.run("user_popup", { login = login })
     return
   end
 
@@ -211,27 +125,8 @@ function M.on_cursor_hold()
   if not repo or not number then
     return
   end
-  local owner, name = utils.split_repo(repo)
-  local query = graphql("issue_summary_query", owner, name, number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local issue = resp.data.repository.issueOrPullRequest
-        local popup_bufnr = vim.api.nvim_create_buf(false, true)
-        local max_length = 80
-        local lines = writers.write_issue_summary(popup_bufnr, issue, { max_length = max_length })
-        window.create_popup {
-          bufnr = popup_bufnr,
-          width = max_length,
-          height = 2 + lines,
-        }
-      end
-    end,
-  }
+
+  backend.run("link_popup", { repo=repo, number=number })
 end
 
 function M.create_buffer(kind, obj, repo, create)

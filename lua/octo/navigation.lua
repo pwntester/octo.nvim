@@ -1,6 +1,6 @@
 local constants = require "octo.constants"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local gh = require "octo.backend.gh.cli"
+local graphql = require "octo.backend.gh.graphql"
 local utils = require "octo.utils"
 
 local M = {}

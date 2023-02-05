@@ -1,8 +1,8 @@
 local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
 local config = require "octo.config"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local gh = require "octo.backend.gh.cli"
+local graphql = require "octo.backend.gh.graphql"
 local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
