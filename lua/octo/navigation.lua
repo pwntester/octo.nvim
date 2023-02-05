@@ -1,6 +1,5 @@
 local constants = require "octo.constants"
-local gh = require "octo.backend.gh.cli"
-local graphql = require "octo.backend.gh.graphql"
+local backend = require "octo.backend"
 local utils = require "octo.utils"
 
 local M = {}
@@ -71,24 +70,7 @@ function M.go_to_issue()
   end
 
   if repo and number then
-    local owner, name = utils.split_repo(repo)
-    local query = graphql("issue_kind_query", owner, name, number)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          local kind = resp.data.repository.issueOrPullRequest.__typename
-          if kind == "Issue" then
-            utils.get_issue(repo, number)
-          elseif kind == "PullRequest" then
-            utils.get_pull_request(repo, number)
-          end
-        end
-      end,
-    }
+    backend.run("go_to_issue", {repo=repo, number=number})
   end
 end
 

@@ -171,13 +171,40 @@ function M.link_popup(opts, _)
     }
 end
 
+function M.go_to_issue(opts, _)
+    local repo = opts["repo"]
+    local number = opts["number"]
+
+    local owner, name = utils.split_repo(repo)
+    local query = graphql("issue_kind_query", owner, name, number)
+
+    cli.run {
+        args = { "api", "graphql", "-f", string.format("query=%s", query) },
+        cb = function(output, stderr)
+            if stderr and not utils.is_blank(stderr) then
+                vim.api.nvim_err_writeln(stderr)
+            elseif output then
+                local resp = vim.fn.json_decode(output)
+                local kind = resp.data.repository.issueOrPullRequest.__typename
+
+                if kind == "Issue" then
+                    utils.get_issue(repo, number)
+                elseif kind == "PullRequest" then
+                    utils.get_pull_request(repo, number)
+                end
+            end
+        end,
+    }
+end
+
 M.functions = {
     ["pull"] = M.pull,
     ["issue"] = M.issue,
     ["repo"] = M.repo,
     ["reactions_popup"] = M.reactions_popup,
     ["user_popup"] = M.user_popup,
-    ["link_popup"] = M.link_popup
+    ["link_popup"] = M.link_popup,
+    ["go_to_issue"] = M.go_to_issue
 }
 
 return M
