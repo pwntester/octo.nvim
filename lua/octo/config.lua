@@ -145,6 +145,7 @@ M.defaults = {
       select_prev_entry = { lhs = "[q", desc = "move to next changed file" },
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       toggle_viewed = { lhs = "<leader><space>", desc = "toggle viewer viewed state" },
+      goto_file = { lhs = "gf", desc = "go to file" },
     },
     file_panel = {
       next_entry = { lhs = "j", desc = "move to next changed file" },
