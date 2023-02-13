@@ -46,6 +46,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 * [📋 PR reviews](#-pr-reviews)
 * [🍞 Completion](#-completion)
 * [🎨 Colors](#-colors)
+* [🏷️  Status Column](#-statuscolumn)
 * [🙋 FAQ](#-faq)
 * [✋ Contributing](#-contributing)
 * [📜 License](#-license)
@@ -421,6 +422,62 @@ Octo provides a built-in omnifunc completion for issues, PRs and users that you 
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
+
+## 🏷️  Status Column
+If you are using the `vim.opt.statuscolumn` feature, you can disable Octo's comment marks in the `signcolumn` and replace them with any customizations on the `statuscolumn`.
+
+Disable the `signcolumn` with:
+
+```lua
+ui = {
+    use_signcolumn = false
+}
+```
+
+Then, provide a `statuscolumn` replacement such as:
+
+```lua
+local function mk_hl(group, sym)
+  return table.concat({ "%#", group, "#", sym, "%*" })
+end
+
+_G.get_statuscol_octo = function(bufnum, lnum)
+  if vim.api.nvim_buf_get_option(bufnum, "filetype") == "octo" then
+    if type(octo_buffers) == "table" then
+      local buffer = octo_buffers[bufnum]
+      if buffer then
+        buffer:update_metadata()
+        local hl = "OctoSignColumn"
+        local metadatas = {buffer.titleMetadata, buffer.bodyMetadata}
+        for _, comment_metadata in ipairs(buffer.commentsMetadata) do
+          table.insert(metadatas, comment_metadata)
+        end
+        for _, metadata in ipairs(metadatas) do
+          if metadata and metadata.startLine and metadata.endLine then
+            if metadata.dirty then
+              hl = "OctoDirty"
+            else
+              hl = "OctoSignColumn"
+            end
+            if lnum - 1 == metadata.startLine and lnum - 1 == metadata.endLine then
+              return mk_hl(hl, "[ ")
+            elseif lnum - 1 == metadata.startLine then
+              return mk_hl(hl, "┌ ")
+            elseif lnum - 1 == metadata.endLine then
+              return mk_hl(hl, "└ ")
+            elseif metadata.startLine < lnum - 1 and lnum - 1 < metadata.endLine then
+              return mk_hl(hl, "│ ")
+            end
+          end
+        end
+      end
+    end
+  end
+  return "  "
+end
+
+vim.opt.statuscolumn = "%{%v:lua.get_statuscol_octo(bufnr(), v:lnum)%}"
+```
 
 ## 🙋 FAQ
 
