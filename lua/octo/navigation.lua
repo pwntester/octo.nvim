@@ -34,18 +34,25 @@ end
 
 function M.go_to_file()
   local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
+  local path = ""
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+  if utils.in_diff_window(bufnr) then
+    _, path = utils.get_split_and_path(bufnr)
+  else
+    local buffer = octo_buffers[bufnr]
+    if not buffer then
+      return
+    end
+    if not buffer:isPullRequest() then
+      return
+    end
+    local _thread = buffer:get_thread_at_cursor()
+    path, line = _thread.path, _thread.line
   end
-  if not buffer:isPullRequest() then
-    return
-  end
-  local _thread = buffer:get_thread_at_cursor()
-  local stat = vim.loop.fs_stat(utils.path_join { vim.fn.getcwd(), _thread.path })
+  local stat = vim.loop.fs_stat(utils.path_join { vim.fn.getcwd(), path })
   if stat and stat.type then
-    vim.cmd("e " .. _thread.path)
-    vim.api.nvim_win_set_cursor(0, { _thread.line, 0 })
+    vim.cmd("e " .. path)
+    vim.api.nvim_win_set_cursor(0, { line, 0 })
   else
     utils.error "Cannot find file in CWD"
   end
