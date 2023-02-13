@@ -747,7 +747,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
-          resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
+            resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
           local review = require("octo.reviews").get_current_review()
           if review then
             review:update_threads(threads)
@@ -787,7 +787,7 @@ function OctoBuffer:update_metadata()
 
   for _, metadata in ipairs(metadata_objs) do
     local mark =
-    vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, { details = true })
+      vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, { details = true })
     local start_line, end_line, text = utils.get_extmark_region(self.bufnr, mark)
     metadata.body = text
     metadata.startLine = start_line
@@ -916,7 +916,7 @@ end
 function OctoBuffer:get_comment_at_line(line)
   for _, comment in ipairs(self.commentsMetadata) do
     local mark =
-    vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, comment.extmark, { details = true })
+      vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, comment.extmark, { details = true })
     local start_line = mark[1] + 1
     local end_line = mark[3]["end_row"] + 1
     if start_line + 1 <= line and end_line - 2 >= line then
@@ -932,7 +932,7 @@ function OctoBuffer:get_body_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local metadata = self.bodyMetadata
   local mark =
-  vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, { details = true })
+    vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, metadata.extmark, { details = true })
   local start_line = mark[1] + 1
   local end_line = mark[3]["end_row"] + 1
   if start_line + 1 <= cursor[1] and end_line - 2 >= cursor[1] then
@@ -994,7 +994,7 @@ function OctoBuffer:update_reactions_at_cursor(reaction_groups, reaction_line)
   local comments = self.commentsMetadata
   for i, comment in ipairs(comments) do
     local mark =
-    vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, comment.extmark, { details = true })
+      vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, comment.extmark, { details = true })
     local start_line = mark[1] + 1
     local end_line = mark[3].end_row + 1
     if start_line <= cursor[1] and end_line >= cursor[1] then

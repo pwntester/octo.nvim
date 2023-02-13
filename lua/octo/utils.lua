@@ -131,11 +131,11 @@ end
 
 function M.is_blank(s)
   return (
-      s == nil
-          or s == vim.NIL
-          or (type(s) == "string" and string.match(s, "%S") == nil)
-          or (type(s) == "table" and next(s) == nil)
-      )
+    s == nil
+    or s == vim.NIL
+    or (type(s) == "string" and string.match(s, "%S") == nil)
+    or (type(s) == "table" and next(s) == nil)
+  )
 end
 
 function M.parse_remote_url(url, aliases)
@@ -921,7 +921,7 @@ function M.process_patch(patch)
   for _, hunk in ipairs(hunk_strings) do
     local header = vim.split(hunk, "\n")[1]
     local found, _, left_start, left_length, right_start, right_length =
-    string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
+      string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
     if found then
       table.insert(hunks, hunk)
       table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
@@ -1036,8 +1036,7 @@ function M.get_pull_request_for_current_branch(cb)
             if stderr and not M.is_blank(stderr) then
               vim.api.nvim_err_writeln(stderr)
             elseif output then
-              local resp =
-              M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
+              local resp = M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
               local obj = resp.data.repository.pullRequest
               local Rev = require("octo.reviews.rev").Rev
               local PullRequest = require("octo.model.pull-request").PullRequest
@@ -1209,10 +1208,11 @@ function M.apply_mappings(kind, bufnr)
   local mappings = require "octo.mappings"
   local conf = config.get_config()
   for action, value in pairs(conf.mappings[kind]) do
-    if not M.is_blank(value)
-        and not M.is_blank(action)
-        and not M.is_blank(value.lhs)
-        and not M.is_blank(mappings[action])
+    if
+      not M.is_blank(value)
+      and not M.is_blank(action)
+      and not M.is_blank(value.lhs)
+      and not M.is_blank(mappings[action])
     then
       if M.is_blank(value.desc) then
         value.desc = ""

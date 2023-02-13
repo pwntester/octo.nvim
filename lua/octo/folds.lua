@@ -1,7 +1,6 @@
 local M = {}
 
-function M.setup()
-end
+function M.setup() end
 
 function M.create(bufnr, start_line, end_line, is_opened)
   vim.api.nvim_buf_call(bufnr, function()
