@@ -1,12 +1,6 @@
 local M = {}
 
 function M.setup()
-  function _G.octo_foldtext()
-    --print(vim.line(vim.v.foldstart - 1))
-    --print(vim.v.foldstart, vim.api.nvim_get_current_buf())
-    --print(vim.v.foldstart, util.get_comment_at_line(vim.v.foldstart))
-    return "  ..."
-  end
 end
 
 function M.create(bufnr, start_line, end_line, is_opened)

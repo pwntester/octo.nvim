@@ -65,7 +65,7 @@ function M.setup()
   })
 end
 
-function M.octo_buffer(bufnr)
+function M.update_signcolumn(bufnr)
   define({ "TextChanged", "TextChangedI" }, {
     group = "octobuffer_autocmds",
     buffer = bufnr,
