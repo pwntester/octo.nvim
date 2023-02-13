@@ -345,7 +345,13 @@ function M.write_details(bufnr, issue, update)
       end
       --end
     end
+    local timeline_nodes = {}
     for _, item in ipairs(issue.timelineItems.nodes) do
+      if item ~= vim.NIL then
+        table.insert(timeline_nodes, item)
+      end
+    end
+    for _, item in ipairs(timeline_nodes) do
       if item.__typename == "PullRequestReview" then
         local name = item.author.login
         collect_reviewer(name, item.state)
