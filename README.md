@@ -98,6 +98,7 @@ require"octo".setup({
   github_hostname = "";                    -- GitHub Enterprise host
   snippet_context_lines = 4;               -- number or lines around commented lines
   gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
+  timeout = 5000,                          -- timeout for requests between the remote server
   ui = {
     use_signcolumn = true,                 -- show "modified" marks on the sign column
   },

@@ -175,6 +175,7 @@ function FileEntry:fetch()
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
   local left_abbrev = current_review.layout.left:abbrev()
+  local conf = config.get_config()
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
@@ -204,7 +205,7 @@ function FileEntry:fetch()
   end
 
   -- wait until we have both versions
-  return vim.wait(5000, function()
+  return vim.wait(conf.timeout, function()
     return self.left_lines and self.right_lines
   end)
 end
