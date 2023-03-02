@@ -1,5 +1,5 @@
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local gh = require "octo.backend.gh.cli"
+local graphql = require "octo.backend.gh.graphql"
 local navigation = require "octo.navigation"
 local previewers = require "octo.pickers.telescope.previewers"
 local entry_maker = require "octo.pickers.telescope.entry_maker"

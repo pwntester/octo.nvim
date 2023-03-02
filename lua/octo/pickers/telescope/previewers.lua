@@ -1,6 +1,6 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local gh = require "octo.backend.gh.cli"
+local graphql = require "octo.backend.gh.graphql"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local previewers = require "telescope.previewers"

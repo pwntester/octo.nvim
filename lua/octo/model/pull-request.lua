@@ -1,5 +1,5 @@
 local utils = require "octo.utils"
-local gh = require "octo.gh"
+local gh = require "octo.backend.gh.cli"
 
 local M = {}
 

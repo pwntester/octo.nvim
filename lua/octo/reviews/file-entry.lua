@@ -2,8 +2,8 @@
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-entry.lua
 
 local config = require "octo.config"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local gh = require "octo.backend.gh.cli"
+local graphql = require "octo.backend.gh.graphql"
 local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
 
