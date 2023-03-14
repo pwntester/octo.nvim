@@ -23,6 +23,7 @@ local env_vars = {
   NO_COLOR = 1,
   http_proxy = vim.env["http_proxy"],
   https_proxy = vim.env["https_proxy"],
+  no_proxy = vim.env["no_proxy"],
 }
 
 local function get_env()
