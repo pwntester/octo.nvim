@@ -98,6 +98,7 @@ require"octo".setup({
   github_hostname = "";                    -- GitHub Enterprise host
   snippet_context_lines = 4;               -- number or lines around commented lines
   gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
+  timeout = 5000,                          -- timeout for requests between the remote server
   ui = {
     use_signcolumn = true,                 -- show "modified" marks on the sign column
   },
@@ -510,6 +511,11 @@ Just add the following lines to your TreeSitter config:
 ```lua
 local ft_to_parser = require "nvim-treesitter.parsers".filetype_to_parsername
 ft_to_parser.octo = "markdown"
+```
+If you are using nvim 0.9 (nightly) use the following instead:
+	
+```lua
+vim.treesitter.language.register('markdown', 'octo')
 ```
 
 **How can I filter PRs by filter keys that aren't available?**

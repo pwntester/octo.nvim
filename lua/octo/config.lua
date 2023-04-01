@@ -16,6 +16,7 @@ M.defaults = {
   github_hostname = "",
   snippet_context_lines = 4,
   gh_env = {},
+  timeout = 5000,
   ui = {
     use_signcolumn = true,
   },
