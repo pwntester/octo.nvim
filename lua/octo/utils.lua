@@ -1164,6 +1164,12 @@ function M.generate_position2line_map(diffhunk)
       left_side_line = left_side_line + 1
     end
   end
+  if left_offset == nil then
+    left_offset = 0
+  end
+  if right_offset == nil then
+    right_offset = 0
+  end
   return {
     left_side_lines = left_side_lines,
     right_side_lines = right_side_lines,
