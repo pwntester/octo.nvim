@@ -42,11 +42,11 @@ local function get_env()
 end
 
 -- uses GH to get the name of the authenticated user
-function M.get_user_name()
+function M.get_user_name(remote_hostname)
   local job = Job:new {
     enable_recording = true,
     command = "gh",
-    args = { "auth", "status" },
+    args = { "auth", "status" , "--hostname", remote_hostname },
     env = get_env(),
   }
   job:sync()
@@ -63,17 +63,17 @@ function M.run(opts)
   if not Job then
     return
   end
+  local remote_hostname = require("octo.utils").get_remote_host()
 
   -- Lazy load viewer name on the first gh command
   if not vim.g.octo_viewer then
-    vim.g.octo_viewer = M.get_user_name()
+    vim.g.octo_viewer = M.get_user_name(remote_hostname)
   end
 
   opts = opts or {}
   local conf = config.get_config()
   local mode = opts.mode or "async"
   local hostname = ""
-  local remote_hostname = require("octo.utils").get_remote_host()
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
     table.insert(opts.args, "Accept: " .. table.concat(headers, ";"))
