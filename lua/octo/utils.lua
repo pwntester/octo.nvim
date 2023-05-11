@@ -13,9 +13,9 @@ local repo_info_cache = {}
 local path_sep = package.config:sub(1, 1)
 
 M.viewed_state_map = {
-  DISMISSED = { icon = " ", hl = "OctoRed" },
-  VIEWED = { icon = "﫟", hl = "OctoGreen" },
-  UNVIEWED = { icon = " ", hl = "OctoBlue" },
+  DISMISSED = { icon = "󰀨 ", hl = "OctoRed" },
+  VIEWED = { icon = "󰗠", hl = "OctoGreen" },
+  UNVIEWED = { icon = "󰄰 ", hl = "OctoBlue" },
 }
 
 M.state_msg_map = {
