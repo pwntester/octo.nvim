@@ -130,6 +130,13 @@ end
 function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
+  local conf = config.get_config()
+  if conf.use_local_fs and not utils.in_pr_branch(pr.bufnr) then
+    local choice = vim.fn.confirm("Currently not in PR branch, would you like to checkout?", "&Yes\n&No", 2)
+    if choice == 1 then
+      utils.checkout_pr_sync(pr.number)
+    end
+  end
 
   -- create the layout
   self.layout = Layout:new {

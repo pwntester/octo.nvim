@@ -14,6 +14,7 @@ M.defaults = {
   right_bubble_delimiter = "",
   left_bubble_delimiter = "",
   github_hostname = "",
+  use_local_fs = false,
   snippet_context_lines = 4,
   gh_env = {},
   timeout = 5000,
