@@ -302,8 +302,7 @@ Can I use treesitter markdown parser with octo buffers?~
 
   Just add the following lines to your TreeSitter config:
 >
-  local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
-  parser_config.markdown.filetype_to_parsername = "octo"
+  vim.treesitter.language.register('markdown', 'octo')
 <
 
 *How can I filter PRs by filter keys that aren't available?~

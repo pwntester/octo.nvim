@@ -511,12 +511,6 @@ GITHUB_TOKEN= gh auth login
 Just add the following lines to your TreeSitter config:
 
 ```lua
-local ft_to_parser = require "nvim-treesitter.parsers".filetype_to_parsername
-ft_to_parser.octo = "markdown"
-```
-If you are using nvim 0.9 (nightly) use the following instead:
-	
-```lua
 vim.treesitter.language.register('markdown', 'octo')
 ```
 
