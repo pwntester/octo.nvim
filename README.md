@@ -511,12 +511,6 @@ GITHUB_TOKEN= gh auth login
 Just add the following lines to your TreeSitter config:
 
 ```lua
-local ft_to_parser = require "nvim-treesitter.parsers".filetype_to_parsername
-ft_to_parser.octo = "markdown"
-```
-If you are using nvim 0.9 (nightly) use the following instead:
-	
-```lua
 vim.treesitter.language.register('markdown', 'octo')
 ```
 
@@ -537,8 +531,8 @@ Note: You need to provide the `repo`, otherwise it will search for every PR by t
 **How to enable autocompletion for issues/prs (`#`) and users (`@`)?**
 
 Add the following mappings for `octo` file type:
-- `vim.api.nvim_buf_set_keymap(0, "i", "@", "@<C-x><C-o>", { silent = true, noremap = true })`
-- `vim.api.nvim_buf_set_keymap(0, "i", "#", "#<C-x><C-o>", { silent = true, noremap = true })`
+- `vim.keymap.set("i", "@", "@<C-x><C-o>", { silent = true, buffer = true })`
+- `vim.keymap.set("i", "#", "#<C-x><C-o>", { silent = true, buffer = true })`
 
 ## ✋ Contributing
 

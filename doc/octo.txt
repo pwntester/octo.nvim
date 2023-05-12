@@ -292,18 +292,17 @@ Why am I getting authentication error from gh?~
   not authenticated.
 
   In case of the former, run:
->
+>bash
   GITHUB_TOKEN= gh auth login
-<  
+<
   ...and choose a method to authorise access for `gh`.
   `gh` must store the creds so it can work in a subshell.
 
 Can I use treesitter markdown parser with octo buffers?~
 
   Just add the following lines to your TreeSitter config:
->
-  local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
-  parser_config.markdown.filetype_to_parsername = "octo"
+>lua
+  vim.treesitter.language.register('markdown', 'octo')
 <
 
 *How can I filter PRs by filter keys that aren't available?~
@@ -313,7 +312,7 @@ Can I use treesitter markdown parser with octo buffers?~
 
   For example to search for PRs with author you can use this command:
 
->
+>vim
   :Octo search is:pr author:pwntester repo:github/codeql
 <
 
@@ -323,9 +322,9 @@ Can I use treesitter markdown parser with octo buffers?~
 
   Add the following mappings for `octo` file type:
 
->
-  `vim.api.nvim_buf_set_keymap(0, "i", "@", "@<C-x><C-o>", { silent = true, noremap = true })
-  `vim.api.nvim_buf_set_keymap(0, "i", "#", "#<C-x><C-o>", { silent = true, noremap = true })
+>lua
+  vim.keymap.set("i", "@", "@<C-x><C-o>", { silent = true, buffer = true })
+  vim.keymap.set("i", "#", "#<C-x><C-o>", { silent = true, buffer = true })
 <
 
 CREDITS                                         *octo-credits*

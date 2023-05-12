@@ -46,7 +46,7 @@ function M.get_user_name(remote_hostname)
   local job = Job:new {
     enable_recording = true,
     command = "gh",
-    args = { "auth", "status" , "--hostname", remote_hostname },
+    args = { "auth", "status", "--hostname", remote_hostname },
     env = get_env(),
   }
   job:sync()

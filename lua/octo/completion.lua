@@ -23,7 +23,7 @@ function M.octo_command_complete(argLead, cmdLine)
     return command_keys
   elseif #parts == 2 and not vim.tbl_contains(command_keys, parts[2]) then
     return get_options(command_keys)
-  elseif (#parts == 2 and vim.tbl_contains(command_keys, parts[2]) or #parts == 3) then
+  elseif #parts == 2 and vim.tbl_contains(command_keys, parts[2]) or #parts == 3 then
     local obj = octo_commands.commands[parts[2]]
     if obj then
       return get_options(vim.tbl_keys(obj))
