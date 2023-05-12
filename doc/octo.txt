@@ -323,8 +323,8 @@ Can I use treesitter markdown parser with octo buffers?~
   Add the following mappings for `octo` file type:
 
 >
-  `vim.api.nvim_buf_set_keymap(0, "i", "@", "@<C-x><C-o>", { silent = true, noremap = true })
-  `vim.api.nvim_buf_set_keymap(0, "i", "#", "#<C-x><C-o>", { silent = true, noremap = true })
+  vim.keymap.set("i", "@", "@<C-x><C-o>", { silent = true, buffer = true })
+  vim.keymap.set("i", "#", "#<C-x><C-o>", { silent = true, buffer = true })
 <
 
 CREDITS                                         *octo-credits*

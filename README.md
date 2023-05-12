@@ -531,8 +531,8 @@ Note: You need to provide the `repo`, otherwise it will search for every PR by t
 **How to enable autocompletion for issues/prs (`#`) and users (`@`)?**
 
 Add the following mappings for `octo` file type:
-- `vim.api.nvim_buf_set_keymap(0, "i", "@", "@<C-x><C-o>", { silent = true, noremap = true })`
-- `vim.api.nvim_buf_set_keymap(0, "i", "#", "#<C-x><C-o>", { silent = true, noremap = true })`
+- `vim.keymap.set("i", "@", "@<C-x><C-o>", { silent = true, buffer = true })`
+- `vim.keymap.set("i", "#", "#<C-x><C-o>", { silent = true, buffer = true })`
 
 ## ✋ Contributing
 
