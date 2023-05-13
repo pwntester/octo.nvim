@@ -70,7 +70,10 @@ function M.go_to_issue()
 
   if not repo or not number then
     repo = current_repo
-    number = utils.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    local start_col, maybe_space, n = utils.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    if n and (start_col == 1 or #maybe_space > 0) then
+      number = n
+    end
   end
 
   if not repo or not number then
