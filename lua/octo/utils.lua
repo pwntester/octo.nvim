@@ -625,8 +625,9 @@ end
 
 function M.cursor_in_col_range(start_col, end_col)
   local cursor = vim.api.nvim_win_get_cursor(0)
+  local col = cursor[2] + 1
   if start_col and end_col then
-    if start_col <= cursor[2] and cursor[2] <= end_col then
+    if start_col <= col and col <= end_col then
       return true
     end
   end
