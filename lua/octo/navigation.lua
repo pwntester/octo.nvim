@@ -66,18 +66,35 @@ function M.go_to_issue()
   end
   local current_repo = buffer.repo
 
-  local repo, number = utils.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
+  local function multi_match(pattern, line, offset)
+    line = line or vim.api.nvim_get_current_line()
+    offset = offset or 0
+    local res = table.pack(line:find(pattern))
+    if #res == 0 then
+      return
+    end
+    local start_col = res[1] + offset
+    local end_col = res[2] + offset
+    if utils.cursor_in_col_range(start_col, end_col) then
+      return unpack(utils.tbl_slice(res, 3, #res))
+    elseif end_col == #line then
+      return
+    end
+    return multi_match(pattern, line:sub(end_col + 1), offset + end_col)
+  end
+
+  local repo, number = multi_match(constants.LONG_ISSUE_PATTERN)
 
   if not repo or not number then
     repo = current_repo
-    local start_col, maybe_space, n = utils.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    local start_col, maybe_space, n = multi_match(constants.SHORT_ISSUE_PATTERN)
     if n and (start_col == 1 or #maybe_space > 0) then
       number = n
     end
   end
 
   if not repo or not number then
-    repo, _, number = utils.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+    repo, _, number = multi_match(constants.URL_ISSUE_PATTERN)
   end
 
   if repo and number then
