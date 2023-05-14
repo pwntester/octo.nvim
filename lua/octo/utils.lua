@@ -640,16 +640,36 @@ function M.split_repo(repo)
   return owner, name
 end
 
-function M.extract_pattern_at_cursor(pattern)
-  local current_line = vim.fn.getline "."
-  if current_line:find(pattern) then
-    local res = table.pack(current_line:find(pattern))
-    local start_col = res[1]
-    local end_col = res[2]
-    if M.cursor_in_col_range(start_col, end_col) then
-      return unpack(M.tbl_slice(res, 3, #res))
+function M.extract_pattern_at_cursor(pattern, line, offset)
+  line = line or vim.api.nvim_get_current_line()
+  offset = offset or 0
+  local res = table.pack(line:find(pattern))
+  if #res == 0 then
+    return
+  end
+  local start_col = res[1] + offset
+  local end_col = res[2] + offset
+  if M.cursor_in_col_range(start_col, end_col) then
+    return unpack(M.tbl_slice(res, 3, #res))
+  elseif end_col == #line then
+    return
+  end
+  return M.extract_pattern_at_cursor(pattern, line:sub(end_col + 1), offset + end_col)
+end
+
+function M.extract_issue_at_cursor(current_repo)
+  local repo, number = M.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
+  if not repo or not number then
+    local start_col, maybe_space, n = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    if n and (start_col == 1 or #maybe_space > 0) then
+      number = n
+      repo = current_repo
     end
   end
+  if not repo or not number then
+    repo, _, number = M.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+  end
+  return repo, number
 end
 
 function M.pattern_split(str, pattern)
