@@ -647,9 +647,9 @@ function M.extract_pattern_at_cursor(pattern, line, offset)
   if #res == 0 then
     return
   end
-  local start_col = res[1] + offset
-  local end_col = res[2] + offset
-  if M.cursor_in_col_range(start_col, end_col) then
+  local start_col = res[1]
+  local end_col = res[2]
+  if M.cursor_in_col_range(offset + start_col, offset + end_col) then
     return unpack(M.tbl_slice(res, 3, #res))
   elseif end_col == #line then
     return
