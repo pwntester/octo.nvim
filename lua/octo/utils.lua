@@ -643,6 +643,9 @@ end
 function M.extract_pattern_at_cursor(pattern, line, offset)
   line = line or vim.api.nvim_get_current_line()
   offset = offset or 0
+  if offset > 0 and pattern:sub(1, 1) == "^" then
+    return
+  end
   local res = table.pack(line:find(pattern))
   if #res == 0 then
     return
@@ -660,9 +663,14 @@ end
 function M.extract_issue_at_cursor(current_repo)
   local repo, number = M.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
   if not repo or not number then
-    local start_col, maybe_space, n = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
-    if n and (start_col == 1 or #maybe_space > 0) then
-      number = n
+    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    if number then
+      repo = current_repo
+    end
+  end
+  if not repo or not number then
+    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_LINE_BEGGINING_PATTERN)
+    if number then
       repo = current_repo
     end
   end
