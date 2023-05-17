@@ -1,4 +1,3 @@
-local bubbles = require "octo.ui.bubbles"
 local utils = require "octo.utils"
 
 local M = {}
@@ -60,7 +59,6 @@ function M.gen_from_review_thread(linenr_length, thread)
   return {
     value = thread.path .. ":" .. thread.startLine .. ":" .. thread.line,
     ordinal = thread.path .. ":" .. thread.startLine .. ":" .. thread.line,
-    display = make_display,
     thread = thread,
   }
 end
@@ -108,7 +106,6 @@ function M.gen_from_label(label)
   return {
     value = label.id,
     ordinal = label.name,
-    display = make_display,
     label = label,
   }
 end
@@ -121,7 +118,6 @@ function M.gen_from_team(team)
   return {
     value = team.id,
     ordinal = team.name,
-    display = make_display,
     team = team,
   }
 end
@@ -134,7 +130,6 @@ function M.gen_from_user(user)
   return {
     value = user.id,
     ordinal = user.login,
-    display = make_display,
     user = user,
   }
 end
@@ -153,7 +148,6 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, r
     kind = "repo",
     value = repo.nameWithOwner,
     ordinal = repo.nameWithOwner .. " " .. repo.description,
-    display = make_display,
     repo = repo,
   }
 end
@@ -170,7 +164,6 @@ function M.gen_from_gist(gist)
   return {
     value = gist.name,
     ordinal = gist.name .. " " .. gist.description,
-    display = make_display,
     gist = gist,
   }
 end
@@ -183,7 +176,6 @@ function M.gen_from_octo_actions(action)
   return {
     value = action.name,
     ordinal = action.object .. " " .. action.name,
-    display = make_display,
     action = action,
   }
 end
@@ -196,7 +188,6 @@ function M.gen_from_issue_templates(template)
   return {
     value = template.name,
     ordinal = template.name .. " " .. template.about,
-    display = make_display,
     template = template,
   }
 end
