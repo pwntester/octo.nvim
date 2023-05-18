@@ -34,6 +34,10 @@ return function (opts)
 
         fzf.fzf_exec(titles, {
           prompt = opts.prompt_title or "",
+          fzf_opts = {
+            ["--delimiter"] = "' '",
+            ['--with-nth'] = "2..",
+          },
           -- TODO What is this?
           -- opts.preview_title = opts.preview_title or "",
           previewer = previewers.changed_files(formatted_files),

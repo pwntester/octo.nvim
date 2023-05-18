@@ -27,7 +27,11 @@ return function (callback)
       end
     end
 
-    fzf.fzf_exec(titles, vim.tbl_extend('force', picker_utils.dropdown_opts, {
+    fzf.fzf_exec(titles, vim.tbl_deep_extend('force', picker_utils.dropdown_opts, {
+      fzf_opts = {
+        ["--delimiter"] = "' '",
+        ['--with-nth'] = "2..",
+      },
       actions = {
         ['default'] = function (selected)
           local entry = formatted_cards[selected[1]]

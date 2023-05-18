@@ -84,9 +84,6 @@ M.issue = function(formattedIssues)
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
           vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
-          vim.api.nvim_buf_set_name(tmpbuf, entry.filename)
-          -- local lines = vim.api.nvim_buf_get_lines(tmpbuf, 0, -1, false)
-          -- entry.body = lines
         end
       end,
     }

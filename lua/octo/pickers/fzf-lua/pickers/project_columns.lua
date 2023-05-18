@@ -42,7 +42,11 @@ return function (callback)
           end
         end
 
-        fzf.fzf_exec(project_titles, vim.tbl_extend('force', picker_utils.dropdown_opts, {
+        fzf.fzf_exec(project_titles, vim.tbl_deep_extend('force', picker_utils.dropdown_opts, {
+          fzf_opts = {
+            ["--delimiter"] = "' '",
+            ['--with-nth'] = "2..",
+          },
           actions = {
             ['default'] = function (selected_project)
               local entry_project = formatted_projects[selected_project[1]]
@@ -59,7 +63,11 @@ return function (callback)
                 end
               end
 
-              fzf.fzf_exec(project_column_titles, vim.tbl_extend('force', picker_utils.dropdown_opts, {
+              fzf.fzf_exec(project_column_titles, vim.tbl_deep_extend('force', picker_utils.dropdown_opts, {
+                fzf_opts = {
+                  ["--delimiter"] = "' '",
+                  ['--with-nth'] = "2..",
+                },
                 actions = {
                   ['default'] = function (selected_column)
                     local entry_column = formatted_project_columns[selected_column[1]]
