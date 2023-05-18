@@ -79,6 +79,11 @@ function M.open_preview_buffer(command, bufnr, entry)
   vim.cmd [[stopinsert]]
 end
 
+--[[
+  Opens the entry in your default browser.
+
+  @param entry The entry to open.
+]]
 function M.open_in_browser(entry)
   local number
   local repo = entry.repo
@@ -88,6 +93,11 @@ function M.open_in_browser(entry)
   navigation.open_in_browser(entry.kind, repo, number)
 end
 
+--[[
+  Copies the url to the clipboard.
+
+  @param entry The entry to get the url from.
+]]
 function M.copy_url(entry)
   local url = entry.obj.url
   vim.fn.setreg("+", url, "c")

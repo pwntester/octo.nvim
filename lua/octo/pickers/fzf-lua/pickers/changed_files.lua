@@ -38,8 +38,6 @@ return function (opts)
             ["--delimiter"] = "' '",
             ['--with-nth'] = "2..",
           },
-          -- TODO What is this?
-          -- opts.preview_title = opts.preview_title or "",
           previewer = previewers.changed_files(formatted_files),
           -- TODO actions not implemented here, what is the use of this exactly?
           -- actions = {

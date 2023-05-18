@@ -1,10 +1,11 @@
+local actions = require "octo.pickers.fzf-lua.pickers.actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local octo_config = require "octo.config"
-local previewers = require "octo.pickers.fzf-lua.previewers"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
+local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
 
 return function (opts)
@@ -59,30 +60,7 @@ return function (opts)
           ['--header'] = opts.results_title,
           ['--preview-window'] = 'nohidden,right,50%',
         }
-        opts.actions = {
-          ['default'] = function (selected)
-            local entry = formatted_issues[selected[1]]
-            picker_utils.open('default', entry)
-          end,
-          ['ctrl-v'] = function (selected)
-            local entry = formatted_issues[selected[1]]
-            picker_utils.open('vertical', entry)
-          end,
-          ['ctrl-s'] = function (selected)
-            local entry = formatted_issues[selected[1]]
-            picker_utils.open('horizontal', entry)
-          end,
-          ['ctrl-t'] = function (selected)
-            local entry = formatted_issues[selected[1]]
-            picker_utils.open('tab', entry)
-          end,
-          ['ctrl-b'] = function (selected)
-            picker_utils.open_in_browser(formatted_issues[selected[1]])
-          end,
-          ['ctrl-y'] = function (selected)
-            picker_utils.copy_url(formatted_issues[selected[1]])
-          end
-        }
+        opts.actions = actions.common_open_actions(formatted_issues)
 
         fzf.fzf_exec(titles, opts)
       end
