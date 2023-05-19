@@ -26,59 +26,74 @@ return function (opts)
     return
   end
 
-  local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
-  local order_by = cfg.pull_requests.order_by
-  local query =
-    graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
-  utils.info "Fetching pull requests (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
-        local pull_requests = resp.data.repository.pullRequests.nodes
-        if #pull_requests == 0 then
-          utils.error(string.format("There are no matching pull requests in %s.", opts.repo))
-          return
-        end
+  local formatted_pulls = {}
 
-        local formatted_pulls = {}
-        local titles = {}
+  local contents = function (fzf_cb)
+    local owner, name = utils.split_repo(opts.repo)
+    local cfg = octo_config.get_config()
+    local order_by = cfg.pull_requests.order_by
 
-        for _, pull in ipairs(pull_requests) do
-          local entry = entry_maker.gen_from_issue(pull)
+    local query =
+      graphql(
+        "pull_requests_query",
+        owner,
+        name,
+        filter,
+        order_by.field,
+        order_by.direction,
+        { escape = false }
+      )
 
-          if entry ~= nil then
-            formatted_pulls[entry.ordinal] = entry
-            table.insert(titles, {
-              prefix = fzf.utils.ansi_from_hl('Comment', entry.value) .. ' ',
-              contents = { entry.obj.title }
-            })
+    gh.run {
+      args = {
+        "api",
+        "graphql",
+        "--paginate",
+        "--jq",
+        ".",
+        "-f",
+        string.format("query=%s", query),
+      },
+      stream_cb = function(data, err)
+        if err and not utils.is_blank(err) then
+          utils.error(err)
+          fzf_cb()
+        elseif data then
+          local resp = utils.aggregate_pages(data, "data.repository.pullRequests.nodes")
+          local pull_requests = resp.data.repository.pullRequests.nodes
+
+          for _, pull in ipairs(pull_requests) do
+            local entry = entry_maker.gen_from_issue(pull)
+
+            if entry ~= nil then
+              formatted_pulls[entry.ordinal] = entry
+              local prefix = fzf.utils.ansi_from_hl('Comment', entry.value)
+              fzf_cb(prefix .. " " .. entry.obj.title)
+            end
           end
         end
+      end,
+      cb = function ()
+        fzf_cb()
+      end,
+    }
+  end
 
-        fzf.fzf_exec(titles, {
-          prompt = opts.prompt_title or "",
-          previewer = previewers.issue(formatted_pulls),
-          fzf_opts = {
-            ["--no-multi"]  = "", -- TODO this can support multi, maybe.
-          },
-          actions = vim.tbl_extend(
-            'force',
-            actions.common_open_actions(formatted_pulls),
-            {
-              ['ctrl-o'] = function (selected)
-                local entry = formatted_pulls[selected[1]]
-                checkout_pull_request(entry)
-              end,
-            }
-          ),
-        })
-
-      end
-    end,
-  }
+  fzf.fzf_exec(contents, {
+    prompt = opts.prompt_title or "",
+    previewer = previewers.issue(formatted_pulls),
+    fzf_opts = {
+      ["--no-multi"]  = "", -- TODO this can support multi, maybe.
+    },
+    actions = vim.tbl_extend(
+      'force',
+      actions.common_open_actions(formatted_pulls),
+      {
+        ['ctrl-o'] = function (selected)
+          local entry = formatted_pulls[selected[1]]
+          checkout_pull_request(entry)
+        end,
+      }
+    ),
+  })
 end

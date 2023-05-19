@@ -61,7 +61,6 @@ return function (opts)
           fzf_opts = {
             ["--no-multi"]  = "", -- TODO this can support multi, maybe.
             ['--header'] = opts.results_title,
-            ['--preview-window'] = 'nohidden,right,50%',
           },
           actions = actions.common_open_actions(formatted_issues),
         })
