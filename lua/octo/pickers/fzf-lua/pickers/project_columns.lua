@@ -48,34 +48,36 @@ return function (callback)
             ['--with-nth'] = "2..",
           },
           actions = {
-            ['default'] = function (selected_project)
-              local entry_project = formatted_projects[selected_project[1]]
+            ['default'] = {
+              function (selected_project)
+                local entry_project = formatted_projects[selected_project[1]]
 
-              local formatted_project_columns = {}
-              local project_column_titles = {}
+                local formatted_project_columns = {}
+                local project_column_titles = {}
 
-              for _, project_column in ipairs(entry_project.project.columns.nodes) do
-                local entry_column = entry_maker.gen_from_project_column(project_column)
+                for _, project_column in ipairs(entry_project.project.columns.nodes) do
+                  local entry_column = entry_maker.gen_from_project_column(project_column)
 
-                if entry_column ~= nil then
-                  formatted_project_columns[entry_column.ordinal] = entry_column
-                  table.insert(project_column_titles , entry_column.ordinal)
-                end
-              end
-
-              fzf.fzf_exec(project_column_titles, vim.tbl_deep_extend('force', picker_utils.dropdown_opts, {
-                fzf_opts = {
-                  ["--delimiter"] = "' '",
-                  ['--with-nth'] = "2..",
-                },
-                actions = {
-                  ['default'] = function (selected_column)
-                    local entry_column = formatted_project_columns[selected_column[1]]
-                    callback(entry_column.column.id)
+                  if entry_column ~= nil then
+                    formatted_project_columns[entry_column.ordinal] = entry_column
+                    table.insert(project_column_titles , entry_column.ordinal)
                   end
-                },
-              }))
-            end
+                end
+
+                fzf.fzf_exec(project_column_titles, vim.tbl_deep_extend('force', picker_utils.dropdown_opts, {
+                  fzf_opts = {
+                    ["--delimiter"] = "' '",
+                    ['--with-nth'] = "2..",
+                  },
+                  actions = {
+                    ['default'] = function (selected_column)
+                      local entry_column = formatted_project_columns[selected_column[1]]
+                      callback(entry_column.column.id)
+                    end
+                  },
+                }))
+              end,
+            },
           },
         }))
       end

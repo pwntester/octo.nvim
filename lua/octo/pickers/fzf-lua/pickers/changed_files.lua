@@ -35,6 +35,7 @@ return function (opts)
         fzf.fzf_exec(titles, {
           prompt = opts.prompt_title or "",
           fzf_opts = {
+            ["--no-multi"]  = "", -- TODO this can support multi, maybe.
             ["--delimiter"] = "' '",
             ['--with-nth'] = "2..",
           },

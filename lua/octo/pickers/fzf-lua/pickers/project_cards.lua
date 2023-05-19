@@ -29,13 +29,14 @@ return function (callback)
 
     fzf.fzf_exec(titles, vim.tbl_deep_extend('force', picker_utils.dropdown_opts, {
       fzf_opts = {
+        ["--no-multi"]  = "", -- TODO this can support multi, maybe.
         ["--delimiter"] = "' '",
         ['--with-nth'] = "2..",
       },
       actions = {
         ['default'] = function (selected)
           local entry = formatted_cards[selected[1]]
-          callback(entry.column.id)
+          callback(entry.card.id)
         end
       },
     }))

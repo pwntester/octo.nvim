@@ -53,15 +53,19 @@ return function (opts)
 
           if entry ~= nil then
             formatted_pulls[entry.ordinal] = entry
-            table.insert(titles, { prefix = entry.number, contents = { entry.ordinal } })
+            table.insert(titles, {
+              prefix = fzf.utils.ansi_from_hl('Comment', entry.value) .. ' ',
+              contents = { entry.obj.title }
+            })
           end
         end
 
         fzf.fzf_exec(titles, {
           prompt = opts.prompt_title or "",
-          -- TODO What is this?
-          -- opts.preview_title = opts.preview_title or ""
           previewer = previewers.issue(formatted_pulls),
+          fzf_opts = {
+            ["--no-multi"]  = "", -- TODO this can support multi, maybe.
+          },
           actions = vim.tbl_extend(
             'force',
             actions.common_open_actions(formatted_pulls),
@@ -78,5 +82,3 @@ return function (opts)
     end,
   }
 end
-
-

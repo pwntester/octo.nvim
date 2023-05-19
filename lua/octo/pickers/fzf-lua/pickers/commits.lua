@@ -37,11 +37,10 @@ return function (opts)
         fzf.fzf_exec(titles, {
           prompt = opts.prompt_title or "",
           fzf_opts = {
+            ["--no-multi"]  = "", -- TODO this can support multi, maybe.
             ["--delimiter"] = "' '",
             ['--with-nth'] = "2..",
           },
-          -- TODO What is this?
-          -- opts.preview_title = opts.preview_title or "",
           previewer = previewers.commit(formatted_commits, buffer.repo),
           -- TODO actions not implemented here, what is the use of this exactly?
           -- actions = {

@@ -48,21 +48,23 @@ return function (opts)
 
           if entry ~= nil then
             formatted_issues[entry.ordinal] = entry
-            table.insert(titles, entry.ordinal)
+            table.insert(titles, {
+              prefix = fzf.utils.ansi_from_hl('Comment', entry.value) .. ' ',
+              contents = { entry.obj.title }
+            })
           end
         end
 
-        opts.prompt = opts.prompt_title or ""
-        -- TODO What is this?
-        -- opts.preview_title = opts.preview_title or ""
-        opts.previewer = previewers.issue(formatted_issues)
-        opts.fzf_opts = {
-          ['--header'] = opts.results_title,
-          ['--preview-window'] = 'nohidden,right,50%',
-        }
-        opts.actions = actions.common_open_actions(formatted_issues)
-
-        fzf.fzf_exec(titles, opts)
+        fzf.fzf_exec(titles, {
+          prompt = opts.prompt_title or "",
+          previewer = previewers.issue(formatted_issues),
+          fzf_opts = {
+            ["--no-multi"]  = "", -- TODO this can support multi, maybe.
+            ['--header'] = opts.results_title,
+            ['--preview-window'] = 'nohidden,right,50%',
+          },
+          actions = actions.common_open_actions(formatted_issues),
+        })
       end
     end,
   }

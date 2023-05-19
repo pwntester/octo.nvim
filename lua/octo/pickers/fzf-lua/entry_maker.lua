@@ -134,6 +134,16 @@ function M.gen_from_user(user)
   }
 end
 
+--[[
+  Generates an entry from a raw repo table.
+
+  TODO use these counts somehow :shrug:
+
+  @param max_nameWithOwner Length of longest name + owner string.
+  @param max_forkCount Length of longest fork count string.
+  @param max_stargazerCount Length of longest stargazer count string.
+  @param repo The raw repo table from GitHub.
+]]
 function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, repo)
   if not repo or vim.tbl_isempty(repo) then
     return nil
