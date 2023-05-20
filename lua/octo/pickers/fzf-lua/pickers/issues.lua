@@ -25,47 +25,62 @@ return function (opts)
   local owner, name = utils.split_repo(opts.repo)
   local cfg = octo_config.get_config()
   local order_by = cfg.issues.order_by
-  local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
-  utils.info "Fetching issues (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
-        local issues = resp.data.repository.issues.nodes
-        if #issues == 0 then
-          utils.error(string.format("There are no matching issues in %s.", opts.repo))
-          return
-        end
 
-        local formatted_issues = {}
-        local titles = {}
+  local query = graphql(
+    "issues_query",
+    owner,
+    name,
+    filter,
+    order_by.field,
+    order_by.direction,
+    { escape = false }
+  )
 
-        for _, issue in ipairs(issues) do
-          local entry = entry_maker.gen_from_issue(issue)
+  local formatted_issues = {}
 
-          if entry ~= nil then
-            formatted_issues[entry.ordinal] = entry
-            table.insert(titles, {
-              prefix = fzf.utils.ansi_from_hl('Comment', entry.value) .. ' ',
-              contents = { entry.obj.title }
-            })
+  local get_contents = function (fzf_cb)
+    gh.run {
+      args = {
+        "api",
+        "graphql",
+        "--paginate",
+        "--jq",
+        ".",
+        "-f",
+        string.format("query=%s", query),
+      },
+      stream_cb = function(data, err)
+        if err and not utils.is_blank(err) then
+          utils.error(err)
+          fzf_cb()
+        elseif data then
+          local resp = utils.aggregate_pages(data, "data.repository.issues.nodes")
+          local issues = resp.data.repository.issues.nodes
+
+          for _, issue in ipairs(issues) do
+            local entry = entry_maker.gen_from_issue(issue)
+
+            if entry ~= nil then
+              formatted_issues[entry.ordinal] = entry
+              local prefix = fzf.utils.ansi_from_hl('Comment', entry.value)
+              fzf_cb(prefix .. ' ' .. entry.obj.title)
+            end
           end
         end
+      end,
+      cb = function () fzf_cb() end,
+    }
+  end
 
-        fzf.fzf_exec(titles, {
-          prompt = opts.prompt_title or "",
-          previewer = previewers.issue(formatted_issues),
-          fzf_opts = {
-            ["--no-multi"]  = "", -- TODO this can support multi, maybe.
-            ['--header'] = opts.results_title,
-          },
-          actions = actions.common_open_actions(formatted_issues),
-        })
-      end
-    end,
-  }
+  fzf.fzf_exec(get_contents, {
+    prompt = opts.prompt_title or "",
+    previewer = previewers.issue(formatted_issues),
+    fzf_opts = {
+      ["--no-multi"]  = "", -- TODO this can support multi, maybe.
+      ['--header'] = opts.results_title,
+      ["--info"] = "default",
+    },
+    actions = actions.common_open_actions(formatted_issues),
+  })
 end
 

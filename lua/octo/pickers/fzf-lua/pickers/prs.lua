@@ -26,24 +26,24 @@ return function (opts)
     return
   end
 
+  local owner, name = utils.split_repo(opts.repo)
+  local cfg = octo_config.get_config()
+  local order_by = cfg.pull_requests.order_by
+
+  local query =
+    graphql(
+      "pull_requests_query",
+      owner,
+      name,
+      filter,
+      order_by.field,
+      order_by.direction,
+      { escape = false }
+    )
+
   local formatted_pulls = {}
 
-  local contents = function (fzf_cb)
-    local owner, name = utils.split_repo(opts.repo)
-    local cfg = octo_config.get_config()
-    local order_by = cfg.pull_requests.order_by
-
-    local query =
-      graphql(
-        "pull_requests_query",
-        owner,
-        name,
-        filter,
-        order_by.field,
-        order_by.direction,
-        { escape = false }
-      )
-
+  local get_contents = function (fzf_cb)
     gh.run {
       args = {
         "api",
@@ -73,17 +73,16 @@ return function (opts)
           end
         end
       end,
-      cb = function ()
-        fzf_cb()
-      end,
+      cb = function () fzf_cb() end,
     }
   end
 
-  fzf.fzf_exec(contents, {
+  fzf.fzf_exec(get_contents, {
     prompt = opts.prompt_title or "",
     previewer = previewers.issue(formatted_pulls),
     fzf_opts = {
-      ["--no-multi"]  = "", -- TODO this can support multi, maybe.
+      ["--no-multi"] = "", -- TODO this can support multi, maybe.
+      ["--info"] = "default",
     },
     actions = vim.tbl_extend(
       'force',
