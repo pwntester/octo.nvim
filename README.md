@@ -63,7 +63,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 - Install [GitHub CLI](https://cli.github.com/)
 - Install [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 - Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
-- Install [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons)
+- Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 
 ## 📦 Installation
 
@@ -75,7 +75,7 @@ use {
   requires = {
     'nvim-lua/plenary.nvim',
     'nvim-telescope/telescope.nvim',
-    'kyazdani42/nvim-web-devicons',
+    'nvim-tree/nvim-web-devicons',
   },
   config = function ()
     require"octo".setup()
