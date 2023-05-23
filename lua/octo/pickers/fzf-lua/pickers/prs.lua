@@ -12,7 +12,7 @@ local function checkout_pull_request(entry)
   utils.checkout_pr(entry.obj.number)
 end
 
-return function (opts)
+return function(opts)
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -31,19 +31,11 @@ return function (opts)
   local order_by = cfg.pull_requests.order_by
 
   local query =
-    graphql(
-      "pull_requests_query",
-      owner,
-      name,
-      filter,
-      order_by.field,
-      order_by.direction,
-      { escape = false }
-    )
+    graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
 
   local formatted_pulls = {}
 
-  local get_contents = function (fzf_cb)
+  local get_contents = function(fzf_cb)
     gh.run {
       args = {
         "api",
@@ -67,13 +59,15 @@ return function (opts)
 
             if entry ~= nil then
               formatted_pulls[entry.ordinal] = entry
-              local prefix = fzf.utils.ansi_from_hl('Comment', entry.value)
+              local prefix = fzf.utils.ansi_from_hl("Comment", entry.value)
               fzf_cb(prefix .. " " .. entry.obj.title)
             end
           end
         end
       end,
-      cb = function () fzf_cb() end,
+      cb = function()
+        fzf_cb()
+      end,
     }
   end
 
@@ -84,15 +78,11 @@ return function (opts)
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--info"] = "default",
     },
-    actions = vim.tbl_extend(
-      'force',
-      actions.common_open_actions(formatted_pulls),
-      {
-        ['ctrl-o'] = function (selected)
-          local entry = formatted_pulls[selected[1]]
-          checkout_pull_request(entry)
-        end,
-      }
-    ),
+    actions = vim.tbl_extend("force", actions.common_open_actions(formatted_pulls), {
+      ["ctrl-o"] = function(selected)
+        local entry = formatted_pulls[selected[1]]
+        checkout_pull_request(entry)
+      end,
+    }),
   })
 end

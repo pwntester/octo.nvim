@@ -99,7 +99,7 @@ function M.run(opts)
     enable_recording = true,
     command = "gh",
     args = opts.args,
-    on_stdout = vim.schedule_wrap(function (err, data, j_self)
+    on_stdout = vim.schedule_wrap(function(err, data, _)
       if mode == "async" and opts.stream_cb then
         opts.stream_cb(data, err)
       end

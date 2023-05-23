@@ -4,7 +4,7 @@ local gh = require "octo.gh"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
 
-return function (opts)
+return function(opts)
   opts = opts or {}
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -35,9 +35,9 @@ return function (opts)
         fzf.fzf_exec(titles, {
           prompt = opts.prompt_title or "",
           fzf_opts = {
-            ["--no-multi"]  = "", -- TODO this can support multi, maybe.
+            ["--no-multi"] = "", -- TODO this can support multi, maybe.
             ["--delimiter"] = "' '",
-            ['--with-nth'] = "2..",
+            ["--with-nth"] = "2..",
           },
           previewer = previewers.changed_files(formatted_files),
           -- TODO actions not implemented here, what is the use of this exactly?

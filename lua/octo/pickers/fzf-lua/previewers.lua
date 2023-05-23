@@ -19,7 +19,7 @@ end
 
 function M.bufferPreviewer:parse_entry(entry_str)
   -- Assume an arbitrary entry in the format of 'file:line'
-  local path, line = entry_str:match("([^:]+):?(.*)")
+  local path, line = entry_str:match "([^:]+):?(.*)"
   return {
     path = path,
     line = tonumber(line) or 1,
@@ -30,7 +30,7 @@ end
 -- Disable line numbering and word wrap
 function M.bufferPreviewer:gen_winopts()
   local new_winopts = {
-    wrap   = false,
+    wrap = false,
     number = false,
   }
   return vim.tbl_extend("force", self.winopts, new_winopts)
@@ -41,19 +41,19 @@ function M.bufferPreviewer:update_border(entry)
   self.win:update_scrollbar()
 end
 
-M.issue = function(formattedIssues)
-  local issuePreviewer = M.bufferPreviewer:extend()
+M.issue = function(formatted_issues)
+  local previewer = M.bufferPreviewer:extend()
 
-  function issuePreviewer:new(o, opts, fzf_win)
+  function previewer:new(o, opts, fzf_win)
     M.bufferPreviewer.super.new(self, o, opts, fzf_win)
-    self.title = 'Issues'
-    setmetatable(self, issuePreviewer)
+    self.title = "Issues"
+    setmetatable(self, previewer)
     return self
   end
 
-  function issuePreviewer:populate_preview_buf(entry_str)
+  function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
-    local entry = formattedIssues[entry_str]
+    local entry = formatted_issues[entry_str]
 
     local number = entry.value
     local owner, name = utils.split_repo(entry.repo)
@@ -93,21 +93,21 @@ M.issue = function(formattedIssues)
     self.win:update_scrollbar()
   end
 
-  return issuePreviewer
+  return previewer
 end
 
-M.commit = function(formattedCommits, repo)
-  local commitPreviewer = M.bufferPreviewer:extend()
+M.commit = function(formatted_commits, repo)
+  local previewer = M.bufferPreviewer:extend()
 
-  function commitPreviewer:new(o, opts, fzf_win)
+  function previewer:new(o, opts, fzf_win)
     M.bufferPreviewer.super.new(self, o, opts, fzf_win)
-    setmetatable(self, commitPreviewer)
+    setmetatable(self, previewer)
     return self
   end
 
-  function commitPreviewer:populate_preview_buf(entry_str)
+  function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
-    local entry = formattedCommits[entry_str]
+    local entry = formatted_commits[entry_str]
 
     local lines = {}
     vim.list_extend(lines, { string.format("Commit: %s", entry.value) })
@@ -123,39 +123,38 @@ M.commit = function(formattedCommits, repo)
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
 
     local url = string.format("/repos/%s/commits/%s", repo, entry.value)
-    local cmd = table.concat({ "gh", "api", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, ' ')
-    local proc = io.popen(cmd, 'r')
+    local cmd = table.concat({ "gh", "api", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, " ")
+    local proc = io.popen(cmd, "r")
     local output
     if proc ~= nil then
-      output = proc:read('*a')
+      output = proc:read "*a"
       proc:close()
     else
       output = "Failed to read from " .. url
     end
 
-    vim.api.nvim_buf_set_lines(tmpbuf, #lines, -1, false, vim.split(output, '\n'))
-
+    vim.api.nvim_buf_set_lines(tmpbuf, #lines, -1, false, vim.split(output, "\n"))
 
     self:set_preview_buf(tmpbuf)
     self:update_border(entry)
     self.win:update_scrollbar()
   end
 
-  return commitPreviewer
+  return previewer
 end
 
-M.changed_files = function(formattedFiles)
-  local filesPreviewer = M.bufferPreviewer:extend()
+M.changed_files = function(formatted_files)
+  local previewer = M.bufferPreviewer:extend()
 
-  function filesPreviewer:new(o, opts, fzf_win)
+  function previewer:new(o, opts, fzf_win)
     M.bufferPreviewer.super.new(self, o, opts, fzf_win)
-    setmetatable(self, filesPreviewer)
+    setmetatable(self, previewer)
     return self
   end
 
-  function filesPreviewer:populate_preview_buf(entry_str)
+  function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
-    local entry = formattedFiles[entry_str]
+    local entry = formatted_files[entry_str]
 
     local diff = entry.change.patch
     if diff then
@@ -168,7 +167,42 @@ M.changed_files = function(formattedFiles)
     self.win:update_scrollbar()
   end
 
-  return filesPreviewer
+  return previewer
+end
+
+M.review_thread = function(formatted_threads)
+  local previewer = M.bufferPreviewer:extend()
+
+  function previewer:new(o, opts, fzf_win)
+    M.bufferPreviewer.super.new(self, o, opts, fzf_win)
+    setmetatable(self, previewer)
+    return self
+  end
+
+  function previewer:populate_preview_buf(entry_str)
+    local tmpbuf = self:get_tmp_buffer()
+    local entry = formatted_threads[entry_str]
+
+    local buffer = OctoBuffer:new {
+      bufnr = tmpbuf,
+    }
+    buffer:configure()
+    writers.write_threads(tmpbuf, { entry.thread })
+    vim.api.nvim_buf_call(tmpbuf, function()
+      vim.cmd [[setlocal foldmethod=manual]]
+      vim.cmd [[normal! zR]]
+    end)
+
+    self:set_preview_buf(tmpbuf)
+    self:update_border(entry)
+    self.win:update_scrollbar()
+  end
+
+  return previewer
+end
+
+M.gist = function()
+  utils.error "Previewer not implemented yet"
 end
 
 return M

@@ -3,7 +3,7 @@ local fzf = require "fzf-lua"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
-return function (callback)
+return function(callback)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   local cards = buffer.node.projectCards
@@ -27,18 +27,21 @@ return function (callback)
       end
     end
 
-    fzf.fzf_exec(titles, vim.tbl_deep_extend('force', picker_utils.dropdown_opts, {
-      fzf_opts = {
-        ["--no-multi"]  = "", -- TODO this can support multi, maybe.
-        ["--delimiter"] = "' '",
-        ['--with-nth'] = "2..",
-      },
-      actions = {
-        ['default'] = function (selected)
-          local entry = formatted_cards[selected[1]]
-          callback(entry.card.id)
-        end
-      },
-    }))
+    fzf.fzf_exec(
+      titles,
+      vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
+        fzf_opts = {
+          ["--no-multi"] = "", -- TODO this can support multi, maybe.
+          ["--delimiter"] = "' '",
+          ["--with-nth"] = "2..",
+        },
+        actions = {
+          ["default"] = function(selected)
+            local entry = formatted_cards[selected[1]]
+            callback(entry.card.id)
+          end,
+        },
+      })
+    )
   end
 end

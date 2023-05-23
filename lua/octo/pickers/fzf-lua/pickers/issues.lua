@@ -8,7 +8,7 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
 
-return function (opts)
+return function(opts)
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -26,19 +26,11 @@ return function (opts)
   local cfg = octo_config.get_config()
   local order_by = cfg.issues.order_by
 
-  local query = graphql(
-    "issues_query",
-    owner,
-    name,
-    filter,
-    order_by.field,
-    order_by.direction,
-    { escape = false }
-  )
+  local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
 
   local formatted_issues = {}
 
-  local get_contents = function (fzf_cb)
+  local get_contents = function(fzf_cb)
     gh.run {
       args = {
         "api",
@@ -62,13 +54,15 @@ return function (opts)
 
             if entry ~= nil then
               formatted_issues[entry.ordinal] = entry
-              local prefix = fzf.utils.ansi_from_hl('Comment', entry.value)
-              fzf_cb(prefix .. ' ' .. entry.obj.title)
+              local prefix = fzf.utils.ansi_from_hl("Comment", entry.value)
+              fzf_cb(prefix .. " " .. entry.obj.title)
             end
           end
         end
       end,
-      cb = function () fzf_cb() end,
+      cb = function()
+        fzf_cb()
+      end,
     }
   end
 
@@ -76,11 +70,10 @@ return function (opts)
     prompt = opts.prompt_title or "",
     previewer = previewers.issue(formatted_issues),
     fzf_opts = {
-      ["--no-multi"]  = "", -- TODO this can support multi, maybe.
-      ['--header'] = opts.results_title,
+      ["--no-multi"] = "", -- TODO this can support multi, maybe.
+      ["--header"] = opts.results_title,
       ["--info"] = "default",
     },
     actions = actions.common_open_actions(formatted_issues),
   })
 end
-
