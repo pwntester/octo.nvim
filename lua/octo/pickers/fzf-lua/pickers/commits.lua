@@ -15,7 +15,7 @@ return function(opts)
 
   local formatted_commits = {}
 
-  local get_contents = function (fzf_cb)
+  local get_contents = function(fzf_cb)
     local url = string.format("repos/%s/pulls/%d/commits", buffer.repo, buffer.number)
     gh.run {
       args = { "api", url },

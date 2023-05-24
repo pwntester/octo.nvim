@@ -15,7 +15,7 @@ return function(opts)
 
   local formatted_files = {}
 
-  local get_contents = function (fzf_cb)
+  local get_contents = function(fzf_cb)
     local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
     gh.run {
       args = { "api", url },
