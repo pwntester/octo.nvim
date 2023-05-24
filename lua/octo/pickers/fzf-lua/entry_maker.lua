@@ -137,7 +137,7 @@ end
 --[[
   Generates an entry from a raw repo table.
 
-  TODO use these counts somehow :shrug:
+  TODO use these in Phase 2. Repo is not a part of the first change.
 
   @param max_nameWithOwner Length of longest name + owner string.
   @param max_forkCount Length of longest fork count string.

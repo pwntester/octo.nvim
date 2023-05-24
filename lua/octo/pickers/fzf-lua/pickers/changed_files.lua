@@ -1,3 +1,4 @@
+local actions = require "octo.pickers.fzf-lua.pickers.actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -11,61 +12,43 @@ return function(opts)
   if not buffer or not buffer:isPullRequest() then
     return
   end
-  local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
-  gh.run {
-    args = { "api", url },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local results = vim.fn.json_decode(output)
 
-        local formatted_files = {}
-        local titles = {}
+  local formatted_files = {}
 
-        for _, result in ipairs(results) do
-          local entry = entry_maker.gen_from_git_changed_files(result)
+  local get_contents = function (fzf_cb)
+    local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
+    gh.run {
+      args = { "api", url },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local results = vim.fn.json_decode(output)
 
-          if entry ~= nil then
-            formatted_files[entry.ordinal] = entry
-            table.insert(titles, entry.ordinal)
+          for _, result in ipairs(results) do
+            local entry = entry_maker.gen_from_git_changed_files(result)
+
+            if entry ~= nil then
+              formatted_files[entry.ordinal] = entry
+              fzf_cb(entry.ordinal)
+            end
           end
         end
 
-        fzf.fzf_exec(titles, {
-          prompt = opts.prompt_title or "",
-          fzf_opts = {
-            ["--no-multi"] = "", -- TODO this can support multi, maybe.
-            ["--delimiter"] = "' '",
-            ["--with-nth"] = "2..",
-          },
-          previewer = previewers.changed_files(formatted_files),
-          -- TODO actions not implemented here, what is the use of this exactly?
-          -- actions = {
-          --   ['default'] = function (selected, opts)
-          --     log.info(opts)
-          --     local bufnr = opts:get_tmp_buffer()
-          --     local entry = formatted_commits[selected[1]]
-          --     picker_utils.open_preview_buffer('default', bufnr, entry)
-          --   end,
-          --   ['ctrl-v'] = function (selected)
-          --     local bufnr = opts:get_tmp_buffer()
-          --     local entry = formatted_commits[selected[1]]
-          --     picker_utils.open_preview_buffer('vertical', bufnr, entry)
-          --   end,
-          --   ['ctrl-s'] = function (selected)
-          --     local bufnr = opts:get_tmp_buffer()
-          --     local entry = formatted_commits[selected[1]]
-          --     picker_utils.open_preview_buffer('horizontal', bufnr, entry)
-          --   end,
-          --   ['ctrl-t'] = function (selected)
-          --     local bufnr = opts:get_tmp_buffer()
-          --     local entry = formatted_commits[selected[1]]
-          --     picker_utils.open_preview_buffer('tab', bufnr, entry)
-          --   end,
-          -- },
-        })
-      end
-    end,
-  }
+        fzf_cb()
+      end,
+    }
+  end
+
+  fzf.fzf_exec(get_contents, {
+    prompt = opts.prompt_title or "",
+    fzf_opts = {
+      ["--delimiter"] = "' '",
+      ["--info"] = "default",
+      ["--no-multi"] = "", -- TODO this can support multi, maybe.
+      ["--with-nth"] = "2..",
+    },
+    previewer = previewers.changed_files(formatted_files),
+    actions = actions.common_buffer_actions(formatted_files),
+  })
 end
