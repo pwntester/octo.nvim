@@ -28,10 +28,12 @@ function M.gen_from_git_commits(entry)
     return nil
   end
 
+  local trimmed_message = string.gsub(entry.commit.message, '\n.*', '')
+
   return {
     value = entry.sha,
     parent = entry.parents[1].sha,
-    ordinal = entry.sha .. " " .. entry.commit.message,
+    ordinal = entry.sha .. " " .. trimmed_message,
     msg = entry.commit.message,
     author = string.format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
     date = entry.commit.author.date,
