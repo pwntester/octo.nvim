@@ -168,28 +168,34 @@ function M.parse_remote_url(url, aliases)
   end
 end
 
-function M.get_url_from_remote_name(name)
+function M.parse_git_remote()
   local conf = config.get_config()
   local aliases = conf.ssh_aliases
-  local job = Job:new {
-    command = "git",
-    args = { "remote", "get-url", name },
-    cwd = vim.fn.getcwd(),
-  }
+  local job = Job:new { command = "git", args = { "remote", "-v" }, cwd = vim.fn.getcwd() }
   job:sync()
-  local url = table.concat(job:result(), "\n")
   local stderr = table.concat(job:stderr_result(), "\n")
-  if M.is_blank(stderr) then
-    return M.parse_remote_url(url, aliases)
+  if not M.is_blank(stderr) then
+    return {}
   end
+  local remotes = {}
+  for _, line in ipairs(job:result()) do
+    local name, url = line:match "^(%S+)%s+(%S+)"
+    if name then
+      local remote = M.parse_remote_url(url, aliases)
+      if remote then
+        remotes[name] = remote
+      end
+    end
+  end
+  return remotes
 end
 
 function M.get_remote()
   local conf = config.get_config()
-  for _, candidate in ipairs(conf.default_remote) do
-    local url = M.get_url_from_remote_name(candidate)
-    if url then
-      return url
+  local remotes = M.parse_git_remote()
+  for name, remote in pairs(remotes) do
+    if vim.tbl_contains(conf.default_remote, name) then
+      return remote
     end
   end
   -- return github.com as default host
@@ -200,22 +206,7 @@ function M.get_remote()
 end
 
 function M.get_all_remotes()
-  local job = Job:new {
-    command = "git",
-    args = { "remote", "show" },
-    cwd = vim.fn.getcwd(),
-  }
-  job:sync()
-  local remotes = table.concat(job:result(), "\n")
-  local stderr = table.concat(job:stderr_result(), "\n")
-  if M.is_blank(stderr) then
-    local urls = {}
-    for _, name in ipairs(vim.split(remotes, "\n", { trimempty = true })) do
-      table.insert(urls, M.get_url_from_remote_name(name))
-    end
-    return urls
-  end
-  --notif
+  return vim.tbl_values(M.parse_git_remote())
 end
 
 function M.get_remote_name()
