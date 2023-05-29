@@ -28,7 +28,7 @@ function M.gen_from_git_commits(entry)
     return nil
   end
 
-  local trimmed_message = string.gsub(entry.commit.message, '\n.*', '')
+  local trimmed_message = string.gsub(entry.commit.message, "\n.*", "")
 
   return {
     value = entry.sha,
