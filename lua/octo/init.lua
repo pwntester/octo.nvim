@@ -190,14 +190,7 @@ function M.on_cursor_hold()
   end
 
   -- link popup
-  local repo, number = utils.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
-  if not repo or not number then
-    repo = buffer.repo
-    number = utils.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
-  end
-  if not repo or not number then
-    repo, _, number = utils.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
-  end
+  local repo, number = utils.extract_issue_at_cursor(buffer.repo)
   if not repo or not number then
     return
   end

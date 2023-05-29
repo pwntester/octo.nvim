@@ -616,8 +616,9 @@ end
 
 function M.cursor_in_col_range(start_col, end_col)
   local cursor = vim.api.nvim_win_get_cursor(0)
+  local col = cursor[2] + 1
   if start_col and end_col then
-    if start_col <= cursor[2] and cursor[2] <= end_col then
+    if start_col <= col and col <= end_col then
       return true
     end
   end
@@ -630,16 +631,44 @@ function M.split_repo(repo)
   return owner, name
 end
 
-function M.extract_pattern_at_cursor(pattern)
-  local current_line = vim.fn.getline "."
-  if current_line:find(pattern) then
-    local res = table.pack(current_line:find(pattern))
-    local start_col = res[1]
-    local end_col = res[2]
-    if M.cursor_in_col_range(start_col, end_col) then
-      return unpack(M.tbl_slice(res, 3, #res))
+function M.extract_pattern_at_cursor(pattern, line, offset)
+  line = line or vim.api.nvim_get_current_line()
+  offset = offset or 0
+  if offset > 0 and pattern:sub(1, 1) == "^" then
+    return
+  end
+  local res = table.pack(line:find(pattern))
+  if #res == 0 then
+    return
+  end
+  local start_col = res[1]
+  local end_col = res[2]
+  if M.cursor_in_col_range(offset + start_col, offset + end_col) then
+    return unpack(M.tbl_slice(res, 3, #res))
+  elseif end_col == #line then
+    return
+  end
+  return M.extract_pattern_at_cursor(pattern, line:sub(end_col + 1), offset + end_col)
+end
+
+function M.extract_issue_at_cursor(current_repo)
+  local repo, number = M.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
+  if not repo or not number then
+    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    if number then
+      repo = current_repo
     end
   end
+  if not repo or not number then
+    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_LINE_BEGGINING_PATTERN)
+    if number then
+      repo = current_repo
+    end
+  end
+  if not repo or not number then
+    repo, _, number = M.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+  end
+  return repo, number
 end
 
 function M.pattern_split(str, pattern)

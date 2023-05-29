@@ -1,4 +1,3 @@
-local constants = require "octo.constants"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
@@ -64,39 +63,28 @@ function M.go_to_issue()
   if not buffer then
     return
   end
-  local current_repo = buffer.repo
-
-  local repo, number = utils.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
-
+  local repo, number = utils.extract_issue_at_cursor(buffer.repo)
   if not repo or not number then
-    repo = current_repo
-    number = utils.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
+    return
   end
-
-  if not repo or not number then
-    repo, _, number = utils.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
-  end
-
-  if repo and number then
-    local owner, name = utils.split_repo(repo)
-    local query = graphql("issue_kind_query", owner, name, number)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          local kind = resp.data.repository.issueOrPullRequest.__typename
-          if kind == "Issue" then
-            utils.get_issue(repo, number)
-          elseif kind == "PullRequest" then
-            utils.get_pull_request(repo, number)
-          end
+  local owner, name = utils.split_repo(repo)
+  local query = graphql("issue_kind_query", owner, name, number)
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.api.nvim_err_writeln(stderr)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        local kind = resp.data.repository.issueOrPullRequest.__typename
+        if kind == "Issue" then
+          utils.get_issue(repo, number)
+        elseif kind == "PullRequest" then
+          utils.get_pull_request(repo, number)
         end
-      end,
-    }
-  end
+      end
+    end,
+  }
 end
 
 function M.next_comment()
