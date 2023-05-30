@@ -99,6 +99,11 @@ function M.run(opts)
     enable_recording = true,
     command = "gh",
     args = opts.args,
+    on_stdout = vim.schedule_wrap(function(err, data, _)
+      if mode == "async" and opts.stream_cb then
+        opts.stream_cb(data, err)
+      end
+    end),
     on_exit = vim.schedule_wrap(function(j_self, _, _)
       if mode == "async" and opts.cb then
         local output = table.concat(j_self:result(), "\n")
