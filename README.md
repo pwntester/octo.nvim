@@ -362,7 +362,7 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 Octo search assignee:pwntester is:pr
 ```
 
-## 📋 PR review
+## 📋 PR reviews
 
 - Open the PR (eg: `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`)
 - Start a review with `Octo review start` or resume a pending review with `Octo review resume`
