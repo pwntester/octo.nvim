@@ -918,10 +918,10 @@ function M.repos(opts)
     if vim.g.octo_viewer then
       opts.login = vim.g.octo_viewer
     else
-      opts.login = require("octo.gh").get_user_name()
+      local remote_hostname = require("octo.utils").get_remote_host()
+      opts.login = require("octo.gh").get_user_name(remote_hostname)
     end
   end
-
   local query = graphql("repos_query", opts.login)
   utils.info "Fetching repositories (this may take a while) ..."
   gh.run {
@@ -930,6 +930,7 @@ function M.repos(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        print(output)
         local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
         local repos = resp.data.repositoryOwner.repositories.nodes
         if #repos == 0 then
