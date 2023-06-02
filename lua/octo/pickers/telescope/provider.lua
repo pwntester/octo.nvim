@@ -930,7 +930,6 @@ function M.repos(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        print(output)
         local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
         local repos = resp.data.repositoryOwner.repositories.nodes
         if #repos == 0 then
