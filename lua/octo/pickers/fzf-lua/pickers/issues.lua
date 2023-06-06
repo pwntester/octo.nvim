@@ -67,12 +67,16 @@ return function(opts)
   end
 
   fzf.fzf_exec(get_contents, {
-    prompt = opts.prompt_title or "",
+    prompt = picker_utils.get_prompt(opts.prompt_title),
     previewer = previewers.issue(formatted_issues),
     fzf_opts = {
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--header"] = opts.results_title,
       ["--info"] = "default",
+    },
+    winopts = {
+      title = opts.window_title or "Issues",
+      title_pos = "center",
     },
     actions = actions.common_open_actions(formatted_issues),
   })

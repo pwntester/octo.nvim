@@ -1,4 +1,5 @@
 local utils = require "octo.utils"
+local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 
 local M = {}
 
@@ -148,20 +149,45 @@ end
 ]]
 function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, repo)
   if not repo or vim.tbl_isempty(repo) then
-    return nil
+    return nil, nil
   end
 
   if repo.description == vim.NIL then
     repo.description = ""
   end
 
-  return {
+  local fzf = require "fzf-lua"
+
+  local entry = {
     filename = utils.get_repo_uri(_, repo),
     kind = "repo",
     value = repo.nameWithOwner,
     ordinal = repo.nameWithOwner .. " " .. repo.description,
     repo = repo,
   }
+
+  local name = fzf.utils.ansi_from_hl("Directory", entry.repo.nameWithOwner)
+  local fork_str = ""
+  if entry.repo.isFork then
+    fork_str = fzf.utils.ansi_from_hl("Comment", "fork")
+  end
+
+  local access_str = fzf.utils.ansi_from_hl("Directory", "public")
+  if entry.repo.isPrivate then
+    access_str = fzf.utils.ansi_from_hl("WarningMsg", "private")
+  end
+
+  local metadata = string.format("(%s)", table.concat({ fork_str, access_str }, ", "))
+  -- local stargazer = fzf.utils.ansi_from_hl("MoreMsg", string.format("s: %"..max_stargazerCount.."s", entry.repo.stargazerCount))
+  -- local fork = fzf.utils.ansi_from_hl("MoreMsg", string.format("f: %"..max_forkCount.."s", entry.repo.forkCount))
+  local description = fzf.utils.ansi_from_hl("Comment", entry.repo.description)
+  local entry_str = table.concat({
+    name,
+    metadata,
+    description,
+  }, " ")
+
+  return entry, entry_str
 end
 
 function M.gen_from_gist(gist)

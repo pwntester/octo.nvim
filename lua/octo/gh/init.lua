@@ -1,6 +1,8 @@
 local config = require "octo.config"
 local _, Job = pcall(require, "plenary.job")
 
+local log = require "octo.pickers.fzf-lua.log"
+
 local M = {}
 
 local headers = {
@@ -43,6 +45,10 @@ end
 
 -- uses GH to get the name of the authenticated user
 function M.get_user_name(remote_hostname)
+  if remote_hostname == nil then
+    remote_hostname = require("octo.utils").get_remote_host()
+  end
+
   local job = Job:new {
     enable_recording = true,
     command = "gh",

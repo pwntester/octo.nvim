@@ -4,6 +4,9 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
+local fzf = require "fzf-lua"
+
+local log = require "octo.pickers.fzf-lua.log"
 
 local M = {}
 
@@ -36,8 +39,8 @@ function M.bufferPreviewer:gen_winopts()
   return vim.tbl_extend("force", self.winopts, new_winopts)
 end
 
-function M.bufferPreviewer:update_border(entry)
-  self.win:update_title(entry.ordinal)
+function M.bufferPreviewer:update_border(title)
+  self.win:update_title(title)
   self.win:update_scrollbar()
 end
 
@@ -89,7 +92,64 @@ M.issue = function(formatted_issues)
     }
 
     self:set_preview_buf(tmpbuf)
-    self:update_border(entry)
+    self:update_border(entry.ordinal)
+    self.win:update_scrollbar()
+  end
+
+  return previewer
+end
+
+M.search = function()
+  local previewer = M.bufferPreviewer:extend()
+
+  function previewer:new(o, opts, fzf_win)
+    M.bufferPreviewer.super.new(self, o, opts, fzf_win)
+    self.title = "Issues"
+    setmetatable(self, previewer)
+    return self
+  end
+
+  function previewer:populate_preview_buf(entry_str)
+    local tmpbuf = self:get_tmp_buffer()
+    local match = string.gmatch(entry_str, "[^%s]+")
+    local kind = match()
+    local owner = match()
+    local name = match()
+    local number = tonumber(match())
+
+    local query
+    if kind == "issue" then
+      query = graphql("issue_query", owner, name, number)
+    elseif kind == "pull_request" then
+      query = graphql("pull_request_query", owner, name, number)
+    end
+    gh.run {
+      args = { "api", "graphql", "-f", string.format("query=%s", query) },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+        elseif output and vim.api.nvim_buf_is_valid(tmpbuf) then
+          local result = vim.fn.json_decode(output)
+          local obj
+          if kind == "issue" then
+            obj = result.data.repository.issue
+          elseif kind == "pull_request" then
+            obj = result.data.repository.pullRequest
+          end
+          writers.write_title(tmpbuf, obj.title, 1)
+          writers.write_details(tmpbuf, obj)
+          writers.write_body(tmpbuf, obj)
+          writers.write_state(tmpbuf, obj.state:upper(), number)
+          local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
+          writers.write_block(tmpbuf, { "", "" }, reactions_line)
+          writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
+          vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
+        end
+      end,
+    }
+
+    self:set_preview_buf(tmpbuf)
+    -- self:update_border(number.." "..description)
     self.win:update_scrollbar()
   end
 
@@ -136,7 +196,7 @@ M.commit = function(formatted_commits, repo)
     vim.api.nvim_buf_set_lines(tmpbuf, #lines, -1, false, vim.split(output, "\n"))
 
     self:set_preview_buf(tmpbuf)
-    self:update_border(entry)
+    self:update_border(entry.ordinal)
     self.win:update_scrollbar()
   end
 
@@ -163,7 +223,7 @@ M.changed_files = function(formatted_files)
     end
 
     self:set_preview_buf(tmpbuf)
-    self:update_border(entry)
+    self:update_border(entry.ordinal)
     self.win:update_scrollbar()
   end
 
@@ -194,7 +254,7 @@ M.review_thread = function(formatted_threads)
     end)
 
     self:set_preview_buf(tmpbuf)
-    self:update_border(entry)
+    self:update_border(entry.ordinal)
     self.win:update_scrollbar()
   end
 
@@ -203,6 +263,50 @@ end
 
 M.gist = function()
   utils.error "Previewer not implemented yet"
+end
+
+M.repo = function (formatted_repos)
+  local previewer = M.bufferPreviewer:extend()
+
+  function previewer:new(o, opts, fzf_win)
+    M.bufferPreviewer.super.new(self, o, opts, fzf_win)
+    setmetatable(self, previewer)
+    return self
+  end
+
+  function previewer:populate_preview_buf(entry_str)
+    local tmpbuf = self:get_tmp_buffer()
+    local entry = formatted_repos[entry_str]
+    log.info('entry str', entry_str)
+
+    local buffer = OctoBuffer:new {
+      bufnr = tmpbuf,
+    }
+    buffer:configure()
+    local repo_name_owner = vim.split(entry_str, " ")[1]
+    local owner, name = utils.split_repo(repo_name_owner)
+    local query = graphql("repository_query", owner, name)
+    gh.run {
+      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
+      cb = function (output, stderr)
+
+        local resp = vim.fn.json_decode(output)
+        writers.write_repo(tmpbuf, resp.data.repository)
+      end,
+    }
+
+    self:set_preview_buf(tmpbuf)
+    -- TODO these can get moved into the entry string.
+    -- TODO ansi highlighting doesn't work in the title of the previewer.
+    -- local stargazer = fzf.utils.ansi_from_hl("MoreMsg", entry.repo.stargazerCount)
+    -- local fork = fzf.utils.ansi_from_hl("Comment", entry.repo.forkCount)
+    local stargazer = string.format("s: %s", entry.repo.stargazerCount)
+    local fork = string.format("f: %s", entry.repo.forkCount)
+    self:update_border(string.format("%s (%s, %s)", repo_name_owner, stargazer, fork))
+    self.win:update_scrollbar()
+  end
+
+  return previewer
 end
 
 return M

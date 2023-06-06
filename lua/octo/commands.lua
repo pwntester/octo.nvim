@@ -9,6 +9,8 @@ local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local config = require "octo.config"
 
+local log = require "octo.pickers.fzf-lua.log"
+
 local M = {}
 
 function M.setup()
@@ -1392,6 +1394,7 @@ function M.add_user(subject, login)
     elseif subject == "reviewer" then
       query = graphql("request_reviews_mutation", iid, user_id)
     end
+    log.info('gh', "api", "graphql", "--paginate", "-f", "'"..string.format("query=%s", query).."'")
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
@@ -1455,7 +1458,7 @@ function M.remove_assignee(login)
       utils.error "User not found"
     end
   else
-    picker.assignees()
+    picker.assignees(cb)
   end
 end
 

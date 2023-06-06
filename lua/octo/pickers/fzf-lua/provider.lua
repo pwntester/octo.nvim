@@ -9,21 +9,23 @@ end
 M.picker = {
   issues = require "octo.pickers.fzf-lua.pickers.issues",
   prs = require "octo.pickers.fzf-lua.pickers.prs",
-  gists = M.not_implemented,
   commits = require "octo.pickers.fzf-lua.pickers.commits",
-  review_commits = M.not_implemented,
   changed_files = require "octo.pickers.fzf-lua.pickers.changed_files",
-  pending_threads = M.not_implemented,
   project_cards = require "octo.pickers.fzf-lua.pickers.project_cards",
   project_columns = require "octo.pickers.fzf-lua.pickers.project_columns",
-  labels = M.not_implemented,
-  assigned_labels = M.not_implemented,
-  users = M.not_implemented,
-  assignees = M.not_implemented,
-  repos = M.not_implemented,
-  search = M.not_implemented,
-  actions = M.not_implemented,
-  issue_templates = M.not_implemented,
+
+  search = require "octo.pickers.fzf-lua.pickers.search",
+  users = require "octo.pickers.fzf-lua.pickers.users",
+  assignees = require "octo.pickers.fzf-lua.pickers.assignees",
+  labels = require "octo.pickers.fzf-lua.pickers.labels",
+  assigned_labels = require "octo.pickers.fzf-lua.pickers.assigned_labels",
+  repos = require "octo.pickers.fzf-lua.pickers.repos",
+
+  review_commits = require "octo.pickers.fzf-lua.pickers.review_commits",
+  gists = require "octo.pickers.fzf-lua.pickers.gists",
+  pending_threads = require "octo.pickers.fzf-lua.pickers.pending_threads",
+  actions = require "octo.pickers.fzf-lua.pickers.actions",
+  issue_templates = require "octo.pickers.fzf-lua.pickers.issue_templates",
 }
 
 return M

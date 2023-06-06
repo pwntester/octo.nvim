@@ -72,7 +72,7 @@ return function(opts)
   end
 
   fzf.fzf_exec(get_contents, {
-    prompt = opts.prompt_title or "",
+    prompt = picker_utils.get_prompt(opts.prompt_title),
     previewer = previewers.issue(formatted_pulls),
     fzf_opts = {
       ["--no-multi"] = "", -- TODO this can support multi, maybe.

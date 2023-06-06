@@ -4,6 +4,24 @@ local utils = require "octo.utils"
 
 local M = {}
 
+--[[
+Opens a url in your default browser, bypassing gh.
+
+@param url The url to open.
+]]
+function M.open_in_browser_raw(url)
+  local os_name = vim.loop.os_uname().sysname
+  local is_windows = vim.loop.os_uname().version:match "Windows"
+
+  if os_name == "Darwin" then
+    os.execute("open " .. url)
+  elseif os_name == "Linux" then
+    os.execute("xdg-open " .. url)
+  elseif is_windows then
+    os.execute("start " .. url)
+  end
+end
+
 function M.open_in_browser(kind, repo, number)
   local cmd
   if not kind and not repo then
