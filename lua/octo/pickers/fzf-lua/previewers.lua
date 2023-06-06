@@ -4,9 +4,6 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
-local fzf = require "fzf-lua"
-
-local log = require "octo.pickers.fzf-lua.log"
 
 local M = {}
 
@@ -261,11 +258,39 @@ M.review_thread = function(formatted_threads)
   return previewer
 end
 
-M.gist = function()
-  utils.error "Previewer not implemented yet"
+M.gist = function(formatted_gists)
+  local previewer = M.bufferPreviewer:extend()
+
+  function previewer:new(o, opts, fzf_win)
+    M.bufferPreviewer.super.new(self, o, opts, fzf_win)
+    setmetatable(self, previewer)
+    return self
+  end
+
+  function previewer:populate_preview_buf(entry_str)
+    local tmpbuf = self:get_tmp_buffer()
+
+    local gist = formatted_gists[entry_str]
+
+    local file = gist.files[1]
+    if file.text then
+      vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, vim.split(file.text, "\n"))
+    else
+      vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, gist.description)
+    end
+    vim.api.nvim_buf_call(tmpbuf, function()
+      pcall(vim.cmd, "set filetype=" .. string.gsub(file.extension, "\\.", ""))
+    end)
+
+    self:set_preview_buf(tmpbuf)
+    self:update_border(gist.description)
+    self.win:update_scrollbar()
+  end
+
+  return previewer
 end
 
-M.repo = function (formatted_repos)
+M.repo = function(formatted_repos)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -277,7 +302,6 @@ M.repo = function (formatted_repos)
   function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_repos[entry_str]
-    log.info('entry str', entry_str)
 
     local buffer = OctoBuffer:new {
       bufnr = tmpbuf,
@@ -288,8 +312,7 @@ M.repo = function (formatted_repos)
     local query = graphql("repository_query", owner, name)
     gh.run {
       args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-      cb = function (output, stderr)
-
+      cb = function(output, stderr)
         local resp = vim.fn.json_decode(output)
         writers.write_repo(tmpbuf, resp.data.repository)
       end,
