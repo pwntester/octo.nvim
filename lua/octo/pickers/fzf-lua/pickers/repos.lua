@@ -34,26 +34,13 @@ return function(opts)
             utils.error(string.format("There are no matching repositories for %s.", opts.login))
             return
           end
-          local max_nameWithOwner = -1
-          local max_forkCount = -1
-          local max_stargazerCount = -1
 
           for _, repo in ipairs(repos) do
-            max_nameWithOwner = math.max(max_nameWithOwner, #repo.nameWithOwner)
-            max_forkCount = math.max(max_forkCount, #tostring(repo.forkCount))
-            max_stargazerCount = math.max(max_stargazerCount, #tostring(repo.stargazerCount))
-          end
-
-          for _, repo in ipairs(repos) do
-            -- TODO this should be handled however.
-            local entry, entry_str = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, repo)
+            local entry, entry_str = entry_maker.gen_from_repo(repo)
 
             if entry ~= nil and entry_str ~= nil then
               formatted_repos[fzf.utils.strip_ansi_coloring(entry_str)] = entry
               fzf_cb(entry_str)
-              -- local name = fzf.utils.ansi_from_hl("Directory", entry.value)
-              -- local description = fzf.utils.ansi_from_hl("Comment", entry.repo.description)
-              -- fzf_cb(name .. " " .. description)
             end
           end
         end

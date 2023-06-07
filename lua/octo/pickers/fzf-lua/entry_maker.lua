@@ -147,7 +147,7 @@ end
   @param max_stargazerCount Length of longest stargazer count string.
   @param repo The raw repo table from GitHub.
 ]]
-function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, repo)
+function M.gen_from_repo(repo)
   if not repo or vim.tbl_isempty(repo) then
     return nil, nil
   end
@@ -178,8 +178,6 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, r
   end
 
   local metadata = string.format("(%s)", table.concat({ fork_str, access_str }, ", "))
-  -- local stargazer = fzf.utils.ansi_from_hl("MoreMsg", string.format("s: %"..max_stargazerCount.."s", entry.repo.stargazerCount))
-  -- local fork = fzf.utils.ansi_from_hl("MoreMsg", string.format("f: %"..max_forkCount.."s", entry.repo.forkCount))
   local description = fzf.utils.ansi_from_hl("Comment", entry.repo.description)
   local entry_str = table.concat({
     name,

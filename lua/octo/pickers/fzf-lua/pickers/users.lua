@@ -5,8 +5,6 @@ local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
-local log = require "octo.pickers.fzf-lua.log"
-
 return function(cb)
   local formatted_users = {}
 
@@ -84,7 +82,6 @@ return function(cb)
         ["default"] = {
           function(user_selected)
             local user_entry = formatted_users[user_selected[1]]
-            log.info('got some user', user_selected, user_entry)
             if not user_entry.teams then
               -- user
               cb(user_entry.id)

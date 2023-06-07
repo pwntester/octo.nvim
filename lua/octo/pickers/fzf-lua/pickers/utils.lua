@@ -132,7 +132,7 @@ end
 function M.pad_string(s, length)
   -- Make sure it's a string.
   local string_s = tostring(s)
-  return string.format("%s%"..(length - #string_s).."s", string_s, " ")
+  return string.format("%s%" .. (length - #string_s) .. "s", string_s, " ")
 end
 
 return M

@@ -359,5 +359,4 @@ M.issue_template = function(formatted_templates)
   return previewer
 end
 
-
 return M
