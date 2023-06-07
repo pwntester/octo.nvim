@@ -1,8 +1,6 @@
 local config = require "octo.config"
 local _, Job = pcall(require, "plenary.job")
 
-local log = require "octo.pickers.fzf-lua.log"
-
 local M = {}
 
 local headers = {
