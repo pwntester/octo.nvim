@@ -332,4 +332,32 @@ M.repo = function(formatted_repos)
   return previewer
 end
 
+M.issue_template = function(formatted_templates)
+  local previewer = M.bufferPreviewer:extend()
+
+  function previewer:new(o, opts, fzf_win)
+    M.bufferPreviewer.super.new(self, o, opts, fzf_win)
+    setmetatable(self, previewer)
+    return self
+  end
+
+  function previewer:populate_preview_buf(entry_str)
+    local tmpbuf = self:get_tmp_buffer()
+    local entry = formatted_templates[entry_str]
+    local template = entry.template.body
+
+    if template then
+      vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, vim.split(template, "\n"))
+      vim.api.nvim_buf_set_option(tmpbuf, "filetype", "markdown")
+    end
+
+    self:set_preview_buf(tmpbuf)
+    self:update_border(entry.ordinal)
+    self.win:update_scrollbar()
+  end
+
+  return previewer
+end
+
+
 return M
