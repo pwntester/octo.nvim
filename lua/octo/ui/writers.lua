@@ -186,7 +186,7 @@ function M.write_state(bufnr, state, number)
   -- title virtual text
   local title_vt = {
     { tostring(number), "OctoIssueId" },
-    { string.format(" [%s] ", state), utils.state_hl_map[state] .. "Float" },
+    { string.format(" [%s] ", state), utils.state_hl_map[state] },
   }
 
   -- PR virtual text
