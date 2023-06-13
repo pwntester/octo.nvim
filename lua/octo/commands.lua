@@ -324,7 +324,11 @@ end
 
 function M.octo(object, action, ...)
   if not object then
-    utils.error "Missing arguments"
+    if config.get_config().enable_builtin then
+      M.commands.actions()
+    else
+      utils.error "Missing arguments"
+    end
     return
   end
   local o = M.commands[object]
