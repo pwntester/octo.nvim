@@ -68,7 +68,7 @@ M.issue = function(formatted_issues)
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
-        elseif output and vim.api.nvim_buf_is_valid(tmpbuf) then
+        elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
           local result = vim.fn.json_decode(output)
           local obj
           if entry.kind == "issue" then
@@ -125,7 +125,7 @@ M.search = function()
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
-        elseif output and vim.api.nvim_buf_is_valid(tmpbuf) then
+        elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
           local result = vim.fn.json_decode(output)
           local obj
           if kind == "issue" then
@@ -312,9 +312,13 @@ M.repo = function(formatted_repos)
     local query = graphql("repository_query", owner, name)
     gh.run {
       args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        local resp = vim.fn.json_decode(output)
-        writers.write_repo(tmpbuf, resp.data.repository)
+      cb = function(output, _)
+        -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
+        -- and `tmpbuf` within this context is already cleared and invalidated
+        if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
+          local resp = vim.fn.json_decode(output)
+          writers.write_repo(tmpbuf, resp.data.repository)
+        end
       end,
     }
 
