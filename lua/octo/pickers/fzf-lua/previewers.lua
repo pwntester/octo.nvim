@@ -90,7 +90,6 @@ M.issue = function(formatted_issues)
 
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.ordinal)
-    self.win:update_scrollbar()
   end
 
   return previewer
@@ -194,7 +193,6 @@ M.commit = function(formatted_commits, repo)
 
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.ordinal)
-    self.win:update_scrollbar()
   end
 
   return previewer
@@ -221,7 +219,6 @@ M.changed_files = function(formatted_files)
 
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.ordinal)
-    self.win:update_scrollbar()
   end
 
   return previewer
@@ -252,7 +249,6 @@ M.review_thread = function(formatted_threads)
 
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.ordinal)
-    self.win:update_scrollbar()
   end
 
   return previewer
@@ -284,7 +280,6 @@ M.gist = function(formatted_gists)
 
     self:set_preview_buf(tmpbuf)
     self:update_border(gist.description)
-    self.win:update_scrollbar()
   end
 
   return previewer
@@ -330,7 +325,6 @@ M.repo = function(formatted_repos)
     local stargazer = string.format("s: %s", entry.repo.stargazerCount)
     local fork = string.format("f: %s", entry.repo.forkCount)
     self:update_border(string.format("%s (%s, %s)", repo_name_owner, stargazer, fork))
-    self.win:update_scrollbar()
   end
 
   return previewer
