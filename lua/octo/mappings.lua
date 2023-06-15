@@ -143,6 +143,24 @@ return {
       end
     end
   end,
+  select_first_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout and layout.file_panel:is_open() then
+      local file = layout.files[1]
+      if file then
+        layout:set_file(file, true)
+      end
+    end
+  end,
+  select_last_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout and layout.file_panel:is_open() then
+      local file = layout.files[#layout.files]
+      if file then
+        layout:set_file(file, true)
+      end
+    end
+  end,
   next_entry = function()
     local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
