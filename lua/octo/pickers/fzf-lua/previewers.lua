@@ -4,6 +4,9 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
+local autocmds = require "octo.autocmds"
+local fzf = require "fzf-lua"
+local config = require "octo.config"
 
 local M = {}
 
@@ -241,7 +244,7 @@ M.review_thread = function(formatted_threads)
       bufnr = tmpbuf,
     }
     buffer:configure()
-    writers.write_threads(tmpbuf, { entry.thread })
+    buffer:render_threads({ entry.thread })
     vim.api.nvim_buf_call(tmpbuf, function()
       vim.cmd [[setlocal foldmethod=manual]]
       vim.cmd [[normal! zR]]
@@ -312,18 +315,22 @@ M.repo = function(formatted_repos)
         -- and `tmpbuf` within this context is already cleared and invalidated
         if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
           local resp = vim.fn.json_decode(output)
-          writers.write_repo(tmpbuf, resp.data.repository)
+          buffer.node = resp.data.repository
+          buffer:render_repo()
         end
       end,
     }
 
     self:set_preview_buf(tmpbuf)
-    -- TODO these can get moved into the entry string.
-    -- TODO ansi highlighting doesn't work in the title of the previewer.
-    -- local stargazer = fzf.utils.ansi_from_hl("MoreMsg", entry.repo.stargazerCount)
-    -- local fork = fzf.utils.ansi_from_hl("Comment", entry.repo.forkCount)
-    local stargazer = string.format("s: %s", entry.repo.stargazerCount)
-    local fork = string.format("f: %s", entry.repo.forkCount)
+
+    local stargazer, fork
+    if config.get_config().picker_config.use_emojis then
+      stargazer = string.format("💫: %s", entry.repo.stargazerCount)
+      fork = string.format("🔱: %s", entry.repo.forkCount)
+    else
+      stargazer = string.format("s: %s", entry.repo.stargazerCount)
+      fork = string.format("f: %s", entry.repo.forkCount)
+    end
     self:update_border(string.format("%s (%s, %s)", repo_name_owner, stargazer, fork))
   end
 

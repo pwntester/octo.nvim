@@ -158,6 +158,7 @@ function M.write_repo(bufnr, repo)
   utils.get_file_contents(repo.nameWithOwner, repo.defaultBranchRef.name, "README.md", function(lines)
     if vim.api.nvim_buf_is_valid(bufnr) then
       vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
+      vim.api.nvim_buf_set_option(bufnr, "modified", false)
     end
   end)
 end

@@ -229,6 +229,7 @@ end
 function OctoBuffer:render_threads(threads)
   self:clear()
   writers.write_threads(self.bufnr, threads)
+  vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
   self.ready = true
 end
 
