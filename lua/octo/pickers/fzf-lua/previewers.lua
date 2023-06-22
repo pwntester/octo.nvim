@@ -244,7 +244,7 @@ M.review_thread = function(formatted_threads)
       bufnr = tmpbuf,
     }
     buffer:configure()
-    buffer:render_threads({ entry.thread })
+    buffer:render_threads { entry.thread }
     vim.api.nvim_buf_call(tmpbuf, function()
       vim.cmd [[setlocal foldmethod=manual]]
       vim.cmd [[normal! zR]]
