@@ -4,9 +4,8 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
-local autocmds = require "octo.autocmds"
-local fzf = require "fzf-lua"
 local config = require "octo.config"
+local log = require "octo.pickers.fzf-lua.log"
 
 local M = {}
 
@@ -175,6 +174,7 @@ M.commit = function(formatted_commits, repo)
     vim.list_extend(lines, { "" })
     vim.list_extend(lines, vim.split(entry.msg, "\n"))
     vim.list_extend(lines, { "" })
+
     vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, lines)
     vim.api.nvim_buf_set_option(tmpbuf, "filetype", "git")
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")

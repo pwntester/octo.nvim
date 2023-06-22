@@ -20,8 +20,8 @@ M.picker = {
   labels = require "octo.pickers.fzf-lua.pickers.labels",
   assigned_labels = require "octo.pickers.fzf-lua.pickers.assigned_labels",
   repos = require "octo.pickers.fzf-lua.pickers.repos",
-
   review_commits = require "octo.pickers.fzf-lua.pickers.review_commits",
+
   gists = require "octo.pickers.fzf-lua.pickers.gists",
   pending_threads = require "octo.pickers.fzf-lua.pickers.pending_threads",
   actions = require "octo.pickers.fzf-lua.pickers.actions",

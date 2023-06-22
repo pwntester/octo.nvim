@@ -34,7 +34,7 @@ return function(thread_cb)
   local formatted_commits = {}
 
   local url =
-    string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
+      string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
 
   local get_contents = function(fzf_cb)
     gh.run {
@@ -47,9 +47,9 @@ return function(thread_cb)
           local results = vim.fn.json_decode(output)
 
           if #formatted_commits == 0 then
-            local full_pr = make_full_pr(results)
-            formatted_commits["FULL PR"] = full_pr
-            fzf_cb "FULL PR"
+            local full_pr = entry_maker.gen_from_git_commits(make_full_pr(current_review))
+            formatted_commits["000 [[ENTIRE PULL REQUEST]]"] = full_pr
+            fzf_cb "000 [[ENTIRE PULL REQUEST]]"
           end
 
           for _, commit in ipairs(results) do
@@ -57,8 +57,7 @@ return function(thread_cb)
 
             if entry ~= nil then
               formatted_commits[entry.ordinal] = entry
-              local prefix = fzf.utils.ansi_from_hl("Comment", entry.value)
-              fzf_cb(prefix .. " " .. entry.obj.title)
+              fzf_cb(entry.ordinal)
             end
           end
         end
@@ -69,10 +68,12 @@ return function(thread_cb)
   end
 
   fzf.fzf_exec(get_contents, {
-    previewer = previewers.commit(formatted_commits),
+    previewer = previewers.commit(formatted_commits, current_review.pull_request.repo),
     fzf_opts = {
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--info"] = "default",
+      ["--delimiter"] = "' '",
+      ["--with-nth"] = "2..",
     },
     actions = {
       ["default"] = function(selected)
