@@ -1,32 +1,32 @@
+local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
+local fzf = require "fzf-lua"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
-local M = {}
 
-M.common_buffer_actions = function(formatted_items)
-  return {
-    ["default"] = function(selected)
-      picker_utils.open("default", formatted_items[selected[1]])
-    end,
-    ["ctrl-v"] = function(selected)
-      picker_utils.open("vertical", formatted_items[selected[1]])
-    end,
-    ["ctrl-s"] = function(selected)
-      picker_utils.open("horizontal", formatted_items[selected[1]])
-    end,
-    ["ctrl-t"] = function(selected)
-      picker_utils.open("tab", formatted_items[selected[1]])
-    end,
-  }
-end
+return function(flattened_actions)
+  local titles = {}
+  local formatted_actions = {}
 
-M.common_open_actions = function(formatted_items)
-  return vim.tbl_extend("force", M.common_buffer_actions(formatted_items), {
-    ["ctrl-b"] = function(selected)
-      picker_utils.open_in_browser(formatted_items[selected[1]])
-    end,
-    ["ctrl-y"] = function(selected)
-      picker_utils.copy_url(formatted_items[selected[1]])
-    end,
+  for _, action in ipairs(flattened_actions) do
+    local entry = entry_maker.gen_from_octo_actions(action)
+    if entry ~= nil then
+      formatted_actions[entry.ordinal] = entry
+      table.insert(titles, entry.ordinal)
+    end
+  end
+
+  table.sort(titles)
+
+  fzf.fzf_exec(titles, {
+    prompt = picker_utils.get_prompt(opts.prompt_title),
+    fzf_opts = {
+      ["--no-multi"] = "",
+    },
+    actions = {
+      ["default"] = function(selected)
+        local entry = formatted_actions[selected[1]]
+        entry.action.fun()
+      end,
+    },
   })
 end
 
-return M

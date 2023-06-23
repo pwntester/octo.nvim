@@ -1,4 +1,4 @@
-local actions = require "octo.pickers.fzf-lua.pickers.actions"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -7,13 +7,10 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 
-local log = require "octo.pickers.fzf-lua.log"
-
 return function(opts)
   opts = opts or {}
 
   local contents = function(query)
-    log.info("search with", query)
     return function(fzf_cb)
       coroutine.wrap(function()
         local co = coroutine.running()
@@ -35,9 +32,7 @@ return function(opts)
             args = { "api", "graphql", "-f", string.format("query=%s", graphql("search_query", _prompt)) },
             mode = "sync",
           }
-          log.info("some query gh", "api", "graphql", "-f", string.format("query=%s", graphql("search_query", _prompt)))
 
-          log.info("OUTPUT", #output)
           if output then
             local resp = vim.fn.json_decode(output)
             local max_id_length = 1
@@ -81,6 +76,6 @@ return function(opts)
       ["--delimiter"] = "' '",
       ["--with-nth"] = "4..",
     },
-    actions = actions.common_open_actions(formatted_issues),
+    actions = fzf_actions.common_open_actions(formatted_issues),
   })
 end

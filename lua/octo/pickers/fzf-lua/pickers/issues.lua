@@ -1,4 +1,4 @@
-local actions = require "octo.pickers.fzf-lua.pickers.actions"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -78,6 +78,6 @@ return function(opts)
       title = opts.window_title or "Issues",
       title_pos = "center",
     },
-    actions = actions.common_open_actions(formatted_issues),
+    actions = fzf_actions.common_open_actions(formatted_issues),
   })
 end

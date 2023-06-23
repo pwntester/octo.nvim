@@ -1,4 +1,4 @@
-local actions = require "octo.pickers.fzf-lua.pickers.actions"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -60,6 +60,6 @@ return function(opts)
       -- ["--delimiter"] = "' '",
       -- ["--with-nth"] = "1..5",
     },
-    actions = actions.common_open_actions(formatted_repos),
+    actions = fzf_actions.common_open_actions(formatted_repos),
   })
 end

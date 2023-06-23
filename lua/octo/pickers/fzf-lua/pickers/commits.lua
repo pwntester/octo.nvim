@@ -1,4 +1,4 @@
-local actions = require "octo.pickers.fzf-lua.pickers.actions"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -49,6 +49,6 @@ return function(opts)
       ["--with-nth"] = "2..",
     },
     previewer = previewers.commit(formatted_commits, buffer.repo),
-    actions = actions.common_buffer_actions(formatted_commits),
+    actions = fzf_actions.common_buffer_actions(formatted_commits),
   })
 end

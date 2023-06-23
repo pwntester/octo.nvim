@@ -1,4 +1,4 @@
-local actions = require "octo.pickers.fzf-lua.pickers.actions"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -78,7 +78,7 @@ return function(opts)
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--info"] = "default",
     },
-    actions = vim.tbl_extend("force", actions.common_open_actions(formatted_pulls), {
+    actions = vim.tbl_extend("force", fzf_actions.common_open_actions(formatted_pulls), {
       ["ctrl-o"] = function(selected)
         local entry = formatted_pulls[selected[1]]
         checkout_pull_request(entry)
