@@ -1,5 +1,5 @@
 local utils = require "octo.utils"
-local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
+local fzf = require "fzf-lua"
 
 local M = {}
 
@@ -156,8 +156,6 @@ function M.gen_from_repo(repo)
     repo.description = ""
   end
 
-  local fzf = require "fzf-lua"
-
   local entry = {
     filename = utils.get_repo_uri(_, repo),
     kind = "repo",
@@ -223,6 +221,7 @@ function M.gen_from_issue_templates(template)
 
   return {
     value = template.name,
+    friendly_title = template.name .. " " .. fzf.utils.ansi_from_hl("Comment", template.about),
     ordinal = template.name .. " " .. template.about,
     template = template,
   }

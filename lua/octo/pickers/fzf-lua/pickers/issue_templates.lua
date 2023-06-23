@@ -16,7 +16,7 @@ return function(templates, cb)
   for _, template in ipairs(templates) do
     local entry = entry_maker.gen_from_issue_templates(template)
     if entry ~= nil then
-      table.insert(titles, entry.ordinal)
+      table.insert(titles, entry.friendly_title)
       formatted_templates[entry.ordinal] = entry
     end
   end

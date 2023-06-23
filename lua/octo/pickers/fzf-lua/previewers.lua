@@ -357,7 +357,7 @@ M.issue_template = function(formatted_templates)
     end
 
     self:set_preview_buf(tmpbuf)
-    self:update_border(entry.ordinal)
+    self:update_border(entry.value)
     self.win:update_scrollbar()
   end
 
