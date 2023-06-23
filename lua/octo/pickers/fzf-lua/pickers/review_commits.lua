@@ -34,7 +34,7 @@ return function(thread_cb)
   local formatted_commits = {}
 
   local url =
-      string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
+    string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
 
   local get_contents = function(fzf_cb)
     gh.run {

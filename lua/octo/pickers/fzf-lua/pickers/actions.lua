@@ -29,4 +29,3 @@ return function(flattened_actions)
     },
   })
 end
-

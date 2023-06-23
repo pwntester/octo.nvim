@@ -6,9 +6,6 @@ local navigation = require "octo.navigation"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
-local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
-
-local log = require "octo.pickers.fzf-lua.log"
 
 local open_gist = function(gist)
   for _, file in ipairs(gist.files) do
@@ -26,7 +23,6 @@ local open_gist = function(gist)
 
     vim.api.nvim_buf_set_keymap(bufnr, "n", "<C-B>", "", {
       callback = function()
-        log.info('doing something', gist.name)
         navigation.open_in_browser("gist", nil, gist.name)
       end,
     })
