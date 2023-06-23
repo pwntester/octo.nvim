@@ -269,20 +269,20 @@ M.gist = function(formatted_gists)
   function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
 
-    local gist = formatted_gists[entry_str]
+    local entry = formatted_gists[entry_str]
 
-    local file = gist.files[1]
+    local file = entry.gist.files[1]
     if file.text then
       vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, vim.split(file.text, "\n"))
     else
-      vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, gist.description)
+      vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, entry.gist.description)
     end
     vim.api.nvim_buf_call(tmpbuf, function()
       pcall(vim.cmd, "set filetype=" .. string.gsub(file.extension, "\\.", ""))
     end)
 
     self:set_preview_buf(tmpbuf)
-    self:update_border(gist.description)
+    self:update_border(entry.gist.description)
   end
 
   return previewer

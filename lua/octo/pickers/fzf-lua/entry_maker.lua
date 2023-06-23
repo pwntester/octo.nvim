@@ -193,8 +193,8 @@ function M.gen_from_gist(gist)
     return
   end
 
-  if gist.description == vim.NIL then
-    gist.description = ""
+  if gist.description == vim.NIL or gist.description == "" then
+    gist.description = gist.name.." (no description provided)"
   end
 
   return {

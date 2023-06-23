@@ -1,9 +1,14 @@
+local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local navigation = require "octo.navigation"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
+
+local log = require "octo.pickers.fzf-lua.log"
 
 local open_gist = function(gist)
   for _, file in ipairs(gist.files) do
@@ -18,6 +23,13 @@ local open_gist = function(gist)
     vim.api.nvim_buf_call(bufnr, function()
       vim.cmd [[filetype detect]]
     end)
+
+    vim.api.nvim_buf_set_keymap(bufnr, "n", "<C-B>", "", {
+      callback = function()
+        log.info('doing something', gist.name)
+        navigation.open_in_browser("gist", nil, gist.name)
+      end,
+    })
   end
 end
 
@@ -46,8 +58,12 @@ return function(opts)
           local gists = resp.data.viewer.gists.nodes
 
           for _, gist in ipairs(gists) do
-            formatted_gists[gist.description] = gist
-            fzf_cb(gist.description)
+            local entry = entry_maker.gen_from_gist(gist)
+
+            if entry ~= nil then
+              formatted_gists[entry.ordinal] = entry
+              fzf_cb(entry.ordinal)
+            end
           end
         end
 
@@ -65,12 +81,22 @@ return function(opts)
     previewer = previewers.gist(formatted_gists),
     fzf_opts = {
       ["--info"] = "default",
-      ["--no-multi"] = "", -- TODO this can support multi, maybe.
+      ["--no-multi"] = "",
+      ["--delimiter"] = "' '",
+      ["--with-nth"] = "2..",
     },
     actions = {
       ["default"] = function(selected)
-        local gist = formatted_gists[selected[1]]
-        open_gist(gist)
+        open_gist(formatted_gists[selected[1]])
+      end,
+      ["ctrl-b"] = function(selected)
+        picker_utils.open_in_browser(formatted_gists[selected[1]])
+      end,
+      ["ctrl-y"] = function(selected)
+        local entry = formatted_gists[selected[1]]
+        local url = string.format("https://gist.github.com/%s", entry.gist.name)
+        vim.fn.setreg("+", url, "c")
+        utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
       end,
     },
   })
