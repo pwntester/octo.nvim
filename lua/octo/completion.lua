@@ -26,7 +26,9 @@ function M.octo_command_complete(argLead, cmdLine)
   elseif #parts == 2 and vim.tbl_contains(command_keys, parts[2]) or #parts == 3 then
     local obj = octo_commands.commands[parts[2]]
     if obj then
-      return get_options(vim.tbl_keys(obj))
+      if type(obj) == "table" then
+        return get_options(vim.tbl_keys(obj))
+      end
     end
   end
 end
