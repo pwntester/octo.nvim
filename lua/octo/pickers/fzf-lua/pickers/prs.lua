@@ -1,4 +1,4 @@
-local actions = require "octo.pickers.fzf-lua.pickers.actions"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -72,13 +72,13 @@ return function(opts)
   end
 
   fzf.fzf_exec(get_contents, {
-    prompt = opts.prompt_title or "",
+    prompt = picker_utils.get_prompt(opts.prompt_title),
     previewer = previewers.issue(formatted_pulls),
     fzf_opts = {
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--info"] = "default",
     },
-    actions = vim.tbl_extend("force", actions.common_open_actions(formatted_pulls), {
+    actions = vim.tbl_extend("force", fzf_actions.common_open_actions(formatted_pulls), {
       ["ctrl-o"] = function(selected)
         local entry = formatted_pulls[selected[1]]
         checkout_pull_request(entry)

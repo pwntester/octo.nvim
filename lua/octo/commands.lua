@@ -1459,7 +1459,7 @@ function M.remove_assignee(login)
       utils.error "User not found"
     end
   else
-    picker.assignees()
+    picker.assignees(cb)
   end
 end
 

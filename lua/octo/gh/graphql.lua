@@ -2564,7 +2564,7 @@ query($endCursor: String) {
 M.repos_query = [[
 query($endCursor: String) {
   repositoryOwner(login: "%s") {
-    repositories(first: 100, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
+    repositories(first: 10, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
       nodes {
         createdAt
         description

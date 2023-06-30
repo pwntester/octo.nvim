@@ -1,4 +1,4 @@
-local actions = require "octo.pickers.fzf-lua.pickers.actions"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -67,13 +67,17 @@ return function(opts)
   end
 
   fzf.fzf_exec(get_contents, {
-    prompt = opts.prompt_title or "",
+    prompt = picker_utils.get_prompt(opts.prompt_title),
     previewer = previewers.issue(formatted_issues),
     fzf_opts = {
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--header"] = opts.results_title,
       ["--info"] = "default",
     },
-    actions = actions.common_open_actions(formatted_issues),
+    winopts = {
+      title = opts.window_title or "Issues",
+      title_pos = "center",
+    },
+    actions = fzf_actions.common_open_actions(formatted_issues),
   })
 end

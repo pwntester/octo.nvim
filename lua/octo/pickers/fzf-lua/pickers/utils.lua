@@ -1,18 +1,22 @@
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
+local fzf_utils = require "fzf-lua.utils"
 
 local M = {}
 
-M.dropdown_opts = {
+M.multi_dropdown_opts = {
   prompt = nil,
   winopts = {
     height = 15,
     width = 0.4,
   },
+}
+
+M.dropdown_opts = vim.tbl_deep_extend("force", M.multi_dropdown_opts, {
   fzf_opts = {
     ["--no-multi"] = "",
   },
-}
+})
 
 function M.get_filter(opts, kind)
   local filter = ""
@@ -63,20 +67,29 @@ function M.open(command, entry)
   utils.get(entry.kind, entry.repo, entry.value)
 end
 
--- TODO this might not be possible with fzf-lua. Preview buffers are not
--- retained at all.
-function M.open_preview_buffer(command, bufnr, entry)
-  if command == "default" then
-    vim.cmd(string.format(":buffer %d", bufnr))
-  elseif command == "horizontal" then
-    vim.cmd(string.format(":sbuffer %d", bufnr))
-  elseif command == "vertical" then
-    vim.cmd(string.format(":vert sbuffer %d", bufnr))
-  elseif command == "tab" then
-    vim.cmd(string.format(":tab sb %d", bufnr))
+--[[
+  Gets a consistent prompt.
+
+  @param title The original prompt title.
+  @return A prompt smartly postfixed with "> ".
+
+  > get_prompt(nil) == "> "
+  > get_prompt("") == "> "
+  > get_prompt("something") == "something> "
+  > get_prompt("something else>") == "something else> "
+  > get_prompt("penultimate thing > ") == "penultimate thing > "
+  > get_prompt("last th> ing") == "last th> ing> "
+]]
+function M.get_prompt(title)
+  if title == nil or title == "" then
+    return "> "
+  elseif string.match(title, ">$") then
+    return title .. " "
+  elseif not string.match(title, "> $") then
+    return title .. "> "
   end
 
-  vim.cmd [[stopinsert]]
+  return title
 end
 
 --[[
@@ -102,6 +115,24 @@ function M.copy_url(entry)
   local url = entry.obj.url
   vim.fn.setreg("+", url, "c")
   utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+end
+
+function M.color_string_with_hex(s, hexcol)
+  local r, g, b = hexcol:match "#(..)(..)(..)"
+  if not r or not g or not b then
+    return
+  end
+  r, g, b = tonumber(r, 16), tonumber(g, 16), tonumber(b, 16)
+
+  -- Foreground code?
+  local escseq = ("[%d;2;%d;%d;%dm"):format(38, r, g, b)
+  return ("%s%s%s"):format(escseq, s, fzf_utils.ansi_colors.clear)
+end
+
+function M.pad_string(s, length)
+  -- Make sure it's a string.
+  local string_s = tostring(s)
+  return string.format("%s%" .. (length - #string_s) .. "s", string_s, " ")
 end
 
 return M
