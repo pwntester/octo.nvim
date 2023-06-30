@@ -55,9 +55,13 @@ function M.get_user_name(remote_hostname)
   }
   job:sync()
   local stderr = table.concat(job:stderr_result(), "\n")
-  local name = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
-  if name then
-    return name
+  local stdout = table.concat(job:result(), "\n")
+  local name_err = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
+  local name_out = string.match(stdout, "Logged in to [^%s]+ as ([^%s]+)")
+  if name_err then
+    return name_err
+  elseif name_out then
+    return name_out
   else
     require("octo.utils").error(stderr)
   end
