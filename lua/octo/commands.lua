@@ -138,7 +138,14 @@ function M.setup()
         picker.repos { login = login }
       end,
       view = function(repo)
-        utils.get_repo(nil, repo)
+        if repo == nil and utils.cwd_is_git() then
+          repo = utils.get_git_origin_repo()
+          utils.get_repo(nil, repo)
+        elseif repo == nil then
+          utils.error "Argument for repo name is required"
+        else
+          utils.get_repo(nil, repo)
+        end
       end,
       fork = function()
         utils.fork_repo()
