@@ -17,7 +17,7 @@ return function(flattened_actions)
   table.sort(titles)
 
   fzf.fzf_exec(titles, {
-    prompt = picker_utils.get_prompt(opts.prompt_title),
+    prompt = picker_utils.get_prompt "Actions",
     fzf_opts = {
       ["--no-multi"] = "",
     },
