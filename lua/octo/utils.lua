@@ -4,6 +4,7 @@ local date = require "octo.date"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local _, Job = pcall(require, "plenary.job")
+local vim = vim
 
 local M = {}
 
@@ -384,15 +385,6 @@ function M.cwd_is_git()
   local out = vim.fn.system(cmd)
   out = out:gsub("%s+", "")
   return out == "true"
-end
-
--- Gets the origin url and returns the repo name
-function M.get_git_origin_repo()
-  local cmd = "git remote get-url origin"
-  local repo = string.gsub(vim.fn.system(cmd), ".*:", "")
-  repo = repo:gsub(".git", "")
-  repo = repo:gsub("%s+", "")
-  return repo
 end
 
 ---Gets repo info

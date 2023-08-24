@@ -139,7 +139,7 @@ function M.setup()
       end,
       view = function(repo)
         if repo == nil and utils.cwd_is_git() then
-          repo = utils.get_git_origin_repo()
+          repo = utils.get_remote_name()
           utils.get_repo(nil, repo)
         elseif repo == nil then
           utils.error "Argument for repo name is required"
@@ -387,14 +387,14 @@ function M.add_comment()
     viewerCanDelete = true,
     viewerDidAuthor = true,
     reactionGroups = {
-      { content = "THUMBS_UP", users = { totalCount = 0 } },
+      { content = "THUMBS_UP",   users = { totalCount = 0 } },
       { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-      { content = "LAUGH", users = { totalCount = 0 } },
-      { content = "HOORAY", users = { totalCount = 0 } },
-      { content = "CONFUSED", users = { totalCount = 0 } },
-      { content = "HEART", users = { totalCount = 0 } },
-      { content = "ROCKET", users = { totalCount = 0 } },
-      { content = "EYES", users = { totalCount = 0 } },
+      { content = "LAUGH",       users = { totalCount = 0 } },
+      { content = "HOORAY",      users = { totalCount = 0 } },
+      { content = "CONFUSED",    users = { totalCount = 0 } },
+      { content = "HEART",       users = { totalCount = 0 } },
+      { content = "ROCKET",      users = { totalCount = 0 } },
+      { content = "EYES",        users = { totalCount = 0 } },
     },
   }
 
@@ -796,7 +796,7 @@ function M.create_pr(is_draft)
   local remote_branch = local_branch
   if not remote_branch_exists then
     local choice =
-      vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+        vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
     if choice == 1 then
       local remote = "origin"
       remote_branch = vim.fn.input {
