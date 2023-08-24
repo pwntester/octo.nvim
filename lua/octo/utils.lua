@@ -378,6 +378,23 @@ function M.get_repo_id(repo)
   end
 end
 
+-- Checks if the current cwd is in a git repo
+function M.cwd_is_git()
+  local cmd = "git rev-parse --is-inside-work-tree"
+  local out = vim.fn.system(cmd)
+  out = out:gsub("%s+", "")
+  return out == "true"
+end
+
+-- Gets the origin url and returns the repo name
+function M.get_git_origin_repo()
+  local cmd = "git remote get-url origin"
+  local repo = string.gsub(vim.fn.system(cmd), ".*:", "")
+  repo = repo:gsub(".git", "")
+  repo = repo:gsub("%s+", "")
+  return repo
+end
+
 ---Gets repo info
 function M.get_repo_info(repo)
   if repo_info_cache[repo] then
