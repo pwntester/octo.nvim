@@ -4,6 +4,7 @@
 local M = {}
 local web_devicons
 local config = require "octo.config"
+local vim = vim
 
 ---@class HlData
 ---@field group string
