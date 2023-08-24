@@ -8,6 +8,7 @@ local window = require "octo.ui.window"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local config = require "octo.config"
+local vim = vim
 
 local M = {}
 
@@ -785,6 +786,11 @@ function M.create_pr(is_draft)
   local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
 
   -- get remote branches
+  if info == nil or info.refs == nil or info.refs.nodes == nil or
+      info == vim.NIL or info.refs == vim.NIL or info.refs.nodes == vim.NIL then
+    utils.error "Cannot grab remote branches"
+    return
+  end
   local remote_branches = info.refs.nodes
 
   local remote_branch_exists = false
