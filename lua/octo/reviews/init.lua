@@ -404,7 +404,7 @@ function Review:add_comment(isSuggestion)
       vim.cmd [[startinsert]]
     end
   else
-    utils.error "Cannot find diff window"
+    utils.error("Cannot find diff window " .. alt_win)
   end
 end
 

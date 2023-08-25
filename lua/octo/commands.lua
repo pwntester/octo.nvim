@@ -439,12 +439,12 @@ function M.delete_comment()
     return
   end
   local comment = buffer:get_comment_at_cursor()
-  local start_line = comment.bufferStartLine
-  local end_line = comment.bufferEndLine
   if not comment then
     utils.error "The cursor does not seem to be located at any comment"
     return
   end
+  local start_line = comment.bufferStartLine
+  local end_line = comment.bufferEndLine
   local query, threadId
   if comment.kind == "IssueComment" then
     query = graphql("delete_issue_comment_mutation", comment.id)
@@ -465,6 +465,7 @@ function M.delete_comment()
         -- In issue buffers, we should hide the thread snippet
         local resp = vim.fn.json_decode(output)
 
+        -- remove comment lines from the buffer
         if comment.reactionLine then
           vim.api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
           vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
@@ -482,27 +483,18 @@ function M.delete_comment()
             end
           end
           buffer.commentsMetadata = updated
-        else
-          utils.error("Deleting buffer" .. tostring(bufnr))
         end
 
         if comment.kind == "PullRequestReviewComment" then
           local review = reviews.get_current_review()
           if not review then
+            utils.error "Cannot find review for this comment"
             return
           end
-          local threads = {}
-          local pr = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest
-          threads = pr.reviewThreads.nodes
 
-          local thread_was_deleted = true
-          for _, thread in ipairs(threads) do
-            if threadId == thread.id then
-              thread_was_deleted = false
-              break
-            end
-          end
+          local threads = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest.reviewThreads.nodes
 
+          -- check if there is still at least a PENDING comment
           local review_was_deleted = true
           for _, thread in ipairs(threads) do
             for _, c in ipairs(thread.comments.nodes) do
@@ -512,21 +504,8 @@ function M.delete_comment()
               end
             end
           end
-
-          if thread_was_deleted then
-            -- this was the last comment on the last thread, close the thread buffer
-            local bufname = vim.api.nvim_buf_get_name(bufnr)
-            local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
-            if split then
-              local diff_win = reviews.get_current_review().layout:cur_file():get_win(split)
-              vim.api.nvim_set_current_win(diff_win)
-              pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-            end
-          end
-
           if review_was_deleted then
-            -- we deleted the last thread of the review and therefore the backend
-            -- also deleted the review, create a new one
+            -- we deleted the last pending comment and therefore GitHub closed the review, create a new one
             review:create(function(resp)
               review.id = resp.data.addPullRequestReview.pullRequestReview.id
               local updated_threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
@@ -534,6 +513,38 @@ function M.delete_comment()
             end)
           else
             review:update_threads(threads)
+          end
+
+          -- check if we removed the last comment of a thread
+          local thread_was_deleted = true
+          for _, thread in ipairs(threads) do
+            if threadId == thread.id then
+              thread_was_deleted = false
+              break
+            end
+          end
+          if thread_was_deleted then
+            -- this was the last comment, close the thread buffer
+            -- No comments left
+            utils.error("Deleting buffer " .. tostring(bufnr))
+            local bufname = vim.api.nvim_buf_get_name(bufnr)
+            local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
+            if split then
+              local layout = reviews.get_current_review().layout
+              local file = layout:cur_file()
+              local diff_win = file:get_win(split)
+              local thread_win = file:get_alternative_win(split)
+              local original_buf = file:get_alternative_buf(split)
+              -- move focus to the split containing the diff buffer
+              -- restore the diff buffer so that window is not closed when deleting thread buffer
+              vim.api.nvim_win_set_buf(thread_win, original_buf)
+              -- delete the thread buffer
+              pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+              -- refresh signs and virtual text
+              file:place_signs()
+              -- diff buffers
+              file:show_diff()
+            end
           end
         end
       end,

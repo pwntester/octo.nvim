@@ -2,6 +2,7 @@
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-entry.lua
 
 local config = require "octo.config"
+local constants = require "octo.constants"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local signs = require "octo.ui.signs"
@@ -338,6 +339,7 @@ function FileEntry:place_signs()
   }
   for _, split in ipairs(splits) do
     signs.unplace(split.bufnr)
+    vim.api.nvim_buf_clear_namespace(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
 
     -- place comment range signs
     if split.comment_ranges then
@@ -380,7 +382,12 @@ function FileEntry:place_signs()
           -- place the virtual text only on first line
           local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
           local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
-          vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
+          --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
+          local opts = {
+            virt_text = { { vt_msg, "Comment" } },
+            virt_text_pos = 'right_align',
+          }
+          vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, opts)
         end
       end
     end
