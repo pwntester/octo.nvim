@@ -385,7 +385,7 @@ function FileEntry:place_signs()
           --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
           local opts = {
             virt_text = { { vt_msg, "Comment" } },
-            virt_text_pos = 'right_align',
+            virt_text_pos = "right_align",
           }
           vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, opts)
         end
