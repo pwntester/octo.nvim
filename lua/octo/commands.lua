@@ -1405,6 +1405,7 @@ function M.add_user(subject, login)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
+    utils.error "No Octo buffer"
     return
   end
 
@@ -1419,6 +1420,9 @@ function M.add_user(subject, login)
       query = graphql("add_assignees_mutation", iid, user_id)
     elseif subject == "reviewer" then
       query = graphql("request_reviews_mutation", iid, user_id)
+    else
+      utils.error "Invalid user type"
+      return
     end
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
