@@ -9,14 +9,15 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
-local colors = require "octo.ui.colors"
 local signs = require "octo.ui.signs"
 local window = require "octo.ui.window"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
+local vim = vim
 
 _G.octo_repo_issues = {}
 _G.octo_buffers = {}
+_G.octo_colors_loaded = false
 
 local M = {}
 
@@ -32,7 +33,6 @@ function M.setup(user_config)
   config.setup(user_config or {})
   signs.setup()
   picker.setup()
-  colors.setup()
   completion.setup()
   folds.setup()
   autocmds.setup()
