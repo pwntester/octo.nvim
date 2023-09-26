@@ -368,7 +368,7 @@ function M.octo(object, action, ...)
 
     local a = o[action]
     if not a then
-      utils.error("Incorrect action: " .. action)
+      utils.error(action and "Incorrect action: " .. action or "No action specified")
       return
     else
       a(...)
