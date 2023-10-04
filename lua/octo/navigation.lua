@@ -24,6 +24,11 @@ end
 
 function M.open_in_browser(kind, repo, number)
   local cmd
+  local remote = utils.get_remote_host()
+  if not remote then
+     utils.error "Cannot find repo remote host"
+     return
+  end
   if not kind and not repo then
     local bufnr = vim.api.nvim_get_current_buf()
     local buffer = octo_buffers[bufnr]
@@ -31,19 +36,19 @@ function M.open_in_browser(kind, repo, number)
       return
     end
     if buffer:isPullRequest() then
-      cmd = string.format("gh pr view --web -R %s %d", buffer.repo, buffer.number)
+      cmd = string.format("gh pr view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
     elseif buffer:isIssue() then
-      cmd = string.format("gh issue view --web -R %s %d", buffer.repo, buffer.number)
+      cmd = string.format("gh issue view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
     elseif buffer:isRepo() then
-      cmd = string.format("gh repo view --web %s", buffer.repo)
+      cmd = string.format("gh repo view --web -R %s/%s", remote, buffer.repo)
     end
   else
     if kind == "pr" or kind == "pull_request" then
-      cmd = string.format("gh pr view --web -R %s %d", repo, number)
+      cmd = string.format("gh pr view --web -R %s/%s %d", remote, repo, number)
     elseif kind == "issue" then
-      cmd = string.format("gh issue view --web -R %s %d", repo, number)
+      cmd = string.format("gh issue view --web -R %s/%s %d", remote, repo, number)
     elseif kind == "repo" then
-      cmd = string.format("gh repo view --web %s", repo)
+      cmd = string.format("gh repo view --web -R %s/%s", remote, repo)
     elseif kind == "gist" then
       cmd = string.format("gh gist view --web %s", number)
     end
