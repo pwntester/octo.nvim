@@ -177,13 +177,9 @@ end
 function M.get_background_color_of_highlight_group(highlight_group_name)
   local highlight_group = vim.api.nvim_get_hl_by_name(highlight_group_name, true)
   local highlight_group_normal = vim.api.nvim_get_hl_by_name("Normal", true)
-  local background_color = highlight_group.background
-      or highlight_group_normal.background
-      or highlight_group_normal.foreground
+  local background_color = highlight_group.background or highlight_group_normal.background
   if background_color then
     return string.format("#%06x", background_color)
-  else
-    return "#000000"
   end
 end
 
