@@ -1,9 +1,3 @@
-# :octopus: Octo.nvim
-
-<p align="center">
-	GitHub in NeoVim.
-</p>
-
 <p align="center">
     <a href="https://github.com/pwntester/octo.nvim"><img
             src="https://img.shields.io/github/repo-size/pwntester/octo.nvim"
@@ -13,7 +7,7 @@
             alt="Issues"/></a>
     <a href="https://github.com/pwntester/octo.nvim/blob/master/LICENSE"><img
             src="https://img.shields.io/github/license/pwntester/octo.nvim"
-            alt="License"/></a><br />
+            alt="License"/></a>
     <a href="https://saythanks.io/to/alvaro%40pwntester.com"><img
             src="https://img.shields.io/badge/say-thanks-modal.svg"
             alt="Say thanks"/></a>
@@ -25,15 +19,12 @@
             alt="Repository's starts"/></a>
 </p>
 
-![issues](https://user-images.githubusercontent.com/125701/124568675-76130600-de45-11eb-9944-2607c5863f37.gif)
+# :octopus: Octo.nvim
 
-![prs](https://user-images.githubusercontent.com/125701/124568138-e8cfb180-de44-11eb-994a-0791d8be63ad.gif)
-
-
-# TL;DR
-<div style="text-align: justify">
 Edit and review GitHub issues and pull requests from the comfort of your favorite editor.
-</div>
+
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="BuyMeACoffee" width="140">](https://www.buymeacoffee.com/pwntester)
+
 
 # 🌲 Table of Contents
 * [✨ Features](#-features)
@@ -47,6 +38,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 * [🍞 Completion](#-completion)
 * [🎨 Colors](#-colors)
 * [🏷️  Status Column](#-statuscolumn)
+* [🚀 Demos](#-demos)
 * [🙋 FAQ](#-faq)
 * [✋ Contributing](#-contributing)
 * [📜 License](#-license)
@@ -482,6 +474,12 @@ end
 
 vim.opt.statuscolumn = "%{%v:lua.get_statuscol_octo(bufnr(), v:lnum)%}"
 ```
+
+## Demos
+
+![issues](https://user-images.githubusercontent.com/125701/124568675-76130600-de45-11eb-9944-2607c5863f37.gif)
+
+![prs](https://user-images.githubusercontent.com/125701/124568138-e8cfb180-de44-11eb-994a-0791d8be63ad.gif)
 
 ## 🙋 FAQ
 
