@@ -15,7 +15,7 @@ local path_sep = package.config:sub(1, 1)
 
 M.viewed_state_map = {
   DISMISSED = { icon = "󰀨 ", hl = "OctoRed" },
-  VIEWED = { icon = "󰗠", hl = "OctoGreen" },
+  VIEWED = { icon = "󰗠 ", hl = "OctoGreen" },
   UNVIEWED = { icon = "󰄰 ", hl = "OctoBlue" },
 }
 
