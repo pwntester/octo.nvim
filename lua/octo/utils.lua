@@ -338,6 +338,21 @@ function M.checkout_pr_sync(pr_number)
   }):sync()
 end
 
+---Mergest a PR b number
+function M.merge_pr(pr_number)
+  if not Job then
+    return
+  end
+  Job:new({
+    enable_recording = true,
+    command = "gh",
+    args = { "pr", "merge", pr_number, "--merge", "--delete-branch" },
+    on_exit = vim.schedule_wrap(function()
+      M.info("Merged PR " .. pr_number .. "!")
+    end),
+  }):start()
+end
+
 ---Formats a string as a date
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1

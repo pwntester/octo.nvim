@@ -254,6 +254,14 @@ local function checkout_pull_request()
   end
 end
 
+local function merge_pull_request()
+  return function(prompt_bufnr)
+    local sel = action_state.get_selected_entry(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    utils.merge_pr(sel.obj.number)
+  end
+end
+
 function M.pull_requests(opts)
   opts = opts or {}
   if not opts.states then
@@ -310,6 +318,7 @@ function M.pull_requests(opts)
               map("i", "<c-o>", checkout_pull_request())
               map("i", "<c-b>", open_in_browser())
               map("i", "<c-y>", copy_url())
+              map("i", "<c-m>", merge_pull_request())
               return true
             end,
           })
