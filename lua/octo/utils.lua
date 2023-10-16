@@ -194,9 +194,9 @@ end
 function M.get_remote()
   local conf = config.get_config()
   local remotes = M.parse_git_remote()
-  for name, remote in pairs(remotes) do
-    if vim.tbl_contains(conf.default_remote, name) then
-      return remote
+  for _, name in ipairs(conf.default_remote) do
+    if remotes[name] then
+      return remotes[name]
     end
   end
   -- return github.com as default host
