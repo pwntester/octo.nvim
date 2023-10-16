@@ -394,14 +394,14 @@ function M.add_comment()
     viewerCanDelete = true,
     viewerDidAuthor = true,
     reactionGroups = {
-      { content = "THUMBS_UP",   users = { totalCount = 0 } },
+      { content = "THUMBS_UP", users = { totalCount = 0 } },
       { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-      { content = "LAUGH",       users = { totalCount = 0 } },
-      { content = "HOORAY",      users = { totalCount = 0 } },
-      { content = "CONFUSED",    users = { totalCount = 0 } },
-      { content = "HEART",       users = { totalCount = 0 } },
-      { content = "ROCKET",      users = { totalCount = 0 } },
-      { content = "EYES",        users = { totalCount = 0 } },
+      { content = "LAUGH", users = { totalCount = 0 } },
+      { content = "HOORAY", users = { totalCount = 0 } },
+      { content = "CONFUSED", users = { totalCount = 0 } },
+      { content = "HEART", users = { totalCount = 0 } },
+      { content = "ROCKET", users = { totalCount = 0 } },
+      { content = "EYES", users = { totalCount = 0 } },
     },
   }
 
@@ -804,12 +804,12 @@ function M.create_pr(is_draft)
 
   -- get remote branches
   if
-      info == nil
-      or info.refs == nil
-      or info.refs.nodes == nil
-      or info == vim.NIL
-      or info.refs == vim.NIL
-      or info.refs.nodes == vim.NIL
+    info == nil
+    or info.refs == nil
+    or info.refs.nodes == nil
+    or info == vim.NIL
+    or info.refs == vim.NIL
+    or info.refs.nodes == vim.NIL
   then
     utils.error "Cannot grab remote branches"
     return
@@ -825,7 +825,7 @@ function M.create_pr(is_draft)
   local remote_branch = local_branch
   if not remote_branch_exists then
     local choice =
-        vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+      vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
     if choice == 1 then
       local remote = "origin"
       remote_branch = vim.fn.input {
@@ -1275,12 +1275,7 @@ function M.move_project_card()
 end
 
 function M.reload(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
-  end
-  require("octo").load_buffer(buffer.repo, buffer.kind, buffer.number)
+  require("octo").load_buffer(bufnr)
 end
 
 function M.create_label(label)

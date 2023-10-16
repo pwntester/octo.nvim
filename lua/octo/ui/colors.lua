@@ -140,8 +140,8 @@ end
 
 function M.setup()
   for name, v in pairs(get_hl_groups()) do
-    local fg  = v.fg and " guifg=" .. v.fg or ""
-    local bg  = v.bg and " guibg=" .. v.bg or ""
+    local fg = v.fg and " guifg=" .. v.fg or ""
+    local bg = v.bg and " guibg=" .. v.bg or ""
     local gui = v.gui and " gui=" .. v.gui or ""
     local cmd = "hi def Octo" .. name .. fg .. bg .. gui
     vim.cmd(cmd)
@@ -168,7 +168,7 @@ local function color_is_bright(r, g, b)
   -- Counting the perceptive luminance - human eye favors green color
   local luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   if luminance > 0.5 then
-    return true  -- Bright colors, black font
+    return true -- Bright colors, black font
   else
     return false -- Dark colors, white font
   end
