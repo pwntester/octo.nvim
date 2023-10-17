@@ -1919,6 +1919,28 @@ query($endCursor: String) {
           }
         }
       }
+      projectItems(first: 100) {
+        nodes {
+          id
+          project {
+            id
+            title
+          }
+          fieldValues(first: 100) {
+            nodes {
+              ... on ProjectV2ItemFieldSingleSelectValue {
+                name
+                optionId
+                field {
+                  ... on ProjectV2SingleSelectField {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       timelineItems(first: 100, after: $endCursor) {
         pageInfo {
           hasNextPage
@@ -2123,6 +2145,7 @@ query($endCursor: String) {
         url
         repository { nameWithOwner }
         headRefName
+        isDraft
       }
       pageInfo {
         hasNextPage
@@ -2235,6 +2258,134 @@ M.delete_project_card_mutation = [[
   mutation {
     deleteProjectCard(input: {cardId: "%s"}) {
       deletedCardId
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/objects#projectv2
+M.projects_query_v2 = [[
+query {
+  repository(owner: "%s", name: "%s") {
+    projects: projectsV2(first: 100) {
+      nodes {
+        id
+        title
+        url
+        closed
+        number
+        owner {
+          ... on User {
+            login
+          }
+          ... on Organization {
+            login
+          }
+        }
+        columns: field(name: "Status") {
+          ... on ProjectV2SingleSelectField {
+            id
+            options {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+  user(login: "%s") {
+    projects: projectsV2(first: 100) {
+      nodes {
+        id
+        title
+        url
+        closed
+        number
+        owner {
+          ... on User {
+            login
+          }
+          ... on Organization {
+            login
+          }
+        }
+        columns: field(name: "Status") {
+          ... on ProjectV2SingleSelectField {
+            id
+            options {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+  organization(login: "%s") {
+    projects: projectsV2(first: 100) {
+      nodes {
+        id
+        title
+        url
+        closed
+        number
+        owner {
+          ... on User {
+            login
+          }
+          ... on Organization {
+            login
+          }
+        }
+        columns: field(name: "Status") {
+          ... on ProjectV2SingleSelectField {
+            id
+            options {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#addprojectv2itembyid
+M.add_project_v2_item_mutation = [[
+  mutation {
+    addProjectV2ItemById(input: {contentId: "%s", projectId: "%s"}) {
+      item {
+        id
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#updateprojectv2itemfieldvalue
+M.update_project_v2_item_mutation = [[
+  mutation {
+    updateProjectV2ItemFieldValue(
+      input: {
+        projectId: "%s",
+        itemId: "%s",
+        fieldId: "%s",
+        value: { singleSelectOptionId: "%s" }
+      }
+    ) {
+      projectV2Item {
+        id
+      }
+    }
+  }
+]]
+
+-- https://docs.github.com/en/graphql/reference/mutations#deleteprojectv2item
+M.delete_project_v2_item_mutation = [[
+  mutation {
+    deleteProjectV2Item(input: {projectId: "%s", itemId: "%s"}) {
+      deletedItemId
     }
   }
 ]]

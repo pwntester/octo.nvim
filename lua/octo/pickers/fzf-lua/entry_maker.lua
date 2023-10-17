@@ -101,6 +101,39 @@ function M.gen_from_project_card(card)
   }
 end
 
+function M.gen_from_project_v2(project)
+  if not project or vim.tbl_isempty(project) then
+    return nil
+  end
+
+  local title = project.title
+
+  if project.closed then
+    title = fzf.utils.ansi_from_hl("Comment", project.title) .. " " .. fzf.utils.ansi_from_hl("OctoPurple", "(closed)")
+  end
+
+
+  return {
+    id = project.id,
+    repo = project.owner.login,
+    value = project.number,
+    ordinal = project.id .. " " .. title,
+    kind = 'project',
+    obj = project,
+  }
+end
+
+function M.gen_from_project_v2_column(column)
+  if not column or vim.tbl_isempty(column) then
+    return nil
+  end
+  return {
+    value = column.id,
+    ordinal = column.id .. " " .. column.name,
+    column = column,
+  }
+end
+
 function M.gen_from_label(label)
   if not label or vim.tbl_isempty(label) then
     return nil

@@ -46,6 +46,8 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh repo view --web %s", repo)
     elseif kind == "gist" then
       cmd = string.format("gh gist view --web %s", number)
+    elseif kind == "project" then
+      cmd = string.format("gh project view --owner %s --web %s", repo, number)
     end
   end
   pcall(vim.cmd, "silent !" .. cmd)

@@ -22,6 +22,7 @@ M.defaults = {
   snippet_context_lines = 4,
   gh_env = {},
   timeout = 5000,
+  default_to_projects_v2 = false,
   ui = {
     use_signcolumn = true,
   },
