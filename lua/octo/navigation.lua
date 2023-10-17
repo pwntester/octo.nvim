@@ -26,8 +26,8 @@ function M.open_in_browser(kind, repo, number)
   local cmd
   local remote = utils.get_remote_host()
   if not remote then
-     utils.error "Cannot find repo remote host"
-     return
+    utils.error "Cannot find repo remote host"
+    return
   end
   if not kind and not repo then
     local bufnr = vim.api.nvim_get_current_buf()
