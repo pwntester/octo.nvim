@@ -320,13 +320,13 @@ function M.write_details(bufnr, issue, update)
         local status = nil
 
         for _, fieldValues in ipairs(item.fieldValues.nodes) do
-          if fieldValues.field ~= nil and fieldValues.field.name == 'Status' then
+          if fieldValues.field ~= nil and fieldValues.field.name == "Status" then
             status = fieldValues.name
           end
         end
 
         if status == nil then
-          table.insert(projects_vt, { 'No status', 'OctoRed' })
+          table.insert(projects_vt, { "No status", "OctoRed" })
         else
           table.insert(projects_vt, { status })
         end
