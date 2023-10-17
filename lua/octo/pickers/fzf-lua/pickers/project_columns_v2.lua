@@ -52,7 +52,6 @@ return function(cb)
           end
 
           for _, project in ipairs(projects) do
-
             local entry = entry_maker.gen_from_project_v2(project)
 
             if entry ~= nil then

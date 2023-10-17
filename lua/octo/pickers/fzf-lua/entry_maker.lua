@@ -112,13 +112,12 @@ function M.gen_from_project_v2(project)
     title = fzf.utils.ansi_from_hl("Comment", project.title) .. " " .. fzf.utils.ansi_from_hl("OctoPurple", "(closed)")
   end
 
-
   return {
     id = project.id,
     repo = project.owner.login,
     value = project.number,
     ordinal = project.id .. " " .. title,
-    kind = 'project',
+    kind = "project",
     obj = project,
   }
 end

@@ -1288,7 +1288,13 @@ function M.set_project_v2_card()
           utils.error(add_stderr)
         elseif add_output then
           local resp = vim.fn.json_decode(add_output)
-          local update_query = graphql("update_project_v2_item_mutation", project_id, resp.data.addProjectV2ItemById.item.id, field_id, value)
+          local update_query = graphql(
+            "update_project_v2_item_mutation",
+            project_id,
+            resp.data.addProjectV2ItemById.item.id,
+            field_id,
+            value
+          )
           gh.run {
             args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", update_query) },
             cb = function(update_output, update_stderr)

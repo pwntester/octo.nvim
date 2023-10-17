@@ -4,7 +4,7 @@ local utils = require "octo.utils"
 
 local function map(tbl, f)
   local t = {}
-  for k,v in pairs(tbl) do
+  for k, v in pairs(tbl) do
     t[k] = f(v)
   end
   return t
@@ -35,7 +35,7 @@ return function(callback)
     local titles = {}
 
     for _, card in ipairs(cards.nodes) do
-      local fields = map(card.fieldValues.nodes, function (fieldValue)
+      local fields = map(card.fieldValues.nodes, function(fieldValue)
         if fieldValue.field == nil then
           return fieldValue
         end
@@ -44,18 +44,21 @@ return function(callback)
           k = fieldValue.field.name,
           v = {
             name = fieldValue.name,
-            optionId = fieldValue.optionId
-          }
+            optionId = fieldValue.optionId,
+          },
         }
       end)
 
-      local reduced = reduce(fields, {}, function (acc, curr)
+      local reduced = reduce(fields, {}, function(acc, curr)
         if curr.k ~= nil then
           acc[curr.k] = curr.v
         end
       end)
 
-      table.insert(titles, string.format("%s %s %s (%s)", card.project.id, card.id, reduced.Status.name, card.project.title))
+      table.insert(
+        titles,
+        string.format("%s %s %s (%s)", card.project.id, card.id, reduced.Status.name, card.project.title)
+      )
     end
 
     fzf.fzf_exec(
