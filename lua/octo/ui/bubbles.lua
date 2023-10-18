@@ -20,13 +20,20 @@ local function make_bubble(content, highlight_group, opts)
   local left_delimiter = (left_margin .. margin) .. conf.left_bubble_delimiter
   local right_delimiter = conf.right_bubble_delimiter .. (right_margin .. margin)
   local delimiter_color = colors.get_background_color_of_highlight_group(highlight_group)
-  local delimiter_highlight_group = colors.create_highlight(delimiter_color, { mode = "foreground" })
-
-  return {
-    { left_delimiter, delimiter_highlight_group },
-    { body, highlight_group },
-    { right_delimiter, delimiter_highlight_group },
-  }
+  if delimiter_color then
+    local delimiter_highlight_group = colors.create_highlight(delimiter_color, { mode = "foreground" })
+    return {
+      { left_delimiter,  delimiter_highlight_group },
+      { body,            highlight_group },
+      { right_delimiter, delimiter_highlight_group },
+    }
+  else
+    return {
+      { left_delimiter,  highlight_group },
+      { body,            highlight_group },
+      { right_delimiter, highlight_group },
+    }
+  end
 end
 
 local function make_user_bubble(name, is_viewer, opts)
