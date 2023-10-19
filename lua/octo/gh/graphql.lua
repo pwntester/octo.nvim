@@ -1597,6 +1597,28 @@ query($endCursor: String) {
           }
         }
       }
+      projectItems(first: 100) {
+        nodes {
+          id
+          project {
+            id
+            title
+          }
+          fieldValues(first: 100) {
+            nodes {
+              ... on ProjectV2ItemFieldSingleSelectValue {
+                name
+                optionId
+                field {
+                  ... on ProjectV2SingleSelectField {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       timelineItems(first: 100, after: $endCursor) {
         pageInfo {
           hasNextPage

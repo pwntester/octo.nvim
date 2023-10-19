@@ -17,6 +17,31 @@ function M.setup()
   end, { complete = require("octo.completion").octo_command_complete, nargs = "*" })
   local conf = config.get_config()
 
+  local card_commands
+
+  if (conf.default_to_projects_v2) then
+    card_commands = {
+      set = function()
+        M.set_project_v2_card()
+      end,
+      remove = function()
+        M.remove_project_v2_card()
+      end,
+    }
+  else
+    card_commands = {
+      add = function()
+        M.add_project_card()
+      end,
+      move = function()
+        M.move_project_card()
+      end,
+      remove = function()
+        M.remove_project_card()
+      end,
+    }
+  end
+
   -- supported commands
   M.commands = {
     actions = function()
@@ -284,29 +309,7 @@ function M.setup()
         M.reaction_action "HEART"
       end,
     },
-    card = {
-      add = function()
-        if conf.default_to_projects_v2 then
-          M.set_project_v2_card()
-        else
-          M.add_project_card()
-        end
-      end,
-      move = function()
-        if conf.default_to_projects_v2 then
-          M.set_project_v2_card()
-        else
-          M.move_project_card()
-        end
-      end,
-      remove = function()
-        if conf.default_to_projects_v2 then
-          M.remove_project_v2_card()
-        else
-          M.remove_project_card()
-        end
-      end,
-    },
+    card = card_commands,
     cardv2 = {
       set = function(...)
         M.set_project_v2_card()
