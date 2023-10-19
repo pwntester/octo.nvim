@@ -19,7 +19,7 @@ function M.setup()
 
   local card_commands
 
-  if (conf.default_to_projects_v2) then
+  if conf.default_to_projects_v2 then
     card_commands = {
       set = function()
         M.set_project_v2_card()
