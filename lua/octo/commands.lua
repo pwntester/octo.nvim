@@ -887,8 +887,10 @@ function M.save_pr(opts)
   local title, body
   local last_commit = string.gsub(vim.fn.system "git log -1 --pretty=%B", "%s+$", "")
   local last_commit_lines = vim.split(last_commit, "\n")
-  if #last_commit_lines > 1 then
+  if #last_commit_lines >= 1 then
     title = last_commit_lines[1]
+  end
+  if #last_commit_lines > 1 then
     if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
       body = table.concat(vim.list_slice(last_commit_lines, 3, #last_commit_lines), "\n")
     else
