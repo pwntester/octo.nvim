@@ -379,7 +379,6 @@ function M.write_details(bufnr, issue, update)
         local strongest_review = utils.calculate_strongest_review_state(reviewers[name])
         local reviewer_vt = {
           { name, "OctoUser" },
-          { " " },
           { utils.state_icon_map[strongest_review], utils.state_hl_map[strongest_review] },
           { " " },
         }
