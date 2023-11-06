@@ -126,7 +126,7 @@ function M.color_string_with_hex(s, hexcol)
 
   -- Foreground code?
   local escseq = ("[%d;2;%d;%d;%dm"):format(38, r, g, b)
-  return ("%s%s%s"):format(escseq, s, fzf_utils.ansi_colors.clear)
+  return ("%s%s%s"):format(escseq, s, fzf_utils.ansi_escseq.clear)
 end
 
 function M.pad_string(s, length)
