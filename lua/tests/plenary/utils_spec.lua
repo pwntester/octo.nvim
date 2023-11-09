@@ -25,5 +25,21 @@ describe("Utils module:", function()
       eq(this.parse_remote_url(remote_urls[5], aliases).host, "github.com")
       eq(this.parse_remote_url(remote_urls[5], aliases).repo, "pwntester/octo.nvim")
     end)
+
+    it("convert_vim_mapping_to_fzf changes vim mappings to fzf mappings", function()
+      local utils = require "octo.utils"
+      local mappings = {
+        ["<C-j>"] = "ctrl-j",
+        ["<c-k>"] = "ctrl-k",
+        ["<A-J>"] = "alt-j",
+        ["<a-k>"] = "alt-k",
+        ["<M-Tab>"] = "alt-tab",
+        ["<m-UP>"] = "alt-up",
+      }
+
+      for vim_mapping, fzf_mapping in pairs(mappings) do
+        eq(utils.convert_vim_mapping_to_fzf(vim_mapping), fzf_mapping)
+      end
+    end)
   end)
 end)
