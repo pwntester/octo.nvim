@@ -79,7 +79,7 @@ return function(opts)
       ["--info"] = "default",
     },
     actions = vim.tbl_extend("force", fzf_actions.common_open_actions(formatted_pulls), {
-      ["ctrl-o"] = function(selected)
+      [picker_utils.convert_mapping(cfg.picker_config.mappings.checkout_pr.lhs)] = function(selected)
         local entry = formatted_pulls[selected[1]]
         checkout_pull_request(entry)
       end,

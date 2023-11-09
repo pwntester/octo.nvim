@@ -27,3 +27,21 @@ describe("Utils module:", function()
     end)
   end)
 end)
+
+describe("Utils module (fzf picker):", function()
+  it("convert_mapping changes vim mappings to fzf mappings", function()
+    local fzf_picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
+    local mappings = {
+      ["<C-j>"] = "ctrl-j",
+      ["<c-k>"] = "ctrl-k",
+      ["<A-J>"] = "alt-j",
+      ["<a-k>"] = "alt-k",
+      ["<M-Tab>"] = "alt-tab",
+      ["<m-UP>"] = "alt-up",
+    }
+
+    for vim_mapping, fzf_mapping in pairs(mappings) do
+      eq(fzf_picker_utils.convert_mapping(vim_mapping), fzf_mapping)
+    end
+  end)
+end)

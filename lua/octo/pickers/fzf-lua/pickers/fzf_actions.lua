@@ -1,4 +1,5 @@
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
+local octo_config = require("octo.config")
 local M = {}
 
 M.common_buffer_actions = function(formatted_items)
@@ -19,11 +20,12 @@ M.common_buffer_actions = function(formatted_items)
 end
 
 M.common_open_actions = function(formatted_items)
+  local cfg = octo_config.get_config()
   return vim.tbl_extend("force", M.common_buffer_actions(formatted_items), {
-    ["ctrl-b"] = function(selected)
+    [picker_utils.convert_mapping(cfg.picker_config.mappings.open_in_browser.lhs)] = function(selected)
       picker_utils.open_in_browser(formatted_items[selected[1]])
     end,
-    ["ctrl-y"] = function(selected)
+    [picker_utils.convert_mapping(cfg.picker_config.mappings.copy_url.lhs)] = function(selected)
       picker_utils.copy_url(formatted_items[selected[1]])
     end,
   })

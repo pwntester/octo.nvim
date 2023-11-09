@@ -135,4 +135,10 @@ function M.pad_string(s, length)
   return string.format("%s%" .. (length - #string_s) .. "s", string_s, " ")
 end
 
+function M.convert_mapping(vim_mapping)
+  local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
+  fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
+  return string.lower(fzf_mapping)
+end
+
 return M
