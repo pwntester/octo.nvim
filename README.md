@@ -261,6 +261,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | diff | Show PR diff |
 | | merge [commit\|rebase\|squash] [delete] | Merge current PR using the specified method|
 | | ready| Mark a draft PR as ready for review |
+| | draft| Send a ready PR back to draft |
 | | checks | Show the status of all checks run on the PR |
 | | reload | Reload PR. Same as doing `e!`|
 | | browser | Open current PR in the browser|
