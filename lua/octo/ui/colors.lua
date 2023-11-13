@@ -168,15 +168,15 @@ local function color_is_bright(r, g, b)
   -- Counting the perceptive luminance - human eye favors green color
   local luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   if luminance > 0.5 then
-    return true -- Bright colors, black font
+    return true  -- Bright colors, black font
   else
     return false -- Dark colors, white font
   end
 end
 
 function M.get_background_color_of_highlight_group(highlight_group_name)
-  local highlight_group = vim.api.nvim_get_hl_by_name(highlight_group_name, true)
-  local highlight_group_normal = vim.api.nvim_get_hl_by_name("Normal", true)
+  local highlight_group = vim.api.nvim_get_hl(0, { name = highlight_group_name })
+  local highlight_group_normal = vim.api.nvim_get_hl(0, { name = "Normal" })
   local background_color = highlight_group.background or highlight_group_normal.background
   if background_color then
     return string.format("#%06x", background_color)
