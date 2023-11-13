@@ -23,14 +23,14 @@ local function make_bubble(content, highlight_group, opts)
   if delimiter_color then
     local delimiter_highlight_group = colors.create_highlight(delimiter_color, { mode = "foreground" })
     return {
-      { left_delimiter,  delimiter_highlight_group },
-      { body,            highlight_group },
+      { left_delimiter, delimiter_highlight_group },
+      { body, highlight_group },
       { right_delimiter, delimiter_highlight_group },
     }
   else
     return {
-      { left_delimiter,  highlight_group },
-      { body,            highlight_group },
+      { left_delimiter, highlight_group },
+      { body, highlight_group },
       { right_delimiter, highlight_group },
     }
   end
