@@ -112,6 +112,9 @@ function M.setup()
       ready = function()
         M.pr_ready_for_review()
       end,
+      draft = function()
+        M.pr_draft()
+      end,
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         if utils.is_blank(opts.repo) then
@@ -887,8 +890,10 @@ function M.save_pr(opts)
   local title, body
   local last_commit = string.gsub(vim.fn.system "git log -1 --pretty=%B", "%s+$", "")
   local last_commit_lines = vim.split(last_commit, "\n")
-  if #last_commit_lines > 1 then
+  if #last_commit_lines >= 1 then
     title = last_commit_lines[1]
+  end
+  if #last_commit_lines > 1 then
     if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
       body = table.concat(vim.list_slice(last_commit_lines, 3, #last_commit_lines), "\n")
     else
@@ -976,6 +981,22 @@ function M.pr_ready_for_review()
   end
   gh.run {
     args = { "pr", "ready", tostring(buffer.number) },
+    cb = function(output, stderr)
+      utils.info(output)
+      utils.error(stderr)
+      writers.write_state(bufnr)
+    end,
+  }
+end
+
+function M.pr_draft()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer or not buffer:isPullRequest() then
+    return
+  end
+  gh.run {
+    args = { "pr", "ready", tostring(buffer.number), "--undo" },
     cb = function(output, stderr)
       utils.info(output)
       utils.error(stderr)

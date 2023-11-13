@@ -1309,4 +1309,10 @@ function M.get_lines_from_context(calling_context)
   return line_number_start, line_number_end
 end
 
+function M.convert_vim_mapping_to_fzf(vim_mapping)
+  local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
+  fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
+  return string.lower(fzf_mapping)
+end
+
 return M

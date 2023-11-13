@@ -169,8 +169,8 @@ function M.issues(opts)
               action_set.select:replace(function(prompt_bufnr, type)
                 open(type)(prompt_bufnr)
               end)
-              map("i", "<c-b>", open_in_browser())
-              map("i", "<c-y>", copy_url())
+              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
               return true
             end,
           })
@@ -315,10 +315,10 @@ function M.pull_requests(opts)
               action_set.select:replace(function(prompt_bufnr, type)
                 open(type)(prompt_bufnr)
               end)
-              map("i", "<c-o>", checkout_pull_request())
-              map("i", "<c-b>", open_in_browser())
-              map("i", "<c-y>", copy_url())
-              map("i", "<c-r>", merge_pull_request())
+              map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+              map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
               return true
             end,
           })
@@ -479,6 +479,7 @@ end
 ---
 function M.search(opts)
   opts = opts or {}
+  local cfg = octo_config.get_config()
   local requester = function()
     return function(prompt)
       if not opts.prompt and utils.is_blank(prompt) then
@@ -531,8 +532,8 @@ function M.search(opts)
         action_set.select:replace(function(prompt_bufnr, type)
           open(type)(prompt_bufnr)
         end)
-        map("i", "<c-b>", open_in_browser())
-        map("i", "<c-y>", copy_url())
+        map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+        map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
         return true
       end,
     })
@@ -923,6 +924,7 @@ end
 --
 function M.repos(opts)
   opts = opts or {}
+  local cfg = octo_config.get_config()
   if not opts.login then
     if vim.g.octo_viewer then
       opts.login = vim.g.octo_viewer
@@ -967,8 +969,8 @@ function M.repos(opts)
               action_set.select:replace(function(prompt_bufnr, type)
                 open(type)(prompt_bufnr)
               end)
-              map("i", "<c-b>", open_in_browser())
-              map("i", "<c-y>", copy_url())
+              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
               return true
             end,
           })

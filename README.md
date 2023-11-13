@@ -83,6 +83,14 @@ require"octo".setup({
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
   default_remote = {"upstream", "origin"}; -- order to try remotes
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`
+  picker_config = {
+    mappings = {
+      open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
+      copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+      checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
+      merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
+    },
+  },
   reaction_viewer_hint_icon = "";         -- marker for user reactions
   user_icon = " ";                        -- user icon
   timeline_marker = "";                   -- timeline marker
@@ -261,6 +269,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | | diff | Show PR diff |
 | | merge [commit\|rebase\|squash] [delete] | Merge current PR using the specified method|
 | | ready| Mark a draft PR as ready for review |
+| | draft| Send a ready PR back to draft |
 | | checks | Show the status of all checks run on the PR |
 | | reload | Reload PR. Same as doing `e!`|
 | | browser | Open current PR in the browser|
