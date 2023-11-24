@@ -175,9 +175,9 @@ local function color_is_bright(r, g, b)
 end
 
 function M.get_background_color_of_highlight_group(highlight_group_name)
-  local highlight_group = vim.api.nvim_get_hl(0, { name = highlight_group_name })
-  local highlight_group_normal = vim.api.nvim_get_hl(0, { name = "Normal" })
-  local background_color = highlight_group.background or highlight_group_normal.background
+  local highlight_group = vim.api.nvim_get_hl(0, { name = highlight_group_name, link = false })
+  local highlight_group_normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+  local background_color = highlight_group.bg or highlight_group_normal.bg
   if background_color then
     return string.format("#%06x", background_color)
   end
