@@ -561,6 +561,30 @@ function M.delete_comment()
   end
 end
 
+local function update_review_thread_header(bufnr, thread, thread_id, thread_line)
+  local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+  local end_line = thread.originalLine
+  local commit_id = ""
+  for _, review_threads in ipairs(thread.pullRequest.reviewThreads.nodes) do
+    if review_threads.id == thread_id then
+      commit_id = review_threads.comments.nodes[1].originalCommit.abbreviatedOid
+    end
+  end
+  writers.write_review_thread_header(bufnr, {
+    path = thread.path,
+    start_line = start_line,
+    end_line = end_line,
+    commit = commit_id,
+    isOutdated = thread.isOutdated,
+    isResolved = thread.isResolved,
+  }, thread_line - 2)
+  local threads = thread.pullRequest.reviewThreads.nodes
+  local review = reviews.get_current_review()
+  if review then
+    review:update_threads(threads)
+  end
+end
+
 function M.resolve_thread()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -583,21 +607,7 @@ function M.resolve_thread()
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.resolveReviewThread.thread
         if thread.isResolved then
-          -- review thread header
-          local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
-          local end_line = thread.originalLine
-          writers.write_review_thread_header(bufnr, {
-            path = thread.path,
-            start_line = start_line,
-            end_line = end_line,
-            isOutdated = thread.isOutdated,
-            isResolved = thread.isResolved,
-          }, thread_line - 2)
-          local threads = resp.data.resolveReviewThread.thread.pullRequest.reviewThreads.nodes
-          local review = reviews.get_current_review()
-          if review then
-            review:update_threads(threads)
-          end
+          update_review_thread_header(bufnr, thread, thread_id, thread_line)
           --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
         end
       end
@@ -627,21 +637,7 @@ function M.unresolve_thread()
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.unresolveReviewThread.thread
         if not thread.isResolved then
-          -- review thread header
-          local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
-          local end_line = thread.originalLine
-          writers.write_review_thread_header(bufnr, {
-            path = thread.path,
-            start_line = start_line,
-            end_line = end_line,
-            isOutdated = thread.isOutdated,
-            isResolved = thread.isResolved,
-          }, thread_line - 2)
-          local threads = resp.data.unresolveReviewThread.thread.pullRequest.reviewThreads.nodes
-          local review = reviews.get_current_review()
-          if review then
-            review:update_threads(threads)
-          end
+          update_review_thread_header(bufnr, thread, thread_id, thread_line)
         end
       end
     end,
