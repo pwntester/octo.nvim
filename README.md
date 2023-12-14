@@ -29,24 +29,24 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 
 <!--toc:start-->
 - [:octopus: Octo.nvim](#octopus-octonvim)
-  - [🌲 Table of Contents](#🌲-table-of-contents)
-  - [💫 Features](#💫-features)
-  - [🎯 Requirements](#🎯-requirements)
-  - [📦 Installation](#📦-installation)
-  - [🔧 Configuration](#🔧-configuration)
-  - [🚀 Usage](#🚀-usage)
-  - [🤖 Commands](#🤖-commands)
-  - [🔥 Examples](#🔥-examples)
-  - [📋 PR reviews](#📋-pr-reviews)
-  - [🍞 Completion](#🍞-completion)
-  - [🎨 Colors](#🎨-colors)
-  - [🗿 Status Column](#🗿-status-column)
-  - [📺 Demos](#📺-demos)
-  - [🙋 FAQ](#🙋-faq)
-  - [🙌 Contributing](#🙌-contributing)
-  - [🌟 Credits](#🌟-credits)
-  - [🙏 Say Thanks](#🙏-say-thanks)
-  - [📜 License](#📜-license)
+  - [🌲 Table of Contents](#-table-of-contents)
+  - [💫 Features](#-features)
+  - [🎯 Requirements](#-requirements)
+  - [📦 Installation](#-installation)
+  - [🔧 Configuration](#-configuration)
+  - [🚀 Usage](#-usage)
+  - [🤖 Commands](#-commands)
+  - [🔥 Examples](#-examples)
+  - [📋 PR reviews](#-pr-reviews)
+  - [🍞 Completion](#-completion)
+  - [🎨 Colors](#-colors)
+  - [🗿 Status Column](#-status-column)
+  - [📺 Demos](#-demos)
+  - [🙋 FAQ](#-faq)
+  - [🙌 Contributing](#-contributing)
+  - [🌟 Credits](#-credits)
+  - [🙏 Say Thanks](#-say-thanks)
+  - [📜 License](#-license)
   <!--toc:end-->
 
 ## 💫 Features
@@ -65,7 +65,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 
 ## 📦 Installation
 
-Use your favourite plugin manager to install it. eg:
+Use your favourite plugin manager to install it, e.g.:
 
 ```lua
 use {
@@ -92,7 +92,7 @@ require"octo".setup({
   picker = "telescope",                    -- or "fzf-lua"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
-    mappings = {                           -- only used by "telescope" picker for now
+    mappings = {                           -- mappings for the pickers
       open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
@@ -387,7 +387,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 
 ## 🔥 Examples
 
-```
+```vim
 Octo https://github.com/pwntester/octo.nvim/issues/12
 Octo issue create
 Octo issue create pwntester/octo.nvim
@@ -402,7 +402,7 @@ Octo search assignee:pwntester is:pr
 
 ## 📋 PR reviews
 
-- Open the PR (eg: `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`)
+- Open the PR (e.g. `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`)
 - Start a review with `Octo review start` or resume a pending review with `Octo review resume`
 - A new tab will show a panel with changed files and two windows showing the diff on any of them.
 - Change panel entries with `]q` and `[q` or by selecting an entry in the window
@@ -533,7 +533,7 @@ vim.opt.statuscolumn = "%{%v:lua.get_statuscol_octo(bufnr(), v:lnum)%}"
 
 **How can I disable bubbles for XYZ?**
 
-Each text-object that makes use of a bubble (except labels) do use their own highlight group that linkes per default to the main bubble highlight group. To disable most bubbles at once you can simply link `OctoBubble` to `Normal`. To only disable them for a certain plain do the same for the specific sub-group (e.g. `OctoUser`).
+Each text-object that makes use of a bubble (except labels) do use their own highlight group that links per default to the main bubble highlight group. To disable most bubbles at once you can simply link `OctoBubble` to `Normal`. To only disable them for a certain plain do the same for the specific sub-group (e.g. `OctoUser`).
 
 **Why do my issue titles or markdown syntax do not get highlighted properly?**
 
@@ -551,7 +551,7 @@ GITHUB_TOKEN= gh auth login
 
 ... and choose a method to authorise access for `gh`.
 
-`gh` must store the creds so it can work in a subshell.
+`gh` must store the credentials so it can work in a subshell.
 
 **Can I use treesitter markdown parser with octo buffers?**
 
