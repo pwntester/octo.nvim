@@ -97,7 +97,7 @@ end
 
 M.reaction_map = {
   ["THUMBS_UP"] = "👍 ",
-  ["THUMBS_DOWN"] = "👎",
+  ["THUMBS_DOWN"] = "👎 ",
   ["LAUGH"] = "😀 ",
   ["HOORAY"] = "🎉 ",
   ["CONFUSED"] = "😕 ",
