@@ -41,15 +41,15 @@ M.state_hl_map = {
 }
 
 M.state_icon_map = {
-  MERGED = "⇌",
-  CLOSED = "⚑",
-  OPEN = "⚐",
-  APPROVED = "✓",
-  CHANGES_REQUESTED = "±",
-  COMMENTED = "☷",
-  DISMISSED = "",
-  PENDING = "",
-  REVIEW_REQUIRED = "",
+  MERGED = "⇌ ",
+  CLOSED = "⚑ ",
+  OPEN = "⚐ ",
+  APPROVED = "✓ ",
+  CHANGES_REQUESTED = "± ",
+  COMMENTED = "☷ ",
+  DISMISSED = " ",
+  PENDING = " ",
+  REVIEW_REQUIRED = " ",
 }
 
 M.state_message_map = {
@@ -96,14 +96,14 @@ function M.calculate_strongest_review_state(states)
 end
 
 M.reaction_map = {
-  ["THUMBS_UP"] = "👍",
-  ["THUMBS_DOWN"] = "👎",
-  ["LAUGH"] = "😀",
-  ["HOORAY"] = "🎉",
-  ["CONFUSED"] = "😕",
-  ["HEART"] = "❤️",
-  ["ROCKET"] = "🚀",
-  ["EYES"] = "👀",
+  ["THUMBS_UP"] = "👍 ",
+  ["THUMBS_DOWN"] = "👎 ",
+  ["LAUGH"] = "😀 ",
+  ["HOORAY"] = "🎉 ",
+  ["CONFUSED"] = "😕 ",
+  ["HEART"] = "❤️ ",
+  ["ROCKET"] = "🚀 ",
+  ["EYES"] = "👀 ",
 }
 
 function M.tbl_slice(tbl, first, last, step)
