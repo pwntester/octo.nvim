@@ -56,8 +56,12 @@ function M.get_user_name(remote_hostname)
   job:sync()
   local stderr = table.concat(job:stderr_result(), "\n")
   local stdout = table.concat(job:result(), "\n")
+  -- Newer versions of the gh cli have a different message. See #467
   local name_err = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
+    or string.match(stderr, "Logged in to [^%s]+ account ([^%s]+)")
   local name_out = string.match(stdout, "Logged in to [^%s]+ as ([^%s]+)")
+    or string.match(stdout, "Logged in to [^%s]+ account ([^%s]+)")
+
   if name_err then
     return name_err
   elseif name_out then
