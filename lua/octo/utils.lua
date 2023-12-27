@@ -139,7 +139,20 @@ function M.is_blank(s)
   )
 end
 
-function M.parse_remote_url(url, aliases)
+---@class Remote
+---@field name string
+---@field host string
+---@field repo string|nil
+---@field resolved string|nil
+---@field push_url string
+---@field fetch_url string
+
+--- Parses a remote url into a Remote class
+---@param url string url of remote
+---@param name string name of remote
+---@param aliases table {["host"]: "alias"}
+---@return Remote|nil
+function M.parse_raw_remote_url(url, name, aliases)
   -- remove trailing ".git"
   url = string.gsub(url, ".git$", "")
   -- remove protocol scheme
@@ -161,15 +174,39 @@ function M.parse_remote_url(url, aliases)
   if aliases[host] then
     host = aliases[host]
   end
+
   if not M.is_blank(host) and not M.is_blank(repo) then
     return {
+      name = name,
       host = host,
       repo = repo,
     }
   end
 end
 
-function M.parse_git_remote()
+--- Takes a list of remotes and overrides with the resolved git config default
+--- Example: remote.origin.gh-resolved pwntester/octo.nvim
+---@param remotes Remote[]
+---@param raw_resolved string[]
+function M.populate_resolved_remotes(remotes, raw_resolved)
+  for _, line in ipairs(raw_resolved) do
+    local parts = M.split(line, " ")
+    local resolved_parts = M.split(parts[1], "%.")
+    if #resolved_parts > 2 then
+      local name = resolved_parts[2]
+      if remotes[name] ~= nil and remotes[name].name == name then
+        remotes[name].resolved = parts[2]
+      end
+    end
+  end
+  return remotes
+end
+
+--- Returns a set of remotes {[name]:remote}
+--- Parses the output of git remote -v into a list of remotes
+--- User defined host aliases are applied afterwards.
+---@return Remote[]
+function M.get_git_remotes()
   local conf = config.get_config()
   local aliases = conf.ssh_aliases
   local job = Job:new { command = "git", args = { "remote", "-v" }, cwd = vim.fn.getcwd() }
@@ -178,22 +215,38 @@ function M.parse_git_remote()
   if not M.is_blank(stderr) then
     return {}
   end
+
+  ---@type Remote[]
   local remotes = {}
   for _, line in ipairs(job:result()) do
     local name, url = line:match "^(%S+)%s+(%S+)"
     if name then
-      local remote = M.parse_remote_url(url, aliases)
+      local remote = M.parse_raw_remote_url(url, name, aliases)
       if remote then
+        if aliases[remote.host] then
+          remote.host = aliases[remote.host]
+        end
         remotes[name] = remote
       end
     end
   end
+
+  local config_job = Job:new { command = "git", args = { "config", "--get-regexp", [[^remote\..*\.gh-resolved$]] } }
+  config_job:sync()
+  stderr = table.concat(config_job:stderr_result(), "\n")
+  if not M.is_blank(stderr) then
+    return remotes
+  end
+
+  remotes = M.populate_resolved_remotes(remotes, config_job:result())
   return remotes
 end
 
+--- Gets the default remote
+---@return Remote
 function M.get_remote()
   local conf = config.get_config()
-  local remotes = M.parse_git_remote()
+  local remotes = M.get_git_remotes()
   for _, name in ipairs(conf.default_remote) do
     if remotes[name] then
       return remotes[name]
@@ -206,14 +259,20 @@ function M.get_remote()
   }
 end
 
-function M.get_all_remotes()
-  return vim.tbl_values(M.parse_git_remote())
-end
-
+--- Get the remote repo name.
+--- If a resloved repo name is set on the default remote this repo name is used
+--- The resolved repo name is set via `gh repo set-default`
+---@return string
 function M.get_remote_name()
-  return M.get_remote().repo
+  local remote = M.get_remote()
+  if remote.resolved and remote.resolved ~= "base" then
+    return remote.resolved
+  end
+  return remote.repo
 end
 
+--- Gets the remote host name
+---@return string
 function M.get_remote_host()
   return M.get_remote().host
 end
@@ -1313,6 +1372,17 @@ function M.convert_vim_mapping_to_fzf(vim_mapping)
   local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
   fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
   return string.lower(fzf_mapping)
+end
+
+--- Utility function that splits a string by sep
+---@param str string
+---@param sep string
+---@return table
+function M.split(str, sep)
+  if str == "" then
+    return {}
+  end
+  return vim.split(str, sep)
 end
 
 return M
