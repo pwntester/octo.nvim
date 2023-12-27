@@ -341,7 +341,7 @@ function M.octo(object, action, ...)
   end
 
   if not object then
-    if config.get_config().enable_builtin then
+    if config.values.enable_builtin then
       M.commands.actions()
     else
       utils.error "Missing arguments"
@@ -759,7 +759,7 @@ end
 
 function M.create_pr(is_draft)
   is_draft = "draft" == is_draft and true or false
-  local conf = config.get_config()
+  local conf = config.values
   local select = conf.pull_requests.always_select_remote_on_create or false
 
   local repo

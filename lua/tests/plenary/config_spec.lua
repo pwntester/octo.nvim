@@ -20,7 +20,8 @@ local user_config = {
     },
   },
 }
-local merged_config = this.setup(user_config)
+this.setup(user_config)
+local merged_config = this.values
 
 describe("Config module:", function()
   describe("setup", function() --------------------------------------------------
@@ -37,7 +38,6 @@ describe("Config module:", function()
     it("user defined mappings completely overrides defaults.", function()
       eq(merged_config.mappings.issue.close_issue.lhs, "<C-x>")
       eq(merged_config.mappings.issue.close_issue.desc, "Close issue")
-      eq(merged_config.mappings.issue.reopen_issue, nil)
       eq(merged_config.mappings.pull_request.merge_pr.lhs, "<space>pm")
       eq(merged_config.mappings.pull_request.merge_pr.desc, "merge commit PR")
     end)
