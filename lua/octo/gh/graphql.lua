@@ -183,6 +183,7 @@ M.start_review_mutation = [[
               diffSide
               startDiffSide
               isResolved
+              resolvedBy { login }
               isCollapsed
               isOutdated
               comments(first:100) {
@@ -1414,6 +1415,7 @@ query {
           startLine
           originalStartLine
           isResolved
+          resolvedBy { login }
           isCollapsed
           isOutdated
           comments(first:100) {
