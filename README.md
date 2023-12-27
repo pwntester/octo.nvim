@@ -126,7 +126,7 @@ require"octo".setup({
       field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
       direction = "DESC"                   -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
     },
-    always_select_remote_on_create = "false" -- always give prompt to select base remote repo when creating PRs
+    always_select_remote_on_create = false -- always give prompt to select base remote repo when creating PRs
   },
   file_panel = {
     size = 10,                             -- changed files panel rows
