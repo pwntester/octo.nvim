@@ -851,6 +851,12 @@ function M.write_review_thread_header(bufnr, opts, line)
     -- )
     --vim.list_extend(header_vt, resolved_bubble)
     vim.list_extend(header_vt, { { conf.resolved_icon, "OctoGreen" } })
+    if opts.resolvedBy then
+      vim.list_extend(
+        header_vt,
+        { { " [Resolved by: ", "OctoSymbol" }, { opts.resolvedBy.login, "OctoDetailsLabel" }, { "] ", "OctoSymbol" } }
+      )
+    end
   end
 
   M.write_block(bufnr, { "" })
@@ -1312,6 +1318,7 @@ function M.write_threads(bufnr, threads)
           end_line = end_line,
           isOutdated = thread.isOutdated,
           isResolved = thread.isResolved,
+          resolvedBy = thread.resolvedBy,
           commit = comment.originalCommit.abbreviatedOid,
         })
 
