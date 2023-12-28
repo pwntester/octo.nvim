@@ -132,7 +132,7 @@ function M.issues(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local order_by = cfg.issues.order_by
   local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
   utils.info "Fetching issues (this may take a while) ..."
@@ -277,7 +277,7 @@ function M.pull_requests(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local order_by = cfg.pull_requests.order_by
   local query =
     graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
@@ -479,7 +479,7 @@ end
 ---
 function M.search(opts)
   opts = opts or {}
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local requester = function()
     return function(prompt)
       if not opts.prompt and utils.is_blank(prompt) then
@@ -924,7 +924,7 @@ end
 --
 function M.repos(opts)
   opts = opts or {}
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   if not opts.login then
     if vim.g.octo_viewer then
       opts.login = vim.g.octo_viewer

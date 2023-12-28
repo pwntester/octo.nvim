@@ -4,7 +4,7 @@ local utils = require "octo.utils"
 local M = {}
 
 function M.setup()
-  local provider_name = config.get_config().picker
+  local provider_name = config.values.picker
   if utils.is_blank(provider_name) then
     provider_name = "telescope"
   end

@@ -23,7 +23,7 @@ return function(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local order_by = cfg.issues.order_by
 
   local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })

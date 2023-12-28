@@ -9,7 +9,7 @@ local colors = require "octo.ui.colors"
 
 local function make_bubble(content, highlight_group, opts)
   opts = opts or {}
-  local conf = config.get_config()
+  local conf = config.values
   local margin = string.rep(" ", opts.margin_width or 0)
   local right_margin = string.rep(" ", opts.right_margin_width or 0)
   local left_margin = string.rep(" ", opts.left_margin_width or 0)
@@ -38,7 +38,7 @@ end
 
 local function make_user_bubble(name, is_viewer, opts)
   opts = opts or {}
-  local conf = config.get_config()
+  local conf = config.values
   local highlight = is_viewer and "OctoUserViewer" or "OctoUser"
   local icon_position = opts.icon_position or "left"
   local icon = conf.user_icon
@@ -53,7 +53,7 @@ local function make_user_bubble(name, is_viewer, opts)
 end
 
 local function make_reaction_bubble(icon, includes_viewer, opts)
-  local conf = config.get_config()
+  local conf = config.values
   local highlight = includes_viewer and "OctoReactionViewer" or "OctoReaction"
   local hint_for_viewer = includes_viewer and conf.reaction_viewer_hint_icon or ""
   local content = icon .. hint_for_viewer

@@ -27,7 +27,7 @@ return function(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local order_by = cfg.pull_requests.order_by
 
   local query =

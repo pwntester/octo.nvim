@@ -22,7 +22,7 @@ local function get_fg(hl_group_name)
 end
 
 local function get_colors()
-  local conf = config.get_config()
+  local conf = config.values
   return conf.colors
 end
 

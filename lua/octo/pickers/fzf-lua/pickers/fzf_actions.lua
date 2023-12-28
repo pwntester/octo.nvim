@@ -21,7 +21,7 @@ M.common_buffer_actions = function(formatted_items)
 end
 
 M.common_open_actions = function(formatted_items)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   return vim.tbl_extend("force", M.common_buffer_actions(formatted_items), {
     [utils.convert_vim_mapping_to_fzf(cfg.picker_config.mappings.open_in_browser.lhs)] = function(selected)
       picker_utils.open_in_browser(formatted_items[selected[1]])

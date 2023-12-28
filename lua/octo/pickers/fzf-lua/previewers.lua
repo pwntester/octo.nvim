@@ -324,7 +324,7 @@ M.repo = function(formatted_repos)
     self:set_preview_buf(tmpbuf)
 
     local stargazer, fork
-    if config.get_config().picker_config.use_emojis then
+    if config.values.picker_config.use_emojis then
       stargazer = string.format("💫: %s", entry.repo.stargazerCount)
       fork = string.format("🔱: %s", entry.repo.forkCount)
     else

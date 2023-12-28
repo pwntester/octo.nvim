@@ -170,7 +170,7 @@ function M.parse_remote_url(url, aliases)
 end
 
 function M.parse_git_remote()
-  local conf = config.get_config()
+  local conf = config.values
   local aliases = conf.ssh_aliases
   local job = Job:new { command = "git", args = { "remote", "-v" }, cwd = vim.fn.getcwd() }
   job:sync()
@@ -192,7 +192,7 @@ function M.parse_git_remote()
 end
 
 function M.get_remote()
-  local conf = config.get_config()
+  local conf = config.values
   local remotes = M.parse_git_remote()
   for _, name in ipairs(conf.default_remote) do
     if remotes[name] then
@@ -1271,7 +1271,7 @@ end
 --- Apply mappings to a buffer
 function M.apply_mappings(kind, bufnr)
   local mappings = require "octo.mappings"
-  local conf = config.get_config()
+  local conf = config.values
   for action, value in pairs(conf.mappings[kind]) do
     if
       not M.is_blank(value)

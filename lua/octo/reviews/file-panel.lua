@@ -58,7 +58,7 @@ FilePanel.bufopts = {
 ---@param files FileEntry[]
 ---@return FilePanel
 function FilePanel:new(files)
-  local conf = config.get_config()
+  local conf = config.values
   local this = {
     files = files,
     size = conf.file_panel.size,
@@ -96,7 +96,7 @@ function FilePanel:open()
     return
   end
 
-  local conf = config.get_config()
+  local conf = config.values
   self.size = conf.file_panel.size
   --vim.cmd("wincmd H")
   --vim.cmd("vsp")
@@ -233,7 +233,7 @@ function FilePanel:render()
   end
 
   local current_review = require("octo.reviews").get_current_review()
-  local conf = config.get_config()
+  local conf = config.values
   local strlen = vim.fn.strlen
   local s = "Files changed"
   add_hl("OctoFilePanelTitle", line_idx, 0, #s)

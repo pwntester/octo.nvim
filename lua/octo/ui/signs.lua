@@ -3,7 +3,7 @@ local config = require "octo.config"
 local M = {}
 
 function M.setup()
-  local conf = config.get_config()
+  local conf = config.values
 
   vim.cmd(string.format("sign define octo_thread text=%s texthl=OctoBlue", conf.comment_icon))
   vim.cmd(string.format("sign define octo_thread_resolved text=%s  texthl=OctoGreen", conf.comment_icon))
