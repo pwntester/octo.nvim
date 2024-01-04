@@ -20,7 +20,7 @@ return function(callback)
       local status = nil
 
       for _, node in ipairs(card.fieldValues.nodes) do
-        if node.field ~= nil and node.field.name == 'Status' then
+        if node.field ~= nil and node.field.name == "Status" then
           status = node.field.name
           break
         end
@@ -30,10 +30,7 @@ return function(callback)
         status = "<No status>"
       end
 
-      table.insert(
-        titles,
-        string.format("%s %s %s (%s)", card.project.id, card.id, status, card.project.title)
-      )
+      table.insert(titles, string.format("%s %s %s (%s)", card.project.id, card.id, status, card.project.title))
     end
 
     fzf.fzf_exec(
