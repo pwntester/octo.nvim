@@ -17,7 +17,7 @@ function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     require("octo.commands").octo(unpack(opts.fargs))
   end, { complete = require("octo.completion").octo_command_complete, nargs = "*" })
-  local conf = config.get_config()
+  local conf = config.values
 
   local card_commands
 

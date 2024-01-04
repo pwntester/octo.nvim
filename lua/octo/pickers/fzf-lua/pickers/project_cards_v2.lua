@@ -2,24 +2,6 @@ local fzf = require "fzf-lua"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
-local function map(tbl, f)
-  local t = {}
-  for k, v in pairs(tbl) do
-    t[k] = f(v)
-  end
-  return t
-end
-
-local function reduce(tbl, start, f)
-  local acc = start
-
-  for k, v in pairs(tbl) do
-    f(acc, v)
-  end
-
-  return acc
-end
-
 return function(callback)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -35,29 +17,22 @@ return function(callback)
     local titles = {}
 
     for _, card in ipairs(cards.nodes) do
-      local fields = map(card.fieldValues.nodes, function(fieldValue)
-        if fieldValue.field == nil then
-          return fieldValue
-        end
+      local status = nil
 
-        return {
-          k = fieldValue.field.name,
-          v = {
-            name = fieldValue.name,
-            optionId = fieldValue.optionId,
-          },
-        }
-      end)
-
-      local reduced = reduce(fields, {}, function(acc, curr)
-        if curr.k ~= nil then
-          acc[curr.k] = curr.v
+      for _, node in ipairs(card.fieldValues.nodes) do
+        if node.field ~= nil and node.field.name == 'Status' then
+          status = node.field.name
+          break
         end
-      end)
+      end
+
+      if status == nil then
+        status = "<No status>"
+      end
 
       table.insert(
         titles,
-        string.format("%s %s %s (%s)", card.project.id, card.id, reduced.Status.name, card.project.title)
+        string.format("%s %s %s (%s)", card.project.id, card.id, status, card.project.title)
       )
     end
 
