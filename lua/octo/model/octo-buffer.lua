@@ -237,7 +237,7 @@ end
 function OctoBuffer:configure()
   -- configure buffer
   vim.api.nvim_buf_call(self.bufnr, function()
-    local use_signcolumn = config.get_config().ui.use_signcolumn
+    local use_signcolumn = config.values.ui.use_signcolumn
     vim.cmd [[setlocal filetype=octo]]
     vim.cmd [[setlocal buftype=acwrite]]
     vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
@@ -799,7 +799,7 @@ end
 
 ---Renders the signcolumn
 function OctoBuffer:render_signcolumn()
-  local use_signcolumn = config.get_config().ui.use_signcolumn
+  local use_signcolumn = config.values.ui.use_signcolumn
   if not use_signcolumn or not self.ready then
     return
   end

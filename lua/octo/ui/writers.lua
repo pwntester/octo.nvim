@@ -7,6 +7,7 @@ local config = require "octo.config"
 local utils = require "octo.utils"
 local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
+local vim = vim
 
 local M = {}
 
@@ -373,15 +374,17 @@ function M.write_details(bufnr, issue, update)
     local collect_reviewer = function(name, state)
       --if vim.g.octo_viewer ~= name then
       if not reviewers[name] then
-        reviewers[name] = { state }
-      else
-        local states = reviewers[name]
-        if not vim.tbl_contains(states, state) then
-          table.insert(states, state)
+        if not reviewers[name] then
+          reviewers[name] = { state }
+        else
+          local states = reviewers[name]
+          if not vim.tbl_contains(states, state) then
+            table.insert(states, state)
+          end
+          reviewers[name] = states
         end
-        reviewers[name] = states
       end
-      --end
+      -- end
     end
     local timeline_nodes = {}
     for _, item in ipairs(issue.timelineItems.nodes) do
@@ -411,7 +414,6 @@ function M.write_details(bufnr, issue, update)
         local strongest_review = utils.calculate_strongest_review_state(reviewers[name])
         local reviewer_vt = {
           { name, "OctoUser" },
-          { " " },
           { utils.state_icon_map[strongest_review], utils.state_hl_map[strongest_review] },
           { " " },
         }
@@ -499,7 +501,7 @@ function M.write_comment(bufnr, comment, kind, line)
   ---- PullRequestComment (regular comment (not associated to any review) to a PR review comment)
 
   local buffer = octo_buffers[bufnr]
-  local conf = config.get_config()
+  local conf = config.values
 
   -- heading
   line = line or vim.api.nvim_buf_line_count(bufnr) + 1
@@ -631,7 +633,7 @@ function M.write_comment(bufnr, comment, kind, line)
 end
 
 local function find_snippet_range(diffhunk_lines)
-  local conf = config.get_config()
+  local conf = config.values
   local context_lines = conf.snippet_context_lines or 4
   local snippet_start
   local count = 0
@@ -851,7 +853,7 @@ end
 function M.write_review_thread_header(bufnr, opts, line)
   line = line or vim.api.nvim_buf_line_count(bufnr) - 1
 
-  local conf = config.get_config()
+  local conf = config.values
 
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line, line + 2)
@@ -884,6 +886,12 @@ function M.write_review_thread_header(bufnr, opts, line)
     -- )
     --vim.list_extend(header_vt, resolved_bubble)
     vim.list_extend(header_vt, { { conf.resolved_icon, "OctoGreen" } })
+    if opts.resolvedBy then
+      vim.list_extend(
+        header_vt,
+        { { " [Resolved by: ", "OctoSymbol" }, { opts.resolvedBy.login, "OctoDetailsLabel" }, { "] ", "OctoSymbol" } }
+      )
+    end
   end
 
   M.write_block(bufnr, { "" })
@@ -1051,7 +1059,7 @@ end
 
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
-  local conf = config.get_config()
+  local conf = config.values
   local max_length = opts.max_length or 80
   local chunks = {}
 
@@ -1134,7 +1142,7 @@ function M.write_assigned_event(bufnr, item)
   --   item.actor.login == vim.g.octo_viewer
   -- )
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
@@ -1147,7 +1155,7 @@ end
 
 function M.write_commit_event(bufnr, item)
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   if item.commit.committer.user ~= vim.NIL then
@@ -1175,7 +1183,7 @@ function M.write_merged_event(bufnr, item)
   --   item.actor.login == vim.g.octo_viewer
   -- )
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
@@ -1194,7 +1202,7 @@ function M.write_closed_event(bufnr, item)
   --   item.actor.login == vim.g.octo_viewer
   -- )
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
@@ -1219,7 +1227,7 @@ function M.write_labeled_events(bufnr, items, action)
 
   for _, actor in ipairs(vim.tbl_keys(labels_by_actor)) do
     local vt = {}
-    local conf = config.get_config()
+    local conf = config.values
     table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
     --vim.list_extend(vt, actor_bubble)
@@ -1245,7 +1253,7 @@ function M.write_reopened_event(bufnr, item)
   --   item.actor.login == vim.g.octo_viewer
   -- )
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
@@ -1262,7 +1270,7 @@ function M.write_review_requested_event(bufnr, item)
   -- )
 
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
@@ -1283,7 +1291,7 @@ function M.write_review_request_removed_event(bufnr, item)
   --   item.actor.login == vim.g.octo_viewer
   -- )
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
@@ -1304,7 +1312,7 @@ function M.write_review_dismissed_event(bufnr, item)
   --   item.actor.login == vim.g.octo_viewer
   -- )
   local vt = {}
-  local conf = config.get_config()
+  local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
@@ -1345,6 +1353,7 @@ function M.write_threads(bufnr, threads)
           end_line = end_line,
           isOutdated = thread.isOutdated,
           isResolved = thread.isResolved,
+          resolvedBy = thread.resolvedBy,
           commit = comment.originalCommit.abbreviatedOid,
         })
 

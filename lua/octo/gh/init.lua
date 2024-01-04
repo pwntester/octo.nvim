@@ -28,7 +28,7 @@ local env_vars = {
 
 local function get_env()
   local env = env_vars
-  local gh_env = config.get_config().gh_env
+  local gh_env = config.values.gh_env
   if type(gh_env) == "function" then
     local computed_env = gh_env()
     if type(computed_env) == "table" then
@@ -56,8 +56,12 @@ function M.get_user_name(remote_hostname)
   job:sync()
   local stderr = table.concat(job:stderr_result(), "\n")
   local stdout = table.concat(job:result(), "\n")
+  -- Newer versions of the gh cli have a different message. See #467
   local name_err = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
+    or string.match(stderr, "Logged in to [^%s]+ account ([^%s]+)")
   local name_out = string.match(stdout, "Logged in to [^%s]+ as ([^%s]+)")
+    or string.match(stdout, "Logged in to [^%s]+ account ([^%s]+)")
+
   if name_err then
     return name_err
   elseif name_out then
@@ -79,7 +83,7 @@ function M.run(opts)
   end
 
   opts = opts or {}
-  local conf = config.get_config()
+  local conf = config.values
   local mode = opts.mode or "async"
   local hostname = ""
   if opts.args[1] == "api" then

@@ -183,6 +183,7 @@ M.start_review_mutation = [[
               diffSide
               startDiffSide
               isResolved
+              resolvedBy { login }
               isCollapsed
               isOutdated
               comments(first:100) {
@@ -1414,6 +1415,7 @@ query {
           startLine
           originalStartLine
           isResolved
+          resolvedBy { login }
           isCollapsed
           isOutdated
           comments(first:100) {
@@ -2572,9 +2574,21 @@ M.remove_assignees_mutation = [[
 -- for teams use `teamIds`
 M.request_reviews_mutation = [[
   mutation {
-    requestReviews(input: {pullRequestId: "%s", userIds: ["%s"]}) {
+    requestReviews(input: {pullRequestId: "%s", union: true, userIds: ["%s"]}) {
       pullRequest {
         id
+        reviewRequests(first: 100) {
+          nodes {
+            requestedReviewer {
+              ... on User {
+                login
+                isViewer
+              }
+              ... on Mannequin { login }
+              ... on Team { name }
+            }
+          }
+        }
       }
     }
   }

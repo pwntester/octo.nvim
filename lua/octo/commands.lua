@@ -8,6 +8,8 @@ local window = require "octo.ui.window"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local config = require "octo.config"
+local colors = require "octo.ui.colors"
+local vim = vim
 
 local M = {}
 
@@ -136,6 +138,9 @@ function M.setup()
       ready = function()
         M.pr_ready_for_review()
       end,
+      draft = function()
+        M.pr_draft()
+      end,
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         if utils.is_blank(opts.repo) then
@@ -164,7 +169,14 @@ function M.setup()
         picker.repos { login = login }
       end,
       view = function(repo)
-        utils.get_repo(nil, repo)
+        if repo == nil and utils.cwd_is_git() then
+          repo = utils.get_remote_name()
+          utils.get_repo(nil, repo)
+        elseif repo == nil then
+          utils.error "Argument for repo name is required"
+        else
+          utils.get_repo(nil, repo)
+        end
       end,
       fork = function()
         utils.fork_repo()
@@ -358,8 +370,13 @@ function M.process_varargs(repo, ...)
 end
 
 function M.octo(object, action, ...)
+  if not _G.octo_colors_loaded then
+    colors.setup()
+    _G.octo_colors_loaded = true
+  end
+
   if not object then
-    if config.get_config().enable_builtin then
+    if config.values.enable_builtin then
       M.commands.actions()
     else
       utils.error "Missing arguments"
@@ -389,7 +406,7 @@ function M.octo(object, action, ...)
 
     local a = o[action]
     if not a then
-      utils.error("Incorrect action: " .. action)
+      utils.error(action and "Incorrect action: " .. action or "No action specified")
       return
     else
       a(...)
@@ -466,12 +483,12 @@ function M.delete_comment()
     return
   end
   local comment = buffer:get_comment_at_cursor()
-  local start_line = comment.bufferStartLine
-  local end_line = comment.bufferEndLine
   if not comment then
     utils.error "The cursor does not seem to be located at any comment"
     return
   end
+  local start_line = comment.bufferStartLine
+  local end_line = comment.bufferEndLine
   local query, threadId
   if comment.kind == "IssueComment" then
     query = graphql("delete_issue_comment_mutation", comment.id)
@@ -492,6 +509,7 @@ function M.delete_comment()
         -- In issue buffers, we should hide the thread snippet
         local resp = vim.fn.json_decode(output)
 
+        -- remove comment lines from the buffer
         if comment.reactionLine then
           vim.api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
           vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
@@ -509,27 +527,18 @@ function M.delete_comment()
             end
           end
           buffer.commentsMetadata = updated
-        else
-          utils.error("Deleting buffer" .. tostring(bufnr))
         end
 
         if comment.kind == "PullRequestReviewComment" then
           local review = reviews.get_current_review()
           if not review then
+            utils.error "Cannot find review for this comment"
             return
           end
-          local threads = {}
-          local pr = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest
-          threads = pr.reviewThreads.nodes
 
-          local thread_was_deleted = true
-          for _, thread in ipairs(threads) do
-            if threadId == thread.id then
-              thread_was_deleted = false
-              break
-            end
-          end
+          local threads = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest.reviewThreads.nodes
 
+          -- check if there is still at least a PENDING comment
           local review_was_deleted = true
           for _, thread in ipairs(threads) do
             for _, c in ipairs(thread.comments.nodes) do
@@ -539,21 +548,8 @@ function M.delete_comment()
               end
             end
           end
-
-          if thread_was_deleted then
-            -- this was the last comment on the last thread, close the thread buffer
-            local bufname = vim.api.nvim_buf_get_name(bufnr)
-            local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
-            if split then
-              local diff_win = reviews.get_current_review().layout:cur_file():get_win(split)
-              vim.api.nvim_set_current_win(diff_win)
-              pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-            end
-          end
-
           if review_was_deleted then
-            -- we deleted the last thread of the review and therefore the backend
-            -- also deleted the review, create a new one
+            -- we deleted the last pending comment and therefore GitHub closed the review, create a new one
             review:create(function(resp)
               review.id = resp.data.addPullRequestReview.pullRequestReview.id
               local updated_threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
@@ -562,9 +558,65 @@ function M.delete_comment()
           else
             review:update_threads(threads)
           end
+
+          -- check if we removed the last comment of a thread
+          local thread_was_deleted = true
+          for _, thread in ipairs(threads) do
+            if threadId == thread.id then
+              thread_was_deleted = false
+              break
+            end
+          end
+          if thread_was_deleted then
+            -- this was the last comment, close the thread buffer
+            -- No comments left
+            utils.error("Deleting buffer " .. tostring(bufnr))
+            local bufname = vim.api.nvim_buf_get_name(bufnr)
+            local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
+            if split then
+              local layout = reviews.get_current_review().layout
+              local file = layout:cur_file()
+              local diff_win = file:get_win(split)
+              local thread_win = file:get_alternative_win(split)
+              local original_buf = file:get_alternative_buf(split)
+              -- move focus to the split containing the diff buffer
+              -- restore the diff buffer so that window is not closed when deleting thread buffer
+              vim.api.nvim_win_set_buf(thread_win, original_buf)
+              -- delete the thread buffer
+              pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+              -- refresh signs and virtual text
+              file:place_signs()
+              -- diff buffers
+              file:show_diff()
+            end
+          end
         end
       end,
     }
+  end
+end
+
+local function update_review_thread_header(bufnr, thread, thread_id, thread_line)
+  local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
+  local end_line = thread.originalLine
+  local commit_id = ""
+  for _, review_threads in ipairs(thread.pullRequest.reviewThreads.nodes) do
+    if review_threads.id == thread_id then
+      commit_id = review_threads.comments.nodes[1].originalCommit.abbreviatedOid
+    end
+  end
+  writers.write_review_thread_header(bufnr, {
+    path = thread.path,
+    start_line = start_line,
+    end_line = end_line,
+    commit = commit_id,
+    isOutdated = thread.isOutdated,
+    isResolved = thread.isResolved,
+  }, thread_line - 2)
+  local threads = thread.pullRequest.reviewThreads.nodes
+  local review = reviews.get_current_review()
+  if review then
+    review:update_threads(threads)
   end
 end
 
@@ -590,21 +642,7 @@ function M.resolve_thread()
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.resolveReviewThread.thread
         if thread.isResolved then
-          -- review thread header
-          local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
-          local end_line = thread.originalLine
-          writers.write_review_thread_header(bufnr, {
-            path = thread.path,
-            start_line = start_line,
-            end_line = end_line,
-            isOutdated = thread.isOutdated,
-            isResolved = thread.isResolved,
-          }, thread_line - 2)
-          local threads = resp.data.resolveReviewThread.thread.pullRequest.reviewThreads.nodes
-          local review = reviews.get_current_review()
-          if review then
-            review:update_threads(threads)
-          end
+          update_review_thread_header(bufnr, thread, thread_id, thread_line)
           --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
         end
       end
@@ -634,21 +672,7 @@ function M.unresolve_thread()
         local resp = vim.fn.json_decode(output)
         local thread = resp.data.unresolveReviewThread.thread
         if not thread.isResolved then
-          -- review thread header
-          local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
-          local end_line = thread.originalLine
-          writers.write_review_thread_header(bufnr, {
-            path = thread.path,
-            start_line = start_line,
-            end_line = end_line,
-            isOutdated = thread.isOutdated,
-            isResolved = thread.isResolved,
-          }, thread_line - 2)
-          local threads = resp.data.unresolveReviewThread.thread.pullRequest.reviewThreads.nodes
-          local review = reviews.get_current_review()
-          if review then
-            review:update_threads(threads)
-          end
+          update_review_thread_header(bufnr, thread, thread_id, thread_line)
         end
       end
     end,
@@ -770,7 +794,7 @@ end
 
 function M.create_pr(is_draft)
   is_draft = "draft" == is_draft and true or false
-  local conf = config.get_config()
+  local conf = config.values
   local select = conf.pull_requests.always_select_remote_on_create or false
 
   local repo
@@ -813,6 +837,17 @@ function M.create_pr(is_draft)
   local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
 
   -- get remote branches
+  if
+    info == nil
+    or info.refs == nil
+    or info.refs.nodes == nil
+    or info == vim.NIL
+    or info.refs == vim.NIL
+    or info.refs.nodes == vim.NIL
+  then
+    utils.error "Cannot grab remote branches"
+    return
+  end
   local remote_branches = info.refs.nodes
 
   local remote_branch_exists = false
@@ -886,8 +921,10 @@ function M.save_pr(opts)
   local title, body
   local last_commit = string.gsub(vim.fn.system "git log -1 --pretty=%B", "%s+$", "")
   local last_commit_lines = vim.split(last_commit, "\n")
-  if #last_commit_lines > 1 then
+  if #last_commit_lines >= 1 then
     title = last_commit_lines[1]
+  end
+  if #last_commit_lines > 1 then
     if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
       body = table.concat(vim.list_slice(last_commit_lines, 3, #last_commit_lines), "\n")
     else
@@ -975,6 +1012,22 @@ function M.pr_ready_for_review()
   end
   gh.run {
     args = { "pr", "ready", tostring(buffer.number) },
+    cb = function(output, stderr)
+      utils.info(output)
+      utils.error(stderr)
+      writers.write_state(bufnr)
+    end,
+  }
+end
+
+function M.pr_draft()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer or not buffer:isPullRequest() then
+    return
+  end
+  gh.run {
+    args = { "pr", "ready", tostring(buffer.number), "--undo" },
     cb = function(output, stderr)
       utils.info(output)
       utils.error(stderr)
@@ -1348,12 +1401,7 @@ function M.remove_project_v2_card()
 end
 
 function M.reload(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
-  end
-  require("octo").load_buffer(buffer.repo, buffer.kind, buffer.number)
+  require("octo").load_buffer(bufnr)
 end
 
 function M.create_label(label)
@@ -1490,6 +1538,7 @@ function M.add_user(subject, login)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
+    utils.error "No Octo buffer"
     return
   end
 
@@ -1504,6 +1553,9 @@ function M.add_user(subject, login)
       query = graphql("add_assignees_mutation", iid, user_id)
     elseif subject == "reviewer" then
       query = graphql("request_reviews_mutation", iid, user_id)
+    else
+      utils.error "Invalid user type"
+      return
     end
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },

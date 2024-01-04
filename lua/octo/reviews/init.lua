@@ -130,7 +130,7 @@ end
 function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
-  local conf = config.get_config()
+  local conf = config.values
   if conf.use_local_fs and not utils.in_pr_branch(pr.bufnr) then
     local choice = vim.fn.confirm("Currently not in PR branch, would you like to checkout?", "&Yes\n&No", 2)
     if choice == 1 then
@@ -224,7 +224,7 @@ function Review:collect_submit_info()
     return
   end
 
-  local conf = config.get_config()
+  local conf = config.values
   local winid, bufnr = window.create_centered_float {
     header = string.format(
       "Press %s to approve, %s to comment or %s to request changes",
@@ -404,7 +404,7 @@ function Review:add_comment(isSuggestion)
       vim.cmd [[startinsert]]
     end
   else
-    utils.error "Cannot find diff window"
+    utils.error("Cannot find diff window " .. alt_win)
   end
 end
 

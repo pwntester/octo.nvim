@@ -26,7 +26,7 @@ function M.gen_from_issue(max_number, print_repo)
         },
       }
     else
-      local icon = entry.kind == "issue" and "" or ""
+      local icon = entry.kind == "issue" and " " or " "
       columns = {
         { entry.value, "TelescopeResultsNumber" },
         { icon .. " " .. entry.obj.title },

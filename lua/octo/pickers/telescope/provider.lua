@@ -132,7 +132,7 @@ function M.issues(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local order_by = cfg.issues.order_by
   local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
   utils.info "Fetching issues (this may take a while) ..."
@@ -169,8 +169,8 @@ function M.issues(opts)
               action_set.select:replace(function(prompt_bufnr, type)
                 open(type)(prompt_bufnr)
               end)
-              map("i", "<c-b>", open_in_browser())
-              map("i", "<c-y>", copy_url())
+              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
               return true
             end,
           })
@@ -254,6 +254,14 @@ local function checkout_pull_request()
   end
 end
 
+local function merge_pull_request()
+  return function(prompt_bufnr)
+    local sel = action_state.get_selected_entry(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    utils.merge_pr(sel.obj.number)
+  end
+end
+
 function M.pull_requests(opts)
   opts = opts or {}
   if not opts.states then
@@ -269,7 +277,7 @@ function M.pull_requests(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local order_by = cfg.pull_requests.order_by
   local query =
     graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
@@ -307,9 +315,10 @@ function M.pull_requests(opts)
               action_set.select:replace(function(prompt_bufnr, type)
                 open(type)(prompt_bufnr)
               end)
-              map("i", "<c-o>", checkout_pull_request())
-              map("i", "<c-b>", open_in_browser())
-              map("i", "<c-y>", copy_url())
+              map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+              map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
               return true
             end,
           })
@@ -470,6 +479,7 @@ end
 ---
 function M.search(opts)
   opts = opts or {}
+  local cfg = octo_config.values
   local requester = function()
     return function(prompt)
       if not opts.prompt and utils.is_blank(prompt) then
@@ -522,8 +532,8 @@ function M.search(opts)
         action_set.select:replace(function(prompt_bufnr, type)
           open(type)(prompt_bufnr)
         end)
-        map("i", "<c-b>", open_in_browser())
-        map("i", "<c-y>", copy_url())
+        map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+        map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
         return true
       end,
     })
@@ -914,6 +924,7 @@ end
 --
 function M.repos(opts)
   opts = opts or {}
+  local cfg = octo_config.values
   if not opts.login then
     if vim.g.octo_viewer then
       opts.login = vim.g.octo_viewer
@@ -958,8 +969,8 @@ function M.repos(opts)
               action_set.select:replace(function(prompt_bufnr, type)
                 open(type)(prompt_bufnr)
               end)
-              map("i", "<c-b>", open_in_browser())
-              map("i", "<c-y>", copy_url())
+              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
               return true
             end,
           })

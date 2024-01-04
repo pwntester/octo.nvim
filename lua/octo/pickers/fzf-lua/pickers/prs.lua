@@ -27,7 +27,7 @@ return function(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local cfg = octo_config.get_config()
+  local cfg = octo_config.values
   local order_by = cfg.pull_requests.order_by
 
   local query =
@@ -85,7 +85,7 @@ return function(opts)
       ["--info"] = "default",
     },
     actions = vim.tbl_extend("force", fzf_actions.common_open_actions(formatted_pulls), {
-      ["ctrl-o"] = function(selected)
+      [utils.convert_vim_mapping_to_fzf(cfg.picker_config.mappings.checkout_pr.lhs)] = function(selected)
         local entry = formatted_pulls[selected[1]]
         checkout_pull_request(entry)
       end,

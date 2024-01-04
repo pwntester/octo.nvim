@@ -4,6 +4,7 @@ local date = require "octo.date"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local _, Job = pcall(require, "plenary.job")
+local vim = vim
 
 local M = {}
 
@@ -14,7 +15,7 @@ local path_sep = package.config:sub(1, 1)
 
 M.viewed_state_map = {
   DISMISSED = { icon = "󰀨 ", hl = "OctoRed" },
-  VIEWED = { icon = "󰗠", hl = "OctoGreen" },
+  VIEWED = { icon = "󰗠 ", hl = "OctoGreen" },
   UNVIEWED = { icon = "󰄰 ", hl = "OctoBlue" },
 }
 
@@ -40,15 +41,15 @@ M.state_hl_map = {
 }
 
 M.state_icon_map = {
-  MERGED = "⇌",
-  CLOSED = "⚑",
-  OPEN = "⚐",
-  APPROVED = "✓",
-  CHANGES_REQUESTED = "±",
-  COMMENTED = "☷",
-  DISMISSED = "",
-  PENDING = "",
-  REVIEW_REQUIRED = "",
+  MERGED = "⇌ ",
+  CLOSED = "⚑ ",
+  OPEN = "⚐ ",
+  APPROVED = "✓ ",
+  CHANGES_REQUESTED = "± ",
+  COMMENTED = "☷ ",
+  DISMISSED = " ",
+  PENDING = " ",
+  REVIEW_REQUIRED = " ",
 }
 
 M.state_message_map = {
@@ -95,14 +96,14 @@ function M.calculate_strongest_review_state(states)
 end
 
 M.reaction_map = {
-  ["THUMBS_UP"] = "👍",
-  ["THUMBS_DOWN"] = "👎",
-  ["LAUGH"] = "😀",
-  ["HOORAY"] = "🎉",
-  ["CONFUSED"] = "😕",
-  ["HEART"] = "❤️",
-  ["ROCKET"] = "🚀",
-  ["EYES"] = "👀",
+  ["THUMBS_UP"] = "👍 ",
+  ["THUMBS_DOWN"] = "👎 ",
+  ["LAUGH"] = "😀 ",
+  ["HOORAY"] = "🎉 ",
+  ["CONFUSED"] = "😕 ",
+  ["HEART"] = "❤️ ",
+  ["ROCKET"] = "🚀 ",
+  ["EYES"] = "👀 ",
 }
 
 function M.tbl_slice(tbl, first, last, step)
@@ -169,7 +170,7 @@ function M.parse_remote_url(url, aliases)
 end
 
 function M.parse_git_remote()
-  local conf = config.get_config()
+  local conf = config.values
   local aliases = conf.ssh_aliases
   local job = Job:new { command = "git", args = { "remote", "-v" }, cwd = vim.fn.getcwd() }
   job:sync()
@@ -191,11 +192,11 @@ function M.parse_git_remote()
 end
 
 function M.get_remote()
-  local conf = config.get_config()
+  local conf = config.values
   local remotes = M.parse_git_remote()
-  for name, remote in pairs(remotes) do
-    if vim.tbl_contains(conf.default_remote, name) then
-      return remote
+  for _, name in ipairs(conf.default_remote) do
+    if remotes[name] then
+      return remotes[name]
     end
   end
   -- return github.com as default host
@@ -337,6 +338,21 @@ function M.checkout_pr_sync(pr_number)
   }):sync()
 end
 
+---Mergest a PR b number
+function M.merge_pr(pr_number)
+  if not Job then
+    return
+  end
+  Job:new({
+    enable_recording = true,
+    command = "gh",
+    args = { "pr", "merge", pr_number, "--merge", "--delete-branch" },
+    on_exit = vim.schedule_wrap(function()
+      M.info("Merged PR " .. pr_number .. "!")
+    end),
+  }):start()
+end
+
 ---Formats a string as a date
 function M.format_date(date_string)
   local time_bias = date():getbias() * -1
@@ -376,6 +392,14 @@ function M.get_repo_id(repo)
     repo_id_cache[repo] = id
     return id
   end
+end
+
+-- Checks if the current cwd is in a git repo
+function M.cwd_is_git()
+  local cmd = "git rev-parse --is-inside-work-tree"
+  local out = vim.fn.system(cmd)
+  out = out:gsub("%s+", "")
+  return out == "true"
 end
 
 ---Gets repo info
@@ -1247,7 +1271,7 @@ end
 --- Apply mappings to a buffer
 function M.apply_mappings(kind, bufnr)
   local mappings = require "octo.mappings"
-  local conf = config.get_config()
+  local conf = config.values
   for action, value in pairs(conf.mappings[kind]) do
     if
       not M.is_blank(value)
@@ -1283,6 +1307,12 @@ function M.get_lines_from_context(calling_context)
     line_number_end = vim.fn.getpos("']")[2]
   end
   return line_number_start, line_number_end
+end
+
+function M.convert_vim_mapping_to_fzf(vim_mapping)
+  local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
+  fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
+  return string.lower(fzf_mapping)
 end
 
 return M

@@ -2,6 +2,7 @@
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/file-entry.lua
 
 local config = require "octo.config"
+local constants = require "octo.constants"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local signs = require "octo.ui.signs"
@@ -175,7 +176,7 @@ function FileEntry:fetch()
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
   local left_abbrev = current_review.layout.left:abbrev()
-  local conf = config.get_config()
+  local conf = config.values
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
@@ -235,7 +236,7 @@ function FileEntry:load_buffers(left_winid, right_winid)
   -- configure diff buffers
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
-      local conf = config.get_config()
+      local conf = config.values
       local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr)
 
       -- create buffer
@@ -338,6 +339,7 @@ function FileEntry:place_signs()
   }
   for _, split in ipairs(splits) do
     signs.unplace(split.bufnr)
+    vim.api.nvim_buf_clear_namespace(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
 
     -- place comment range signs
     if split.comment_ranges then
@@ -380,7 +382,12 @@ function FileEntry:place_signs()
           -- place the virtual text only on first line
           local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
           local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
-          vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
+          --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
+          local opts = {
+            virt_text = { { vt_msg, "Comment" } },
+            virt_text_pos = "right_align",
+          }
+          vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, opts)
         end
       end
     end
@@ -462,7 +469,7 @@ end
 
 function M._configure_buffer(bufid)
   utils.apply_mappings("review_diff", bufid)
-  -- local conf = config.get_config()
+  -- local conf = config.values
   -- vim.cmd(string.format("nnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
   -- vim.cmd(string.format("vnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
   -- vim.cmd(string.format("nnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
@@ -470,7 +477,7 @@ function M._configure_buffer(bufid)
 end
 
 function M._detach_buffer(bufid)
-  local conf = config.get_config()
+  local conf = config.values
   for _, lhs in pairs(conf.mappings.review_diff) do
     pcall(vim.keymap.del, "n", lhs, { buffer = bufid })
   end
