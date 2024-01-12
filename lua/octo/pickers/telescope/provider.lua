@@ -158,23 +158,23 @@ function M.issues(opts)
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = issues,
-              entry_maker = entry_maker.gen_from_issue(max_number),
-            },
-            sorter = conf.generic_sorter(opts),
-            previewer = previewers.issue.new(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = issues,
+                entry_maker = entry_maker.gen_from_issue(max_number),
+              },
+              sorter = conf.generic_sorter(opts),
+              previewer = previewers.issue.new(opts),
+              attach_mappings = function(_, map)
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open(type)(prompt_bufnr)
+                end)
+                map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+                map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -224,19 +224,19 @@ function M.gists(opts)
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = gists,
-              entry_maker = entry_maker.gen_from_gist(),
-            },
-            previewer = previewers.gist.new(opts),
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
-              map("i", "<CR>", open_gist)
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = gists,
+                entry_maker = entry_maker.gen_from_gist(),
+              },
+              previewer = previewers.gist.new(opts),
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, map)
+                map("i", "<CR>", open_gist)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -280,7 +280,7 @@ function M.pull_requests(opts)
   local cfg = octo_config.values
   local order_by = cfg.pull_requests.order_by
   local query =
-    graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
+      graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
   utils.info "Fetching pull requests (this may take a while) ..."
   gh.run {
     args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
@@ -304,25 +304,25 @@ function M.pull_requests(opts)
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = pull_requests,
-              entry_maker = entry_maker.gen_from_issue(max_number),
-            },
-            sorter = conf.generic_sorter(opts),
-            previewer = previewers.issue.new(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
-              map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = pull_requests,
+                entry_maker = entry_maker.gen_from_issue(max_number),
+              },
+              sorter = conf.generic_sorter(opts),
+              previewer = previewers.issue.new(opts),
+              attach_mappings = function(_, map)
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open(type)(prompt_bufnr)
+                end)
+                map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+                map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+                map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+                map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -340,31 +340,31 @@ function M.commits()
   -- TODO: graphql
   local url = string.format("repos/%s/pulls/%d/commits", buffer.repo, buffer.number)
   gh.run {
-    args = { "api", url },
+    args = { "api", "--paginate", url },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
         local results = vim.fn.json_decode(output)
         pickers
-          .new({}, {
-            prompt_title = false,
-            results_title = false,
-            preview_title = false,
-            finder = finders.new_table {
-              results = results,
-              entry_maker = entry_maker.gen_from_git_commits(),
-            },
-            sorter = conf.generic_sorter {},
-            previewer = previewers.commit.new { repo = buffer.repo },
-            attach_mappings = function()
-              action_set.select:replace(function(prompt_bufnr, type)
-                open_preview_buffer(type)(prompt_bufnr)
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new({}, {
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_git_commits(),
+              },
+              sorter = conf.generic_sorter {},
+              previewer = previewers.commit.new { repo = buffer.repo },
+              attach_mappings = function()
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open_preview_buffer(type)(prompt_bufnr)
+                end)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -378,9 +378,9 @@ function M.review_commits(callback)
   end
   -- TODO: graphql
   local url =
-    string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
+      string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
   gh.run {
-    args = { "api", url },
+    args = { "api", "--paginate", url },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
@@ -406,28 +406,28 @@ function M.review_commits(callback)
         })
 
         pickers
-          .new({}, {
-            prompt_title = false,
-            results_title = false,
-            preview_title = false,
-            finder = finders.new_table {
-              results = results,
-              entry_maker = entry_maker.gen_from_git_commits(),
-            },
-            sorter = conf.generic_sorter {},
-            previewer = previewers.commit.new { repo = current_review.pull_request.repo },
-            attach_mappings = function()
-              action_set.select:replace(function(prompt_bufnr)
-                local commit = action_state.get_selected_entry(prompt_bufnr)
-                local right = commit.value
-                local left = commit.parent
-                actions.close(prompt_bufnr)
-                callback(right, left)
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new({}, {
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_git_commits(),
+              },
+              sorter = conf.generic_sorter {},
+              previewer = previewers.commit.new { repo = current_review.pull_request.repo },
+              attach_mappings = function()
+                action_set.select:replace(function(prompt_bufnr)
+                  local commit = action_state.get_selected_entry(prompt_bufnr)
+                  local right = commit.value
+                  local left = commit.parent
+                  actions.close(prompt_bufnr)
+                  callback(right, left)
+                end)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -444,31 +444,31 @@ function M.changed_files()
   end
   local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
   gh.run {
-    args = { "api", url },
+    args = { "api", "--paginate", url },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
         local results = vim.fn.json_decode(output)
         pickers
-          .new({}, {
-            prompt_title = false,
-            results_title = false,
-            preview_title = false,
-            finder = finders.new_table {
-              results = results,
-              entry_maker = entry_maker.gen_from_git_changed_files(),
-            },
-            sorter = conf.generic_sorter {},
-            previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
-            attach_mappings = function()
-              action_set.select:replace(function(prompt_bufnr, type)
-                open_preview_buffer(type)(prompt_bufnr)
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new({}, {
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_git_changed_files(),
+              },
+              sorter = conf.generic_sorter {},
+              previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
+              attach_mappings = function()
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open_preview_buffer(type)(prompt_bufnr)
+                end)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -524,20 +524,20 @@ function M.search(opts)
   opts.prompt_title = opts.prompt_title or ""
   opts.results_title = opts.results_title or ""
   pickers
-    .new(opts, {
-      finder = finder,
-      sorter = conf.generic_sorter(opts),
-      previewer = previewers.issue.new(opts),
-      attach_mappings = function(_, map)
-        action_set.select:replace(function(prompt_bufnr, type)
-          open(type)(prompt_bufnr)
-        end)
-        map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-        map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finder,
+        sorter = conf.generic_sorter(opts),
+        previewer = previewers.issue.new(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(function(prompt_bufnr, type)
+            open(type)(prompt_bufnr)
+          end)
+          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          return true
+        end,
+      })
+      :find()
 end
 
 ---
@@ -550,26 +550,26 @@ function M.pending_threads(threads)
     max_linenr_length = math.max(max_linenr_length, #tostring(thread.line))
   end
   pickers
-    .new({}, {
-      prompt_title = false,
-      results_title = false,
-      preview_title = false,
-      finder = finders.new_table {
-        results = threads,
-        entry_maker = entry_maker.gen_from_review_thread(max_linenr_length),
-      },
-      sorter = conf.generic_sorter {},
-      previewer = previewers.review_thread.new {},
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local thread = action_state.get_selected_entry(prompt_bufnr).thread
-          actions.close(prompt_bufnr)
-          reviews.jump_to_pending_review_thread(thread)
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new({}, {
+        prompt_title = false,
+        results_title = false,
+        preview_title = false,
+        finder = finders.new_table {
+          results = threads,
+          entry_maker = entry_maker.gen_from_review_thread(max_linenr_length),
+        },
+        sorter = conf.generic_sorter {},
+        previewer = previewers.review_thread.new {},
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local thread = action_state.get_selected_entry(prompt_bufnr).thread
+            actions.close(prompt_bufnr)
+            reviews.jump_to_pending_review_thread(thread)
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 ---
@@ -589,22 +589,22 @@ function M.select_project_card(cb)
   else
     local opts = vim.deepcopy(dropdown_opts)
     pickers
-      .new(opts, {
-        finder = finders.new_table {
-          results = cards.nodes,
-          entry_maker = entry_maker.gen_from_project_card(),
-        },
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(_, _)
-          actions.select_default:replace(function(prompt_bufnr)
-            local source_card = action_state.get_selected_entry(prompt_bufnr)
-            actions.close(prompt_bufnr)
-            cb(source_card.card.id)
-          end)
-          return true
-        end,
-      })
-      :find()
+        .new(opts, {
+          finder = finders.new_table {
+            results = cards.nodes,
+            entry_maker = entry_maker.gen_from_project_card(),
+          },
+          sorter = conf.generic_sorter(opts),
+          attach_mappings = function(_, _)
+            actions.select_default:replace(function(prompt_bufnr)
+              local source_card = action_state.get_selected_entry(prompt_bufnr)
+              actions.close(prompt_bufnr)
+              cb(source_card.card.id)
+            end)
+            return true
+          end,
+        })
+        :find()
   end
 end
 
@@ -635,39 +635,39 @@ function M.select_target_project_column(cb)
 
         local opts = vim.deepcopy(dropdown_opts)
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = projects,
-              entry_maker = entry_maker.gen_from_project(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function()
-              action_set.select:replace(function(prompt_bufnr)
-                local selected_project = action_state.get_selected_entry(prompt_bufnr)
-                actions._close(prompt_bufnr, true)
-                local opts2 = vim.deepcopy(dropdown_opts)
-                pickers
-                  .new(opts2, {
-                    finder = finders.new_table {
-                      results = selected_project.project.columns.nodes,
-                      entry_maker = entry_maker.gen_from_project_column(),
-                    },
-                    sorter = conf.generic_sorter(opts2),
-                    attach_mappings = function()
-                      action_set.select:replace(function(prompt_bufnr2)
-                        local selected_column = action_state.get_selected_entry(prompt_bufnr2)
-                        actions.close(prompt_bufnr2)
-                        cb(selected_column.column.id)
-                      end)
-                      return true
-                    end,
-                  })
-                  :find()
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = projects,
+                entry_maker = entry_maker.gen_from_project(),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function()
+                action_set.select:replace(function(prompt_bufnr)
+                  local selected_project = action_state.get_selected_entry(prompt_bufnr)
+                  actions._close(prompt_bufnr, true)
+                  local opts2 = vim.deepcopy(dropdown_opts)
+                  pickers
+                      .new(opts2, {
+                        finder = finders.new_table {
+                          results = selected_project.project.columns.nodes,
+                          entry_maker = entry_maker.gen_from_project_column(),
+                        },
+                        sorter = conf.generic_sorter(opts2),
+                        attach_mappings = function()
+                          action_set.select:replace(function(prompt_bufnr2)
+                            local selected_column = action_state.get_selected_entry(prompt_bufnr2)
+                            actions.close(prompt_bufnr2)
+                            cb(selected_column.column.id)
+                          end)
+                          return true
+                        end,
+                      })
+                      :find()
+                end)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -694,22 +694,22 @@ function M.select_label(cb)
         local resp = vim.fn.json_decode(output)
         local labels = resp.data.repository.labels.nodes
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = labels,
-              entry_maker = entry_maker.gen_from_label(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _)
-              actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = labels,
+                entry_maker = entry_maker.gen_from_label(),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_label = action_state.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  cb(selected_label.label.id)
+                end)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -739,22 +739,22 @@ function M.select_assigned_label(cb)
         local resp = vim.fn.json_decode(output)
         local labels = resp.data.repository[key].labels.nodes
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = labels,
-              entry_maker = entry_maker.gen_from_label(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _)
-              actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = labels,
+                entry_maker = entry_maker.gen_from_label(),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_label = action_state.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  cb(selected_label.label.id)
+                end)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -828,47 +828,47 @@ function M.select_user(cb)
   end
 
   pickers
-    .new(opts, {
-      finder = finders.new_dynamic {
-        entry_maker = entry_maker.gen_from_user(),
-        fn = get_user_requester(),
-      },
-      sorter = sorters.get_fuzzy_file(opts),
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local selected_user = action_state.get_selected_entry(prompt_bufnr)
-          actions._close(prompt_bufnr, true)
-          if not selected_user.teams then
-            -- user
-            cb(selected_user.value)
-          else
-            -- organization, pick a team
-            pickers
-              .new(opts, {
-                prompt_title = false,
-                results_title = false,
-                preview_title = false,
-                finder = finders.new_table {
-                  results = selected_user.teams,
-                  entry_maker = entry_maker.gen_from_team(),
-                },
-                sorter = conf.generic_sorter(opts),
-                attach_mappings = function()
-                  actions.select_default:replace(function(prompt_bufnr)
-                    local selected_team = action_state.get_selected_entry(prompt_bufnr)
-                    actions.close(prompt_bufnr)
-                    cb(selected_team.team.id)
-                  end)
-                  return true
-                end,
-              })
-              :find()
-          end
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finders.new_dynamic {
+          entry_maker = entry_maker.gen_from_user(),
+          fn = get_user_requester(),
+        },
+        sorter = sorters.get_fuzzy_file(opts),
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local selected_user = action_state.get_selected_entry(prompt_bufnr)
+            actions._close(prompt_bufnr, true)
+            if not selected_user.teams then
+              -- user
+              cb(selected_user.value)
+            else
+              -- organization, pick a team
+              pickers
+                  .new(opts, {
+                    prompt_title = false,
+                    results_title = false,
+                    preview_title = false,
+                    finder = finders.new_table {
+                      results = selected_user.teams,
+                      entry_maker = entry_maker.gen_from_team(),
+                    },
+                    sorter = conf.generic_sorter(opts),
+                    attach_mappings = function()
+                      actions.select_default:replace(function(prompt_bufnr)
+                        local selected_team = action_state.get_selected_entry(prompt_bufnr)
+                        actions.close(prompt_bufnr)
+                        cb(selected_team.team.id)
+                      end)
+                      return true
+                    end,
+                  })
+                  :find()
+            end
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 --
@@ -898,22 +898,22 @@ function M.select_assignee(cb)
         local resp = vim.fn.json_decode(output)
         local assignees = resp.data.repository[key].assignees.nodes
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = assignees,
-              entry_maker = entry_maker.gen_from_user(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _)
-              actions.select_default:replace(function(prompt_bufnr)
-                local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_assignee.user.id)
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = assignees,
+                entry_maker = entry_maker.gen_from_user(),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  cb(selected_assignee.user.id)
+                end)
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -959,22 +959,22 @@ function M.repos(opts)
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
         pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = repos,
-              entry_maker = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              return true
-            end,
-          })
-          :find()
+            .new(opts, {
+              finder = finders.new_table {
+                results = repos,
+                entry_maker = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, map)
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open(type)(prompt_bufnr)
+                end)
+                map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+                map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+                return true
+              end,
+            })
+            :find()
       end
     end,
   }
@@ -991,22 +991,22 @@ function M.actions(flattened_actions)
   }
 
   pickers
-    .new(opts, {
-      finder = finders.new_table {
-        results = flattened_actions,
-        entry_maker = entry_maker.gen_from_octo_actions(),
-      },
-      sorter = conf.generic_sorter(opts),
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local selected_command = action_state.get_selected_entry(prompt_bufnr)
-          actions.close(prompt_bufnr)
-          selected_command.action.fun()
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finders.new_table {
+          results = flattened_actions,
+          entry_maker = entry_maker.gen_from_octo_actions(),
+        },
+        sorter = conf.generic_sorter(opts),
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local selected_command = action_state.get_selected_entry(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            selected_command.action.fun()
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 --
@@ -1020,23 +1020,23 @@ function M.issue_templates(templates, cb)
   }
 
   pickers
-    .new(opts, {
-      finder = finders.new_table {
-        results = templates,
-        entry_maker = entry_maker.gen_from_issue_templates(),
-      },
-      sorter = conf.generic_sorter(opts),
-      previewer = previewers.issue_template.new {},
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local selected_template = action_state.get_selected_entry(prompt_bufnr)
-          actions.close(prompt_bufnr)
-          cb(selected_template.template)
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finders.new_table {
+          results = templates,
+          entry_maker = entry_maker.gen_from_issue_templates(),
+        },
+        sorter = conf.generic_sorter(opts),
+        previewer = previewers.issue_template.new {},
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local selected_template = action_state.get_selected_entry(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            cb(selected_template.template)
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 M.picker = {

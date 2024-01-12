@@ -18,7 +18,7 @@ return function(opts)
   local get_contents = function(fzf_cb)
     local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
     gh.run {
-      args = { "api", url },
+      args = { "api", "--paginate", url },
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)

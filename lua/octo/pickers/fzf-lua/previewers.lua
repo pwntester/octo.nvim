@@ -182,7 +182,7 @@ M.commit = function(formatted_commits, repo)
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
 
     local url = string.format("/repos/%s/commits/%s", repo, entry.value)
-    local cmd = table.concat({ "gh", "api", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, " ")
+    local cmd = table.concat({ "gh", "api", "--paginate", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, " ")
     local proc = io.popen(cmd, "r")
     local output
     if proc ~= nil then
