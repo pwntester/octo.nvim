@@ -60,7 +60,6 @@ local M = {}
 ---@field snippet_context_lines number
 ---@field gh_env table
 ---@field timeout number
----@field default_to_projects_v2 boolean
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
 ---@field pull_requests OctoConfigPR
@@ -99,7 +98,6 @@ function M.get_default_values()
     snippet_context_lines = 4,
     gh_env = {},
     timeout = 5000,
-    default_to_projects_v2 = false,
     ui = {
       use_signcolumn = true,
     },

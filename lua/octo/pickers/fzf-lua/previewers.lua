@@ -5,6 +5,7 @@ local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
 local config = require "octo.config"
+local log = require "octo.pickers.fzf-lua.log"
 
 local M = {}
 

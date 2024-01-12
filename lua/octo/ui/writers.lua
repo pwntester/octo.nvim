@@ -305,41 +305,6 @@ function M.write_details(bufnr, issue, update)
     table.insert(details, projects_vt)
   end
 
-  -- projects v2
-  if issue.projectItems and #issue.projectItems.nodes > 0 then
-    local projects_vt = {
-      { "Projects (v2): ", "OctoDetailsLabel" },
-    }
-    --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
-    --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
-    for idx, item in ipairs(issue.projectItems.nodes) do
-      if item.project ~= vim.NIL then
-        if idx >= 2 then
-          table.insert(projects_vt, { ", " })
-        end
-
-        local status = nil
-
-        for _, fieldValues in ipairs(item.fieldValues.nodes) do
-          if fieldValues.field ~= nil and fieldValues.field.name == "Status" then
-            status = fieldValues.name
-          end
-        end
-
-        if status == nil then
-          table.insert(projects_vt, { "No status", "OctoRed" })
-        else
-          table.insert(projects_vt, { status })
-        end
-
-        table.insert(projects_vt, { " (", "OctoDetailsLabel" })
-        table.insert(projects_vt, { item.project.title })
-        table.insert(projects_vt, { ")", "OctoDetailsLabel" })
-      end
-    end
-    table.insert(details, projects_vt)
-  end
-
   -- milestones
   local ms = issue.milestone
   local milestone_vt = {

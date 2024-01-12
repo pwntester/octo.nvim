@@ -8,7 +8,7 @@ return function(callback)
   local buffer = octo_buffers[bufnr]
   local cards = buffer.node.projectCards
   if not cards or #cards.nodes == 0 then
-    utils.error "Can't find any project cards"
+    utils.error "Cant find any project cards"
     return
   end
 

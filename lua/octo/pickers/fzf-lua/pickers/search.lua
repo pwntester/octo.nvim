@@ -71,7 +71,6 @@ return function(opts)
     prompt = picker_utils.get_prompt(opts.prompt_title),
     func_async_callback = false,
     previewer = previewers.search(),
-    query_delay = 500,
     fzf_opts = {
       ["--info"] = "default",
       ["--delimiter"] = "' '",

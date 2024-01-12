@@ -59,13 +59,7 @@ return function(opts)
 
             if entry ~= nil then
               formatted_pulls[entry.ordinal] = entry
-              local highlight
-              if entry.obj.isDraft then
-                highlight = "OctoSymbol"
-              else
-                highlight = "OctoStateOpen"
-              end
-              local prefix = fzf.utils.ansi_from_hl(highlight, entry.value)
+              local prefix = fzf.utils.ansi_from_hl("Comment", entry.value)
               fzf_cb(prefix .. " " .. entry.obj.title)
             end
           end
