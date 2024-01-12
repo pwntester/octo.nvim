@@ -173,23 +173,31 @@ function M.setup()
         local current_review = reviews.get_current_review()
         if current_review then
           current_review:show_pending_comments()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       submit = function()
         local current_review = reviews.get_current_review()
         if current_review then
           current_review:collect_submit_info()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       discard = function()
         local current_review = reviews.get_current_review()
         if current_review then
           current_review:discard()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       close = function()
         if reviews.get_current_review() then
           reviews.get_current_review().layout:close()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       commit = function()
@@ -198,6 +206,8 @@ function M.setup()
           picker.review_commits(function(right, left)
             current_review:focus_commit(right, left)
           end)
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
     },
@@ -1095,7 +1105,7 @@ function M.show_pr_diff()
   end
   local url = string.format("/repos/%s/pulls/%s", buffer.repo, buffer.number)
   gh.run {
-    args = { "api", url },
+    args = { "api", "--paginate", url },
     headers = { "Accept: application/vnd.github.v3.diff" },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then

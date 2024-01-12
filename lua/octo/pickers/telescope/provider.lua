@@ -340,7 +340,7 @@ function M.commits()
   -- TODO: graphql
   local url = string.format("repos/%s/pulls/%d/commits", buffer.repo, buffer.number)
   gh.run {
-    args = { "api", url },
+    args = { "api", "--paginate", url },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
@@ -380,7 +380,7 @@ function M.review_commits(callback)
   local url =
     string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
   gh.run {
-    args = { "api", url },
+    args = { "api", "--paginate", url },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
@@ -444,7 +444,7 @@ function M.changed_files()
   end
   local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
   gh.run {
-    args = { "api", url },
+    args = { "api", "--paginate", url },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)

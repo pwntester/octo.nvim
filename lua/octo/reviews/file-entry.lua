@@ -7,6 +7,7 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
+local vim = vim
 
 local M = {}
 
@@ -274,12 +275,12 @@ end
 function FileEntry:show_diff()
   for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
     vim.api.nvim_buf_call(bufid, function()
-      vim.cmd [[filetype detect]]
-      vim.cmd [[doau BufEnter]]
-      vim.cmd [[diffthis]]
+      pcall(vim.cmd, [[filetype detect]])
+      pcall(vim.cmd, [[doau BufEnter]])
+      pcall(vim.cmd, [[diffthis]])
       -- Scroll to trigger the scrollbind and sync the windows. This works more
       -- consistently than calling `:syncbind`.
-      vim.cmd [[exec "normal! \<c-y>"]]
+      pcall(vim.cmd, [[exec "normal! \<c-y>"]])
     end)
   end
 end
