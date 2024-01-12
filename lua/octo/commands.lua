@@ -173,23 +173,31 @@ function M.setup()
         local current_review = reviews.get_current_review()
         if current_review then
           current_review:show_pending_comments()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       submit = function()
         local current_review = reviews.get_current_review()
         if current_review then
           current_review:collect_submit_info()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       discard = function()
         local current_review = reviews.get_current_review()
         if current_review then
           current_review:discard()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       close = function()
         if reviews.get_current_review() then
           reviews.get_current_review().layout:close()
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
       commit = function()
@@ -198,6 +206,8 @@ function M.setup()
           picker.review_commits(function(right, left)
             current_review:focus_commit(right, left)
           end)
+        else
+          utils.error "Please start or resume a review first"
         end
       end,
     },
@@ -397,14 +407,14 @@ function M.add_comment()
     viewerCanDelete = true,
     viewerDidAuthor = true,
     reactionGroups = {
-      { content = "THUMBS_UP", users = { totalCount = 0 } },
+      { content = "THUMBS_UP",   users = { totalCount = 0 } },
       { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-      { content = "LAUGH", users = { totalCount = 0 } },
-      { content = "HOORAY", users = { totalCount = 0 } },
-      { content = "CONFUSED", users = { totalCount = 0 } },
-      { content = "HEART", users = { totalCount = 0 } },
-      { content = "ROCKET", users = { totalCount = 0 } },
-      { content = "EYES", users = { totalCount = 0 } },
+      { content = "LAUGH",       users = { totalCount = 0 } },
+      { content = "HOORAY",      users = { totalCount = 0 } },
+      { content = "CONFUSED",    users = { totalCount = 0 } },
+      { content = "HEART",       users = { totalCount = 0 } },
+      { content = "ROCKET",      users = { totalCount = 0 } },
+      { content = "EYES",        users = { totalCount = 0 } },
     },
   }
 
@@ -803,12 +813,12 @@ function M.create_pr(is_draft)
 
   -- get remote branches
   if
-    info == nil
-    or info.refs == nil
-    or info.refs.nodes == nil
-    or info == vim.NIL
-    or info.refs == vim.NIL
-    or info.refs.nodes == vim.NIL
+      info == nil
+      or info.refs == nil
+      or info.refs.nodes == nil
+      or info == vim.NIL
+      or info.refs == vim.NIL
+      or info.refs.nodes == vim.NIL
   then
     utils.error "Cannot grab remote branches"
     return
@@ -824,7 +834,7 @@ function M.create_pr(is_draft)
   local remote_branch = local_branch
   if not remote_branch_exists then
     local choice =
-      vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+        vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
     if choice == 1 then
       local remote = "origin"
       remote_branch = vim.fn.input {

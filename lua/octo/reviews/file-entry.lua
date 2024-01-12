@@ -7,6 +7,7 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
+local vim = vim
 
 local M = {}
 
@@ -274,12 +275,12 @@ end
 function FileEntry:show_diff()
   for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
     vim.api.nvim_buf_call(bufid, function()
-      vim.cmd [[filetype detect]]
-      vim.cmd [[doau BufEnter]]
-      vim.cmd [[diffthis]]
+      pcall(vim.cmd, [[filetype detect]])
+      pcall(vim.cmd, [[doau BufEnter]])
+      pcall(vim.cmd, [[diffthis]])
       -- Scroll to trigger the scrollbind and sync the windows. This works more
       -- consistently than calling `:syncbind`.
-      vim.cmd [[exec "normal! \<c-y>"]]
+      pcall(vim.cmd, [[exec "normal! \<c-y>"]])
     end)
   end
 end
@@ -371,8 +372,8 @@ function FileEntry:place_signs()
           sign = sign .. "_pending"
         end
         if
-          (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
-          or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
+            (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
+            or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
         then
           -- for lines between startLine and endLine, place the sign
           for line = startLine, endLine do
@@ -405,7 +406,8 @@ function M._create_buffer(opts)
   else
     bufnr = vim.api.nvim_create_buf(false, false)
     local bufname =
-      string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
+        string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts
+          .path)
     vim.api.nvim_buf_set_name(bufnr, bufname)
     if opts.binary then
       vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
