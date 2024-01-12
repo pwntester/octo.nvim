@@ -17,10 +17,6 @@ local sorters = require "telescope.sorters"
 
 local M = {}
 
-function M.not_implemented()
-  utils.error "Not implemented yet"
-end
-
 local dropdown_opts = require("telescope.themes").get_dropdown {
   layout_config = {
     width = 0.4,
@@ -1052,9 +1048,7 @@ M.picker = {
   changed_files = M.changed_files,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
-  project_cards_v2 = M.not_implemented,
   project_columns = M.select_target_project_column,
-  project_columns_v2 = M.not_implemented,
   labels = M.select_label,
   assigned_labels = M.select_assigned_label,
   users = M.select_user,
