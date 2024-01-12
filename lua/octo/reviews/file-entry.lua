@@ -372,8 +372,8 @@ function FileEntry:place_signs()
           sign = sign .. "_pending"
         end
         if
-            (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
-            or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
+          (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
+          or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
         then
           -- for lines between startLine and endLine, place the sign
           for line = startLine, endLine do
@@ -406,8 +406,7 @@ function M._create_buffer(opts)
   else
     bufnr = vim.api.nvim_create_buf(false, false)
     local bufname =
-        string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts
-          .path)
+      string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
     vim.api.nvim_buf_set_name(bufnr, bufname)
     if opts.binary then
       vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
