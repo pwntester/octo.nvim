@@ -106,6 +106,16 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
+      it("should return invalid when default_to_projects_v2 isn't a boolean", function()
+        config.values.default_to_projects_v2 = "not a boolean"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when suppress_missing_scope isn't a table", function()
+        config.values.suppress_missing_scope = "not a table"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
       it("should return invalid when ui isn't a table", function()
         config.values.ui = "not a table"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)

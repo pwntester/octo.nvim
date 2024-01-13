@@ -59,8 +59,15 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 ## 🎯 Requirements
 
 - Install [GitHub CLI](https://cli.github.com/)
+  - If you'd like to use [Projects v2](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
+    you will need to add the `read:project` scope to your `gh` token. You can
+    do so by running `gh auth refresh -s read:project`.
+  - If you'd like to actually modify projects you can instead add the `project`
+    scope to your token instead.
 - Install [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
-- Install [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- Install one of:
+  - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+  - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
 - Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 
 ## 📦 Installation
@@ -73,6 +80,7 @@ use {
   requires = {
     'nvim-lua/plenary.nvim',
     'nvim-telescope/telescope.nvim',
+    -- OR 'ibhagwan/fzf-lua',
     'nvim-tree/nvim-web-devicons',
   },
   config = function ()
@@ -112,8 +120,13 @@ require"octo".setup({
   snippet_context_lines = 4;               -- number or lines around commented lines
   gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
   timeout = 5000,                          -- timeout for requests between the remote server
+  default_to_projects_v2 = false,          -- use projects v2 for the `Octo card ...` command by default. Both legacy and v2 commands are available under `Octo cardlegacy ...` and `Octo cardv2 ...` respectively.
   ui = {
     use_signcolumn = true,                 -- show "modified" marks on the sign column
+  },
+  picker = "telescope",                    -- "telescope" | "fzf-lua"
+  picker_config = {
+    use_emojis = false,                    -- Only used in fzf-lua picker. If you want emojis when viewing the picker set to true.
   },
   issues = {
     order_by = {                           -- criteria to sort results of `Octo issue list`

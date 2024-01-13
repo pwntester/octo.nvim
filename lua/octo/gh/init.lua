@@ -71,6 +71,35 @@ function M.get_user_name(remote_hostname)
   end
 end
 
+M.scopes = {}
+
+function M.setup()
+  local job = Job:new {
+    enable_recording = true,
+    command = "gh",
+    args = { "auth", "status" },
+    env = get_env(),
+  }
+  job:sync()
+  local stdout = table.concat(job:result(), "\n")
+  local all_scopes = string.match(stdout, "- Token scopes: (.*)")
+  local split = vim.split(all_scopes, ", ")
+
+  for idx, split_scope in ipairs(split) do
+    M.scopes[idx] = string.gsub(split_scope, "'", "")
+  end
+end
+
+function M.has_scope(test_scopes)
+  for _, test_scope in ipairs(test_scopes) do
+    if vim.tbl_contains(M.scopes, test_scope) then
+      return true
+    end
+  end
+
+  return false
+end
+
 function M.run(opts)
   if not Job then
     return

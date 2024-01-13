@@ -326,7 +326,23 @@ Can I use treesitter markdown parser with octo buffers?~
 >lua
   vim.keymap.set("i", "@", "@<C-x><C-o>", { silent = true, buffer = true })
   vim.keymap.set("i", "#", "#<C-x><C-o>", { silent = true, buffer = true })
-<
+
+
+I can't see my v2 projects in issues and/or pull requests!~
+
+  (and I see a warning when I open them)
+
+  You are missing a scope from the token gh uses. You can add the scope to
+  your gh token with
+
+  `gh auth refresh -s read:project`
+
+  Alternatively if you want to be able to modify projects (i.e. add/remove
+  cards) you need to add the `project` scope to your token instead.
+
+  If you don't care about projects v2 you can suppress the warning by setting
+  `suppress_missing_scope.project_v2 = true` in your Octo config.
+
 
 CREDITS                                         *octo-credits*
 
