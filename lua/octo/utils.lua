@@ -980,7 +980,7 @@ function M.process_patch(patch)
   for _, hunk in ipairs(hunk_strings) do
     local header = vim.split(hunk, "\n")[1]
     local found, _, left_start, left_length, right_start, right_length =
-        string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
+      string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
     if found then
       table.insert(hunks, hunk)
       table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
@@ -1274,10 +1274,10 @@ function M.apply_mappings(kind, bufnr)
   local conf = config.values
   for action, value in pairs(conf.mappings[kind]) do
     if
-        not M.is_blank(value)
-        and not M.is_blank(action)
-        and not M.is_blank(value.lhs)
-        and not M.is_blank(mappings[action])
+      not M.is_blank(value)
+      and not M.is_blank(action)
+      and not M.is_blank(value.lhs)
+      and not M.is_blank(mappings[action])
     then
       if M.is_blank(value.desc) then
         value.desc = ""
