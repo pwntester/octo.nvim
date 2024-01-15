@@ -58,9 +58,9 @@ function M.get_user_name(remote_hostname)
   local stdout = table.concat(job:result(), "\n")
   -- Newer versions of the gh cli have a different message. See #467
   local name_err = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
-    or string.match(stderr, "Logged in to [^%s]+ account ([^%s]+)")
+      or string.match(stderr, "Logged in to [^%s]+ account ([^%s]+)")
   local name_out = string.match(stdout, "Logged in to [^%s]+ as ([^%s]+)")
-    or string.match(stdout, "Logged in to [^%s]+ account ([^%s]+)")
+      or string.match(stdout, "Logged in to [^%s]+ account ([^%s]+)")
 
   if name_err then
     return name_err
@@ -82,7 +82,8 @@ function M.setup()
   }
   job:sync()
   local stdout = table.concat(job:result(), "\n")
-  local all_scopes = string.match(stdout, "- Token scopes: (.*)")
+  local all_scopes = string.match(stdout, " Token scopes: (.*)")
+  print(vim.inspect(all_scopes))
   local split = vim.split(all_scopes, ", ")
 
   for idx, split_scope in ipairs(split) do

@@ -60,9 +60,9 @@ M.issue = function(formatted_issues)
     local owner, name = utils.split_repo(entry.repo)
     local query
     if entry.kind == "issue" then
-      query = graphql("issue_query", owner, name, number)
+      query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
     elseif entry.kind == "pull_request" then
-      query = graphql("pull_request_query", owner, name, number)
+      query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
     end
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -116,9 +116,9 @@ M.search = function()
 
     local query
     if kind == "issue" then
-      query = graphql("issue_query", owner, name, number)
+      query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
     elseif kind == "pull_request" then
-      query = graphql("pull_request_query", owner, name, number)
+      query = graphql("pull_request_query", owner, name, number, octo_pv2_fragment)
     end
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },

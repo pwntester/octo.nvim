@@ -39,6 +39,14 @@ function M.setup(user_config)
   autocmds.setup()
   commands.setup()
   gh.setup()
+  if gh.has_scope { "read:project", "project" } then
+    _G.octo_pv2_fragment = fragments.projects_v2_fragment
+  else
+    if not config.values.suppress_missing_scope.projects_v2 then
+      utils.info "Cannot request projects v2, missing scope 'read:project'"
+    end
+    _G.octo_pv2_fragment = ""
+  end
 end
 
 function M.configure_octo_buffer(bufnr)
@@ -89,21 +97,11 @@ function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
   local query, key
 
-  local pv2_fragment
-  if gh.has_scope { "read:project", "project" } then
-    pv2_fragment = fragments.projects_v2_fragment
-  else
-    if not config.values.suppress_missing_scope.projects_v2 then
-      utils.info "Cannot request projects v2, missing scope 'read:project'"
-    end
-    pv2_fragment = ""
-  end
-
   if kind == "pull" then
-    query = graphql("pull_request_query", owner, name, number, pv2_fragment)
+    query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
     key = "pullRequest"
   elseif kind == "issue" then
-    query = graphql("issue_query", owner, name, number, pv2_fragment)
+    query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
     key = "issue"
   elseif kind == "repo" then
     query = graphql("repository_query", owner, name)
