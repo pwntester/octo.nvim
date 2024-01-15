@@ -83,7 +83,6 @@ function M.setup()
   job:sync()
   local stdout = table.concat(job:result(), "\n")
   local all_scopes = string.match(stdout, " Token scopes: (.*)")
-  print(vim.inspect(all_scopes))
   local split = vim.split(all_scopes, ", ")
 
   for idx, split_scope in ipairs(split) do
