@@ -1,5 +1,7 @@
 local config = require "octo.config"
+local fragments = require "octo.gh.fragments"
 local _, Job = pcall(require, "plenary.job")
+local vim = vim
 
 local M = {}
 
@@ -71,33 +73,39 @@ function M.get_user_name(remote_hostname)
   end
 end
 
-M.scopes = {}
-
-function M.setup()
-  local job = Job:new {
-    enable_recording = true,
-    command = "gh",
-    args = { "auth", "status" },
-    env = get_env(),
-  }
-  job:sync()
-  local stdout = table.concat(job:result(), "\n")
-  local all_scopes = string.match(stdout, " Token scopes: (.*)")
-  local split = vim.split(all_scopes, ", ")
-
-  for idx, split_scope in ipairs(split) do
-    M.scopes[idx] = string.gsub(split_scope, "'", "")
-  end
-end
+local scopes = {}
 
 function M.has_scope(test_scopes)
   for _, test_scope in ipairs(test_scopes) do
-    if vim.tbl_contains(M.scopes, test_scope) then
+    if vim.tbl_contains(scopes, test_scope) then
       return true
     end
   end
 
   return false
+end
+
+function M.setup()
+  _G.octo_pv2_fragment = ""
+  Job:new({
+    enable_recording = true,
+    command = "gh",
+    args = { "auth", "status" },
+    env = get_env(),
+    on_exit = vim.schedule_wrap(function(j_self, _, _)
+      local stdout = table.concat(j_self:result(), "\n")
+      local all_scopes = string.match(stdout, " Token scopes: (.*)")
+      local split = vim.split(all_scopes, ", ")
+      for idx, split_scope in ipairs(split) do
+        scopes[idx] = string.gsub(split_scope, "'", "")
+      end
+      if M.has_scope { "read:project", "project" } then
+        _G.octo_pv2_fragment = fragments.projects_v2_fragment
+      elseif not config.values.suppress_missing_scope.projects_v2 then
+        require("octo.utils").info "Cannot request projects v2, missing scope 'read:project'"
+      end
+    end),
+  }):start()
 end
 
 function M.run(opts)

@@ -7,7 +7,6 @@ local completion = require "octo.completion"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
-local fragments = require "octo.gh.fragments"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local signs = require "octo.ui.signs"
@@ -39,14 +38,6 @@ function M.setup(user_config)
   autocmds.setup()
   commands.setup()
   gh.setup()
-  if gh.has_scope { "read:project", "project" } then
-    _G.octo_pv2_fragment = fragments.projects_v2_fragment
-  else
-    if not config.values.suppress_missing_scope.projects_v2 then
-      utils.info "Cannot request projects v2, missing scope 'read:project'"
-    end
-    _G.octo_pv2_fragment = ""
-  end
 end
 
 function M.configure_octo_buffer(bufnr)
