@@ -1088,7 +1088,7 @@ function M.get_pull_request_for_current_branch(cb)
         local id = pr.currentBranch.id
         local owner = pr.currentBranch.headRepositoryOwner.login
         local name = pr.currentBranch.headRepository.name
-        local query = graphql("pull_request_query", owner, name, number)
+        local query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
         gh.run {
           args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
           cb = function(output, stderr)

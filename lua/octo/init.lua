@@ -7,6 +7,7 @@ local completion = require "octo.completion"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local fragments = require "octo.gh.fragments"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local signs = require "octo.ui.signs"
@@ -37,6 +38,15 @@ function M.setup(user_config)
   folds.setup()
   autocmds.setup()
   commands.setup()
+  gh.setup()
+  if gh.has_scope { "read:project", "project" } then
+    _G.octo_pv2_fragment = fragments.projects_v2_fragment
+  else
+    if not config.values.suppress_missing_scope.projects_v2 then
+      utils.info "Cannot request projects v2, missing scope 'read:project'"
+    end
+    _G.octo_pv2_fragment = ""
+  end
 end
 
 function M.configure_octo_buffer(bufnr)
@@ -86,11 +96,12 @@ end
 function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
   local query, key
+
   if kind == "pull" then
-    query = graphql("pull_request_query", owner, name, number)
+    query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
     key = "pullRequest"
   elseif kind == "issue" then
-    query = graphql("issue_query", owner, name, number)
+    query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
     key = "issue"
   elseif kind == "repo" then
     query = graphql("repository_query", owner, name)

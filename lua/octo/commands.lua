@@ -17,6 +17,32 @@ function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     require("octo.commands").octo(unpack(opts.fargs))
   end, { complete = require("octo.completion").octo_command_complete, nargs = "*" })
+  local conf = config.values
+
+  local card_commands
+
+  if conf.default_to_projects_v2 then
+    card_commands = {
+      set = function()
+        M.set_project_v2_card()
+      end,
+      remove = function()
+        M.remove_project_v2_card()
+      end,
+    }
+  else
+    card_commands = {
+      add = function()
+        M.add_project_card()
+      end,
+      move = function()
+        M.move_project_card()
+      end,
+      remove = function()
+        M.remove_project_card()
+      end,
+    }
+  end
 
   -- supported commands
   M.commands = {
@@ -305,7 +331,16 @@ function M.setup()
         M.reaction_action "HEART"
       end,
     },
-    card = {
+    card = card_commands,
+    cardv2 = {
+      set = function(...)
+        M.set_project_v2_card()
+      end,
+      remove = function()
+        M.remove_project_v2_card()
+      end,
+    },
+    cardlegacy = {
       add = function()
         M.add_project_card()
       end,
@@ -1298,6 +1333,80 @@ function M.move_project_card()
         end,
       }
     end)
+  end)
+end
+
+function M.set_project_v2_card()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then
+    return
+  end
+
+  -- show column selection picker
+  picker.project_columns_v2(function(project_id, field_id, value)
+    -- add new card
+    local add_query = graphql("add_project_v2_item_mutation", buffer.node.id, project_id)
+    gh.run {
+      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", add_query) },
+      cb = function(add_output, add_stderr)
+        if add_stderr and not utils.is_blank(add_stderr) then
+          utils.error(add_stderr)
+        elseif add_output then
+          local resp = vim.fn.json_decode(add_output)
+          local update_query = graphql(
+            "update_project_v2_item_mutation",
+            project_id,
+            resp.data.addProjectV2ItemById.item.id,
+            field_id,
+            value
+          )
+          gh.run {
+            args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", update_query) },
+            cb = function(update_output, update_stderr)
+              if update_stderr and not utils.is_blank(update_stderr) then
+                utils.error(update_stderr)
+              elseif update_output then
+                -- TODO do update here
+                -- refresh issue/pr details
+                require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+                  writers.write_details(bufnr, obj, true)
+                  buffer.node.projectCards = obj.projectCards
+                end)
+              end
+            end,
+          }
+        end
+      end,
+    }
+  end)
+end
+
+function M.remove_project_v2_card()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buffer = octo_buffers[bufnr]
+  if not buffer then
+    return
+  end
+
+  -- show card selection picker
+  picker.project_cards_v2(function(project_id, item_id)
+    -- delete card
+    local query = graphql("delete_project_v2_item_mutation", project_id, item_id)
+    gh.run {
+      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          -- refresh issue/pr details
+          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+            buffer.node.projectCards = obj.projectCards
+            writers.write_details(bufnr, obj, true)
+          end)
+        end
+      end,
+    }
   end)
 end
 

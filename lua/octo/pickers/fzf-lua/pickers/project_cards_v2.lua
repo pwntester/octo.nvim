@@ -1,4 +1,3 @@
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
@@ -6,25 +5,32 @@ local utils = require "octo.utils"
 return function(callback)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  local cards = buffer.node.projectCards
+  local cards = buffer.node.projectItems
   if not cards or #cards.nodes == 0 then
-    utils.error "Can't find any project cards"
+    utils.error "Can't find any project v2 cards"
     return
   end
 
   if #cards.nodes == 1 then
-    callback(cards.nodes[1].id)
+    callback(cards.nodes[1].project.id, cards.nodes[1].id)
   else
-    local formatted_cards = {}
     local titles = {}
 
     for _, card in ipairs(cards.nodes) do
-      local entry = entry_maker.gen_from_project_card(card)
+      local status = nil
 
-      if entry ~= nil then
-        formatted_cards[entry.ordinal] = entry
-        table.insert(titles, entry.ordinal)
+      for _, node in ipairs(card.fieldValues.nodes) do
+        if node.field ~= nil and node.field.name == "Status" then
+          status = node.field.name
+          break
+        end
       end
+
+      if status == nil then
+        status = "<No status>"
+      end
+
+      table.insert(titles, string.format("%s %s %s (%s)", card.project.id, card.id, status, card.project.title))
     end
 
     fzf.fzf_exec(
@@ -33,12 +39,12 @@ return function(callback)
         fzf_opts = {
           ["--no-multi"] = "", -- TODO this can support multi, maybe.
           ["--delimiter"] = "' '",
-          ["--with-nth"] = "2..",
+          ["--with-nth"] = "3..",
         },
         actions = {
           ["default"] = function(selected)
-            local entry = formatted_cards[selected[1]]
-            callback(entry.card.id)
+            local project_id, item_id, _ = unpack(vim.split(selected[1], " "))
+            callback(project_id, item_id)
           end,
         },
       })

@@ -40,6 +40,9 @@ local M = {}
 ---@field field string
 ---@field direction "ASC" | "DESC"
 
+---@class OctoMissingScopeConfig
+---@field projects_v2 boolean
+
 ---@class OctoConfig Octo configuration settings
 ---@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
@@ -60,6 +63,8 @@ local M = {}
 ---@field snippet_context_lines number
 ---@field gh_env table
 ---@field timeout number
+---@field default_to_projects_v2 boolean
+---@field suppress_missing_scope OctoMissingScopeConfig
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
 ---@field pull_requests OctoConfigPR
@@ -98,6 +103,10 @@ function M.get_default_values()
     snippet_context_lines = 4,
     gh_env = {},
     timeout = 5000,
+    default_to_projects_v2 = false,
+    suppress_missing_scope = {
+      projects_v2 = false,
+    },
     ui = {
       use_signcolumn = true,
     },
@@ -361,6 +370,10 @@ function M.validate_config()
     validate_type(config.enable_builtin, "enable_builtin", "boolean")
     validate_type(config.snippet_context_lines, "snippet_context_lines", "number")
     validate_type(config.timeout, "timeout", "number")
+    validate_type(config.default_to_projects_v2, "default_to_projects_v2", "boolean")
+    if validate_type(config.suppress_missing_scope, "supress_missing_scope", "table") then
+      validate_type(config.suppress_missing_scope.projects_v2, "supress_missing_scope.projects_v2", "boolean")
+    end
     validate_type(config.gh_env, "gh_env", "table")
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
     validate_type(config.user_icon, "user_icon", "string")
