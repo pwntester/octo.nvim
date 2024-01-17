@@ -94,7 +94,7 @@ function M.setup()
     env = get_env(),
     on_exit = vim.schedule_wrap(function(j_self, _, _)
       local stdout = table.concat(j_self:result(), "\n")
-      local all_scopes = string.match(stdout, " Token scopes: (.*)")
+      local all_scopes = string.match(stdout, " Token scopes: (.*)") or ""
       local split = vim.split(all_scopes, ", ")
       for idx, split_scope in ipairs(split) do
         scopes[idx] = string.gsub(split_scope, "'", "")
