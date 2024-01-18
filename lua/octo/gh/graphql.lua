@@ -1527,6 +1527,7 @@ query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequest(number: %d) {
       id
+      isDraft
       number
       state
       title
