@@ -38,6 +38,17 @@ local issue = defaulter(function(opts)
               elseif entry.kind == "pull_request" then
                 obj = result.data.repository.pullRequest
               end
+
+              -- We have to create a new buffer since writers.write_state relies on
+              -- octo_buffers containing a buffer at a index of the current buffer number.
+              -- OctoBuffer:new adds that buffer to octo_buffers
+              OctoBuffer:new {
+                bufnr = bufnr,
+                number = obj.number,
+                repo = entry.repo,
+                node = obj,
+              }
+
               writers.write_title(bufnr, obj.title, 1)
               writers.write_details(bufnr, obj)
               writers.write_body(bufnr, obj)
