@@ -341,7 +341,7 @@ I can't see my v2 projects in issues and/or pull requests!~
   cards) you need to add the `project` scope to your token instead.
 
   If you don't care about projects v2 you can suppress the warning by setting
-  `suppress_missing_scope.project_v2 = true` in your Octo config.
+  `suppress_missing_scope.projects_v2 = true` in your Octo config.
 
 
 CREDITS                                         *octo-credits*
