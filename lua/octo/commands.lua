@@ -1095,6 +1095,9 @@ function M.pr_checks()
 end
 
 function M.merge_pr(...)
+  local conf = config.values
+  local defaultMergeMethod = conf.default_merge_method
+
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then
@@ -1121,7 +1124,13 @@ function M.merge_pr(...)
     end
   end
   if not has_flag then
-    table.insert(args, "--merge")
+    if defaultMergeMethod == "squash" then
+      table.insert(args, "--squash")
+    elseif defaultMergeMethod == "rebase" then
+      table.insert(args, "--rebase")
+    else
+      table.insert(args, "--merge")
+    end
   end
   gh.run {
     args = args,
