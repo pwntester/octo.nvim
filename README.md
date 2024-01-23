@@ -544,6 +544,21 @@ vim.opt.statuscolumn = "%{%v:lua.get_statuscol_octo(bufnr(), v:lnum)%}"
 
 ## 🙋 FAQ
 
+**I get a warning saying `Cannot request projects v2, missing scope 'read:project'`**
+
+That's expected. The new support for projects v2 support requires the `read:proejct` scope on your GitHub token.
+
+You add the scope by using `gh auth refresh -s read:project` or you can suppress this warning by setting the following in your config
+
+```
+{
+  suppress_missing_scope = {
+    project_v2 = true,
+  }
+}
+```
+
+
 **How can I disable bubbles for XYZ?**
 
 Each text-object that makes use of a bubble (except labels) do use their own highlight group that links per default to the main bubble highlight group. To disable most bubbles at once you can simply link `OctoBubble` to `Normal`. To only disable them for a certain plain do the same for the specific sub-group (e.g. `OctoUser`).
