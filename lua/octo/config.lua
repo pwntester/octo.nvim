@@ -47,6 +47,7 @@ local M = {}
 ---@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table
+---@field default_merge_method string
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
 ---@field user_icon string
@@ -87,6 +88,7 @@ function M.get_default_values()
       },
     },
     default_remote = { "upstream", "origin" },
+    default_merge_method = "commit",
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
     user_icon = " ",
@@ -390,6 +392,7 @@ function M.validate_config()
         validate_type(v, "remote", "string")
       end
     end
+    validate_type(config.default_merge_method, "default_merge_method", "string")
     if validate_type(config.ui, "ui", "table") then
       validate_type(config.ui.use_signcolumn, "ui.use_signcolumn", "boolean")
     end

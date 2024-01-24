@@ -3,6 +3,7 @@ local eq = assert.are.same
 
 local user_config = {
   default_remote = { "remote1", "remote2" },
+  default_merge_method = "rebase",
   file_panel = { use_icons = false },
   ssh_aliases = {
     ["remote"] = "host",
@@ -28,6 +29,7 @@ describe("Config module:", function()
     it("user configuration overrides defaults.", function()
       eq(merged_config.default_remote[1], "remote1")
       eq(merged_config.default_remote[2], "remote2")
+      eq(merged_config.default_merge_method, "rebase")
       eq(merged_config.file_panel.size, 10, "file_panel.size should be 10")
       eq(merged_config.file_panel.use_icons, false, "file_panel.use_icons should be false")
       eq(merged_config.ssh_aliases["remote"], "host")
