@@ -33,6 +33,9 @@ return {
   squash_and_merge_pr = function()
     require("octo.commands").merge_pr "squash"
   end,
+  rebase_and_merge_pr = function()
+    require("octo.commands").merge_pr "rebase"
+  end,
   add_reviewer = function()
     require("octo.commands").add_user "reviewer"
   end,
