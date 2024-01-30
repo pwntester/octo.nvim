@@ -174,6 +174,7 @@ function M.get_default_values()
         checkout_pr = { lhs = "<space>po", desc = "checkout PR" },
         merge_pr = { lhs = "<space>pm", desc = "merge commit PR" },
         squash_and_merge_pr = { lhs = "<space>psm", desc = "squash and merge PR" },
+        rebase_and_merge_pr = { lhs = "<space>prm", desc = "rebase and merge PR" },
         list_commits = { lhs = "<space>pc", desc = "list PR commits" },
         list_changed_files = { lhs = "<space>pf", desc = "list PR changed files" },
         show_pr_diff = { lhs = "<space>pd", desc = "show PR diff" },
