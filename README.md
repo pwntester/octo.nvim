@@ -555,7 +555,7 @@ You add the scope by using `gh auth refresh -s read:project` or you can suppress
 ```
 {
   suppress_missing_scope = {
-    project_v2 = true,
+    projects_v2 = true,
   }
 }
 ```
