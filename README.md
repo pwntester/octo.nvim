@@ -548,7 +548,7 @@ vim.opt.statuscolumn = "%{%v:lua.get_statuscol_octo(bufnr(), v:lnum)%}"
 
 **I get a warning saying `Cannot request projects v2, missing scope 'read:project'`**
 
-That's expected. The new support for projects v2 support requires the `read:proejct` scope on your GitHub token.
+That's expected. The new support for projects v2 support requires the `read:project` scope on your GitHub token.
 
 You add the scope by using `gh auth refresh -s read:project` or you can suppress this warning by setting the following in your config
 
