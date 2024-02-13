@@ -204,20 +204,10 @@ function M.setup()
         end
       end,
       submit = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          current_review:collect_submit_info()
-        else
-          utils.error "Please start or resume a review first"
-        end
+        reviews.submit_review()
       end,
       discard = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          current_review:discard()
-        else
-          utils.error "Please start or resume a review first"
-        end
+        reviews.discard_review()
       end,
       close = function()
         if reviews.get_current_review() then

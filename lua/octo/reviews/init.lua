@@ -527,4 +527,22 @@ function M.resume_review()
   end
 end
 
+function M.discard_review()
+  local current_review = M.get_current_review()
+  if current_review then
+    current_review:discard()
+  else
+    utils.error "Please start or resume a review first"
+  end
+end
+
+function M.submit_review()
+  local current_review = M.get_current_review()
+  if current_review then
+    current_review:collect_submit_info()
+  else
+    utils.error "Please start or resume a review first"
+  end
+end
+
 return M

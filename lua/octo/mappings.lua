@@ -111,14 +111,27 @@ return {
   react_confused = function()
     require("octo.commands").reaction_action "confused"
   end,
+  review_start = function()
+    reviews.start_review()
+  end,
+  review_resume = function()
+    reviews.resume_review()
+  end,
+  discard_review = function()
+    reviews.discard_review()
+  end,
+  submit_review = function()
+    reviews.submit_review()
+  end,
   add_review_comment = function()
-    require("octo.reviews").add_review_comment(false)
+    reviews.add_review_comment(false)
   end,
   add_review_suggestion = function()
-    require("octo.reviews").add_review_comment(true)
+    reviews.add_review_comment(true)
   end,
   close_review_tab = function()
-    require("octo.reviews").close()
+    local tabpage = vim.api.nvim_get_current_tabpage()
+    reviews.close(tabpage)
   end,
   next_thread = function()
     require("octo.reviews.file-panel").next_thread()
@@ -207,15 +220,15 @@ return {
     vim.api.nvim_win_close(vim.api.nvim_get_current_win())
   end,
   approve_review = function()
-    local current_review = require("octo.reviews").get_current_review()
+    local current_review = reviews.get_current_review()
     current_review:submit "APPROVE"
   end,
   comment_review = function()
-    local current_review = require("octo.reviews").get_current_review()
+    local current_review = reviews.get_current_review()
     current_review:submit "COMMENT"
   end,
   request_changes = function()
-    local current_review = require("octo.reviews").get_current_review()
+    local current_review = reviews.get_current_review()
     current_review:submit "REQUEST_CHANGES"
   end,
   toggle_viewed = function()
