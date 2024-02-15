@@ -222,6 +222,8 @@ require"octo".setup({
       react_rocket = { lhs = "<space>rr", desc = "add/remove 🚀 reaction" },
       react_laugh = { lhs = "<space>rl", desc = "add/remove 😄 reaction" },
       react_confused = { lhs = "<space>rc", desc = "add/remove 😕 reaction" },
+      review_start = { lhs = "<space>vs", desc = "start a review for the current PR" },
+      review_resume = { lhs = "<space>vr", desc = "resume a pending review for the current PR" },
     },
     review_thread = {
       goto_issue = { lhs = "<space>gi", desc = "navigate to a local repo issue" },
@@ -251,6 +253,8 @@ require"octo".setup({
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
     },
     review_diff = {
+      submit_review = { lhs = "<leader>vs", desc = "submit review" },
+      discard_review = { lhs = "<leader>vd", desc = "discard review" },
       add_review_comment = { lhs = "<space>ca", desc = "add a new review comment" },
       add_review_suggestion = { lhs = "<space>sa", desc = "add a new review suggestion" },
       focus_files = { lhs = "<leader>e", desc = "move focus to changed file panel" },
@@ -266,6 +270,8 @@ require"octo".setup({
       goto_file = { lhs = "gf", desc = "go to file" },
     },
     file_panel = {
+      submit_review = { lhs = "<leader>vs", desc = "submit review" },
+      discard_review = { lhs = "<leader>vd", desc = "discard review" },
       next_entry = { lhs = "j", desc = "move to next changed file" },
       prev_entry = { lhs = "k", desc = "move to previous changed file" },
       select_entry = { lhs = "<cr>", desc = "show selected changed file diffs" },
