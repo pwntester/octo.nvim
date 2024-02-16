@@ -26,8 +26,8 @@ function M.setup(user_config)
     utils.error "octo.nvim requires neovim 0.7+"
     return
   end
-  config.setup(user_config or {})
 
+  config.setup(user_config or {})
   if not vim.fn.executable(config.values.gh_cmd) then
     utils.error("gh executable not found using path: " .. config.values.gh_cmd)
     return
