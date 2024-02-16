@@ -62,6 +62,7 @@ local M = {}
 ---@field use_local_fs boolean
 ---@field enable_builtin boolean
 ---@field snippet_context_lines number
+---@field gh_cmd string
 ---@field gh_env table
 ---@field timeout number
 ---@field default_to_projects_v2 boolean
@@ -103,6 +104,7 @@ function M.get_default_values()
     use_local_fs = false,
     enable_builtin = false,
     snippet_context_lines = 4,
+    gh_cmd = "gh",
     gh_env = {},
     timeout = 5000,
     default_to_projects_v2 = false,
@@ -383,6 +385,7 @@ function M.validate_config()
     if validate_type(config.suppress_missing_scope, "supress_missing_scope", "table") then
       validate_type(config.suppress_missing_scope.projects_v2, "supress_missing_scope.projects_v2", "boolean")
     end
+    validate_type(config.gh_cmd, "gh_cmd", "string")
     validate_type(config.gh_env, "gh_env", "table")
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
     validate_type(config.user_icon, "user_icon", "string")
