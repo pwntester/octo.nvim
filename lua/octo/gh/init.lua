@@ -51,7 +51,7 @@ function M.get_user_name(remote_hostname)
 
   local job = Job:new {
     enable_recording = true,
-    command = "gh",
+    command = config.values.gh_cmd,
     args = { "auth", "status", "--hostname", remote_hostname },
     env = get_env(),
   }
@@ -89,7 +89,7 @@ function M.setup()
   _G.octo_pv2_fragment = ""
   Job:new({
     enable_recording = true,
-    command = "gh",
+    command = config.values.gh_cmd,
     args = { "auth", "status" },
     env = get_env(),
     on_exit = vim.schedule_wrap(function(j_self, _, _)
@@ -146,7 +146,7 @@ function M.run(opts)
   end
   local job = Job:new {
     enable_recording = true,
-    command = "gh",
+    command = config.values.gh_cmd,
     args = opts.args,
     on_stdout = vim.schedule_wrap(function(err, data, _)
       if mode == "async" and opts.stream_cb then
