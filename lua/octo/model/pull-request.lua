@@ -1,5 +1,6 @@
 local utils = require "octo.utils"
 local gh = require "octo.gh"
+local async = require "plenary.async"
 
 local M = {}
 
@@ -115,7 +116,9 @@ function PullRequest:get_changed_files(callback)
     }
   end
 
-  loop(1)
+  async.run(function()
+    loop(1)
+  end)
 end
 
 ---Fetch the changed files at a given commit
