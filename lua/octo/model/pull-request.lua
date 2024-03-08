@@ -75,35 +75,47 @@ end
 
 ---Fetch the changed files for a given PR
 function PullRequest:get_changed_files(callback)
-  local url = string.format("repos/%s/pulls/%d/files", self.repo, self.number)
-  gh.run {
-    args = { "api", "--paginate", url, "--jq", "." },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local FileEntry = require("octo.reviews.file-entry").FileEntry
-        local results = vim.fn.json_decode(output)
-        local files = {}
-        for _, result in ipairs(results) do
-          local entry = FileEntry:new {
-            path = result.filename,
-            previous_path = result.previous_filename,
-            patch = result.patch,
-            pull_request = self,
-            status = utils.file_status_map[result.status],
-            stats = {
-              additions = result.additions,
-              deletions = result.deletions,
-              changes = result.changes,
-            },
-          }
-          table.insert(files, entry)
+  local url_base = string.format("repos/%s/pulls/%d/files", self.repo, self.number)
+  local files = {}
+
+  local loop
+  loop = function(page)
+    local url = string.format("%s?page=%d&per_page=100", url_base, page)
+    print(url)
+    gh.run {
+      args = { "api", url, "--jq", "." },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local FileEntry = require("octo.reviews.file-entry").FileEntry
+          local results = vim.fn.json_decode(output)
+          if next(results) ~= nil then
+            for _, result in ipairs(results) do
+              local entry = FileEntry:new {
+                path = result.filename,
+                previous_path = result.previous_filename,
+                patch = result.patch,
+                pull_request = self,
+                status = utils.file_status_map[result.status],
+                stats = {
+                  additions = result.additions,
+                  deletions = result.deletions,
+                  changes = result.changes,
+                },
+              }
+              table.insert(files, entry)
+            end
+            loop(page + 1)
+          else
+            callback(files)
+          end
         end
-        callback(files)
-      end
-    end,
-  }
+      end,
+    }
+  end
+
+  loop(1)
 end
 
 ---Fetch the changed files at a given commit
