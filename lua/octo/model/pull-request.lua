@@ -82,7 +82,6 @@ function PullRequest:get_changed_files(callback)
   local loop
   loop = function(page)
     local url = string.format("%s?page=%d&per_page=100", url_base, page)
-    print(url)
     gh.run {
       args = { "api", url, "--jq", "." },
       cb = function(output, stderr)
