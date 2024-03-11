@@ -126,10 +126,6 @@ require"octo".setup({
   ui = {
     use_signcolumn = true,                 -- show "modified" marks on the sign column
   },
-  picker = "telescope",                    -- "telescope" | "fzf-lua"
-  picker_config = {
-    use_emojis = false,                    -- Only used in fzf-lua picker. If you want emojis when viewing the picker set to true.
-  },
   issues = {
     order_by = {                           -- criteria to sort results of `Octo issue list`
       field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
