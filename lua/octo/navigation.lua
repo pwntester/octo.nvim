@@ -40,7 +40,7 @@ function M.open_in_browser(kind, repo, number)
     elseif buffer:isIssue() then
       cmd = string.format("gh issue view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
     elseif buffer:isRepo() then
-      cmd = string.format("gh repo view --web -R %s/%s", remote, buffer.repo)
+      cmd = string.format("gh repo view --web %s/%s", remote, buffer.repo)
     end
   else
     if kind == "pr" or kind == "pull_request" then
@@ -48,7 +48,7 @@ function M.open_in_browser(kind, repo, number)
     elseif kind == "issue" then
       cmd = string.format("gh issue view --web -R %s/%s %d", remote, repo, number)
     elseif kind == "repo" then
-      cmd = string.format("gh repo view --web -R %s/%s", remote, repo)
+      cmd = string.format("gh repo view --web %s", repo.url)
     elseif kind == "gist" then
       cmd = string.format("gh gist view --web %s", number)
     elseif kind == "project" then
