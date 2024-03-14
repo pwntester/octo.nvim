@@ -343,6 +343,8 @@ I can't see my v2 projects in issues and/or pull requests!~
   If you don't care about projects v2 you can suppress the warning by setting
   `suppress_missing_scope.projects_v2 = true` in your Octo config.
 
+How can I disable default key mappings?~
+  set `mappings_disable_default = true` in user config.
 
 CREDITS                                         *octo-credits*
 
