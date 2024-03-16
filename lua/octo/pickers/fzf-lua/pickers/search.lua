@@ -25,7 +25,7 @@ end
 return function(opts)
   opts = opts or {}
 
-  local formatted_issues = {}
+  local formatted_items = {}
 
   local contents = function(query)
     return function(fzf_cb)
@@ -65,7 +65,7 @@ return function(opts)
 
           for _, issue in ipairs(resp.data.search.nodes) do
             vim.schedule(function()
-              handle_entry(fzf_cb, issue, max_id_length, formatted_issues, co)
+              handle_entry(fzf_cb, issue, max_id_length, formatted_items, co)
             end)
             coroutine.yield()
           end
@@ -84,9 +84,9 @@ return function(opts)
     query_delay = 500,
     fzf_opts = {
       ["--info"] = "default",
-      ["--delimiter"] = "' '",
+      ["--delimiter"] = " ",
       ["--with-nth"] = "4..",
     },
-    actions = fzf_actions.common_open_actions(formatted_issues),
+    actions = fzf_actions.common_open_actions(formatted_items),
   })
 end
