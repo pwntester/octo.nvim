@@ -7,8 +7,25 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 
+local handle_entry = function(fzf_cb, issue, max_id_length, formatted_issues, co)
+  local entry = entry_maker.gen_from_issue(issue)
+  if entry ~= nil then
+    local owner, name = utils.split_repo(entry.repo)
+    local raw_number = picker_utils.pad_string(entry.obj.number, max_id_length)
+    local number = fzf.utils.ansi_from_hl("Comment", raw_number)
+    local ordinal_entry = string.format("%s %s %s %s %s", entry.kind, owner, name, raw_number, entry.obj.title)
+    local string_entry = string.format("%s %s %s %s %s", entry.kind, owner, name, number, entry.obj.title)
+    formatted_issues[ordinal_entry] = entry
+    fzf_cb(string_entry, function()
+      coroutine.resume(co)
+    end)
+  end
+end
+
 return function(opts)
   opts = opts or {}
+
+  local formatted_items = {}
 
   local contents = function(query)
     return function(fzf_cb)
@@ -33,31 +50,24 @@ return function(opts)
             mode = "sync",
           }
 
-          if output then
-            local resp = vim.fn.json_decode(output)
-            local max_id_length = 1
-            for _, issue in ipairs(resp.data.search.nodes) do
-              local s = tostring(issue.number)
-              if #s > max_id_length then
-                max_id_length = #s
-              end
-            end
+          if not output then
+            return {}
+          end
 
-            for _, issue in ipairs(resp.data.search.nodes) do
-              vim.schedule(function()
-                local entry = entry_maker.gen_from_issue(issue)
-                if entry ~= nil then
-                  local owner, name = utils.split_repo(entry.repo)
-                  local number =
-                    fzf.utils.ansi_from_hl("Comment", picker_utils.pad_string(entry.obj.number, max_id_length))
-                  local string_entry = string.format("%s %s %s %s %s", entry.kind, owner, name, number, entry.obj.title)
-                  fzf_cb(string_entry, function()
-                    coroutine.resume(co)
-                  end)
-                end
-              end)
-              coroutine.yield()
+          local resp = vim.fn.json_decode(output)
+          local max_id_length = 1
+          for _, issue in ipairs(resp.data.search.nodes) do
+            local s = tostring(issue.number)
+            if #s > max_id_length then
+              max_id_length = #s
             end
+          end
+
+          for _, issue in ipairs(resp.data.search.nodes) do
+            vim.schedule(function()
+              handle_entry(fzf_cb, issue, max_id_length, formatted_items, co)
+            end)
+            coroutine.yield()
           end
         end
 
@@ -74,9 +84,9 @@ return function(opts)
     query_delay = 500,
     fzf_opts = {
       ["--info"] = "default",
-      ["--delimiter"] = "' '",
+      ["--delimiter"] = " ",
       ["--with-nth"] = "4..",
     },
-    actions = fzf_actions.common_open_actions(formatted_issues),
+    actions = fzf_actions.common_open_actions(formatted_items),
   })
 end
