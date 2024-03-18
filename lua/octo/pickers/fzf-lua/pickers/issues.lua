@@ -70,7 +70,6 @@ return function(opts)
     prompt = picker_utils.get_prompt(opts.prompt_title),
     previewer = previewers.issue(formatted_issues),
     fzf_opts = {
-      ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--header"] = opts.results_title,
       ["--info"] = "default",
     },
