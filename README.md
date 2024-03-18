@@ -616,6 +616,10 @@ Add the following mappings for `octo` file type:
 - `vim.keymap.set("i", "@", "@<C-x><C-o>", { silent = true, buffer = true })`
 - `vim.keymap.set("i", "#", "#<C-x><C-o>", { silent = true, buffer = true })`
 
+**How can I disable default key mappings?**
+
+Set `mappings_disable_default = true` in user config.
+
 ## 🙌 Contributing
 
 Contributions are always welcome!
