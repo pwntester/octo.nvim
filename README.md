@@ -157,6 +157,7 @@ require"octo".setup({
     dark_blue = "#0366d6",
     purple = "#6f42c1",
   },
+  mappings_disable_default = false,        -- disable default mappings if true, but will still adapt user mappings
   mappings = {
     issue = {
       close_issue = { lhs = "<space>ic", desc = "close issue" },
@@ -614,6 +615,10 @@ Add the following mappings for `octo` file type:
 
 - `vim.keymap.set("i", "@", "@<C-x><C-o>", { silent = true, buffer = true })`
 - `vim.keymap.set("i", "#", "#<C-x><C-o>", { silent = true, buffer = true })`
+
+**How can I disable default key mappings?**
+
+Set `mappings_disable_default = true` in user config.
 
 ## 🙌 Contributing
 
