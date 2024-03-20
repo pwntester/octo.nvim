@@ -86,7 +86,13 @@ function M.write_repo(bufnr, repo)
 
   add_details_line(details, "Name", repo.nameWithOwner)
   add_details_line(details, "Description", repo.description)
-  add_details_line(details, "Default branch", repo.defaultBranchRef.name)
+  local defaultBranchRefName
+  if repo.defaultBranchRef == vim.NIL then
+    defaultBranchRefName = nil
+  else
+    defaultBranchRefName = repo.defaultBranchRef.name
+  end
+  add_details_line(details, "Default branch", defaultBranchRefName)
   add_details_line(details, "URL", repo.url)
   add_details_line(details, "Homepage URL", function()
     if not utils.is_blank(repo.homepageUrl) then
@@ -156,12 +162,14 @@ function M.write_repo(bufnr, repo)
     line = line + 1
   end
 
-  utils.get_file_contents(repo.nameWithOwner, repo.defaultBranchRef.name, "README.md", function(lines)
-    if vim.api.nvim_buf_is_valid(bufnr) then
-      vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
-      vim.api.nvim_buf_set_option(bufnr, "modified", false)
-    end
-  end)
+  if defaultBranchRefName ~= nil then
+    utils.get_file_contents(repo.nameWithOwner, defaultBranchRefName, "README.md", function(lines)
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
+        vim.api.nvim_buf_set_option(bufnr, "modified", false)
+      end
+    end)
+  end
 end
 
 function M.write_title(bufnr, title, line)
