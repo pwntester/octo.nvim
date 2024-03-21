@@ -389,7 +389,7 @@ function FileEntry:place_signs()
             virt_text_pos = "right_align",
             -- adding the extmark below can fail if we are in the `COMMIT` review level and the commit contains thread comments
             -- that is why we set strict to `false` here to ignore this possible error
-            strict = false
+            strict = false,
           }
           vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, opts)
           -- break out to prevent duplicate extmarks for the current comment thread
