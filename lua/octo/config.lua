@@ -1,3 +1,4 @@
+local vim = vim
 local M = {}
 
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
@@ -431,7 +432,16 @@ end
 function M.setup(opts)
   if opts ~= nil then
     if opts.mappings_disable_default == true then
-      M.values.mappings = {} -- clear default mappings before merging user mappings
+      -- clear default mappings before merging user mappings
+      M.values.mappings = {
+        issue = {},
+        pull_request = {},
+        review_thread = {},
+        submit_win = {},
+        review_diff = {},
+        file_panel = {},
+        repo = {},
+      }
     end
     M.values = vim.tbl_deep_extend("force", M.values, opts)
   end
