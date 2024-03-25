@@ -56,11 +56,11 @@ end
 ]]
 function M.open(command, entry)
   if command == "default" then
-    vim.cmd [[:buffer %]]
+    vim.cmd(':buffer '..entry.filename)
   elseif command == "horizontal" then
     vim.cmd [[:sbuffer %]]
   elseif command == "vertical" then
-    vim.cmd [[:vert sbuffer %]]
+    vim.cmd('vsplit '..entry.filename)
   elseif command == "tab" then
     vim.cmd [[:tab sb %]]
   end

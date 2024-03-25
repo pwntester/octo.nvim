@@ -1,4 +1,3 @@
-local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -7,6 +6,7 @@ local octo_config = require "octo.config"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
+local fzf_actions = require "fzf-lua.actions"
 
 return function(opts)
   opts = opts or {}
@@ -53,9 +53,9 @@ return function(opts)
             local entry = entry_maker.gen_from_issue(issue)
 
             if entry ~= nil then
-              formatted_issues[entry.ordinal] = entry
+              formatted_issues[entry.filename.." "..entry.ordinal] = entry
               local prefix = fzf.utils.ansi_from_hl("Comment", entry.value)
-              fzf_cb(prefix .. " " .. entry.obj.title)
+              fzf_cb(entry.filename .. " " .. prefix .. " " .. entry.obj.title)
             end
           end
         end
@@ -72,11 +72,27 @@ return function(opts)
     fzf_opts = {
       ["--header"] = opts.results_title,
       ["--info"] = "default",
+      ["--multi"] = true,
+      ["--delimiter"] = " ",
+      ["--with-nth"] = "2..",
     },
     winopts = {
       title = opts.window_title or "Issues",
       title_pos = "center",
     },
-    actions = fzf_actions.common_open_actions(formatted_issues),
+    actions = {
+      ["default"] = fzf_actions.file_edit_or_qf,
+      ["ctrl-s"]  = fzf_actions.file_split,
+      ["ctrl-v"]  = fzf_actions.file_vsplit,
+      ["ctrl-t"]  = fzf_actions.file_tabedit,
+      ["alt-q"]   = fzf_actions.file_sel_to_qf,
+      ["alt-l"]   = fzf_actions.file_sel_to_ll,
+    },
+    _fmt = {
+      from = function (entry)
+        local split = vim.split(entry, " ")
+        return split[1]..":1:1:"..table.concat(split, " ", 2)
+      end
+    },
   })
 end

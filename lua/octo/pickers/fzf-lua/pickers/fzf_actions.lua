@@ -6,13 +6,8 @@ local M = {}
 
 M.common_buffer_actions = function(formatted_items)
   return {
-    ["default"] = function(selected)
-      log.info(selected)
+    ["default"] = function(selected, opts)
       if #selected > 1 then
-        local selected_items = vim.tbl_map(function(i)
-          log.info('adding to quickfix list', formatted_items[i])
-          return formatted_items[i]
-        end, selected)
         vim.fn.setqflist({}, " ", {
           title = "Octo",
           lines = vim.tbl_map(function(i)
@@ -21,6 +16,7 @@ M.common_buffer_actions = function(formatted_items)
           end, selected),
           efm = "%f#%l#%m"
         })
+
         vim.cmd "copen"
       else
         picker_utils.open("default", formatted_items[selected[1]])
