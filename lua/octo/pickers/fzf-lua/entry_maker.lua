@@ -24,6 +24,21 @@ function M.gen_from_issue(issue_table)
   }
 end
 
+function M.entry_string_from_issue_or_pr(tbl, prefix_fn)
+  if not tbl or vim.tbl_isempty(tbl) then
+    return nil
+  end
+  local kind = tbl.__typename == "Issue" and "issue" or "pull_request"
+  local filename
+  if kind == "issue" then
+    filename = utils.get_issue_uri(tbl.repository.nameWithOwner, tbl.number)
+  else
+    filename = utils.get_pull_request_uri(tbl.repository.nameWithOwner, tbl.number)
+  end
+  local prefix = prefix_fn(tbl)
+  return string.format("%s %s %s %s %s", filename, tbl.url, tbl.repository.nameWithOwner, prefix, tbl.title)
+end
+
 function M.gen_from_git_commits(entry)
   if not entry then
     return nil
@@ -210,6 +225,7 @@ function M.gen_from_repo(repo)
   local metadata = string.format("(%s)", table.concat({ fork_str, access_str }, ", "))
   local description = fzf.utils.ansi_from_hl("Comment", entry.repo.description)
   local entry_str = table.concat({
+    entry.filename,
     name,
     metadata,
     description,

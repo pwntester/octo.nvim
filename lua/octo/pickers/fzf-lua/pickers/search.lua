@@ -6,17 +6,16 @@ local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
+local log = require "octo.pickers.fzf-lua.log"
 
-local handle_entry = function(fzf_cb, issue, max_id_length, formatted_issues, co)
-  local entry = entry_maker.gen_from_issue(issue)
-  if entry ~= nil then
-    local owner, name = utils.split_repo(entry.repo)
-    local raw_number = picker_utils.pad_string(entry.obj.number, max_id_length)
-    local number = fzf.utils.ansi_from_hl("Comment", raw_number)
-    local ordinal_entry = string.format("%s %s %s %s %s", entry.kind, owner, name, raw_number, entry.obj.title)
-    local string_entry = string.format("%s %s %s %s %s", entry.kind, owner, name, number, entry.obj.title)
-    formatted_issues[ordinal_entry] = entry
-    fzf_cb(string_entry, function()
+local handle_entry = function(fzf_cb, issue, max_id_length, co)
+  local entry_string = entry_maker.entry_string_from_issue_or_pr(issue, function (tbl)
+    local raw_number = picker_utils.pad_string(tbl.number, max_id_length)
+    return fzf.utils.ansi_from_hl("Comment", raw_number)
+  end)
+  if entry_string ~= nil then
+    log.info('entry_string', entry_string)
+    fzf_cb(entry_string, function()
       coroutine.resume(co)
     end)
   end
@@ -24,8 +23,6 @@ end
 
 return function(opts)
   opts = opts or {}
-
-  local formatted_items = {}
 
   local contents = function(query)
     return function(fzf_cb)
@@ -65,7 +62,7 @@ return function(opts)
 
           for _, issue in ipairs(resp.data.search.nodes) do
             vim.schedule(function()
-              handle_entry(fzf_cb, issue, max_id_length, formatted_items, co)
+              handle_entry(fzf_cb, issue, max_id_length, co)
             end)
             coroutine.yield()
           end
@@ -81,12 +78,34 @@ return function(opts)
     prompt = picker_utils.get_prompt(opts.prompt_title),
     func_async_callback = false,
     previewer = previewers.search(),
-    query_delay = 500,
+    query_delay = 250,
     fzf_opts = {
       ["--info"] = "default",
+      ["--multi"] = true,
       ["--delimiter"] = " ",
       ["--with-nth"] = "4..",
     },
-    actions = fzf_actions.common_open_actions(formatted_items),
+    actions = fzf_actions.common_open_actions_v2(),
+    _fmt = {
+      from = function(entry)
+        local split = vim.split(entry, " ")
+        return split[1] .. ":1:1:" .. table.concat(split, " ", 2)
+      end,
+    },
+    parse_entry = function(entry)
+      log.info('entry here', entry)
+      local match = string.gmatch(entry, "[^%s]+")
+      local _ = match()
+      local _ = match()
+      local repo = match()
+      local owner, name = utils.split_repo(repo)
+      local number = match()
+      return {
+        kind = opts.kind,
+        number = number,
+        owner = owner,
+        name = name,
+      }
+    end,
   })
 end

@@ -5,6 +5,7 @@ local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
 local config = require "octo.config"
+local log = require "octo.pickers.fzf-lua.log"
 
 local M = {}
 
@@ -42,7 +43,7 @@ function M.bufferPreviewer:update_border(title)
   self.win:update_scrollbar()
 end
 
-M.issue = function(formatted_issues)
+M.pr_and_issue = function()
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -54,15 +55,12 @@ M.issue = function(formatted_issues)
 
   function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
-    local entry = formatted_issues[entry_str]
-
-    local number = entry.value
-    local owner, name = utils.split_repo(entry.repo)
+    local entry = self.opts.parse_entry(entry_str)
     local query
     if entry.kind == "issue" then
-      query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
+      query = graphql("issue_query", entry.owner, entry.name, entry.number, _G.octo_pv2_fragment)
     elseif entry.kind == "pull_request" then
-      query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
+      query = graphql("pull_request_query", entry.owner, entry.name, entry.number, _G.octo_pv2_fragment)
     end
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -80,7 +78,7 @@ M.issue = function(formatted_issues)
           writers.write_title(tmpbuf, obj.title, 1)
           writers.write_details(tmpbuf, obj)
           writers.write_body(tmpbuf, obj)
-          writers.write_state(tmpbuf, obj.state:upper(), number)
+          writers.write_state(tmpbuf, obj.state:upper(), entry.number)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
@@ -90,7 +88,7 @@ M.issue = function(formatted_issues)
     }
 
     self:set_preview_buf(tmpbuf)
-    self:update_border(entry.ordinal)
+    self:update_border(entry.previewer_title)
   end
 
   return previewer
@@ -101,24 +99,22 @@ M.search = function()
 
   function previewer:new(o, opts, fzf_win)
     M.bufferPreviewer.super.new(self, o, opts, fzf_win)
-    self.title = "Issues"
+    self.title = "Search"
     setmetatable(self, previewer)
     return self
   end
 
   function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
-    local match = string.gmatch(entry_str, "[^%s]+")
-    local kind = match()
-    local owner = match()
-    local name = match()
-    local number = tonumber(match())
+    log.info('entry', entry_str)
+    local entry = self.opts.parse_entry(entry_str)
+    log.info('parsed', entry)
 
     local query
-    if kind == "issue" then
-      query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
-    elseif kind == "pull_request" then
-      query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
+    if entry.kind == "issue" then
+      query = graphql("issue_query", entry.owner, entry.name, entry.number, _G.octo_pv2_fragment)
+    elseif entry.kind == "pull_request" then
+      query = graphql("pull_request_query", entry.owner, entry.name, entry.number, _G.octo_pv2_fragment)
     end
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -128,15 +124,15 @@ M.search = function()
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
           local result = vim.fn.json_decode(output)
           local obj
-          if kind == "issue" then
+          if entry.kind == "issue" then
             obj = result.data.repository.issue
-          elseif kind == "pull_request" then
+          elseif entry.kind == "pull_request" then
             obj = result.data.repository.pullRequest
           end
           writers.write_title(tmpbuf, obj.title, 1)
           writers.write_details(tmpbuf, obj)
           writers.write_body(tmpbuf, obj)
-          writers.write_state(tmpbuf, obj.state:upper(), number)
+          writers.write_state(tmpbuf, obj.state:upper(), entry.number)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)

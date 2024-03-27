@@ -57,8 +57,8 @@ return function(opts)
     fzf_opts = {
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--info"] = "default",
-      -- ["--delimiter"] = "' '",
-      -- ["--with-nth"] = "1..5",
+      ["--delimiter"] = "' '",
+      ["--with-nth"] = "2..",
     },
     actions = fzf_actions.common_open_actions(formatted_repos),
   })

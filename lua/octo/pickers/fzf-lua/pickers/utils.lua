@@ -112,7 +112,10 @@ end
   @param entry The entry to get the url from.
 ]]
 function M.copy_url(entry)
-  local url = entry.obj.url
+  M.copy_url_raw(entry.obj.url)
+end
+
+function M.copy_url_raw(url)
   vim.fn.setreg("+", url, "c")
   utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
 end
