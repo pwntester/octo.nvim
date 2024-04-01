@@ -958,6 +958,9 @@ function M.extract_diffhunks_from_diff(diff)
       table.insert(current_diffhunk, line)
     end
   end
+  if #current_diffhunk > 0 then
+    diffhunks[current_path] = table.concat(current_diffhunk, "\n")
+  end
   return diffhunks
 end
 
