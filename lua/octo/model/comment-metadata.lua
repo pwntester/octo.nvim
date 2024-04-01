@@ -23,6 +23,8 @@ local M = {}
 ---@field diffSide string
 ---@field snippetStartLine integer
 ---@field snippetEndLine integer
+---@field bufferStartLine integer
+---@field bufferEndLine integer
 local CommentMetadata = {}
 CommentMetadata.__index = CommentMetadata
 
@@ -52,6 +54,8 @@ function CommentMetadata:new(opts)
     endLine = opts.endLine,
     snippetStartLine = opts.snippetStartLine,
     snippetEndLine = opts.snippetEndLine,
+    bufferStartLine = opts.bufferStartLine,
+    bufferEndLine = opts.bufferEndLine,
   }
   setmetatable(this, self)
   return this

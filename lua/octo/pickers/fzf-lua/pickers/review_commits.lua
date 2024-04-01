@@ -1,6 +1,4 @@
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
-local gh = require "octo.gh"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
 
@@ -33,38 +31,10 @@ return function(thread_cb)
 
   local formatted_commits = {}
 
-  local url =
-    string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
-
   local get_contents = function(fzf_cb)
-    gh.run {
-      args = { "api", "--paginate", url },
-      cb = function(output, err)
-        if err and not utils.is_blank(err) then
-          utils.error(err)
-          fzf_cb()
-        elseif output then
-          local results = vim.fn.json_decode(output)
-
-          if #formatted_commits == 0 then
-            local full_pr = entry_maker.gen_from_git_commits(make_full_pr(current_review))
-            formatted_commits["000 [[ENTIRE PULL REQUEST]]"] = full_pr
-            fzf_cb "000 [[ENTIRE PULL REQUEST]]"
-          end
-
-          for _, commit in ipairs(results) do
-            local entry = entry_maker.gen_from_git_commits(commit)
-
-            if entry ~= nil then
-              formatted_commits[entry.ordinal] = entry
-              fzf_cb(entry.ordinal)
-            end
-          end
-        end
-
-        fzf_cb()
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_review_commits"]
+    func(formatted_commits, current_review, make_full_pr, fzf_cb)
   end
 
   fzf.fzf_exec(get_contents, {

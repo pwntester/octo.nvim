@@ -1,7 +1,4 @@
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local navigation = require "octo.navigation"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
@@ -42,33 +39,9 @@ return function(opts)
   local formatted_gists = {}
 
   local get_contents = function(fzf_cb)
-    local query = graphql("gists_query", privacy)
-
-    gh.run {
-      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-      stream_cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
-          local gists = resp.data.viewer.gists.nodes
-
-          for _, gist in ipairs(gists) do
-            local entry = entry_maker.gen_from_gist(gist)
-
-            if entry ~= nil then
-              formatted_gists[entry.ordinal] = entry
-              fzf_cb(entry.ordinal)
-            end
-          end
-        end
-
-        fzf_cb()
-      end,
-      cb = function()
-        fzf_cb()
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_gists"]
+    func(formatted_gists, privacy, fzf_cb)
   end
 
   fzf.fzf_exec(get_contents, {

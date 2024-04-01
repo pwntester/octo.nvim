@@ -1,11 +1,8 @@
 local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
-local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
+local utils = require "octo.utils"
 
 return function(opts)
   opts = opts or {}
@@ -13,42 +10,19 @@ return function(opts)
     if vim.g.octo_viewer then
       opts.login = vim.g.octo_viewer
     else
-      opts.login = require("octo.gh").get_user_name()
+      local backend = require "octo.backend"
+      local remote_hostname = utils.get_remote_host()
+      local func = backend.get_funcs()["get_user_name"]
+      opts.login = func(remote_hostname)
     end
   end
 
   local formatted_repos = {}
 
   local get_contents = function(fzf_cb)
-    local query = graphql("repos_query", opts.login)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-      stream_cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-          fzf_cb()
-        elseif output then
-          local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
-          local repos = resp.data.repositoryOwner.repositories.nodes
-          if #repos == 0 then
-            utils.error(string.format("There are no matching repositories for %s.", opts.login))
-            return
-          end
-
-          for _, repo in ipairs(repos) do
-            local entry, entry_str = entry_maker.gen_from_repo(repo)
-
-            if entry ~= nil and entry_str ~= nil then
-              formatted_repos[fzf.utils.strip_ansi_coloring(entry_str)] = entry
-              fzf_cb(entry_str)
-            end
-          end
-        end
-      end,
-      cb = function()
-        fzf_cb()
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_repos"]
+    func(formatted_repos, opts.login, fzf_cb)
   end
 
   fzf.fzf_exec(get_contents, {

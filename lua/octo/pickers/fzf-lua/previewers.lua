@@ -1,9 +1,5 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local builtin = require "fzf-lua.previewer.builtin"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
-local utils = require "octo.utils"
-local writers = require "octo.ui.writers"
 local config = require "octo.config"
 
 local M = {}
@@ -55,39 +51,9 @@ M.issue = function(formatted_issues)
   function previewer:populate_preview_buf(entry_str)
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_issues[entry_str]
-
-    local number = entry.value
-    local owner, name = utils.split_repo(entry.repo)
-    local query
-    if entry.kind == "issue" then
-      query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
-    elseif entry.kind == "pull_request" then
-      query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
-    end
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.fn.json_decode(output)
-          local obj
-          if entry.kind == "issue" then
-            obj = result.data.repository.issue
-          elseif entry.kind == "pull_request" then
-            obj = result.data.repository.pullRequest
-          end
-          writers.write_title(tmpbuf, obj.title, 1)
-          writers.write_details(tmpbuf, obj)
-          writers.write_body(tmpbuf, obj)
-          writers.write_state(tmpbuf, obj.state:upper(), number)
-          local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
-          writers.write_block(tmpbuf, { "", "" }, reactions_line)
-          writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
-          vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
-        end
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_default_issue"]
+    func(entry, tmpbuf)
 
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.ordinal)
@@ -114,36 +80,9 @@ M.search = function()
     local name = match()
     local number = tonumber(match())
 
-    local query
-    if kind == "issue" then
-      query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
-    elseif kind == "pull_request" then
-      query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
-    end
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.fn.json_decode(output)
-          local obj
-          if kind == "issue" then
-            obj = result.data.repository.issue
-          elseif kind == "pull_request" then
-            obj = result.data.repository.pullRequest
-          end
-          writers.write_title(tmpbuf, obj.title, 1)
-          writers.write_details(tmpbuf, obj)
-          writers.write_body(tmpbuf, obj)
-          writers.write_state(tmpbuf, obj.state:upper(), number)
-          local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
-          writers.write_block(tmpbuf, { "", "" }, reactions_line)
-          writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
-          vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
-        end
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_previewer_search"]
+    func(kind, number, owner, name, tmpbuf)
 
     self:set_preview_buf(tmpbuf)
     -- self:update_border(number.." "..description)
@@ -180,16 +119,9 @@ M.commit = function(formatted_commits, repo)
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
 
-    local url = string.format("/repos/%s/commits/%s", repo, entry.value)
-    local cmd = table.concat({ "gh", "api", "--paginate", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, " ")
-    local proc = io.popen(cmd, "r")
-    local output
-    if proc ~= nil then
-      output = proc:read "*a"
-      proc:close()
-    else
-      output = "Failed to read from " .. url
-    end
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_default_commit"]
+    local output = func(repo, entry.value)
 
     vim.api.nvim_buf_set_lines(tmpbuf, #lines, -1, false, vim.split(output, "\n"))
 
@@ -305,20 +237,9 @@ M.repo = function(formatted_repos)
     }
     buffer:configure()
     local repo_name_owner = vim.split(entry_str, " ")[1]
-    local owner, name = utils.split_repo(repo_name_owner)
-    local query = graphql("repository_query", owner, name)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-      cb = function(output, _)
-        -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
-        -- and `tmpbuf` within this context is already cleared and invalidated
-        if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local resp = vim.fn.json_decode(output)
-          buffer.node = resp.data.repository
-          buffer:render_repo()
-        end
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_previewer_repos"]
+    func(buffer, repo_name_owner, tmpbuf)
 
     self:set_preview_buf(tmpbuf)
 

@@ -1,5 +1,5 @@
 local config = require "octo.config"
-local fragments = require "octo.gh.fragments"
+local fragments = require "octo.backend.gh.fragments"
 local _, Job = pcall(require, "plenary.job")
 local vim = vim
 

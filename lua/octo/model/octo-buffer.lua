@@ -4,8 +4,6 @@ local autocmds = require "octo.autocmds"
 local config = require "octo.config"
 local constants = require "octo.constants"
 local folds = require "octo.folds"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local signs = require "octo.ui.signs"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
@@ -279,35 +277,16 @@ function OctoBuffer:async_fetch_taggable_users()
   for _, c in pairs(self.commentsMetadata) do
     table.insert(users, c.author)
   end
-
-  -- add repo contributors
-  gh.run {
-    args = { "api", string.format("repos/%s/contributors", self.repo) },
-    cb = function(response)
-      if not utils.is_blank(response) then
-        local resp = vim.fn.json_decode(response)
-        for _, contributor in ipairs(resp) do
-          table.insert(users, contributor.login)
-        end
-        self.taggable_users = users
-      end
-    end,
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["buffer_fetch_taggable_users"]
+  func(self.repo, users)
 end
 
 ---Fetches the issues in the repo so they can be used for completion.
 function OctoBuffer:async_fetch_issues()
-  gh.run {
-    args = { "api", string.format("repos/%s/issues", self.repo) },
-    cb = function(response)
-      local issues_metadata = {}
-      local resp = vim.fn.json_decode(response)
-      for _, issue in ipairs(resp) do
-        table.insert(issues_metadata, { number = issue.number, title = issue.title })
-      end
-      octo_repo_issues[self.repo] = issues_metadata
-    end,
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["buffer_fetch_issues"]
+  func(self.repo)
 end
 
 ---Syncs all the comments/title/body with GitHub
@@ -366,149 +345,26 @@ function OctoBuffer:do_save_title_and_body()
       return
     end
 
-    local query
-    if self:isIssue() then
-      query = graphql("update_issue_mutation", id, title_metadata.body, desc_metadata.body)
-    elseif self:isPullRequest() then
-      query = graphql("update_pull_request_mutation", id, title_metadata.body, desc_metadata.body)
-    end
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = vim.fn.json_decode(output)
-          local obj
-          if self:isPullRequest() then
-            obj = resp.data.updatePullRequest.pullRequest
-          elseif self:isIssue() then
-            obj = resp.data.updateIssue.issue
-          end
-          if title_metadata.body == obj.title then
-            title_metadata.savedBody = obj.title
-            title_metadata.dirty = false
-            self.titleMetadata = title_metadata
-          end
-
-          if desc_metadata.body == obj.body then
-            desc_metadata.savedBody = obj.body
-            desc_metadata.dirty = false
-            self.bodyMetadata = desc_metadata
-          end
-
-          self:render_signs()
-          utils.info "Saved!"
-        end
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["buffer_save_title_and_body"]
+    func(self, id, title_metadata, desc_metadata)
   end
 end
 
 ---Add a new comment to the issue/PR
 function OctoBuffer:do_add_issue_comment(comment_metadata)
-  -- create new issue comment
   local id = self.node.id
-  local add_query = graphql("add_issue_comment_mutation", id, comment_metadata.body)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", add_query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local respBody = resp.data.addComment.commentEdge.node.body
-        local respId = resp.data.addComment.commentEdge.node.id
-        if utils.trim(comment_metadata.body) == utils.trim(respBody) then
-          local comments = self.commentsMetadata
-          for i, c in ipairs(comments) do
-            if tonumber(c.id) == -1 then
-              comments[i].id = respId
-              comments[i].savedBody = respBody
-              comments[i].dirty = false
-              break
-            end
-          end
-          self:render_signs()
-        end
-      end
-    end,
-  }
+
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["buffer_add_issue_comment"]
+  func(self, id, comment_metadata)
 end
 
 ---Replies to a review comment thread
 function OctoBuffer:do_add_thread_comment(comment_metadata)
-  -- create new thread reply
-  local query = graphql(
-    "add_pull_request_review_comment_mutation",
-    comment_metadata.replyTo,
-    comment_metadata.body,
-    comment_metadata.reviewId
-  )
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local resp_comment = resp.data.addPullRequestReviewComment.comment
-        local comment_end
-        if utils.trim(comment_metadata.body) == utils.trim(resp_comment.body) then
-          local comments = self.commentsMetadata
-          for i, c in ipairs(comments) do
-            if tonumber(c.id) == -1 then
-              comments[i].id = resp_comment.id
-              comments[i].savedBody = resp_comment.body
-              comments[i].dirty = false
-              comment_end = comments[i].endLine
-              break
-            end
-          end
-
-          local threads = resp_comment.pullRequest.reviewThreads.nodes
-          local review = require("octo.reviews").get_current_review()
-          if review then
-            review:update_threads(threads)
-          end
-
-          self:render_signs()
-
-          -- update thread map
-          local thread_id
-          for _, thread in ipairs(threads) do
-            for _, c in ipairs(thread.comments.nodes) do
-              if c.id == resp_comment.id then
-                thread_id = thread.id
-                break
-              end
-            end
-          end
-          local mark_id
-          for markId, threadMetadata in pairs(self.threadsMetadata) do
-            if threadMetadata.threadId == thread_id then
-              mark_id = markId
-            end
-          end
-          local extmark = vim.api.nvim_buf_get_extmark_by_id(
-            self.bufnr,
-            constants.OCTO_THREAD_NS,
-            tonumber(mark_id),
-            { details = true }
-          )
-          local thread_start = extmark[1]
-          -- update extmark
-          vim.api.nvim_buf_del_extmark(self.bufnr, constants.OCTO_THREAD_NS, tonumber(mark_id))
-          local thread_mark_id = vim.api.nvim_buf_set_extmark(self.bufnr, constants.OCTO_THREAD_NS, thread_start, 0, {
-            end_line = comment_end + 2,
-            end_col = 0,
-          })
-          self.threadsMetadata[tostring(thread_mark_id)] = self.threadsMetadata[tostring(mark_id)]
-          self.threadsMetadata[tostring(mark_id)] = nil
-        end
-      end
-    end,
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["buffer_add_thread_comment"]
+  func(self, comment_metadata)
 end
 
 ---Adds a new review comment thread to the current review.
@@ -531,60 +387,9 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
 
   -- create new thread
   if review_level == "PR" then
-    local query
-    if isMultiline then
-      query = graphql(
-        "add_pull_request_review_multiline_thread_mutation",
-        comment_metadata.reviewId,
-        comment_metadata.body,
-        comment_metadata.path,
-        comment_metadata.diffSide,
-        comment_metadata.diffSide,
-        comment_metadata.snippetStartLine,
-        comment_metadata.snippetEndLine
-      )
-    else
-      query = graphql(
-        "add_pull_request_review_thread_mutation",
-        comment_metadata.reviewId,
-        comment_metadata.body,
-        comment_metadata.path,
-        comment_metadata.diffSide,
-        comment_metadata.snippetStartLine
-      )
-    end
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
-        elseif output then
-          local resp = vim.fn.json_decode(output).data.addPullRequestReviewThread
-          if not utils.is_blank(resp.thread) then
-            local new_comment = resp.thread.comments.nodes[1]
-            if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
-              local comments = self.commentsMetadata
-              for i, c in ipairs(comments) do
-                if tonumber(c.id) == -1 then
-                  comments[i].id = new_comment.id
-                  comments[i].savedBody = new_comment.body
-                  comments[i].dirty = false
-                  break
-                end
-              end
-              local threads = resp.thread.pullRequest.reviewThreads.nodes
-              if review then
-                review:update_threads(threads)
-              end
-              self:render_signs()
-            end
-          else
-            utils.error "Failed to create thread"
-            return
-          end
-        end
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["buffer_pr_add_thread"]
+    func(self, comment_metadata, review, isMultiline)
   elseif review_level == "COMMIT" then
     if isMultiline then
       utils.error "Can't create a multiline comment at the commit level"
@@ -642,46 +447,9 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         position = position + offset - 1
       end
 
-      local query = graphql(
-        "add_pull_request_review_commit_thread_mutation",
-        layout.right.commit,
-        comment_metadata.body,
-        comment_metadata.reviewId,
-        comment_metadata.path,
-        position
-      )
-      gh.run {
-        args = { "api", "graphql", "-f", string.format("query=%s", query) },
-        cb = function(output, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            vim.api.nvim_err_writeln(stderr)
-          elseif output then
-            local r = vim.fn.json_decode(output)
-            local resp = r.data.addPullRequestReviewComment
-            if not utils.is_blank(resp.comment) then
-              if utils.trim(comment_metadata.body) == utils.trim(resp.comment.body) then
-                local comments = self.commentsMetadata
-                for i, c in ipairs(comments) do
-                  if tonumber(c.id) == -1 then
-                    comments[i].id = resp.comment.id
-                    comments[i].savedBody = resp.comment.body
-                    comments[i].dirty = false
-                    break
-                  end
-                end
-                if review then
-                  local threads = resp.comment.pullRequest.reviewThreads.nodes
-                  review:update_threads(threads)
-                end
-                self:render_signs()
-              end
-            else
-              utils.error "Failed to create thread"
-              return
-            end
-          end
-        end,
-      }
+      local backend = require "octo.backend"
+      local func = backend.get_funcs()["buffer_commit_add_thread"]
+      func(self, comment_metadata, review, position)
     end
   end
 end
@@ -693,91 +461,17 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
     utils.error "Please submit or discard the current review before adding a comment"
     return
   end
-  gh.run {
-    args = {
-      "api",
-      "--method",
-      "POST",
-      string.format("/repos/%s/pulls/%d/comments/%s/replies", self.repo, self.number, comment_metadata.replyToRest),
-      "-f",
-      string.format([[body=%s]], utils.escape_char(comment_metadata.body)),
-      "--jq",
-      ".",
-    },
-    headers = { "Accept: application/vnd.github.v3+json" },
-    cb = function(output, stderr)
-      if not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        if not utils.is_blank(resp) then
-          if utils.trim(comment_metadata.body) == utils.trim(resp.body) then
-            local comments = self.commentsMetadata
-            for i, c in ipairs(comments) do
-              if tonumber(c.id) == -1 then
-                comments[i].id = resp.id
-                comments[i].savedBody = resp.body
-                comments[i].dirty = false
-                break
-              end
-            end
-            self:render_signs()
-          end
-        else
-          utils.error "Failed to create thread"
-          return
-        end
-      end
-    end,
-  }
+
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["buffer_add_pr_comment"]
+  func(self, comment_metadata)
 end
 
 ---Update a comment's metadata
 function OctoBuffer:do_update_comment(comment_metadata)
-  -- update comment/reply
-  local update_query
-  if comment_metadata.kind == "IssueComment" then
-    update_query = graphql("update_issue_comment_mutation", comment_metadata.id, comment_metadata.body)
-  elseif comment_metadata.kind == "PullRequestReviewComment" then
-    update_query = graphql("update_pull_request_review_comment_mutation", comment_metadata.id, comment_metadata.body)
-  elseif comment_metadata.kind == "PullRequestReview" then
-    update_query = graphql("update_pull_request_review_mutation", comment_metadata.id, comment_metadata.body)
-  end
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", update_query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local resp_comment
-        if comment_metadata.kind == "IssueComment" then
-          resp_comment = resp.data.updateIssueComment.issueComment
-        elseif comment_metadata.kind == "PullRequestReviewComment" then
-          resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
-          local threads =
-            resp.data.updatePullRequestReviewComment.pullRequestReviewComment.pullRequest.reviewThreads.nodes
-          local review = require("octo.reviews").get_current_review()
-          if review then
-            review:update_threads(threads)
-          end
-        elseif comment_metadata.kind == "PullRequestReview" then
-          resp_comment = resp.data.updatePullRequestReview.pullRequestReview
-        end
-        if resp_comment and utils.trim(comment_metadata.body) == utils.trim(resp_comment.body) then
-          local comments = self.commentsMetadata
-          for i, c in ipairs(comments) do
-            if c.id == comment_metadata.id then
-              comments[i].savedBody = comment_metadata.body
-              comments[i].dirty = false
-              break
-            end
-          end
-          self:render_signs()
-        end
-      end
-    end,
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["buffer_update_comment"]
+  func(self, comment_metadata)
 end
 
 ---Update the buffer metadata

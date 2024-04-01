@@ -1,4 +1,3 @@
-local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local fzf_utils = require "fzf-lua.utils"
 
@@ -103,6 +102,7 @@ function M.open_in_browser(entry)
   if entry.kind ~= "repo" then
     number = entry.value
   end
+  local navigation = require "octo.navigation"
   navigation.open_in_browser(entry.kind, repo, number)
 end
 

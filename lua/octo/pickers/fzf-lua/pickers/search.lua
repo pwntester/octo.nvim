@@ -1,8 +1,5 @@
 local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
@@ -45,30 +42,9 @@ return function(opts)
           if val then
             _prompt = string.format("%s %s", val, _prompt)
           end
-          local output = gh.run {
-            args = { "api", "graphql", "-f", string.format("query=%s", graphql("search_query", _prompt)) },
-            mode = "sync",
-          }
-
-          if not output then
-            return {}
-          end
-
-          local resp = vim.fn.json_decode(output)
-          local max_id_length = 1
-          for _, issue in ipairs(resp.data.search.nodes) do
-            local s = tostring(issue.number)
-            if #s > max_id_length then
-              max_id_length = #s
-            end
-          end
-
-          for _, issue in ipairs(resp.data.search.nodes) do
-            vim.schedule(function()
-              handle_entry(fzf_cb, issue, max_id_length, formatted_items, co)
-            end)
-            coroutine.yield()
-          end
+          local backend = require "octo.backend"
+          local func = backend.get_funcs()["fzf_lua_search"]
+          func(co, _prompt, fzf_cb)
         end
 
         fzf_cb()

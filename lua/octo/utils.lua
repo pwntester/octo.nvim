@@ -1,8 +1,6 @@
 local config = require "octo.config"
 local constants = require "octo.constants"
 local date = require "octo.date"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local _, Job = pcall(require, "plenary.job")
 local vim = vim
 
@@ -312,45 +310,28 @@ function M.checkout_pr(pr_number)
   if not Job then
     return
   end
-  Job:new({
-    enable_recording = true,
-    command = "gh",
-    args = { "pr", "checkout", pr_number },
-    on_exit = vim.schedule_wrap(function()
-      local output = vim.fn.system "git branch --show-current"
-      M.info("Switched to " .. output)
-    end),
-  }):start()
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_checkout_pr"]
+  func(pr_number)
 end
 
 function M.checkout_pr_sync(pr_number)
   if not Job then
     return
   end
-  Job:new({
-    enable_recording = true,
-    command = "gh",
-    args = { "pr", "checkout", pr_number },
-    on_exit = vim.schedule_wrap(function()
-      local output = vim.fn.system "git branch --show-current"
-      M.info("Switched to " .. output)
-    end),
-  }):sync()
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_checkout_pr_sync"]
+  func(pr_number)
 end
 
----Mergest a PR b number
+---Merges a PR number
 function M.merge_pr(pr_number)
   if not Job then
     return
   end
-  Job:new({
-    enable_recording = true,
-    command = "gh",
-    args = { "pr", "merge", pr_number, "--merge", "--delete-branch" },
-    on_exit = vim.schedule_wrap(function()
-      M.info("Merged PR " .. pr_number .. "!")
-    end),
-  }):start()
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_merge_pr"]
+  func(pr_number)
 end
 
 ---Formats a string as a date
@@ -381,14 +362,9 @@ function M.get_repo_id(repo)
   if repo_id_cache[repo] then
     return repo_id_cache[repo]
   else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_id_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
-    local resp = vim.fn.json_decode(output)
-    local id = resp.data.repository.id
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["util_get_repo_iid"]
+    local id = func(repo)
     repo_id_cache[repo] = id
     return id
   end
@@ -407,12 +383,9 @@ function M.get_repo_info(repo)
   if repo_info_cache[repo] then
     return repo_info_cache[repo]
   else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["util_get_repo_info"]
+    local output = func(repo)
     local resp = vim.fn.json_decode(output)
     local info = resp.data.repository
     repo_info_cache[repo] = info
@@ -425,12 +398,9 @@ function M.get_repo_templates(repo)
   if repo_templates_cache[repo] then
     return repo_templates_cache[repo]
   else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_templates_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["util_get_repo_templates"]
+    local output = func(repo)
     local resp = vim.fn.json_decode(output)
     local templates = resp.data.repository
 
@@ -596,24 +566,9 @@ end
 ---@param path string
 ---@param cb function
 function M.get_file_contents(repo, commit, path, cb)
-  local owner, name = M.split_repo(repo)
-  local query = graphql("file_content_query", owner, name, commit, path)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local blob = resp.data.repository.object
-        local lines = {}
-        if blob and blob ~= vim.NIL and type(blob.text) == "string" then
-          lines = vim.split(blob.text, "\n")
-        end
-        cb(lines)
-      end
-    end,
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_get_file_contents"]
+  func(repo, commit, path, cb)
 end
 
 function M.set_timeout(delay, callback, ...)
@@ -1059,7 +1014,9 @@ function M.fork_repo()
     return
   end
   M.info(string.format("Cloning %s. It can take a few minutes", buffer.repo))
-  M.info(vim.fn.system('echo "n" | gh repo fork ' .. buffer.repo .. " 2>&1 | cat "))
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_fork"]
+  func(buffer.repo)
 end
 
 function M.notify(msg, level)
@@ -1082,63 +1039,9 @@ function M.error(msg)
 end
 
 function M.get_pull_request_for_current_branch(cb)
-  gh.run {
-    args = { "pr", "view", "--json", "id,number,headRepositoryOwner,headRepository,isCrossRepository,url" },
-    cb = function(out)
-      if out == "" then
-        M.error "No pr found for current branch"
-        return
-      end
-      local pr = vim.fn.json_decode(out)
-      local owner
-      local name
-      if pr.number then
-        if pr.isCrossRepository then
-          -- Parsing the pr url is the only way to get the target repo owner if the pr is cross repo
-          if not pr.url then
-            M.error "Failed to get pr url"
-            return
-          end
-          local url_suffix = pr.url:match "[^/]+/[^/]+/pull/%d+$"
-          if not url_suffix then
-            M.error "Failed to parse pr url"
-            return
-          end
-          local iter = url_suffix:gmatch "[^/]+/"
-          owner = vim.print(iter():sub(1, -2))
-          name = vim.print(iter():sub(1, -2))
-        else
-          owner = pr.headRepositoryOwner.login
-          name = pr.headRepository.name
-        end
-        local number = pr.number
-        local id = pr.id
-        local query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
-        gh.run {
-          args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
-            if stderr and not M.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
-            elseif output then
-              local resp = M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
-              local obj = resp.data.repository.pullRequest
-              local Rev = require("octo.reviews.rev").Rev
-              local PullRequest = require("octo.model.pull-request").PullRequest
-              local pull_request = PullRequest:new {
-                repo = owner .. "/" .. name,
-                number = number,
-                id = id,
-                left = Rev:new(obj.baseRefOid),
-                right = Rev:new(obj.headRefOid),
-                files = obj.files.nodes,
-              }
-              cb(pull_request)
-            end
-          end,
-        }
-      end
-    end,
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_get_pr_for_curr_branch"]
+  func(cb)
 end
 
 local function close_preview_window(winnr, bufnrs)
@@ -1185,11 +1088,9 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
 end
 
 function M.get_user_id(login)
-  local query = graphql("user_query", login)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_get_user_id"]
+  local output = func(login)
   if output then
     local resp = vim.fn.json_decode(output)
     if resp.data.user and resp.data.user ~= vim.NIL then
@@ -1206,12 +1107,9 @@ function M.get_label_id(label)
     return
   end
 
-  local owner, name = M.split_repo(buffer.repo)
-  local query = graphql("repo_labels_query", owner, name)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
-  }
+  local backend = require "octo.backend"
+  local func = backend.get_funcs()["util_get_label_id"]
+  local output = func(buffer.repo)
   if output then
     local resp = vim.fn.json_decode(output)
     if resp.data.repository.labels.nodes and resp.data.repository.labels.nodes ~= vim.NIL then
