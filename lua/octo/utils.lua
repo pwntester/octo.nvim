@@ -251,6 +251,22 @@ function M.get_file_at_commit(path, commit, cb)
   job:start()
 end
 
+function M.get_diff_between_commits(start_commit, end_commit)
+  if not Job then
+    return
+  end
+  local job = Job:new {
+    command = "git",
+    args = { "diff", string.format("%s..%s", start_commit, end_commit) },
+  }
+  job:sync()
+  local stderr = table.concat(job:stderr_result(), "\n")
+  if not M.is_blank(stderr) then
+    return {}
+  end
+  return table.concat(job:result(), "\n")
+end
+
 function M.in_pr_repo()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -557,6 +573,8 @@ function M.parse_url(url)
     return repo, number, "issue"
   elseif repo and number and kind == "pull" then
     return repo, number, kind
+  elseif repo and number and kind == "merge_requests" then
+    return repo, number, "pull"
   end
 end
 
@@ -1236,6 +1254,13 @@ function M.convert_vim_mapping_to_fzf(vim_mapping)
   local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
   fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
   return string.lower(fzf_mapping)
+end
+
+---@param url string
+---@return string
+function M.url_encode(url)
+  url = url:gsub("\n", "%%0A")
+  return select(1, string.gsub(url, " ", "+"))
 end
 
 return M

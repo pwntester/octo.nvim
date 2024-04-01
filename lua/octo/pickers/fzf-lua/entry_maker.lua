@@ -9,6 +9,8 @@ function M.gen_from_issue(issue_table)
   end
   local kind = issue_table.__typename == "Issue" and "issue" or "pull_request"
   local filename
+  -- gh number == iid, glab number == gid
+  local id = issue_table.global_id or issue_table.number
   if kind == "issue" then
     filename = utils.get_issue_uri(issue_table.repository.nameWithOwner, issue_table.number)
   else
@@ -17,7 +19,7 @@ function M.gen_from_issue(issue_table)
   return {
     filename = filename,
     kind = kind,
-    value = issue_table.number,
+    value = id,
     ordinal = issue_table.number .. " " .. issue_table.title,
     obj = issue_table,
     repo = issue_table.repository.nameWithOwner,

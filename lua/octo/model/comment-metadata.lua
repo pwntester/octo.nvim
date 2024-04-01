@@ -25,6 +25,7 @@ local M = {}
 ---@field snippetEndLine integer
 ---@field bufferStartLine integer
 ---@field bufferEndLine integer
+---@field state string pending or committed
 local CommentMetadata = {}
 CommentMetadata.__index = CommentMetadata
 
@@ -56,6 +57,7 @@ function CommentMetadata:new(opts)
     snippetEndLine = opts.snippetEndLine,
     bufferStartLine = opts.bufferStartLine,
     bufferEndLine = opts.bufferEndLine,
+    state = opts.state,
   }
   setmetatable(this, self)
   return this

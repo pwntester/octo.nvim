@@ -1,0 +1,112 @@
+local cli = require "octo.backend.glab.cli"
+local commands = require "octo.backend.glab.commands"
+local telescope_commands = require "octo.backend.glab.telescope-commands"
+local fzf_lua_commands = require "octo.backend.glab.fzf-lua-commands"
+
+local M = {}
+
+---@param name string
+local function not_implemented(name)
+  return function()
+    local utils = require "octo.utils"
+    utils.error("Gitlab backend doesn't have " .. name .. " implemented")
+  end
+end
+
+M.functions = {
+  ["setup"] = cli.setup,
+  ["load"] = commands.load,
+  ["reactions_popup"] = not_implemented "reactions_popup",
+  ["user_popup"] = not_implemented "user_popup",
+  ["link_popup"] = not_implemented "link_popup",
+  ["cmds_delete_comment"] = commands.cmds_delete_comment,
+  ["cmds_resolve_thread"] = commands.cmds_resolve_thread,
+  ["cmds_unresolve_thread"] = commands.cmds_unresolve_thread,
+  ["cmds_change_state"] = not_implemented "cmds_change_state",
+  ["cmds_save_issue"] = not_implemented "cmds_save_issue",
+  ["cmds_save_pr"] = not_implemented "cmds_save_pr",
+  ["cmds_mark_pr_ready"] = not_implemented "cmds_mark_pr_ready",
+  ["cmds_mark_pr_draft"] = not_implemented "cmds_mark_pr_draft",
+  ["cmds_pr_checks"] = not_implemented "cmds_pr_checks",
+  ["cmds_merge_pr"] = not_implemented "cmds_merge_pr",
+  ["cmds_show_pr_diff"] = not_implemented "cmds_show_pr_diff",
+  ["cmds_reaction_action"] = not_implemented "cmds_reaction_action",
+  ["cmds_add_project_card"] = not_implemented "cmds_add_project_card",
+  ["cmds_remove_project_card"] = not_implemented "cmds_remove_project_card",
+  ["cmds_move_project_card"] = not_implemented "cmds_move_project_card",
+  ["cmds_set_project_card_v2"] = not_implemented "cmds_set_project_card_v2",
+  ["cmds_remove_project_card_v2"] = not_implemented "cmds_remove_project_card_v2",
+  ["cmds_create_label"] = commands.cmds_create_label,
+  ["cmds_add_label"] = commands.cmds_add_label,
+  ["cmds_remove_label"] = commands.cmds_remove_label,
+  ["cmds_add_user"] = not_implemented "cmds_add_user",
+  ["cmds_remove_assignee"] = not_implemented "cmds_remove_assignee",
+  ["buffer_fetch_taggable_users"] = commands.buffer_fetch_taggable_users,
+  ["buffer_fetch_issues"] = commands.buffer_fetch_issues,
+  ["buffer_save_title_and_body"] = commands.buffer_save_title_and_body,
+  ["buffer_add_issue_comment"] = not_implemented "buffer_add_issue_comment",
+  ["buffer_add_thread_comment"] = commands.buffer_add_thread_comment,
+  ["buffer_pr_add_thread"] = commands.buffer_pr_add_thread,
+  ["buffer_commit_add_thread"] = not_implemented "buffer_commit_add_thread",
+  ["buffer_add_pr_comment"] = not_implemented "buffer_add_pr_comment",
+  ["buffer_update_comment"] = commands.buffer_update_comment,
+  ["pr_get_diff"] = commands.pr_get_diff,
+  ["pr_get_changed_files"] = commands.pr_get_changed_files,
+  ["pr_get_commit_changed_files"] = not_implemented "pr_get_commit_changed_files",
+  ["go_to_issue"] = not_implemented "go_to_issue",
+  ["file_toggle_viewed"] = not_implemented "file_toggle_viewed",
+  ["review_start_review_mutation"] = commands.review_start_review_mutation,
+  ["review_retrieve"] = not_implemented "review_retrieve",
+  ["review_discard"] = not_implemented "review_discard",
+  ["review_submit"] = commands.review_submit,
+  ["util_checkout_pr"] = not_implemented "util_checkout_pr",
+  ["util_checkout_pr_sync"] = not_implemented "util_checkout_pr_sync",
+  ["util_merge_pr"] = not_implemented "util_merge_pr",
+  ["util_get_repo_iid"] = not_implemented "util_get_repo_iid",
+  ["util_get_repo_info"] = not_implemented "util_get_repo_info",
+  ["util_get_repo_templates"] = not_implemented "util_get_repo_templates",
+  ["util_get_file_contents"] = not_implemented "util_get_file_contents",
+  ["util_fork"] = not_implemented "util_fork",
+  ["util_get_pr_for_curr_branch"] = not_implemented "util_get_pr_for_curr_branch",
+  ["util_get_user_id"] = not_implemented "util_get_user_id",
+  ["util_get_label_id"] = not_implemented "util_get_label_id",
+  ["get_user_name"] = commands.get_user_name,
+  ["open_in_browser"] = not_implemented "open_in_browser",
+  ["telescope_default_issue"] = telescope_commands.telescope_default_issue,
+  ["telescope_default_commit"] = not_implemented "telescope_default_commit",
+  ["telescope_issues"] = not_implemented "telescope_issues",
+  ["telescope_gists"] = not_implemented "telescope_gists",
+  ["telescope_pull_requests"] = telescope_commands.telescope_pull_requests,
+  ["telescope_commits"] = not_implemented "telescope_commits",
+  -- doesnt really work since gitlab refuses to hand out parent commits
+  ["telescope_review_commits"] = not_implemented "telescope_review_commits",
+  ["telescope_changed_files"] = not_implemented "telescope_changed_files",
+  ["telescope_search"] = not_implemented "telescope_search",
+  ["telescope_select_target_project_column"] = not_implemented "telescope_select_target_project_column",
+  ["telescope_select_label"] = telescope_commands.telescope_select_label,
+  ["telescope_select_assigned_label"] = telescope_commands.telescope_select_assigned_label,
+  ["telescope_get_users"] = not_implemented "telescope_get_users",
+  ["telescope_select_assignee"] = not_implemented "telescope_select_assignee",
+  ["telescope_repos"] = not_implemented "telescope_repos",
+  ["fzf_lua_default_issue"] = fzf_lua_commands.fzf_lua_default_issue,
+  ["fzf_lua_previewer_search"] = not_implemented "fzf_lua_previewer_search",
+  ["fzf_lua_default_commit"] = not_implemented "fzf_lua_default_commit",
+  ["fzf_lua_previewer_repos"] = not_implemented "fzf_lua_previewer_repos",
+  ["fzf_lua_issues"] = not_implemented "fzf_lua_issues",
+  ["fzf_lua_gists"] = not_implemented "fzf_lua_gists",
+  ["fzf_lua_pull_requests"] = fzf_lua_commands.fzf_lua_pull_requests,
+  ["fzf_lua_commits"] = not_implemented "fzf_lua_commits",
+  -- doesnt really work since gitlab refuses to hand out parent commits
+  ["fzf_lua_review_commits"] = not_implemented "fzf_lua_review_commits",
+  ["fzf_lua_changed_files"] = not_implemented "fzf_lua_changed_files",
+  ["fzf_lua_search"] = not_implemented "fzf_lua_search",
+  ["fzf_lua_select_target_project_column"] = not_implemented "fzf_lua_select_target_project_column",
+  ["fzf_lua_select_target_project_column_v2"] = not_implemented "fzf_lua_select_target_project_column_v2",
+  ["fzf_lua_select_label"] = fzf_lua_commands.fzf_lua_select_label,
+  ["fzf_lua_select_assigned_label"] = fzf_lua_commands.fzf_lua_select_assigned_label,
+  ["fzf_lua_get_users"] = not_implemented "fzf_lua_get_users",
+  ["fzf_lua_select_assignee"] = not_implemented "fzf_lua_select_assignee",
+  ["fzf_lua_repos"] = not_implemented "fzf_lua_repos",
+}
+
+return M

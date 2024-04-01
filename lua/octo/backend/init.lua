@@ -1,4 +1,5 @@
 local gh = require "octo.backend.gh"
+local glab = require "octo.backend.glab"
 local utils = require "octo.utils"
 local config = require "octo.config"
 
@@ -6,14 +7,17 @@ local M = {}
 
 local backend = {
   ["gh"] = gh,
+  ["glab"] = glab,
 }
 
----@return string
+---@return "gh" | "glab"
 local function get_cli()
   local remote_hostname = utils.get_remote_host()
   local cli
   if string.find(remote_hostname, "github") then
     cli = config.values.gh_cmd
+  else
+    cli = config.values.glab_cmd
   end
   return cli
 end

@@ -111,7 +111,8 @@ function OctoBuffer:render_issue()
 
   -- write body reactions
   local reaction_line
-  if utils.count_reactions(self.node.reactionGroups) > 0 then
+  -- #233 missing glab reaction support
+  if self.node.reactionGroups and utils.count_reactions(self.node.reactionGroups) > 0 then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
     writers.write_block(self.bufnr, { "", "" }, line)
     reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)

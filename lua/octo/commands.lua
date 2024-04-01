@@ -506,7 +506,7 @@ function M.resolve_thread()
     return
   end
   local func = backend.get_funcs()["cmds_resolve_thread"]
-  func(_thread, bufnr)
+  func(_thread, bufnr, buffer.number)
 end
 
 function M.unresolve_thread()
@@ -520,7 +520,7 @@ function M.unresolve_thread()
     return
   end
   local func = backend.get_funcs()["cmds_unresolve_thread"]
-  func(_thread, bufnr)
+  func(_thread, bufnr, buffer.number)
 end
 
 function M.change_state(state)

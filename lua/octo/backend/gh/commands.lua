@@ -278,7 +278,7 @@ end
 
 ---@param thread ThreadMetadata
 ---@param bufnr integer
-function M.cmds_resolve_thread(thread, bufnr)
+function M.cmds_resolve_thread(thread, bufnr, _)
   local thread_id = thread.threadId
   local thread_line = thread.bufferStartLine
 
@@ -302,7 +302,7 @@ end
 
 ---@param thread ThreadMetadata
 ---@param bufnr integer
-function M.cmds_unresolve_thread(thread, bufnr)
+function M.cmds_unresolve_thread(thread, bufnr, _)
   local thread_id = thread.threadId
   local thread_line = thread.bufferStartLine
 

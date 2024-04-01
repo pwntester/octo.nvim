@@ -81,6 +81,11 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
+      it("should return invalid when gitlab_hostname isn't a string", function()
+        config.values.gitlab_hostname = false
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
       it("should return invalid when use_local_fs isn't a boolean", function()
         config.values.use_local_fs = "not a boolean"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
@@ -98,6 +103,11 @@ describe("Octo config", function()
 
       it("should return invalid when gh_env isn't a table", function()
         config.values.gh_env = "not a table"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when glab_env isn't a table", function()
+        config.values.glab_env = "not a table"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
