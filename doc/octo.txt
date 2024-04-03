@@ -188,10 +188,9 @@ configuration in Lua.
 PR REVIEW                                       *octo-pr-review*
 
  Open the PR (eg: `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`)
-* Start a review with `Octo review start` or resume a pending review with
+* Start a review with `Octo review start` or resume a pending review with `Octo review resume`
  A new tab will show a panel with changed files and two windows showing the diff on any of them.
-  `Octo review resume`
- Change panel entries with `]q` and `[q` or by selecting an entry in the window
+ Change panel entries with `]q` and `[q` or by selecting an entry in the window.
 * Add comments with `<space>ca` or suggestions with `<space>sa` on single or
   multiple visual-selected lines
   * A new buffer will appear in the alternate diff window. Cursor will be
