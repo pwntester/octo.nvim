@@ -342,6 +342,14 @@ function M.setup()
       end,
     },
   }
+
+  setmetatable(M.commands.pr, {
+    __call = function(_)
+      utils.get_pull_request_for_current_branch(function(pr)
+        vim.cmd("e " .. utils.get_pull_request_uri(pr.repo, pr.number))
+      end)
+    end,
+  })
 end
 
 function M.process_varargs(repo, ...)
@@ -404,12 +412,10 @@ function M.octo(object, action, ...)
       return
     end
 
-    local a = o[action]
-    if not a then
+    local a = o[action] or o
+    if not pcall(a, ...) then
       utils.error(action and "Incorrect action: " .. action or "No action specified")
       return
-    else
-      a(...)
     end
   end
 end

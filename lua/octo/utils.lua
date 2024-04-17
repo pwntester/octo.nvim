@@ -1080,14 +1080,36 @@ end
 
 function M.get_pull_request_for_current_branch(cb)
   gh.run {
-    args = { "pr", "status", "--json", "id,number,headRepositoryOwner,headRepository" },
+    args = { "pr", "view", "--json", "id,number,headRepositoryOwner,headRepository,isCrossRepository,url" },
     cb = function(out)
+      if out == "" then
+        M.error "No pr found for current branch"
+        return
+      end
       local pr = vim.fn.json_decode(out)
-      if pr.currentBranch and pr.currentBranch.number then
-        local number = pr.currentBranch.number
-        local id = pr.currentBranch.id
-        local owner = pr.currentBranch.headRepositoryOwner.login
-        local name = pr.currentBranch.headRepository.name
+      local owner
+      local name
+      if pr.number then
+        if pr.isCrossRepository then
+          -- Parsing the pr url is the only way to get the target repo owner if the pr is cross repo
+          if not pr.url then
+            M.error "Failed to get pr url"
+            return
+          end
+          local url_suffix = pr.url:match "[^/]+/[^/]+/pull/%d+$"
+          if not url_suffix then
+            M.error "Failed to parse pr url"
+            return
+          end
+          local iter = url_suffix:gmatch "[^/]+/"
+          owner = vim.print(iter():sub(1, -2))
+          name = vim.print(iter():sub(1, -2))
+        else
+          owner = pr.headRepositoryOwner.login
+          name = pr.headRepository.name
+        end
+        local number = pr.number
+        local id = pr.id
         local query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
         gh.run {
           args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
