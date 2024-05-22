@@ -40,6 +40,10 @@ function M.gen_from_issue(max_number, print_repo)
       }
     end
 
+    if entry.kind == "pull_request" then
+      table.insert(columns, "(" .. entry.obj.headRefName .. ")")
+    end
+
     local displayer = entry_display.create(layout)
 
     return displayer(columns)
