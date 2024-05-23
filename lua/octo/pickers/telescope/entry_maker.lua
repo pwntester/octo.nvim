@@ -66,7 +66,7 @@ local function get_icon(entry)
   return icons.unknown
 end
 
-function M.gen_from_pull_request(max_number, username_col_len, branch_name_col_len)
+function M.gen_from_pull_request(max_number, username_col_len, branch_name_col_len, author_count)
   local make_display = function(entry)
     if not entry then
       return nil
@@ -88,6 +88,12 @@ function M.gen_from_pull_request(max_number, username_col_len, branch_name_col_l
         { remaining = true },
       },
     }
+
+    -- hide author column if there is just one author
+    if author_count == 1 then
+      table.remove(columns, 2)
+      table.remove(layout.items, 2)
+    end
 
     local displayer = entry_display.create(layout)
 
