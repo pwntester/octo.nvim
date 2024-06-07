@@ -73,6 +73,7 @@ local function get_hl_links()
     CursorLine = "CursorLine",
     VertSplit = "VertSplit",
     SignColumn = "Normal",
+    StatusColumn = "SignColumn",
     StatusLine = "StatusLine",
     StatusLineNC = "StatusLineNC",
     EndOfBuffer = "EndOfBuffer",

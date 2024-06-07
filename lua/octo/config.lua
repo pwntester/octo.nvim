@@ -29,6 +29,7 @@ local M = {}
 
 ---@class OctoConfigUi
 ---@field use_signcolumn boolean
+---@field use_statuscolumn boolean
 
 ---@class OctoConfigIssues
 ---@field order_by OctoConfigOrderBy
@@ -115,6 +116,7 @@ function M.get_default_values()
     },
     ui = {
       use_signcolumn = true,
+      use_statuscolumn = true,
     },
     issues = {
       order_by = {
@@ -408,6 +410,7 @@ function M.validate_config()
     validate_type(config.default_merge_method, "default_merge_method", "string")
     if validate_type(config.ui, "ui", "table") then
       validate_type(config.ui.use_signcolumn, "ui.use_signcolumn", "boolean")
+      validate_type(config.ui.use_statuscolumn, "ui.use_statuscolumn", "boolean")
     end
     if validate_type(config.colors, "colors", "table") then
       for k, v in pairs(config.colors) do
@@ -472,6 +475,7 @@ function M.setup(opts)
       vim.log.levels.ERROR
     )
   end
+  M.values.ui.use_statuscolumn = M.values.ui.use_statuscolumn and vim.fn.has "nvim-0.9" == 1
 end
 
 return M

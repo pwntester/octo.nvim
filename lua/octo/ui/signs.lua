@@ -34,12 +34,20 @@ end
 function M.unplace(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   pcall(vim.fn.sign_unplace, "octo_ns", { buffer = bufnr })
+  if config.values.ui.use_statuscolumn then
+    require("octo.ui.statuscolumn").reset(bufnr)
+  end
 end
 
 function M.place_signs(bufnr, start_line, end_line, is_dirty)
   if not start_line or not end_line then
     return
   end
+
+  if config.values.ui.use_statuscolumn then
+    return require("octo.ui.statuscolumn").add(bufnr, start_line, end_line, is_dirty)
+  end
+
   local dirty_mod = is_dirty and "dirty" or "clean"
 
   if start_line == end_line or end_line < start_line then
