@@ -30,6 +30,7 @@ local M = {}
 ---@class OctoConfigUi
 ---@field use_signcolumn boolean
 ---@field use_statuscolumn boolean
+---@field use_foldtext boolean
 
 ---@class OctoConfigIssues
 ---@field order_by OctoConfigOrderBy
@@ -117,6 +118,7 @@ function M.get_default_values()
     ui = {
       use_signcolumn = true,
       use_statuscolumn = true,
+      use_foldtext = true,
     },
     issues = {
       order_by = {
@@ -411,6 +413,7 @@ function M.validate_config()
     if validate_type(config.ui, "ui", "table") then
       validate_type(config.ui.use_signcolumn, "ui.use_signcolumn", "boolean")
       validate_type(config.ui.use_statuscolumn, "ui.use_statuscolumn", "boolean")
+      validate_type(config.ui.use_foldtext, "ui.use_foldtext", "boolean")
     end
     if validate_type(config.colors, "colors", "table") then
       for k, v in pairs(config.colors) do
@@ -476,6 +479,7 @@ function M.setup(opts)
     )
   end
   M.values.ui.use_statuscolumn = M.values.ui.use_statuscolumn and vim.fn.has "nvim-0.9" == 1
+  M.values.ui.use_foldtext = M.values.ui.use_foldtext and vim.fn.has "nvim-0.10" == 1
 end
 
 return M

@@ -1402,7 +1402,14 @@ end
 function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   mode = mode or "extmark"
   if mode == "extmark" then
-    pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, { virt_text = chunks, virt_text_pos = "overlay" })
+    pcall(
+      vim.api.nvim_buf_set_extmark,
+      bufnr,
+      ns,
+      line,
+      0,
+      { virt_text = chunks, virt_text_pos = "overlay", hl_mode = "combine" }
+    )
   elseif mode == "vt" then
     pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
   end
