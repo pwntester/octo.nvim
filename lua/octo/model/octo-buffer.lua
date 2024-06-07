@@ -239,6 +239,7 @@ function OctoBuffer:configure()
   vim.api.nvim_buf_call(self.bufnr, function()
     local use_signcolumn = config.values.ui.use_signcolumn
     local use_statuscolumn = config.values.ui.use_statuscolumn
+    local use_foldtext = config.values.ui.use_foldtext
     vim.cmd [[setlocal filetype=octo]]
     vim.cmd [[setlocal buftype=acwrite]]
     vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
@@ -247,6 +248,9 @@ function OctoBuffer:configure()
 
     if use_statuscolumn then
       vim.opt_local.statuscolumn = [[%!v:lua.require'octo.ui.statuscolumn'.statuscolumn()]]
+    end
+    if use_foldtext then
+      vim.opt_local.foldtext = [[v:lua.require'octo.folds'.foldtext()]]
     end
     if use_signcolumn then
       vim.cmd [[setlocal signcolumn=yes]]
