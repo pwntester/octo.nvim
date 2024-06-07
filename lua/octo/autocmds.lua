@@ -18,7 +18,6 @@ function M.setup()
     group = "octo_autocmds",
     pattern = { "octo://*" },
     callback = function(ev)
-      dd(ev)
       require("octo").load_buffer(ev.buf)
     end,
   })
