@@ -238,11 +238,16 @@ function OctoBuffer:configure()
   -- configure buffer
   vim.api.nvim_buf_call(self.bufnr, function()
     local use_signcolumn = config.values.ui.use_signcolumn
+    local use_statuscolumn = config.values.ui.use_statuscolumn
     vim.cmd [[setlocal filetype=octo]]
     vim.cmd [[setlocal buftype=acwrite]]
     vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
     vim.cmd [[setlocal conceallevel=2]]
     vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
+
+    if use_statuscolumn then
+      vim.opt_local.statuscolumn = [[%!v:lua.require'octo.ui.statuscolumn'.statuscolumn()]]
+    end
     if use_signcolumn then
       vim.cmd [[setlocal signcolumn=yes]]
       autocmds.update_signcolumn(self.bufnr)
