@@ -82,7 +82,9 @@ function M.load_buffer(bufnr)
     return
   end
   M.load(repo, kind, number, function(obj)
-    M.create_buffer(kind, obj, repo, false)
+    vim.api.nvim_buf_call(bufnr, function()
+      M.create_buffer(kind, obj, repo, false)
+    end)
   end)
 end
 
