@@ -62,19 +62,9 @@ function M.statuscolumn()
   local buf = vim.api.nvim_win_get_buf(win)
   local components = { "", "" }
 
-  local fold ---@type OctoSign?
   local comment = M.get_sign(buf, vim.v.lnum, vim.v.virtnum, win)
 
-  vim.api.nvim_win_call(win, function()
-    if vim.fn.foldclosed(vim.v.lnum) >= 0 then
-      fold = { text = vim.opt.fillchars:get().foldclose or "", hl = "Folded" }
-    end
-  end)
-
-  -- Left: mark or non-git sign
   components[1] = M.highlight(comment)
-  -- Right: fold icon or git sign (only if file)
-  -- components[3] = M.highlight(fold) or ""
 
   if vim.v.virtnum ~= 0 then
     components[2] = "%= "
