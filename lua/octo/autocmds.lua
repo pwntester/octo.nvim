@@ -1,3 +1,4 @@
+local vim = vim
 local create = vim.api.nvim_create_augroup
 local define = vim.api.nvim_create_autocmd
 
@@ -65,7 +66,7 @@ function M.setup()
   })
 end
 
-function M.update_signcolumn(bufnr)
+function M.update_signs(bufnr)
   define({ "TextChanged", "TextChangedI" }, {
     group = "octobuffer_autocmds",
     buffer = bufnr,
