@@ -70,7 +70,7 @@ function M.update_signcolumn(bufnr)
     group = "octobuffer_autocmds",
     buffer = bufnr,
     callback = function()
-      require("octo").render_signcolumn()
+      require("octo").render_signs()
     end,
   })
 end
