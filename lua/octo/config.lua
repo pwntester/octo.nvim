@@ -389,7 +389,7 @@ function M.validate_config()
       validate_type(config.suppress_missing_scope.projects_v2, "supress_missing_scope.projects_v2", "boolean")
     end
     validate_type(config.gh_cmd, "gh_cmd", "string")
-    validate_type(config.gh_env, "gh_env", "table")
+    validate_type(config.gh_env, "gh_env", { "table", "function" })
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
     validate_type(config.user_icon, "user_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
