@@ -116,7 +116,7 @@ function M.get_default_values()
       projects_v2 = false,
     },
     ui = {
-      use_signcolumn = true,
+      use_signcolumn = false,
       use_statuscolumn = true,
       use_foldtext = true,
     },
