@@ -28,6 +28,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 ## 🌲 Table of Contents
 
 <!--toc:start-->
+
 - [:octopus: Octo.nvim](#octopus-octonvim)
   - [🌲 Table of Contents](#-table-of-contents)
   - [💫 Features](#-features)
@@ -124,7 +125,8 @@ require"octo".setup({
   timeout = 5000,                          -- timeout for requests between the remote server
   default_to_projects_v2 = false,          -- use projects v2 for the `Octo card ...` command by default. Both legacy and v2 commands are available under `Octo cardlegacy ...` and `Octo cardv2 ...` respectively.
   ui = {
-    use_signcolumn = true,                 -- show "modified" marks on the sign column
+    use_signcolumn = false,                -- show "modified" marks on the sign column
+    use_signstatus = true,                 -- show "modified" marks on the status column
   },
   issues = {
     order_by = {                           -- criteria to sort results of `Octo issue list`
@@ -296,70 +298,70 @@ Just edit the issue title, body or comments as a regular buffer and use `:w(rite
 There is only an `Octo <object> <action> [arguments]` command:
 If no command is passed, the argument to `Octo` is treated as a URL from where an issue or pr repo and number are extracted.
 
-| Object | Action | Arguments|
-|---|---|---|
-| issue | close | Close the current issue|
-| | reopen | Reopen the current issue|
-| | create [repo]| Creates a new issue in the current or specified repo |
-| | edit [repo] <number> | Edit issue `<number>` in current or specified repo |
-| | list [repo] [key=value] (1) | List all issues satisfying given filter |
-| | search | Live issue search |
-| | reload | Reload issue. Same as doing `e!`|
-| | browser | Open current issue in the browser |
-| | url | Copies the URL of the current issue to the system clipboard|
-| pr | list [repo] [key=value] (2)| List all PRs satisfying given filter |
-| | search | Live issue search |
-| | edit [repo] <number> | Edit PR `<number>` in current or specified repo|
-| | reopen | Reopen the current PR|
-| | create | Creates a new PR for the current branch|
-| | close | Close the current PR|
-| | checkout | Checkout PR|
-| | commits | List all PR commits|
-| | changes | Show all PR changes (diff hunks)|
-| | diff | Show PR diff |
-| | merge [commit\|rebase\|squash] [delete] | Merge current PR using the specified method|
-| | ready| Mark a draft PR as ready for review |
-| | draft| Send a ready PR back to draft |
-| | checks | Show the status of all checks run on the PR |
-| | reload | Reload PR. Same as doing `e!`|
-| | browser | Open current PR in the browser|
-| | url | Copies the URL of the current PR to the system clipboard|
-| repo | list (3) | List repos user owns, contributes or belong to |
-| | fork | Fork repo |
-| | browser | Open current repo in the browser|
-| | url | Copies the URL of the current repo to the system clipboard|
-| | view | Open a repo by path ({organization}/{name})|
-| gist | list [repo] [key=value] (4) | List user gists |
-| comment | add | Add a new comment |
-| | delete | Delete a comment |
-| thread | resolve| Mark a review thread as resolved |
-| | unresolve | Mark a review thread as unresolved |
-| label | add [label] | Add a label from available label menu |
-| | remove [label] | Remove a label |
-| | create [label] | Create a new label |
-| assignee| add [login] | Assign a user |
-| | remove [login] | Unassign a user |
-| reviewer | add [login] | Assign a PR reviewer |
-| reaction | `thumbs_up` \| `+1` | Add 👍 reaction|
-| | `thumbs_down` \| `-1` | Add 👎 reaction|
-| | `eyes` | Add 👀 reaction|
-| | `laugh` | Add 😄 reaction|
-| | `confused` | Add 😕 reaction|
-| | `rocket` | Add 🚀 reaction|
-| | `heart` | Add ❤️ reaction|
-| | `hooray` \| `party` \| `tada` | Add 🎉 reaction|
-| card | add | Assign issue/PR to a project new card |
-| | remove | Delete project card |
-| | move | Move project card to different project/column|
-| review| start| Start a new review |
-| | submit| Submit the review |
-| | resume| Edit a pending review for current PR |
-| | discard| Deletes a pending review for current PR if any |
-| | comments| View pending review comments |
-| | commit | Pick a specific commit to review |
-| | close | Close the review window and return to the PR |
-| actions |  | Lists all available Octo actions|
-| search | <query> | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
+| Object   | Action                                  | Arguments                                                                                                                                              |
+| -------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| issue    | close                                   | Close the current issue                                                                                                                                |
+|          | reopen                                  | Reopen the current issue                                                                                                                               |
+|          | create [repo]                           | Creates a new issue in the current or specified repo                                                                                                   |
+|          | edit [repo] <number>                    | Edit issue `<number>` in current or specified repo                                                                                                     |
+|          | list [repo] [key=value] (1)             | List all issues satisfying given filter                                                                                                                |
+|          | search                                  | Live issue search                                                                                                                                      |
+|          | reload                                  | Reload issue. Same as doing `e!`                                                                                                                       |
+|          | browser                                 | Open current issue in the browser                                                                                                                      |
+|          | url                                     | Copies the URL of the current issue to the system clipboard                                                                                            |
+| pr       | list [repo] [key=value] (2)             | List all PRs satisfying given filter                                                                                                                   |
+|          | search                                  | Live issue search                                                                                                                                      |
+|          | edit [repo] <number>                    | Edit PR `<number>` in current or specified repo                                                                                                        |
+|          | reopen                                  | Reopen the current PR                                                                                                                                  |
+|          | create                                  | Creates a new PR for the current branch                                                                                                                |
+|          | close                                   | Close the current PR                                                                                                                                   |
+|          | checkout                                | Checkout PR                                                                                                                                            |
+|          | commits                                 | List all PR commits                                                                                                                                    |
+|          | changes                                 | Show all PR changes (diff hunks)                                                                                                                       |
+|          | diff                                    | Show PR diff                                                                                                                                           |
+|          | merge [commit\|rebase\|squash] [delete] | Merge current PR using the specified method                                                                                                            |
+|          | ready                                   | Mark a draft PR as ready for review                                                                                                                    |
+|          | draft                                   | Send a ready PR back to draft                                                                                                                          |
+|          | checks                                  | Show the status of all checks run on the PR                                                                                                            |
+|          | reload                                  | Reload PR. Same as doing `e!`                                                                                                                          |
+|          | browser                                 | Open current PR in the browser                                                                                                                         |
+|          | url                                     | Copies the URL of the current PR to the system clipboard                                                                                               |
+| repo     | list (3)                                | List repos user owns, contributes or belong to                                                                                                         |
+|          | fork                                    | Fork repo                                                                                                                                              |
+|          | browser                                 | Open current repo in the browser                                                                                                                       |
+|          | url                                     | Copies the URL of the current repo to the system clipboard                                                                                             |
+|          | view                                    | Open a repo by path ({organization}/{name})                                                                                                            |
+| gist     | list [repo] [key=value] (4)             | List user gists                                                                                                                                        |
+| comment  | add                                     | Add a new comment                                                                                                                                      |
+|          | delete                                  | Delete a comment                                                                                                                                       |
+| thread   | resolve                                 | Mark a review thread as resolved                                                                                                                       |
+|          | unresolve                               | Mark a review thread as unresolved                                                                                                                     |
+| label    | add [label]                             | Add a label from available label menu                                                                                                                  |
+|          | remove [label]                          | Remove a label                                                                                                                                         |
+|          | create [label]                          | Create a new label                                                                                                                                     |
+| assignee | add [login]                             | Assign a user                                                                                                                                          |
+|          | remove [login]                          | Unassign a user                                                                                                                                        |
+| reviewer | add [login]                             | Assign a PR reviewer                                                                                                                                   |
+| reaction | `thumbs_up` \| `+1`                     | Add 👍 reaction                                                                                                                                        |
+|          | `thumbs_down` \| `-1`                   | Add 👎 reaction                                                                                                                                        |
+|          | `eyes`                                  | Add 👀 reaction                                                                                                                                        |
+|          | `laugh`                                 | Add 😄 reaction                                                                                                                                        |
+|          | `confused`                              | Add 😕 reaction                                                                                                                                        |
+|          | `rocket`                                | Add 🚀 reaction                                                                                                                                        |
+|          | `heart`                                 | Add ❤️ reaction                                                                                                                                        |
+|          | `hooray` \| `party` \| `tada`           | Add 🎉 reaction                                                                                                                                        |
+| card     | add                                     | Assign issue/PR to a project new card                                                                                                                  |
+|          | remove                                  | Delete project card                                                                                                                                    |
+|          | move                                    | Move project card to different project/column                                                                                                          |
+| review   | start                                   | Start a new review                                                                                                                                     |
+|          | submit                                  | Submit the review                                                                                                                                      |
+|          | resume                                  | Edit a pending review for current PR                                                                                                                   |
+|          | discard                                 | Deletes a pending review for current PR if any                                                                                                         |
+|          | comments                                | View pending review comments                                                                                                                           |
+|          | commit                                  | Pick a specific commit to review                                                                                                                       |
+|          | close                                   | Close the review window and return to the PR                                                                                                           |
+| actions  |                                         | Lists all available Octo actions                                                                                                                       |
+| search   | <query>                                 | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
@@ -445,102 +447,45 @@ Octo provides a built-in omnifunc completion for issues, PRs and users that you 
 ## 🎨 Colors
 
 | Highlight Group             | Defaults to     |
-| ---                         | ---             |
-| *OctoDirty*                 | ErrorMsg        |
-| *OctoIssueTitle*            | PreProc         |
-| *OctoIssueId*               | Question        |
-| *OctoEmpty*                 | Comment         |
-| *OctoFloat*                 | NormalNC        |
-| *OctoDate*                  | Comment         |
-| *OctoSymbol*                | Comment         |
-| *OctoTimelineItemHeading*   | Comment         |
-| *OctoDetailsLabel*          | Title           |
-| *OctoMissingDetails*        | Comment         |
-| *OctoDetailsValue*          | Identifier      |
-| *OctoDiffHunkPosition*      | NormalFloat     |
-| *OctoCommentLine*           | TabLineSel      |
-| *OctoEditable*              | NormalFloat bg  |
-| *OctoViewer*                | GitHub color    |
-| *OctoBubble*                | NormalFloat     |
-| *OctoBubbleGreen*           | GitHub color    |
-| *OctoBubbleRed*             | GitHub color    |
-| *OctoUser*                  | OctoBubble      |
-| *OctoUserViewer*            | OctoViewer      |
-| *OctoReaction*              | OctoBubble      |
-| *OctoReactionViewer*        | OctoViewer      |
-| *OctoPassingTest*           | GitHub color    |
-| *OctoFailingTest*           | GitHub color    |
-| *OctoPullAdditions*         | GitHub color    |
-| *OctoPullDeletions*         | GitHub color    |
-| *OctoPullModifications*     | GitHub color    |
-| *OctoStateOpen*             | GitHub color    |
-| *OctoStateClosed*           | GitHub color    |
-| *OctoStateMerge*            | GitHub color    |
-| *OctoStatePending*          | GitHub color    |
-| *OctoStateApproved*         | OctoStateOpen   |
-| *OctoStateChangesRequested* | OctoStateClosed |
-| *OctoStateCommented*        | Normal          |
-| *OctoStateDismissed*        | OctoStateClosed |
+| --------------------------- | --------------- |
+| _OctoDirty_                 | ErrorMsg        |
+| _OctoIssueTitle_            | PreProc         |
+| _OctoIssueId_               | Question        |
+| _OctoEmpty_                 | Comment         |
+| _OctoFloat_                 | NormalNC        |
+| _OctoDate_                  | Comment         |
+| _OctoSymbol_                | Comment         |
+| _OctoTimelineItemHeading_   | Comment         |
+| _OctoDetailsLabel_          | Title           |
+| _OctoMissingDetails_        | Comment         |
+| _OctoDetailsValue_          | Identifier      |
+| _OctoDiffHunkPosition_      | NormalFloat     |
+| _OctoCommentLine_           | TabLineSel      |
+| _OctoEditable_              | NormalFloat bg  |
+| _OctoViewer_                | GitHub color    |
+| _OctoBubble_                | NormalFloat     |
+| _OctoBubbleGreen_           | GitHub color    |
+| _OctoBubbleRed_             | GitHub color    |
+| _OctoUser_                  | OctoBubble      |
+| _OctoUserViewer_            | OctoViewer      |
+| _OctoReaction_              | OctoBubble      |
+| _OctoReactionViewer_        | OctoViewer      |
+| _OctoPassingTest_           | GitHub color    |
+| _OctoFailingTest_           | GitHub color    |
+| _OctoPullAdditions_         | GitHub color    |
+| _OctoPullDeletions_         | GitHub color    |
+| _OctoPullModifications_     | GitHub color    |
+| _OctoStateOpen_             | GitHub color    |
+| _OctoStateClosed_           | GitHub color    |
+| _OctoStateMerge_            | GitHub color    |
+| _OctoStatePending_          | GitHub color    |
+| _OctoStateApproved_         | OctoStateOpen   |
+| _OctoStateChangesRequested_ | OctoStateClosed |
+| _OctoStateCommented_        | Normal          |
+| _OctoStateDismissed_        | OctoStateClosed |
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
-
-## 🗿 Status Column
-
-If you are using the `vim.opt.statuscolumn` feature, you can disable Octo's comment marks in the `signcolumn` and replace them with any customizations on the `statuscolumn`.
-
-Disable the `signcolumn` with:
-
-```lua
-ui = {
-    use_signcolumn = false
-}
-```
-
-Then, provide a `statuscolumn` replacement such as:
-
-```lua
-local function mk_hl(group, sym)
-  return table.concat({ "%#", group, "#", sym, "%*" })
-end
-
-_G.get_statuscol_octo = function(bufnum, lnum)
-  if vim.api.nvim_buf_get_option(bufnum, "filetype") == "octo" then
-    if type(octo_buffers) == "table" then
-      local buffer = octo_buffers[bufnum]
-      if buffer then
-        buffer:update_metadata()
-        local hl = "OctoSignColumn"
-        local metadatas = {buffer.titleMetadata, buffer.bodyMetadata}
-        for _, comment_metadata in ipairs(buffer.commentsMetadata) do
-          table.insert(metadatas, comment_metadata)
-        end
-        for _, metadata in ipairs(metadatas) do
-          if metadata and metadata.startLine and metadata.endLine then
-            if metadata.dirty then
-              hl = "OctoDirty"
-            else
-              hl = "OctoSignColumn"
-            end
-            if lnum - 1 == metadata.startLine and lnum - 1 == metadata.endLine then
-              return mk_hl(hl, "[ ")
-            elseif lnum - 1 == metadata.startLine then
-              return mk_hl(hl, "┌ ")
-            elseif lnum - 1 == metadata.endLine then
-              return mk_hl(hl, "└ ")
-            elseif metadata.startLine < lnum - 1 and lnum - 1 < metadata.endLine then
-              return mk_hl(hl, "│ ")
-            end
-          end
-        end
-      end
-    end
-  end
-  return "  "
-end
-
-vim.opt.statuscolumn = "%{%v:lua.get_statuscol_octo(bufnr(), v:lnum)%}"
-```
 
 ## 📺 Demos
 
@@ -563,7 +508,6 @@ You add the scope by using `gh auth refresh -s read:project` or you can suppress
   }
 }
 ```
-
 
 **How can I disable bubbles for XYZ?**
 
