@@ -59,6 +59,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 
 ## 🎯 Requirements
 
+- [Neovim `>=0.10.0`](https://neovim.io/)
 - Install [GitHub CLI](https://cli.github.com/)
   - If you'd like to use [Projects v2](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
     you will need to add the `read:project` scope to your `gh` token. You can
