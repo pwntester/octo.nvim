@@ -1419,6 +1419,16 @@ function M.reload(bufnr)
   require("octo").load_buffer(bufnr)
 end
 
+function random_hex_color() 
+    local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
+    math.randomseed(os.time())
+    local color = {}
+    for _ = 1, 6 do
+        table.insert(color, chars[math.random(1, 16)])
+    end
+    return table.concat(color, "")
+end
+
 function M.create_label(label)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -1431,20 +1441,17 @@ function M.create_label(label)
   local name, color, description
   if label then
     name = label
+    color = random_hex_color()
     description = ""
-    local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
-    math.randomseed(os.time())
-    color = {}
-    for _ = 1, 6 do
-      table.insert(color, chars[math.random(1, 16)])
-    end
-    color = table.concat(color, "")
   else
     vim.fn.inputsave()
     name = vim.fn.input(string.format("Creating label for %s. Enter title: ", buffer.repo))
     color = vim.fn.input "Enter color (RGB): "
     description = vim.fn.input "Enter description: "
     vim.fn.inputrestore()
+    if color == "" then
+      color = random_hex_color()
+    end
     color = string.gsub(color, "#", "")
   end
 
