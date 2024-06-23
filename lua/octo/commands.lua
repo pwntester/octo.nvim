@@ -1419,14 +1419,14 @@ function M.reload(bufnr)
   require("octo").load_buffer(bufnr)
 end
 
-function random_hex_color() 
-    local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
-    math.randomseed(os.time())
-    local color = {}
-    for _ = 1, 6 do
-        table.insert(color, chars[math.random(1, 16)])
-    end
-    return table.concat(color, "")
+function random_hex_color()
+  local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
+  math.randomseed(os.time())
+  local color = {}
+  for _ = 1, 6 do
+    table.insert(color, chars[math.random(1, 16)])
+  end
+  return table.concat(color, "")
 end
 
 function M.create_label(label)
