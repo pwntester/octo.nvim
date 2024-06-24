@@ -131,6 +131,7 @@ function M.get_default_values()
         field = "CREATED_AT",
         direction = "DESC",
       },
+      limit = 50,
       always_select_remote_on_create = false,
     },
     file_panel = {
