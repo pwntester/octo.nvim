@@ -3,8 +3,7 @@
 
 local config = require "octo.config"
 local constants = require "octo.constants"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local backend = require "octo.backend"
 local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
 local vim = vim
@@ -87,33 +86,8 @@ end
 
 ---FileEntry toggle_viewed
 function FileEntry:toggle_viewed()
-  local query, next_state
-  if self.viewed_state == "VIEWED" then
-    query = graphql("unmark_file_as_viewed_mutation", self.path, self.pull_request.id)
-    next_state = "UNVIEWED"
-  elseif self.viewed_state == "UNVIEWED" then
-    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
-    next_state = "VIEWED"
-  elseif self.viewed_state == "DISMISSED" then
-    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
-    next_state = "VIEWED"
-  end
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        --local resp = vim.fn.json_decode(output)
-        self.viewed_state = next_state
-        local current_review = require("octo.reviews").get_current_review()
-        if current_review then
-          current_review.layout.file_panel:render()
-          current_review.layout.file_panel:redraw()
-        end
-      end
-    end,
-  }
+  local func = backend.get_funcs()["file_toggle_viewed"]
+  func(self)
 end
 
 ---FileEntry finalizer

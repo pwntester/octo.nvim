@@ -8,8 +8,8 @@ local M = {}
 ---@field startLine integer
 ---@field endLine integer
 ---@field viewerCanUpdate boolean
--- @field reactionGroups table[]
--- @field reactionLine integer
+---@field reactionGroups table[]
+---@field reactionLine integer
 local BodyMetadata = {}
 BodyMetadata.__index = BodyMetadata
 

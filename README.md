@@ -123,6 +123,7 @@ require"octo".setup({
   snippet_context_lines = 4;               -- number or lines around commented lines
   gh_cmd = "gh",                           -- Command to use when calling Github CLI
   gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
+  glab_env = {},                           -- extra environment variables to pass on to Gitlab CLI, can be a table or function returning a table
   timeout = 5000,                          -- timeout for requests between the remote server
   default_to_projects_v2 = false,          -- use projects v2 for the `Octo card ...` command by default. Both legacy and v2 commands are available under `Octo cardlegacy ...` and `Octo cardv2 ...` respectively.
   ui = {
