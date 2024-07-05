@@ -7,6 +7,8 @@ local M = {}
 ---@field reviewId string
 ---@field path string
 ---@field line number
+---@field bufferStartLine integer
+---@field bufferEndLine integer
 local ThreadMetadata = {}
 ThreadMetadata.__index = ThreadMetadata
 
@@ -20,6 +22,8 @@ function ThreadMetadata:new(opts)
     reviewId = opts.reviewId,
     path = opts.path,
     line = opts.line,
+    bufferStartLine = opts.bufferStartLine,
+    bufferEndLine = opts.bufferEndLine,
   }
   setmetatable(this, self)
   return this

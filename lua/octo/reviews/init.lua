@@ -1,8 +1,7 @@
 local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
 local config = require "octo.config"
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local backend = require "octo.backend"
 local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
@@ -33,18 +32,8 @@ end
 
 -- Creates a new review
 function Review:create(callback)
-  local query = graphql("start_review_mutation", self.pull_request.id)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        callback(resp)
-      end
-    end,
-  }
+  local func = backend.get_funcs()["review_start_review_mutation"]
+  func(self.pull_request.id, callback)
 end
 
 -- Starts a new review
@@ -59,19 +48,8 @@ end
 
 -- Retrieves existing review
 function Review:retrieve(callback)
-  local query =
-    graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        callback(resp)
-      end
-    end,
-  }
+  local func = backend.get_funcs()["review_retrieve"]
+  func(self.pull_request, callback)
 end
 
 -- Resumes an existing review
@@ -158,42 +136,8 @@ function Review:initiate(opts)
 end
 
 function Review:discard()
-  local query =
-    graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.error(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-          utils.error "No pending reviews found"
-          return
-        end
-        self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
-
-        local choice = vim.fn.confirm("All pending comments will get deleted, are you sure?", "&Yes\n&No\n&Cancel", 2)
-        if choice == 1 then
-          local delete_query = graphql("delete_pull_request_review_mutation", self.id)
-          gh.run {
-            args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
-            cb = function(output, stderr)
-              if stderr and not utils.is_blank(stderr) then
-                vim.error(stderr)
-              elseif output then
-                self.id = -1
-                self.threads = {}
-                self.files = {}
-                utils.info "Pending review discarded"
-                vim.cmd [[tabclose]]
-              end
-            end,
-          }
-        end
-      end
-    end,
-  }
+  local func = backend.get_funcs()["review_discard"]
+  func(self)
 end
 
 function Review:update_threads(threads)
@@ -240,23 +184,8 @@ function Review:collect_submit_info()
 end
 
 function Review:submit(event)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local winid = vim.api.nvim_get_current_win()
-  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
-  local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = false })
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        utils.info "Review was submitted successfully!"
-        pcall(vim.api.nvim_win_close, winid, 0)
-        self.layout:close()
-      end
-    end,
-  }
+  local func = backend.get_funcs()["review_submit"]
+  func(self.id, self.layout, event)
 end
 
 function Review:show_pending_comments()

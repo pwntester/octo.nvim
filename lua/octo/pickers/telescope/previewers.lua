@@ -1,14 +1,11 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local writers = require "octo.ui.writers"
-local utils = require "octo.utils"
 local previewers = require "telescope.previewers"
-local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
 
 local issue = defaulter(function(opts)
+  local backend = require "octo.backend"
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
     get_buffer_by_name = function(_, entry)
@@ -17,38 +14,8 @@ local issue = defaulter(function(opts)
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
-        local number = entry.value
-        local owner, name = utils.split_repo(entry.repo)
-        local query
-        if entry.kind == "issue" then
-          query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
-        elseif entry.kind == "pull_request" then
-          query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
-        end
-        gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
-            if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
-            elseif output and vim.api.nvim_buf_is_valid(bufnr) then
-              local result = vim.fn.json_decode(output)
-              local obj
-              if entry.kind == "issue" then
-                obj = result.data.repository.issue
-              elseif entry.kind == "pull_request" then
-                obj = result.data.repository.pullRequest
-              end
-              writers.write_title(bufnr, obj.title, 1)
-              writers.write_details(bufnr, obj)
-              writers.write_body(bufnr, obj)
-              writers.write_state(bufnr, obj.state:upper(), number)
-              local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
-              writers.write_block(bufnr, { "", "" }, reactions_line)
-              writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
-              vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
-            end
-          end,
-        }
+        local func = backend.get_funcs()["telescope_default_issue"]
+        func(entry, bufnr)
       end
     end,
   }
@@ -78,6 +45,7 @@ local gist = defaulter(function(opts)
 end)
 
 local commit = defaulter(function(opts)
+  local backend = require "octo.backend"
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
     keep_last_buf = true,
@@ -95,19 +63,8 @@ local commit = defaulter(function(opts)
         vim.list_extend(lines, { "" })
         vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
 
-        local url = string.format("/repos/%s/commits/%s", opts.repo, entry.value)
-        local cmd = { "gh", "api", "--paginate", url, "-H", "Accept: application/vnd.github.v3.diff" }
-        pv_utils.job_maker(cmd, self.state.bufnr, {
-          value = entry.value,
-          bufname = self.state.bufname,
-          mode = "append",
-          callback = function(bufnr, _)
-            vim.api.nvim_buf_set_option(bufnr, "filetype", "diff")
-            vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
-            vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
-            vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
-          end,
-        })
+        local func = backend.get_funcs()["telescope_default_commit"]
+        func(entry, opts.repo, self.state.bufname, self.state.bufnr)
       end
     end,
   }

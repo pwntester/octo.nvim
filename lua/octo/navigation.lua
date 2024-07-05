@@ -1,5 +1,4 @@
-local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local backend = require "octo.backend"
 local utils = require "octo.utils"
 
 local M = {}
@@ -23,39 +22,13 @@ function M.open_in_browser_raw(url)
 end
 
 function M.open_in_browser(kind, repo, number)
-  local cmd
   local remote = utils.get_remote_host()
   if not remote then
     utils.error "Cannot find repo remote host"
     return
   end
-  if not kind and not repo then
-    local bufnr = vim.api.nvim_get_current_buf()
-    local buffer = octo_buffers[bufnr]
-    if not buffer then
-      return
-    end
-    if buffer:isPullRequest() then
-      cmd = string.format("gh pr view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
-    elseif buffer:isIssue() then
-      cmd = string.format("gh issue view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
-    elseif buffer:isRepo() then
-      cmd = string.format("gh repo view --web %s/%s", remote, buffer.repo)
-    end
-  else
-    if kind == "pr" or kind == "pull_request" then
-      cmd = string.format("gh pr view --web -R %s/%s %d", remote, repo, number)
-    elseif kind == "issue" then
-      cmd = string.format("gh issue view --web -R %s/%s %d", remote, repo, number)
-    elseif kind == "repo" then
-      cmd = string.format("gh repo view --web %s", repo.url)
-    elseif kind == "gist" then
-      cmd = string.format("gh gist view --web %s", number)
-    elseif kind == "project" then
-      cmd = string.format("gh project view --owner %s --web %s", repo, number)
-    end
-  end
-  pcall(vim.cmd, "silent !" .. cmd)
+  local func = backend.get_funcs()["open_in_browser"]
+  func(repo, kind, number, remote)
 end
 
 local function open_file_if_found(path, line)
@@ -106,24 +79,8 @@ function M.go_to_issue()
   if not repo or not number then
     return
   end
-  local owner, name = utils.split_repo(repo)
-  local query = graphql("issue_kind_query", owner, name, number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local kind = resp.data.repository.issueOrPullRequest.__typename
-        if kind == "Issue" then
-          utils.get_issue(repo, number)
-        elseif kind == "PullRequest" then
-          utils.get_pull_request(repo, number)
-        end
-      end
-    end,
-  }
+  local func = backend.get_funcs()["go_to_issue"]
+  func(repo, number)
 end
 
 function M.next_comment()

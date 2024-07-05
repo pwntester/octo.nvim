@@ -1,9 +1,6 @@
 local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
-local gh = require "octo.gh"
 local previewers = require "octo.pickers.fzf-lua.previewers"
-local utils = require "octo.utils"
 
 return function(opts)
   opts = opts or {}
@@ -16,28 +13,9 @@ return function(opts)
   local formatted_files = {}
 
   local get_contents = function(fzf_cb)
-    local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
-    gh.run {
-      args = { "api", "--paginate", url },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          local results = vim.fn.json_decode(output)
-
-          for _, result in ipairs(results) do
-            local entry = entry_maker.gen_from_git_changed_files(result)
-
-            if entry ~= nil then
-              formatted_files[entry.ordinal] = entry
-              fzf_cb(entry.ordinal)
-            end
-          end
-        end
-
-        fzf_cb()
-      end,
-    }
+    local backend = require "octo.backend"
+    local func = backend.get_funcs()["fzf_lua_changed_files"]
+    func(formatted_files, buffer, fzf_cb)
   end
 
   fzf.fzf_exec(get_contents, {

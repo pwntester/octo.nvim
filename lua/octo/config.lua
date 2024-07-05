@@ -62,11 +62,14 @@ local M = {}
 ---@field right_bubble_delimiter string
 ---@field left_bubble_delimiter string
 ---@field github_hostname string
+---@field gitlab_hostname string
 ---@field use_local_fs boolean
 ---@field enable_builtin boolean
 ---@field snippet_context_lines number
 ---@field gh_cmd string
 ---@field gh_env table
+---@field glab_cmd string
+---@field glab_env table
 ---@field timeout number
 ---@field default_to_projects_v2 boolean
 ---@field suppress_missing_scope OctoMissingScopeConfig
@@ -105,11 +108,14 @@ function M.get_default_values()
     right_bubble_delimiter = "",
     left_bubble_delimiter = "",
     github_hostname = "",
+    gitlab_hostname = "",
     use_local_fs = false,
     enable_builtin = false,
     snippet_context_lines = 4,
     gh_cmd = "gh",
     gh_env = {},
+    glab_cmd = "glab",
+    glab_env = {},
     timeout = 5000,
     default_to_projects_v2 = false,
     suppress_missing_scope = {
@@ -394,6 +400,8 @@ function M.validate_config()
     end
     validate_type(config.gh_cmd, "gh_cmd", "string")
     validate_type(config.gh_env, "gh_env", { "table", "function" })
+    validate_type(config.glab_cmd, "glab_cmd", "string")
+    validate_type(config.glab_env, "glab_env", { "table", "function" })
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
     validate_type(config.user_icon, "user_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
@@ -404,6 +412,7 @@ function M.validate_config()
     validate_type(config.right_bubble_delimiter, "right_bubble_delimiter", "string")
     validate_type(config.left_bubble_delimiter, "left_bubble_delimiter", "string")
     validate_type(config.github_hostname, "github_hostname", "string")
+    validate_type(config.gitlab_hostname, "gitlab_hostname", "string")
     if validate_type(config.default_remote, "default_remote", "table") then
       for _, v in ipairs(config.default_remote) do
         validate_type(v, "remote", "string")
