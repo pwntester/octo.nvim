@@ -364,13 +364,33 @@ function M.format_date(date_string)
   elseif diff:spandays() > 0 and diff:spandays() > 30 and now:getyear() == d:getyear() then
     return string.format("%s %d", d:fmt "%b", d:getday())
   elseif diff:spandays() > 0 and diff:spandays() <= 30 then
-    return tostring(math.floor(diff:spandays())) .. " days ago"
+    local days = math.floor(diff:spandays())
+    if days == 1 then
+      return "1 day ago"
+    else
+      return tostring(days) .. " days ago"
+    end
   elseif diff:spanhours() > 0 then
-    return tostring(math.floor(diff:spanhours())) .. " hours ago"
+    local hours = math.floor(diff:spanhours())
+    if hours == 1 then
+      return "1 hour ago"
+    else
+      return tostring(hours) .. " hours ago"
+    end
   elseif diff:spanminutes() > 0 then
-    return tostring(math.floor(diff:spanminutes())) .. " minutes ago"
+    local minutes = math.floor(diff:spanminutes())
+    if minutes == 1 then
+      return "1 minute ago"
+    else
+      return tostring(minutes) .. " minutes ago"
+    end
   elseif diff:spanseconds() > 0 then
-    return tostring(math.floor(diff:spanswconds())) .. " seconds ago"
+    local seconds = math.floor(diff:spanswconds())
+    if seconds == 1 then
+      return "1 second ago"
+    else
+      return tostring(seconds) .. " seconds ago"
+    end
   else
     return string.format("%s %s %d", d:getyear(), d:fmt "%b", d:getday())
   end
