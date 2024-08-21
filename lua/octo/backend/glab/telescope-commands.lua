@@ -79,6 +79,10 @@ function M.telescope_pull_requests(opts, cfg, filter)
         utils.error(stderr)
       elseif not utils.is_blank(output) then
         local prs = vim.fn.json_decode(output)
+        if #prs == 0 then
+          utils.error(string.format("There are no matching pull requests in %s.", opts.repo))
+          return
+        end
         local pull_requests, max_number = converters.parse_merge_requests_output(prs, opts.repo)
         opts.preview_title = opts.preview_title or ""
         opts.prompt_title = opts.prompt_title or ""

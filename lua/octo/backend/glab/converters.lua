@@ -304,11 +304,6 @@ end
 ---@param repo string
 ---@return gh_pr[]?, integer?
 function M.parse_merge_requests_output(pull_requests, repo)
-  if #pull_requests == 0 then
-    utils.error(string.format("There are no matching pull requests in %s.", repo))
-    return
-  end
-
   local owner, name = utils.split_repo(repo)
 
   local max_number = -1

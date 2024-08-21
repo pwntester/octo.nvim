@@ -76,6 +76,10 @@ function M.fzf_lua_pull_requests(formatted_pulls, repo, order_by, filter, fzf_cb
         fzf_cb()
       elseif output then
         local prs = vim.fn.json_decode(output)
+        if #prs == 0 then
+          utils.error(string.format("There are no matching pull requests in %s.", repo))
+          return
+        end
         local pull_requests, _ = converters.parse_merge_requests_output(prs, repo)
         for _, pull in ipairs(pull_requests) do
           local entry = entry_maker.gen_from_issue(pull)
