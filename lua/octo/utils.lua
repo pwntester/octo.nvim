@@ -355,6 +355,10 @@ end
 
 ---Formats a string as a date
 function M.format_date(date_string)
+  if date_string == nil then
+    return ""
+  end
+
   -- Parse the input date string (assumed to be in UTC)
   local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
   local parsedTimeUTC = os.time {
@@ -405,13 +409,13 @@ function M.format_date(date_string)
 
   -- Return the human-readable format for differences within 30 days
   if days > 0 then
-    return days .. " day" .. (days > 1 and "s" or "") .. suffix
+    return days .. " day" .. (days ~= 1 and "s" or "") .. suffix
   elseif hours > 0 then
-    return hours .. " hour" .. (hours > 1 and "s" or "") .. suffix
+    return hours .. " hour" .. (hours ~= 1 and "s" or "") .. suffix
   elseif minutes > 0 then
-    return minutes .. " minute" .. (minutes > 1 and "s" or "") .. suffix
+    return minutes .. " minute" .. (minutes ~= 1 and "s" or "") .. suffix
   else
-    return seconds .. " second" .. (seconds > 1 and "s" or "") .. suffix
+    return seconds .. " second" .. (seconds ~= 1 and "s" or "") .. suffix
   end
 end
 
