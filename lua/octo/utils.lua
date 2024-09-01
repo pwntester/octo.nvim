@@ -355,44 +355,63 @@ end
 
 ---Formats a string as a date
 function M.format_date(date_string)
-  local time_bias = date():getbias() * -1
-  local d = date(date_string):addminutes(time_bias)
-  local now = date(os.time())
-  local diff = date.diff(now, d)
-  if diff:spandays() > 0 and diff:spandays() > 30 and now:getyear() ~= d:getyear() then
-    return string.format("%s %s %d", d:getyear(), d:fmt "%b", d:getday())
-  elseif diff:spandays() > 0 and diff:spandays() > 30 and now:getyear() == d:getyear() then
-    return string.format("%s %d", d:fmt "%b", d:getday())
-  elseif diff:spandays() > 0 and diff:spandays() <= 30 then
-    local days = math.floor(diff:spandays())
-    if days == 1 then
-      return "1 day ago"
+  -- Parse the input date string (assumed to be in UTC)
+  local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
+  local parsedTimeUTC = os.time {
+    year = year,
+    month = month,
+    day = day,
+    hour = hour,
+    min = min,
+    sec = sec,
+    isdst = false, -- Input is in UTC
+  }
+
+  -- Get the offset of your local time zone from UTC
+  local localTime = os.time()
+  local utcTime = os.time(os.date "!*t")
+  local timeZoneOffset = os.difftime(localTime, utcTime)
+
+  -- Convert the parsed UTC time to local time
+  local parsedTimeLocal = parsedTimeUTC + timeZoneOffset
+
+  -- Calculate the time difference in seconds
+  local diff = os.time() - parsedTimeLocal
+
+  -- Determine if it's in the past or future
+  local suffix = " ago"
+  if diff < 0 then
+    diff = -diff
+    suffix = " from now"
+  end
+
+  -- Calculate time components
+  local days = math.floor(diff / 86400)
+  diff = diff % 86400
+  local hours = math.floor(diff / 3600)
+  diff = diff % 3600
+  local minutes = math.floor(diff / 60)
+  local seconds = diff % 60
+
+  -- Check if the difference is more than 30 days
+  if days > 30 then
+    local dateOutput = os.date("*t", parsedTimeLocal)
+    if dateOutput.year == os.date("*t", localTime).year then
+      return os.date("%B %d", parsedTimeLocal) -- "Month Day"
     else
-      return tostring(days) .. " days ago"
+      return os.date("%Y %B %d", parsedTimeLocal) -- "Year Month Day"
     end
-  elseif diff:spanhours() > 0 then
-    local hours = math.floor(diff:spanhours())
-    if hours == 1 then
-      return "1 hour ago"
-    else
-      return tostring(hours) .. " hours ago"
-    end
-  elseif diff:spanminutes() > 0 then
-    local minutes = math.floor(diff:spanminutes())
-    if minutes == 1 then
-      return "1 minute ago"
-    else
-      return tostring(minutes) .. " minutes ago"
-    end
-  elseif diff:spanseconds() > 0 then
-    local seconds = math.floor(diff:spanswconds())
-    if seconds == 1 then
-      return "1 second ago"
-    else
-      return tostring(seconds) .. " seconds ago"
-    end
+  end
+
+  -- Return the human-readable format for differences within 30 days
+  if days > 0 then
+    return days .. " day" .. (days > 1 and "s" or "") .. suffix
+  elseif hours > 0 then
+    return hours .. " hour" .. (hours > 1 and "s" or "") .. suffix
+  elseif minutes > 0 then
+    return minutes .. " minute" .. (minutes > 1 and "s" or "") .. suffix
   else
-    return string.format("%s %s %d", d:getyear(), d:fmt "%b", d:getday())
+    return seconds .. " second" .. (seconds > 1 and "s" or "") .. suffix
   end
 end
 

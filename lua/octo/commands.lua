@@ -432,7 +432,7 @@ function M.add_comment()
   local comment = {
     id = -1,
     author = { login = vim.g.octo_viewer },
-    createdAt = vim.fn.strftime "%FT%TZ",
+    createdAt = os.date "!%FT%TZ",
     body = " ",
     viewerCanUpdate = true,
     viewerCanDelete = true,
