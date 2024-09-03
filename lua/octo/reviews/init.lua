@@ -244,7 +244,7 @@ function Review:submit(event)
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
-  local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = false })
+  local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = true })
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
