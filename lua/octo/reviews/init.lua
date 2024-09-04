@@ -360,7 +360,7 @@ function Review:add_comment(isSuggestion)
               replyTo = vim.NIL,
               url = vim.NIL,
               diffHunk = diff_hunk,
-              createdAt = vim.fn.strftime "%FT%TZ",
+              createdAt = os.date "!%FT%TZ",
               originalCommit = { oid = commit, abbreviatedOid = commit_abbrev },
               body = " ",
               viewerCanUpdate = true,
