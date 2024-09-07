@@ -22,8 +22,15 @@ M.NO_BODY_MSG = "No description provided."
 M.LONG_ISSUE_PATTERN = "([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(%d+)"
 M.SHORT_ISSUE_PATTERN = "[^%w%d]+#(%d+)"
 M.SHORT_ISSUE_LINE_BEGGINING_PATTERN = "^#(%d+)"
-M.URL_ISSUE_PATTERN = "[htps]+://[^/]+/([^/]+/[^/]+)/([pulisue]+)/(%d+)"
+-- Gitlab Merge Request URLs got an extra '/-'
+M.URL_ISSUE_PATTERN = "[htps]+://[^/]+/([^/]+/[^/]+)[-/]*/([pulisuemrg_qt]+)/(%d+)"
+M.GID_MR_PATTERN = "[gid]+://gitlab/MergeRequest/(%d+)"
 
 M.USER_PATTERN = "@([%w-]+)"
+
+M.ASSIGN_EVENT_PATTERN = "assigned to @([A-Za-z0-9.]+)"
+M.REQUEST_REVIEW_EVENT_PATTERN = "requested review from @([A-Za-z0-9.]+)"
+M.PULL_REQUEST_COMMIT_EVENT_PATTERN = "added (%d+) commit[s]*.*<ul>(.+)</ul>.*"
+M.PULL_REQUEST_COMMIT_PATTERN = "<li>(%w+) %- (.-)</li>(.*)"
 
 return M

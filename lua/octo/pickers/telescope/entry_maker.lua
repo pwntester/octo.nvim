@@ -13,7 +13,7 @@ function M.gen_from_issue(max_number, print_repo)
     local layout, columns
     if print_repo then
       columns = {
-        { entry.value, "TelescopeResultsNumber" },
+        { entry.display_value, "TelescopeResultsNumber" },
         { entry.repo, "OctoDetailsLabel" },
         { entry.obj.title },
       }
@@ -28,7 +28,7 @@ function M.gen_from_issue(max_number, print_repo)
     else
       local icon = entry.kind == "issue" and " " or " "
       columns = {
-        { entry.value, "TelescopeResultsNumber" },
+        { entry.display_value, "TelescopeResultsNumber" },
         { icon .. " " .. entry.obj.title },
       }
       layout = {
@@ -51,16 +51,22 @@ function M.gen_from_issue(max_number, print_repo)
     end
     local kind = obj.__typename == "Issue" and "issue" or "pull_request"
     local filename
+    -- gh number == iid, glab number == gid
+    local id = obj.global_id or obj.number
     if kind == "issue" then
-      filename = utils.get_issue_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_issue_uri(obj.repository.nameWithOwner, id)
     else
-      filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, id)
     end
+
     return {
       filename = filename,
       kind = kind,
-      value = obj.number,
-      ordinal = obj.number .. " " .. obj.title,
+      value = id,
+      -- glab needs the gid to fetch the correct MR,
+      -- but wants to display the iid to the user.
+      display_value = obj.number,
+      ordinal = id .. " " .. obj.title,
       display = make_display,
       obj = obj,
       repo = obj.repository.nameWithOwner,
