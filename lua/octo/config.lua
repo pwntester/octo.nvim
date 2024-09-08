@@ -53,6 +53,7 @@ local M = {}
 ---@field default_merge_method string
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
+---@field users string
 ---@field user_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
@@ -96,6 +97,7 @@ function M.get_default_values()
     default_merge_method = "commit",
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
+    users = "search",
     user_icon = " ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
@@ -346,6 +348,25 @@ function M.validate_config()
     validate_type(config.picker_config.mappings, "picker_config.mappings", "table")
   end
 
+  local function validate_user_search()
+    if not validate_type(config.users, "users", "string") then
+      return
+    end
+
+    local valid_finders = { "search", "mentionable", "assignable" }
+
+    if not vim.tbl_contains(valid_finders, config.users) then
+      err(
+        "users." .. config.users,
+        string.format(
+          "Expected a valid user finder, received '%s', which is not a supported finder! Valid finders: %s",
+          config.users,
+          table.concat(valid_finders, ", ")
+        )
+      )
+    end
+  end
+
   local function validate_aliases()
     if not validate_type(config.ssh_aliases, "ssh_aliases", "table") then
       return
@@ -395,6 +416,7 @@ function M.validate_config()
     validate_type(config.gh_cmd, "gh_cmd", "string")
     validate_type(config.gh_env, "gh_env", { "table", "function" })
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
+    validate_user_search()
     validate_type(config.user_icon, "user_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
     validate_type(config.outdated_icon, "outdated_icon", "string")

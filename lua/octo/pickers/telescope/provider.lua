@@ -15,6 +15,8 @@ local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local sorters = require "telescope.sorters"
 
+local vim = vim
+
 local M = {}
 
 function M.not_implemented()
@@ -769,6 +771,7 @@ end
 --
 local function get_user_requester()
   return function(prompt)
+    print("The prompt is: " .. prompt)
     -- skip empty queries
     if not prompt or prompt == "" or utils.is_blank(prompt) then
       return {}
@@ -823,10 +826,11 @@ local function get_user_requester()
   end
 end
 
-local function get_mentionable_users()
+local function get_users(query_name, node_name)
+  print "Calling the get_users function"
   local repo = utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
-  local query = graphql("mentionable_users_query", owner, name, { escape = true })
+  local query = graphql(query_name, owner, name, { escape = true })
   local output = gh.run {
     args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
     mode = "sync",
@@ -840,7 +844,8 @@ local function get_mentionable_users()
   local users = {}
 
   for _, resp in ipairs(responses) do
-    for _, user in ipairs(resp.data.repository.mentionableUsers.nodes) do
+    local nodes = resp.data.repository[node_name].nodes
+    for _, user in ipairs(nodes) do
       table.insert(users, {
         id = user.id,
         login = user.login,
@@ -851,6 +856,41 @@ local function get_mentionable_users()
   return users
 end
 
+local function get_assignable_users()
+  return get_users("assignable_users_query", "assignableUsers")
+end
+
+local function get_mentionable_users()
+  return get_users("mentionable_users_query", "mentionableUsers")
+end
+
+local function create_user_finder()
+  local cfg = octo_config.values
+
+  local finder
+  local user_entry_maker = entry_maker.gen_from_user()
+  print "Using the configuration setting"
+  print(cfg.users)
+  if cfg.users == "search" then
+    finder = finders.new_dynamic {
+      entry_maker = user_entry_maker,
+      fn = get_user_requester(),
+    }
+  elseif cfg.users == "assignable" then
+    finder = finders.new_table {
+      results = get_assignable_users(),
+      entry_maker = user_entry_maker,
+    }
+  else
+    finder = finders.new_table {
+      results = get_mentionable_users(),
+      entry_maker = user_entry_maker,
+    }
+  end
+
+  return finder
+end
+
 function M.select_user(cb)
   local opts = vim.deepcopy(dropdown_opts)
   opts.layout_config = {
@@ -858,15 +898,7 @@ function M.select_user(cb)
     height = 15,
   }
 
-  -- local finder = finders.new_dynamic {
-  --     entry_maker = entry_maker.gen_from_user(),
-  --     fn = get_user_requester(),
-  -- }
-
-  local finder = finders.new_table {
-    results = get_mentionable_users(),
-    entry_maker = entry_maker.gen_from_user(),
-  }
+  local finder = create_user_finder()
 
   pickers
     .new(opts, {
