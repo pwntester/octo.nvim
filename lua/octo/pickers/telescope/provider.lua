@@ -824,12 +824,14 @@ local function get_user_requester()
 end
 
 local function get_mentionable_users()
-  local query = graphql "mentionable_users_query"
+  local repo = utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
+  local query = graphql("mentionable_users_query", owner, name, { escape = true })
   local output = gh.run {
     args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
     mode = "sync",
   }
-  if output then
+  if not output then
     return {}
   end
 
@@ -839,10 +841,10 @@ local function get_mentionable_users()
 
   for _, resp in ipairs(responses) do
     for _, user in ipairs(resp.data.repository.mentionableUsers.nodes) do
-      users[user.login] = {
+      table.insert(users, {
         id = user.id,
         login = user.login,
-      }
+      })
     end
   end
 
