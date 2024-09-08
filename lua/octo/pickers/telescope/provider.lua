@@ -771,7 +771,6 @@ end
 --
 local function get_user_requester()
   return function(prompt)
-    print("The prompt is: " .. prompt)
     -- skip empty queries
     if not prompt or prompt == "" or utils.is_blank(prompt) then
       return {}
@@ -827,7 +826,6 @@ local function get_user_requester()
 end
 
 local function get_users(query_name, node_name)
-  print "Calling the get_users function"
   local repo = utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
   local query = graphql(query_name, owner, name, { escape = true })
@@ -869,8 +867,6 @@ local function create_user_finder()
 
   local finder
   local user_entry_maker = entry_maker.gen_from_user()
-  print "Using the configuration setting"
-  print(cfg.users)
   if cfg.users == "search" then
     finder = finders.new_dynamic {
       entry_maker = user_entry_maker,
