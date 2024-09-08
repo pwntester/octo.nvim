@@ -3212,10 +3212,9 @@ query {
 ]]
 
 local function escape_char(string)
-  local escaped, _ = string.gsub(string, '["\\\n]', {
+  local escaped, _ = string.gsub(string, '["\\]', {
     ['"'] = '\\"',
     ["\\"] = "\\\\",
-    ["\n"] = "\\n",
   })
   return escaped
 end
