@@ -2681,7 +2681,7 @@ query {
 
 M.mentionable_users_query = [[
 query($endCursor: String) {
-  repository(owner: %s, name: %s) {
+  repository(owner: "%s", name: "%s") {
       mentionableUsers(first: 100, after: $endCursor) {
       pageInfo {
         hasNextPage
