@@ -414,9 +414,9 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `mentionable`: List of *mentionable* users in current repo
 - `assignable`: List of *assignable* users in current repo
 
-Here, `search` is the default value and most broad. Both `assignable` and
-`mentionable` are specific to the current repo. The `assignable` option is more
-restrictive than `mentionable`.
+  Here, `search` is the default value and most broad. Both `assignable` and
+  `mentionable` are specific to the current repo. The `assignable` option is more
+  restrictive than `mentionable`.
 
 ## 🔥 Examples
 
