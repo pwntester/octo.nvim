@@ -3193,12 +3193,12 @@ query {
 }
 ]]
 
---- Escapes a characters on a string to be used as a JSON string
 local function escape_char(string)
-  return string.gsub(string, '["\\]', {
+  local escaped, _ = string.gsub(string, '["\\]', {
     ['"'] = '\\"',
     ["\\"] = "\\\\",
   })
+  return escaped
 end
 
 return function(query, ...)
