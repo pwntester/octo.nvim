@@ -1,4 +1,6 @@
 local vim = vim
+local config = require "octo.config"
+
 local create = vim.api.nvim_create_augroup
 local define = vim.api.nvim_create_autocmd
 
@@ -36,13 +38,15 @@ function M.setup()
       require("octo").on_cursor_hold()
     end,
   })
-  define({ "CursorMoved" }, {
-    group = "octo_autocmds",
-    pattern = { "*" },
-    callback = function()
-      require("octo.reviews.thread-panel").show_review_threads()
-    end,
-  })
+  if config.values.reviews.auto_show_threads then
+    define({ "CursorMoved" }, {
+      group = "octo_autocmds",
+      pattern = { "*" },
+      callback = function()
+        require("octo.reviews.thread-panel").show_review_threads()
+      end,
+    })
+  end
   define({ "TabClosed" }, {
     group = "octo_autocmds",
     pattern = { "*" },

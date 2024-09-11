@@ -35,6 +35,9 @@ local M = {}
 ---@class OctoConfigIssues
 ---@field order_by OctoConfigOrderBy
 
+---@class OctoConfigReviews
+---@field auto_show_threads boolean
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -72,6 +75,7 @@ local M = {}
 ---@field suppress_missing_scope OctoMissingScopeConfig
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
+---@field reviews OctoConfigReviews
 ---@field pull_requests OctoConfigPR
 ---@field file_panel OctoConfigFilePanel
 ---@field colors OctoConfigColors
@@ -125,6 +129,9 @@ function M.get_default_values()
         field = "CREATED_AT",
         direction = "DESC",
       },
+    },
+    reviews = {
+      auto_show_threads = true,
     },
     pull_requests = {
       order_by = {

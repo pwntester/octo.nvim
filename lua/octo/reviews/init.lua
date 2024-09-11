@@ -402,6 +402,14 @@ function Review:add_comment(isSuggestion)
       vim.cmd [[diffoff!]]
       vim.cmd [[normal! vvGk]]
       vim.cmd [[startinsert]]
+
+      vim.keymap.set("n", "q", function()
+        thread_panel.hide_thread_buffer(split, file)
+        local file_win = file:get_win(split)
+        if vim.api.nvim_win_is_valid(file_win) then
+          vim.api.nvim_set_current_win(file_win)
+        end
+      end, { buffer = thread_buffer.bufnr })
     end
   else
     utils.error("Cannot find diff window " .. alt_win)
