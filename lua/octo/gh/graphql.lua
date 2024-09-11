@@ -1,4 +1,3 @@
-local utils = require "octo.utils"
 local M = {}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addreaction
@@ -3194,6 +3193,14 @@ query {
 }
 ]]
 
+--- Escapes a characters on a string to be used as a JSON string
+local function escape_char(string)
+  return string.gsub(string, '["\\]', {
+    ['"'] = '\\"',
+    ["\\"] = "\\\\",
+  })
+end
+
 return function(query, ...)
   local opts = { escape = true }
   for _, v in ipairs { ... } do
@@ -3205,7 +3212,7 @@ return function(query, ...)
   local escaped = {}
   for _, v in ipairs { ... } do
     if type(v) == "string" and opts.escape then
-      table.insert(escaped, utils.escape_char(v))
+      table.insert(escaped, escape_char(v))
     else
       table.insert(escaped, v)
     end
