@@ -275,7 +275,10 @@ end
 function FileEntry:show_diff()
   for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
     vim.api.nvim_buf_call(bufid, function()
-      pcall(vim.cmd, [[filetype detect]])
+      -- Only trigger ft detect event for non local files to avoid triggering ftplugins for nothing
+      if vim.fn.bufname(bufid):match "octo://*" then
+        pcall(vim.cmd, [[filetype detect]])
+      end
       pcall(vim.cmd, [[doau BufEnter]])
       pcall(vim.cmd, [[diffthis]])
       -- Scroll to trigger the scrollbind and sync the windows. This works more
