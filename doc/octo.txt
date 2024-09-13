@@ -51,6 +51,8 @@ See |octo-command-examples| for examples.
 
 :Octo pr [action] {args}                        *octo-commands-pr*
 
+  Omit action to open the pull request matching the current branch.
+
   list [repo] {key=val} Lists all PRs satisfying a given filter.
                         In-menu mappings: 
                           <CR>    Edit PR.
@@ -147,6 +149,9 @@ See |octo-command-examples| for examples.
 
 
 :Octo review [action]                           *octo-commands-review*
+
+  Omit action to resume a review if one is in progress, or start a new one if
+  no review is in progress.
 
   start                 Start a new review.
   submit                Submit the review.

@@ -353,6 +353,12 @@ function M.setup()
       end)
     end,
   })
+
+  setmetatable(M.commands.review, {
+    __call = function(_)
+      reviews.start_or_resume_review()
+    end,
+  })
 end
 
 function M.process_varargs(repo, ...)
