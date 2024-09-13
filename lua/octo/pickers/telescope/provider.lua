@@ -15,6 +15,8 @@ local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local sorters = require "telescope.sorters"
 
+local vim = vim
+
 local M = {}
 
 function M.not_implemented()
@@ -767,6 +769,124 @@ end
 --
 -- ASSIGNEES
 --
+local function get_user_requester()
+  return function(prompt)
+    -- skip empty queries
+    if not prompt or prompt == "" or utils.is_blank(prompt) then
+      return {}
+    end
+    local query = graphql("users_query", prompt)
+    local output = gh.run {
+      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+      mode = "sync",
+    }
+    if output then
+      return {}
+    end
+
+    local users = {}
+    local orgs = {}
+    local responses = utils.get_pages(output)
+    for _, resp in ipairs(responses) do
+      for _, user in ipairs(resp.data.search.nodes) do
+        if not user.teams then
+          -- regular user
+          if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
+            users[user.login] = {
+              id = user.id,
+              login = user.login,
+            }
+          end
+        elseif user.teams and user.teams.totalCount > 0 then
+          -- organization, collect all teams
+          if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
+            orgs[user.login] = {
+              id = user.id,
+              login = user.login,
+              teams = user.teams.nodes,
+            }
+          else
+            vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+          end
+        end
+      end
+    end
+
+    local results = {}
+    -- process orgs with teams
+    for _, user in pairs(users) do
+      table.insert(results, user)
+    end
+    for _, org in pairs(orgs) do
+      org.login = string.format("%s (%d)", org.login, #org.teams)
+      table.insert(results, org)
+    end
+    return results
+  end
+end
+
+local function get_users(query_name, node_name)
+  local repo = utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
+  local query = graphql(query_name, owner, name, { escape = true })
+  local output = gh.run {
+    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    mode = "sync",
+  }
+  if not output then
+    return {}
+  end
+
+  local responses = utils.get_pages(output)
+
+  local users = {}
+
+  for _, resp in ipairs(responses) do
+    local nodes = resp.data.repository[node_name].nodes
+    for _, user in ipairs(nodes) do
+      table.insert(users, {
+        id = user.id,
+        login = user.login,
+      })
+    end
+  end
+
+  return users
+end
+
+local function get_assignable_users()
+  return get_users("assignable_users_query", "assignableUsers")
+end
+
+local function get_mentionable_users()
+  return get_users("mentionable_users_query", "mentionableUsers")
+end
+
+local function create_user_finder()
+  local cfg = octo_config.values
+
+  local finder
+  local user_entry_maker = entry_maker.gen_from_user()
+  if cfg.users == "search" then
+    finder = finders.new_dynamic {
+      entry_maker = user_entry_maker,
+      fn = get_user_requester(),
+    }
+  elseif cfg.users == "assignable" then
+    finder = finders.new_table {
+      results = get_assignable_users(),
+      entry_maker = user_entry_maker,
+    }
+  else
+    finder = finders.new_table {
+      results = get_mentionable_users(),
+      entry_maker = user_entry_maker,
+    }
+  end
+
+  return finder
+end
+
 function M.select_user(cb)
   local opts = vim.deepcopy(dropdown_opts)
   opts.layout_config = {
@@ -774,69 +894,11 @@ function M.select_user(cb)
     height = 15,
   }
 
-  --local queue = {}
-  local function get_user_requester()
-    return function(prompt)
-      -- skip empty queries
-      if not prompt or prompt == "" or utils.is_blank(prompt) then
-        return {}
-      end
-      local query = graphql("users_query", prompt)
-      local output = gh.run {
-        args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-        mode = "sync",
-      }
-      if output then
-        local users = {}
-        local orgs = {}
-        local responses = utils.get_pages(output)
-        for _, resp in ipairs(responses) do
-          for _, user in ipairs(resp.data.search.nodes) do
-            if not user.teams then
-              -- regular user
-              if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
-                users[user.login] = {
-                  id = user.id,
-                  login = user.login,
-                }
-              end
-            elseif user.teams and user.teams.totalCount > 0 then
-              -- organization, collect all teams
-              if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
-                orgs[user.login] = {
-                  id = user.id,
-                  login = user.login,
-                  teams = user.teams.nodes,
-                }
-              else
-                vim.list_extend(orgs[user.login].teams, user.teams.nodes)
-              end
-            end
-          end
-        end
-
-        local results = {}
-        -- process orgs with teams
-        for _, user in pairs(users) do
-          table.insert(results, user)
-        end
-        for _, org in pairs(orgs) do
-          org.login = string.format("%s (%d)", org.login, #org.teams)
-          table.insert(results, org)
-        end
-        return results
-      else
-        return {}
-      end
-    end
-  end
+  local finder = create_user_finder()
 
   pickers
     .new(opts, {
-      finder = finders.new_dynamic {
-        entry_maker = entry_maker.gen_from_user(),
-        fn = get_user_requester(),
-      },
+      finder = finder,
       sorter = sorters.get_fuzzy_file(opts),
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)

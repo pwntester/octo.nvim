@@ -114,6 +114,7 @@ require"octo".setup({
   outdated_icon = "󰅒 ",                    -- outdated indicator
   resolved_icon = " ",                    -- resolved indicator
   reaction_viewer_hint_icon = " ";        -- marker for user reactions
+  users = "search",                        -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
   user_icon = " ";                        -- user icon
   timeline_marker = " ";                  -- timeline marker
   timeline_indent = "2";                   -- timeline indentation
@@ -406,6 +407,16 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 
 - `<CR>`: Append Gist to buffer
   [Available keys](https://cli.github.com/manual/gh_gist_list): `repo`\|`public`\|`secret`
+
+5. Users in the assignee and reviewer commands: 
+
+- `search`: Dynamically search all GitHub users
+- `mentionable`: List of *mentionable* users in current repo
+- `assignable`: List of *assignable* users in current repo
+
+  Here, `search` is the default value and most broad. Both `assignable` and
+  `mentionable` are specific to the current repo. The `assignable` option is more
+  restrictive than `mentionable`.
 
 ## 🔥 Examples
 

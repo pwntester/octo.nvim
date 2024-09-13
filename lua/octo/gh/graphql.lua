@@ -2679,6 +2679,42 @@ query {
 }
 ]]
 
+M.mentionable_users_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+      mentionableUsers(first: 100, after: $endCursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+        startCursor
+      }
+      nodes {
+        id
+        login
+      }
+    }
+  }
+}
+]]
+
+M.assignable_users_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+    assignableUsers(first: 100, after: $endCursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+        startCursor
+      }
+      nodes {
+        id
+        login
+      }
+    }
+  }
+}
+]]
+
 M.users_query = [[
 query($endCursor: String) {
   search(query: """%s""", type: USER, first: 100) {
