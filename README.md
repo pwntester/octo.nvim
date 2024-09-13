@@ -136,6 +136,9 @@ require"octo".setup({
       direction = "DESC"                   -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
     }
   },
+  reviews = {
+    auto_show_threads = true,              -- automatically show comment threads on cursor move
+  },
   pull_requests = {
     order_by = {                           -- criteria to sort the results of `Octo pr list`
       field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)

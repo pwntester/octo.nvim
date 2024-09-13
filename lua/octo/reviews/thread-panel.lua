@@ -1,10 +1,12 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local utils = require "octo.utils"
 local vim = vim
+local config = require "octo.config"
 
 local M = {}
 
-function M.show_review_threads()
+function M.show_review_threads(params)
+  local params = params or {}
   -- This function is called from a very broad CursorHold event
   -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
@@ -67,6 +69,18 @@ function M.show_review_threads()
         table.insert(file.associated_bufs, thread_buffer.bufnr)
         vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
         thread_buffer:configure()
+
+        vim.keymap.set("n", "q", function()
+          M.hide_thread_buffer(split, file)
+          local file_win = file:get_win(split)
+          if vim.api.nvim_win_is_valid(file_win) then
+            vim.api.nvim_set_current_win(file_win)
+          end
+        end, { buffer = thread_buffer.bufnr })
+
+        if params.jump_to_buffer then
+          vim.api.nvim_set_current_win(alt_win)
+        end
         vim.api.nvim_buf_call(thread_buffer.bufnr, function()
           vim.cmd [[diffoff!]]
           pcall(vim.cmd, "normal ]c")
@@ -75,18 +89,21 @@ function M.show_review_threads()
     end
   else
     -- no threads at the current line, hide the thread buffer
-    local alt_buf = file:get_alternative_buf(split)
-    local alt_win = file:get_alternative_win(split)
-    local cur_win = file:get_win(split)
-    if vim.api.nvim_win_is_valid(alt_win) and vim.api.nvim_buf_is_valid(alt_buf) then
-      local current_alt_bufnr = vim.api.nvim_win_get_buf(alt_win)
-      if current_alt_bufnr ~= alt_buf then
-        -- if we are not showing the corresponging alternative diff buffer, do so
-        vim.api.nvim_win_set_buf(alt_win, alt_buf)
+    M.hide_thread_buffer(split, file)
+  end
+end
 
-        -- show the diff
-        file:show_diff()
-      end
+function M.hide_thread_buffer(split, file)
+  local alt_buf = file:get_alternative_buf(split)
+  local alt_win = file:get_alternative_win(split)
+  if vim.api.nvim_win_is_valid(alt_win) and vim.api.nvim_buf_is_valid(alt_buf) then
+    local current_alt_bufnr = vim.api.nvim_win_get_buf(alt_win)
+    if current_alt_bufnr ~= alt_buf then
+      -- if we are not showing the corresponging alternative diff buffer, do so
+      vim.api.nvim_win_set_buf(alt_win, alt_buf)
+
+      -- show the diff
+      file:show_diff()
     end
   end
 end
