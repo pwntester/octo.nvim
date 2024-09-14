@@ -149,7 +149,7 @@ function M.parse_remote_url(url, aliases)
   -- if url contains two slashes
   local segments = vim.split(url, "/")
   local host, repo
-  if #segments == 3 or (#segments == 4 and segments[4] == '') then
+  if #segments == 3 or (#segments == 4 and segments[4] == "") then
     host = segments[1]
     repo = segments[2] .. "/" .. segments[3]
   elseif #segments == 2 then
