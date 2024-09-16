@@ -440,8 +440,7 @@ Octo search assignee:pwntester is:pr
 
 ## 📋 PR reviews
 
-- Open the PR (e.g. `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`)
-- Start a review with `Octo review start` or resume a pending review with `Octo review resume`
+- Enter review mode for the current branch with `Octo review`. Alternatively open the PR (e.g. `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`) then use `Octo review` in the PR buffer to enter review mode for a specific PR.
 - A new tab will show a panel with changed files and two windows showing the diff on any of them.
 - Change panel entries with `]q` and `[q` or by selecting an entry in the window
 - Add comments with `<leader>ca` or suggestions with `<leader>sa` on single or multiple visual-selected lines
