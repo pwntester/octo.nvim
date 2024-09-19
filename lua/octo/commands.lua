@@ -62,6 +62,18 @@ function M.setup()
       close = function()
         M.change_state "CLOSED"
       end,
+      develop = function(repo, ...)
+        local bufnr = vim.api.nvim_get_current_buf()
+        local buffer = octo_buffers[bufnr]
+
+        if not buffer then
+          local opts = M.process_varargs(repo, ...)
+          picker.issues(opts, true)
+          return
+        end
+
+        utils.develop_issue(buffer.node.number)
+      end,
       reopen = function()
         M.change_state "OPEN"
       end,
