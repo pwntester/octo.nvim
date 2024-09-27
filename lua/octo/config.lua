@@ -4,6 +4,7 @@ local M = {}
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
+---@alias OctoFocus "right" | "left"
 
 ---@class OctoPickerConfig
 ---@field use_emojis boolean
@@ -37,6 +38,7 @@ local M = {}
 
 ---@class OctoConfigReviews
 ---@field auto_show_threads boolean
+---@field focus OctoFocus
 
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
@@ -134,6 +136,7 @@ function M.get_default_values()
     },
     reviews = {
       auto_show_threads = true,
+      focus = "right",
     },
     pull_requests = {
       order_by = {
@@ -304,7 +307,7 @@ function M.validate_config()
     errors[value] = msg
   end
 
-  ---Checks if a variable is the correct, type if not it calls err with an error string
+  ---Checks if a variable is the correct type if not it calls err with an error string
   ---@param value any
   ---@param name string
   ---@param expected_types type | type[]
@@ -332,46 +335,36 @@ function M.validate_config()
     return true
   end
 
-  local function validate_pickers()
-    local valid_pickers = { "telescope", "fzf-lua" }
-    if not validate_type(config.picker, "picker", "string") then
-      return
-    end
-    if not vim.tbl_contains(valid_pickers, config.picker) then
-      err(
-        "picker." .. config.picker,
-        string.format(
-          "Expected a valid picker, received '%s', which is not a supported picker! Valid pickers: ",
-          config.picker,
-          table.concat(valid_pickers, ", ")
+  ---Checks if a variable is one of the allowed string value
+  ---@param value any
+  ---@param name string
+  ---@param expected_strings string[]
+  local function validate_string_enum(value, name, expected_strings)
+    -- First check that the value is indeed a string
+    if validate_type(value, name, "string") then
+      -- Then check it matches one of the expected values
+      if not vim.tbl_contains(expected_strings, value) then
+        err(
+          name .. "." .. value,
+          string.format(
+            "Received '%s', which is not supported! Valid values: %s",
+            value,
+            table.concat(expected_strings, ", ")
+          )
         )
-      )
+      end
     end
+  end
+
+  local function validate_pickers()
+    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua" })
+
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
     end
 
     validate_type(config.picker_config.use_emojis, "picker_config.use_emojis", "boolean")
     validate_type(config.picker_config.mappings, "picker_config.mappings", "table")
-  end
-
-  local function validate_user_search()
-    if not validate_type(config.users, "users", "string") then
-      return
-    end
-
-    local valid_finders = { "search", "mentionable", "assignable" }
-
-    if not vim.tbl_contains(valid_finders, config.users) then
-      err(
-        "users." .. config.users,
-        string.format(
-          "Expected a valid user finder, received '%s', which is not a supported finder! Valid finders: %s",
-          config.users,
-          table.concat(valid_finders, ", ")
-        )
-      )
-    end
   end
 
   local function validate_aliases()
@@ -391,6 +384,15 @@ function M.validate_config()
       validate_type(config.issues.order_by.field, "issues.order_by.field", "string")
       validate_type(config.issues.order_by.direction, "issues.order_by.direction", "string")
     end
+  end
+
+  local function validate_reviews()
+    if not validate_type(config.reviews, "reviews", "table") then
+      return
+    end
+
+    validate_type(config.reviews.auto_show_threads, "reviews.auto_show_threads", "boolean")
+    validate_string_enum(config.reviews.focus, "reviews.focus", { "right", "left" })
   end
 
   local function validate_pull_requests()
@@ -423,7 +425,7 @@ function M.validate_config()
     validate_type(config.gh_cmd, "gh_cmd", "string")
     validate_type(config.gh_env, "gh_env", { "table", "function" })
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
-    validate_user_search()
+    validate_string_enum(config.users, "users", { "search", "mentionable", "assignable" })
     validate_type(config.user_icon, "user_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
     validate_type(config.outdated_icon, "outdated_icon", "string")
@@ -451,6 +453,7 @@ function M.validate_config()
     end
 
     validate_issues()
+    validate_reviews()
     validate_pull_requests()
     if validate_type(config.file_panel, "file_panel", "table") then
       validate_type(config.file_panel.size, "file_panel.size", "number")
