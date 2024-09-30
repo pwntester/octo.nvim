@@ -17,7 +17,7 @@ function M.write_block(bufnr, lines, line, mark)
   mark = mark or false
 
   if type(lines) == "string" then
-    lines = vim.split(lines, "\n", true)
+    lines = vim.split(lines, "\n")
   end
 
   -- write content lines
@@ -43,6 +43,16 @@ function M.write_block(bufnr, lines, line, mark)
         end_line = i
         break
       end
+    end
+
+    local indent_text = string.rep(" ", 2 * 4)
+    for i = start_line, end_line do
+      vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_COMMENT_NS, i - 1, 0, {
+        virt_text = { { indent_text, "Whitespace" } },
+        virt_text_pos = "inline",
+        virt_text_repeat_linebreak = true,
+        right_gravity = false,
+      })
     end
 
     return vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_COMMENT_NS, math.max(0, start_line - 1 - 1), 0, {
@@ -595,9 +605,20 @@ function M.write_comment(bufnr, comment, kind, line)
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or utils.is_blank(comment_body) then
     comment_body = " "
   end
-  local content = vim.split(comment_body, "\n", true)
+  local content = vim.split(comment_body, "\n")
   vim.list_extend(content, { "" })
+
+  -- Set extmark with virtual text at the beginning of the line
   local comment_mark = M.write_block(bufnr, content, line, true)
+  --
+  -- -- Define the number of spaces for indentation (e.g., 4 spaces per indent level)
+  -- local indent_text = string.rep(" ", 2 * 4) -- Adjust 4 based on your desired indent width
+  -- vim.api.nvim_buf_set_extmark(bufnr, comment_vt_ns, line - 1, 0, {
+  --   virt_lines = { { { "foo" .. indent_text, "Normal" } }, { { "bar" .. indent_text, "Normal" } } },
+  --   virt_lines_leftcol = true,
+  --   end_row = line + 1,
+  --   virt_text_pos = "inline",
+  -- })
 
   line = line + #content
 
