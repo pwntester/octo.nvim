@@ -5,6 +5,8 @@ local M = {}
 
 ---@class PullRequest
 ---@field repo string
+---@field head_repo string
+---@field head_ref_name string
 ---@field owner string
 ---@field name string
 ---@field number integer
@@ -23,8 +25,9 @@ PullRequest.__index = PullRequest
 ---@return PullRequest
 function PullRequest:new(opts)
   local this = {
-    -- TODO: rename to nwo
     repo = opts.repo,
+    head_repo = opts.head_repo,
+    head_ref_name = opts.head_ref_name,
     number = opts.number,
     owner = "",
     name = "",
@@ -57,7 +60,8 @@ end
 
 M.PullRequest = PullRequest
 
----Fetch the diff of the PR
+--- Fetch the diff of the PR
+--- @param pr PullRequest
 function PullRequest:get_diff(pr)
   local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
   gh.run {
