@@ -228,7 +228,9 @@ function Review:update_threads(threads)
       thread.startDiffSide = thread.diffSide
       thread.originalStartLine = thread.originalLine
     end
-    self.threads[thread.id] = thread
+    if not thread.isOutdated then
+      self.threads[thread.id] = thread
+    end
   end
   if self.layout then
     self.layout.file_panel:render()
