@@ -238,7 +238,7 @@ function FileEntry:load_buffers(left_winid, right_winid)
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
       local conf = config.values
-      local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr)
+      local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request)
 
       -- create buffer
       split.bufid = M._create_buffer {
@@ -275,12 +275,15 @@ end
 function FileEntry:show_diff()
   for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
     vim.api.nvim_buf_call(bufid, function()
-      pcall(vim.cmd, [[filetype detect]])
-      pcall(vim.cmd, [[doau BufEnter]])
-      pcall(vim.cmd, [[diffthis]])
+      -- Only trigger ft detect event for non local files to avoid triggering ftplugins for nothing
+      if vim.fn.bufname(bufid):match "octo://*" then
+        pcall(vim.cmd.filetype, [[detect]])
+      end
+      pcall(vim.cmd.doau, [[BufEnter]])
+      pcall(vim.cmd.diffthis)
       -- Scroll to trigger the scrollbind and sync the windows. This works more
       -- consistently than calling `:syncbind`.
-      pcall(vim.cmd, [[exec "normal! \<c-y>"]])
+      pcall(vim.cmd.exec, [["normal! \<c-y>"]])
     end)
   end
 end

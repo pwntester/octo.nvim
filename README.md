@@ -138,6 +138,7 @@ require"octo".setup({
   },
   reviews = {
     auto_show_threads = true,              -- automatically show comment threads on cursor move
+    focus             = "right",           -- focus right buffer on diff open
   },
   pull_requests = {
     order_by = {                           -- criteria to sort the results of `Octo pr list`
