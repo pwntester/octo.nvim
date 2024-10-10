@@ -80,6 +80,7 @@ function M.setup()
           prompt = prompt .. k .. ":" .. v .. " "
         end
         opts.prompt = prompt
+        opts.kind = "issue"
         picker.search(opts)
       end,
       reload = function()
@@ -152,6 +153,7 @@ function M.setup()
           prompt = prompt .. k .. ":" .. v .. " "
         end
         opts.prompt = prompt
+        opts.kind = "pull_request"
         picker.search(opts)
       end,
       reload = function()

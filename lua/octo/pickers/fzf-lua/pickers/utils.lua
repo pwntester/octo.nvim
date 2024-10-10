@@ -56,11 +56,11 @@ end
 ]]
 function M.open(command, entry)
   if command == "default" then
-    vim.cmd [[:buffer %]]
+    vim.cmd(':buffer '..entry.filename)
   elseif command == "horizontal" then
     vim.cmd [[:sbuffer %]]
   elseif command == "vertical" then
-    vim.cmd [[:vert sbuffer %]]
+    vim.cmd('vsplit '..entry.filename)
   elseif command == "tab" then
     vim.cmd [[:tab sb %]]
   end
@@ -112,7 +112,10 @@ end
   @param entry The entry to get the url from.
 ]]
 function M.copy_url(entry)
-  local url = entry.obj.url
+  M.copy_url_raw(entry.obj.url)
+end
+
+function M.copy_url_raw(url)
   vim.fn.setreg("+", url, "c")
   utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
 end
