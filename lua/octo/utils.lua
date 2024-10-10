@@ -236,6 +236,22 @@ function M.commit_exists(commit, cb)
   }):start()
 end
 
+function M.develop_issue(issue_number)
+  if not Job then
+    return
+  end
+
+  Job:new({
+    enable_recording = true,
+    command = "gh",
+    args = { "issue", "develop", issue_number, "--checkout" },
+    on_exit = vim.schedule_wrap(function()
+      local output = vim.fn.system "git branch --show-current"
+      M.info("Switched to " .. output)
+    end),
+  }):start()
+end
+
 function M.get_file_at_commit(path, commit, cb)
   if not Job then
     return

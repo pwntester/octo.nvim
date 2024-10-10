@@ -308,6 +308,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | issue    | close                                   | Close the current issue                                                                                                                                |
 |          | reopen                                  | Reopen the current issue                                                                                                                               |
 |          | create [repo]                           | Creates a new issue in the current or specified repo                                                                                                   |
+|          | develop                                 | Create and checkout a new branch for an issue in the current repo                                                                                      |
 |          | edit [repo] <number>                    | Edit issue `<number>` in current or specified repo                                                                                                     |
 |          | list [repo] [key=value] (1)             | List all issues satisfying given filter                                                                                                                |
 |          | search                                  | Live issue search                                                                                                                                      |
