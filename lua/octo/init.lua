@@ -42,6 +42,24 @@ function M.setup(user_config)
   gh.setup()
 end
 
+function M.update_layout_for_current_file()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local thisfile = vim.api.nvim_buf_get_name(bufnr)
+  local relative_path = vim.fn.fnamemodify(thisfile, ":~:.")
+  local review = reviews.get_current_review()
+  if review == nil then
+    return
+  end
+  local files = review.layout.files
+  for _, file in ipairs(files) do
+    if file.path == relative_path then
+      -- NOTE: set_file triggers a bufread autocmd popup message
+      review.layout:set_file(file)
+      vim.api.nvim_set_current_win(review.layout.right_winid)
+    end
+  end
+end
+
 function M.configure_octo_buffer(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local split, path = utils.get_split_and_path(bufnr)
