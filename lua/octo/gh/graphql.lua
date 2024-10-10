@@ -2129,6 +2129,7 @@ query($endCursor: String) {
         repository { nameWithOwner }
         headRefName
         isDraft
+        author { username: login }
       }
       pageInfo {
         hasNextPage
