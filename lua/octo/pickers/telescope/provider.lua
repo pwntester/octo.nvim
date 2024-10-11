@@ -123,7 +123,25 @@ end
 --
 -- ISSUES
 --
-function M.issues(opts)
+local function open_issue_buffer(prompt_bufnr, type)
+  open(type)(prompt_bufnr)
+end
+
+local function develop_issue(prompt_bufnr, type)
+  local selection = action_state.get_selected_entry(prompt_bufnr)
+  actions.close(prompt_bufnr)
+
+  utils.develop_issue(selection.obj.number)
+end
+
+function M.issues(opts, develop)
+  local replace
+  if develop then
+    replace = develop_issue
+  else
+    replace = open_issue_buffer
+  end
+
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -172,9 +190,7 @@ function M.issues(opts)
             sorter = conf.generic_sorter(opts),
             previewer = previewers.issue.new(opts),
             attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
+              action_set.select:replace(replace)
               map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
               map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
               return true
