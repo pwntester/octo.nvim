@@ -3229,14 +3229,6 @@ query {
 }
 ]]
 
-local function escape_char(string)
-  local escaped, _ = string.gsub(string, '["\\]', {
-    ['"'] = '\\"',
-    ["\\"] = "\\\\",
-  })
-  return escaped
-end
-
 return function(query, ...)
   local opts = { escape = true }
   for _, v in ipairs { ... } do
@@ -3245,13 +3237,9 @@ return function(query, ...)
       break
     end
   end
-  local escaped = {}
+  local args = {}
   for _, v in ipairs { ... } do
-    if type(v) == "string" and opts.escape then
-      table.insert(escaped, escape_char(v))
-    else
-      table.insert(escaped, v)
-    end
+    table.insert(args, v)
   end
-  return string.format(M[query], unpack(escaped))
+  return string.format(M[query], unpack(args))
 end
