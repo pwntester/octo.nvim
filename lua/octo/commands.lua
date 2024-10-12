@@ -1669,10 +1669,20 @@ end
 function M.copy_url()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
+  local url
+
+  if buffer then
+    url = buffer.node.url
+  else
+    local host = utils.get_remote_host()
+    local remote_name = utils.get_remote_name()
+    if not host or not remote_name then
+      utils.error "No remote repository found"
+      return
+    end
+    url = "https://" .. host .. "/" .. remote_name
   end
-  local url = buffer.node.url
+
   vim.fn.setreg("+", url, "c")
   utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
 end
