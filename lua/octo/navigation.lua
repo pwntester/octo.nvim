@@ -33,7 +33,13 @@ function M.open_in_browser(kind, repo, number)
     local bufnr = vim.api.nvim_get_current_buf()
     local buffer = octo_buffers[bufnr]
     if not buffer then
-      return
+      local owner_repo = utils.get_remote_name()
+      if not owner_repo then
+        utils.error "No remote repository found"
+        return
+      end
+      cmd = string.format("gh repo view --web %s", owner_repo)
+      return pcall(vim.cmd, "silent !" .. cmd)
     end
     if buffer:isPullRequest() then
       cmd = string.format("gh pr view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
