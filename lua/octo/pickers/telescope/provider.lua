@@ -326,7 +326,7 @@ function M.pull_requests(opts)
         local max_number = -1
         local username_col_len = 0
         local branch_name_col_len = 0
-        local authors = {}
+        local author_ids = {}
         local author_count = 0
         for _, pull in ipairs(pull_requests) do
           -- modify result to be consistent with GraphQL output.
@@ -334,12 +334,22 @@ function M.pull_requests(opts)
           pull.author.username = pull.author.login
           pull.repository = { nameWithOwner = pull.headRepositoryOwner.login .. "/" .. pull.headRepository.name }
 
-          authors[pull.author.id] = (authors[pull.author.id] or 0) + 1
+          local author_id = "?"
+          local author_name = "?"
+          if pull.author ~= nil then
+            if pull.author.id ~= nil then
+              author_id = pull.author.id
+            end
+            if pull.author.username ~= nil then
+              author_name = pull.author.username
+            end
+          end
+          author_ids[author_id] = true
+          username_col_len = math.min(20, math.max(username_col_len, #tostring(author_name)))
           max_number = math.max(max_number, #tostring(pull.number))
-          username_col_len = math.min(20, math.max(username_col_len, #tostring(pull.author.username)))
           branch_name_col_len = math.min(20, math.max(branch_name_col_len, #tostring(pull.headRefName)))
         end
-        for _ in pairs(authors) do
+        for _ in pairs(author_ids) do
           author_count = author_count + 1
         end
 
