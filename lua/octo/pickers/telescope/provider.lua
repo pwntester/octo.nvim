@@ -296,16 +296,20 @@ function M.pull_requests(opts)
 
   utils.info "Fetching pull requests (this may take a while) ..."
   local args = {
-    "pr", "list",
-    "--limit", tostring(opts.limit),
-    "--json", "author,number,title,url,headRepository,headRepositoryOwner,headRefName,isDraft"
+    "pr",
+    "list",
+    "--limit",
+    tostring(opts.limit),
+    "--json",
+    "author,number,title,url,headRepository,headRepositoryOwner,headRefName,isDraft",
   }
+
   if opts.repo then
     table.insert(args, "-R")
     table.insert(args, opts.repo)
   end
-  local keys = { "author", "assignee", "label", "state", "head", "base", "search" }
 
+  local keys = { "author", "assignee", "label", "state", "head", "base", "search" }
   for _, key in ipairs(keys) do
     if opts[key] then
       table.insert(args, "--" .. key)
@@ -328,20 +332,29 @@ function M.pull_requests(opts)
         local max_number = -1
         local username_col_len = 0
         local branch_name_col_len = 0
-        local authors = {}
+        local author_ids = {}
         local author_count = 0
         for _, pull in ipairs(pull_requests) do
           -- modify result to be consistent with GraphQL output.
           pull["__typename"] = "pull_request"
-          pull.author.username = pull.author.login
           pull.repository = { nameWithOwner = pull.headRepositoryOwner.login .. "/" .. pull.headRepository.name }
 
-          authors[pull.author.id] = (authors[pull.author.id] or 0) + 1
+          local author_id = "?"
+          local author_name = "?"
+          if pull.author ~= nil then
+            if pull.author.id ~= nil then
+              author_id = pull.author.id
+            end
+            if pull.author.login ~= nil then
+              author_name = pull.author.login
+            end
+          end
+          author_ids[author_id] = true
+          username_col_len = math.min(20, math.max(username_col_len, #tostring(author_name)))
           max_number = math.max(max_number, #tostring(pull.number))
-          username_col_len = math.min(20, math.max(username_col_len, #tostring(pull.author.login)))
           branch_name_col_len = math.min(20, math.max(branch_name_col_len, #tostring(pull.headRefName)))
         end
-        for _ in pairs(authors) do
+        for _ in pairs(author_ids) do
           author_count = author_count + 1
         end
 
@@ -352,7 +365,12 @@ function M.pull_requests(opts)
           .new(opts, {
             finder = finders.new_table {
               results = pull_requests,
-              entry_maker = entry_maker.gen_from_pull_request(max_number, username_col_len, branch_name_col_len, author_count),
+              entry_maker = entry_maker.gen_from_pull_request(
+                max_number,
+                username_col_len,
+                branch_name_col_len,
+                author_count
+              ),
             },
             sorter = conf.generic_sorter(opts),
             previewer = previewers.issue.new(opts),

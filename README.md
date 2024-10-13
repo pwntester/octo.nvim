@@ -144,6 +144,7 @@ require"octo".setup({
       field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
       direction = "DESC"                   -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
     },
+    limit = 100                            -- maximum number of pull requests in `Octo pr list` results
     always_select_remote_on_create = false -- always give prompt to select base remote repo when creating PRs
   },
   file_panel = {
