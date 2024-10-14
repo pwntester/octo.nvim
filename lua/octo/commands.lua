@@ -1674,13 +1674,7 @@ function M.copy_url()
   if buffer then
     url = buffer.node.url
   else
-    local host = utils.get_remote_host()
-    local remote_name = utils.get_remote_name()
-    if not host or not remote_name then
-      utils.error "No remote repository found"
-      return
-    end
-    url = "https://" .. host .. "/" .. remote_name
+    url = utils.get_remote_url()
   end
 
   vim.fn.setreg("+", url, "c")
