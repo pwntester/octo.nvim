@@ -294,16 +294,21 @@ function M.pull_requests(opts)
 
   utils.info "Fetching pull requests (this may take a while) ..."
   local args = {
-    "pr", "list",
-    "--limit", tostring(opts.limit),
-    "--json", "author,number,title,url,headRepository,headRepositoryOwner,headRefName,isDraft"
+    "pr",
+    "list",
+    "--paginate",
+    "--limit",
+    tostring(opts.limit),
+    "--json",
+    "author,number,title,url,headRepository,headRepositoryOwner,headRefName,isDraft",
   }
+
   if opts.repo then
     table.insert(args, "-R")
     table.insert(args, opts.repo)
   end
-  local keys = { "author", "assignee", "label", "state", "head", "base", "search" }
 
+  local keys = { "author", "assignee", "label", "state", "head", "base", "search" }
   for _, key in ipairs(keys) do
     if opts[key] then
       table.insert(args, "--" .. key)
@@ -360,7 +365,12 @@ function M.pull_requests(opts)
           .new(opts, {
             finder = finders.new_table {
               results = pull_requests,
-              entry_maker = entry_maker.gen_from_pull_request(max_number, username_col_len, branch_name_col_len, author_count),
+              entry_maker = entry_maker.gen_from_pull_request(
+                max_number,
+                username_col_len,
+                branch_name_col_len,
+                author_count
+              ),
             },
             sorter = conf.generic_sorter(opts),
             previewer = previewers.issue.new(opts),
