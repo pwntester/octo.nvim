@@ -1,7 +1,7 @@
 local vim = vim
 local M = {}
 
----@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "run"
+---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "runs"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
 
@@ -182,7 +182,7 @@ function M.get_default_values()
     },
     mappings_disable_default = false,
     mappings = {
-      run = {
+      runs = {
         open = { lhs = "<leader>o", desc = "view workflow run" },
         refresh = { lhs = "<leader>r", desc = "refresh workflow runs list" }
       },

@@ -456,7 +456,7 @@ local function populate_list(buf)
         end
       end,
       on_exit = function()
-        local mapping = require("octo.config").values.mappings.run.open.lhs
+        local mapping = require("octo.config").values.mappings.runs.open.lhs
         vim.keymap.set('n', mapping, function()
           local line_num = vim.api.nvim_win_get_cursor(0)[1]
           local line = lines[line_num - 2]
@@ -510,7 +510,7 @@ M.list = function()
 
   refresh()
 
-  local mapping = require("octo.config").values.mappings.run.refresh.lhs
+  local mapping = require("octo.config").values.mappings.runs.refresh.lhs
   vim.keymap.set('n', mapping, function()
     vim.notify("Refreshing")
     populate_list(buf)
