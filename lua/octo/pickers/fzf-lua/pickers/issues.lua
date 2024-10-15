@@ -1,4 +1,3 @@
-local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
@@ -7,6 +6,7 @@ local octo_config = require "octo.config"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
+local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 
 return function(opts)
   opts = opts or {}
@@ -28,8 +28,6 @@ return function(opts)
 
   local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
 
-  local formatted_issues = {}
-
   local get_contents = function(fzf_cb)
     gh.run {
       args = {
@@ -50,12 +48,12 @@ return function(opts)
           local issues = resp.data.repository.issues.nodes
 
           for _, issue in ipairs(issues) do
-            local entry = entry_maker.gen_from_issue(issue)
+            local entry_string = entry_maker.entry_string_from_issue_or_pr(issue, function(tbl)
+              return fzf.utils.ansi_from_hl("Comment", tbl.number)
+            end)
 
-            if entry ~= nil then
-              formatted_issues[entry.ordinal] = entry
-              local prefix = fzf.utils.ansi_from_hl("Comment", entry.value)
-              fzf_cb(prefix .. " " .. entry.obj.title)
+            if entry_string ~= nil then
+              fzf_cb(entry_string)
             end
           end
         end
@@ -68,16 +66,36 @@ return function(opts)
 
   fzf.fzf_exec(get_contents, {
     prompt = picker_utils.get_prompt(opts.prompt_title),
-    previewer = previewers.issue(formatted_issues),
+    previewer = previewers.pr_and_issue(),
     fzf_opts = {
-      ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--header"] = opts.results_title,
       ["--info"] = "default",
+      ["--multi"] = true,
+      ["--delimiter"] = " ",
+      ["--with-nth"] = "4..",
     },
     winopts = {
       title = opts.window_title or "Issues",
       title_pos = "center",
     },
-    actions = fzf_actions.common_open_actions(formatted_issues),
+    actions = fzf_actions.common_buffer_actions_v2(),
+    _fmt = {
+      from = function(entry)
+        local split = vim.split(entry, " ")
+        return split[1] .. ":1:1:" .. table.concat(split, " ", 2)
+      end,
+    },
+    parse_entry = function(entry)
+      local split = vim.split(entry, " ")
+      local number = split[4]
+      local owner, name = utils.split_repo(split[3])
+      return {
+        kind = "issue",
+        number = number,
+        owner = owner,
+        name = name,
+        previewer_title = split[3],
+      }
+    end,
   })
 end

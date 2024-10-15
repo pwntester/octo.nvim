@@ -31,9 +31,7 @@ return function(opts)
   local order_by = cfg.pull_requests.order_by
 
   local query =
-    graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
-
-  local formatted_pulls = {}
+      graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
 
   local get_contents = function(fzf_cb)
     gh.run {
@@ -55,18 +53,18 @@ return function(opts)
           local pull_requests = resp.data.repository.pullRequests.nodes
 
           for _, pull in ipairs(pull_requests) do
-            local entry = entry_maker.gen_from_issue(pull)
-
-            if entry ~= nil then
-              formatted_pulls[entry.ordinal] = entry
+            local entry_string = entry_maker.entry_string_from_issue_or_pr(pull, function(tbl)
               local highlight
-              if entry.obj.isDraft then
+              if tbl.isDraft then
                 highlight = "OctoSymbol"
               else
                 highlight = "OctoStateOpen"
               end
-              local prefix = fzf.utils.ansi_from_hl(highlight, entry.value)
-              fzf_cb(prefix .. " " .. entry.obj.title)
+              return fzf.utils.ansi_from_hl(highlight, tbl.number)
+            end)
+
+            if entry_string ~= nil then
+              fzf_cb(entry_string)
             end
           end
         end
@@ -77,18 +75,40 @@ return function(opts)
     }
   end
 
+  local checkout_pr_mapping = utils.convert_vim_mapping_to_fzf(cfg.picker_config.mappings.checkout_pr.lhs)
+
   fzf.fzf_exec(get_contents, {
     prompt = picker_utils.get_prompt(opts.prompt_title),
-    previewer = previewers.issue(formatted_pulls),
+    previewer = previewers.pr_and_issue(),
     fzf_opts = {
-      ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--info"] = "default",
+      ["--multi"] = true,
+      ["--delimiter"] = " ",
+      ["--with-nth"] = "4..",
     },
-    actions = vim.tbl_extend("force", fzf_actions.common_open_actions(formatted_pulls), {
-      [utils.convert_vim_mapping_to_fzf(cfg.picker_config.mappings.checkout_pr.lhs)] = function(selected)
-        local entry = formatted_pulls[selected[1]]
-        checkout_pull_request(entry)
+    actions = vim.tbl_extend("force", fzf_actions.common_open_actions_v2(), {
+      [checkout_pr_mapping] = function(selected, _opts)
+        local split = vim.split(selected[1], " ")
+        utils.checkout_pr(split[3])
       end,
     }),
+    _fmt = {
+      from = function(entry)
+        local split = vim.split(entry, " ")
+        return split[1] .. ":1:1:" .. table.concat(split, " ", 2)
+      end,
+    },
+    parse_entry = function(entry)
+      local split = vim.split(entry, " ")
+      local number = split[4]
+      local owner, name = utils.split_repo(split[3])
+      return {
+        kind = "pull_request",
+        number = number,
+        owner = owner,
+        name = name,
+        previewer_title = split[3],
+      }
+    end,
   })
 end
