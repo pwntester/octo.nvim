@@ -249,48 +249,51 @@ local fields =
 "conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
 
 local function get_job_status(status, conclusion)
+  local icons = require("octo.config").values.runs.icons
   if status == "queued" then
-    return "🕕"
+    return icons.skipped
   elseif status == "in_progress" then
-    return "🔄"
+    return icons.in_progress
   elseif conclusion == "success" then
-    return "✔"
+    return icons.succeeded
   elseif conclusion == "failure" then
-    return "❌"
+    return icons.failed
   elseif conclusion == "skipped" then
-    return "⏩"
+    return icons.skipped
   else
     return "❓"
   end
 end
 
 local function get_step_status(status, conclusion)
+  local icons = require("octo.config").values.runs.icons
   if status == "pending" then
-    return "🕕"
+    return icons.pending
   elseif status == "in_progress" then
-    return "🔄"
+    return icons.in_progress
   elseif conclusion == "success" then
-    return "✔"
+    return icons.succeeded
   elseif conclusion == "failure" then
-    return "❌"
+    return icons.failed
   elseif conclusion == "skipped" then
-    return "⏩"
+    return icons.skipped
   else
     return "❓"
   end
 end
 
 local function get_workflow_status(status, conclusion)
+  local icons = require("octo.config").values.runs.icons
   if status == "queued" then
-    return "🕕"
+    return icons.pending
   elseif status == "in_progress" then
-    return "🔄"
+    return icons.in_progress
   elseif conclusion == "success" then
-    return "✔"
+    return icons.succeeded
   elseif conclusion == "failure" then
-    return "❌"
+    return icons.failed
   elseif conclusion == "skipped" then
-    return "⏩"
+    return icons.skipped
   else
     return "❓"
   end
@@ -432,6 +435,7 @@ local function job_details_float(id)
 end
 
 local function populate_list(buf)
+  local icons = require("octo.config").values.runs.icons
   local lines = {}
   vim.fn.jobstart("gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId",
     {
@@ -440,8 +444,8 @@ local function populate_list(buf)
         local json = vim.fn.json_decode(table.concat(data))
         for _, value in ipairs(json) do
           local wf_run = {
-            status = value.status == "queued" and "🕐" or value.status == "in_progress" and "🔁" or
-                value.conclusion == "failure" and "❌" or "✅",
+            status = value.status == "queued" and icons.pending or value.status == "in_progress" and icons.in_progress or
+                value.conclusion == "failure" and icons.failed or icons.succeeded,
             title = value.displayTitle,
             branch = value.headBranch,
             name = value.name,

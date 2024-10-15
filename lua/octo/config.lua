@@ -38,6 +38,16 @@ local M = {}
 ---@class OctoConfigReviews
 ---@field auto_show_threads boolean
 
+---@class OctoConfigWorkflowIcons
+---@field pending string
+---@field skipped string
+---@field in_progress string
+---@field failed string
+---@field succeeded string
+
+---@class OctoConfigRuns
+---@field icons OctoConfigWorkflowIcons
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -77,6 +87,7 @@ local M = {}
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
 ---@field reviews OctoConfigReviews
+---@field runs OctoConfigRuns
 ---@field pull_requests OctoConfigPR
 ---@field file_panel OctoConfigFilePanel
 ---@field colors OctoConfigColors
@@ -134,6 +145,15 @@ function M.get_default_values()
     },
     reviews = {
       auto_show_threads = true,
+    },
+    runs = {
+      icons = {
+        pending = "🕖",
+        in_progress = "🔄",
+        failed = "❌",
+        succeeded = "✅",
+        skipped = "⏩"
+      }
     },
     pull_requests = {
       order_by = {
