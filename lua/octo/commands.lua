@@ -1669,10 +1669,14 @@ end
 function M.copy_url()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
+  local url
+
+  if buffer then
+    url = buffer.node.url
+  else
+    url = utils.get_remote_url()
   end
-  local url = buffer.node.url
+
   vim.fn.setreg("+", url, "c")
   utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
 end

@@ -206,6 +206,16 @@ function M.get_remote()
   }
 end
 
+function M.get_remote_url()
+  local host = M.get_remote_host()
+  local remote_name = M.get_remote_name()
+  if not host or not remote_name then
+    M.error "No remote repository found"
+    return
+  end
+  return "https://" .. host .. "/" .. remote_name
+end
+
 function M.get_all_remotes()
   return vim.tbl_values(M.parse_git_remote())
 end
