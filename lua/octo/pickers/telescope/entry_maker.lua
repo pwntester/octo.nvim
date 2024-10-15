@@ -4,6 +4,23 @@ local utils = require "octo.utils"
 
 local M = {}
 
+---@param row table @A row from the issue or pull request list
+---@return string @The highlight group for the icon
+local function get_icon_highlight_group(row)
+  local highlight_group
+  if row.isDraft then
+    highlight_group = "OctoGrey"
+  elseif row.state == "OPEN" then
+    highlight_group = "OctoGreen"
+  elseif row.state == "CLOSED" then
+    highlight_group = "OctoRed"
+  elseif row.state == "MERGED" then
+    highlight_group = "OctoRed"
+  end
+
+  return highlight_group
+end
+
 function M.gen_from_issue(max_number, print_repo)
   local make_display = function(entry)
     if not entry then
@@ -27,14 +44,18 @@ function M.gen_from_issue(max_number, print_repo)
       }
     else
       local icon = entry.kind == "issue" and " " or " "
+      local highlight_group = get_icon_highlight_group(entry.obj)
+
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        { icon .. " " .. entry.obj.title },
+        { icon, highlight_group },
+        { entry.obj.title },
       }
       layout = {
         separator = " ",
         items = {
           { width = max_number },
+          { width = 2 },
           { remaining = true },
         },
       }
