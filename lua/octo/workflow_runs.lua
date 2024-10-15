@@ -11,7 +11,7 @@ local function get_default_win_opts()
     col = math.floor((vim.o.columns - width) / 2),
     row = math.floor((vim.o.lines - height) / 2),
     style = "minimal",
-    border = "rounded"
+    border = "rounded",
   }
 end
 
@@ -22,14 +22,13 @@ local function update_win_opts(win, opts)
   vim.api.nvim_win_set_config(win, opts)
 end
 
-
 function Window.new_float()
   local self = setmetatable({}, Window)
   self.buf = vim.api.nvim_create_buf(false, true)
   self.opts = get_default_win_opts()
   self.buf_opts = {
     modifiable = false,
-    filetype = nil
+    filetype = nil,
   }
   self.callbacks = {}
   return self
@@ -37,7 +36,7 @@ end
 
 function Window:buf_set_filetype(filetype)
   if self.buf ~= nil then
-    vim.api.nvim_set_option_value('filetype', filetype, { buf = self.buf })
+    vim.api.nvim_set_option_value("filetype", filetype, { buf = self.buf })
   end
 
   self.buf_opts.filetype = filetype
@@ -55,19 +54,19 @@ function Window:on_win_close(callback)
       if tonumber(event.match) == self.win then
         callback()
       end
-    end
+    end,
   })
 
   return self
 end
 
 local function set_buf_opts(buf, opts)
-  vim.api.nvim_set_option_value('filetype', opts.filetype, { buf = buf })
-  vim.api.nvim_set_option_value('modifiable', opts.modifiable, { buf = buf })
+  vim.api.nvim_set_option_value("filetype", opts.filetype, { buf = buf })
+  vim.api.nvim_set_option_value("modifiable", opts.modifiable, { buf = buf })
 end
 
 function Window:write_buf(lines)
-  vim.api.nvim_set_option_value('modifiable', true, { buf = self.buf })
+  vim.api.nvim_set_option_value("modifiable", true, { buf = self.buf })
   vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, lines)
   set_buf_opts(self.buf, self.buf_opts)
   return self
@@ -109,7 +108,7 @@ function Window:create()
   local win = vim.api.nvim_open_win(self.buf, true, self.opts)
   self.win = win
 
-  vim.keymap.set('n', 'q', function()
+  vim.keymap.set("n", "q", function()
     vim.api.nvim_win_close(self.win, true)
   end, { buffer = self.buf, noremap = true, silent = true })
 
@@ -122,7 +121,7 @@ function Window:create()
           cb()
         end
       end
-    end
+    end,
   })
   return self
 end
@@ -210,28 +209,27 @@ local function createStdoutBuf(name)
       vim.api.nvim_buf_set_lines(outBuf, 0, -1, true, lines)
       vim.api.nvim_set_option_value("modifiable", false, { buf = outBuf })
     end,
-    bufnr = outBuf
+    bufnr = outBuf,
   }
 end
-
 
 local function parse_gh_timestamp(dateString)
   local pattern = "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
   local year, month, day, hour, min, sec = dateString:match(pattern)
-  return os.time({
+  return os.time {
     year = year,
     month = month,
     day = day,
     hour = hour,
     min = min,
     sec = sec,
-    isdst = false
-  })
+    isdst = false,
+  }
 end
 
 local function time_ago(timestamp)
   local unix = parse_gh_timestamp(timestamp)
-  local current_time = os.time(os.date("!*t"))
+  local current_time = os.time(os.date "!*t")
   local diff = current_time - unix
 
   if diff < 60 then
@@ -246,7 +244,7 @@ local function time_ago(timestamp)
 end
 
 local fields =
-"conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
+  "conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
 
 local function get_job_status(status, conclusion)
   local icons = require("octo.config").values.runs.icons
@@ -299,11 +297,12 @@ local function get_workflow_status(status, conclusion)
   end
 end
 
-
 local function get_job_details_lines(details)
   local lines = {}
-  table.insert(lines,
-    string.format("%s %s", details.displayTitle, get_workflow_status(details.status, details.conclusion)))
+  table.insert(
+    lines,
+    string.format("%s %s", details.displayTitle, get_workflow_status(details.status, details.conclusion))
+  )
 
   table.insert(lines, "")
 
@@ -326,8 +325,10 @@ local function get_job_details_lines(details)
 
     for i, step in ipairs(job.steps) do
       local stepIndent = jobIndent .. "       "
-      table.insert(lines,
-        string.format("%s%d. %s %s", stepIndent, i, step.name, get_step_status(step.status, step.conclusion)))
+      table.insert(
+        lines,
+        string.format("%s%d. %s %s", stepIndent, i, step.name, get_step_status(step.status, step.conclusion))
+      )
       if i ~= #job.steps then
         table.insert(lines, "")
       end
@@ -337,13 +338,16 @@ local function get_job_details_lines(details)
   return lines
 end
 
-
 local function job_stderr_float(id, float)
   local lines = {}
 
-  local stderr_float = Window.new_float():pos_right():on_win_close(function()
-    float:pos_center()
-  end):create():write_buf({ "Loading stacktrace" })
+  local stderr_float = Window.new_float()
+    :pos_right()
+    :on_win_close(function()
+      float:pos_center()
+    end)
+    :create()
+    :write_buf { "Loading stacktrace" }
   float:pos_left()
 
   vim.fn.jobstart(string.format("gh run view %s --log-failed", id), {
@@ -358,7 +362,7 @@ local function job_stderr_float(id, float)
         table.insert(lines, {
           job_name = job_name,
           timestamp = timestamp,
-          stderr = stderr
+          stderr = stderr,
         })
       end
     end,
@@ -376,11 +380,16 @@ local function job_stderr_float(id, float)
       stderr_float:write_buf(buf_lines)
 
       for line_index, value in ipairs(lines) do
-        vim.api.nvim_buf_add_highlight(stderr_float.buf, require("octo.constants").OCTO_WORKFLOW_NS, "ErrorMsg",
+        vim.api.nvim_buf_add_highlight(
+          stderr_float.buf,
+          require("octo.constants").OCTO_WORKFLOW_NS,
+          "ErrorMsg",
           line_index - 1,
-          #value.job_name + 2, -1)
+          #value.job_name + 2,
+          -1
+        )
       end
-    end
+    end,
   })
 end
 
@@ -415,7 +424,7 @@ local function update_job_details(id, float)
           end
           vim.defer_fn(refresh_job_details, 5000)
           vim.api.nvim_buf_set_extmark(buf, require("octo.constants").OCTO_WORKFLOW_NS, 0, 0, {
-            virt_text = { { string.format("auto refresh enabled"), "Character" } },
+            virt_text = { { string.format "auto refresh enabled", "Character" } },
             virt_text_pos = "right_align",
             priority = 200,
           })
@@ -423,41 +432,42 @@ local function update_job_details(id, float)
       else
         --stderr
       end
-    end
+    end,
   })
 end
 
 local function job_details_float(id)
-  local float = Window.new_float()
-      :create()
-      :write_buf({ "Loading job run.." })
+  local float = Window.new_float():create():write_buf { "Loading job run.." }
   update_job_details(id, float)
 end
 
 local function populate_list(buf)
   local icons = require("octo.config").values.runs.icons
   local lines = {}
-  vim.fn.jobstart("gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId",
+  vim.fn.jobstart(
+    "gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId",
     {
       stdout_buffered = true,
       on_stdout = function(_, data)
         local json = vim.fn.json_decode(table.concat(data))
         for _, value in ipairs(json) do
           local wf_run = {
-            status = value.status == "queued" and icons.pending or value.status == "in_progress" and icons.in_progress or
-                value.conclusion == "failure" and icons.failed or icons.succeeded,
+            status = value.status == "queued" and icons.pending
+              or value.status == "in_progress" and icons.in_progress
+              or value.conclusion == "failure" and icons.failed
+              or icons.succeeded,
             title = value.displayTitle,
             branch = value.headBranch,
             name = value.name,
             age = time_ago(value.updatedAt),
-            id = value.databaseId
+            id = value.databaseId,
           }
           table.insert(lines, wf_run)
         end
       end,
       on_exit = function()
         local mapping = require("octo.config").values.mappings.runs.open.lhs
-        vim.keymap.set('n', mapping, function()
+        vim.keymap.set("n", mapping, function()
           local line_num = vim.api.nvim_win_get_cursor(0)[1]
           local line = lines[line_num - 2]
           if line == nil then
@@ -470,14 +480,14 @@ local function populate_list(buf)
         buf.write_table(lines, order)
         local ns_id = require("octo.constants").OCTO_WORKFLOW_NS
         vim.api.nvim_buf_set_extmark(buf.bufnr, ns_id, 0, 0, {
-          virt_text = { { string.format("auto refresh enabled"), "Character" } },
+          virt_text = { { string.format "auto refresh enabled", "Character" } },
           virt_text_pos = "right_align",
           priority = 200,
         })
-      end
-    })
+      end,
+    }
+  )
 end
-
 
 M.list = function()
   local buf_name = "Workflow runs"
@@ -498,25 +508,25 @@ M.list = function()
     callback = function()
       focused = true
       refresh()
-    end
+    end,
   })
 
   vim.api.nvim_create_autocmd({ "BufLeave", "BufWinLeave" }, {
     buffer = buf.bufnr,
     callback = function()
       focused = false
-    end
+    end,
   })
 
   refresh()
 
   local mapping = require("octo.config").values.mappings.runs.refresh.lhs
-  vim.keymap.set('n', mapping, function()
-    vim.notify("Refreshing")
+  vim.keymap.set("n", mapping, function()
+    vim.notify "Refreshing"
     populate_list(buf)
   end, { buffer = buf.bufnr, noremap = true, silent = true })
 
-  buf.write({ "Loading actions..." })
+  buf.write { "Loading actions..." }
 end
 
 return M
