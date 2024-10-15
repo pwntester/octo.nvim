@@ -17,6 +17,8 @@ M.OCTO_EMPTY_MSG_VT_NS = vim.api.nvim_create_namespace "octo_empty_msg_vt"
 M.OCTO_THREAD_HEADER_VT_NS = vim.api.nvim_create_namespace "octo_thread_header_vt"
 M.OCTO_EVENT_VT_NS = vim.api.nvim_create_namespace "octo_event_vt"
 
+M.OCTO_WORKFLOW_NS = vim.api.nvim_create_namespace "octo_workflow"
+
 M.NO_BODY_MSG = "No description provided."
 
 M.LONG_ISSUE_PATTERN = "([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(%d+)"
