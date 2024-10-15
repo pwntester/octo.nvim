@@ -452,7 +452,8 @@ local function populate_list(buf)
         end
       end,
       on_exit = function()
-        vim.keymap.set('n', '<leader>o', function()
+        local mapping = require("octo.config").values.mappings.run.open.lhs
+        vim.keymap.set('n', mapping, function()
           local line_num = vim.api.nvim_win_get_cursor(0)[1]
           local line = lines[line_num - 2]
           if line == nil then
@@ -505,7 +506,8 @@ M.list = function()
 
   refresh()
 
-  vim.keymap.set('n', '<leader>r', function()
+  local mapping = require("octo.config").values.mappings.run.refresh.lhs
+  vim.keymap.set('n', mapping, function()
     vim.notify("Refreshing")
     populate_list(buf)
   end, { buffer = buf.bufnr, noremap = true, silent = true })
