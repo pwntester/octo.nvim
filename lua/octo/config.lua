@@ -152,8 +152,8 @@ function M.get_default_values()
         in_progress = "🔄",
         failed = "❌",
         succeeded = "✅",
-        skipped = "⏩"
-      }
+        skipped = "⏩",
+      },
     },
     pull_requests = {
       order_by = {
@@ -184,7 +184,7 @@ function M.get_default_values()
     mappings = {
       runs = {
         open = { lhs = "<leader>o", desc = "view workflow run" },
-        refresh = { lhs = "<leader>r", desc = "refresh workflow runs list" }
+        refresh = { lhs = "<leader>r", desc = "refresh workflow runs list" },
       },
       issue = {
         close_issue = { lhs = "<leader>ic", desc = "close issue" },
