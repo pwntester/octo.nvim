@@ -4,6 +4,7 @@ local utils = require "octo.utils"
 
 local M = {}
 
+-- Symbols found with "Telescope symbols"
 local icons = {
   issue = {
     open = { " ", "OctoGreen" },
