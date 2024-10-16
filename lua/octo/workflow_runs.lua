@@ -500,7 +500,7 @@ M.list = function()
       return
     end
     populate_list(buf)
-    vim.defer_fn(refresh, 30000)
+    vim.defer_fn(refresh, require("octo.config").values.runs.refresh_interval_list)
   end
 
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {

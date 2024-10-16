@@ -47,6 +47,7 @@ local M = {}
 
 ---@class OctoConfigRuns
 ---@field icons OctoConfigWorkflowIcons
+---@field refresh_interval_list number
 
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
@@ -147,6 +148,7 @@ function M.get_default_values()
       auto_show_threads = true,
     },
     runs = {
+      refresh_interval_list = 30000,
       icons = {
         pending = "🕖",
         in_progress = "🔄",
