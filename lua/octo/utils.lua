@@ -627,12 +627,20 @@ function M.get_pull_request_uri(...)
   return string.format("octo://%s/pull/%s", repo, number)
 end
 
+function M.get_discussion_uri(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+
+  return string.format("octo://%s/discussion/%s", repo, number)
+end
+
 ---Helper method opening octo buffers
 function M.get(kind, ...)
   if kind == "issue" then
     M.get_issue(...)
   elseif kind == "pull_request" then
     M.get_pull_request(...)
+  elseif kind == "discussion" then
+    M.get_discussion(...)
   elseif kind == "repo" then
     M.get_repo(...)
   end
@@ -648,6 +656,10 @@ end
 
 function M.get_pull_request(...)
   vim.cmd("edit " .. M.get_pull_request_uri(...))
+end
+
+function M.get_discussion(...)
+  vim.cmd("edit " .. M.get_discussion_uri(...))
 end
 
 function M.parse_url(url)

@@ -8,6 +8,15 @@ local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
 
+local discussion = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    title = opts.preview_title,
+    define_preview = function(self, entry)
+      return self.state.bufnr, self.state.bufname
+    end,
+  }
+end)
+
 local issue = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
@@ -174,6 +183,7 @@ local issue_template = defaulter(function(opts)
 end, {})
 
 return {
+  discussion = discussion,
   issue = issue,
   gist = gist,
   commit = commit,

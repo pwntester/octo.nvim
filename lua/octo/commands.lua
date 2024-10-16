@@ -52,6 +52,12 @@ function M.setup()
     search = function(...)
       M.search(...)
     end,
+    discussion = {
+      list = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        picker.discussions(opts)
+      end,
+    },
     issue = {
       create = function(repo)
         M.create_issue(repo)

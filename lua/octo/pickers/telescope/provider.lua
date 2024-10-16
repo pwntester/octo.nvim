@@ -1121,7 +1121,60 @@ function M.issue_templates(templates, cb)
     :find()
 end
 
+function M.discussions(opts)
+  local owner, name = utils.split_repo(opts.repo)
+  local query = graphql("discussions_query", owner, name)
+  utils.info "Fetching discussions (this may take a while) ..."
+  gh.run {
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.error(stderr)
+        return
+      end
+
+      local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
+      local discussions = resp.data.repository.discussions.nodes
+
+      local max_number = -1
+      for _, discussion in ipairs(discussions) do
+        if #tostring(discussion.number) > max_number then
+          max_number = #tostring(discussion.number)
+        end
+      end
+
+      if #discussions == 0 then
+        utils.error(string.format("There are no matching discussions in %s.", opts.repo))
+        return
+      end
+
+      local cfg = octo_config.values
+      local replace = function(prompt_bufnr, type)
+        open "discussion"(prompt_bufnr)
+      end
+
+      pickers
+        .new(opts, {
+          finder = finders.new_table {
+            results = discussions,
+            entry_maker = entry_maker.gen_from_discussions(max_number),
+          },
+          sorter = conf.generic_sorter(opts),
+          previewer = previewers.discussion.new(opts),
+          attach_mappings = function(_, map)
+            action_set.select:replace(replace)
+            map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+            map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+            return true
+          end,
+        })
+        :find()
+    end,
+  }
+end
+
 M.picker = {
+  discussions = M.discussions,
   issues = M.issues,
   prs = M.pull_requests,
   gists = M.gists,

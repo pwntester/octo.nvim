@@ -2162,6 +2162,27 @@ query {
 }
 ]]
 
+M.discussions_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+    discussions(first: 100, after: $endCursor) {
+      nodes {
+        __typename
+        number
+        title
+        url
+        closed
+        repository { nameWithOwner }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
 query {

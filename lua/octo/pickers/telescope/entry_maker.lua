@@ -2,7 +2,54 @@ local entry_display = require "telescope.pickers.entry_display"
 local bubbles = require "octo.ui.bubbles"
 local utils = require "octo.utils"
 
+local vim = vim
+
 local M = {}
+
+function M.gen_from_discussions(max_number)
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local icon = " "
+    local columns = {
+      { entry.value, "TelescopeResultsNumber" },
+      { icon },
+      { entry.obj.title },
+    }
+    local layout = {
+      separator = " ",
+      items = {
+        { width = max_number },
+        { width = 2 },
+        { remaining = true },
+      },
+    }
+    local displayer = entry_display.create(layout)
+
+    return displayer(columns)
+  end
+
+  return function(obj)
+    if not obj or vim.tbl_isempty(obj) then
+      return nil
+    end
+
+    local kind = "discussion"
+    local filename = utils.get_discussion_uri(obj.repository.nameWithOwner, obj.number)
+
+    return {
+      filename = filename,
+      kind = kind,
+      value = obj.number,
+      ordinal = obj.number .. " " .. obj.title,
+      display = make_display,
+      obj = obj,
+      repo = obj.repository.nameWithOwner,
+    }
+  end
+end
 
 function M.gen_from_issue(max_number, print_repo)
   local make_display = function(entry)
@@ -25,7 +72,6 @@ function M.gen_from_issue(max_number, print_repo)
           { remaining = true },
         },
       }
-    else
       local icon = entry.kind == "issue" and " " or " "
       columns = {
         { entry.value, "TelescopeResultsNumber" },
