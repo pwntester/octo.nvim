@@ -181,7 +181,6 @@ function M.issues(opts, develop)
         opts.preview_title = opts.preview_title or ""
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
-
         pickers
           .new(opts, {
             finder = finders.new_table {
