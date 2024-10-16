@@ -2109,6 +2109,7 @@ query($endCursor: String) {
         url
         repository { nameWithOwner }
         state
+        stateReason
       }
       pageInfo {
         hasNextPage
@@ -2152,6 +2153,7 @@ query {
         title
         state
         repository { nameWithOwner }
+        stateReason
       }
       ... on PullRequest {
         __typename
