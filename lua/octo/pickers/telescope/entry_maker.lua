@@ -4,7 +4,7 @@ local utils = require "octo.utils"
 
 local M = {}
 
-local symbols = {
+local icons = {
   issue = {
     open = { " ", "OctoGreen" },
     closed = { " ", "OctoPurple" },
@@ -31,21 +31,21 @@ local function get_icon(entry)
   local stateReason = entry.obj.stateReason
 
   if kind == "issue" and state == "OPEN" then
-    icon = symbols.issue.open
+    icon = icons.issue.open
   elseif kind == "issue" and state == "CLOSED" and stateReason == "NOT_PLANNED" then
-    icon = symbols.issue.not_planned
+    icon = icons.issue.not_planned
   elseif kind == "issue" and state == "CLOSED" then
-    icon = symbols.issue.closed
+    icon = icons.issue.closed
   elseif kind == "pull_request" and state == "MERGED" then
-    icon = symbols.pull_request.merged
+    icon = icons.pull_request.merged
   elseif kind == "pull_request" and state == "CLOSED" then
-    icon = symbols.pull_request.closed
+    icon = icons.pull_request.closed
   elseif kind == "pull_request" and isDraft then
-    icon = symbols.pull_request.draft
+    icon = icons.pull_request.draft
   elseif kind == "pull_request" and state == "OPEN" then
-    icon = symbols.pull_request.open
+    icon = icons.pull_request.open
   else
-    icon = symbols.unknown
+    icon = icons.unknown
   end
 
   return icon
