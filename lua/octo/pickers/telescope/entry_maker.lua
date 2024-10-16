@@ -4,21 +4,51 @@ local utils = require "octo.utils"
 
 local M = {}
 
----@param row table @A row from the issue or pull request list
----@return string @The highlight group for the icon
-local function get_icon_highlight_group(row)
-  local highlight_group
-  if row.isDraft then
-    highlight_group = "OctoGrey"
-  elseif row.state == "OPEN" then
-    highlight_group = "OctoGreen"
-  elseif row.state == "CLOSED" then
-    highlight_group = "OctoRed"
-  elseif row.state == "MERGED" then
-    highlight_group = "OctoRed"
+local symbols = {
+  issue = {
+    open = { " ", "OctoGreen" },
+    closed = { " ", "OctoPurple" },
+    not_planned = { " ", "OctoGrey" },
+  },
+  pull_request = {
+    open = { " ", "OctoGreen" },
+    draft = { " ", "OctoGrey" },
+    merged = { " ", "OctoPurple" },
+    closed = { " ", "OctoRed" },
+  },
+  unknown = { " " },
+}
+
+--- Get the icon for the entry
+---@param entry table: The entry to get the icon for
+---@return table: The icon for the entry
+local function get_icon(entry)
+  local icon
+
+  local kind = entry.kind
+  local state = entry.obj.state
+  local isDraft = entry.obj.isDraft
+  local stateReason = entry.obj.stateReason
+
+  if kind == "issue" and state == "OPEN" then
+    icon = symbols.issue.open
+  elseif kind == "issue" and state == "CLOSED" and stateReason == "NOT_PLANNED" then
+    icon = symbols.issue.not_planned
+  elseif kind == "issue" and state == "CLOSED" then
+    icon = symbols.issue.closed
+  elseif kind == "pull_request" and state == "MERGED" then
+    icon = symbols.pull_request.merged
+  elseif kind == "pull_request" and state == "CLOSED" then
+    icon = symbols.pull_request.closed
+  elseif kind == "pull_request" and isDraft then
+    icon = symbols.pull_request.draft
+  elseif kind == "pull_request" and state == "OPEN" then
+    icon = symbols.pull_request.open
+  else
+    icon = symbols.unknown
   end
 
-  return highlight_group
+  return icon
 end
 
 function M.gen_from_issue(max_number, print_repo)
@@ -43,12 +73,11 @@ function M.gen_from_issue(max_number, print_repo)
         },
       }
     else
-      local icon = entry.kind == "issue" and " " or " "
-      local highlight_group = get_icon_highlight_group(entry.obj)
+      local icon = get_icon(entry)
 
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        { icon, highlight_group },
+        icon,
         { entry.obj.title },
       }
       layout = {
