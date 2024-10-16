@@ -333,6 +333,7 @@ local function get_job_details_lines(details)
         table.insert(lines, "")
       end
     end
+    table.insert(lines, "")
   end
 
   return lines
