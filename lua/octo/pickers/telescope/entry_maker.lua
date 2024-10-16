@@ -4,6 +4,54 @@ local utils = require "octo.utils"
 
 local M = {}
 
+-- Symbols found with "Telescope symbols"
+local icons = {
+  issue = {
+    open = { " ", "OctoGreen" },
+    closed = { " ", "OctoPurple" },
+    not_planned = { " ", "OctoGrey" },
+  },
+  pull_request = {
+    open = { " ", "OctoGreen" },
+    draft = { " ", "OctoGrey" },
+    merged = { " ", "OctoPurple" },
+    closed = { " ", "OctoRed" },
+  },
+  unknown = { " " },
+}
+
+--- Get the icon for the entry
+---@param entry table: The entry to get the icon for
+---@return table: The icon for the entry
+local function get_icon(entry)
+  local icon
+
+  local kind = entry.kind
+  local state = entry.obj.state
+  local isDraft = entry.obj.isDraft
+  local stateReason = entry.obj.stateReason
+
+  if kind == "issue" and state == "OPEN" then
+    icon = icons.issue.open
+  elseif kind == "issue" and state == "CLOSED" and stateReason == "NOT_PLANNED" then
+    icon = icons.issue.not_planned
+  elseif kind == "issue" and state == "CLOSED" then
+    icon = icons.issue.closed
+  elseif kind == "pull_request" and state == "MERGED" then
+    icon = icons.pull_request.merged
+  elseif kind == "pull_request" and state == "CLOSED" then
+    icon = icons.pull_request.closed
+  elseif kind == "pull_request" and isDraft then
+    icon = icons.pull_request.draft
+  elseif kind == "pull_request" and state == "OPEN" then
+    icon = icons.pull_request.open
+  else
+    icon = icons.unknown
+  end
+
+  return icon
+end
+
 function M.gen_from_issue(max_number, print_repo)
   local make_display = function(entry)
     if not entry then
@@ -26,15 +74,18 @@ function M.gen_from_issue(max_number, print_repo)
         },
       }
     else
-      local icon = entry.kind == "issue" and " " or " "
+      local icon = get_icon(entry)
+
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        { icon .. " " .. entry.obj.title },
+        icon,
+        { entry.obj.title },
       }
       layout = {
         separator = " ",
         items = {
           { width = max_number },
+          { width = 2 },
           { remaining = true },
         },
       }

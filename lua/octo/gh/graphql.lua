@@ -2108,6 +2108,8 @@ query($endCursor: String) {
         title
         url
         repository { nameWithOwner }
+        state
+        stateReason
       }
       pageInfo {
         hasNextPage
@@ -2129,6 +2131,7 @@ query($endCursor: String) {
         repository { nameWithOwner }
         headRefName
         isDraft
+        state
       }
       pageInfo {
         hasNextPage
@@ -2148,13 +2151,17 @@ query {
         number
         url
         title
+        state
         repository { nameWithOwner }
+        stateReason
       }
       ... on PullRequest {
         __typename
         number
         title
         url
+        state
+        isDraft
         repository { nameWithOwner }
       }
     }
