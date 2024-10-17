@@ -4,6 +4,7 @@
 local FilePanel = require("octo.reviews.file-panel").FilePanel
 local utils = require "octo.utils"
 local file_entry = require "octo.reviews.file-entry"
+local config = require "octo.config"
 
 local M = {}
 
@@ -51,7 +52,7 @@ function Layout:open(review)
 
   local file = self:cur_file()
   if file then
-    self:set_file(file)
+    self:set_file(file, config.values.reviews.focus)
   else
     self:file_safeguard()
   end
@@ -133,7 +134,7 @@ function Layout:update_files()
   self.file_panel:render()
   self.file_panel:redraw()
   local file = self:cur_file()
-  self:set_file(file)
+  self:set_file(file, config.values.reviews.focus)
   self.update_needed = false
 end
 
