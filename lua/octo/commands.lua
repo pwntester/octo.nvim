@@ -46,6 +46,11 @@ function M.setup()
 
   -- supported commands
   M.commands = {
+    run = {
+      list = function()
+        require("octo.workflow_runs").list()
+      end,
+    },
     actions = function()
       M.actions()
     end,
