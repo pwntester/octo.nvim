@@ -59,7 +59,7 @@ See |octo-command-examples| for examples.
                           <C-b>   Open PR in browser.
                           <C-o>   Checkout PR.
                           <C-y>   Copy URL to system clipboard.
-                        Available filter keys: see <https://docs.github.com/en/graphql/reference/input-objects#issuefilters>
+                        Available filter keys: author,assignee,label,state,head,base,search,limit
   search                Live PR search.
   edit [number] {repo}  Edits issue/PR with the given number in the current or
                         specified repo. 
