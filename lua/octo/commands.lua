@@ -48,7 +48,12 @@ function M.setup()
   M.commands = {
     run = {
       list = function()
-        require("octo.workflow_runs").list()
+        local function co_wrapper()
+          require("octo.workflow_runs").list()
+        end
+
+        local co = coroutine.create(co_wrapper)
+        coroutine.resume(co)
       end,
     },
     actions = function()
