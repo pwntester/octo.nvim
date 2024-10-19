@@ -24,32 +24,32 @@ local icons = {
 ---@param entry table: The entry to get the icon for
 ---@return table: The icon for the entry
 local function get_icon(entry)
-  local icon
-
   local kind = entry.kind
   local state = entry.obj.state
   local isDraft = entry.obj.isDraft
   local stateReason = entry.obj.stateReason
 
-  if kind == "issue" and state == "OPEN" then
-    icon = icons.issue.open
-  elseif kind == "issue" and state == "CLOSED" and stateReason == "NOT_PLANNED" then
-    icon = icons.issue.not_planned
-  elseif kind == "issue" and state == "CLOSED" then
-    icon = icons.issue.closed
-  elseif kind == "pull_request" and state == "MERGED" then
-    icon = icons.pull_request.merged
-  elseif kind == "pull_request" and state == "CLOSED" then
-    icon = icons.pull_request.closed
-  elseif kind == "pull_request" and isDraft then
-    icon = icons.pull_request.draft
-  elseif kind == "pull_request" and state == "OPEN" then
-    icon = icons.pull_request.open
-  else
-    icon = icons.unknown
+  if kind == "issue" then
+    if state == "OPEN" then
+      return icons.issue.open
+    elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
+      return icons.issue.not_planned
+    elseif state == "CLOSED" then
+      return icons.issue.closed
+    end
+  elseif kind == "pull_request" then
+    if state == "MERGED" then
+      return icons.pull_request.merged
+    elseif state == "CLOSED" then
+      return icons.pull_request.closed
+    elseif isDraft then
+      return icons.pull_request.draft
+    elseif state == "OPEN" then
+      return icons.pull_request.open
+    end
   end
 
-  return icon
+  return icons.unknown
 end
 
 function M.gen_from_issue(max_number, print_repo)
