@@ -18,10 +18,6 @@ local M = {}
 --- @field [2] string|nil The highlight group for the icon
 --- @see octo.ui.colors for the available highlight groups
 
---- Get the icon for the entry
---- @param entry Entry: The entry to get the icon for
---- @return Icon: The icon for the entry
-
 -- Symbols found with "Telescope symbols"
 local icons = {
   issue = {
