@@ -4,6 +4,24 @@ local utils = require "octo.utils"
 
 local M = {}
 
+--- @class EntryObject
+--- @field state string
+--- @field isDraft boolean
+--- @field stateReason string
+
+--- @class Entry
+--- @field kind string
+--- @field obj EntryObject
+
+--- @class Icon
+--- @field [1] string The icon
+--- @field [2] string|nil The highlight group for the icon
+--- @see octo.ui.colors for the available highlight groups
+
+--- Get the icon for the entry
+--- @param entry Entry: The entry to get the icon for
+--- @return Icon: The icon for the entry
+
 -- Symbols found with "Telescope symbols"
 local icons = {
   issue = {
@@ -21,8 +39,8 @@ local icons = {
 }
 
 --- Get the icon for the entry
----@param entry table: The entry to get the icon for
----@return table: The icon for the entry
+---@param entry Entry: The entry to get the icon for
+---@return Icon: The icon for the entry
 local function get_icon(entry)
   local kind = entry.kind
   local state = entry.obj.state
@@ -74,11 +92,9 @@ function M.gen_from_issue(max_number, print_repo)
         },
       }
     else
-      local icon = get_icon(entry)
-
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        icon,
+        get_icon(entry),
         { entry.obj.title },
       }
       layout = {
