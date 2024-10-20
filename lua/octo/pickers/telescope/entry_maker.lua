@@ -4,6 +4,58 @@ local utils = require "octo.utils"
 
 local M = {}
 
+function M.gen_from_pull_request(max_number, username_col_len, branch_name_col_len, author_count)
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local layout, columns
+    columns = {
+      { entry.value, "TelescopeResultsNumber" },
+      { entry.obj.author.username },
+      { entry.obj.headRefName },
+      { entry.obj.title },
+    }
+    layout = {
+      separator = " ",
+      items = {
+        { width = max_number },
+        { width = username_col_len },
+        { width = branch_name_col_len },
+        { remaining = true },
+      },
+    }
+
+    -- hide author column if there is just one author
+    if author_count == 1 then
+      table.remove(columns, 2)
+      table.remove(layout.items, 2)
+    end
+
+    local displayer = entry_display.create(layout)
+
+    return displayer(columns)
+  end
+
+  return function(obj)
+    if not obj or vim.tbl_isempty(obj) then
+      return nil
+    end
+    local filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+
+    return {
+      filename = filename,
+      kind = "pull_request",
+      value = obj.number,
+      ordinal = obj.number .. " " .. obj.title .. " " .. obj.author.username .. " " .. obj.headRefName,
+      display = make_display,
+      obj = obj,
+      repo = obj.repository.nameWithOwner,
+    }
+  end
+end
+
 function M.gen_from_issue(max_number, print_repo)
   local make_display = function(entry)
     if not entry then
