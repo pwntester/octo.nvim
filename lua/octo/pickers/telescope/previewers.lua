@@ -43,7 +43,7 @@ local discussion = defaulter(function(opts)
             --
             --
             writers.write_body(bufnr, obj, 11)
-            --
+
             -- local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
             -- writers.write_block(bufnr, { "", "" }, reactions_line)
             -- writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)

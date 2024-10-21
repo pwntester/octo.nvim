@@ -2203,6 +2203,10 @@ query($endCursor: String) {
             number
             closed
             isAnswered
+            answer {
+                author { login }
+                body
+            }
             title
             body
             createdAt
