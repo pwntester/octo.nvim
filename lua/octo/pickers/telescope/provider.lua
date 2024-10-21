@@ -1164,6 +1164,8 @@ function M.discussions(opts)
         opts.cb(selected, prompt_bufnr, type)
       end
 
+      opts.preview_title = opts.preview_title or ""
+
       pickers
         .new(opts, {
           finder = finders.new_table {

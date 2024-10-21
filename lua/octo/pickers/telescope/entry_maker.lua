@@ -10,6 +10,8 @@ local M = {}
 --- @field state string
 --- @field isDraft boolean
 --- @field stateReason string
+--- @field isAnswered boolean
+--- @field closed boolean
 
 --- @class Entry
 --- @field kind string
@@ -35,7 +37,8 @@ local icons = {
   },
   discussion = {
     open = { " ", "OctoGrey" },
-    closed = { " ", "OctoGreen" },
+    answered = { " ", "OctoGreen" },
+    closed = { " ", "OctoRed" },
   },
   unknown = { " " },
 }
@@ -71,11 +74,14 @@ local function get_icon(entry)
       return icons.pull_request.open
     end
   elseif kind == "discussion" then
-    local state = entry.obj.state
+    local closed = entry.obj.closed
+    local isAnswered = entry.obj.isAnswered
 
-    if state == "OPENED" then
+    if not closed then
       return icons.discussion.open
-    elseif state == "CLOSED" then
+    elseif isAnswered then
+      return icons.discussion.answered
+    else
       return icons.discussion.closed
     end
   end
@@ -89,16 +95,9 @@ function M.gen_from_discussions(max_number)
       return nil
     end
 
-    local icon
-    if entry.obj.closed then
-      icon = icons.discussion.closed
-    else
-      icon = icons.discussion.open
-    end
-
     local columns = {
       { entry.value, "TelescopeResultsNumber" },
-      icon,
+      get_icon(entry),
       { entry.obj.title },
     }
     local layout = {

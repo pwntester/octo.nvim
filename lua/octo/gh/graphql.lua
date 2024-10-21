@@ -2179,6 +2179,7 @@ query($endCursor: String) {
         title
         url
         closed
+        isAnswered
         repository { nameWithOwner }
       }
       pageInfo {
@@ -2187,6 +2188,62 @@ query($endCursor: String) {
       }
     }
   }
+}
+]]
+
+M.discussion_query = [[
+query($endCursor: String) {
+    repository(owner: "%s", name: "%s") {
+        discussion(number: %d) {
+            id
+            number
+            title
+            body
+            createdAt
+            closedAt
+            url
+            repository { nameWithOwner }
+            author { login }
+            labels(first: 20) {
+                nodes {
+                    color
+                    name
+                }
+            }
+            comments(first: 100, after: $endCursor) {
+                nodes {
+                    id
+                    body
+                    createdAt
+                    lastEditedAt
+                    reactionGroups {
+                        content
+                        viewerHasReacted
+                        users {
+                            totalCount
+                        }
+                    }
+                    author {
+                        login
+                    }
+                    viewerDidAuthor
+                    viewerCanUpdate
+                    viewerCanDelete
+                    replies(first: 10) {
+                        totalCount
+                        nodes {
+                            body
+                            author { login }
+                        }
+                    }
+                }
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+            }
+        }
+    }
 }
 ]]
 

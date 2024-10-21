@@ -8,11 +8,41 @@ local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
 
+local vim = vim
+
 local discussion = defaulter(function(opts)
   return previewers.new_buffer_previewer {
     title = opts.preview_title,
+    get_buffer_by_name = function(_, entry)
+      return entry.value
+    end,
     define_preview = function(self, entry)
-      return self.state.bufnr, self.state.bufname
+      local bufnr = self.state.bufnr
+
+      if self.state.bufname == entry.value and vim.api.nvim_buf_line_count(bufnr) ~= 1 then
+        return
+      end
+
+      local number = entry.value
+      local owner, name = utils.split_repo(entry.repo)
+      local query = graphql("discussion_query", owner, name, number)
+
+      gh.run {
+        args = { "api", "graphql", "-f", string.format("query=%s", query) },
+        cb = function(output, stderr)
+          if stderr and not utils.is_blank(stderr) then
+            vim.api.nvim_err_writeln(stderr)
+          elseif output and vim.api.nvim_buf_is_valid(bufnr) then
+            local result = vim.fn.json_decode(output)
+            local obj = result.data.repository.discussion
+
+            writers.write_title(bufnr, tostring(obj.title), 1)
+            writers.write_body(bufnr, obj)
+
+            vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+          end
+        end,
+      }
     end,
   }
 end)

@@ -176,6 +176,8 @@ function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, { title, "" }, line, true)
   vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
   local buffer = octo_buffers[bufnr]
+
+  vim.print(buffer)
   if buffer then
     buffer.titleMetadata = TitleMetadata:new {
       savedBody = title,
