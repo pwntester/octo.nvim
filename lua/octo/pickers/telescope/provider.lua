@@ -1131,7 +1131,9 @@ function M.discussions(opts)
   end
 
   local owner, name = utils.split_repo(opts.repo)
-  local query = graphql("discussions_query", owner, name)
+  local cfg = octo_config.values
+  local order_by = cfg.discussions.order_by
+  local query = graphql("discussions_query", owner, name, order_by.field, order_by.direction, { escape = false })
   utils.info "Fetching discussions (this may take a while) ..."
   gh.run {
     args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
