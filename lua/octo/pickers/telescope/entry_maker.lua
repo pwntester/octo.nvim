@@ -6,16 +6,94 @@ local vim = vim
 
 local M = {}
 
+--- @class EntryObject
+--- @field state string
+--- @field isDraft boolean
+--- @field stateReason string
+
+--- @class Entry
+--- @field kind string
+--- @field obj EntryObject
+
+--- @class Icon
+--- @field [1] string The icon
+--- @field [2] string|nil The highlight group for the icon
+--- @see octo.ui.colors for the available highlight groups
+
+-- Symbols found with "Telescope symbols"
+local icons = {
+  issue = {
+    open = { " ", "OctoGreen" },
+    closed = { " ", "OctoPurple" },
+    not_planned = { " ", "OctoGrey" },
+  },
+  pull_request = {
+    open = { " ", "OctoGreen" },
+    draft = { " ", "OctoGrey" },
+    merged = { " ", "OctoPurple" },
+    closed = { " ", "OctoRed" },
+  },
+  discussion = {
+    open = { " ", "OctoGrey" },
+    closed = { " ", "OctoGreen" },
+  },
+  unknown = { " " },
+}
+
+--- Get the icon for the entry
+---@param entry Entry: The entry to get the icon for
+---@return Icon: The icon for the entry
+local function get_icon(entry)
+  local kind = entry.kind
+  local state = entry.obj.state
+  local isDraft = entry.obj.isDraft
+  local stateReason = entry.obj.stateReason
+
+  if kind == "issue" then
+    if state == "OPEN" then
+      return icons.issue.open
+    elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
+      return icons.issue.not_planned
+    elseif state == "CLOSED" then
+      return icons.issue.closed
+    end
+  elseif kind == "pull_request" then
+    if state == "MERGED" then
+      return icons.pull_request.merged
+    elseif state == "CLOSED" then
+      return icons.pull_request.closed
+    elseif isDraft then
+      return icons.pull_request.draft
+    elseif state == "OPEN" then
+      return icons.pull_request.open
+    end
+  elseif kind == "discussion" then
+    if state == "OPENED" then
+      return icons.discussion.open
+    elseif state == "CLOSED" then
+      return icons.discussion.closed
+    end
+  end
+
+  return icons.unknown
+end
+
 function M.gen_from_discussions(max_number)
   local make_display = function(entry)
     if not entry then
       return nil
     end
 
-    local icon = " "
+    local icon
+    if entry.obj.closed then
+      icon = icons.discussion.closed
+    else
+      icon = icons.discussion.open
+    end
+
     local columns = {
       { entry.value, "TelescopeResultsNumber" },
-      { icon },
+      icon,
       { entry.obj.title },
     }
     local layout = {
@@ -72,15 +150,16 @@ function M.gen_from_issue(max_number, print_repo)
           { remaining = true },
         },
       }
-      local icon = entry.kind == "issue" and " " or " "
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        { icon .. " " .. entry.obj.title },
+        get_icon(entry),
+        { entry.obj.title },
       }
       layout = {
         separator = " ",
         items = {
           { width = max_number },
+          { width = 2 },
           { remaining = true },
         },
       }
@@ -95,13 +174,26 @@ function M.gen_from_issue(max_number, print_repo)
     if not obj or vim.tbl_isempty(obj) then
       return nil
     end
-    local kind = obj.__typename == "Issue" and "issue" or "pull_request"
+
+    local kind
+    local typename = obj.__typename
+    if typename == "Issue" then
+      kind = "issue"
+    elseif typename == "PullRequest" then
+      kind = "pull_request"
+    else
+      kind = "discussion"
+    end
+
     local filename
     if kind == "issue" then
       filename = utils.get_issue_uri(obj.repository.nameWithOwner, obj.number)
-    else
+    elseif kind == "pull_request" then
       filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+    else
+      filename = utils.get_discussion_uri(obj.respository.nameWithOwner, obj.number)
     end
+
     return {
       filename = filename,
       kind = kind,

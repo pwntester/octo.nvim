@@ -181,6 +181,7 @@ function M.issues(opts, develop)
         opts.preview_title = opts.preview_title or ""
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
+
         pickers
           .new(opts, {
             finder = finders.new_table {
@@ -1150,7 +1151,10 @@ function M.discussions(opts)
 
       local cfg = octo_config.values
       local replace = function(prompt_bufnr, type)
-        open "discussion"(prompt_bufnr)
+        local selected = action_state.get_selected_entry(prompt_bufnr)
+        actions.close(prompt_bufnr)
+
+        opts.cb(selected, prompt_bufnr, type)
       end
 
       pickers
@@ -1174,26 +1178,26 @@ function M.discussions(opts)
 end
 
 M.picker = {
-  discussions = M.discussions,
-  issues = M.issues,
-  prs = M.pull_requests,
-  gists = M.gists,
-  commits = M.commits,
-  review_commits = M.review_commits,
+  actions = M.actions,
+  assigned_labels = M.select_assigned_label,
+  assignees = M.select_assignee,
   changed_files = M.changed_files,
+  commits = M.commits,
+  discussions = M.discussions,
+  gists = M.gists,
+  issue_templates = M.issue_templates,
+  issues = M.issues,
+  labels = M.select_label,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
   project_cards_v2 = M.not_implemented,
   project_columns = M.select_target_project_column,
   project_columns_v2 = M.not_implemented,
-  labels = M.select_label,
-  assigned_labels = M.select_assigned_label,
-  users = M.select_user,
-  assignees = M.select_assignee,
+  prs = M.pull_requests,
   repos = M.repos,
+  review_commits = M.review_commits,
   search = M.search,
-  actions = M.actions,
-  issue_templates = M.issue_templates,
+  users = M.select_user,
 }
 
 return M
