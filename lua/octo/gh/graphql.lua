@@ -2196,11 +2196,18 @@ query($endCursor: String) {
     repository(owner: "%s", name: "%s") {
         discussion(number: %d) {
             id
+            category {
+                name
+                emoji
+            }
             number
+            closed
+            isAnswered
             title
             body
             createdAt
             closedAt
+            updatedAt
             url
             repository { nameWithOwner }
             author { login }
@@ -2210,7 +2217,15 @@ query($endCursor: String) {
                     name
                 }
             }
+            reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                    totalCount
+                }
+            }
             comments(first: 100, after: $endCursor) {
+                totalCount
                 nodes {
                     id
                     body

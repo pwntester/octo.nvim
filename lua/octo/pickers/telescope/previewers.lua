@@ -37,8 +37,14 @@ local discussion = defaulter(function(opts)
             local obj = result.data.repository.discussion
 
             writers.write_title(bufnr, tostring(obj.title), 1)
-            writers.write_body(bufnr, obj)
-
+            -- writers.write_details(bufnr, obj)
+            writers.write_discussion_details(bufnr, obj)
+            -- writers.write_body(bufnr, obj)
+            --
+            -- local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
+            -- writers.write_block(bufnr, { "", "" }, reactions_line)
+            -- writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
+            --
             vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
           end
         end,
@@ -77,6 +83,7 @@ local issue = defaulter(function(opts)
               elseif entry.kind == "pull_request" then
                 obj = result.data.repository.pullRequest
               end
+
               writers.write_title(bufnr, obj.title, 1)
               writers.write_details(bufnr, obj)
               writers.write_body(bufnr, obj)

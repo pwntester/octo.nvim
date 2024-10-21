@@ -77,10 +77,10 @@ local function get_icon(entry)
     local closed = entry.obj.closed
     local isAnswered = entry.obj.isAnswered
 
-    if not closed then
-      return icons.discussion.open
-    elseif isAnswered then
+    if isAnswered ~= vim.NIL and isAnswered then
       return icons.discussion.answered
+    elseif not closed then
+      return icons.discussion.open
     else
       return icons.discussion.closed
     end

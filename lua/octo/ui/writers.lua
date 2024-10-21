@@ -76,6 +76,66 @@ local function add_details_line(details, label, value, kind)
   end
 end
 
+function M.write_discussion_details(bufnr, discussion)
+  local details = {}
+
+  -- print("This is the discussion")
+  -- vim.print(discussion)
+
+  -- add_details_line(details, "Number", discussion.number)
+  --
+  local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
+  local author_bubble = bubbles.make_user_bubble(discussion.author.login, discussion.viewerDidAuthor)
+  vim.list_extend(author_vt, author_bubble)
+  table.insert(details, author_vt)
+
+  local category_vt = {
+    { "Category: ", "OctoDetailsLabel" },
+    { discussion.category.name, "OctoDetailsValue" },
+  }
+  table.insert(details, category_vt)
+
+  add_details_line(details, "Created at", discussion.createdAt, "date")
+  add_details_line(details, "Updated at", discussion.updatedAt, "date")
+
+  local labels_vt = { { "Labels: ", "OctoDetailsLabel" } }
+
+  if #discussion.labels.nodes > 0 then
+    for _, label in ipairs(discussion.labels.nodes) do
+      local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
+      vim.list_extend(labels_vt, label_bubble)
+    end
+  else
+    table.insert(labels_vt, { "None yet", "OctoMissingDetails" })
+  end
+
+  table.insert(details, labels_vt)
+
+  -- Is answered details
+  local answered_vt = {
+    { "Answered: ", "OctoDetailsLabel" },
+  }
+  if discussion.isAnswered ~= vim.NIL and discussion.isAnswered then
+    table.insert(answered_vt, { "Yes", "OctoGreen" })
+  else
+    table.insert(answered_vt, { "Not yet", "OctoMissingDetails" })
+  end
+  table.insert(details, answered_vt)
+
+  add_details_line(details, "Comments", discussion.comments.totalCount)
+
+  local line = 3
+  local empty_lines = {}
+  for _ = 1, #details + 1 do
+    table.insert(empty_lines, "")
+  end
+  M.write_block(bufnr, empty_lines, line)
+  for _, d in ipairs(details) do
+    M.write_virtual_text(bufnr, constants.OCTO_REPO_VT_NS, line - 1, d)
+    line = line + 1
+  end
+end
+
 function M.write_repo(bufnr, repo)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
 
@@ -177,7 +237,6 @@ function M.write_title(bufnr, title, line)
   vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
   local buffer = octo_buffers[bufnr]
 
-  vim.print(buffer)
   if buffer then
     buffer.titleMetadata = TitleMetadata:new {
       savedBody = title,
