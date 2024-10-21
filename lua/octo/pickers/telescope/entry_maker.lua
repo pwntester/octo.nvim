@@ -45,11 +45,11 @@ local icons = {
 ---@return Icon: The icon for the entry
 local function get_icon(entry)
   local kind = entry.kind
-  local state = entry.obj.state
-  local isDraft = entry.obj.isDraft
-  local stateReason = entry.obj.stateReason
 
   if kind == "issue" then
+    local state = entry.obj.state
+    local stateReason = entry.obj.stateReason
+
     if state == "OPEN" then
       return icons.issue.open
     elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
@@ -58,6 +58,9 @@ local function get_icon(entry)
       return icons.issue.closed
     end
   elseif kind == "pull_request" then
+    local state = entry.obj.state
+    local isDraft = entry.obj.isDraft
+
     if state == "MERGED" then
       return icons.pull_request.merged
     elseif state == "CLOSED" then
@@ -68,6 +71,8 @@ local function get_icon(entry)
       return icons.pull_request.open
     end
   elseif kind == "discussion" then
+    local state = entry.obj.state
+
     if state == "OPENED" then
       return icons.discussion.open
     elseif state == "CLOSED" then
@@ -150,6 +155,7 @@ function M.gen_from_issue(max_number, print_repo)
           { remaining = true },
         },
       }
+    else
       columns = {
         { entry.value, "TelescopeResultsNumber" },
         get_icon(entry),

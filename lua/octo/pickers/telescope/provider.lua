@@ -1123,6 +1123,13 @@ function M.issue_templates(templates, cb)
 end
 
 function M.discussions(opts)
+  opts = opts or {}
+
+  if opts.cb == nil then
+    utils.error "Callback function is required"
+    return
+  end
+
   local owner, name = utils.split_repo(opts.repo)
   local query = graphql("discussions_query", owner, name)
   utils.info "Fetching discussions (this may take a while) ..."
