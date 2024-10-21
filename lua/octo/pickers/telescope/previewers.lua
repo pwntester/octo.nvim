@@ -39,7 +39,10 @@ local discussion = defaulter(function(opts)
             writers.write_title(bufnr, tostring(obj.title), 1)
             -- writers.write_details(bufnr, obj)
             writers.write_discussion_details(bufnr, obj)
-            -- writers.write_body(bufnr, obj)
+            -- writers.write_block(bufnr, obj.body)
+            --
+            --
+            writers.write_body(bufnr, obj, 11)
             --
             -- local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
             -- writers.write_block(bufnr, { "", "" }, reactions_line)
