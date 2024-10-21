@@ -1,10 +1,17 @@
+local utils = require "octo.utils"
+
 local M = {}
+
+function M.not_implemented()
+  utils.error "Not implemented yet"
+end
 
 M.picker = {
   actions = require "octo.pickers.fzf-lua.pickers.actions",
   assigned_labels = require "octo.pickers.fzf-lua.pickers.assigned_labels",
   assignees = require "octo.pickers.fzf-lua.pickers.assignees",
   changed_files = require "octo.pickers.fzf-lua.pickers.changed_files",
+  discussions = M.not_implemented,
   commits = require "octo.pickers.fzf-lua.pickers.commits",
   gists = require "octo.pickers.fzf-lua.pickers.gists",
   issue_templates = require "octo.pickers.fzf-lua.pickers.issue_templates",

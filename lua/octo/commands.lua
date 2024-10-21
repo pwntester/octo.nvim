@@ -52,6 +52,16 @@ function M.setup()
     search = function(...)
       M.search(...)
     end,
+    discussion = {
+      list = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        opts.cb = function(selected, ...)
+          vim.fn.setreg("+", "#" .. selected.obj.number, "c")
+          utils.info("Discussion copied to clipboard: " .. selected.obj.number)
+        end
+        picker.discussions(opts)
+      end,
+    },
     issue = {
       create = function(repo)
         M.create_issue(repo)
