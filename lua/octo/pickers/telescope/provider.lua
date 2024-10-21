@@ -1174,7 +1174,7 @@ function M.discussions(opts)
           previewer = previewers.discussion.new(opts),
           attach_mappings = function(_, map)
             action_set.select:replace(replace)
-            map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+
             map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
             return true
           end,
