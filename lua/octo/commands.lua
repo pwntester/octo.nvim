@@ -163,6 +163,7 @@ function M.setup()
           prompt = prompt .. k .. ":" .. v .. " "
         end
         opts.prompt = prompt
+        opts.search_prs = true
         picker.search(opts)
       end,
       reload = function()
