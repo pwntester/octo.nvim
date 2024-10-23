@@ -2169,6 +2169,103 @@ query {
 }
 ]]
 
+M.discussions_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+    discussions(first: 100, after: $endCursor, orderBy: {field: %s, direction: %s}) {
+      nodes {
+        __typename
+        number
+        title
+        url
+        closed
+        isAnswered
+        repository { nameWithOwner }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+]]
+
+M.discussion_query = [[
+query($endCursor: String) {
+    repository(owner: "%s", name: "%s") {
+        discussion(number: %d) {
+            id
+            category {
+                name
+                emoji
+            }
+            number
+            closed
+            isAnswered
+            answer {
+                author { login }
+                body
+            }
+            title
+            body
+            createdAt
+            closedAt
+            updatedAt
+            url
+            repository { nameWithOwner }
+            author { login }
+            labels(first: 20) {
+                nodes {
+                    color
+                    name
+                }
+            }
+            reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                    totalCount
+                }
+            }
+            comments(first: 100, after: $endCursor) {
+                totalCount
+                nodes {
+                    id
+                    body
+                    createdAt
+                    lastEditedAt
+                    reactionGroups {
+                        content
+                        viewerHasReacted
+                        users {
+                            totalCount
+                        }
+                    }
+                    author {
+                        login
+                    }
+                    viewerDidAuthor
+                    viewerCanUpdate
+                    viewerCanDelete
+                    replies(first: 10) {
+                        totalCount
+                        nodes {
+                            body
+                            author { login }
+                        }
+                    }
+                }
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+            }
+        }
+    }
+}
+]]
+
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
 query {

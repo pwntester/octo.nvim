@@ -2,6 +2,8 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 
+local vim = vim
+
 local M = {}
 
 --[[
@@ -29,6 +31,7 @@ function M.open_in_browser(kind, repo, number)
     utils.error "Cannot find repo remote host"
     return
   end
+
   if not kind and not repo then
     local bufnr = vim.api.nvim_get_current_buf()
     local buffer = octo_buffers[bufnr]
