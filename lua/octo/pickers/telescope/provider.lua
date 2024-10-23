@@ -556,6 +556,10 @@ function M.search(opts)
         end)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
         map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+        if opts.search_prs then
+          map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+          map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
+        end
         return true
       end,
     })
