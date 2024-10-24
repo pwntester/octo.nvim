@@ -21,8 +21,7 @@ function M.setup()
     group = "octo_autocmds",
     pattern = { "octo://*" },
     callback = function(ev)
-      opts = { bufnr = ev.buf }
-      require("octo").load_buffer(opts)
+      require("octo").load_buffer { bufnr = ev.buf }
     end,
   })
   define({ "BufWriteCmd" }, {
