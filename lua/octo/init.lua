@@ -64,12 +64,12 @@ function M.save_buffer()
   buffer:save()
 end
 
----@class Opts
+---@class ReloadOpts
 ---@field bufnr number
 ---@field verbose boolean
 
 --- Load issue/pr/repo buffer
----@param opts Opts
+---@param opts ReloadOpts
 ---@return nil
 function M.load_buffer(opts)
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
