@@ -94,9 +94,7 @@ function M.setup()
         picker.search(opts)
       end,
       reload = function()
-        M.reload {
-          verbose = true,
-        }
+        M.reload { verbose = true }
       end,
       browser = function()
         navigation.open_in_browser()
