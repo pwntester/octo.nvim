@@ -2172,7 +2172,7 @@ query {
 M.discussions_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
-    discussions(first: 100, after: $endCursor, orderBy: {field: %s, direction: %s}) {
+    discussions(first: 100, after: $endCursor, states: OPEN, orderBy: {field: %s, direction: %s}) {
       nodes {
         __typename
         number
