@@ -79,6 +79,9 @@ end
 function M.write_discussion_details(bufnr, discussion)
   local details = {}
 
+  -- clear namespace and set vt
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, 0, -1)
+
   -- print("This is the discussion")
   -- vim.print(discussion)
 
@@ -143,6 +146,23 @@ function M.write_detail_table(opts)
   end
 end
 
+function M.write_upvotes(bufnr, obj, line)
+  -- clear namespace and set vt
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
+
+  local upvote_symbol = " "
+
+  local upvotes = obj.upvoteCount
+  local viewer_did_upvote = obj.viewerHasUpvoted
+
+  local upvotes_vt = {
+    { upvote_symbol, "OctoDetailsLabel" },
+    { " " .. upvotes, "OctoDetailsValue" },
+  }
+  M.write_block(bufnr, { "" }, line)
+  M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line, upvotes_vt)
+end
+
 function M.write_discussion_answer(bufnr, obj, line)
   local answer = obj.answer
 
@@ -154,7 +174,9 @@ function M.write_discussion_answer(bufnr, obj, line)
   table.insert(answer_vt, { " " .. utils.format_date(answer.createdAt), "OctoDetailsValue" })
 
   M.write_detail_table { bufnr = bufnr, details = { answer_vt }, offset = line }
-  M.write_block(bufnr, answer.body:gsub("\r\n", "\n"), line + 2)
+
+  line = line + 10
+  M.write_block(bufnr, answer.body:gsub("\r\n", "\n"), line)
 end
 
 function M.write_repo(bufnr, repo)
@@ -314,25 +336,25 @@ function M.write_body(bufnr, issue, line)
 end
 
 function M.write_reactions(bufnr, reaction_groups, line)
+  local reactions_count = utils.count_reactions(reaction_groups)
+  if reactions_count <= 0 then
+    return nil
+  end
+
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
-  local reactions_count = utils.count_reactions(reaction_groups)
-  if reactions_count > 0 then
-    local reactions_vt = {}
-    for _, group in ipairs(reaction_groups) do
-      if group.users.totalCount > 0 then
-        local icon = utils.reaction_map[group.content]
-        local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
-        vim.list_extend(reactions_vt, bubble)
-        table.insert(reactions_vt, { " " .. group.users.totalCount .. " ", "NormalFront" })
-      end
+  local reactions_vt = {}
+  for _, group in ipairs(reaction_groups) do
+    if group.users.totalCount > 0 then
+      local icon = utils.reaction_map[group.content]
+      local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
+      vim.list_extend(reactions_vt, bubble)
+      table.insert(reactions_vt, { " " .. group.users.totalCount .. " ", "NormalFront" })
     end
-    M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
-    return line
-  else
-    return nil
   end
+  M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
+  return line
 end
 
 function M.write_details(bufnr, issue, update)

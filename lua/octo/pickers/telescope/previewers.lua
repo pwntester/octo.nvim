@@ -33,12 +33,20 @@ local discussion = defaulter(function(opts)
           if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output and vim.api.nvim_buf_is_valid(bufnr) then
+            -- clear the buffer
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+
             local result = vim.fn.json_decode(output)
             local obj = result.data.repository.discussion
 
             writers.write_title(bufnr, tostring(obj.title), 1)
             writers.write_discussion_details(bufnr, obj)
             writers.write_body(bufnr, obj, 11)
+
+            -- local line = vim.api.nvim_buf_line_count(bufnr) + 2
+            -- writers.write_upvotes(bufnr, obj, line)
+            -- writers.write_reactions(bufnr, obj.reactionGroups, line)
+
             if obj.answer ~= vim.NIL then
               local line = vim.api.nvim_buf_line_count(bufnr) + 1
               writers.write_discussion_answer(bufnr, obj, line)
