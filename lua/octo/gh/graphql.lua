@@ -2180,6 +2180,10 @@ query($endCursor: String) {
         url
         closed
         isAnswered
+        answer {
+            author { login }
+            body
+        }
         repository { nameWithOwner }
       }
       pageInfo {
