@@ -2210,6 +2210,8 @@ query($endCursor: String) {
             answer {
                 author { login }
                 body
+                createdAt
+                viewerDidAuthor
             }
             title
             body
