@@ -37,17 +37,13 @@ local discussion = defaulter(function(opts)
             local obj = result.data.repository.discussion
 
             writers.write_title(bufnr, tostring(obj.title), 1)
-            -- writers.write_details(bufnr, obj)
             writers.write_discussion_details(bufnr, obj)
-            -- writers.write_block(bufnr, obj.body)
-            --
-            --
             writers.write_body(bufnr, obj, 11)
+            if obj.answer ~= vim.NIL then
+              local line = vim.api.nvim_buf_line_count(bufnr) + 1
+              writers.write_discussion_answer(bufnr, obj, line)
+            end
 
-            -- local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
-            -- writers.write_block(bufnr, { "", "" }, reactions_line)
-            -- writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
-            --
             vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
           end
         end,

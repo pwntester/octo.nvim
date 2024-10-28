@@ -124,7 +124,14 @@ function M.write_discussion_details(bufnr, discussion)
 
   add_details_line(details, "Comments", discussion.comments.totalCount)
 
-  local line = 3
+  M.write_detail_table { bufnr = bufnr, details = details, offset = 3 }
+end
+
+function M.write_detail_table(opts)
+  local bufnr = opts.bufnr
+  local details = opts.details
+  local line = opts.offset
+
   local empty_lines = {}
   for _ = 1, #details + 1 do
     table.insert(empty_lines, "")
@@ -134,6 +141,20 @@ function M.write_discussion_details(bufnr, discussion)
     M.write_virtual_text(bufnr, constants.OCTO_REPO_VT_NS, line - 1, d)
     line = line + 1
   end
+end
+
+function M.write_discussion_answer(bufnr, obj, line)
+  local answer = obj.answer
+
+  local answer_vt = {
+    { "Answered by: ", "OctoDetailsLabel" },
+  }
+  local author_bubble = bubbles.make_user_bubble(answer.author.login, answer.viewerDidAuthor)
+  vim.list_extend(answer_vt, author_bubble)
+  table.insert(answer_vt, { " " .. utils.format_date(answer.createdAt), "OctoDetailsValue" })
+
+  M.write_detail_table { bufnr = bufnr, details = { answer_vt }, offset = line }
+  M.write_block(bufnr, answer.body:gsub("\r\n", "\n"), line + 2)
 end
 
 function M.write_repo(bufnr, repo)
