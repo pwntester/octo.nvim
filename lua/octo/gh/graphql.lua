@@ -2227,6 +2227,8 @@ query($endCursor: String) {
                     name
                 }
             }
+            upvoteCount
+            viewerHasUpvoted
             reactionGroups {
                 content
                 viewerHasReacted
@@ -2244,7 +2246,7 @@ query($endCursor: String) {
                     reactionGroups {
                         content
                         viewerHasReacted
-                        users {
+                        reactors {
                             totalCount
                         }
                     }
