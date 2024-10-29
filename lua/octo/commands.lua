@@ -104,7 +104,7 @@ function M.setup()
         picker.search(opts)
       end,
       reload = function()
-        M.reload()
+        M.reload { verbose = true }
       end,
       browser = function()
         navigation.open_in_browser()
@@ -173,10 +173,11 @@ function M.setup()
           prompt = prompt .. k .. ":" .. v .. " "
         end
         opts.prompt = prompt
+        opts.search_prs = true
         picker.search(opts)
       end,
       reload = function()
-        M.reload()
+        M.reload { verbose = true }
       end,
       browser = function()
         navigation.open_in_browser()
@@ -1445,8 +1446,8 @@ function M.remove_project_v2_card()
   end)
 end
 
-function M.reload(bufnr)
-  require("octo").load_buffer(bufnr)
+function M.reload(opts)
+  require("octo").load_buffer(opts)
 end
 
 function random_hex_color()
