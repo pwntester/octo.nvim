@@ -382,7 +382,9 @@ function FileEntry:place_signs()
 
           -- place the virtual text only on first line
           local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
-          local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
+          local comments_count = #thread.comments.nodes
+          local comments_word = comments_count == 1 and "comment" or "comments"
+          local vt_msg = string.format("    %d %s (%s)", comments_count, comments_word, utils.format_date(last_date))
           --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
           local opts = {
             virt_text = { { vt_msg, "Comment" } },
