@@ -41,7 +41,6 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
   - [📋 PR reviews](#-pr-reviews)
   - [🍞 Completion](#-completion)
   - [🎨 Colors](#-colors)
-  - [🗿 Status Column](#-status-column)
   - [📺 Demos](#-demos)
   - [🙋 FAQ](#-faq)
   - [🙌 Contributing](#-contributing)
