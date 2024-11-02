@@ -540,9 +540,10 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
     --vim.list_extend(header_vt, author_bubble)
     table.insert(header_vt, {
-      comment.author.login .. " ",
+      comment.author.login,
       comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser",
     })
+    table.insert(header_vt, { " ", "OctoTimelineItemHeading" })
     vim.list_extend(header_vt, state_bubble)
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
     if not comment.viewerCanUpdate then
