@@ -460,6 +460,15 @@ function M.write_details(bufnr, issue, update)
       table.insert(details, decision_vt)
     end
 
+    if issue.statusCheckRollup and issue.statusCheckRollup ~= vim.NIL then
+      local state = issue.statusCheckRollup.state
+      local checks_vt = {
+        { "Checks: ", "OctoDetailsLabel" },
+        { utils.checks_message_map[state], utils.checks_hl_map[state] },
+      }
+      table.insert(details, checks_vt)
+    end
+
     -- changes
     local changes_vt = {
       { "Commits: ", "OctoDetailsLabel" },
