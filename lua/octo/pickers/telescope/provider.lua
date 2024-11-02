@@ -815,6 +815,7 @@ local function get_user_requester()
             users[user.login] = {
               id = user.id,
               login = user.login,
+              name = user.name,
             }
           end
         elseif user.teams and user.teams.totalCount > 0 then
@@ -867,6 +868,7 @@ local function get_users(query_name, node_name)
       table.insert(users, {
         id = user.id,
         login = user.login,
+        name = user.name,
       })
     end
   end
