@@ -71,6 +71,22 @@ M.file_status_map = {
   renamed = "R",
 }
 
+M.checks_hl_map = {
+  ERROR = "OctoStateDismissed",
+  EXPECTED = "OctoStatePending",
+  FAILURE = "OctoStateDismissed",
+  PENDING = "OctoStatePending",
+  SUCCESS = "OctoStateApproved",
+}
+
+M.checks_message_map = {
+  ERROR = "× errored",
+  EXPECTED = " expected",
+  FAILURE = "× failed",
+  PENDING = " pending",
+  SUCCESS = "✓ passed",
+}
+
 function M.trim(str)
   if type(vim.fn.trim) == "function" then
     return vim.fn.trim(str)

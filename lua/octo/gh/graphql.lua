@@ -1868,6 +1868,9 @@ query($endCursor: String) {
           }
         }
       }
+      statusCheckRollup {
+        state
+      }
     }
   }
 }
