@@ -156,6 +156,13 @@ function M.is_blank(s)
 end
 
 function M.parse_remote_url(url, aliases)
+  -- filesystem path
+  if vim.startswith(url, "/") or vim.startswith(url, ".") then
+    return {
+      host = nil,
+      repo = url,
+    }
+  end
   -- remove trailing ".git"
   url = string.gsub(url, ".git$", "")
   -- remove protocol scheme
@@ -616,7 +623,7 @@ function M.get_repo_number_from_varargs(...)
     return
   end
   if not repo then
-    M.error "Cant find repo name"
+    M.error "Can not find repo name"
     return
   end
   if not number then
