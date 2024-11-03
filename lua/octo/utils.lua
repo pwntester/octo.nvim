@@ -80,11 +80,45 @@ M.checks_hl_map = {
 }
 
 M.checks_message_map = {
-  ERROR = "× errored",
-  EXPECTED = " expected",
-  FAILURE = "× failed",
-  PENDING = " pending",
-  SUCCESS = "✓ passed",
+  ERROR = "× ERRORED",
+  EXPECTED = " EXPECTED",
+  FAILURE = "× FAILED",
+  PENDING = " PENDING",
+  SUCCESS = "✓ PASSED",
+}
+
+M.mergeable_hl_map = {
+  CONFLICTING = "OctoStateDismissed",
+  MERGEABLE = "OctoStateApproved",
+  UNKNOWN = "OctoStatePending",
+}
+
+M.mergeable_message_map = {
+  CONFLICTING = "× CONFLICTING",
+  MERGEABLE = "✓ MERGEABLE",
+  UNKNOWN = " PENDING",
+}
+
+M.merge_state_hl_map = {
+  BEHIND = "OctoNormal",
+  BLOCKED = "OctoStateDismissed",
+  CLEAN = "OctoStateApproved",
+  DIRTY = "OctoStateDismissed",
+  DRAFT = "OctoStateDraftFloat",
+  HAS_HOOKS = "OctoStateApproved",
+  UNKNOWN = "OctoStatePending",
+  UNSTABLE = "OctoStateDismissed",
+}
+
+M.merge_state_message_map = {
+  BEHIND = "- OUT-OF-DATE",
+  BLOCKED = "× BLOCKED",
+  CLEAN = "✓ CLEAN",
+  DIRTY = "× DIRTY",
+  DRAFT = "= DRAFT",
+  HAS_HOOKS = "✓ HAS-HOOKS",
+  UNKNOWN = " PENDING",
+  UNSTABLE = "! UNSTABLE",
 }
 
 function M.trim(str)

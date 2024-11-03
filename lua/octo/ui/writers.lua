@@ -460,6 +460,7 @@ function M.write_details(bufnr, issue, update)
       table.insert(details, decision_vt)
     end
 
+    -- checks
     if issue.statusCheckRollup and issue.statusCheckRollup ~= vim.NIL then
       local state = issue.statusCheckRollup.state
       local checks_vt = {
@@ -467,6 +468,27 @@ function M.write_details(bufnr, issue, update)
         { utils.checks_message_map[state], utils.checks_hl_map[state] },
       }
       table.insert(details, checks_vt)
+    end
+
+    -- merge state
+    if not issue.merged and issue.mergeable then
+      local merge_state_vt = {
+        { "Merge: ", "OctoDetailsLabel" },
+      }
+
+      if issue.mergeable == "MERGEABLE" then
+        table.insert(
+          merge_state_vt,
+          { utils.merge_state_message_map[issue.mergeStateStatus], utils.merge_state_hl_map[issue.mergeStateStatus] }
+        )
+      else
+        table.insert(
+          merge_state_vt,
+          { utils.mergeable_message_map[issue.mergeable], utils.mergeable_hl_map[issue.mergeable] }
+        )
+      end
+
+      table.insert(details, merge_state_vt)
     end
 
     -- changes
