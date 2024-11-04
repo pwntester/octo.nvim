@@ -10,9 +10,11 @@ describe("Utils module:", function()
         "git@github.com:pwntester/octo.nvim.git",
         "git@github.com:pwntester/octo.nvim.git",
         "hub.com:pwntester/octo.nvim.git",
+        "hub.com-alias:pwntester/octo.nvim.git",
       }
       local aliases = {
         ["hub.com"] = "github.com",
+        ["hub.com-.*"] = "github.com",
       }
       eq(this.parse_remote_url(remote_urls[1], aliases).host, "github.com")
       eq(this.parse_remote_url(remote_urls[1], aliases).repo, "pwntester/octo.nvim")
@@ -24,6 +26,8 @@ describe("Utils module:", function()
       eq(this.parse_remote_url(remote_urls[4], aliases).repo, "pwntester/octo.nvim")
       eq(this.parse_remote_url(remote_urls[5], aliases).host, "github.com")
       eq(this.parse_remote_url(remote_urls[5], aliases).repo, "pwntester/octo.nvim")
+      eq(this.parse_remote_url(remote_urls[6], aliases).host, "github.com")
+      eq(this.parse_remote_url(remote_urls[6], aliases).repo, "pwntester/octo.nvim")
     end)
 
     it("convert_vim_mapping_to_fzf changes vim mappings to fzf mappings", function()

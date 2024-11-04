@@ -434,8 +434,13 @@ function M.octo(object, action, ...)
     end
 
     local a = o[action] or o
-    if not pcall(a, ...) then
+    if not a then
       utils.error(action and "Incorrect action: " .. action or "No action specified")
+      return
+    end
+    res = pcall(a, ...)
+    if not res then
+      utils.error(action and "Failed action: " .. action)
       return
     end
   end
