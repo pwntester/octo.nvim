@@ -2703,6 +2703,7 @@ query($endCursor: String) {
       nodes {
         id
         login
+        name
       }
     }
   }
@@ -2721,6 +2722,7 @@ query($endCursor: String) {
       nodes {
         id
         login
+        name
       }
     }
   }
