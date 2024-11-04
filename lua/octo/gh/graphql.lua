@@ -1871,6 +1871,8 @@ query($endCursor: String) {
       statusCheckRollup {
         state
       }
+      mergeStateStatus
+      mergeable
     }
   }
 }
