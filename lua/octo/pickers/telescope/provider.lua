@@ -76,7 +76,9 @@ local function open(command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
-    utils.get(selection.kind, selection.repo, selection.value)
+    if selection then
+      utils.get(selection.kind, selection.repo, selection.value)
+    end
   end
 end
 
