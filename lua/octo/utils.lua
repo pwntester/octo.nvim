@@ -71,6 +71,56 @@ M.file_status_map = {
   renamed = "R",
 }
 
+M.checks_hl_map = {
+  ERROR = "OctoStateDismissed",
+  EXPECTED = "OctoStatePending",
+  FAILURE = "OctoStateDismissed",
+  PENDING = "OctoStatePending",
+  SUCCESS = "OctoStateApproved",
+}
+
+M.checks_message_map = {
+  ERROR = "× ERRORED",
+  EXPECTED = " EXPECTED",
+  FAILURE = "× FAILED",
+  PENDING = " PENDING",
+  SUCCESS = "✓ PASSED",
+}
+
+M.mergeable_hl_map = {
+  CONFLICTING = "OctoStateDismissed",
+  MERGEABLE = "OctoStateApproved",
+  UNKNOWN = "OctoStatePending",
+}
+
+M.mergeable_message_map = {
+  CONFLICTING = "× CONFLICTING",
+  MERGEABLE = "✓ MERGEABLE",
+  UNKNOWN = " PENDING",
+}
+
+M.merge_state_hl_map = {
+  BEHIND = "OctoNormal",
+  BLOCKED = "OctoStateDismissed",
+  CLEAN = "OctoStateApproved",
+  DIRTY = "OctoStateDismissed",
+  DRAFT = "OctoStateDraftFloat",
+  HAS_HOOKS = "OctoStateApproved",
+  UNKNOWN = "OctoStatePending",
+  UNSTABLE = "OctoStateDismissed",
+}
+
+M.merge_state_message_map = {
+  BEHIND = "- OUT-OF-DATE",
+  BLOCKED = "× BLOCKED",
+  CLEAN = "✓ CLEAN",
+  DIRTY = "× DIRTY",
+  DRAFT = "= DRAFT",
+  HAS_HOOKS = "✓ HAS-HOOKS",
+  UNKNOWN = " PENDING",
+  UNSTABLE = "! UNSTABLE",
+}
+
 function M.trim(str)
   if type(vim.fn.trim) == "function" then
     return vim.fn.trim(str)
@@ -140,6 +190,13 @@ function M.is_blank(s)
 end
 
 function M.parse_remote_url(url, aliases)
+  -- filesystem path
+  if vim.startswith(url, "/") or vim.startswith(url, ".") then
+    return {
+      host = nil,
+      repo = url,
+    }
+  end
   -- remove trailing ".git"
   url = string.gsub(url, ".git$", "")
   -- remove protocol scheme
@@ -158,8 +215,8 @@ function M.parse_remote_url(url, aliases)
     repo = chunks[#chunks]
   end
 
-  if aliases[host] then
-    host = aliases[host]
+  for alias, rhost in pairs(aliases) do
+    host = host:gsub("^" .. alias .. "$", rhost, 1)
   end
   if not M.is_blank(host) and not M.is_blank(repo) then
     return {
@@ -600,7 +657,7 @@ function M.get_repo_number_from_varargs(...)
     return
   end
   if not repo then
-    M.error "Cant find repo name"
+    M.error "Can not find repo name"
     return
   end
   if not number then

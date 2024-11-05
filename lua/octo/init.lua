@@ -64,8 +64,16 @@ function M.save_buffer()
   buffer:save()
 end
 
-function M.load_buffer(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
+---@class ReloadOpts
+---@field bufnr number
+---@field verbose boolean
+
+--- Load issue/pr/repo buffer
+---@param opts ReloadOpts
+---@return nil
+function M.load_buffer(opts)
+  local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
   local repo, kind, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
   if not repo then
@@ -84,6 +92,17 @@ function M.load_buffer(bufnr)
   M.load(repo, kind, number, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
       M.create_buffer(kind, obj, repo, false)
+
+      -- One to the left
+      local new_cursor_pos = {
+        cursor_pos[1],
+        math.max(0, cursor_pos[2] - 1),
+      }
+      vim.api.nvim_win_set_cursor(0, new_cursor_pos)
+
+      if opts.verbose then
+        utils.info(string.format("Loaded %s/%s/%d", repo, kind, number))
+      end
     end)
   end)
 end

@@ -43,8 +43,6 @@ end
 -- Globals
 ------------------
 
-_G.eq = assert.are.same
-
 _G.Test_filter = function(data)
   local run_data = {}
   for _, value in pairs(data) do

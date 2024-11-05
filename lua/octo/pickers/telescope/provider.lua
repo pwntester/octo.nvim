@@ -76,7 +76,9 @@ local function open(command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
-    utils.get(selection.kind, selection.repo, selection.value)
+    if selection then
+      utils.get(selection.kind, selection.repo, selection.value)
+    end
   end
 end
 
@@ -556,6 +558,10 @@ function M.search(opts)
         end)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
         map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+        if opts.search_prs then
+          map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+          map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
+        end
         return true
       end,
     })
@@ -811,6 +817,7 @@ local function get_user_requester()
             users[user.login] = {
               id = user.id,
               login = user.login,
+              name = user.name,
             }
           end
         elseif user.teams and user.teams.totalCount > 0 then
@@ -863,6 +870,7 @@ local function get_users(query_name, node_name)
       table.insert(users, {
         id = user.id,
         login = user.login,
+        name = user.name,
       })
     end
   end
