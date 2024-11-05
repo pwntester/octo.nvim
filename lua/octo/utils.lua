@@ -421,17 +421,47 @@ function M.checkout_pr_sync(pr_number)
   }):sync()
 end
 
----Mergest a PR b number
+M.merge_method_to_flag = {
+  squash = "--squash",
+  rebase = "--rebase",
+  commit = "--merge",
+}
+
+function M.insert_merge_flag(args, method)
+  table.insert(args, M.merge_method_to_flag[method])
+end
+
+function M.insert_delete_flag(args, delete)
+  if delete then
+    table.insert(args, "--delete-branch")
+  end
+end
+
+---Merges a PR by number
 function M.merge_pr(pr_number)
   if not Job then
+    M.error "Aborting PR merge"
     return
   end
+
+  local conf = config.values
+  local args = { "pr", "merge", pr_number }
+
+  M.insert_merge_flag(args, conf.default_merge_method)
+  M.insert_delete_flag(args, conf.default_delete_branch)
+
   Job:new({
-    enable_recording = true,
     command = "gh",
-    args = { "pr", "merge", pr_number, "--merge", "--delete-branch" },
-    on_exit = vim.schedule_wrap(function()
-      M.info("Merged PR " .. pr_number .. "!")
+    args = args,
+    on_exit = vim.schedule_wrap(function(job, code)
+      if code == 0 then
+        M.info("Merged PR " .. pr_number .. "!")
+      else
+        local stderr = table.concat(job:stderr_result(), "\n")
+        if not M.is_blank(stderr) then
+          M.error(stderr)
+        end
+      end
     end),
   }):start()
 end
