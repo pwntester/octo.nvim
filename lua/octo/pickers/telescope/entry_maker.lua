@@ -492,13 +492,25 @@ function M.gen_from_team()
 end
 
 function M.gen_from_user()
+  local function create_name(user, parens)
+    if not user.name or user.name == vim.NIL then
+      return user.login
+    end
+
+    if parens then
+      return user.login .. " (" .. user.name .. ")"
+    end
+
+    return user.login .. user.name
+  end
+
   local make_display = function(entry)
     if not entry then
       return nil
     end
 
     local columns = {
-      { entry.user.login },
+      { create_name(entry.user, true) },
     }
 
     local displayer = entry_display.create {
@@ -518,7 +530,7 @@ function M.gen_from_user()
 
     return {
       value = user.id,
-      ordinal = user.login,
+      ordinal = create_name(user, false),
       display = make_display,
       user = user,
     }

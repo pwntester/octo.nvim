@@ -1868,6 +1868,11 @@ query($endCursor: String) {
           }
         }
       }
+      statusCheckRollup {
+        state
+      }
+      mergeStateStatus
+      mergeable
     }
   }
 }
@@ -2803,6 +2808,7 @@ query($endCursor: String) {
       nodes {
         id
         login
+        name
       }
     }
   }
@@ -2821,6 +2827,7 @@ query($endCursor: String) {
       nodes {
         id
         login
+        name
       }
     }
   }

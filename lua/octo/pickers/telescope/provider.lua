@@ -76,7 +76,9 @@ local function open(command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
-    utils.get(selection.kind, selection.repo, selection.value)
+    if selection then
+      utils.get(selection.kind, selection.repo, selection.value)
+    end
   end
 end
 
@@ -816,6 +818,7 @@ local function get_user_requester()
             users[user.login] = {
               id = user.id,
               login = user.login,
+              name = user.name,
             }
           end
         elseif user.teams and user.teams.totalCount > 0 then
@@ -868,6 +871,7 @@ local function get_users(query_name, node_name)
       table.insert(users, {
         id = user.id,
         login = user.login,
+        name = user.name,
       })
     end
   end

@@ -41,7 +41,6 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
   - [📋 PR reviews](#-pr-reviews)
   - [🍞 Completion](#-completion)
   - [🎨 Colors](#-colors)
-  - [🗿 Status Column](#-status-column)
   - [📺 Demos](#-demos)
   - [🙋 FAQ](#-faq)
   - [🙌 Contributing](#-contributing)
@@ -99,7 +98,7 @@ require"octo".setup({
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
   default_remote = {"upstream", "origin"}; -- order to try remotes
   default_merge_method = "commit",         -- default merge method which should be used when calling `Octo pr merge`, could be `commit`, `rebase` or `squash`
-  ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`
+  ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
   picker = "telescope",                    -- or "fzf-lua"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
@@ -412,7 +411,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `<CR>`: Append Gist to buffer
   [Available keys](https://cli.github.com/manual/gh_gist_list): `repo`\|`public`\|`secret`
 
-5. Users in the assignee and reviewer commands: 
+5. Users in the assignee and reviewer commands:
 
 - `search`: Dynamically search all GitHub users
 - `mentionable`: List of *mentionable* users in current repo
