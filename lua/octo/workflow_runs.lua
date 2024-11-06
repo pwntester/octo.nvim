@@ -1,7 +1,7 @@
 local M = {}
 
 local fields =
-  "conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
+"conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
 
 local function get_job_status(status, conclusion)
   local icons = require("octo.config").values.runs.icons
@@ -54,6 +54,7 @@ local function get_workflow_status(status, conclusion)
   end
 end
 local utils = require "octo.utils"
+local actions = require('telescope.actions')
 local function get_job_details_lines(details)
   local lines = {}
   table.insert(
@@ -160,9 +161,9 @@ local function get_workflow_runs_sync(co)
         for _, value in ipairs(json) do
           local wf_run = {
             status = value.status == "queued" and icons.pending
-              or value.status == "in_progress" and icons.in_progress
-              or value.conclusion == "failure" and icons.failed
-              or icons.succeeded,
+                or value.status == "in_progress" and icons.in_progress
+                or value.conclusion == "failure" and icons.failed
+                or icons.succeeded,
             title = value.displayTitle,
             display = value.displayTitle,
             value = value.databaseId,
@@ -238,12 +239,14 @@ M.list = function()
   local co = coroutine.running()
   local wf_runs = get_workflow_runs_sync(co)
 
-  print(vim.inspect(wf_runs))
   preview_picker(
     nil,
     wf_runs,
     function(i)
-      vim.notify "I should open a new buffer with the workflow run now"
+      local new_buf = vim.api.nvim_create_buf(true, true)
+      vim.api.nvim_set_current_buf(new_buf)
+      populate_preview_buffer(i.id, new_buf)
+      --TODO: add fold logic
     end,
     "Workflow runs",
     function(self, entry)
