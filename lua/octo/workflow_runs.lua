@@ -242,11 +242,12 @@ M.list = function()
   preview_picker(
     nil,
     wf_runs,
-    function(i)
+    function(selected)
       local new_buf = vim.api.nvim_create_buf(true, true)
       vim.api.nvim_set_current_buf(new_buf)
-      populate_preview_buffer(i.id, new_buf)
-      --TODO: add fold logic
+      populate_preview_buffer(selected.id, new_buf)
+      vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
+      --TODO: add <CR> to display logs
     end,
     "Workflow runs",
     function(self, entry)
