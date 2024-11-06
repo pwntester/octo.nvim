@@ -97,7 +97,8 @@ require"octo".setup({
   use_local_fs = false,                    -- use local files on right side of reviews
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
   default_remote = {"upstream", "origin"}; -- order to try remotes
-  default_merge_method = "commit",         -- default merge method which should be used when calling `Octo pr merge`, could be `commit`, `rebase` or `squash`
+  default_merge_method = "commit",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `commit`, `rebase` or `squash`
+  default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
   picker = "telescope",                    -- or "fzf-lua"
   picker_config = {
@@ -302,71 +303,71 @@ Just edit the issue title, body or comments as a regular buffer and use `:w(rite
 There is only an `Octo <object> <action> [arguments]` command:
 If no command is passed, the argument to `Octo` is treated as a URL from where an issue or pr repo and number are extracted.
 
-| Object   | Action                                  | Arguments                                                                                                                                              |
-| -------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| issue    | close                                   | Close the current issue                                                                                                                                |
-|          | reopen                                  | Reopen the current issue                                                                                                                               |
-|          | create [repo]                           | Creates a new issue in the current or specified repo                                                                                                   |
-|          | develop                                 | Create and checkout a new branch for an issue in the current repo                                                                                      |
-|          | edit [repo] <number>                    | Edit issue `<number>` in current or specified repo                                                                                                     |
-|          | list [repo] [key=value] (1)             | List all issues satisfying given filter                                                                                                                |
-|          | search                                  | Live issue search                                                                                                                                      |
-|          | reload                                  | Reload issue. Same as doing `e!`                                                                                                                       |
-|          | browser                                 | Open current issue in the browser                                                                                                                      |
-|          | url                                     | Copies the URL of the current issue to the system clipboard                                                                                            |
-| pr       | list [repo] [key=value] (2)             | List all PRs satisfying given filter                                                                                                                   |
-|          | search                                  | Live issue search                                                                                                                                      |
-|          | edit [repo] <number>                    | Edit PR `<number>` in current or specified repo                                                                                                        |
-|          | reopen                                  | Reopen the current PR                                                                                                                                  |
-|          | create                                  | Creates a new PR for the current branch                                                                                                                |
-|          | close                                   | Close the current PR                                                                                                                                   |
-|          | checkout                                | Checkout PR                                                                                                                                            |
-|          | commits                                 | List all PR commits                                                                                                                                    |
-|          | changes                                 | Show all PR changes (diff hunks)                                                                                                                       |
-|          | diff                                    | Show PR diff                                                                                                                                           |
-|          | merge [commit\|rebase\|squash] [delete] | Merge current PR using the specified method                                                                                                            |
-|          | ready                                   | Mark a draft PR as ready for review                                                                                                                    |
-|          | draft                                   | Send a ready PR back to draft                                                                                                                          |
-|          | checks                                  | Show the status of all checks run on the PR                                                                                                            |
-|          | reload                                  | Reload PR. Same as doing `e!`                                                                                                                          |
-|          | browser                                 | Open current PR in the browser                                                                                                                         |
-|          | url                                     | Copies the URL of the current PR to the system clipboard                                                                                               |
-| repo     | list (3)                                | List repos user owns, contributes or belong to                                                                                                         |
-|          | fork                                    | Fork repo                                                                                                                                              |
-|          | browser                                 | Open current repo in the browser                                                                                                                       |
-|          | url                                     | Copies the URL of the current repo to the system clipboard                                                                                             |
-|          | view                                    | Open a repo by path ({organization}/{name})                                                                                                            |
-| gist     | list [repo] [key=value] (4)             | List user gists                                                                                                                                        |
-| comment  | add                                     | Add a new comment                                                                                                                                      |
-|          | delete                                  | Delete a comment                                                                                                                                       |
-| thread   | resolve                                 | Mark a review thread as resolved                                                                                                                       |
-|          | unresolve                               | Mark a review thread as unresolved                                                                                                                     |
-| label    | add [label]                             | Add a label from available label menu                                                                                                                  |
-|          | remove [label]                          | Remove a label                                                                                                                                         |
-|          | create [label]                          | Create a new label                                                                                                                                     |
-| assignee | add [login]                             | Assign a user                                                                                                                                          |
-|          | remove [login]                          | Unassign a user                                                                                                                                        |
-| reviewer | add [login]                             | Assign a PR reviewer                                                                                                                                   |
-| reaction | `thumbs_up` \| `+1`                     | Add 👍 reaction                                                                                                                                        |
-|          | `thumbs_down` \| `-1`                   | Add 👎 reaction                                                                                                                                        |
-|          | `eyes`                                  | Add 👀 reaction                                                                                                                                        |
-|          | `laugh`                                 | Add 😄 reaction                                                                                                                                        |
-|          | `confused`                              | Add 😕 reaction                                                                                                                                        |
-|          | `rocket`                                | Add 🚀 reaction                                                                                                                                        |
-|          | `heart`                                 | Add ❤️ reaction                                                                                                                                        |
-|          | `hooray` \| `party` \| `tada`           | Add 🎉 reaction                                                                                                                                        |
-| card     | add                                     | Assign issue/PR to a project new card                                                                                                                  |
-|          | remove                                  | Delete project card                                                                                                                                    |
-|          | move                                    | Move project card to different project/column                                                                                                          |
-| review   | start                                   | Start a new review                                                                                                                                     |
-|          | submit                                  | Submit the review                                                                                                                                      |
-|          | resume                                  | Edit a pending review for current PR                                                                                                                   |
-|          | discard                                 | Deletes a pending review for current PR if any                                                                                                         |
-|          | comments                                | View pending review comments                                                                                                                           |
-|          | commit                                  | Pick a specific commit to review                                                                                                                       |
-|          | close                                   | Close the review window and return to the PR                                                                                                           |
-| actions  |                                         | Lists all available Octo actions                                                                                                                       |
-| search   | <query>                                 | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
+| Object   | Action                                            | Arguments                                                                                                                                              |
+| -------- | ---------------------------------------           | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| issue    | close                                             | Close the current issue                                                                                                                                |
+|          | reopen                                            | Reopen the current issue                                                                                                                               |
+|          | create [repo]                                     | Creates a new issue in the current or specified repo                                                                                                   |
+|          | develop                                           | Create and checkout a new branch for an issue in the current repo                                                                                      |
+|          | edit [repo] <number>                              | Edit issue `<number>` in current or specified repo                                                                                                     |
+|          | list [repo] [key=value] (1)                       | List all issues satisfying given filter                                                                                                                |
+|          | search                                            | Live issue search                                                                                                                                      |
+|          | reload                                            | Reload issue. Same as doing `e!`                                                                                                                       |
+|          | browser                                           | Open current issue in the browser                                                                                                                      |
+|          | url                                               | Copies the URL of the current issue to the system clipboard                                                                                            |
+| pr       | list [repo] [key=value] (2)                       | List all PRs satisfying given filter                                                                                                                   |
+|          | search                                            | Live issue search                                                                                                                                      |
+|          | edit [repo] <number>                              | Edit PR `<number>` in current or specified repo                                                                                                        |
+|          | reopen                                            | Reopen the current PR                                                                                                                                  |
+|          | create                                            | Creates a new PR for the current branch                                                                                                                |
+|          | close                                             | Close the current PR                                                                                                                                   |
+|          | checkout                                          | Checkout PR                                                                                                                                            |
+|          | commits                                           | List all PR commits                                                                                                                                    |
+|          | changes                                           | Show all PR changes (diff hunks)                                                                                                                       |
+|          | diff                                              | Show PR diff                                                                                                                                           |
+|          | merge [commit\|rebase\|squash] [delete\|nodelete] | Merge current PR using the specified method                                                                                                            |
+|          | ready                                             | Mark a draft PR as ready for review                                                                                                                    |
+|          | draft                                             | Send a ready PR back to draft                                                                                                                          |
+|          | checks                                            | Show the status of all checks run on the PR                                                                                                            |
+|          | reload                                            | Reload PR. Same as doing `e!`                                                                                                                          |
+|          | browser                                           | Open current PR in the browser                                                                                                                         |
+|          | url                                               | Copies the URL of the current PR to the system clipboard                                                                                               |
+| repo     | list (3)                                          | List repos user owns, contributes or belong to                                                                                                         |
+|          | fork                                              | Fork repo                                                                                                                                              |
+|          | browser                                           | Open current repo in the browser                                                                                                                       |
+|          | url                                               | Copies the URL of the current repo to the system clipboard                                                                                             |
+|          | view                                              | Open a repo by path ({organization}/{name})                                                                                                            |
+| gist     | list [repo] [key=value] (4)                       | List user gists                                                                                                                                        |
+| comment  | add                                               | Add a new comment                                                                                                                                      |
+|          | delete                                            | Delete a comment                                                                                                                                       |
+| thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
+|          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
+| label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
+|          | remove [label]                                    | Remove a label                                                                                                                                         |
+|          | create [label]                                    | Create a new label                                                                                                                                     |
+| assignee | add [login]                                       | Assign a user                                                                                                                                          |
+|          | remove [login]                                    | Unassign a user                                                                                                                                        |
+| reviewer | add [login]                                       | Assign a PR reviewer                                                                                                                                   |
+| reaction | `thumbs_up` \| `+1`                               | Add 👍 reaction                                                                                                                                        |
+|          | `thumbs_down` \| `-1`                             | Add 👎 reaction                                                                                                                                        |
+|          | `eyes`                                            | Add 👀 reaction                                                                                                                                        |
+|          | `laugh`                                           | Add 😄 reaction                                                                                                                                        |
+|          | `confused`                                        | Add 😕 reaction                                                                                                                                        |
+|          | `rocket`                                          | Add 🚀 reaction                                                                                                                                        |
+|          | `heart`                                           | Add ❤️ reaction                                                                                                                                         |
+|          | `hooray` \| `party` \| `tada`                     | Add 🎉 reaction                                                                                                                                        |
+| card     | add                                               | Assign issue/PR to a project new card                                                                                                                  |
+|          | remove                                            | Delete project card                                                                                                                                    |
+|          | move                                              | Move project card to different project/column                                                                                                          |
+| review   | start                                             | Start a new review                                                                                                                                     |
+|          | submit                                            | Submit the review                                                                                                                                      |
+|          | resume                                            | Edit a pending review for current PR                                                                                                                   |
+|          | discard                                           | Deletes a pending review for current PR if any                                                                                                         |
+|          | comments                                          | View pending review comments                                                                                                                           |
+|          | commit                                            | Pick a specific commit to review                                                                                                                       |
+|          | close                                             | Close the review window and return to the PR                                                                                                           |
+| actions  |                                                   | Lists all available Octo actions                                                                                                                       |
+| search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

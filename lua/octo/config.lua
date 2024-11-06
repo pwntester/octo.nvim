@@ -65,6 +65,7 @@ local M = {}
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table
 ---@field default_merge_method string
+---@field default_delete_branch boolean
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
 ---@field users string
@@ -111,6 +112,7 @@ function M.get_default_values()
     },
     default_remote = { "upstream", "origin" },
     default_merge_method = "commit",
+    default_delete_branch = false,
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
     users = "search",
