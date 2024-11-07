@@ -121,6 +121,12 @@ M.merge_state_message_map = {
   UNSTABLE = "! UNSTABLE",
 }
 
+M.auto_merge_method_map = {
+  MERGE = "commit",
+  REBASE = "rebase",
+  SQUASH = "squash",
+}
+
 function M.trim(str)
   if type(vim.fn.trim) == "function" then
     return vim.fn.trim(str)
