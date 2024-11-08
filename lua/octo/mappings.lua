@@ -1,4 +1,5 @@
 local reviews = require "octo.reviews"
+local config = require "octo.config"
 
 return {
   close_issue = function()
@@ -145,7 +146,7 @@ return {
       local file_idx = layout.file_idx % #layout.files + 1
       local file = layout.files[file_idx]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file, config.values.reviews.focus)
       end
     end
   end,
@@ -155,7 +156,7 @@ return {
       local file_idx = (layout.file_idx - 2) % #layout.files + 1
       local file = layout.files[file_idx]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file, config.values.reviews.focus)
       end
     end
   end,
@@ -164,7 +165,7 @@ return {
     if layout and layout.file_panel:is_open() then
       local file = layout.files[1]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file, config.values.reviews.focus)
       end
     end
   end,
@@ -173,7 +174,7 @@ return {
     if layout and layout.file_panel:is_open() then
       local file = layout.files[#layout.files]
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file, config.values.reviews.focus)
       end
     end
   end,
@@ -194,7 +195,7 @@ return {
     if layout and layout.file_panel:is_open() then
       local file = layout.file_panel:get_file_at_cursor()
       if file then
-        layout:set_file(file, true)
+        layout:set_file(file, config.values.reviews.focus)
       end
     end
   end,
@@ -217,7 +218,7 @@ return {
     end
   end,
   close_review_win = function()
-    vim.api.nvim_win_close(vim.api.nvim_get_current_win())
+    vim.api.nvim_win_close(vim.api.nvim_get_current_win(), true)
   end,
   approve_review = function()
     local current_review = reviews.get_current_review()
