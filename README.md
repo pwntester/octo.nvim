@@ -589,6 +589,8 @@ See [`CONTRIBUTING`](/CONTRIBUTING.md) for ways to get started.
 
 Please adhere to this project's [`CODE_OF_CONDUCT`](/CODE_OF_CONDUCT.md).
 
+You are welcome to join the [#octo.nvim:matrix.org](https://matrix.to/#/#octo.nvim:matrix.org) chatroom if you need help on anything.
+
 ## 🌟 Credits
 
 The PR review panel is heavily inspired in [diffview.nvim](https://github.com/sindrets/diffview.nvim)
