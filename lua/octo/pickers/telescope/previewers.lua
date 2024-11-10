@@ -43,9 +43,6 @@ local discussion = defaulter(function(opts)
             writers.write_discussion_details(bufnr, obj)
             writers.write_body(bufnr, obj, 11)
 
-            -- local line = vim.api.nvim_buf_line_count(bufnr) + 2
-            -- writers.write_upvotes(bufnr, obj, line)
-            -- writers.write_reactions(bufnr, obj.reactionGroups, line)
 
             if obj.answer ~= vim.NIL then
               local line = vim.api.nvim_buf_line_count(bufnr) + 1
