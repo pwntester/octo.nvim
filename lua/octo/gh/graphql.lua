@@ -1873,6 +1873,10 @@ query($endCursor: String) {
       }
       mergeStateStatus
       mergeable
+      autoMergeRequest {
+        enabledBy { login }
+        mergeMethod
+      }
     }
   }
 }
