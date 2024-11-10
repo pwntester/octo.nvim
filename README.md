@@ -138,6 +138,7 @@ require"octo".setup({
   },
   reviews = {
     auto_show_threads = true,              -- automatically show comment threads on cursor move
+    focus             = "right",           -- focus right buffer on diff open
   },
   pull_requests = {
     order_by = {                           -- criteria to sort the results of `Octo pr list`
@@ -587,6 +588,8 @@ Contributions are always welcome!
 See [`CONTRIBUTING`](/CONTRIBUTING.md) for ways to get started.
 
 Please adhere to this project's [`CODE_OF_CONDUCT`](/CODE_OF_CONDUCT.md).
+
+You are welcome to join the [#octo.nvim:matrix.org](https://matrix.to/#/#octo.nvim:matrix.org) chatroom if you need help on anything.
 
 ## 🌟 Credits
 
