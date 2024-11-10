@@ -152,7 +152,7 @@ function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
   local conf = config.values
-  if conf.use_local_fs and not utils.in_pr_branch(pr.bufnr) then
+  if conf.use_local_fs and not utils.in_pr_branch(pr) then
     local choice = vim.fn.confirm("Currently not in PR branch, would you like to checkout?", "&Yes\n&No", 2)
     if choice == 1 then
       utils.checkout_pr_sync(pr.number)
@@ -520,41 +520,43 @@ function M.close(tabpage)
   end
 end
 
---- Get the pull request associated with current buffer
+--- Get the pull request associated with current buffer.
+--- Fall back to pull request associated with the current branch if not in an Octo buffer.
 --- @param cb function
-local function get_pr_from_buffer(cb)
+local function get_pr_from_buffer_or_current_branch(cb)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
+
   if not buffer then
-    utils.error "No Octo buffer found"
+    -- We are not in an octo buffer, try and fallback to the current branch's pr
+    utils.get_pull_request_for_current_branch(cb)
     return
   end
+
   local pull_request = buffer:get_pr()
   if pull_request then
     cb(pull_request)
   else
-    pull_request = utils.get_pull_request_for_current_branch(function(pr)
-      cb(pr)
-    end)
+    pull_request = utils.get_pull_request_for_current_branch(cb)
   end
 end
 
 function M.start_review()
-  get_pr_from_buffer(function(pull_request)
+  get_pr_from_buffer_or_current_branch(function(pull_request)
     local current_review = Review:new(pull_request)
     current_review:start()
   end)
 end
 
 function M.resume_review()
-  get_pr_from_buffer(function(pull_request)
+  get_pr_from_buffer_or_current_branch(function(pull_request)
     local current_review = Review:new(pull_request)
     current_review:resume()
   end)
 end
 
 function M.start_or_resume_review()
-  get_pr_from_buffer(function(pull_request)
+  get_pr_from_buffer_or_current_branch(function(pull_request)
     local current_review = Review:new(pull_request)
     current_review:start_or_resume()
   end)
