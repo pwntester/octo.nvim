@@ -1134,8 +1134,10 @@ function M.discussions(opts)
   opts = opts or {}
 
   if opts.cb == nil then
-    utils.error "Callback function is required"
-    return
+    opts.cb = function(selected, _)
+      local url = selected.obj.url
+      navigation.open_in_browser_raw(url)
+    end
   end
 
   local owner, name = utils.split_repo(opts.repo)
@@ -1170,7 +1172,6 @@ function M.discussions(opts)
       local replace = function(prompt_bufnr, type)
         local selected = action_state.get_selected_entry(prompt_bufnr)
         actions.close(prompt_bufnr)
-
         opts.cb(selected, prompt_bufnr, type)
       end
 
