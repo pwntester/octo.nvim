@@ -55,10 +55,6 @@ function M.setup()
     discussion = {
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
-        opts.cb = function(selected, ...)
-          vim.fn.setreg("+", "#" .. selected.obj.number, "c")
-          utils.info("Discussion copied to clipboard: " .. selected.obj.number)
-        end
         picker.discussions(opts)
       end,
     },
