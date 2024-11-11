@@ -72,6 +72,7 @@ end
 ---@param opts ReloadOpts
 ---@return nil
 function M.load_buffer(opts)
+  opts = opts or {}
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)

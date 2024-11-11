@@ -44,7 +44,7 @@ return {
     require("octo.commands").remove_user "reviewer"
   end,
   reload = function()
-    vim.cmd [[e!]]
+    require("octo.commands").reload()
   end,
   open_in_browser = function()
     require("octo.navigation").open_in_browser()
