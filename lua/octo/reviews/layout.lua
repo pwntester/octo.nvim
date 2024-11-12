@@ -24,7 +24,7 @@ local win_reset_opts = {
 ---@field left_winid integer
 ---@field right_winid integer
 ---@field files FileEntry[]
----@field file_idx integer
+---@field selected_file_idx integer
 ---@field ready boolean
 local Layout = {}
 Layout.__index = Layout
@@ -50,9 +50,9 @@ function Layout:open(review)
   require("octo.reviews").reviews[tostring(self.tabpage)] = review
   self:init_layout()
 
-  local file = self:cur_file()
+  local file = self:get_current_file()
   if file then
-    self:set_file(file, config.values.reviews.focus)
+    self:set_current_file(file, config.values.reviews.focus)
   else
     self:file_safeguard()
   end
@@ -79,15 +79,20 @@ function Layout:init_layout()
   self.file_panel:open()
 end
 
-function Layout:cur_file()
+--- Get the currently selected file
+--- Returns nil if no files are currently in the review
+--- @return FileEntry | nil
+function Layout:get_current_file()
   if #self.files > 0 then
-    return self.files[utils.clamp(self.file_idx, 1, #self.files)]
+    return self.files[utils.clamp(self.selected_file_idx, 1, #self.files)]
   end
   return nil
 end
 
--- sets selected file
-function Layout:set_file(file, focus)
+--- Sets the currently selected file
+--- @param file FileEntry
+--- @param focus OctoFocus
+function Layout:set_current_file(file, focus)
   self:ensure_layout()
   if self:file_safeguard() or not file then
     return
@@ -96,7 +101,7 @@ function Layout:set_file(file, focus)
   for i, f in ipairs(self.files) do
     if f == file then
       found = true
-      self.file_idx = i
+      self.selected_file_idx = i
       break
     end
   end
@@ -108,16 +113,16 @@ function Layout:set_file(file, focus)
         return
       end
     end
-    local cur = self:cur_file()
+    local cur = self:get_current_file()
     if cur then
       cur:detach_buffers()
     end
     vim.cmd [[diffoff!]]
-    self.files[self.file_idx] = file
+    self.files[self.selected_file_idx] = file
     file:load_buffers(self.left_winid, self.right_winid)
 
     -- highlight file in file panel
-    self.file_panel:highlight_file(self:cur_file())
+    self.file_panel:highlight_file(self:get_current_file())
 
     -- set focus on specified window
     if focus == "right" then
@@ -133,8 +138,10 @@ function Layout:update_files()
   self.file_panel.files = self.files
   self.file_panel:render()
   self.file_panel:redraw()
-  local file = self:cur_file()
-  self:set_file(file, config.values.reviews.focus)
+  local file = self:get_current_file()
+  if file then
+    self:set_current_file(file, config.values.reviews.focus)
+  end
   self.update_needed = false
 end
 
@@ -197,7 +204,7 @@ end
 ---@return boolean
 function Layout:file_safeguard()
   if #self.files == 0 then
-    local cur = self:cur_file()
+    local cur = self:get_current_file()
     if cur then
       cur:detach_buffers()
     end
@@ -212,14 +219,14 @@ function Layout:on_enter()
     self:update_files()
   end
 
-  local file = self:cur_file()
+  local file = self:get_current_file()
   if file then
     file:attach_buffers()
   end
 end
 
 function Layout:on_leave()
-  local file = self:cur_file()
+  local file = self:get_current_file()
   if file then
     file:detach_buffers()
   end

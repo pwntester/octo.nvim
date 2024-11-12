@@ -161,7 +161,6 @@ function Review:initiate(opts)
 
   -- create the layout
   self.layout = Layout:new {
-    -- TODO: rename to left_rev and right_rev
     left = opts.left or pr.left,
     right = opts.right or pr.right,
     files = {},
@@ -235,8 +234,9 @@ function Review:update_threads(threads)
   if self.layout then
     self.layout.file_panel:render()
     self.layout.file_panel:redraw()
-    if self.layout:cur_file() then
-      self.layout:cur_file():place_signs()
+    local file = self.layout:get_current_file()
+    if file then
+      file:place_signs()
     end
   end
 end
@@ -307,7 +307,7 @@ function Review:add_comment(isSuggestion)
     return
   end
 
-  local file = self.layout:cur_file()
+  local file = self.layout:get_current_file()
   if not file then
     return
   end
