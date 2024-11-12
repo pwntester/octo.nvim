@@ -1308,7 +1308,7 @@ end
 ---@param events table list of events
 ---@param winnr number window id of preview window
 ---@param bufnrs table list of buffers where the preview window will remain visible
----@see |autocmd-events|
+---@see autocmd-events
 function M.close_preview_autocmd(events, winnr, bufnrs)
   local augroup = vim.api.nvim_create_augroup("preview_window_" .. winnr, {
     clear = true,

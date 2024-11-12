@@ -142,40 +142,26 @@ return {
   end,
   select_next_entry = function()
     local layout = reviews.get_current_layout()
-    if layout and layout.file_panel:is_open() then
-      local file_idx = layout.file_idx % #layout.files + 1
-      local file = layout.files[file_idx]
-      if file then
-        layout:set_file(file, config.values.reviews.focus)
-      end
+    if layout then
+      layout:select_next_file()
     end
   end,
   select_prev_entry = function()
     local layout = reviews.get_current_layout()
-    if layout and layout.file_panel:is_open() then
-      local file_idx = (layout.file_idx - 2) % #layout.files + 1
-      local file = layout.files[file_idx]
-      if file then
-        layout:set_file(file, config.values.reviews.focus)
-      end
+    if layout then
+      layout:select_prev_file()
     end
   end,
   select_first_entry = function()
     local layout = reviews.get_current_layout()
-    if layout and layout.file_panel:is_open() then
-      local file = layout.files[1]
-      if file then
-        layout:set_file(file, config.values.reviews.focus)
-      end
+    if layout then
+      layout:select_first_file()
     end
   end,
   select_last_entry = function()
     local layout = reviews.get_current_layout()
-    if layout and layout.file_panel:is_open() then
-      local file = layout.files[#layout.files]
-      if file then
-        layout:set_file(file, config.values.reviews.focus)
-      end
+    if layout then
+      layout:select_last_file()
     end
   end,
   next_entry = function()
@@ -195,7 +181,7 @@ return {
     if layout and layout.file_panel:is_open() then
       local file = layout.file_panel:get_file_at_cursor()
       if file then
-        layout:set_file(file, config.values.reviews.focus)
+        layout:set_current_file(file)
       end
     end
   end,
@@ -222,14 +208,23 @@ return {
   end,
   approve_review = function()
     local current_review = reviews.get_current_review()
+    if not current_review then
+      return
+    end
     current_review:submit "APPROVE"
   end,
   comment_review = function()
     local current_review = reviews.get_current_review()
+    if not current_review then
+      return
+    end
     current_review:submit "COMMENT"
   end,
   request_changes = function()
     local current_review = reviews.get_current_review()
+    if not current_review then
+      return
+    end
     current_review:submit "REQUEST_CHANGES"
   end,
   toggle_viewed = function()

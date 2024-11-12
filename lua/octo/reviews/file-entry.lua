@@ -32,7 +32,11 @@ M._null_buffer = {}
 ---@field right_binary boolean|nil
 ---@field left_bufid integer
 ---@field right_bufid integer
+--- If this table is empty, the buffer is not ready to be displayed
+--- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field left_lines string[]
+--- If this table is empty, the buffer is not ready to be displayed
+--- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field right_lines string[]
 ---@field left_winid number
 ---@field right_winid number
@@ -72,6 +76,8 @@ function FileEntry:new(opt)
     right_comment_ranges = right_ranges,
     left_binary = opt.left_binary,
     right_binary = opt.right_binary,
+    left_lines = {},
+    right_lines = {},
     diffhunks = diffhunks,
     associated_bufs = {},
     viewed_state = pr.files[opt.path],
@@ -125,47 +131,47 @@ function FileEntry:destroy()
 end
 
 ---Get the window id for the alternative side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_win(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.right_winid
-  elseif split:lower() == "right" then
-    return self.left_winid
   end
+
+  return self.left_winid
 end
 
 ---Get the buffer id for the alternative side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_buf(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.right_bufid
-  elseif split:lower() == "right" then
-    return self.left_bufid
   end
+
+  return self.left_bufid
 end
 
 ---Get the window id for the side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_win(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.left_winid
-  elseif split:lower() == "right" then
-    return self.right_winid
   end
+
+  return self.right_winid
 end
 
 ---Get the buffer id for the side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_buf(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.left_bufid
-  elseif split:lower() == "right" then
-    return self.right_bufid
   end
+
+  return self.right_bufid
 end
 
 ---Fetch file content locally or from GitHub.
@@ -173,6 +179,9 @@ function FileEntry:fetch()
   local right_path = self.path
   local left_path = self.path
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
   local right_sha = current_review.layout.right.commit
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
@@ -208,8 +217,14 @@ function FileEntry:fetch()
 
   -- wait until we have both versions
   return vim.wait(conf.timeout, function()
-    return self.left_lines and self.right_lines
+    return self:is_ready_to_render()
   end)
+end
+
+---Determines whether the file content has been loaded and the file is ready to render
+---@return boolean
+function FileEntry:is_ready_to_render()
+  return #self.left_lines > 0 and #self.right_lines > 0
 end
 
 ---Load the buffers.
@@ -328,6 +343,9 @@ end
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
   local review_level = current_review:get_level()
   local splits = {
     {
@@ -407,6 +425,9 @@ end
 
 function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
   local bufnr
   if opts.use_local then
     -- Use the file from the file system
@@ -480,11 +501,6 @@ end
 
 function M._configure_buffer(bufid)
   utils.apply_mappings("review_diff", bufid)
-  -- local conf = config.values
-  -- vim.cmd(string.format("nnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
-  -- vim.cmd(string.format("vnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
-  -- vim.cmd(string.format("nnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
-  -- vim.cmd(string.format("vnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
 end
 
 function M._detach_buffer(bufid)

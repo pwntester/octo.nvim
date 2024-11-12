@@ -50,7 +50,7 @@ function M.configure_octo_buffer(bufnr)
     -- review diff buffers
     local current_review = reviews.get_current_review()
     if current_review and #current_review.threads > 0 then
-      current_review.layout:cur_file():place_signs()
+      current_review.layout:get_current_file():place_signs()
     end
   elseif buffer then
     -- issue/pr/reviewthread buffers

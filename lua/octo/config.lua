@@ -4,7 +4,7 @@ local M = {}
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
----@alias OctoFocus "right" | "left"
+---@alias OctoSplit "right" | "left"
 
 ---@class OctoPickerConfig
 ---@field use_emojis boolean
@@ -38,7 +38,7 @@ local M = {}
 
 ---@class OctoConfigReviews
 ---@field auto_show_threads boolean
----@field focus OctoFocus
+---@field focus OctoSplit
 
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy

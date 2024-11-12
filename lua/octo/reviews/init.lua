@@ -7,6 +7,8 @@ local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
 
+---@alias ReviewLevel "commit" | "pr"
+
 ---@class Review
 ---@field repo string
 ---@field number integer
@@ -198,10 +200,10 @@ function Review:discard()
           local delete_query = graphql("delete_pull_request_review_mutation", self.id)
           gh.run {
             args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
-            cb = function(output, stderr)
-              if stderr and not utils.is_blank(stderr) then
-                vim.error(stderr)
-              elseif output then
+            cb = function(output_inner, stderr_inner)
+              if stderr_inner and not utils.is_blank(stderr_inner) then
+                vim.error(stderr_inner)
+              elseif output_inner then
                 self.id = default_id
                 self.threads = {}
                 self.files = {}
@@ -439,15 +441,16 @@ function Review:add_comment(isSuggestion)
   end
 end
 
+---Get the review level, aka whether the review is at commit or PR level
+---@return ReviewLevel
 function Review:get_level()
-  local review_level = "COMMIT"
   if
     self.layout.left.commit == self.pull_request.left.commit
     and self.layout.right.commit == self.pull_request.right.commit
   then
-    review_level = "PR"
+    return "pr"
   end
-  return review_level
+  return "commit"
 end
 
 local M = {}
@@ -458,15 +461,21 @@ M.Review = Review
 
 function M.add_review_comment(isSuggestion)
   local review = M.get_current_review()
+  if not review then
+    error "Could not find review"
+  end
   review:add_comment(isSuggestion)
 end
 
 function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
+  if not current_review then
+    return
+  end
   for _, file in ipairs(current_review.layout.files) do
     if thread.path == file.path then
       current_review.layout:ensure_layout()
-      current_review.layout:set_file(file)
+      current_review.layout:set_current_file(file)
       local win = file:get_win(thread.diffSide)
       if vim.api.nvim_win_is_valid(win) then
         local review_level = current_review:get_level()
@@ -484,15 +493,19 @@ function M.jump_to_pending_review_thread(thread)
   end
 end
 
+--- Get the current review according to the tab page
+--- @return Review | nil
 function M.get_current_review()
   local current_tabpage = vim.api.nvim_get_current_tabpage()
   return M.reviews[tostring(current_tabpage)]
 end
 
+--- Get the diff Layout of the review if any
+--- @return Layout | nil
 function M.get_current_layout()
   local current_review = M.get_current_review()
   if current_review then
-    return current_review.layout
+    return M.get_current_review().layout
   end
 end
 

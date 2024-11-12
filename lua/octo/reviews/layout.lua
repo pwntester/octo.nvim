@@ -36,7 +36,7 @@ function Layout:new(opt)
     left = opt.left,
     right = opt.right,
     files = opt.files,
-    file_idx = 1,
+    selected_file_idx = 1,
     ready = false,
   }
   this.file_panel = FilePanel:new(this.files)
@@ -52,7 +52,7 @@ function Layout:open(review)
 
   local file = self:get_current_file()
   if file then
-    self:set_current_file(file, config.values.reviews.focus)
+    self:set_current_file(file)
   else
     self:file_safeguard()
   end
@@ -68,7 +68,7 @@ function Layout:close()
 
   if self.tabpage and vim.api.nvim_tabpage_is_valid(self.tabpage) then
     local pagenr = vim.api.nvim_tabpage_get_number(self.tabpage)
-    pcall(vim.cmd, "tabclose " .. pagenr)
+    pcall(vim.cmd.tabclose, pagenr)
   end
 end
 
@@ -90,8 +90,9 @@ function Layout:get_current_file()
 end
 
 --- Sets the currently selected file
+--- Focus parameter is optional and defaults to the config value
 --- @param file FileEntry
---- @param focus OctoFocus
+--- @param focus OctoSplit | nil
 function Layout:set_current_file(file, focus)
   self:ensure_layout()
   if self:file_safeguard() or not file then
@@ -106,7 +107,7 @@ function Layout:set_current_file(file, focus)
     end
   end
   if found then
-    if not file.left_lines or not file.right_lines then
+    if not file:is_ready_to_render() then
       local result = file:fetch()
       if not result then
         vim.api.nvim_err_writeln("Timeout fetching " .. file.path)
@@ -121,10 +122,11 @@ function Layout:set_current_file(file, focus)
     self.files[self.selected_file_idx] = file
     file:load_buffers(self.left_winid, self.right_winid)
 
-    -- highlight file in file panel
+    -- Highlight file in file panel
     self.file_panel:highlight_file(self:get_current_file())
 
-    -- set focus on specified window
+    -- Set focus on specified window
+    focus = focus or config.values.reviews.focus
     if focus == "right" then
       vim.api.nvim_set_current_win(self.right_winid)
     else
@@ -140,9 +142,45 @@ function Layout:update_files()
   self.file_panel:redraw()
   local file = self:get_current_file()
   if file then
-    self:set_current_file(file, config.values.reviews.focus)
+    self:set_current_file(file)
   end
   self.update_needed = false
+end
+
+--- Select the prev file entry
+--- Loops around to last if already at first
+function Layout:select_prev_file()
+  if self.file_panel:is_open() then
+    local prev_file_idx = (self.selected_file_idx - 2) % #self.files + 1
+    local file = self.files[prev_file_idx]
+    self:set_current_file(file)
+  end
+end
+
+--- Select the next file entry
+--- Loops around to first if already at last
+function Layout:select_next_file()
+  if self.file_panel:is_open() then
+    local next_file_idx = self.selected_file_idx % #self.files + 1
+    local file = self.files[next_file_idx]
+    self:set_current_file(file)
+  end
+end
+
+--- Select the first file entry
+function Layout:select_first_file()
+  if self.file_panel:is_open() then
+    local file = self.files[1]
+    self:set_current_file(file)
+  end
+end
+
+--- Select the last file entry
+function Layout:select_last_file()
+  if self.file_panel:is_open() then
+    local file = self.files[#self.files]
+    self:set_current_file(file)
+  end
 end
 
 ---Checks the state of the view layout.
@@ -180,13 +218,11 @@ function Layout:recover_layout(state)
     vim.cmd "aboveleft vsp"
     self.left_winid = vim.api.nvim_get_current_win()
     self.file_panel:open()
-    --self:set_file(self:cur_file(), "right")
   elseif not state.right_win then
     vim.api.nvim_set_current_win(self.left_winid)
     vim.cmd "belowright vsp"
     self.right_winid = vim.api.nvim_get_current_win()
     self.file_panel:open()
-    --self:set_file(self:cur_file(), "left")
   end
 
   self.ready = true

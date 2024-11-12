@@ -512,13 +512,17 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
 end
 
 ---Adds a new review comment thread to the current review.
+---@return nil
 function OctoBuffer:do_add_new_thread(comment_metadata)
   --TODO: How to create a new thread on a line where there is already one
 
   local review = require("octo.reviews").get_current_review()
+  if not review then
+    return
+  end
   local layout = review.layout
   local pr = review.pull_request
-  local file = layout:cur_file()
+  local file = layout:get_current_file()
   if not file then
     utils.error "No file selected"
     return
