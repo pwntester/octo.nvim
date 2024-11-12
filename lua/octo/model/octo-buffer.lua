@@ -234,7 +234,7 @@ function OctoBuffer:render_threads(threads)
   self.ready = true
 end
 
----Confgiures the buffer
+---Configures the buffer
 function OctoBuffer:configure()
   -- configure buffer
   vim.api.nvim_buf_call(self.bufnr, function()
