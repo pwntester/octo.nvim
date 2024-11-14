@@ -224,7 +224,7 @@ function M.write_repo(bufnr, repo)
       return nil
     end
   end)
-  add_details_line(details, "Mirroed from", function()
+  add_details_line(details, "Mirrored from", function()
     if repo.isMirror == "true" then
       return repo.mirrorUrl
     else

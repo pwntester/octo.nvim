@@ -254,10 +254,13 @@ function M.parse_git_remote()
   return remotes
 end
 
-function M.get_remote()
+--- Returns first host and repo information found in a list of remote values
+--- If no argument is provided, defaults to matching against config's default remote
+--- @param remote table | nil list of local remotes to match against
+function M.get_remote(remote)
   local conf = config.values
   local remotes = M.parse_git_remote()
-  for _, name in ipairs(conf.default_remote) do
+  for _, name in ipairs(remote or conf.default_remote) do
     if remotes[name] then
       return remotes[name]
     end
@@ -283,12 +286,12 @@ function M.get_all_remotes()
   return vim.tbl_values(M.parse_git_remote())
 end
 
-function M.get_remote_name()
-  return M.get_remote().repo
+function M.get_remote_name(remote)
+  return M.get_remote(remote).repo
 end
 
-function M.get_remote_host()
-  return M.get_remote().host
+function M.get_remote_host(remote)
+  return M.get_remote(remote).host
 end
 
 function M.commit_exists(commit, cb)
@@ -363,37 +366,22 @@ function M.in_pr_repo()
   end
 end
 
-function M.in_pr_branch(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
-  end
-  if not buffer:isPullRequest() then
-    --M.error("Not in Octo PR buffer")
-    return false
-  end
+--- Determines if we are locally are in a branch matching the pr head ref
+--- @param pr PullRequest
+--- @return boolean
+function M.in_pr_branch(pr)
+  local cmd = "git rev-parse --abbrev-ref --symbolic-full-name @{u}"
+  local local_branch_with_local_remote = vim.split(string.gsub(vim.fn.system(cmd), "%s+", ""), "/")
+  local local_remote = local_branch_with_local_remote[1]
+  local local_branch = local_branch_with_local_remote[2]
 
-  local cmd = "git rev-parse --abbrev-ref HEAD"
-  local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
-  if local_branch == string.format("%s/%s", buffer.node.headRepoName, buffer.node.headRefName) then
-    -- for PRs submitted from master, local_branch will get something like other_repo/master
-    local_branch = vim.split(local_branch, "/")[2]
-  end
+  local local_repo = M.get_remote_name { local_remote }
 
-  local local_repo = M.get_remote_name()
-  if buffer.node.baseRepository.nameWithOwner == local_repo and buffer.node.headRefName == local_branch then
+  if local_repo == pr.head_repo and local_branch == pr.head_ref_name then
     return true
-  elseif buffer.node.baseRepository.nameWithOwner ~= local_repo then
-    --M.error(string.format("Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
-    return false
-  elseif buffer.node.headRefName ~= local_branch then
-    -- TODO: suggest to checkout the branch
-    --M.error(string.format("Not in PR branch. Expected %s, got %s", buffer.node.headRefName, local_branch))
-    return false
-  else
-    return false
   end
+
+  return false
 end
 
 ---Checks out a PR b number
@@ -1261,8 +1249,8 @@ function M.get_pull_request_for_current_branch(cb)
         return
       end
       local pr = vim.fn.json_decode(out)
-      local owner
-      local name
+      local base_owner
+      local base_name
       if pr.number then
         if pr.isCrossRepository then
           -- Parsing the pr url is the only way to get the target repo owner if the pr is cross repo
@@ -1276,15 +1264,15 @@ function M.get_pull_request_for_current_branch(cb)
             return
           end
           local iter = url_suffix:gmatch "[^/]+/"
-          owner = vim.print(iter():sub(1, -2))
-          name = vim.print(iter():sub(1, -2))
+          base_owner = iter():sub(1, -2)
+          base_name = iter():sub(1, -2)
         else
-          owner = pr.headRepositoryOwner.login
-          name = pr.headRepository.name
+          base_owner = pr.headRepositoryOwner.login
+          base_name = pr.headRepository.name
         end
         local number = pr.number
         local id = pr.id
-        local query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
+        local query = graphql("pull_request_query", base_owner, base_name, number, _G.octo_pv2_fragment)
         gh.run {
           args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
           cb = function(output, stderr)
@@ -1296,9 +1284,11 @@ function M.get_pull_request_for_current_branch(cb)
               local Rev = require("octo.reviews.rev").Rev
               local PullRequest = require("octo.model.pull-request").PullRequest
               local pull_request = PullRequest:new {
-                repo = owner .. "/" .. name,
+                repo = base_owner .. "/" .. base_name,
+                head_repo = obj.headRepository.nameWithOwner,
                 number = number,
                 id = id,
+                head_ref_name = obj.headRefName,
                 left = Rev:new(obj.baseRefOid),
                 right = Rev:new(obj.headRefOid),
                 files = obj.files.nodes,

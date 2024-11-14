@@ -908,6 +908,8 @@ function OctoBuffer:get_pr()
   return PullRequest:new {
     bufnr = bufnr,
     repo = self.repo,
+    head_repo = self.node.headRepository.nameWithOwner,
+    head_ref_name = self.node.headRefName,
     number = self.number,
     id = self.node.id,
     left = Rev:new(self.node.baseRefOid),
