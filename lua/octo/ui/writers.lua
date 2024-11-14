@@ -491,7 +491,7 @@ function M.write_details(bufnr, issue, update)
       table.insert(details, merge_state_vt)
     end
 
-    if not issue.merged and issue.autoMergeRequest ~= vim.NIL then
+    if not issue.merged and issue.autoMergeRequest ~= vim.NIL and issue.autoMergeRequest ~= nil then
       local auto_merge_vt = {
         { "Auto-merge: ", "OctoDetailsLabel" },
         { "ENABLED", "OctoStateApproved" },
