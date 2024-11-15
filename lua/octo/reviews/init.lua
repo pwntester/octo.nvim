@@ -7,7 +7,7 @@ local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
 
----@alias ReviewLevel "commit" | "pr"
+---@alias ReviewLevel "COMMIT" | "PR"
 
 ---@class Review
 ---@field repo string
@@ -124,6 +124,31 @@ function Review:start_or_resume()
   end)
 end
 
+---Register freshly fetched files as this review's files
+---Selects and fetches the first unread files
+---Defaults to the first file if all files are VIEWED
+---@param files FileEntry[]
+function Review:set_files_and_select_first(files)
+  local selected_file_idx
+  for idx, file in ipairs(files) do
+    if file.viewed_state ~= "VIEWED" then
+      selected_file_idx = idx
+      break
+    end
+  end
+
+  if not selected_file_idx and #files > 0 then
+    selected_file_idx = 1
+  end
+
+  self.layout.files = files
+  if selected_file_idx then
+    files[selected_file_idx]:fetch()
+    self.layout.selected_file_idx = selected_file_idx
+  end
+  self.layout:update_files()
+end
+
 -- Updates layout to focus on a single commit
 function Review:focus_commit(right, left)
   local pr = self.pull_request
@@ -135,12 +160,7 @@ function Review:focus_commit(right, left)
   }
   self.layout:open(self)
   local cb = function(files)
-    -- pre-fetch the first file
-    if #files > 0 then
-      files[1]:fetch()
-    end
-    self.layout.files = files
-    self.layout:update_files()
+    self:set_files_and_select_first(files)
   end
   if right == self.pull_request.right.commit and left == self.pull_request.left.commit then
     pr:get_changed_files(cb)
@@ -170,12 +190,7 @@ function Review:initiate(opts)
   self.layout:open(self)
 
   pr:get_changed_files(function(files)
-    -- pre-fetch the first file
-    if #files > 0 then
-      files[1]:fetch()
-    end
-    self.layout.files = files
-    self.layout:update_files()
+    self:set_files_and_select_first(files)
   end)
 end
 
@@ -448,9 +463,9 @@ function Review:get_level()
     self.layout.left.commit == self.pull_request.left.commit
     and self.layout.right.commit == self.pull_request.right.commit
   then
-    return "pr"
+    return "PR"
   end
-  return "commit"
+  return "COMMIT"
 end
 
 local M = {}

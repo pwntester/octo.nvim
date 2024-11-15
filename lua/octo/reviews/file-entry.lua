@@ -44,7 +44,7 @@ M._null_buffer = {}
 ---@field right_comment_ranges table
 ---@field associated_bufs integer[]
 ---@field diffhunks string[]
----@field viewed_state string
+---@field viewed_state ViewedState
 local FileEntry = {}
 FileEntry.__index = FileEntry
 
@@ -110,7 +110,6 @@ function FileEntry:toggle_viewed()
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        --local resp = vim.fn.json_decode(output)
         self.viewed_state = next_state
         local current_review = require("octo.reviews").get_current_review()
         if current_review then
