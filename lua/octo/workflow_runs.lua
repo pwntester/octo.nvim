@@ -45,9 +45,12 @@
 ---@class Handler
 ---@field tree table<string,WorkflowNode>
 ---@field buf_name string
+---@field buf integer
 ---@field filetype string
 ---@field current_wf WorkflowRun
----@field current_wf_log table
+---@field wf_cache table<string,WorkflowRun>
+---@field refresh function
+---@field refetch function
 
 ---@class WorkflowNode
 ---@field id string
@@ -68,10 +71,8 @@ local M = {
   buf = nil,
   buf_name = "",
   filetype = "",
-  lines = {},
   tree = {},
   current_wf = nil,
-  current_wf_log = nil,
   wf_cache = {}
 }
 
@@ -357,6 +358,14 @@ local function get_logs(id)
   end
 end
 
+local keymaps = {
+  ---@param api Handler
+  ["<C-r>"] = function(api)
+    vim.notify("refreshing...")
+    api.refetch()
+  end
+}
+
 local tree_keymaps = {
   ---@param node WorkflowNode
   ["<CR>"] = function(node)
@@ -532,7 +541,7 @@ local function populate_preview_buffer(id, buf)
     M.tree = generateWorkflowTree(cached)
     M.refresh()
   else
-    update_job_details(id, buf)
+    update_job_details(id)
   end
 end
 
@@ -622,7 +631,12 @@ local function print_lines()
       if line.node_ref ~= nil then
         cb(line.node_ref)
       end
-    end)
+    end, { silent = true, noremap = true, buffer = M.buf })
+  end
+  for binding, cb in pairs(keymaps) do
+    vim.keymap.set("n", binding, function()
+      cb(M)
+    end, { silent = true, noremap = true, buffer = M.buf })
   end
 end
 
@@ -748,6 +762,13 @@ M.list = function()
       populate_preview_buffer(id, self.state.bufnr)
     end
   )
+end
+
+M.refetch = function()
+  local id = M.current_wf.databaseId
+  M.wf_cache[id] = nil
+  M.current_wf = nil
+  populate_preview_buffer(id, M.buf)
 end
 
 
