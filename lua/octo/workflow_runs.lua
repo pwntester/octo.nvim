@@ -1,12 +1,65 @@
----@alias LineType "step" | "step_log" | "job" | "separator" | nil
+---@alias LineType "job" | "step" | "step_log" |  nil
+
+---@class WorkflowRun
+---@field conclusion string
+---@field createdAt string
+---@field databaseId string
+---@field displayTitle string
+---@field event string
+---@field headBranch string
+---@field headSha string
+---@field name string
+---@field number number
+---@field startedAt string
+---@field status string
+---@field updatedAt string
+---@field url string
+---@field workflowDatabaseId string
+---@field workflowName string
+---@field jobs WorkflowJob[]
+
+---@class WorkflowJob
+---@field completedAt string
+---@field conclusion string
+---@field databaseId number
+---@field name string
+---@field startedAt string
+---@field status string
+---@field steps WorkflowStep[]
+---@field url string
+
+---@class WorkflowStep
+---@field conclusion string
+---@field name string
+---@field number number
+---@field status string
+
 
 ---@class LineDef
 ---@field value string
 ---@field id string | nil
----@field type LineType
 ---@field highlight string | nil
----@field step_log LineDef[] | nil
----@field expanded boolean | nil
+---@field node_ref WorkflowNode | nil
+
+
+---@class Handler
+---@field tree table<string,WorkflowNode>
+---@field buf_name string
+---@field filetype string
+---@field current_wf WorkflowRun
+---@field current_wf_log table
+
+---@class WorkflowNode
+---@field id string
+---@field display string
+---@field type LineType
+---@field job_id string
+---@field indent number
+---@field expanded boolean
+---@field highlight string
+---@field preIcon string
+---@field icon string
+---@field children table<string, WorkflowNode>
 
 
 local M = {
@@ -14,26 +67,94 @@ local M = {
   buf_name = "",
   filetype = "",
   lines = {},
+  tree = {},
   current_wf = nil,
   current_wf_log = nil
 }
+
 local namespace = require("octo.constants").OCTO_WORKFLOW_NS
 
 
+---@param data WorkflowRun
+---@return WorkflowNode
+local function generateWorkflowTree(data)
+  local root = {
+    id = "Jobs",
+    display = "Jobs",
+    type = "root",
+    job_id = "",
+    indent = 0,
+    expanded = true,
+    highlight = nil,
+    preIcon = "",
+    icon = "📂",
+    children = {}
+  }
+
+  for _, job in ipairs(data.jobs) do
+    local jobNode = {
+      id = job.name,
+      job_id = job.name,
+      display = job.name,
+      type = "job",
+      indent = 2,
+      expanded = true,
+      highlight = nil,
+      preIcon = "",
+      icon = "🛠️",
+      children = {}
+    }
+
+    for _, step in ipairs(job.steps) do
+      local stepNode = {
+        id = step.name,
+        job_id = jobNode.id,
+        display = step.name,
+        type = "step",
+        indent = 4,
+        expanded = false,
+        highlight = nil,
+        preIcon = "",
+        icon = "",
+        children = {}
+      }
+      table.insert(jobNode.children, stepNode)
+    end
+
+    table.insert(root.children, jobNode)
+  end
+
+  return root
+end
+
+---@param names JobStep[]
+---@param lines string[]
 local function match_lines_to_names(names, lines)
   local results = {}
   local name_index = 1
 
   for _, line in ipairs(lines) do
-    -- Match the current line with the current name
     local current_name = names[name_index]
     local next_name = names[name_index + 1]
 
-    if line:find(current_name, 1, true) then
-      table.insert(results, { line = line, matched_name = current_name })
-    elseif next_name ~= nil and line:find(next_name, 1, true) then
-      table.insert(results, { line = line, matched_name = next_name })
+    -- Ensure there's a result set for the current job
+    local job_results = results[current_name.job]
+    if not job_results then
+      job_results = {}
+      results[current_name.job] = job_results
+    end
+
+    if line:find(current_name.job, 1, true) and line:find(current_name.step, 1, true) then
+      table.insert(job_results, { line = line, job = current_name.job, step = current_name.step })
+    elseif next_name and line:find(next_name.job, 1, true) and line:find(next_name.step, 1, true) then
+      -- Move to next name and ensure its result set
       name_index = name_index + 1
+      local next_job_results = results[next_name.job]
+      if not next_job_results then
+        next_job_results = {}
+        results[next_name.job] = next_job_results
+      end
+      table.insert(next_job_results, { line = line, job = next_name.job, step = next_name.step })
     else
       error("Failed to match line to step: " .. line)
     end
@@ -41,7 +162,6 @@ local function match_lines_to_names(names, lines)
 
   return results
 end
-
 local function split_by_newline(input)
   local result = {}
   for line in input:gmatch("([^\n]*)\n?") do
@@ -59,11 +179,41 @@ local function extractAfterTimestamp(logLine)
   return result
 end
 
-local function get_logs(id)
-  for _, value in ipairs(M.lines) do
-    -- value.expanded = false
-    value.step_log = {}
+---Traverses a tree from the given node, giving a callback for every item
+---@param tree WorkflowNode | nil
+---@param cb function
+M.traverse = function(tree, cb)
+  if not tree then
+    tree = M.tree
   end
+  --HACK: handle no tree set
+  if not tree.id then
+    return
+  end
+
+  cb(tree)
+  for _, node in ipairs(tree.children or {}) do
+    M.traverse(node, cb)
+  end
+end
+
+
+---@class JobStep
+---@field job string
+---@field step string
+
+
+local function get_logs(id)
+  ---@type JobStep[]
+  local names = {}
+  ---@param node WorkflowNode
+  M.traverse(M.tree, function(node)
+    if node.type == "step" then
+      table.insert(names, { step = node.id, job = node.job_id })
+    end
+  end)
+  print(vim.inspect(names))
+
   --TODO: check if logs are "fresh"
   local out = vim.system(
     {
@@ -75,41 +225,58 @@ local function get_logs(id)
     }):wait()
 
   local stdout = out.stdout
-  local names = {}
-  --TODO: multi job support
-  local currJob = M.current_wf.jobs[1]
-  for _, value in ipairs(currJob.steps) do
-    table.insert(names, value.name)
-  end
 
+  --TODO: convert tree from pairs to ipairs due to bug in sequencing
   local matches = match_lines_to_names(names, split_by_newline(stdout))
 
-  for _, log_entry in ipairs(matches) do
-    for _, line in ipairs(M.lines) do
-      if line.id == log_entry.matched_name then
-        line.step_log = line.step_log or {}
-        table.insert(line.step_log, { value = extractAfterTimestamp(log_entry.line), highlight = "Question" })
-        print("Inserted line")
-      end
+
+  --clear all children
+  M.traverse(M.tree, function(i)
+    if i.type ~= "step" then
+      return
+    end
+    i.children = {}
+  end)
+
+
+  for job, entry in pairs(matches) do
+    for _, log_entry in ipairs(entry) do
+      ---@param node WorkflowNode
+      M.traverse(M.tree, function(node)
+        if node.type ~= "step" or node.job_id ~= job then
+          return
+        end
+        print(node.id)
+        print(log_entry.step)
+        if node.id == log_entry.step then
+          table.insert(node.children, {
+            display = extractAfterTimestamp(log_entry.line),
+            id = log_entry.line,
+            expanded = false,
+            indent = node.indent + 2,
+            type = "step_log",
+            highlight = "Question",
+            icon = "",
+            preIcon = "",
+            children = {},
+
+          })
+        end
+      end)
     end
   end
 end
 
-local keymaps = {
-  ---@param line LineDef
-  ["<CR>"] = function(line)
-    if line.type == "step" then
-      if line.expanded == true then
-        line.expanded = false
-      else
-        -- print(vim.inspect(M.current_wf))
+local tree_keymaps = {
+  ---@param node WorkflowNode
+  ["<CR>"] = function(node)
+    if node.expanded == false then
+      node.expanded = true
+      if node.type == "step" then
         get_logs(M.current_wf.databaseId)
-        -- line.step_log = {
-        --   { value = "Failed to load stuff",        type = "step_log" },
-        --   { value = "And other interesting stuff", type = "step_log" },
-        -- }
-        line.expanded = true
       end
+    else
+      node.expanded = false
     end
     M.refresh()
   end
@@ -180,7 +347,9 @@ local separator = {
   type = "separator"
 }
 
-local function get_job_details_lines(details)
+local function get_workflow_header()
+  ---@type WorkflowRun
+  local details = M.current_wf
   ---@type LineDef[]
   local lines = {}
   table.insert(lines,
@@ -204,29 +373,6 @@ local function get_job_details_lines(details)
 
   table.insert(lines, separator)
 
-  table.insert(lines, { value = "Jobs:" })
-  for _, job in ipairs(details.jobs) do
-    local jobIndent = "  "
-    table.insert(lines, { value = string.format("%sJob name: %s", jobIndent, job.name), id = job.name, type = "job" })
-    table.insert(lines, { value = string.format("%sStatus: %s", jobIndent, get_job_status(job.status, job.conclusion)) })
-    table.insert(lines, { value = string.format("%sSteps: %s", jobIndent, "") })
-
-    for i, step in ipairs(job.steps) do
-      local stepIndent = jobIndent .. "       "
-      table.insert(
-        lines,
-        {
-          value = string.format("%s%d. %s %s", stepIndent, i, step.name, get_step_status(step.status, step.conclusion)),
-          id = step.name,
-          type = "step"
-        }
-      )
-      if i ~= #job.steps then
-        table.insert(lines, separator)
-      end
-    end
-    table.insert(lines, separator)
-  end
 
   return lines
 end
@@ -235,36 +381,44 @@ end
 
 local wf_cache = {}
 local function update_job_details(id, buf)
+  ---@type WorkflowRun
   local job_details = {}
+  if wf_cache[id] ~= nil then
+    M.refresh()
+    return
+  end
   vim.fn.jobstart(string.format("gh run view %s --json %s", id, fields), {
     stdout_buffered = true,
     on_stdout = function(_, data)
       job_details = vim.fn.json_decode(table.concat(data, "\n"))
       wf_cache[id] = job_details
-      M.current_wf = job_details
     end,
     on_exit = function(_, b)
       if b == 0 then
-        local lines = get_job_details_lines(job_details)
-        if vim.api.nvim_buf_is_valid(buf) then
-          M.lines = lines
-          M.refresh()
-        end
-
-        if #job_details.conclusion == 0 then
-          local function refresh_job_details()
-            if vim.api.nvim_buf_is_valid(buf) then
-              update_job_details(id, buf)
-            end
-          end
-          vim.defer_fn(refresh_job_details, 5000)
-          vim.api.nvim_buf_set_extmark(buf, require("octo.constants").OCTO_WORKFLOW_NS, 0, 0, {
-            virt_text = { { string.format "auto refresh enabled", "Character" } },
-            virt_text_pos = "right_align",
-            priority = 200,
-          })
-        end
+        M.current_wf = job_details
+        M.tree = generateWorkflowTree(job_details)
+        M.refresh()
+        -- local lines = get_job_details_lines(job_details)
+        -- if vim.api.nvim_buf_is_valid(buf) then
+        --   M.lines = lines
+        --   M.refresh()
+        -- end
+        --
+        -- if #job_details.conclusion == 0 then
+        --   local function refresh_job_details()
+        --     if vim.api.nvim_buf_is_valid(buf) then
+        --       update_job_details(id, buf)
+        --     end
+        --   end
+        --   vim.defer_fn(refresh_job_details, 5000)
+        --   vim.api.nvim_buf_set_extmark(buf, require("octo.constants").OCTO_WORKFLOW_NS, 0, 0, {
+        --     virt_text = { { string.format "auto refresh enabled", "Character" } },
+        --     virt_text_pos = "right_align",
+        --     priority = 200,
+        --   })
+        -- end
       else
+        print("Failed to get workflow run for " .. id)
         --stderr
       end
     end,
@@ -273,45 +427,97 @@ end
 
 local function populate_preview_buffer(id, buf)
   --TODO: check outcome and if running refresh otherwise cached value is valid
-  if wf_cache[id] ~= nil and vim.api.nvim_buf_is_valid(buf) then
-    local lines = get_job_details_lines(wf_cache[id])
-    M.lines = lines
+  if M.current_wf ~= nil and vim.api.nvim_buf_is_valid(buf) then
     M.refresh()
   end
   update_job_details(id, buf)
-  M.refresh()
 end
+
+
+---@param node WorkflowNode
+---@return string
+local function format_node(node)
+  local indent = string.rep(" ", node.indent)
+  local preIcon = node.type ~= "step_log" and (node.expanded == true and "> " or "> ") or ""
+  local formatted = string.format("%s%s%s", indent, preIcon, node.display)
+  return formatted
+end
+
+---@param node WorkflowNode
+---@param list LineDef[] | nil
+---@return LineDef[]
+local function tree_to_string(node, list)
+  list = list or {}
+  local formatted = format_node(node)
+  ---@type LineDef
+  local lineDef = {
+    value = formatted,
+    id = node.id,
+    type = node.type,
+    highlight = node.highlight or nil,
+    step_log = nil,
+    expanded = node.expanded or false,
+    node_ref = node
+  }
+
+  table.insert(list, lineDef)
+  if node.type ~= "step_log" then
+    table.insert(list, separator)
+  end
+
+  if node.expanded and next(node.children) then
+    for _, child in ipairs(node.children) do
+      tree_to_string(child, list)
+    end
+  end
+
+  return list
+end
+
 
 local function print_lines()
   vim.api.nvim_buf_clear_namespace(M.buf, namespace, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local lines = {}
+
+
+  local lines = get_workflow_header()
+  ---Offset is first x before tree
+  local offset = #lines
+
+  local stringified_tree = tree_to_string(M.tree, {})
+  for _, value in ipairs(stringified_tree) do
+    table.insert(lines, value)
+  end
+
   local highlights = {}
 
-  for _, line_def in ipairs(M.lines) do
-    table.insert(lines, line_def.value)
-    table.insert(highlights, { index = #lines - 1, highlight = line_def.highlight })
-    if next(line_def.step_log or {}) and line_def.expanded then
-      for _, log_line in ipairs(line_def.step_log) do
-        local stringified = string.rep(" ", 11) .. log_line.value
-        table.insert(lines, stringified)
-        table.insert(highlights, { index = #lines - 1, highlight = log_line.highlight })
-      end
-    end
+  local string_lines = {}
+
+  for index, line_def in ipairs(lines) do
+    table.insert(string_lines, line_def.value)
+    table.insert(highlights, { index = index - 1, highlight = line_def.highlight })
   end
 
 
-  vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, lines)
+  vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, string_lines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", false)
 
-  for _, value in ipairs(highlights) do
-    if value.highlight then
-      vim.api.nvim_buf_add_highlight(M.buf, namespace, value.highlight, value.index, 0, -1)
+  for _, vl in ipairs(highlights) do
+    if vl.highlight then
+      vim.api.nvim_buf_add_highlight(M.buf, namespace, vl.highlight, vl.index, 0, -1)
     end
   end
 
 
-  -- apply_highlights()
+  for binding, cb in pairs(tree_keymaps) do
+    vim.keymap.set("n", binding, function()
+      local current_line = vim.api.nvim_win_get_cursor(0)[1]
+      local line = lines[current_line]
+      if line.node_ref ~= nil then
+        cb(line.node_ref)
+      end
+    end)
+  end
 end
 
 M.refresh = function()
@@ -409,46 +615,6 @@ end
 ---@field step_name string
 
 
-
-
-local function table_to_string(tbl, indent)
-  if not indent then indent = 0 end
-  local str = ""
-  for k, v in pairs(tbl) do
-    local key = tostring(k)
-    if type(v) == "table" then
-      str = str .. string.rep(" ", indent) .. key .. ":\n" .. table_to_string(v, indent + 2)
-    else
-      str = str .. string.rep(" ", indent) .. key .. ": " .. tostring(v) .. "\n"
-    end
-  end
-  return str
-end
-
-local write_to_log = function(message)
-  local log_path = os.tmpname()
-  -- Open the file in append mode
-  local file, err = vim.loop.fs_open(log_path, "a", 438) -- 438 is the octal value for file permissions 0666
-
-  if err then
-    print("Error opening file: " .. err)
-    return
-  end
-
-  -- Write the message to the file
-  if (type(message) == "table") then
-    vim.loop.fs_write(file, table_to_string(message) .. "\n", -1)
-  elseif type(message) == "string" then
-    vim.loop.fs_write(file, message .. "\n", -1)
-  else
-    error("Failed to write to log, datatype: " .. type(message) .. " not supported")
-  end
-
-  -- Close the file
-  vim.loop.fs_close(file)
-  return log_path
-end
-
 local function render(selected)
   local new_buf = vim.api.nvim_create_buf(true, true)
   M.buf = new_buf
@@ -456,27 +622,6 @@ local function render(selected)
   populate_preview_buffer(selected.id, new_buf)
   vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
 
-  for binding, cb in pairs(keymaps) do
-    vim.keymap.set("n", binding, function()
-      local index = 1
-      local current_line = vim.api.nvim_win_get_cursor(0)[1]
-
-      for _, value in ipairs(M.lines) do
-        if current_line == index then
-          cb(value)
-        end
-        index = index + 1
-        if next(value.step_log or {}) and value.expanded == true then
-          for _, step_log in ipairs(value.step_log) do
-            if current_line == index then
-              cb(step_log)
-            end
-            index = index + 1
-          end
-        end
-      end
-    end)
-  end
 
   -- vim.keymap.set("n", "<CR>", function()
   --   if wf_cache[selected.id] and false then
@@ -519,5 +664,6 @@ M.list = function()
     end
   )
 end
+
 
 return M
