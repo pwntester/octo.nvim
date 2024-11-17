@@ -69,7 +69,8 @@ local M = {
   lines = {},
   tree = {},
   current_wf = nil,
-  current_wf_log = nil
+  current_wf_log = nil,
+  wf_cache = {}
 }
 
 local namespace = require("octo.constants").OCTO_WORKFLOW_NS
@@ -212,7 +213,6 @@ local function get_logs(id)
       table.insert(names, { step = node.id, job = node.job_id })
     end
   end)
-  print(vim.inspect(names))
 
   --TODO: check if logs are "fresh"
   local out = vim.system(
@@ -246,8 +246,6 @@ local function get_logs(id)
         if node.type ~= "step" or node.job_id ~= job then
           return
         end
-        print(node.id)
-        print(log_entry.step)
         if node.id == log_entry.step then
           table.insert(node.children, {
             display = extractAfterTimestamp(log_entry.line),
@@ -379,11 +377,10 @@ end
 
 
 
-local wf_cache = {}
 local function update_job_details(id, buf)
   ---@type WorkflowRun
   local job_details = {}
-  if wf_cache[id] ~= nil then
+  if M.wf_cache[id] ~= nil then
     M.refresh()
     return
   end
@@ -391,7 +388,7 @@ local function update_job_details(id, buf)
     stdout_buffered = true,
     on_stdout = function(_, data)
       job_details = vim.fn.json_decode(table.concat(data, "\n"))
-      wf_cache[id] = job_details
+      M.wf_cache[id] = job_details
     end,
     on_exit = function(_, b)
       if b == 0 then
@@ -426,11 +423,15 @@ local function update_job_details(id, buf)
 end
 
 local function populate_preview_buffer(id, buf)
+  local cached = M.wf_cache[id]
   --TODO: check outcome and if running refresh otherwise cached value is valid
-  if M.current_wf ~= nil and vim.api.nvim_buf_is_valid(buf) then
+  if cached and vim.api.nvim_buf_is_valid(buf) then
+    M.current_wf = cached
+    M.tree = generateWorkflowTree(cached)
     M.refresh()
+  else
+    update_job_details(id, buf)
   end
-  update_job_details(id, buf)
 end
 
 
@@ -621,27 +622,6 @@ local function render(selected)
   vim.api.nvim_set_current_buf(new_buf)
   populate_preview_buffer(selected.id, new_buf)
   vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
-
-
-  -- vim.keymap.set("n", "<CR>", function()
-  --   if wf_cache[selected.id] and false then
-  --     local workflow = wf_cache[selected.id]
-  --
-  --     local names = {}
-  --     local currJob = workflow.jobs[1]
-  --     for _, value in ipairs(currJob.steps) do
-  --       table.insert(names, value.name)
-  --     end
-  --     print(vim.inspect(names))
-  --
-  --     vim.notify("I should open this line")
-  --     print(vim.inspect(matches))
-  --     local file = write_to_log(matches)
-  --   else
-  --     local current_line = vim.api.nvim_win_get_cursor(0)[1]
-  --     print("Workflow has not loaded yet")
-  --   end
-  -- end, { noremap = true, silent = true, buffer = new_buf })
 end
 
 
