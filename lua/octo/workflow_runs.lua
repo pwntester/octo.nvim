@@ -56,7 +56,7 @@
 ---@field job_id string
 ---@field indent number
 ---@field expanded boolean
----@field highlight string
+---@field highlight string | nil
 ---@field preIcon string
 ---@field icon string
 ---@field status string
@@ -76,6 +76,40 @@ local M = {
 }
 
 local namespace = require("octo.constants").OCTO_WORKFLOW_NS
+
+---@return string | nil
+local function get_job_highlight(status, conclusion)
+  if status == "queued" then
+    return "Question"
+  elseif status == "in_progress" then
+    return "Directory"
+  elseif conclusion == "success" then
+    return "Character"
+  elseif conclusion == "failure" then
+    return "ErrorMsg"
+  elseif conclusion == "skipped" then
+    return "NonText"
+  elseif conclusion == "cancelled" then
+    return "NonText"
+  end
+end
+
+---@return string | nil
+local function get_step_highlight(status, conclusion)
+  if status == "pending" then
+    return "Question"
+  elseif status == "in_progress" then
+    return "Directory"
+  elseif conclusion == "success" then
+    return "Character"
+  elseif conclusion == "failure" then
+    return "ErrorMsg"
+  elseif conclusion == "skipped" then
+    return "NonText"
+  elseif conclusion == "cancelled" then
+    return "NonText"
+  end
+end
 
 
 ---@param data WorkflowRun
@@ -102,7 +136,7 @@ local function generateWorkflowTree(data)
       type = "job",
       indent = 2,
       expanded = true,
-      highlight = nil,
+      highlight = get_job_highlight(job.status, job.conclusion),
       status = job.status,
       conclusion = job.conclusion,
       preIcon = "",
@@ -121,7 +155,7 @@ local function generateWorkflowTree(data)
         type = "step",
         indent = 4,
         expanded = false,
-        highlight = nil,
+        highlight = get_step_highlight(step.status, step.conclusion),
         preIcon = "",
         icon = "",
         children = {}
@@ -404,7 +438,6 @@ local function get_workflow_status(status, conclusion)
   end
 end
 local utils = require "octo.utils"
-local actions = require('telescope.actions')
 
 ---@type LineDef
 local separator = {
@@ -446,7 +479,7 @@ end
 
 
 
-local function update_job_details(id, buf)
+local function update_job_details(id)
   ---@type WorkflowRun
   local job_details = {}
   if M.wf_cache[id] ~= nil then
@@ -516,50 +549,9 @@ local function format_node(node)
   return formatted
 end
 
----@return string | nil
-local function get_job_highlight(status, conclusion)
-  if status == "queued" then
-    return "Question"
-  elseif status == "in_progress" then
-    return "Directory"
-  elseif conclusion == "success" then
-    return "Character"
-  elseif conclusion == "failure" then
-    return "ErrorMsg"
-  elseif conclusion == "skipped" then
-    return "NonText"
-  elseif conclusion == "cancelled" then
-    return "NonText"
-  end
-end
-
----@return string | nil
-local function get_step_highlight(status, conclusion)
-  local icons = require("octo.config").values.runs.icons
-  if status == "pending" then
-    return "Question"
-  elseif status == "in_progress" then
-    return "Directory"
-  elseif conclusion == "success" then
-    return "Character"
-  elseif conclusion == "failure" then
-    return "ErrorMsg"
-  elseif conclusion == "skipped" then
-    return "NonText"
-  elseif conclusion == "cancelled" then
-    return "NonText"
-  end
-end
 
 
----@param node WorkflowNode
-local function highlight_node(node)
-  if node.type == "job" then
-    return get_job_highlight(node.status, node.conclusion)
-  elseif node.type == "step" then
-    return get_step_highlight(node.status, node.conclusion)
-  end
-end
+
 
 ---@param node WorkflowNode
 ---@param list LineDef[] | nil
@@ -572,7 +564,7 @@ local function tree_to_string(node, list)
     value = formatted,
     id = node.id,
     type = node.type,
-    highlight = highlight_node(node),
+    highlight = node.highlight,
     step_log = nil,
     expanded = node.expanded or false,
     node_ref = node
@@ -596,11 +588,7 @@ end
 local function print_lines()
   vim.api.nvim_buf_clear_namespace(M.buf, namespace, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-
-
   local lines = get_workflow_header()
-  ---Offset is first x before tree
-  local offset = #lines
 
   local stringified_tree = tree_to_string(M.tree, {})
   for _, value in ipairs(stringified_tree) do
