@@ -128,6 +128,11 @@ local function generateWorkflowTree(data)
   return root
 end
 
+local function extractAfterTimestamp(logLine)
+  local result = logLine:match("%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%.%d+Z%s*(.*)")
+  return result
+end
+
 ---@param names JobStep[]
 ---@param lines string[]
 local function match_lines_to_names(names, lines)
@@ -138,7 +143,6 @@ local function match_lines_to_names(names, lines)
     local current_name = names[name_index]
     local next_name = names[name_index + 1]
 
-    -- Ensure there's a result set for the current job
     local job_results = results[current_name.job]
     if not job_results then
       job_results = {}
@@ -146,16 +150,17 @@ local function match_lines_to_names(names, lines)
     end
 
     if line:find(current_name.job, 1, true) and line:find(current_name.step, 1, true) then
-      table.insert(job_results, { line = line, job = current_name.job, step = current_name.step })
+      table.insert(job_results,
+        { line = line, job = current_name.job, step = current_name.step })
     elseif next_name and line:find(next_name.job, 1, true) and line:find(next_name.step, 1, true) then
-      -- Move to next name and ensure its result set
       name_index = name_index + 1
       local next_job_results = results[next_name.job]
       if not next_job_results then
         next_job_results = {}
         results[next_name.job] = next_job_results
       end
-      table.insert(next_job_results, { line = line, job = next_name.job, step = next_name.step })
+      table.insert(next_job_results,
+        { line = line, job = next_name.job, step = next_name.step })
     else
       error("Failed to match line to step: " .. line)
     end
@@ -163,6 +168,7 @@ local function match_lines_to_names(names, lines)
 
   return results
 end
+
 local function split_by_newline(input)
   local result = {}
   for line in input:gmatch("([^\n]*)\n?") do
@@ -170,13 +176,6 @@ local function split_by_newline(input)
       table.insert(result, line)
     end
   end
-  return result
-end
-
-
-
-local function extractAfterTimestamp(logLine)
-  local result = logLine:match("%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%.%d+Z%s*(.*)")
   return result
 end
 
@@ -204,6 +203,59 @@ end
 ---@field step string
 
 
+local function collapse_groups(lines)
+  local collapsed = {}
+  local current_group = nil
+
+  for _, line in ipairs(lines) do
+    if extractAfterTimestamp(line):find("##%[group%]") then
+      -- Start a new group
+      current_group = { line }
+    elseif extractAfterTimestamp(line):find("##%[endgroup%]") then
+      if current_group then
+        -- End the current group and collapse it
+        table.insert(collapsed, table.concat(current_group, "\n"))
+        current_group = nil
+      else
+        error("Mismatched ##[endgroup] found: " .. line)
+      end
+    elseif current_group then
+      -- Add to the current group
+      table.insert(current_group, line)
+    else
+      -- Regular line, add directly
+      table.insert(collapsed, line)
+    end
+  end
+
+  -- Error if a group is left open
+  if current_group then
+    error("Unclosed group found.")
+  end
+
+  return collapsed
+end
+
+
+local function create_log_child(value, indent)
+  return {
+    display = extractAfterTimestamp(value)
+        :gsub("##%[group%]", "> ")
+        :gsub("##%[endgroup%]", "")
+        :gsub("%[command%]", ""),
+    id = value,
+    expanded = false,
+    indent = indent + 2,
+    type = "step_log",
+    highlight = value:find("%[command%]") ~= nil and "PreProc" or "Question",
+    icon = "",
+    preIcon = "",
+    children = {},
+  }
+end
+
+
+
 local function get_logs(id)
   ---@type JobStep[]
   local names = {}
@@ -227,8 +279,7 @@ local function get_logs(id)
   local stdout = out.stdout
 
   --TODO: convert tree from pairs to ipairs due to bug in sequencing
-  local matches = match_lines_to_names(names, split_by_newline(stdout))
-
+  local matches = match_lines_to_names(names, collapse_groups(split_by_newline(stdout)))
 
   --clear all children
   M.traverse(M.tree, function(i)
@@ -247,18 +298,18 @@ local function get_logs(id)
           return
         end
         if node.id == log_entry.step then
-          table.insert(node.children, {
-            display = extractAfterTimestamp(log_entry.line),
-            id = log_entry.line,
-            expanded = false,
-            indent = node.indent + 2,
-            type = "step_log",
-            highlight = "Question",
-            icon = "",
-            preIcon = "",
-            children = {},
-
-          })
+          local lines = split_by_newline(log_entry.line)
+          local log_child = create_log_child(lines[1], node.indent)
+          if #lines > 1 then
+            local sub = {}
+            for i, value in ipairs(lines) do
+              if i ~= 1 then
+                table.insert(sub, create_log_child(value, log_child.indent))
+              end
+            end
+            log_child.children = sub
+          end
+          table.insert(node.children, log_child)
         end
       end)
     end
