@@ -138,6 +138,7 @@ require"octo".setup({
   },
   reviews = {
     auto_show_threads = true,              -- automatically show comment threads on cursor move
+    focus             = "right",           -- focus right buffer on diff open
   },
   pull_requests = {
     order_by = {                           -- criteria to sort the results of `Octo pr list`
@@ -439,8 +440,7 @@ Octo search assignee:pwntester is:pr
 
 ## 📋 PR reviews
 
-- Open the PR (e.g. `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`)
-- Start a review with `Octo review start` or resume a pending review with `Octo review resume`
+- Enter review mode for the current branch with `Octo review`. Alternatively open the PR (e.g. `Octo <PR url>` or `Octo pr list` or `Octo pr edit <PR number>`) then use `Octo review` in the PR buffer to enter review mode for a specific PR.
 - A new tab will show a panel with changed files and two windows showing the diff on any of them.
 - Change panel entries with `]q` and `[q` or by selecting an entry in the window
 - Add comments with `<leader>ca` or suggestions with `<leader>sa` on single or multiple visual-selected lines
@@ -587,6 +587,8 @@ Contributions are always welcome!
 See [`CONTRIBUTING`](/CONTRIBUTING.md) for ways to get started.
 
 Please adhere to this project's [`CODE_OF_CONDUCT`](/CODE_OF_CONDUCT.md).
+
+You are welcome to join the [#octo.nvim:matrix.org](https://matrix.to/#/#octo.nvim:matrix.org) chatroom if you need help on anything.
 
 ## 🌟 Credits
 

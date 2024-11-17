@@ -1536,7 +1536,7 @@ query($endCursor: String) {
       closedAt
       updatedAt
       url
-      repository { nameWithOwner }
+      headRepository { nameWithOwner }
       files(first:100) {
         nodes {
           path
@@ -1873,6 +1873,10 @@ query($endCursor: String) {
       }
       mergeStateStatus
       mergeable
+      autoMergeRequest {
+        enabledBy { login }
+        mergeMethod
+      }
     }
   }
 }

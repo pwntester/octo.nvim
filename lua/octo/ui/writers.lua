@@ -126,7 +126,7 @@ function M.write_repo(bufnr, repo)
       return nil
     end
   end)
-  add_details_line(details, "Mirroed from", function()
+  add_details_line(details, "Mirrored from", function()
     if repo.isMirror == "true" then
       return repo.mirrorUrl
     else
@@ -489,6 +489,17 @@ function M.write_details(bufnr, issue, update)
       end
 
       table.insert(details, merge_state_vt)
+    end
+
+    if not issue.merged and issue.autoMergeRequest ~= vim.NIL then
+      local auto_merge_vt = {
+        { "Auto-merge: ", "OctoDetailsLabel" },
+        { "ENABLED", "OctoStateApproved" },
+        { " by " },
+        { issue.autoMergeRequest.enabledBy.login, "OctoUser" },
+        { " (" .. utils.auto_merge_method_map[issue.autoMergeRequest.mergeMethod] .. ")" },
+      }
+      table.insert(details, auto_merge_vt)
     end
 
     -- changes
