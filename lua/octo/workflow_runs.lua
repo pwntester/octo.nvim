@@ -59,6 +59,8 @@
 ---@field highlight string
 ---@field preIcon string
 ---@field icon string
+---@field status string
+---@field conclusion string
 ---@field children table<string, WorkflowNode>
 
 
@@ -101,16 +103,21 @@ local function generateWorkflowTree(data)
       indent = 2,
       expanded = true,
       highlight = nil,
+      status = job.status,
+      conclusion = job.conclusion,
       preIcon = "",
       icon = "🛠️",
       children = {}
     }
 
     for _, step in ipairs(job.steps) do
+      ---@type WorkflowNode
       local stepNode = {
         id = step.name,
         job_id = jobNode.id,
         display = step.name,
+        status = step.status,
+        conclusion = step.conclusion,
         type = "step",
         indent = 4,
         expanded = false,
@@ -209,26 +216,21 @@ local function collapse_groups(lines)
 
   for _, line in ipairs(lines) do
     if extractAfterTimestamp(line):find("##%[group%]") then
-      -- Start a new group
       current_group = { line }
     elseif extractAfterTimestamp(line):find("##%[endgroup%]") then
       if current_group then
-        -- End the current group and collapse it
         table.insert(collapsed, table.concat(current_group, "\n"))
         current_group = nil
       else
         error("Mismatched ##[endgroup] found: " .. line)
       end
     elseif current_group then
-      -- Add to the current group
       table.insert(current_group, line)
     else
-      -- Regular line, add directly
       table.insert(collapsed, line)
     end
   end
 
-  -- Error if a group is left open
   if current_group then
     error("Unclosed group found.")
   end
@@ -277,6 +279,11 @@ local function get_logs(id)
     }):wait()
 
   local stdout = out.stdout
+  local stderr = out.stderr
+
+  if #stderr > 1 then
+    error("Failed to get logs: \n" .. vim.inspect(stderr))
+  end
 
   --TODO: convert tree from pairs to ipairs due to bug in sequencing
   local matches = match_lines_to_names(names, collapse_groups(split_by_newline(stdout)))
@@ -323,6 +330,7 @@ local tree_keymaps = {
       node.expanded = true
       if node.type == "step" then
         get_logs(M.current_wf.databaseId)
+        print("logs have been fetched")
       end
     else
       node.expanded = false
@@ -342,11 +350,17 @@ local function get_job_status(status, conclusion)
   elseif status == "in_progress" then
     return icons.in_progress
   elseif conclusion == "success" then
-    return icons.succeeded
+    return ""
+    -- return icons.succeeded
   elseif conclusion == "failure" then
     return icons.failed
   elseif conclusion == "skipped" then
-    return icons.skipped
+    return ""
+    -- return icons.skipped
+  elseif conclusion == "cancelled" then
+    return ""
+    --TODO: make cancelled
+    -- return icons.skipped
   else
     return "❓"
   end
@@ -359,10 +373,14 @@ local function get_step_status(status, conclusion)
   elseif status == "in_progress" then
     return icons.in_progress
   elseif conclusion == "success" then
-    return icons.succeeded
+    return ""
+    -- return icons.succeeded
   elseif conclusion == "failure" then
     return icons.failed
   elseif conclusion == "skipped" then
+    return icons.skipped
+  elseif conclusion == "cancelled" then
+    --TODO: add cancelled
     return icons.skipped
   else
     return "❓"
@@ -489,10 +507,58 @@ end
 ---@param node WorkflowNode
 ---@return string
 local function format_node(node)
+  local status = node.type == "step" and get_step_status(node.status, node.conclusion) or
+      node.type == "job" and get_job_status(node.status, node.conclusion) or ""
+
   local indent = string.rep(" ", node.indent)
   local preIcon = node.type ~= "step_log" and (node.expanded == true and "> " or "> ") or ""
-  local formatted = string.format("%s%s%s", indent, preIcon, node.display)
+  local formatted = string.format("%s%s%s %s", indent, preIcon, node.display, status)
   return formatted
+end
+
+---@return string | nil
+local function get_job_highlight(status, conclusion)
+  if status == "queued" then
+    return "Question"
+  elseif status == "in_progress" then
+    return "Directory"
+  elseif conclusion == "success" then
+    return "Character"
+  elseif conclusion == "failure" then
+    return "ErrorMsg"
+  elseif conclusion == "skipped" then
+    return "NonText"
+  elseif conclusion == "cancelled" then
+    return "NonText"
+  end
+end
+
+---@return string | nil
+local function get_step_highlight(status, conclusion)
+  local icons = require("octo.config").values.runs.icons
+  if status == "pending" then
+    return "Question"
+  elseif status == "in_progress" then
+    return "Directory"
+  elseif conclusion == "success" then
+    return "Character"
+  elseif conclusion == "failure" then
+    return "ErrorMsg"
+  elseif conclusion == "skipped" then
+    return "NonText"
+  elseif conclusion == "cancelled" then
+    return "NonText"
+  end
+end
+
+
+---@param node WorkflowNode
+local function highlight_node(node)
+  if node.type == "job" then
+    return get_job_highlight(node.status, node.conclusion)
+  elseif node.type == "step" then
+    return get_step_highlight(node.status, node.conclusion)
+  end
 end
 
 ---@param node WorkflowNode
@@ -506,7 +572,7 @@ local function tree_to_string(node, list)
     value = formatted,
     id = node.id,
     type = node.type,
-    highlight = node.highlight or nil,
+    highlight = highlight_node(node),
     step_log = nil,
     expanded = node.expanded or false,
     node_ref = node
