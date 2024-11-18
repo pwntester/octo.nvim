@@ -66,7 +66,7 @@ return function(opts)
                 highlight = "OctoStateOpen"
               end
               local prefix = fzf.utils.ansi_from_hl(highlight, entry.value)
-              fzf_cb(prefix .. " " .. entry.obj.title)
+              fzf_cb(prefix .. " " .. entry.obj.title .. " (" .. entry.obj.headRefName .. ")")
             end
           end
         end

@@ -2141,6 +2141,8 @@ query($endCursor: String) {
         headRefName
         isDraft
         state
+        stateReason
+        author { login }
       }
       pageInfo {
         hasNextPage
