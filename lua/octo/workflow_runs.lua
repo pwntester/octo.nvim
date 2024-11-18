@@ -279,7 +279,10 @@ local function create_log_child(value, indent)
     display = extractAfterTimestamp(value)
         :gsub("##%[group%]", "> ")
         :gsub("##%[endgroup%]", "")
-        :gsub("%[command%]", ""),
+        :gsub("%[command%]", "")
+        :gsub("##%[notice%]", "Notice: ")
+        --strip ansi color codes
+        :gsub("\x1b%[[%d;]*m", ""),
     id = value,
     expanded = false,
     indent = indent + 2,
