@@ -191,7 +191,7 @@ local function match_lines_to_names(names, lines)
       results[current_name.job] = job_results
     end
 
-    if line:find(current_name.job, 1, true) and line:find(current_name.step, 1, true) then
+    if line:find(current_name.job, 1, true) and line:find(current_name.step, #current_name.job, true) then
       table.insert(job_results,
         { line = line, job = current_name.job, step = current_name.step })
     elseif next_name and line:find(next_name.job, 1, true) and line:find(next_name.step, 1, true) then
@@ -280,6 +280,7 @@ local function create_log_child(value, indent)
         :gsub("##%[group%]", "> ")
         :gsub("##%[endgroup%]", "")
         :gsub("%[command%]", "")
+        :gsub("##%[warning%]", "Warning: ")
         :gsub("##%[notice%]", "Notice: ")
         --strip ansi color codes
         :gsub("\x1b%[[%d;]*m", ""),
@@ -301,7 +302,10 @@ local function get_logs(id)
   local names = {}
   ---@param node WorkflowNode
   M.traverse(M.tree, function(node)
-    if node.type == "step" then
+    if node.type == "step" and not vim.tbl_contains(names, function(val)
+          return val.job == node.job_id and
+              val.step == node.id
+        end, { predicate = true }) then
       table.insert(names, { step = node.id, job = node.job_id })
     end
   end)
@@ -498,7 +502,9 @@ local function update_job_details(id)
     M.refresh()
     return
   end
-  vim.fn.jobstart(string.format("gh run view %s --json %s", id, fields), {
+  local cmd = string.format("gh run view %s --json %s", id, fields)
+  print(cmd)
+  vim.fn.jobstart(cmd, {
     stdout_buffered = true,
     on_stdout = function(_, data)
       job_details = vim.fn.json_decode(table.concat(data, "\n"))
@@ -598,6 +604,9 @@ end
 
 
 local function print_lines()
+  if not vim.api.nvim_buf_is_valid(M.buf) then
+    return
+  end
   vim.api.nvim_buf_clear_namespace(M.buf, namespace, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
   local lines = get_workflow_header()
@@ -647,11 +656,14 @@ M.refresh = function()
   print_lines()
 end
 
+local workflow_limit = 100
+
 local function get_workflow_runs_sync(co)
   local icons = require("octo.config").values.runs.icons
   local lines = {}
   vim.fn.jobstart(
-    "gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId",
+    "gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId -L " ..
+    workflow_limit,
     {
       stdout_buffered = true,
       on_stdout = function(_, data)
