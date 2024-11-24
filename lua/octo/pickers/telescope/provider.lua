@@ -1101,6 +1101,69 @@ function M.actions(flattened_actions)
 end
 
 --
+-- NOTIFICATIONS
+--
+local function mark_notification_read()
+  return function(prompt_bufnr)
+    local current_picker = action_state.get_current_picker(prompt_bufnr)
+    current_picker:delete_selection(function(selection)
+      local url = string.format("/notifications/threads/%s", selection.thread_id)
+      gh.run {
+        args = { "api", "--method", "PATCH", url },
+        headers = { "Accept: application/vnd.github.v3.diff" },
+        cb = function(_, stderr)
+          if stderr and not utils.is_blank(stderr) then
+            utils.error(stderr)
+            return
+          end
+        end,
+      }
+    end)
+  end
+end
+
+function M.notifications()
+  local cfg = octo_config.values
+  local opts = {
+    preview_title = "",
+    prompt_title = "Github Notifications",
+    results_title = "",
+  }
+
+  gh.run {
+    args = { "api", "--paginate", "/notifications" },
+    headers = { "Accept: application/vnd.github.v3.diff" },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.error(stderr)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        pickers
+          .new(opts, {
+
+            finder = finders.new_table {
+              results = resp,
+              entry_maker = entry_maker.gen_from_notification(),
+            },
+            sorter = conf.generic_sorter(opts),
+            previewer = previewers.issue.new(opts),
+            attach_mappings = function(_, map)
+              action_set.select:replace(function(prompt_bufnr, type)
+                open(type)(prompt_bufnr)
+              end)
+              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+              map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
+              return true
+            end,
+          })
+          :find()
+      end
+    end,
+  }
+end
+
+--
 -- Issue templates
 --
 function M.issue_templates(templates, cb)
@@ -1208,6 +1271,7 @@ M.picker = {
   issue_templates = M.issue_templates,
   issues = M.issues,
   labels = M.select_label,
+  notifications = M.notifications,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
   project_cards_v2 = M.not_implemented,
