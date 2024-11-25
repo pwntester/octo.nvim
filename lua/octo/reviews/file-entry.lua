@@ -124,8 +124,15 @@ end
 ---FileEntry finalizer
 function FileEntry:destroy()
   self:detach_buffers()
+
   for _, bn in ipairs(self.associated_bufs) do
-    pcall(vim.api.nvim_buf_delete, bn, { force = true })
+    if vim.api.nvim_buf_get_name(bn):match "octo://*" then
+      pcall(vim.api.nvim_buf_delete, bn, { force = true })
+    else
+      signs.unplace(bn)
+      vim.api.nvim_buf_set_option(bn, "modifiable", true)
+      vim.api.nvim_buf_clear_namespace(bn, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
+    end
   end
 end
 
@@ -433,6 +440,8 @@ function M._create_buffer(opts)
     -- Pros: LSP powered
     -- Cons: we need to change to the commit branch
     bufnr = vim.fn.bufadd(opts.path)
+    -- vim.fn.bufadd creates the buffer as unlisted by default
+    vim.api.nvim_buf_set_option(bufnr, "buflisted", true)
   else
     bufnr = vim.api.nvim_create_buf(false, false)
     local bufname =
@@ -504,8 +513,8 @@ end
 
 function M._detach_buffer(bufid)
   local conf = config.values
-  for _, lhs in pairs(conf.mappings.review_diff) do
-    pcall(vim.keymap.del, "n", lhs, { buffer = bufid })
+  for _, mapping in pairs(conf.mappings.review_diff) do
+    pcall(vim.keymap.del, "n", mapping.lhs, { buffer = bufid })
   end
 end
 
