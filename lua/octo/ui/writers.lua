@@ -380,19 +380,15 @@ function M.write_details(bufnr, issue, update)
     -- reviewers
     local reviewers = {}
     local collect_reviewer = function(name, state)
-      --if vim.g.octo_viewer ~= name then
       if not reviewers[name] then
-        if not reviewers[name] then
-          reviewers[name] = { state }
-        else
-          local states = reviewers[name]
-          if not vim.tbl_contains(states, state) then
-            table.insert(states, state)
-          end
-          reviewers[name] = states
+        reviewers[name] = { state }
+      else
+        local states = reviewers[name]
+        if not vim.tbl_contains(states, state) then
+          table.insert(states, state)
         end
+        reviewers[name] = states
       end
-      -- end
     end
     local timeline_nodes = {}
     for _, item in ipairs(issue.timelineItems.nodes) do
