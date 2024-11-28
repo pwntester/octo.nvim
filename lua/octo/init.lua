@@ -50,7 +50,7 @@ function M.configure_octo_buffer(bufnr)
     -- review diff buffers
     local current_review = reviews.get_current_review()
     if current_review and #current_review.threads > 0 then
-      current_review.layout:cur_file():place_signs()
+      current_review.layout:get_current_file():place_signs()
     end
   elseif buffer then
     -- issue/pr/reviewthread buffers
@@ -72,6 +72,7 @@ end
 ---@param opts ReloadOpts
 ---@return nil
 function M.load_buffer(opts)
+  opts = opts or {}
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)

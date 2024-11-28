@@ -479,19 +479,15 @@ function M.write_details(bufnr, issue, update)
     -- reviewers
     local reviewers = {}
     local collect_reviewer = function(name, state)
-      --if vim.g.octo_viewer ~= name then
       if not reviewers[name] then
-        if not reviewers[name] then
-          reviewers[name] = { state }
-        else
-          local states = reviewers[name]
-          if not vim.tbl_contains(states, state) then
-            table.insert(states, state)
-          end
-          reviewers[name] = states
+        reviewers[name] = { state }
+      else
+        local states = reviewers[name]
+        if not vim.tbl_contains(states, state) then
+          table.insert(states, state)
         end
+        reviewers[name] = states
       end
-      -- end
     end
     local timeline_nodes = {}
     for _, item in ipairs(issue.timelineItems.nodes) do
@@ -590,7 +586,7 @@ function M.write_details(bufnr, issue, update)
       table.insert(details, merge_state_vt)
     end
 
-    if not issue.merged and issue.autoMergeRequest ~= vim.NIL then
+    if not issue.merged and issue.autoMergeRequest and issue.autoMergeRequest ~= vim.NIL then
       local auto_merge_vt = {
         { "Auto-merge: ", "OctoDetailsLabel" },
         { "ENABLED", "OctoStateApproved" },

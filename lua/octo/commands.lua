@@ -613,8 +613,10 @@ function M.delete_comment()
             local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
             if split then
               local layout = reviews.get_current_review().layout
-              local file = layout:cur_file()
-              local diff_win = file:get_win(split)
+              local file = layout:get_current_file()
+              if not file then
+                return
+              end
               local thread_win = file:get_alternative_win(split)
               local original_buf = file:get_alternative_buf(split)
               -- move focus to the split containing the diff buffer
@@ -1443,7 +1445,7 @@ function M.reload(opts)
   require("octo").load_buffer(opts)
 end
 
-function random_hex_color()
+function M.random_hex_color()
   local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
   math.randomseed(os.time())
   local color = {}
@@ -1465,7 +1467,7 @@ function M.create_label(label)
   local name, color, description
   if label then
     name = label
-    color = random_hex_color()
+    color = M.random_hex_color()
     description = ""
   else
     vim.fn.inputsave()
@@ -1474,7 +1476,7 @@ function M.create_label(label)
     description = vim.fn.input "Enter description: "
     vim.fn.inputrestore()
     if color == "" then
-      color = random_hex_color()
+      color = M.random_hex_color()
     end
     color = string.gsub(color, "#", "")
   end

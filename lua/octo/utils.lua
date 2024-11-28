@@ -1,12 +1,15 @@
 local config = require "octo.config"
 local constants = require "octo.constants"
-local date = require "octo.date"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local _, Job = pcall(require, "plenary.job")
 local vim = vim
 
 local M = {}
+
+---@class OctoRepo
+---@field host string
+---@field name string
 
 local repo_id_cache = {}
 local repo_templates_cache = {}
@@ -232,6 +235,8 @@ function M.parse_remote_url(url, aliases)
   end
 end
 
+---Parse local git remotes from git cli
+---@return OctoRepo[]
 function M.parse_git_remote()
   local conf = config.values
   local aliases = conf.ssh_aliases
@@ -254,9 +259,10 @@ function M.parse_git_remote()
   return remotes
 end
 
---- Returns first host and repo information found in a list of remote values
---- If no argument is provided, defaults to matching against config's default remote
---- @param remote table | nil list of local remotes to match against
+---Returns first host and repo information found in a list of remote values
+---If no argument is provided, defaults to matching against config's default remote
+---@param remote table | nil list of local remotes to match against
+---@return OctoRepo
 function M.get_remote(remote)
   local conf = config.values
   local remotes = M.parse_git_remote()
@@ -375,9 +381,10 @@ function M.in_pr_branch(pr)
   local local_remote = local_branch_with_local_remote[1]
   local local_branch = local_branch_with_local_remote[2]
 
-  local local_repo = M.get_remote_name { local_remote }
+  -- Github repos are case insensitive, ignore case when comparing to local remotes
+  local local_repo = M.get_remote_name({ local_remote }):lower()
 
-  if local_repo == pr.head_repo and local_branch == pr.head_ref_name then
+  if local_repo == pr.head_repo:lower() and local_branch == pr.head_ref_name then
     return true
   end
 
@@ -1320,7 +1327,7 @@ end
 ---@param events table list of events
 ---@param winnr number window id of preview window
 ---@param bufnrs table list of buffers where the preview window will remain visible
----@see |autocmd-events|
+---@see autocmd-events
 function M.close_preview_autocmd(events, winnr, bufnrs)
   local augroup = vim.api.nvim_create_augroup("preview_window_" .. winnr, {
     clear = true,
