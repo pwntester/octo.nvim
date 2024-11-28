@@ -196,7 +196,7 @@ PR REVIEW                                       *octo-pr-review*
 * Start a review with `Octo review start` or resume a pending review with `Octo review resume`
  A new tab will show a panel with changed files and two windows showing the diff on any of them.
  Change panel entries with `]q` and `[q` or by selecting an entry in the window.
-* Add comments with `<leader>ca` or suggestions with `<leader>sa` on single or
+* Add comments with `<localleader>ca` or suggestions with `<localleader>sa` on single or
   multiple visual-selected lines
   * A new buffer will appear in the alternate diff window. Cursor will be
     positioned in the new buffer
