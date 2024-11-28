@@ -183,6 +183,7 @@ function M.issues(opts, develop)
         opts.preview_title = opts.preview_title or ""
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
+
         pickers
           .new(opts, {
             finder = finders.new_table {
@@ -1129,26 +1130,94 @@ function M.issue_templates(templates, cb)
     :find()
 end
 
+function M.discussions(opts)
+  opts = opts or {}
+
+  if opts.cb == nil then
+    opts.cb = function(selected, _)
+      local url = selected.obj.url
+      navigation.open_in_browser_raw(url)
+    end
+  end
+
+  local owner, name = utils.split_repo(opts.repo)
+  local cfg = octo_config.values
+  local order_by = cfg.discussions.order_by
+  local query = graphql("discussions_query", owner, name, order_by.field, order_by.direction, { escape = false })
+  utils.info "Fetching discussions (this may take a while) ..."
+  gh.run {
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.error(stderr)
+        return
+      end
+
+      local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
+      local discussions = resp.data.repository.discussions.nodes
+
+      local max_number = -1
+      for _, discussion in ipairs(discussions) do
+        if #tostring(discussion.number) > max_number then
+          max_number = #tostring(discussion.number)
+        end
+      end
+
+      if #discussions == 0 then
+        utils.error(string.format("There are no matching discussions in %s.", opts.repo))
+        return
+      end
+
+      local cfg = octo_config.values
+      local replace = function(prompt_bufnr, type)
+        local selected = action_state.get_selected_entry(prompt_bufnr)
+        actions.close(prompt_bufnr)
+        opts.cb(selected, prompt_bufnr, type)
+      end
+
+      opts.preview_title = opts.preview_title or ""
+
+      pickers
+        .new(opts, {
+          finder = finders.new_table {
+            results = discussions,
+            entry_maker = entry_maker.gen_from_discussions(max_number),
+          },
+          sorter = conf.generic_sorter(opts),
+          previewer = previewers.discussion.new(opts),
+          attach_mappings = function(_, map)
+            action_set.select:replace(replace)
+
+            map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+            return true
+          end,
+        })
+        :find()
+    end,
+  }
+end
+
 M.picker = {
-  issues = M.issues,
-  prs = M.pull_requests,
-  gists = M.gists,
-  commits = M.commits,
-  review_commits = M.review_commits,
+  actions = M.actions,
+  assigned_labels = M.select_assigned_label,
+  assignees = M.select_assignee,
   changed_files = M.changed_files,
+  commits = M.commits,
+  discussions = M.discussions,
+  gists = M.gists,
+  issue_templates = M.issue_templates,
+  issues = M.issues,
+  labels = M.select_label,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
   project_cards_v2 = M.not_implemented,
   project_columns = M.select_target_project_column,
   project_columns_v2 = M.not_implemented,
-  labels = M.select_label,
-  assigned_labels = M.select_assigned_label,
-  users = M.select_user,
-  assignees = M.select_assignee,
+  prs = M.pull_requests,
   repos = M.repos,
+  review_commits = M.review_commits,
   search = M.search,
-  actions = M.actions,
-  issue_templates = M.issue_templates,
+  users = M.select_user,
 }
 
 return M

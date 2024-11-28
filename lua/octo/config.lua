@@ -40,6 +40,9 @@ local M = {}
 ---@field auto_show_threads boolean
 ---@field focus OctoSplit
 
+---@class OctoConfigDiscussions
+---@field order_by OctoConfigOrderBy
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -85,6 +88,7 @@ local M = {}
 ---@field colors OctoConfigColors
 ---@field mappings { [OctoMappingsWindow]: OctoMappingsList}
 ---@field mappings_disable_default boolean
+---@field discussions OctoConfigDiscussions
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -131,6 +135,12 @@ function M.get_default_values()
       use_foldtext = true,
     },
     issues = {
+      order_by = {
+        field = "CREATED_AT",
+        direction = "DESC",
+      },
+    },
+    discussions = {
       order_by = {
         field = "CREATED_AT",
         direction = "DESC",
