@@ -3,6 +3,9 @@ local gh = require "octo.gh"
 
 local M = {}
 
+---https://docs.github.com/en/graphql/reference/enums#fileviewedstate
+---@alias ViewedState "DISMISSED" | "VIEWED" | "UNVIEWED"
+
 ---@class PullRequest
 ---@field repo string
 ---@field head_repo string
@@ -16,7 +19,7 @@ local M = {}
 ---@field right Rev
 ---@field local_right boolean
 ---@field local_left boolean
----@field files table
+---@field files {[string]: ViewedState}
 ---@field diff string
 local PullRequest = {}
 PullRequest.__index = PullRequest
@@ -78,6 +81,7 @@ function PullRequest:get_diff(pr)
 end
 
 ---Fetch the changed files for a given PR
+---@param callback fun(files: FileEntry[]): nil
 function PullRequest:get_changed_files(callback)
   local url = string.format("repos/%s/pulls/%d/files", self.repo, self.number)
   gh.run {

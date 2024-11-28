@@ -1,7 +1,6 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local utils = require "octo.utils"
 local vim = vim
-local config = require "octo.config"
 
 local M = {}
 
@@ -22,7 +21,7 @@ function M.show_review_threads(params)
     return
   end
 
-  local file = review.layout:cur_file()
+  local file = review.layout:get_current_file()
   if not file then
     -- cant find the changed file metadata
     return
@@ -83,7 +82,7 @@ function M.show_review_threads(params)
         end
         vim.api.nvim_buf_call(thread_buffer.bufnr, function()
           vim.cmd [[diffoff!]]
-          pcall(vim.cmd, "normal ]c")
+          pcall(vim.cmd.normal, "]c")
         end)
       end
     end
@@ -108,30 +107,44 @@ function M.hide_thread_buffer(split, file)
   end
 end
 
+---Create a thread buffer
+---@param threads any
+---@param repo any
+---@param number any
+---@param side any
+---@param path any
+---@return OctoBuffer | nil
 function M.create_thread_buffer(threads, repo, number, side, path)
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
+
   if not vim.startswith(path, "/") then
     path = "/" .. path
   end
   local line = threads[1].originalStartLine ~= vim.NIL and threads[1].originalStartLine or threads[1].originalLine
   local bufname = string.format("octo://%s/review/%s/threads/%s%s:%d", repo, current_review.id, side, path, line)
-  local bufnr = vim.fn.bufnr(bufname)
-  local buffer
-  if bufnr == -1 then
-    bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_name(bufnr, bufname)
-    buffer = OctoBuffer:new {
-      bufnr = bufnr,
-      number = number,
-      repo = repo,
-    }
-    buffer:render_threads(threads)
-    buffer:render_signs()
-  elseif vim.api.nvim_buf_is_loaded(bufnr) then
-    buffer = octo_buffers[bufnr]
-  else
-    vim.api.nvim_buf_delete(bufnr, { force = true })
+  local existing_bufnr = vim.fn.bufnr(bufname)
+
+  if existing_bufnr ~= -1 then
+    if vim.api.nvim_buf_is_loaded(existing_bufnr) then
+      return octo_buffers[existing_bufnr]
+    end
+
+    -- Weird situation, force delete buffer and start from scratch
+    vim.api.nvim_buf_delete(existing_bufnr, { force = true })
   end
+
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_name(bufnr, bufname)
+  local buffer = OctoBuffer:new {
+    bufnr = bufnr,
+    number = number,
+    repo = repo,
+  }
+  buffer:render_threads(threads)
+  buffer:render_signs()
   return buffer
 end
 
