@@ -59,6 +59,7 @@
 ---@field job_id string
 ---@field indent number
 ---@field expanded boolean
+---@field number number | nil
 ---@field highlight string | nil
 ---@field preIcon string
 ---@field icon string
@@ -152,6 +153,7 @@ local function generateWorkflowTree(data)
         job_id = jobNode.id,
         display = step.name,
         status = step.status,
+        number = step.number,
         conclusion = step.conclusion,
         type = "step",
         indent = 4,
@@ -175,52 +177,6 @@ local function extractAfterTimestamp(logLine)
   return result
 end
 
----@param names JobStep[]
----@param lines string[]
-local function match_lines_to_names(names, lines)
-  local results = {}
-  local name_index = 1
-
-  for _, line in ipairs(lines) do
-    local current_name = names[name_index]
-    local next_name = names[name_index + 1]
-
-    local job_results = results[current_name.job]
-    if not job_results then
-      job_results = {}
-      results[current_name.job] = job_results
-    end
-
-    if line:find(current_name.job, 1, true) and line:find(current_name.step, #current_name.job, true) then
-      table.insert(job_results,
-        { line = line, job = current_name.job, step = current_name.step })
-    elseif next_name and line:find(next_name.job, 1, true) and line:find(next_name.step, 1, true) then
-      name_index = name_index + 1
-      local next_job_results = results[next_name.job]
-      if not next_job_results then
-        next_job_results = {}
-        results[next_name.job] = next_job_results
-      end
-      table.insert(next_job_results,
-        { line = line, job = next_name.job, step = next_name.step })
-    else
-      error("Failed to match line to step: " .. line)
-    end
-  end
-
-  return results
-end
-
-local function split_by_newline(input)
-  local result = {}
-  for line in input:gmatch("([^\n]*)\n?") do
-    if line ~= "" then
-      table.insert(result, line)
-    end
-  end
-  return result
-end
-
 ---Traverses a tree from the given node, giving a callback for every item
 ---@param tree WorkflowNode | nil
 ---@param cb function
@@ -238,12 +194,6 @@ M.traverse = function(tree, cb)
     M.traverse(node, cb)
   end
 end
-
-
----@class JobStep
----@field job string
----@field step string
-
 
 local function collapse_groups(lines)
   local collapsed = {}
@@ -273,7 +223,6 @@ local function collapse_groups(lines)
   return collapsed
 end
 
-
 local function create_log_child(value, indent)
   return {
     display = extractAfterTimestamp(value)
@@ -296,73 +245,77 @@ local function create_log_child(value, indent)
 end
 
 
+-- Accepts zip contents and writes and then unzips them
+---@param stdout string - The zip content to write
+local function write_and_unzip_file(stdout)
+  local temp_location = os.tmpname()
+  local file = io.open(temp_location .. ".zip", "wb")
+  if not file then
+    print("Failed to create temporary file")
+    return
+  end
+
+  file:write(stdout)
+  file:close()
+
+  local unzipOutput = vim.system({ "unzip", "-d", temp_location, temp_location .. ".zip" }):wait()
+
+  if unzipOutput.code ~= 0 then
+    print("Failed to unzip logs: " .. (unzipOutput.stderr or "Unknown error"))
+  end
+  return temp_location
+  --TODO: return handler for deleting file
+end
 
 local function get_logs(id)
-  ---@type JobStep[]
-  local names = {}
-  ---@param node WorkflowNode
-  M.traverse(M.tree, function(node)
-    if node.type == "step" and not vim.tbl_contains(names, function(val)
-          return val.job == node.job_id and
-              val.step == node.id
-        end, { predicate = true }) then
-      table.insert(names, { step = node.id, job = node.job_id })
-    end
-  end)
-
   --TODO: check if logs are "fresh"
+  local reponame = vim.fn.json_decode(vim.fn.system("gh repo view --json nameWithOwner")).nameWithOwner
+  if not reponame then
+    error("Failed to resolve reponame")
+  end
   local out = vim.system(
     {
       "gh",
-      "run",
-      "view",
-      id,
-      "--log"
+      "api",
+      string.format("repos/%s/actions/runs/%s/logs", reponame, id, 0)
     }):wait()
 
-  local stdout = out.stdout
-  local stderr = out.stderr
-
-  if #stderr > 1 then
-    error("Failed to get logs: \n" .. vim.inspect(stderr))
+  if out.code ~= 0 then
+    print("Failed to fetch logs: " .. (out.stderr or "Unknown error"))
+    return
   end
 
-  --TODO: convert tree from pairs to ipairs due to bug in sequencing
-  local matches = match_lines_to_names(names, collapse_groups(split_by_newline(stdout)))
+  local temp_location = write_and_unzip_file(out.stdout)
 
-  --clear all children
-  M.traverse(M.tree, function(i)
-    if i.type ~= "step" then
+  ---@param node WorkflowNode
+  M.traverse(M.tree, function(node)
+    if node.type ~= "step" then
       return
     end
-    i.children = {}
-  end)
 
+    local sanitized_name = node.id:gsub("/", "")
+    local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
+    local path = vim.fs.joinpath(temp_location, node.job_id, file_name)
+    local lines = vim.fn.readfile(path)
 
-  for job, entry in pairs(matches) do
-    for _, log_entry in ipairs(entry) do
-      ---@param node WorkflowNode
-      M.traverse(M.tree, function(node)
-        if node.type ~= "step" or node.job_id ~= job then
-          return
-        end
-        if node.id == log_entry.step then
-          local lines = split_by_newline(log_entry.line)
-          local log_child = create_log_child(lines[1], node.indent)
-          if #lines > 1 then
-            local sub = {}
-            for i, value in ipairs(lines) do
-              if i ~= 1 then
-                table.insert(sub, create_log_child(value, log_child.indent))
-              end
-            end
-            log_child.children = sub
+    node.children = {}
+
+    for _, collapsed in ipairs(collapse_groups(lines)) do
+      local groupedLines = vim.fn.split(collapsed, "\n")
+      local log_child = create_log_child(groupedLines[1], node.indent)
+      if #groupedLines > 1 then
+        local sub = {}
+        for i, value in ipairs(groupedLines) do
+          if i ~= 1 then
+            table.insert(sub, create_log_child(value, log_child.indent))
           end
-          table.insert(node.children, log_child)
         end
-      end)
+        log_child.children = sub
+      end
+
+      table.insert(node.children, log_child)
     end
-  end
+  end)
 end
 
 local keymaps = {
@@ -380,7 +333,6 @@ local tree_keymaps = {
       node.expanded = true
       if node.type == "step" then
         get_logs(M.current_wf.databaseId)
-        print("logs have been fetched")
       end
     else
       node.expanded = false
@@ -488,12 +440,8 @@ local function get_workflow_header()
   end
 
   table.insert(lines, separator)
-
-
   return lines
 end
-
-
 
 local function update_job_details(id)
   ---@type WorkflowRun
@@ -503,7 +451,6 @@ local function update_job_details(id)
     return
   end
   local cmd = string.format("gh run view %s --json %s", id, fields)
-  print(cmd)
   vim.fn.jobstart(cmd, {
     stdout_buffered = true,
     on_stdout = function(_, data)
@@ -554,7 +501,6 @@ local function populate_preview_buffer(id, buf)
   end
 end
 
-
 ---@param node WorkflowNode
 ---@return string
 local function format_node(node)
@@ -566,10 +512,6 @@ local function format_node(node)
   local formatted = string.format("%s%s%s %s", indent, preIcon, node.display, status)
   return formatted
 end
-
-
-
-
 
 ---@param node WorkflowNode
 ---@param list LineDef[] | nil
@@ -634,7 +576,6 @@ local function print_lines()
       vim.api.nvim_buf_add_highlight(M.buf, namespace, vl.highlight, vl.index, 0, -1)
     end
   end
-
 
   for binding, cb in pairs(tree_keymaps) do
     vim.keymap.set("n", binding, function()
@@ -744,12 +685,6 @@ local preview_picker = function(bufnr, options, on_select_cb, title, previewer)
   picker:find()
 end
 
-
----@class LogEntry
----@field line string
----@field step_name string
-
-
 local function render(selected)
   local new_buf = vim.api.nvim_create_buf(true, true)
   M.buf = new_buf
@@ -785,6 +720,5 @@ M.refetch = function()
   M.current_wf = nil
   populate_preview_buffer(id, M.buf)
 end
-
 
 return M
