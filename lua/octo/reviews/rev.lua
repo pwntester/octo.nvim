@@ -23,10 +23,7 @@ function Rev:new(commit, head)
 end
 
 function Rev:abbrev()
-  if self.commit then
-    return self.commit:sub(1, 7)
-  end
-  return nil
+  return self.commit:sub(1, 7)
 end
 
 M.Rev = Rev

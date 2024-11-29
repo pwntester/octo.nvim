@@ -15,10 +15,10 @@ jobs:
             manager: sudo apt-get
             packages: -y fd-find
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: date +%F > todays-date
       - name: Restore from todays cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: _neovim
           key: ${{ runner.os }}-${{ matrix.url }}-${{ hashFiles('todays-date') }}

@@ -4,7 +4,7 @@ local M = {}
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "runs"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
----@alias OctoFocus "right" | "left"
+---@alias OctoSplit "right" | "left"
 
 ---@class OctoPickerConfig
 ---@field use_emojis boolean
@@ -38,7 +38,10 @@ local M = {}
 
 ---@class OctoConfigReviews
 ---@field auto_show_threads boolean
----@field focus OctoFocus
+---@field focus OctoSplit
+
+---@class OctoConfigDiscussions
+---@field order_by OctoConfigOrderBy
 
 ---@class OctoConfigWorkflowIcons
 ---@field pending string
@@ -97,6 +100,7 @@ local M = {}
 ---@field colors OctoConfigColors
 ---@field mappings { [OctoMappingsWindow]: OctoMappingsList}
 ---@field mappings_disable_default boolean
+---@field discussions OctoConfigDiscussions
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -143,6 +147,12 @@ function M.get_default_values()
       use_foldtext = true,
     },
     issues = {
+      order_by = {
+        field = "CREATED_AT",
+        direction = "DESC",
+      },
+    },
+    discussions = {
       order_by = {
         field = "CREATED_AT",
         direction = "DESC",
