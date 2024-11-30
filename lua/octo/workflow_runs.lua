@@ -77,6 +77,22 @@ local M = {
   wf_cache = {}
 }
 
+local function get_repo_name()
+  local result = vim.system({ "gh", "repo", "view", "--json", "nameWithOwner" }, { text = true }):wait()
+
+  if result.code ~= 0 then
+    error("Failed to execute 'gh repo view': " .. (result.stderr or "Unknown error"))
+  end
+
+  local ok, decoded = pcall(vim.json.decode, result.stdout)
+  if not ok or not decoded or not decoded.nameWithOwner then
+    error("Failed to parse repository name from 'gh repo view' output")
+  end
+
+  return decoded.nameWithOwner
+end
+
+
 local namespace = require("octo.constants").OCTO_WORKFLOW_NS
 
 ---@return string | nil
@@ -269,10 +285,7 @@ end
 
 local function get_logs(id)
   --TODO: check if logs are "fresh"
-  local reponame = vim.fn.json_decode(vim.fn.system("gh repo view --json nameWithOwner")).nameWithOwner
-  if not reponame then
-    error("Failed to resolve reponame")
-  end
+  local reponame = get_repo_name()
   local out = vim.system(
     {
       "gh",
@@ -318,21 +331,30 @@ local function get_logs(id)
   end)
 end
 
+
 local keymaps = {
   ---@param api Handler
   ["<C-r>"] = function(api)
     vim.notify("refreshing...")
     api.refetch()
+  end,
+  ["<C-b>"] = function(api)
+    local id = api.current_wf.databaseId
+    require("octo.navigation").open_in_browser("workflow_run", nil, id)
   end
 }
 
 local tree_keymaps = {
   ---@param node WorkflowNode
-  ["<CR>"] = function(node)
+  ["o"] = function(node)
     if node.expanded == false then
       node.expanded = true
       if node.type == "step" then
-        get_logs(M.current_wf.databaseId)
+        -- only refresh logs aggressively if step is in_progress
+        if (not next(node.children)) or node.conclusion == "in_progress" then
+          get_logs(M.current_wf.databaseId)
+          print("I got the logs mister")
+        end
       end
     else
       node.expanded = false
