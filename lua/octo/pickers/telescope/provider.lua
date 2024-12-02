@@ -129,13 +129,11 @@ local function open_issue_buffer(prompt_bufnr, type)
   open(type)(prompt_bufnr)
 end
 
-local function develop_issue(repo)
-  return function(prompt_bufnr, type)
-    local selection = action_state.get_selected_entry(prompt_bufnr)
-    actions.close(prompt_bufnr)
+local function develop_issue(prompt_bufnr, type)
+  local selection = action_state.get_selected_entry(prompt_bufnr)
+  actions.close(prompt_bufnr)
 
-    utils.develop_issue(selection.repo, selection.obj.number, repo)
-  end
+  utils.develop_issue(selection.repo, selection.obj.number, nil)
 end
 
 function M.issues(opts, develop)
@@ -154,7 +152,7 @@ function M.issues(opts, develop)
 
   local replace
   if develop then
-    replace = develop_issue(opts.repo)
+    replace = develop_issue
   else
     replace = open_issue_buffer
   end
