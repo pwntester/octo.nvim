@@ -398,7 +398,7 @@ function M.in_pr_branch(pr)
   local cmd = "git rev-parse --abbrev-ref --symbolic-full-name @{u}"
   local local_branch_with_local_remote = vim.split(string.gsub(vim.fn.system(cmd), "%s+", ""), "/")
   local local_remote = local_branch_with_local_remote[1]
-  local local_branch = local_branch_with_local_remote[2]
+  local local_branch = table.concat(local_branch_with_local_remote, "/", 2)
 
   -- Github repos are case insensitive, ignore case when comparing to local remotes
   local local_repo = M.get_remote_name({ local_remote }):lower()
