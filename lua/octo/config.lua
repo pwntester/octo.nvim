@@ -73,6 +73,7 @@ local M = {}
 ---@field left_bubble_delimiter string
 ---@field github_hostname string
 ---@field use_local_fs boolean
+---@field wrap boolean
 ---@field enable_builtin boolean
 ---@field snippet_context_lines number
 ---@field gh_cmd string
@@ -120,6 +121,7 @@ function M.get_default_values()
     left_bubble_delimiter = "",
     github_hostname = "",
     use_local_fs = false,
+    wrap = false,
     enable_builtin = false,
     snippet_context_lines = 4,
     gh_cmd = "gh",
@@ -427,6 +429,7 @@ function M.validate_config()
 
   if validate_type(config, "base config", "table") then
     validate_type(config.use_local_fs, "use_local_fs", "boolean")
+    validate_type(config.wrap, "wrap", "boolean")
     validate_type(config.enable_builtin, "enable_builtin", "boolean")
     validate_type(config.snippet_context_lines, "snippet_context_lines", "number")
     validate_type(config.timeout, "timeout", "number")
