@@ -383,7 +383,6 @@ function M.setup()
     end,
   })
 
-
   setmetatable(M.commands.notification, {
     __call = function(_)
       picker.notifications()
