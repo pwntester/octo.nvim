@@ -1,7 +1,7 @@
 local vim = vim
 local M = {}
 
----@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
+---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "runs"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
 ---@alias OctoSplit "right" | "left"
@@ -43,6 +43,17 @@ local M = {}
 ---@class OctoConfigDiscussions
 ---@field order_by OctoConfigOrderBy
 
+---@class OctoConfigWorkflowIcons
+---@field pending string
+---@field skipped string
+---@field in_progress string
+---@field failed string
+---@field succeeded string
+
+---@class OctoConfigRuns
+---@field icons OctoConfigWorkflowIcons
+---@field refresh_interval_list number
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -83,6 +94,7 @@ local M = {}
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
 ---@field reviews OctoConfigReviews
+---@field runs OctoConfigRuns
 ---@field pull_requests OctoConfigPR
 ---@field file_panel OctoConfigFilePanel
 ---@field colors OctoConfigColors
@@ -150,6 +162,16 @@ function M.get_default_values()
       auto_show_threads = true,
       focus = "right",
     },
+    runs = {
+      refresh_interval_list = 30000,
+      icons = {
+        pending = "🕖",
+        in_progress = "🔄",
+        failed = "❌",
+        succeeded = "✅",
+        skipped = "⏩",
+      },
+    },
     pull_requests = {
       order_by = {
         field = "CREATED_AT",
@@ -177,6 +199,10 @@ function M.get_default_values()
     },
     mappings_disable_default = false,
     mappings = {
+      runs = {
+        open = { lhs = "<leader>o", desc = "view workflow run" },
+        refresh = { lhs = "<leader>r", desc = "refresh workflow runs list" },
+      },
       issue = {
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },
         reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
