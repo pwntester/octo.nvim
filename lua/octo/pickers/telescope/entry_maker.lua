@@ -682,7 +682,7 @@ function M.gen_from_octo_actions()
     local displayer = entry_display.create {
       separator = "",
       items = {
-        { width = 12 },
+        { width = 16 },
         { remaining = true },
       },
     }
