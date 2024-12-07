@@ -502,16 +502,32 @@ end
 ---
 -- SEARCH
 ---
+
+local function get_search_size(prompt)
+  local query = graphql("search_count_query", prompt)
+  local output = gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    mode = "sync",
+  }
+  local resp = vim.fn.json_decode(output)
+  vim.print(resp)
+  return resp.data.search.issueCount
+end
+
 function M.search(opts)
   opts = opts or {}
   local cfg = octo_config.values
+  if type(opts.prompt) == "string" then
+    opts.prompt = { opts.prompt }
+  end
+
+  local num_results = get_search_size(opts.prompt[1])
+  local width = math.min(#tostring(num_results), 6)
+
   local requester = function()
     return function(prompt)
-      if not opts.prompt and utils.is_blank(prompt) then
+      if utils.is_blank(opts.prompt) and utils.is_blank(prompt) then
         return {}
-      end
-      if type(opts.prompt) == "string" then
-        opts.prompt = { opts.prompt }
       end
       local results = {}
       for _, val in ipairs(opts.prompt) do
@@ -536,13 +552,13 @@ function M.search(opts)
   end
   local finder = finders.new_dynamic {
     fn = requester(),
-    entry_maker = entry_maker.gen_from_issue(6),
+    entry_maker = entry_maker.gen_from_issue(width),
   }
   if opts.static then
     local results = requester() ""
     finder = finders.new_table {
       results = results,
-      entry_maker = entry_maker.gen_from_issue(6, true),
+      entry_maker = entry_maker.gen_from_issue(width, true),
     }
   end
   opts.preview_title = opts.preview_title or ""
