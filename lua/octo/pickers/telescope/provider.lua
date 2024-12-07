@@ -133,17 +133,10 @@ local function develop_issue(prompt_bufnr, type)
   local selection = action_state.get_selected_entry(prompt_bufnr)
   actions.close(prompt_bufnr)
 
-  utils.develop_issue(selection.obj.number)
+  utils.develop_issue(selection.repo, selection.obj.number, nil)
 end
 
 function M.issues(opts, develop)
-  local replace
-  if develop then
-    replace = develop_issue
-  else
-    replace = open_issue_buffer
-  end
-
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -155,6 +148,13 @@ function M.issues(opts, develop)
   if not opts.repo then
     utils.error "Cannot find repo"
     return
+  end
+
+  local replace
+  if develop then
+    replace = develop_issue
+  else
+    replace = open_issue_buffer
   end
 
   local owner, name = utils.split_repo(opts.repo)
