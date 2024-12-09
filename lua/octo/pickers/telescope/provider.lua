@@ -502,15 +502,22 @@ end
 ---
 -- SEARCH
 ---
+
 local function get_search_query(prompt)
-  local query = prompt[1]
-  local parts = vim.split(query, " ")
+  local full_prompt = prompt[1]
+  local parts = vim.split(full_prompt, " ")
   for _, part in ipairs(parts) do
-    if string.match(part, "repo:") then
-      return part
+    if string.match(part, "^repo:") then
+      return {
+        single_repo = true,
+        prompt = part,
+      }
     end
   end
-  return query
+  return {
+    single_repo = false,
+    prompt = full_prompt,
+  }
 end
 
 local function get_search_size(prompt)
@@ -530,10 +537,10 @@ function M.search(opts)
     opts.prompt = { opts.prompt }
   end
 
-  local search_prompt = get_search_query(opts.prompt)
+  local search = get_search_query(opts.prompt)
   local width = 6
-  if search_prompt:match "repo:" then
-    local num_results = get_search_size(search_prompt)
+  if search.single_repo then
+    local num_results = get_search_size(search.prompt)
     width = math.min(#tostring(num_results), width)
   end
 
