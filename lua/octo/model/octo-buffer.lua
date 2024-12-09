@@ -211,6 +211,9 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "ReviewDismissedEvent" then
       writers.write_review_dismissed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "RenamedTitleEvent" then
+      writers.write_renamed_title_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
   if prev_is_event then
