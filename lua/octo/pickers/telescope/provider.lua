@@ -502,6 +502,16 @@ end
 ---
 -- SEARCH
 ---
+local function get_search_query(prompt)
+  local query = prompt[1]
+  local parts = vim.split(query, " ")
+  for _, part in ipairs(parts) do
+    if string.match(part, "repo:") then
+      return part
+    end
+  end
+  return query
+end
 
 local function get_search_size(prompt)
   local query = graphql("search_count_query", prompt)
@@ -510,7 +520,6 @@ local function get_search_size(prompt)
     mode = "sync",
   }
   local resp = vim.fn.json_decode(output)
-  vim.print(resp)
   return resp.data.search.issueCount
 end
 
@@ -521,8 +530,12 @@ function M.search(opts)
     opts.prompt = { opts.prompt }
   end
 
-  local num_results = get_search_size(opts.prompt[1])
-  local width = math.min(#tostring(num_results), 6)
+  local search_prompt = get_search_query(opts.prompt)
+  local width = 6
+  if search_prompt:match "repo:" then
+    local num_results = get_search_size(search_prompt)
+    width = math.min(#tostring(num_results), width)
+  end
 
   local requester = function()
     return function(prompt)
