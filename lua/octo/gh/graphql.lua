@@ -2005,6 +2005,12 @@ query($endCursor: String) {
             }
             createdAt
           }
+          ... on RenamedTitleEvent {
+            actor { login }
+            createdAt
+            previousTitle
+            currentTitle
+          }
         }
       }
       labels(first: 20) {
