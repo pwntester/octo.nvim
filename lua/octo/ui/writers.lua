@@ -1338,9 +1338,9 @@ function M.write_renamed_title_event(bufnr, item)
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
   })
-  table.insert(vt, { " renamed from ", "OctoTimelineItemHeading" })
-  table.insert(vt, { item.previousTitle, "OctoDetailsLabel" })
-  table.insert(vt, { " to ", "OctoTimelineItemHeading" })
+  table.insert(vt, { " changed the title ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.previousTitle, "OctoStrikethrough" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.currentTitle, "OctoDetailsLabel" })
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
