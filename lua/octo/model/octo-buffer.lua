@@ -48,7 +48,9 @@ function OctoBuffer:new(opts)
     this.taggable_users = { this.node.author.login }
   elseif this.node and this.number then
     this.kind = "issue"
-    this.taggable_users = { this.node.author.login }
+    if not utils.is_blank(this.node.author) then
+      this.taggable_users = { this.node.author.login }
+    end
   elseif this.node and not this.number then
     this.kind = "repo"
   else
