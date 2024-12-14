@@ -1896,6 +1896,7 @@ query($endCursor: String) {
       id
       number
       state
+      stateReason
       title
       body
       createdAt
