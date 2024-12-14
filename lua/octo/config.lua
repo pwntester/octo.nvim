@@ -202,8 +202,9 @@ function M.get_default_values()
     mappings_disable_default = false,
     mappings = {
       runs = {
-        open = { lhs = "<leader>o", desc = "view workflow run" },
-        refresh = { lhs = "<leader>r", desc = "refresh workflow runs list" },
+        expand_step = { lhs = "o", desc = "expand workflow step" },
+        open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser"},
+        refresh = { lhs = "<C-r>", desc = "refresh workflow"}
       },
       issue = {
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },

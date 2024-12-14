@@ -265,7 +265,8 @@ end
 ---@param stdout string - The zip content to write
 local function write_and_unzip_file(stdout)
   local temp_location = os.tmpname()
-  local file = io.open(temp_location .. ".zip", "wb")
+  local zip_location = temp_location .. ".zip"
+  local file = io.open(zip_location, "wb")
   if not file then
     print("Failed to create temporary file")
     return
@@ -274,11 +275,20 @@ local function write_and_unzip_file(stdout)
   file:write(stdout)
   file:close()
 
-  local unzipOutput = vim.system({ "unzip", "-d", temp_location, temp_location .. ".zip" }):wait()
+  local unzipOutput = vim.system({ "unzip", "-d", temp_location, zip_location }):wait()
 
   if unzipOutput.code ~= 0 then
     print("Failed to unzip logs: " .. (unzipOutput.stderr or "Unknown error"))
   end
+
+  local success, err = pcall(function()
+    vim.loop.fs_unlink(zip_location)
+  end)
+
+  if not success then
+    print("Error deleting zip archive: " .. err)
+  end
+
   return temp_location
   --TODO: return handler for deleting file
 end
@@ -332,13 +342,14 @@ local function get_logs(id)
 end
 
 
+local mappings = require("octo.config").values.mappings.runs
 local keymaps = {
   ---@param api Handler
-  ["<C-r>"] = function(api)
+  [mappings.refresh.lhs] = function(api)
     vim.notify("refreshing...")
     api.refetch()
   end,
-  ["<C-b>"] = function(api)
+  [mappings.open_in_browser.lhs] = function(api)
     local id = api.current_wf.databaseId
     require("octo.navigation").open_in_browser("workflow_run", nil, id)
   end
@@ -346,14 +357,13 @@ local keymaps = {
 
 local tree_keymaps = {
   ---@param node WorkflowNode
-  ["o"] = function(node)
+  [mappings.expand_step.lhs] = function(node)
     if node.expanded == false then
       node.expanded = true
       if node.type == "step" then
         -- only refresh logs aggressively if step is in_progress
         if (not next(node.children)) or node.conclusion == "in_progress" then
           get_logs(M.current_wf.databaseId)
-          print("I got the logs mister")
         end
       end
     else
