@@ -1323,6 +1323,29 @@ function M.write_commit_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+function M.write_renamed_title_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if utils.is_blank(item.actor) then
+    table.insert(vt, { "Title renamed", "OctoTimelineItemHeading" })
+    write_event(bufnr, vt)
+    return
+  end
+
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " changed the title ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.previousTitle, "OctoStrikethrough" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.currentTitle, "OctoDetailsLabel" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
 function M.write_merged_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,

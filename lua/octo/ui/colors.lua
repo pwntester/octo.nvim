@@ -64,6 +64,7 @@ local function get_hl_groups()
     NormalFront = { fg = get_fg "Normal" or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
     Editable = { bg = float_bg },
+    Strikethrough = { fg = colors.grey, gui = "strikethrough" },
   }
 end
 

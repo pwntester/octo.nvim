@@ -1739,6 +1739,12 @@ query($endCursor: String) {
             viewerCanUpdate
             viewerCanDelete
           }
+          ... on RenamedTitleEvent {
+            actor { login }
+            createdAt
+            previousTitle
+            currentTitle
+          }
           ... on PullRequestReview {
             id
             body
@@ -2004,6 +2010,12 @@ query($endCursor: String) {
               ... on Mannequin { login }
             }
             createdAt
+          }
+          ... on RenamedTitleEvent {
+            actor { login }
+            createdAt
+            previousTitle
+            currentTitle
           }
         }
       }
