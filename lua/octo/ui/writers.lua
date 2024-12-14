@@ -368,7 +368,12 @@ function M.write_details(bufnr, issue, update)
 
   -- author
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
-  local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor)
+  local opts = {}
+  if utils.is_blank(issue.author) then
+    issue.author = { login = "ghost" }
+    opts = { ghost = true }
+  end
+  local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
@@ -1261,11 +1266,19 @@ function M.write_issue_summary(bufnr, issue, opts)
   end
 
   -- author line
-  table.insert(chunks, {
-    { " " },
-    { conf.user_icon or " " },
-    { issue.author.login },
-  })
+  if utils.is_blank(issue.author) then
+    table.insert(chunks, {
+      { " " },
+      { conf.ghost_icon or "󰊠 " },
+      { "ghost" },
+    })
+  else
+    table.insert(chunks, {
+      { " " },
+      { conf.user_icon or " " },
+      { issue.author.login },
+    })
+  end
 
   for i = 1, #chunks do
     M.write_block(bufnr, { "" }, i)
