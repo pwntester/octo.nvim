@@ -957,6 +957,7 @@ M.update_issue_state_mutation = [[
         id
         number
         state
+        stateReason
         title
         body
         createdAt
