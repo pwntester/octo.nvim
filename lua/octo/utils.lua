@@ -318,18 +318,38 @@ function M.commit_exists(commit, cb)
   }):start()
 end
 
-function M.develop_issue(issue_number)
+function M.develop_issue(issue_repo, issue_number, branch_repo)
   if not Job then
     return
+  end
+
+  if M.is_blank(branch_repo) then
+    branch_repo = M.get_remote_name()
   end
 
   Job:new({
     enable_recording = true,
     command = "gh",
-    args = { "issue", "develop", issue_number, "--checkout" },
-    on_exit = vim.schedule_wrap(function()
-      local output = vim.fn.system "git branch --show-current"
-      M.info("Switched to " .. output)
+    args = {
+      "issue",
+      "develop",
+      "--repo",
+      issue_repo,
+      issue_number,
+      "--checkout",
+      "--branch-repo",
+      branch_repo,
+    },
+    on_exit = vim.schedule_wrap(function(job, code)
+      if code == 0 then
+        local output = vim.fn.system "git branch --show-current"
+        M.info("Switched to " .. output)
+      else
+        local stderr = table.concat(job:stderr_result(), "\n")
+        if not M.is_blank(stderr) then
+          M.error(stderr)
+        end
+      end
     end),
   }):start()
 end
@@ -342,13 +362,10 @@ function M.get_file_at_commit(path, commit, cb)
     enable_recording = true,
     command = "git",
     args = { "show", string.format("%s:%s", commit, path) },
-    on_exit = vim.schedule_wrap(function(j_self, _, _)
-      local output = table.concat(j_self:result(), "\n")
-      local stderr = table.concat(j_self:stderr_result(), "\n")
-      cb(vim.split(output, "\n"), vim.split(stderr, "\n"))
-    end),
   }
-  job:start()
+  local result = job:sync()
+  local output = table.concat(result, "\n")
+  cb(vim.split(output, "\n"))
 end
 
 function M.in_pr_repo()

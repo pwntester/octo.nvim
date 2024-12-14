@@ -75,6 +75,7 @@ local M = {}
 ---@field reaction_viewer_hint_icon string
 ---@field users string
 ---@field user_icon string
+---@field ghost_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
 ---@field resolved_icon string
@@ -123,6 +124,7 @@ function M.get_default_values()
     reaction_viewer_hint_icon = " ",
     users = "search",
     user_icon = " ",
+    ghost_icon = "󰊠 ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
@@ -465,6 +467,7 @@ function M.validate_config()
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
     validate_string_enum(config.users, "users", { "search", "mentionable", "assignable" })
     validate_type(config.user_icon, "user_icon", "string")
+    validate_type(config.ghost_icon, "ghost_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")

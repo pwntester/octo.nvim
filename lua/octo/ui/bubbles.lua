@@ -41,8 +41,8 @@ local function make_user_bubble(name, is_viewer, opts)
   local conf = config.values
   local highlight = is_viewer and "OctoUserViewer" or "OctoUser"
   local icon_position = opts.icon_position or "left"
-  local icon = conf.user_icon
-  icon = opts.icon or icon
+  local default_icon = opts.ghost and conf.ghost_icon or conf.user_icon
+  local icon = opts.icon or default_icon
   local content
   if icon_position == "left" then
     content = icon .. " " .. name

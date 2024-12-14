@@ -1739,6 +1739,12 @@ query($endCursor: String) {
             viewerCanUpdate
             viewerCanDelete
           }
+          ... on RenamedTitleEvent {
+            actor { login }
+            createdAt
+            previousTitle
+            currentTitle
+          }
           ... on PullRequestReview {
             id
             body
@@ -2005,6 +2011,12 @@ query($endCursor: String) {
             }
             createdAt
           }
+          ... on RenamedTitleEvent {
+            actor { login }
+            createdAt
+            previousTitle
+            currentTitle
+          }
         }
       }
       labels(first: 20) {
@@ -2147,6 +2159,14 @@ query($endCursor: String) {
         endCursor
       }
     }
+  }
+}
+]]
+
+M.search_count_query = [[
+query {
+  search(query: """%s""", type: ISSUE, last: 100) {
+    issueCount
   }
 }
 ]]

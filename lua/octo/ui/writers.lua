@@ -368,7 +368,12 @@ function M.write_details(bufnr, issue, update)
 
   -- author
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
-  local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor)
+  local opts = {}
+  if utils.is_blank(issue.author) then
+    issue.author = { login = "ghost" }
+    opts = { ghost = true }
+  end
+  local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
@@ -1261,11 +1266,19 @@ function M.write_issue_summary(bufnr, issue, opts)
   end
 
   -- author line
-  table.insert(chunks, {
-    { " " },
-    { conf.user_icon or " " },
-    { issue.author.login },
-  })
+  if utils.is_blank(issue.author) then
+    table.insert(chunks, {
+      { " " },
+      { conf.ghost_icon or "󰊠 " },
+      { "ghost" },
+    })
+  else
+    table.insert(chunks, {
+      { " " },
+      { conf.user_icon or " " },
+      { issue.author.login },
+    })
+  end
 
   for i = 1, #chunks do
     M.write_block(bufnr, { "" }, i)
@@ -1317,8 +1330,31 @@ function M.write_commit_event(bufnr, item)
   end
   table.insert(vt, { " added ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
-  table.insert(vt, { " '", "OctoTimelineItemHeading" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+function M.write_renamed_title_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if utils.is_blank(item.actor) then
+    table.insert(vt, { "Title renamed", "OctoTimelineItemHeading" })
+    write_event(bufnr, vt)
+    return
+  end
+
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " changed the title ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.previousTitle, "OctoStrikethrough" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.currentTitle, "OctoDetailsLabel" })
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
 end

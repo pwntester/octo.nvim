@@ -133,17 +133,10 @@ local function develop_issue(prompt_bufnr, type)
   local selection = action_state.get_selected_entry(prompt_bufnr)
   actions.close(prompt_bufnr)
 
-  utils.develop_issue(selection.obj.number)
+  utils.develop_issue(selection.repo, selection.obj.number, nil)
 end
 
 function M.issues(opts, develop)
-  local replace
-  if develop then
-    replace = develop_issue
-  else
-    replace = open_issue_buffer
-  end
-
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -155,6 +148,13 @@ function M.issues(opts, develop)
   if not opts.repo then
     utils.error "Cannot find repo"
     return
+  end
+
+  local replace
+  if develop then
+    replace = develop_issue
+  else
+    replace = open_issue_buffer
   end
 
   local owner, name = utils.split_repo(opts.repo)
@@ -502,16 +502,52 @@ end
 ---
 -- SEARCH
 ---
+
+local function get_search_query(prompt)
+  local full_prompt = prompt[1]
+  local parts = vim.split(full_prompt, " ")
+  for _, part in ipairs(parts) do
+    if string.match(part, "^repo:") then
+      return {
+        single_repo = true,
+        prompt = part,
+      }
+    end
+  end
+  return {
+    single_repo = false,
+    prompt = full_prompt,
+  }
+end
+
+local function get_search_size(prompt)
+  local query = graphql("search_count_query", prompt)
+  local output = gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    mode = "sync",
+  }
+  local resp = vim.fn.json_decode(output)
+  return resp.data.search.issueCount
+end
+
 function M.search(opts)
   opts = opts or {}
   local cfg = octo_config.values
+  if type(opts.prompt) == "string" then
+    opts.prompt = { opts.prompt }
+  end
+
+  local search = get_search_query(opts.prompt)
+  local width = 6
+  if search.single_repo then
+    local num_results = get_search_size(search.prompt)
+    width = math.min(#tostring(num_results), width)
+  end
+
   local requester = function()
     return function(prompt)
-      if not opts.prompt and utils.is_blank(prompt) then
+      if utils.is_blank(opts.prompt) and utils.is_blank(prompt) then
         return {}
-      end
-      if type(opts.prompt) == "string" then
-        opts.prompt = { opts.prompt }
       end
       local results = {}
       for _, val in ipairs(opts.prompt) do
@@ -536,13 +572,13 @@ function M.search(opts)
   end
   local finder = finders.new_dynamic {
     fn = requester(),
-    entry_maker = entry_maker.gen_from_issue(6),
+    entry_maker = entry_maker.gen_from_issue(width),
   }
   if opts.static then
     local results = requester() ""
     finder = finders.new_table {
       results = results,
-      entry_maker = entry_maker.gen_from_issue(6, true),
+      entry_maker = entry_maker.gen_from_issue(width, true),
     }
   end
   opts.preview_title = opts.preview_title or ""

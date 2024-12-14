@@ -83,7 +83,7 @@ function M.setup()
         local buffer = octo_buffers[bufnr]
 
         if buffer and buffer.kind and buffer.kind == "issue" then
-          utils.develop_issue(buffer.node.number)
+          utils.develop_issue(buffer.repo, buffer.node.number, repo)
         else
           local opts = M.process_varargs(repo, ...)
           picker.issues(opts, true)
