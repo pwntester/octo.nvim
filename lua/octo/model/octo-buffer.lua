@@ -108,7 +108,13 @@ function OctoBuffer:render_issue()
   writers.write_details(self.bufnr, self.node)
 
   -- write issue/pr status
-  writers.write_state(self.bufnr, self.node.state:upper(), self.number)
+  local state
+  if self.kind == "issue" and self.node.state == "CLOSED" then
+    state = self.node.stateReason
+  else
+    state = self.node.state
+  end
+  writers.write_state(self.bufnr, state:upper(), self.number)
 
   -- write body
   writers.write_body(self.bufnr, self.node)
