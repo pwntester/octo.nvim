@@ -65,8 +65,9 @@ function M.setup()
       edit = function(...)
         utils.get_issue(...)
       end,
-      close = function()
-        M.change_state "CLOSED"
+      close = function(stateReason)
+        stateReason = stateReason or "CLOSED"
+        M.change_state(stateReason)
       end,
       develop = function(repo, ...)
         local bufnr = vim.api.nvim_get_current_buf()
@@ -732,11 +733,22 @@ function M.change_state(state)
   end
 
   local id = buffer.node.id
-  local query
-  if buffer:isIssue() then
+  local query, get_obj
+  if buffer:isIssue() and (state == "CLOSED" or state == "OPEN") then
     query = graphql("update_issue_state_mutation", id, state)
+    get_obj = function(resp)
+      return resp.data.updateIssue.issue
+    end
+  elseif buffer:isIssue() then
+    query = graphql("close_issue_mutation", id, state)
+    get_obj = function(resp)
+      return resp.data.closeIssue.issue
+    end
   elseif buffer:isPullRequest() then
     query = graphql("update_pull_request_state_mutation", id, state)
+    get_obj = function(resp)
+      return resp.data.updatePullRequest.pullRequest
+    end
   end
 
   gh.run {
@@ -746,14 +758,9 @@ function M.change_state(state)
         utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
-        local new_state, obj
-        if buffer:isIssue() then
-          obj = resp.data.updateIssue.issue
-          new_state = obj.state
-        elseif buffer:isPullRequest() then
-          obj = resp.data.updatePullRequest.pullRequest
-          new_state = obj.state
-        end
+        local obj = get_obj(resp)
+        local new_state = obj.state
+
         if state == new_state then
           buffer.node.state = new_state
           writers.write_state(bufnr, new_state:upper(), buffer.number)

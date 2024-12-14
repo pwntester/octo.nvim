@@ -949,6 +949,108 @@ M.update_issue_mutation = [[
   }
 ]]
 
+M.close_issue_mutation = [[
+mutation {
+  closeIssue(input: {issueId: "%s", stateReason: %s}) {
+    issue {
+      url
+      author { login }
+      state
+      stateReason
+      closedAt
+      updatedAt
+      milestone {
+        title
+        state
+      }
+      labels(first: 20) {
+        nodes {
+          color
+          name
+        }
+      }
+      timelineItems(last: 100) {
+        nodes {
+          __typename
+          ... on LabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
+          ... on UnlabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
+          ... on IssueComment {
+            id
+            body
+            createdAt
+            reactionGroups {
+              content
+              viewerHasReacted
+              users {
+                totalCount
+              }
+            }
+            author {
+              login
+            }
+            viewerDidAuthor
+            viewerCanUpdate
+            viewerCanDelete
+          }
+          ... on ClosedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on ReopenedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on AssignedEvent {
+            actor {
+              login
+            }
+            assignee {
+              ... on Organization { name }
+              ... on Bot { login }
+              ... on User {
+                login
+                isViewer
+              }
+              ... on Mannequin { login }
+            }
+            createdAt
+          }
+        }
+      }
+      assignees(first: 20) {
+        nodes {
+          id
+          login
+          isViewer
+        }
+      }
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
   mutation {
