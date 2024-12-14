@@ -318,7 +318,7 @@ local function get_logs(id)
 
     local sanitized_name = node.id:gsub("/", "")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
-    local path = vim.fs.joinpath(temp_location, node.job_id, file_name)
+    local path = vim.fs.normalize(vim.fs.joinpath(temp_location, node.job_id, file_name))
     local lines = vim.fn.readfile(path)
 
     node.children = {}
