@@ -2077,6 +2077,7 @@ query {
         __typename
         createdAt
         state
+        stateReason
         number
         title
         body

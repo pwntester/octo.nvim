@@ -1222,9 +1222,15 @@ function M.write_issue_summary(bufnr, issue, opts)
   })
 
   -- issue body
+  local state
+  if issue.__typename == "Issue" and issue.state == "CLOSED" then
+    state = issue.stateReason
+  else
+    state = issue.state
+  end
   table.insert(chunks, {
     { " " },
-    { "[" .. issue.state .. "] ", utils.state_hl_map[issue.state] },
+    { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
     { issue.title .. " ", "OctoDetailsLabel" },
     { "#" .. issue.number .. " ", "OctoDetailsValue" },
   })
