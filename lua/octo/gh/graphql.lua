@@ -2163,6 +2163,14 @@ query($endCursor: String) {
 }
 ]]
 
+M.search_count_query = [[
+query {
+  search(query: """%s""", type: ISSUE, last: 100) {
+    issueCount
+  }
+}
+]]
+
 M.search_query = [[
 query {
   search(query: """%s""", type: ISSUE, last: 100) {
