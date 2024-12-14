@@ -385,16 +385,12 @@ local function get_job_status(status, conclusion)
     return icons.in_progress
   elseif conclusion == "success" then
     return ""
-    -- return icons.succeeded
   elseif conclusion == "failure" then
     return icons.failed
   elseif conclusion == "skipped" then
-    return ""
-    -- return icons.skipped
+    return icons.skipped
   elseif conclusion == "cancelled" then
-    return ""
-    --TODO: make cancelled
-    -- return icons.skipped
+    return icons.cancelled
   else
     return "❓"
   end
@@ -408,14 +404,12 @@ local function get_step_status(status, conclusion)
     return icons.in_progress
   elseif conclusion == "success" then
     return ""
-    -- return icons.succeeded
   elseif conclusion == "failure" then
     return icons.failed
   elseif conclusion == "skipped" then
     return icons.skipped
   elseif conclusion == "cancelled" then
-    --TODO: add cancelled
-    return icons.skipped
+    return icons.cancelled
   else
     return "❓"
   end
@@ -494,28 +488,8 @@ local function update_job_details(id)
         M.current_wf = job_details
         M.tree = generateWorkflowTree(job_details)
         M.refresh()
-        -- local lines = get_job_details_lines(job_details)
-        -- if vim.api.nvim_buf_is_valid(buf) then
-        --   M.lines = lines
-        --   M.refresh()
-        -- end
-        --
-        -- if #job_details.conclusion == 0 then
-        --   local function refresh_job_details()
-        --     if vim.api.nvim_buf_is_valid(buf) then
-        --       update_job_details(id, buf)
-        --     end
-        --   end
-        --   vim.defer_fn(refresh_job_details, 5000)
-        --   vim.api.nvim_buf_set_extmark(buf, require("octo.constants").OCTO_WORKFLOW_NS, 0, 0, {
-        --     virt_text = { { string.format "auto refresh enabled", "Character" } },
-        --     virt_text_pos = "right_align",
-        --     priority = 200,
-        --   })
-        -- end
       else
         print("Failed to get workflow run for " .. id)
-        --stderr
       end
     end,
   })

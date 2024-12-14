@@ -49,10 +49,10 @@ local M = {}
 ---@field in_progress string
 ---@field failed string
 ---@field succeeded string
+---@field cancelled string
 
 ---@class OctoConfigRuns
 ---@field icons OctoConfigWorkflowIcons
----@field refresh_interval_list number
 
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
@@ -165,13 +165,13 @@ function M.get_default_values()
       focus = "right",
     },
     runs = {
-      refresh_interval_list = 30000,
       icons = {
         pending = "🕖",
         in_progress = "🔄",
         failed = "❌",
-        succeeded = "✅",
+        succeeded = "",
         skipped = "⏩",
+        cancelled = "✖"
       },
     },
     pull_requests = {
@@ -203,8 +203,8 @@ function M.get_default_values()
     mappings = {
       runs = {
         expand_step = { lhs = "o", desc = "expand workflow step" },
-        open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser"},
-        refresh = { lhs = "<C-r>", desc = "refresh workflow"}
+        open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
+        refresh = { lhs = "<C-r>", desc = "refresh workflow" }
       },
       issue = {
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },
