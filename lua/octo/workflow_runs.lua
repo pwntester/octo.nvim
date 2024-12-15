@@ -288,11 +288,21 @@ local function write_and_unzip_file(stdout)
     octo_error("Error deleting zip archive: " .. err)
   end
 
-  return temp_location
+  return temp_location,
+    function()
+      local unlink_success, unlink_error = pcall(function()
+        vim.loop.fs_unlink(temp_location)
+      end)
+
+      if not unlink_success then
+        octo_error("Error deleting logs archive: " .. unlink_error)
+      end
+    end
   --TODO: return handler for deleting file
 end
 
 local function get_logs(id)
+  vim.notify "Fetching workflow logs (this may take a while) ..."
   --TODO: check if logs are "fresh"
   local reponame = get_repo_name()
   local out = vim
@@ -308,7 +318,7 @@ local function get_logs(id)
     return
   end
 
-  local temp_location = write_and_unzip_file(out.stdout)
+  local temp_location, cleanup = write_and_unzip_file(out.stdout)
 
   ---@param node WorkflowNode
   M.traverse(M.tree, function(node)
@@ -339,6 +349,7 @@ local function get_logs(id)
       table.insert(node.children, log_child)
     end
   end)
+  cleanup()
 end
 
 local keymaps = {
