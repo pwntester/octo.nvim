@@ -7,6 +7,7 @@ local previewers = require "telescope.previewers"
 local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
+local workflow_runs_previewer = require("octo.workflow_runs").previewer
 
 local vim = vim
 
@@ -222,7 +223,14 @@ local issue_template = defaulter(function(opts)
   }
 end, {})
 
+local workflow_runs = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    define_preview = workflow_runs_previewer,
+  }
+end, {})
+
 return {
+  workflow_runs = workflow_runs,
   discussion = discussion,
   issue = issue,
   gist = gist,

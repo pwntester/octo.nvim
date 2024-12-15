@@ -3,13 +3,8 @@ local mappings = require("octo.config").values.mappings.runs
 local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
-local previewers = require "telescope.previewers"
-local pickers = require "telescope.pickers"
-local finders = require "telescope.finders"
-local actions = require "telescope.actions"
-local state = require "telescope.actions.state"
-local config = require "telescope.config"
 local octo_error = require("octo.utils").error
+local ts_provider = require "octo.pickers.telescope.provider"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
@@ -641,55 +636,6 @@ local function get_workflow_runs_sync(co)
   return lines
 end
 
-local preview_picker = function(bufnr, options, on_select_cb, title, previewer)
-  if #options == 0 then
-    error "No options provided, minimum 1 is required"
-  end
-
-  -- Auto pick if only one option present
-  if #options == 1 then
-    on_select_cb(options[1])
-    return
-  end
-
-  local picker = pickers.new(bufnr, {
-    prompt_title = title,
-    finder = finders.new_table {
-      results = options,
-      entry_maker = function(entry)
-        return {
-          display = entry.display,
-          value = entry,
-          ordinal = entry.display,
-        }
-      end,
-    },
-    previewer = previewers.new_buffer_previewer {
-      title = title .. " preview",
-      define_preview = previewer,
-    },
-    sorter = config.values.generic_sorter {},
-    preview = true,
-    attach_mappings = function(_, map)
-      map("i", "<CR>", function(prompt_bufnr)
-        local selection = state.get_selected_entry()
-        actions.close(prompt_bufnr)
-        on_select_cb(selection.value)
-      end)
-      map("n", "<CR>", function(prompt_bufnr)
-        local selection = state.get_selected_entry()
-        actions.close(prompt_bufnr)
-        on_select_cb(selection.value)
-      end)
-      map("n", "q", function(prompt_bufnr)
-        actions.close(prompt_bufnr)
-      end)
-      return true
-    end,
-  })
-  picker:find()
-end
-
 local function render(selected)
   local new_buf = vim.api.nvim_create_buf(true, true)
   M.buf = new_buf
@@ -698,22 +644,18 @@ local function render(selected)
   vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
 end
 
+M.previewer = function(self, entry)
+  local id = entry.value.id
+  M.buf = self.state.bufnr
+  populate_preview_buffer(id, self.state.bufnr)
+end
+
 M.list = function()
   vim.notify "Fetching workflow runs (this may take a while) ..."
   local co = coroutine.running()
   local wf_runs = get_workflow_runs_sync(co)
 
-  preview_picker(
-    nil,
-    wf_runs,
-    render,
-    "Workflow runs",
-    function(self, entry)
-      local id = entry.value.id
-      M.buf = self.state.bufnr
-      populate_preview_buffer(id, self.state.bufnr)
-    end
-  )
+  ts_provider.workflow_runs(wf_runs, "Worklow runs", render)
 end
 
 M.refetch = function()

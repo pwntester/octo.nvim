@@ -637,6 +637,30 @@ function M.pending_threads(threads)
     :find()
 end
 
+function M.workflow_runs(workflow_runs, title, on_select_cb)
+  pickers
+    .new({}, {
+      prompt_title = title or false,
+      results_title = false,
+      preview_title = false,
+      finder = finders.new_table {
+        results = workflow_runs,
+        entry_maker = entry_maker.gen_from_workflow_run(),
+      },
+      sorter = conf.generic_sorter {},
+      previewer = previewers.workflow_runs.new {},
+      attach_mappings = function()
+        actions.select_default:replace(function(prompt_bufnr)
+          local selection = action_state.get_selected_entry(prompt_bufnr)
+          actions.close(prompt_bufnr)
+          on_select_cb(selection.value)
+        end)
+        return true
+      end,
+    })
+    :find()
+end
+
 ---
 -- PROJECTS
 ---
