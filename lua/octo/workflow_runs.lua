@@ -4,7 +4,6 @@ local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local octo_error = require("octo.utils").error
-local ts_provider = require "octo.pickers.telescope.provider"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
@@ -655,7 +654,7 @@ M.list = function()
   local co = coroutine.running()
   local wf_runs = get_workflow_runs_sync(co)
 
-  ts_provider.workflow_runs(wf_runs, "Worklow runs", render)
+  require("octo.pickers.telescope.provider").workflow_runs(wf_runs, "Workflow runs", render)
 end
 
 M.refetch = function()
