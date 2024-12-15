@@ -1504,6 +1504,22 @@ function M.create_label(label)
   }
 end
 
+local function format(str)
+  return string.format('"%s"', str)
+end
+
+local function create_list(values, fmt)
+  if type(values) == "string" then
+    return fmt(values)
+  end
+
+  local formatted_values = {}
+  for _, value in ipairs(values) do
+    table.insert(formatted_values, fmt(value))
+  end
+  return "[" .. table.concat(formatted_values, ", ") .. "]"
+end
+
 local function label_action(opts)
   local label = opts.label
 
@@ -1518,8 +1534,13 @@ local function label_action(opts)
     utils.error "Cannot get issue/pr id"
   end
 
-  local cb = function(label_id)
-    local query = graphql(opts.query_name, iid, label_id)
+  local cb = function(labels)
+    local label_ids = {}
+    for _, lbl in ipairs(labels) do
+      table.insert(label_ids, lbl.id)
+    end
+
+    local query = graphql(opts.query_name, iid, create_list(label_ids, format))
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
