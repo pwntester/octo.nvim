@@ -1,15 +1,15 @@
 local namespace = require("octo.constants").OCTO_WORKFLOW_NS
 local mappings = require("octo.config").values.mappings.runs
 local icons = require("octo.config").values.runs.icons
-local navigation = require("octo.navigation")
+local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local previewers = require "telescope.previewers"
-local pickers = require("telescope.pickers")
-local finders = require("telescope.finders")
-local actions = require("telescope.actions")
-local state = require("telescope.actions.state")
-local config = require("telescope.config")
-
+local pickers = require "telescope.pickers"
+local finders = require "telescope.finders"
+local actions = require "telescope.actions"
+local state = require "telescope.actions.state"
+local config = require "telescope.config"
+local octo_error = require("octo.utils").error
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
@@ -47,13 +47,11 @@ local config = require("telescope.config")
 ---@field number number
 ---@field status string
 
-
 ---@class LineDef
 ---@field value string
 ---@field id string | nil
 ---@field highlight string | nil
 ---@field node_ref WorkflowNode | nil
-
 
 ---@class Handler
 ---@field tree table<string,WorkflowNode>
@@ -80,14 +78,13 @@ local config = require("telescope.config")
 ---@field conclusion string
 ---@field children table<string, WorkflowNode>
 
-
 local M = {
   buf = nil,
   buf_name = "",
   filetype = "",
   tree = {},
   current_wf = nil,
-  wf_cache = {}
+  wf_cache = {},
 }
 
 local function get_repo_name()
@@ -99,13 +96,11 @@ local function get_repo_name()
 
   local ok, decoded = pcall(vim.json.decode, result.stdout)
   if not ok or not decoded or not decoded.nameWithOwner then
-    error("Failed to parse repository name from 'gh repo view' output")
+    error "Failed to parse repository name from 'gh repo view' output"
   end
 
   return decoded.nameWithOwner
 end
-
-
 
 ---@return string | nil
 local function get_job_highlight(status, conclusion)
@@ -141,7 +136,6 @@ local function get_step_highlight(status, conclusion)
   end
 end
 
-
 ---@param data WorkflowRun
 ---@return WorkflowNode
 local function generateWorkflowTree(data)
@@ -155,7 +149,7 @@ local function generateWorkflowTree(data)
     highlight = nil,
     preIcon = "",
     icon = "📂",
-    children = {}
+    children = {},
   }
 
   for _, job in ipairs(data.jobs) do
@@ -171,7 +165,7 @@ local function generateWorkflowTree(data)
       conclusion = job.conclusion,
       preIcon = "",
       icon = "🛠️",
-      children = {}
+      children = {},
     }
 
     for _, step in ipairs(job.steps) do
@@ -189,7 +183,7 @@ local function generateWorkflowTree(data)
         highlight = get_step_highlight(step.status, step.conclusion),
         preIcon = "",
         icon = "",
-        children = {}
+        children = {},
       }
       table.insert(jobNode.children, stepNode)
     end
@@ -201,7 +195,7 @@ local function generateWorkflowTree(data)
 end
 
 local function extractAfterTimestamp(logLine)
-  local result = logLine:match("%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%.%d+Z%s*(.*)")
+  local result = logLine:match "%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%.%d+Z%s*(.*)"
   return result
 end
 
@@ -228,9 +222,9 @@ local function collapse_groups(lines)
   local current_group = nil
 
   for _, line in ipairs(lines) do
-    if extractAfterTimestamp(line):find("##%[group%]") then
+    if extractAfterTimestamp(line):find "##%[group%]" then
       current_group = { line }
-    elseif extractAfterTimestamp(line):find("##%[endgroup%]") then
+    elseif extractAfterTimestamp(line):find "##%[endgroup%]" then
       if current_group then
         table.insert(collapsed, table.concat(current_group, "\n"))
         current_group = nil
@@ -245,7 +239,7 @@ local function collapse_groups(lines)
   end
 
   if current_group then
-    error("Unclosed group found.")
+    error "Unclosed group found."
   end
 
   return collapsed
@@ -254,24 +248,23 @@ end
 local function create_log_child(value, indent)
   return {
     display = extractAfterTimestamp(value)
-        :gsub("##%[group%]", "> ")
-        :gsub("##%[endgroup%]", "")
-        :gsub("%[command%]", "")
-        :gsub("##%[warning%]", "Warning: ")
-        :gsub("##%[notice%]", "Notice: ")
-        --strip ansi color codes
-        :gsub("\x1b%[[%d;]*m", ""),
+      :gsub("##%[group%]", "> ")
+      :gsub("##%[endgroup%]", "")
+      :gsub("%[command%]", "")
+      :gsub("##%[warning%]", "Warning: ")
+      :gsub("##%[notice%]", "Notice: ")
+      --strip ansi color codes
+      :gsub("\x1b%[[%d;]*m", ""),
     id = value,
     expanded = false,
     indent = indent + 2,
     type = "step_log",
-    highlight = value:find("%[command%]") ~= nil and "PreProc" or "Question",
+    highlight = value:find "%[command%]" ~= nil and "PreProc" or "Question",
     icon = "",
     preIcon = "",
     children = {},
   }
 end
-
 
 -- Accepts zip contents and writes and then unzips them
 ---@param stdout string - The zip content to write
@@ -280,7 +273,7 @@ local function write_and_unzip_file(stdout)
   local zip_location = temp_location .. ".zip"
   local file = io.open(zip_location, "wb")
   if not file then
-    print("Failed to create temporary file")
+    octo_error "Failed to create temporary file"
     return
   end
 
@@ -290,7 +283,7 @@ local function write_and_unzip_file(stdout)
   local unzipOutput = vim.system({ "unzip", "-d", temp_location, zip_location }):wait()
 
   if unzipOutput.code ~= 0 then
-    print("Failed to unzip logs: " .. (unzipOutput.stderr or "Unknown error"))
+    octo_error("Failed to unzip logs: " .. (unzipOutput.stderr or "Unknown error"))
   end
 
   local success, err = pcall(function()
@@ -298,7 +291,7 @@ local function write_and_unzip_file(stdout)
   end)
 
   if not success then
-    print("Error deleting zip archive: " .. err)
+    octo_error("Error deleting zip archive: " .. err)
   end
 
   return temp_location
@@ -308,15 +301,16 @@ end
 local function get_logs(id)
   --TODO: check if logs are "fresh"
   local reponame = get_repo_name()
-  local out = vim.system(
-    {
+  local out = vim
+    .system({
       "gh",
       "api",
-      string.format("repos/%s/actions/runs/%s/logs", reponame, id, 0)
-    }):wait()
+      string.format("repos/%s/actions/runs/%s/logs", reponame, id, 0),
+    })
+    :wait()
 
   if out.code ~= 0 then
-    print("Failed to fetch logs: " .. (out.stderr or "Unknown error"))
+    octo_error("Failed to fetch logs: " .. (out.stderr or "Unknown error"))
     return
   end
 
@@ -353,17 +347,16 @@ local function get_logs(id)
   end)
 end
 
-
 local keymaps = {
   ---@param api Handler
   [mappings.refresh.lhs] = function(api)
-    vim.notify("refreshing...")
+    vim.notify "refreshing..."
     api.refetch()
   end,
   [mappings.open_in_browser.lhs] = function(api)
     local id = api.current_wf.databaseId
     navigation.open_in_browser("workflow_run", nil, id)
-  end
+  end,
 }
 
 local tree_keymaps = {
@@ -381,12 +374,11 @@ local tree_keymaps = {
       node.expanded = false
     end
     M.refresh()
-  end
+  end,
 }
 
-
 local fields =
-"conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
+  "conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
 
 local function get_job_status(status, conclusion)
   if status == "queued" then
@@ -445,7 +437,7 @@ local separator = {
   value = "",
   highlight = nil,
   id = "",
-  type = "separator"
+  type = "separator",
 }
 
 local function get_workflow_header()
@@ -453,11 +445,10 @@ local function get_workflow_header()
   local details = M.current_wf
   ---@type LineDef[]
   local lines = {}
-  table.insert(lines,
-    {
-      value = string.format("%s %s", details.displayTitle, get_workflow_status(details.status, details.conclusion)),
-      highlight = "Question"
-    })
+  table.insert(lines, {
+    value = string.format("%s %s", details.displayTitle, get_workflow_status(details.status, details.conclusion)),
+    highlight = "Question",
+  })
 
   table.insert(lines, separator)
 
@@ -465,11 +456,15 @@ local function get_workflow_header()
   table.insert(lines, { value = string.format("Event: %s", details.event), highlight = "Directory" })
 
   if #details.conclusion > 0 then
-    table.insert(lines,
-      { value = string.format("Finished: %s", utils.format_date(details.updatedAt)), highlight = "Directory" })
+    table.insert(
+      lines,
+      { value = string.format("Finished: %s", utils.format_date(details.updatedAt)), highlight = "Directory" }
+    )
   elseif #details.startedAt > 0 then
-    table.insert(lines,
-      { value = string.format("Started: %s", utils.format_date(details.startedAt)), highlight = "Directory" })
+    table.insert(
+      lines,
+      { value = string.format("Started: %s", utils.format_date(details.startedAt)), highlight = "Directory" }
+    )
   end
 
   table.insert(lines, separator)
@@ -496,7 +491,7 @@ local function update_job_details(id)
         M.tree = generateWorkflowTree(job_details)
         M.refresh()
       else
-        print("Failed to get workflow run for " .. id)
+        octo_error("Failed to get workflow run for " .. id)
       end
     end,
   })
@@ -517,8 +512,9 @@ end
 ---@param node WorkflowNode
 ---@return string
 local function format_node(node)
-  local status = node.type == "step" and get_step_status(node.status, node.conclusion) or
-      node.type == "job" and get_job_status(node.status, node.conclusion) or ""
+  local status = node.type == "step" and get_step_status(node.status, node.conclusion)
+    or node.type == "job" and get_job_status(node.status, node.conclusion)
+    or ""
 
   local indent = string.rep(" ", node.indent)
   local preIcon = node.type ~= "step_log" and (node.expanded == true and "> " or "> ") or ""
@@ -540,7 +536,7 @@ local function tree_to_string(node, list)
     highlight = node.highlight,
     step_log = nil,
     expanded = node.expanded or false,
-    node_ref = node
+    node_ref = node,
   }
 
   table.insert(list, lineDef)
@@ -556,7 +552,6 @@ local function tree_to_string(node, list)
 
   return list
 end
-
 
 local function print_lines()
   if not vim.api.nvim_buf_is_valid(M.buf) then
@@ -579,7 +574,6 @@ local function print_lines()
     table.insert(string_lines, line_def.value)
     table.insert(highlights, { index = index - 1, highlight = line_def.highlight })
   end
-
 
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, string_lines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", false)
@@ -615,8 +609,8 @@ local workflow_limit = 100
 local function get_workflow_runs_sync(co)
   local lines = {}
   vim.fn.jobstart(
-    "gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId -L " ..
-    workflow_limit,
+    "gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId -L "
+      .. workflow_limit,
     {
       stdout_buffered = true,
       on_stdout = function(_, data)
@@ -624,9 +618,9 @@ local function get_workflow_runs_sync(co)
         for _, value in ipairs(json) do
           local wf_run = {
             status = value.status == "queued" and icons.pending
-                or value.status == "in_progress" and icons.in_progress
-                or value.conclusion == "failure" and icons.failed
-                or icons.succeeded,
+              or value.status == "in_progress" and icons.in_progress
+              or value.conclusion == "failure" and icons.failed
+              or icons.succeeded,
             title = value.displayTitle,
             display = value.displayTitle,
             value = value.databaseId,
@@ -704,7 +698,6 @@ local function render(selected)
   vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
 end
 
-
 M.list = function()
   vim.notify "Fetching workflow runs (this may take a while) ..."
   local co = coroutine.running()
@@ -732,6 +725,4 @@ M.refetch = function()
   populate_preview_buffer(id, M.buf)
 end
 
-return M
-return M
 return M
