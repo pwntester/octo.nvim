@@ -708,9 +708,7 @@ M.list = function()
   preview_picker(
     nil,
     wf_runs,
-    function(selected)
-      render(selected)
-    end,
+    render,
     "Workflow runs",
     function(self, entry)
       local id = entry.value.id
