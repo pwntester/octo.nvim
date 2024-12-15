@@ -741,6 +741,30 @@ end
 --
 -- LABELS
 --
+
+local function select(opts)
+  local prompt_bufnr = opts.bufnr
+  local single_cb = opts.single_cb
+  local multiple_cb = opts.multiple_cb
+
+  local picker = action_state.get_current_picker(prompt_bufnr)
+  local selections = picker:get_multi_selection()
+  local cb
+  local labels = {}
+  if #selections == 0 then
+    local selected_label = action_state.get_selected_entry(prompt_bufnr)
+    table.insert(labels, selected_label.label)
+    cb = single_cb
+  else
+    for _, selection in ipairs(selections) do
+      table.insert(labels, selection.label)
+    end
+    cb = multiple_cb
+  end
+  actions.close(prompt_bufnr)
+  cb(labels)
+end
+
 function M.select_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -767,9 +791,7 @@ function M.select_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select { bufnr = prompt_bufnr, single_cb = cb, multiple_cb = cb }
               end)
               return true
             end,
@@ -812,9 +834,7 @@ function M.select_assigned_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select { bufnr = prompt_bufnr, single_cb = cb, multiple_cb = cb }
               end)
               return true
             end,

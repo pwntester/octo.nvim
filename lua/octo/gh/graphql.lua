@@ -2530,7 +2530,7 @@ M.create_label_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation = [[
   mutation {
-    addLabelsToLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+    addLabelsToLabelable(input: {labelableId: "%s", labelIds: %s}) {
       labelable {
         ... on Issue {
           id
@@ -2546,7 +2546,7 @@ M.add_labels_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.remove_labels_mutation = [[
   mutation {
-    removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+    removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: %s}) {
       labelable {
         ... on Issue {
           id
