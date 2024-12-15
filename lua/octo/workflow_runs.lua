@@ -1,3 +1,16 @@
+local namespace = require("octo.constants").OCTO_WORKFLOW_NS
+local mappings = require("octo.config").values.mappings.runs
+local icons = require("octo.config").values.runs.icons
+local navigation = require("octo.navigation")
+local utils = require "octo.utils"
+local previewers = require "telescope.previewers"
+local pickers = require("telescope.pickers")
+local finders = require("telescope.finders")
+local actions = require("telescope.actions")
+local state = require("telescope.actions.state")
+local config = require("telescope.config")
+
+
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
 ---@class WorkflowRun
@@ -93,7 +106,6 @@ local function get_repo_name()
 end
 
 
-local namespace = require("octo.constants").OCTO_WORKFLOW_NS
 
 ---@return string | nil
 local function get_job_highlight(status, conclusion)
@@ -342,7 +354,6 @@ local function get_logs(id)
 end
 
 
-local mappings = require("octo.config").values.mappings.runs
 local keymaps = {
   ---@param api Handler
   [mappings.refresh.lhs] = function(api)
@@ -351,7 +362,7 @@ local keymaps = {
   end,
   [mappings.open_in_browser.lhs] = function(api)
     local id = api.current_wf.databaseId
-    require("octo.navigation").open_in_browser("workflow_run", nil, id)
+    navigation.open_in_browser("workflow_run", nil, id)
   end
 }
 
@@ -378,7 +389,6 @@ local fields =
 "conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName"
 
 local function get_job_status(status, conclusion)
-  local icons = require("octo.config").values.runs.icons
   if status == "queued" then
     return icons.skipped
   elseif status == "in_progress" then
@@ -397,7 +407,6 @@ local function get_job_status(status, conclusion)
 end
 
 local function get_step_status(status, conclusion)
-  local icons = require("octo.config").values.runs.icons
   if status == "pending" then
     return icons.pending
   elseif status == "in_progress" then
@@ -416,7 +425,6 @@ local function get_step_status(status, conclusion)
 end
 
 local function get_workflow_status(status, conclusion)
-  local icons = require("octo.config").values.runs.icons
   if status == "queued" then
     return icons.pending
   elseif status == "in_progress" then
@@ -431,7 +439,6 @@ local function get_workflow_status(status, conclusion)
     return "❓"
   end
 end
-local utils = require "octo.utils"
 
 ---@type LineDef
 local separator = {
@@ -606,7 +613,6 @@ end
 local workflow_limit = 100
 
 local function get_workflow_runs_sync(co)
-  local icons = require("octo.config").values.runs.icons
   local lines = {}
   vim.fn.jobstart(
     "gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId -L " ..
@@ -652,10 +658,9 @@ local preview_picker = function(bufnr, options, on_select_cb, title, previewer)
     return
   end
 
-  local previewers = require "telescope.previewers"
-  local picker = require("telescope.pickers").new(bufnr, {
+  local picker = pickers.new(bufnr, {
     prompt_title = title,
-    finder = require("telescope.finders").new_table {
+    finder = finders.new_table {
       results = options,
       entry_maker = function(entry)
         return {
@@ -669,21 +674,21 @@ local preview_picker = function(bufnr, options, on_select_cb, title, previewer)
       title = title .. " preview",
       define_preview = previewer,
     },
-    sorter = require("telescope.config").values.generic_sorter {},
+    sorter = config.values.generic_sorter {},
     preview = true,
     attach_mappings = function(_, map)
       map("i", "<CR>", function(prompt_bufnr)
-        local selection = require("telescope.actions.state").get_selected_entry()
-        require("telescope.actions").close(prompt_bufnr)
+        local selection = state.get_selected_entry()
+        actions.close(prompt_bufnr)
         on_select_cb(selection.value)
       end)
       map("n", "<CR>", function(prompt_bufnr)
-        local selection = require("telescope.actions.state").get_selected_entry()
-        require("telescope.actions").close(prompt_bufnr)
+        local selection = state.get_selected_entry()
+        actions.close(prompt_bufnr)
         on_select_cb(selection.value)
       end)
       map("n", "q", function(prompt_bufnr)
-        require("telescope.actions").close(prompt_bufnr)
+        actions.close(prompt_bufnr)
       end)
       return true
     end,
@@ -727,4 +732,6 @@ M.refetch = function()
   populate_preview_buffer(id, M.buf)
 end
 
+return M
+return M
 return M
