@@ -1516,7 +1516,25 @@ function M.create_label(label)
   }
 end
 
-function M.add_label(label)
+local function format(str)
+  return string.format('"%s"', str)
+end
+
+local function create_list(values, fmt)
+  if type(values) == "string" then
+    return fmt(values)
+  end
+
+  local formatted_values = {}
+  for _, value in ipairs(values) do
+    table.insert(formatted_values, fmt(value))
+  end
+  return "[" .. table.concat(formatted_values, ", ") .. "]"
+end
+
+local function label_action(opts)
+  local label = opts.label
+
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1528,8 +1546,13 @@ function M.add_label(label)
     utils.error "Cannot get issue/pr id"
   end
 
-  local cb = function(label_id)
-    local query = graphql("add_labels_mutation", iid, label_id)
+  local cb = function(labels)
+    local label_ids = {}
+    for _, lbl in ipairs(labels) do
+      table.insert(label_ids, lbl.id)
+    end
+
+    local query = graphql(opts.query_name, iid, create_list(label_ids, format))
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
@@ -1544,6 +1567,7 @@ function M.add_label(label)
       end,
     }
   end
+
   if label then
     local label_id = utils.get_label_id(label)
     if label_id then
@@ -1552,49 +1576,24 @@ function M.add_label(label)
       utils.error("Cannot find label: " .. label)
     end
   else
-    picker.labels(cb)
+    opts.labels(cb)
   end
 end
 
+function M.add_label(label)
+  return label_action {
+    query_name = "add_labels_mutation",
+    label = label,
+    labels = picker.labels,
+  }
+end
+
 function M.remove_label(label)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
-  end
-
-  local iid = buffer.node.id
-  if not iid then
-    utils.error "Cannot get issue/pr id"
-  end
-
-  local cb = function(label_id)
-    local query = graphql("remove_labels_mutation", iid, label_id)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
-          end)
-        end
-      end,
-    }
-  end
-
-  if label then
-    local label_id = utils.get_label_id(label)
-    if label_id then
-      cb(label_id)
-    else
-      utils.error("Cannot find label: " .. label)
-    end
-  else
-    picker.assigned_labels(cb)
-  end
+  return label_action {
+    query_name = "remove_labels_mutation",
+    label = label,
+    labels = picker.assigned_labels,
+  }
 end
 
 function M.add_user(subject, login)
