@@ -363,6 +363,11 @@ function M.setup()
         M.remove_project_card()
       end,
     },
+    notification = {
+      list = function()
+        picker.notifications()
+      end,
+    },
   }
 
   setmetatable(M.commands.pr, {
@@ -376,6 +381,12 @@ function M.setup()
   setmetatable(M.commands.review, {
     __call = function(_)
       reviews.start_or_resume_review()
+    end,
+  })
+
+  setmetatable(M.commands.notification, {
+    __call = function(_)
+      picker.notifications()
     end,
   })
 end
