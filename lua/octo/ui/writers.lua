@@ -297,7 +297,7 @@ function M.write_state(bufnr, state, number)
   -- title virtual text
   local title_vt = {
     { tostring(number), "OctoIssueId" },
-    { string.format(" [%s] ", state), utils.state_hl_map[state] },
+    { string.format(" [%s] ", state:gsub("_", " ")), utils.state_hl_map[state] },
   }
 
   -- PR virtual text
@@ -1222,9 +1222,10 @@ function M.write_issue_summary(bufnr, issue, opts)
   })
 
   -- issue body
+  local state = utils.get_displayed_state(issue.__typename == "Issue", issue.state, issue.stateReason)
   table.insert(chunks, {
     { " " },
-    { "[" .. issue.state .. "] ", utils.state_hl_map[issue.state] },
+    { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
     { issue.title .. " ", "OctoDetailsLabel" },
     { "#" .. issue.number .. " ", "OctoDetailsValue" },
   })

@@ -754,12 +754,15 @@ function M.change_state(state)
           obj = resp.data.updatePullRequest.pullRequest
           new_state = obj.state
         end
-        if state == new_state then
-          buffer.node.state = new_state
-          writers.write_state(bufnr, new_state:upper(), buffer.number)
-          writers.write_details(bufnr, obj, true)
-          utils.info("Issue state changed to: " .. new_state)
+        if state ~= new_state then
+          return
         end
+        buffer.node.state = new_state
+
+        local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
+        writers.write_state(bufnr, updated_state:upper(), buffer.number)
+        writers.write_details(bufnr, obj, true)
+        utils.info("Issue state changed to: " .. updated_state)
       end
     end,
   }

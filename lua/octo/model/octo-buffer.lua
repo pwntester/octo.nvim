@@ -108,7 +108,8 @@ function OctoBuffer:render_issue()
   writers.write_details(self.bufnr, self.node)
 
   -- write issue/pr status
-  writers.write_state(self.bufnr, self.node.state:upper(), self.number)
+  local state = utils.get_displayed_state(self.kind == "issue", self.node.state, self.node.stateReason)
+  writers.write_state(self.bufnr, state:upper(), self.number)
 
   -- write body
   writers.write_body(self.bufnr, self.node)
