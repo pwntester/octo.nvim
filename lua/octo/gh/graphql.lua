@@ -953,20 +953,67 @@ M.close_issue_mutation = [[
 mutation {
   closeIssue(input: {issueId: "%s", stateReason: %s}) {
     issue {
-      url
-      author { login }
+      id
+      number
       state
       stateReason
+      title
+      body
+      createdAt
       closedAt
       updatedAt
+      url
+      repository {
+        nameWithOwner
+      }
       milestone {
         title
         state
+      }
+      author {
+        login
+      }
+      participants(first:10) {
+        nodes {
+          login
+        }
+      }
+      reactionGroups {
+        content
+        viewerHasReacted
+        users {
+          totalCount
+        }
+      }
+      comments(first: 100) {
+        nodes {
+          id
+          body
+          createdAt
+          reactionGroups {
+            content
+            viewerHasReacted
+            users {
+              totalCount
+            }
+          }
+          author {
+            login
+          }
+          viewerDidAuthor
+        }
       }
       labels(first: 20) {
         nodes {
           color
           name
+        }
+      }
+      assignees(first: 20) {
+        nodes {
+          id
+          login
+          isViewer
         }
       }
       timelineItems(last: 100) {
@@ -1037,13 +1084,6 @@ mutation {
             }
             createdAt
           }
-        }
-      }
-      assignees(first: 20) {
-        nodes {
-          id
-          login
-          isViewer
         }
       }
     }
