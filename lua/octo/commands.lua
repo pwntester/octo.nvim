@@ -65,15 +65,16 @@ function M.setup()
       edit = function(...)
         utils.get_issue(...)
       end,
-      close = function()
-        M.change_state "CLOSED"
+      close = function(stateReason)
+        stateReason = stateReason or "CLOSED"
+        M.change_state(stateReason)
       end,
       develop = function(repo, ...)
         local bufnr = vim.api.nvim_get_current_buf()
         local buffer = octo_buffers[bufnr]
 
         if buffer and buffer.kind and buffer.kind == "issue" then
-          utils.develop_issue(buffer.node.number)
+          utils.develop_issue(buffer.repo, buffer.node.number, repo)
         else
           local opts = M.process_varargs(repo, ...)
           picker.issues(opts, true)
@@ -732,11 +733,25 @@ function M.change_state(state)
   end
 
   local id = buffer.node.id
-  local query
-  if buffer:isIssue() then
+  local query, get_obj, desired_state
+  if buffer:isIssue() and (state == "CLOSED" or state == "OPEN") then
     query = graphql("update_issue_state_mutation", id, state)
+    desired_state = state
+    get_obj = function(resp)
+      return resp.data.updateIssue.issue
+    end
+  elseif buffer:isIssue() then
+    query = graphql("close_issue_mutation", id, state)
+    desired_state = "CLOSED"
+    get_obj = function(resp)
+      return resp.data.closeIssue.issue
+    end
   elseif buffer:isPullRequest() then
     query = graphql("update_pull_request_state_mutation", id, state)
+    desired_state = state
+    get_obj = function(resp)
+      return resp.data.updatePullRequest.pullRequest
+    end
   end
 
   gh.run {
@@ -746,20 +761,20 @@ function M.change_state(state)
         utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
-        local new_state, obj
-        if buffer:isIssue() then
-          obj = resp.data.updateIssue.issue
-          new_state = obj.state
-        elseif buffer:isPullRequest() then
-          obj = resp.data.updatePullRequest.pullRequest
-          new_state = obj.state
+
+        local obj = get_obj(resp)
+        local new_state = obj.state
+
+        if desired_state ~= new_state then
+          return
         end
-        if state == new_state then
-          buffer.node.state = new_state
-          writers.write_state(bufnr, new_state:upper(), buffer.number)
-          writers.write_details(bufnr, obj, true)
-          utils.info("Issue state changed to: " .. new_state)
-        end
+
+        buffer.node.state = new_state
+
+        local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
+        writers.write_state(bufnr, updated_state:upper(), buffer.number)
+        writers.write_details(bufnr, obj, true)
+        utils.info("Issue state changed to: " .. updated_state)
       end
     end,
   }
@@ -1501,7 +1516,25 @@ function M.create_label(label)
   }
 end
 
-function M.add_label(label)
+local function format(str)
+  return string.format('"%s"', str)
+end
+
+local function create_list(values, fmt)
+  if type(values) == "string" then
+    return fmt(values)
+  end
+
+  local formatted_values = {}
+  for _, value in ipairs(values) do
+    table.insert(formatted_values, fmt(value))
+  end
+  return "[" .. table.concat(formatted_values, ", ") .. "]"
+end
+
+local function label_action(opts)
+  local label = opts.label
+
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1513,8 +1546,13 @@ function M.add_label(label)
     utils.error "Cannot get issue/pr id"
   end
 
-  local cb = function(label_id)
-    local query = graphql("add_labels_mutation", iid, label_id)
+  local cb = function(labels)
+    local label_ids = {}
+    for _, lbl in ipairs(labels) do
+      table.insert(label_ids, lbl.id)
+    end
+
+    local query = graphql(opts.query_name, iid, create_list(label_ids, format))
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
@@ -1529,57 +1567,33 @@ function M.add_label(label)
       end,
     }
   end
+
   if label then
     local label_id = utils.get_label_id(label)
     if label_id then
-      cb(label_id)
+      cb { { id = label_id } }
     else
       utils.error("Cannot find label: " .. label)
     end
   else
-    picker.labels(cb)
+    opts.labels(cb)
   end
 end
 
+function M.add_label(label)
+  return label_action {
+    query_name = "add_labels_mutation",
+    label = label,
+    labels = picker.labels,
+  }
+end
+
 function M.remove_label(label)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
-  end
-
-  local iid = buffer.node.id
-  if not iid then
-    utils.error "Cannot get issue/pr id"
-  end
-
-  local cb = function(label_id)
-    local query = graphql("remove_labels_mutation", iid, label_id)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
-          end)
-        end
-      end,
-    }
-  end
-
-  if label then
-    local label_id = utils.get_label_id(label)
-    if label_id then
-      cb(label_id)
-    else
-      utils.error("Cannot find label: " .. label)
-    end
-  else
-    picker.assigned_labels(cb)
-  end
+  return label_action {
+    query_name = "remove_labels_mutation",
+    label = label,
+    labels = picker.assigned_labels,
+  }
 end
 
 function M.add_user(subject, login)

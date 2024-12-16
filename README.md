@@ -115,7 +115,8 @@ require"octo".setup({
   resolved_icon = " ",                    -- resolved indicator
   reaction_viewer_hint_icon = " ";        -- marker for user reactions
   users = "search",                        -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
-  user_icon = " ";                        -- user icon
+  user_icon = " ",                        -- user icon
+  ghost_icon = "󰊠 ",                       -- ghost icon
   timeline_marker = " ";                  -- timeline marker
   timeline_indent = "2";                   -- timeline indentation
   right_bubble_delimiter = "";            -- bubble delimiter
