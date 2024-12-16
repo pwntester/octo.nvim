@@ -1059,6 +1059,7 @@ M.update_issue_state_mutation = [[
         id
         number
         state
+        stateReason
         title
         body
         createdAt
@@ -1998,6 +1999,7 @@ query($endCursor: String) {
       id
       number
       state
+      stateReason
       title
       body
       createdAt
@@ -2178,6 +2180,7 @@ query {
         __typename
         createdAt
         state
+        stateReason
         number
         title
         body
