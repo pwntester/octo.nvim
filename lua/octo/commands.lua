@@ -759,13 +759,7 @@ function M.change_state(state)
         end
         buffer.node.state = new_state
 
-        local updated_state
-        if buffer:isIssue() and new_state == "CLOSED" then
-          updated_state = obj.stateReason
-        else
-          updated_state = new_state
-        end
-
+        local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
         writers.write_state(bufnr, updated_state:upper(), buffer.number)
         writers.write_details(bufnr, obj, true)
         utils.info("Issue state changed to: " .. updated_state)

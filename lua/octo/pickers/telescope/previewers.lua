@@ -87,12 +87,7 @@ local issue = defaulter(function(opts)
                 obj = result.data.repository.pullRequest
               end
 
-              local state
-              if entry.kind == "issue" and obj.state == "CLOSED" then
-                state = obj.stateReason
-              else
-                state = obj.state
-              end
+              local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
 
               writers.write_title(bufnr, obj.title, 1)
               writers.write_details(bufnr, obj)
