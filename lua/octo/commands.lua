@@ -733,19 +733,22 @@ function M.change_state(state)
   end
 
   local id = buffer.node.id
-  local query, get_obj
+  local query, get_obj, desired_state
   if buffer:isIssue() and (state == "CLOSED" or state == "OPEN") then
     query = graphql("update_issue_state_mutation", id, state)
+    desired_state = state
     get_obj = function(resp)
       return resp.data.updateIssue.issue
     end
   elseif buffer:isIssue() then
     query = graphql("close_issue_mutation", id, state)
+    desired_state = "CLOSED"
     get_obj = function(resp)
       return resp.data.closeIssue.issue
     end
   elseif buffer:isPullRequest() then
     query = graphql("update_pull_request_state_mutation", id, state)
+    desired_state = state
     get_obj = function(resp)
       return resp.data.updatePullRequest.pullRequest
     end
@@ -758,14 +761,14 @@ function M.change_state(state)
         utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
-        
+
         local obj = get_obj(resp)
         local new_state = obj.state
-        
-        if state ~= new_state then
+
+        if desired_state ~= new_state then
           return
         end
-        
+
         buffer.node.state = new_state
 
         local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
