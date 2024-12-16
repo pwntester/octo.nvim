@@ -1571,7 +1571,7 @@ local function label_action(opts)
   if label then
     local label_id = utils.get_label_id(label)
     if label_id then
-      cb(label_id)
+      cb { { id = label_id } }
     else
       utils.error("Cannot find label: " .. label)
     end
