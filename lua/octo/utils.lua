@@ -33,6 +33,8 @@ M.state_msg_map = {
 M.state_hl_map = {
   MERGED = "OctoStateMerged",
   CLOSED = "OctoStateClosed",
+  COMPLETED = "OctoStateCompleted",
+  NOT_PLANNED = "OctoStateNotPlanned",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -1523,6 +1525,19 @@ function M.convert_vim_mapping_to_fzf(vim_mapping)
   local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
   fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
   return string.lower(fzf_mapping)
+end
+
+--- Logic to determine the state displayed for issue or PR
+---@param isIssue boolean
+---@param state string
+---@param stateReason string | nil
+---@return string
+function M.get_displayed_state(isIssue, state, stateReason)
+  if isIssue and state == "CLOSED" then
+    return stateReason or state
+  end
+
+  return state
 end
 
 return M
