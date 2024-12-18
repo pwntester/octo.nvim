@@ -1,7 +1,7 @@
 local vim = vim
 local M = {}
 
----@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
+---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "runs"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
 ---@alias OctoSplit "right" | "left"
@@ -42,6 +42,17 @@ local M = {}
 
 ---@class OctoConfigDiscussions
 ---@field order_by OctoConfigOrderBy
+
+---@class OctoConfigWorkflowIcons
+---@field pending string
+---@field skipped string
+---@field in_progress string
+---@field failed string
+---@field succeeded string
+---@field cancelled string
+
+---@class OctoConfigRuns
+---@field icons OctoConfigWorkflowIcons
 
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
@@ -84,6 +95,7 @@ local M = {}
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
 ---@field reviews OctoConfigReviews
+---@field runs OctoConfigRuns
 ---@field pull_requests OctoConfigPR
 ---@field file_panel OctoConfigFilePanel
 ---@field colors OctoConfigColors
@@ -152,6 +164,16 @@ function M.get_default_values()
       auto_show_threads = true,
       focus = "right",
     },
+    runs = {
+      icons = {
+        pending = "🕖",
+        in_progress = "🔄",
+        failed = "❌",
+        succeeded = "",
+        skipped = "⏩",
+        cancelled = "✖"
+      },
+    },
     pull_requests = {
       order_by = {
         field = "CREATED_AT",
@@ -179,6 +201,11 @@ function M.get_default_values()
     },
     mappings_disable_default = false,
     mappings = {
+      runs = {
+        expand_step = { lhs = "o", desc = "expand workflow step" },
+        open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
+        refresh = { lhs = "<C-r>", desc = "refresh workflow" }
+      },
       issue = {
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },
         reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
