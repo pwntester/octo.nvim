@@ -132,7 +132,7 @@ end
 
 ---@param data WorkflowRun
 ---@return WorkflowNode
-local function generateWorkflowTree(data)
+local function generate_workflow_tree(data)
   local root = {
     id = "Jobs",
     display = "Jobs",
@@ -188,9 +188,9 @@ local function generateWorkflowTree(data)
   return root
 end
 
-local function extractAfterTimestamp(logLine)
+local function extract_after_timestamp(logLine)
   local result = logLine:match "%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%.%d+Z%s*(.*)"
-  return result
+  return result or ""
 end
 
 ---Traverses a tree from the given node, giving a callback for every item
@@ -216,9 +216,9 @@ local function collapse_groups(lines)
   local current_group = nil
 
   for _, line in ipairs(lines) do
-    if extractAfterTimestamp(line):find "##%[group%]" then
+    if extract_after_timestamp(line):find "##%[group%]" then
       current_group = { line }
-    elseif extractAfterTimestamp(line):find "##%[endgroup%]" then
+    elseif extract_after_timestamp(line):find "##%[endgroup%]" then
       if current_group then
         table.insert(collapsed, table.concat(current_group, "\n"))
         current_group = nil
@@ -241,7 +241,7 @@ end
 
 local function create_log_child(value, indent)
   return {
-    display = extractAfterTimestamp(value)
+    display = extract_after_timestamp(value)
       :gsub("##%[group%]", "> ")
       :gsub("##%[endgroup%]", "")
       :gsub("%[command%]", "")
@@ -493,7 +493,7 @@ local function update_job_details(id)
     on_exit = function(_, b)
       if b == 0 then
         M.current_wf = job_details
-        M.tree = generateWorkflowTree(job_details)
+        M.tree = generate_workflow_tree(job_details)
         M.refresh()
       else
         octo_error("Failed to get workflow run for " .. id)
@@ -507,7 +507,7 @@ local function populate_preview_buffer(id, buf)
   --TODO: check outcome and if running refresh otherwise cached value is valid
   if cached and vim.api.nvim_buf_is_valid(buf) then
     M.current_wf = cached
-    M.tree = generateWorkflowTree(cached)
+    M.tree = generate_workflow_tree(cached)
     M.refresh()
   else
     update_job_details(id)
