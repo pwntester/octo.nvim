@@ -1,12 +1,15 @@
 local config = require "octo.config"
 local constants = require "octo.constants"
-local date = require "octo.date"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local _, Job = pcall(require, "plenary.job")
 local vim = vim
 
 local M = {}
+
+---@class OctoRepo
+---@field host string
+---@field name string
 
 local repo_id_cache = {}
 local repo_templates_cache = {}
@@ -30,6 +33,8 @@ M.state_msg_map = {
 M.state_hl_map = {
   MERGED = "OctoStateMerged",
   CLOSED = "OctoStateClosed",
+  COMPLETED = "OctoStateCompleted",
+  NOT_PLANNED = "OctoStateNotPlanned",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -69,6 +74,62 @@ M.file_status_map = {
   added = "A",
   deleted = "D",
   renamed = "R",
+}
+
+M.checks_hl_map = {
+  ERROR = "OctoStateDismissed",
+  EXPECTED = "OctoStatePending",
+  FAILURE = "OctoStateDismissed",
+  PENDING = "OctoStatePending",
+  SUCCESS = "OctoStateApproved",
+}
+
+M.checks_message_map = {
+  ERROR = "× ERRORED",
+  EXPECTED = " EXPECTED",
+  FAILURE = "× FAILED",
+  PENDING = " PENDING",
+  SUCCESS = "✓ PASSED",
+}
+
+M.mergeable_hl_map = {
+  CONFLICTING = "OctoStateDismissed",
+  MERGEABLE = "OctoStateApproved",
+  UNKNOWN = "OctoStatePending",
+}
+
+M.mergeable_message_map = {
+  CONFLICTING = "× CONFLICTING",
+  MERGEABLE = "✓ MERGEABLE",
+  UNKNOWN = " PENDING",
+}
+
+M.merge_state_hl_map = {
+  BEHIND = "OctoNormal",
+  BLOCKED = "OctoStateDismissed",
+  CLEAN = "OctoStateApproved",
+  DIRTY = "OctoStateDismissed",
+  DRAFT = "OctoStateDraftFloat",
+  HAS_HOOKS = "OctoStateApproved",
+  UNKNOWN = "OctoStatePending",
+  UNSTABLE = "OctoStateDismissed",
+}
+
+M.merge_state_message_map = {
+  BEHIND = "- OUT-OF-DATE",
+  BLOCKED = "× BLOCKED",
+  CLEAN = "✓ CLEAN",
+  DIRTY = "× DIRTY",
+  DRAFT = "= DRAFT",
+  HAS_HOOKS = "✓ HAS-HOOKS",
+  UNKNOWN = " PENDING",
+  UNSTABLE = "! UNSTABLE",
+}
+
+M.auto_merge_method_map = {
+  MERGE = "commit",
+  REBASE = "rebase",
+  SQUASH = "squash",
 }
 
 function M.trim(str)
@@ -140,6 +201,13 @@ function M.is_blank(s)
 end
 
 function M.parse_remote_url(url, aliases)
+  -- filesystem path
+  if vim.startswith(url, "/") or vim.startswith(url, ".") then
+    return {
+      host = nil,
+      repo = url,
+    }
+  end
   -- remove trailing ".git"
   url = string.gsub(url, ".git$", "")
   -- remove protocol scheme
@@ -149,7 +217,7 @@ function M.parse_remote_url(url, aliases)
   -- if url contains two slashes
   local segments = vim.split(url, "/")
   local host, repo
-  if #segments == 3 then
+  if #segments == 3 or (#segments == 4 and segments[4] == "") then
     host = segments[1]
     repo = segments[2] .. "/" .. segments[3]
   elseif #segments == 2 then
@@ -158,8 +226,8 @@ function M.parse_remote_url(url, aliases)
     repo = chunks[#chunks]
   end
 
-  if aliases[host] then
-    host = aliases[host]
+  for alias, rhost in pairs(aliases) do
+    host = host:gsub("^" .. alias .. "$", rhost, 1)
   end
   if not M.is_blank(host) and not M.is_blank(repo) then
     return {
@@ -169,6 +237,8 @@ function M.parse_remote_url(url, aliases)
   end
 end
 
+---Parse local git remotes from git cli
+---@return OctoRepo[]
 function M.parse_git_remote()
   local conf = config.values
   local aliases = conf.ssh_aliases
@@ -191,10 +261,14 @@ function M.parse_git_remote()
   return remotes
 end
 
-function M.get_remote()
+---Returns first host and repo information found in a list of remote values
+---If no argument is provided, defaults to matching against config's default remote
+---@param remote table | nil list of local remotes to match against
+---@return OctoRepo
+function M.get_remote(remote)
   local conf = config.values
   local remotes = M.parse_git_remote()
-  for _, name in ipairs(conf.default_remote) do
+  for _, name in ipairs(remote or conf.default_remote) do
     if remotes[name] then
       return remotes[name]
     end
@@ -206,16 +280,26 @@ function M.get_remote()
   }
 end
 
+function M.get_remote_url()
+  local host = M.get_remote_host()
+  local remote_name = M.get_remote_name()
+  if not host or not remote_name then
+    M.error "No remote repository found"
+    return
+  end
+  return "https://" .. host .. "/" .. remote_name
+end
+
 function M.get_all_remotes()
   return vim.tbl_values(M.parse_git_remote())
 end
 
-function M.get_remote_name()
-  return M.get_remote().repo
+function M.get_remote_name(remote)
+  return M.get_remote(remote).repo
 end
 
-function M.get_remote_host()
-  return M.get_remote().host
+function M.get_remote_host(remote)
+  return M.get_remote(remote).host
 end
 
 function M.commit_exists(commit, cb)
@@ -236,6 +320,42 @@ function M.commit_exists(commit, cb)
   }):start()
 end
 
+function M.develop_issue(issue_repo, issue_number, branch_repo)
+  if not Job then
+    return
+  end
+
+  if M.is_blank(branch_repo) then
+    branch_repo = M.get_remote_name()
+  end
+
+  Job:new({
+    enable_recording = true,
+    command = "gh",
+    args = {
+      "issue",
+      "develop",
+      "--repo",
+      issue_repo,
+      issue_number,
+      "--checkout",
+      "--branch-repo",
+      branch_repo,
+    },
+    on_exit = vim.schedule_wrap(function(job, code)
+      if code == 0 then
+        local output = vim.fn.system "git branch --show-current"
+        M.info("Switched to " .. output)
+      else
+        local stderr = table.concat(job:stderr_result(), "\n")
+        if not M.is_blank(stderr) then
+          M.error(stderr)
+        end
+      end
+    end),
+  }):start()
+end
+
 function M.get_file_at_commit(path, commit, cb)
   if not Job then
     return
@@ -244,13 +364,10 @@ function M.get_file_at_commit(path, commit, cb)
     enable_recording = true,
     command = "git",
     args = { "show", string.format("%s:%s", commit, path) },
-    on_exit = vim.schedule_wrap(function(j_self, _, _)
-      local output = table.concat(j_self:result(), "\n")
-      local stderr = table.concat(j_self:stderr_result(), "\n")
-      cb(vim.split(output, "\n"), vim.split(stderr, "\n"))
-    end),
   }
-  job:start()
+  local result = job:sync()
+  local output = table.concat(result, "\n")
+  cb(vim.split(output, "\n"))
 end
 
 function M.in_pr_repo()
@@ -274,37 +391,23 @@ function M.in_pr_repo()
   end
 end
 
-function M.in_pr_branch(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
-  end
-  if not buffer:isPullRequest() then
-    --M.error("Not in Octo PR buffer")
-    return false
-  end
+--- Determines if we are locally are in a branch matching the pr head ref
+--- @param pr PullRequest
+--- @return boolean
+function M.in_pr_branch(pr)
+  local cmd = "git rev-parse --abbrev-ref --symbolic-full-name @{u}"
+  local local_branch_with_local_remote = vim.split(string.gsub(vim.fn.system(cmd), "%s+", ""), "/")
+  local local_remote = local_branch_with_local_remote[1]
+  local local_branch = table.concat(local_branch_with_local_remote, "/", 2)
 
-  local cmd = "git rev-parse --abbrev-ref HEAD"
-  local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
-  if local_branch == string.format("%s/%s", buffer.node.headRepoName, buffer.node.headRefName) then
-    -- for PRs submitted from master, local_branch will get something like other_repo/master
-    local_branch = vim.split(local_branch, "/")[2]
-  end
+  -- Github repos are case insensitive, ignore case when comparing to local remotes
+  local local_repo = M.get_remote_name({ local_remote }):lower()
 
-  local local_repo = M.get_remote_name()
-  if buffer.node.baseRepository.nameWithOwner == local_repo and buffer.node.headRefName == local_branch then
+  if local_repo == pr.head_repo:lower() and local_branch == pr.head_ref_name then
     return true
-  elseif buffer.node.baseRepository.nameWithOwner ~= local_repo then
-    --M.error(string.format("Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
-    return false
-  elseif buffer.node.headRefName ~= local_branch then
-    -- TODO: suggest to checkout the branch
-    --M.error(string.format("Not in PR branch. Expected %s, got %s", buffer.node.headRefName, local_branch))
-    return false
-  else
-    return false
   end
+
+  return false
 end
 
 ---Checks out a PR b number
@@ -338,41 +441,114 @@ function M.checkout_pr_sync(pr_number)
   }):sync()
 end
 
----Mergest a PR b number
+M.merge_method_to_flag = {
+  squash = "--squash",
+  rebase = "--rebase",
+  commit = "--merge",
+}
+
+function M.insert_merge_flag(args, method)
+  table.insert(args, M.merge_method_to_flag[method])
+end
+
+function M.insert_delete_flag(args, delete)
+  if delete then
+    table.insert(args, "--delete-branch")
+  end
+end
+
+---Merges a PR by number
 function M.merge_pr(pr_number)
   if not Job then
+    M.error "Aborting PR merge"
     return
   end
+
+  local conf = config.values
+  local args = { "pr", "merge", pr_number }
+
+  M.insert_merge_flag(args, conf.default_merge_method)
+  M.insert_delete_flag(args, conf.default_delete_branch)
+
   Job:new({
-    enable_recording = true,
     command = "gh",
-    args = { "pr", "merge", pr_number, "--merge", "--delete-branch" },
-    on_exit = vim.schedule_wrap(function()
-      M.info("Merged PR " .. pr_number .. "!")
+    args = args,
+    on_exit = vim.schedule_wrap(function(job, code)
+      if code == 0 then
+        M.info("Merged PR " .. pr_number .. "!")
+      else
+        local stderr = table.concat(job:stderr_result(), "\n")
+        if not M.is_blank(stderr) then
+          M.error(stderr)
+        end
+      end
     end),
   }):start()
 end
 
 ---Formats a string as a date
 function M.format_date(date_string)
-  local time_bias = date():getbias() * -1
-  local d = date(date_string):addminutes(time_bias)
-  local now = date(os.time())
-  local diff = date.diff(now, d)
-  if diff:spandays() > 0 and diff:spandays() > 30 and now:getyear() ~= d:getyear() then
-    return string.format("%s %s %d", d:getyear(), d:fmt "%b", d:getday())
-  elseif diff:spandays() > 0 and diff:spandays() > 30 and now:getyear() == d:getyear() then
-    return string.format("%s %d", d:fmt "%b", d:getday())
-  elseif diff:spandays() > 0 and diff:spandays() <= 30 then
-    return tostring(math.floor(diff:spandays())) .. " days ago"
-  elseif diff:spanhours() > 0 then
-    return tostring(math.floor(diff:spanhours())) .. " hours ago"
-  elseif diff:spanminutes() > 0 then
-    return tostring(math.floor(diff:spanminutes())) .. " minutes ago"
-  elseif diff:spanseconds() > 0 then
-    return tostring(math.floor(diff:spanswconds())) .. " seconds ago"
+  if date_string == nil then
+    return ""
+  end
+
+  -- Parse the input date string (assumed to be in UTC)
+  local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
+  local parsedTimeUTC = os.time {
+    year = year,
+    month = month,
+    day = day,
+    hour = hour,
+    min = min,
+    sec = sec,
+    isdst = false, -- Input is in UTC
+  }
+
+  -- Get the offset of your local time zone from UTC
+  local localTime = os.time()
+  local utcTime = os.time(os.date "!*t")
+  local timeZoneOffset = os.difftime(localTime, utcTime)
+
+  -- Convert the parsed UTC time to local time
+  local parsedTimeLocal = parsedTimeUTC + timeZoneOffset
+
+  -- Calculate the time difference in seconds
+  local diff = os.time() - parsedTimeLocal
+
+  -- Determine if it's in the past or future
+  local suffix = " ago"
+  if diff < 0 then
+    diff = -diff
+    suffix = " from now"
+  end
+
+  -- Calculate time components
+  local days = math.floor(diff / 86400)
+  diff = diff % 86400
+  local hours = math.floor(diff / 3600)
+  diff = diff % 3600
+  local minutes = math.floor(diff / 60)
+  local seconds = diff % 60
+
+  -- Check if the difference is more than 30 days
+  if days > 30 then
+    local dateOutput = os.date("*t", parsedTimeLocal)
+    if dateOutput.year == os.date("*t", localTime).year then
+      return os.date("%B %d", parsedTimeLocal) -- "Month Day"
+    else
+      return os.date("%Y %B %d", parsedTimeLocal) -- "Year Month Day"
+    end
+  end
+
+  -- Return the human-readable format for differences within 30 days
+  if days > 0 then
+    return days .. " day" .. (days ~= 1 and "s" or "") .. suffix
+  elseif hours > 0 then
+    return hours .. " hour" .. (hours ~= 1 and "s" or "") .. suffix
+  elseif minutes > 0 then
+    return minutes .. " minute" .. (minutes ~= 1 and "s" or "") .. suffix
   else
-    return string.format("%s %s %d", d:getyear(), d:fmt "%b", d:getday())
+    return seconds .. " second" .. (seconds ~= 1 and "s" or "") .. suffix
   end
 end
 
@@ -531,7 +707,7 @@ function M.get_repo_number_from_varargs(...)
     return
   end
   if not repo then
-    M.error "Cant find repo name"
+    M.error "Can not find repo name"
     return
   end
   if not number then
@@ -558,12 +734,20 @@ function M.get_pull_request_uri(...)
   return string.format("octo://%s/pull/%s", repo, number)
 end
 
+function M.get_discussion_uri(...)
+  local repo, number = M.get_repo_number_from_varargs(...)
+
+  return string.format("octo://%s/discussion/%s", repo, number)
+end
+
 ---Helper method opening octo buffers
 function M.get(kind, ...)
   if kind == "issue" then
     M.get_issue(...)
   elseif kind == "pull_request" then
     M.get_pull_request(...)
+  elseif kind == "discussion" then
+    M.get_discussion(...)
   elseif kind == "repo" then
     M.get_repo(...)
   end
@@ -579,6 +763,10 @@ end
 
 function M.get_pull_request(...)
   vim.cmd("edit " .. M.get_pull_request_uri(...))
+end
+
+function M.get_discussion(...)
+  vim.cmd("edit " .. M.get_discussion_uri(...))
 end
 
 function M.parse_url(url)
@@ -1087,8 +1275,8 @@ function M.get_pull_request_for_current_branch(cb)
         return
       end
       local pr = vim.fn.json_decode(out)
-      local owner
-      local name
+      local base_owner
+      local base_name
       if pr.number then
         if pr.isCrossRepository then
           -- Parsing the pr url is the only way to get the target repo owner if the pr is cross repo
@@ -1102,15 +1290,15 @@ function M.get_pull_request_for_current_branch(cb)
             return
           end
           local iter = url_suffix:gmatch "[^/]+/"
-          owner = vim.print(iter():sub(1, -2))
-          name = vim.print(iter():sub(1, -2))
+          base_owner = iter():sub(1, -2)
+          base_name = iter():sub(1, -2)
         else
-          owner = pr.headRepositoryOwner.login
-          name = pr.headRepository.name
+          base_owner = pr.headRepositoryOwner.login
+          base_name = pr.headRepository.name
         end
         local number = pr.number
         local id = pr.id
-        local query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
+        local query = graphql("pull_request_query", base_owner, base_name, number, _G.octo_pv2_fragment)
         gh.run {
           args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
           cb = function(output, stderr)
@@ -1122,9 +1310,11 @@ function M.get_pull_request_for_current_branch(cb)
               local Rev = require("octo.reviews.rev").Rev
               local PullRequest = require("octo.model.pull-request").PullRequest
               local pull_request = PullRequest:new {
-                repo = owner .. "/" .. name,
+                repo = base_owner .. "/" .. base_name,
+                head_repo = obj.headRepository.nameWithOwner,
                 number = number,
                 id = id,
+                head_ref_name = obj.headRefName,
                 left = Rev:new(obj.baseRefOid),
                 right = Rev:new(obj.headRefOid),
                 files = obj.files.nodes,
@@ -1156,7 +1346,7 @@ end
 ---@param events table list of events
 ---@param winnr number window id of preview window
 ---@param bufnrs table list of buffers where the preview window will remain visible
----@see |autocmd-events|
+---@see autocmd-events
 function M.close_preview_autocmd(events, winnr, bufnrs)
   local augroup = vim.api.nvim_create_augroup("preview_window_" .. winnr, {
     clear = true,
@@ -1335,6 +1525,19 @@ function M.convert_vim_mapping_to_fzf(vim_mapping)
   local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
   fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
   return string.lower(fzf_mapping)
+end
+
+--- Logic to determine the state displayed for issue or PR
+---@param isIssue boolean
+---@param state string
+---@param stateReason string | nil
+---@return string
+function M.get_displayed_state(isIssue, state, stateReason)
+  if isIssue and state == "CLOSED" then
+    return stateReason or state
+  end
+
+  return state
 end
 
 return M

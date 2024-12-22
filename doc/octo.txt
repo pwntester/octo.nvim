@@ -51,6 +51,8 @@ See |octo-command-examples| for examples.
 
 :Octo pr [action] {args}                        *octo-commands-pr*
 
+  Omit action to open the pull request matching the current branch.
+
   list [repo] {key=val} Lists all PRs satisfying a given filter.
                         In-menu mappings: 
                           <CR>    Edit PR.
@@ -148,6 +150,9 @@ See |octo-command-examples| for examples.
 
 :Octo review [action]                           *octo-commands-review*
 
+  Omit action to resume a review if one is in progress, or start a new one if
+  no review is in progress.
+
   start                 Start a new review.
   submit                Submit the review.
   resume                Edit a pending review for the current PR.
@@ -191,7 +196,7 @@ PR REVIEW                                       *octo-pr-review*
 * Start a review with `Octo review start` or resume a pending review with `Octo review resume`
  A new tab will show a panel with changed files and two windows showing the diff on any of them.
  Change panel entries with `]q` and `[q` or by selecting an entry in the window.
-* Add comments with `<space>ca` or suggestions with `<space>sa` on single or
+* Add comments with `<localleader>ca` or suggestions with `<localleader>sa` on single or
   multiple visual-selected lines
   * A new buffer will appear in the alternate diff window. Cursor will be
     positioned in the new buffer

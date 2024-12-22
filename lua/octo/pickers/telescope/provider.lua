@@ -15,6 +15,8 @@ local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 local sorters = require "telescope.sorters"
 
+local vim = vim
+
 local M = {}
 
 function M.not_implemented()
@@ -74,7 +76,9 @@ local function open(command)
     elseif command == "tab" then
       vim.cmd [[:tab sb %]]
     end
-    utils.get(selection.kind, selection.repo, selection.value)
+    if selection then
+      utils.get(selection.kind, selection.repo, selection.value)
+    end
   end
 end
 
@@ -121,7 +125,18 @@ end
 --
 -- ISSUES
 --
-function M.issues(opts)
+local function open_issue_buffer(prompt_bufnr, type)
+  open(type)(prompt_bufnr)
+end
+
+local function develop_issue(prompt_bufnr, type)
+  local selection = action_state.get_selected_entry(prompt_bufnr)
+  actions.close(prompt_bufnr)
+
+  utils.develop_issue(selection.repo, selection.obj.number, nil)
+end
+
+function M.issues(opts, develop)
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -133,6 +148,13 @@ function M.issues(opts)
   if not opts.repo then
     utils.error "Cannot find repo"
     return
+  end
+
+  local replace
+  if develop then
+    replace = develop_issue
+  else
+    replace = open_issue_buffer
   end
 
   local owner, name = utils.split_repo(opts.repo)
@@ -161,6 +183,7 @@ function M.issues(opts)
         opts.preview_title = opts.preview_title or ""
         opts.prompt_title = opts.prompt_title or ""
         opts.results_title = opts.results_title or ""
+
         pickers
           .new(opts, {
             finder = finders.new_table {
@@ -170,9 +193,7 @@ function M.issues(opts)
             sorter = conf.generic_sorter(opts),
             previewer = previewers.issue.new(opts),
             attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
+              action_set.select:replace(replace)
               map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
               map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
               return true
@@ -481,16 +502,52 @@ end
 ---
 -- SEARCH
 ---
+
+local function get_search_query(prompt)
+  local full_prompt = prompt[1]
+  local parts = vim.split(full_prompt, " ")
+  for _, part in ipairs(parts) do
+    if string.match(part, "^repo:") then
+      return {
+        single_repo = true,
+        prompt = part,
+      }
+    end
+  end
+  return {
+    single_repo = false,
+    prompt = full_prompt,
+  }
+end
+
+local function get_search_size(prompt)
+  local query = graphql("search_count_query", prompt)
+  local output = gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    mode = "sync",
+  }
+  local resp = vim.fn.json_decode(output)
+  return resp.data.search.issueCount
+end
+
 function M.search(opts)
   opts = opts or {}
   local cfg = octo_config.values
+  if type(opts.prompt) == "string" then
+    opts.prompt = { opts.prompt }
+  end
+
+  local search = get_search_query(opts.prompt)
+  local width = 6
+  if search.single_repo then
+    local num_results = get_search_size(search.prompt)
+    width = math.min(#tostring(num_results), width)
+  end
+
   local requester = function()
     return function(prompt)
-      if not opts.prompt and utils.is_blank(prompt) then
+      if utils.is_blank(opts.prompt) and utils.is_blank(prompt) then
         return {}
-      end
-      if type(opts.prompt) == "string" then
-        opts.prompt = { opts.prompt }
       end
       local results = {}
       for _, val in ipairs(opts.prompt) do
@@ -515,13 +572,13 @@ function M.search(opts)
   end
   local finder = finders.new_dynamic {
     fn = requester(),
-    entry_maker = entry_maker.gen_from_issue(6),
+    entry_maker = entry_maker.gen_from_issue(width),
   }
   if opts.static then
     local results = requester() ""
     finder = finders.new_table {
       results = results,
-      entry_maker = entry_maker.gen_from_issue(6, true),
+      entry_maker = entry_maker.gen_from_issue(width, true),
     }
   end
   opts.preview_title = opts.preview_title or ""
@@ -538,6 +595,10 @@ function M.search(opts)
         end)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
         map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+        if opts.search_prs then
+          map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+          map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
+        end
         return true
       end,
     })
@@ -680,6 +741,31 @@ end
 --
 -- LABELS
 --
+
+local function select(opts)
+  local prompt_bufnr = opts.bufnr
+  local single_cb = opts.single_cb
+  local multiple_cb = opts.multiple_cb
+  local get_item = opts.get_item
+
+  local picker = action_state.get_current_picker(prompt_bufnr)
+  local selections = picker:get_multi_selection()
+  local cb
+  local items = {}
+  if #selections == 0 then
+    local selection = action_state.get_selected_entry(prompt_bufnr)
+    table.insert(items, get_item(selection))
+    cb = single_cb
+  else
+    for _, selection in ipairs(selections) do
+      table.insert(items, get_item(selection))
+    end
+    cb = multiple_cb
+  end
+  actions.close(prompt_bufnr)
+  cb(items)
+end
+
 function M.select_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -706,9 +792,14 @@ function M.select_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = cb,
+                  multiple_cb = cb,
+                  get_item = function(selection)
+                    return selection.label
+                  end,
+                }
               end)
               return true
             end,
@@ -751,9 +842,14 @@ function M.select_assigned_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = cb,
+                  multiple_cb = cb,
+                  get_item = function(selection)
+                    return selection.label
+                  end,
+                }
               end)
               return true
             end,
@@ -767,6 +863,126 @@ end
 --
 -- ASSIGNEES
 --
+local function get_user_requester()
+  return function(prompt)
+    -- skip empty queries
+    if not prompt or prompt == "" or utils.is_blank(prompt) then
+      return {}
+    end
+    local query = graphql("users_query", prompt)
+    local output = gh.run {
+      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+      mode = "sync",
+    }
+    if output then
+      return {}
+    end
+
+    local users = {}
+    local orgs = {}
+    local responses = utils.get_pages(output)
+    for _, resp in ipairs(responses) do
+      for _, user in ipairs(resp.data.search.nodes) do
+        if not user.teams then
+          -- regular user
+          if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
+            users[user.login] = {
+              id = user.id,
+              login = user.login,
+              name = user.name,
+            }
+          end
+        elseif user.teams and user.teams.totalCount > 0 then
+          -- organization, collect all teams
+          if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
+            orgs[user.login] = {
+              id = user.id,
+              login = user.login,
+              teams = user.teams.nodes,
+            }
+          else
+            vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+          end
+        end
+      end
+    end
+
+    local results = {}
+    -- process orgs with teams
+    for _, user in pairs(users) do
+      table.insert(results, user)
+    end
+    for _, org in pairs(orgs) do
+      org.login = string.format("%s (%d)", org.login, #org.teams)
+      table.insert(results, org)
+    end
+    return results
+  end
+end
+
+local function get_users(query_name, node_name)
+  local repo = utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
+  local query = graphql(query_name, owner, name, { escape = true })
+  local output = gh.run {
+    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+    mode = "sync",
+  }
+  if not output then
+    return {}
+  end
+
+  local responses = utils.get_pages(output)
+
+  local users = {}
+
+  for _, resp in ipairs(responses) do
+    local nodes = resp.data.repository[node_name].nodes
+    for _, user in ipairs(nodes) do
+      table.insert(users, {
+        id = user.id,
+        login = user.login,
+        name = user.name,
+      })
+    end
+  end
+
+  return users
+end
+
+local function get_assignable_users()
+  return get_users("assignable_users_query", "assignableUsers")
+end
+
+local function get_mentionable_users()
+  return get_users("mentionable_users_query", "mentionableUsers")
+end
+
+local function create_user_finder()
+  local cfg = octo_config.values
+
+  local finder
+  local user_entry_maker = entry_maker.gen_from_user()
+  if cfg.users == "search" then
+    finder = finders.new_dynamic {
+      entry_maker = user_entry_maker,
+      fn = get_user_requester(),
+    }
+  elseif cfg.users == "assignable" then
+    finder = finders.new_table {
+      results = get_assignable_users(),
+      entry_maker = user_entry_maker,
+    }
+  else
+    finder = finders.new_table {
+      results = get_mentionable_users(),
+      entry_maker = user_entry_maker,
+    }
+  end
+
+  return finder
+end
+
 function M.select_user(cb)
   local opts = vim.deepcopy(dropdown_opts)
   opts.layout_config = {
@@ -774,69 +990,11 @@ function M.select_user(cb)
     height = 15,
   }
 
-  --local queue = {}
-  local function get_user_requester()
-    return function(prompt)
-      -- skip empty queries
-      if not prompt or prompt == "" or utils.is_blank(prompt) then
-        return {}
-      end
-      local query = graphql("users_query", prompt)
-      local output = gh.run {
-        args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-        mode = "sync",
-      }
-      if output then
-        local users = {}
-        local orgs = {}
-        local responses = utils.get_pages(output)
-        for _, resp in ipairs(responses) do
-          for _, user in ipairs(resp.data.search.nodes) do
-            if not user.teams then
-              -- regular user
-              if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
-                users[user.login] = {
-                  id = user.id,
-                  login = user.login,
-                }
-              end
-            elseif user.teams and user.teams.totalCount > 0 then
-              -- organization, collect all teams
-              if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
-                orgs[user.login] = {
-                  id = user.id,
-                  login = user.login,
-                  teams = user.teams.nodes,
-                }
-              else
-                vim.list_extend(orgs[user.login].teams, user.teams.nodes)
-              end
-            end
-          end
-        end
-
-        local results = {}
-        -- process orgs with teams
-        for _, user in pairs(users) do
-          table.insert(results, user)
-        end
-        for _, org in pairs(orgs) do
-          org.login = string.format("%s (%d)", org.login, #org.teams)
-          table.insert(results, org)
-        end
-        return results
-      else
-        return {}
-      end
-    end
-  end
+  local finder = create_user_finder()
 
   pickers
     .new(opts, {
-      finder = finders.new_dynamic {
-        entry_maker = entry_maker.gen_from_user(),
-        fn = get_user_requester(),
-      },
+      finder = finder,
       sorter = sorters.get_fuzzy_file(opts),
       attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr)
@@ -1043,26 +1201,94 @@ function M.issue_templates(templates, cb)
     :find()
 end
 
+function M.discussions(opts)
+  opts = opts or {}
+
+  if opts.cb == nil then
+    opts.cb = function(selected, _)
+      local url = selected.obj.url
+      navigation.open_in_browser_raw(url)
+    end
+  end
+
+  local owner, name = utils.split_repo(opts.repo)
+  local cfg = octo_config.values
+  local order_by = cfg.discussions.order_by
+  local query = graphql("discussions_query", owner, name, order_by.field, order_by.direction, { escape = false })
+  utils.info "Fetching discussions (this may take a while) ..."
+  gh.run {
+    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.error(stderr)
+        return
+      end
+
+      local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
+      local discussions = resp.data.repository.discussions.nodes
+
+      local max_number = -1
+      for _, discussion in ipairs(discussions) do
+        if #tostring(discussion.number) > max_number then
+          max_number = #tostring(discussion.number)
+        end
+      end
+
+      if #discussions == 0 then
+        utils.error(string.format("There are no matching discussions in %s.", opts.repo))
+        return
+      end
+
+      local cfg = octo_config.values
+      local replace = function(prompt_bufnr, type)
+        local selected = action_state.get_selected_entry(prompt_bufnr)
+        actions.close(prompt_bufnr)
+        opts.cb(selected, prompt_bufnr, type)
+      end
+
+      opts.preview_title = opts.preview_title or ""
+
+      pickers
+        .new(opts, {
+          finder = finders.new_table {
+            results = discussions,
+            entry_maker = entry_maker.gen_from_discussions(max_number),
+          },
+          sorter = conf.generic_sorter(opts),
+          previewer = previewers.discussion.new(opts),
+          attach_mappings = function(_, map)
+            action_set.select:replace(replace)
+
+            map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+            return true
+          end,
+        })
+        :find()
+    end,
+  }
+end
+
 M.picker = {
-  issues = M.issues,
-  prs = M.pull_requests,
-  gists = M.gists,
-  commits = M.commits,
-  review_commits = M.review_commits,
+  actions = M.actions,
+  assigned_labels = M.select_assigned_label,
+  assignees = M.select_assignee,
   changed_files = M.changed_files,
+  commits = M.commits,
+  discussions = M.discussions,
+  gists = M.gists,
+  issue_templates = M.issue_templates,
+  issues = M.issues,
+  labels = M.select_label,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
   project_cards_v2 = M.not_implemented,
   project_columns = M.select_target_project_column,
   project_columns_v2 = M.not_implemented,
-  labels = M.select_label,
-  assigned_labels = M.select_assigned_label,
-  users = M.select_user,
-  assignees = M.select_assignee,
+  prs = M.pull_requests,
   repos = M.repos,
+  review_commits = M.review_commits,
   search = M.search,
-  actions = M.actions,
-  issue_templates = M.issue_templates,
+  users = M.select_user,
 }
 
 return M

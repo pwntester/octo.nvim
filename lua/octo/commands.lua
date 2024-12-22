@@ -52,6 +52,12 @@ function M.setup()
     search = function(...)
       M.search(...)
     end,
+    discussion = {
+      list = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        picker.discussions(opts)
+      end,
+    },
     issue = {
       create = function(repo)
         M.create_issue(repo)
@@ -59,8 +65,20 @@ function M.setup()
       edit = function(...)
         utils.get_issue(...)
       end,
-      close = function()
-        M.change_state "CLOSED"
+      close = function(stateReason)
+        stateReason = stateReason or "CLOSED"
+        M.change_state(stateReason)
+      end,
+      develop = function(repo, ...)
+        local bufnr = vim.api.nvim_get_current_buf()
+        local buffer = octo_buffers[bufnr]
+
+        if buffer and buffer.kind and buffer.kind == "issue" then
+          utils.develop_issue(buffer.repo, buffer.node.number, repo)
+        else
+          local opts = M.process_varargs(repo, ...)
+          picker.issues(opts, true)
+        end
       end,
       reopen = function()
         M.change_state "OPEN"
@@ -83,7 +101,7 @@ function M.setup()
         picker.search(opts)
       end,
       reload = function()
-        M.reload()
+        M.reload { verbose = true }
       end,
       browser = function()
         navigation.open_in_browser()
@@ -152,10 +170,11 @@ function M.setup()
           prompt = prompt .. k .. ":" .. v .. " "
         end
         opts.prompt = prompt
+        opts.search_prs = true
         picker.search(opts)
       end,
       reload = function()
-        M.reload()
+        M.reload { verbose = true }
       end,
       browser = function()
         navigation.open_in_browser()
@@ -225,6 +244,9 @@ function M.setup()
         else
           utils.error "Please start or resume a review first"
         end
+      end,
+      thread = function()
+        require("octo.reviews.thread-panel").show_review_threads { jump_to_buffer = true }
       end,
     },
     gist = {
@@ -350,6 +372,12 @@ function M.setup()
       end)
     end,
   })
+
+  setmetatable(M.commands.review, {
+    __call = function(_)
+      reviews.start_or_resume_review()
+    end,
+  })
 end
 
 function M.process_varargs(repo, ...)
@@ -413,8 +441,13 @@ function M.octo(object, action, ...)
     end
 
     local a = o[action] or o
-    if not pcall(a, ...) then
+    if not a then
       utils.error(action and "Incorrect action: " .. action or "No action specified")
+      return
+    end
+    res = pcall(a, ...)
+    if not res then
+      utils.error(action and "Failed action: " .. action)
       return
     end
   end
@@ -432,7 +465,7 @@ function M.add_comment()
   local comment = {
     id = -1,
     author = { login = vim.g.octo_viewer },
-    createdAt = vim.fn.strftime "%FT%TZ",
+    createdAt = os.date "!%FT%TZ",
     body = " ",
     viewerCanUpdate = true,
     viewerCanDelete = true,
@@ -581,8 +614,10 @@ function M.delete_comment()
             local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
             if split then
               local layout = reviews.get_current_review().layout
-              local file = layout:cur_file()
-              local diff_win = file:get_win(split)
+              local file = layout:get_current_file()
+              if not file then
+                return
+              end
               local thread_win = file:get_alternative_win(split)
               local original_buf = file:get_alternative_buf(split)
               -- move focus to the split containing the diff buffer
@@ -698,11 +733,25 @@ function M.change_state(state)
   end
 
   local id = buffer.node.id
-  local query
-  if buffer:isIssue() then
+  local query, get_obj, desired_state
+  if buffer:isIssue() and (state == "CLOSED" or state == "OPEN") then
     query = graphql("update_issue_state_mutation", id, state)
+    desired_state = state
+    get_obj = function(resp)
+      return resp.data.updateIssue.issue
+    end
+  elseif buffer:isIssue() then
+    query = graphql("close_issue_mutation", id, state)
+    desired_state = "CLOSED"
+    get_obj = function(resp)
+      return resp.data.closeIssue.issue
+    end
   elseif buffer:isPullRequest() then
     query = graphql("update_pull_request_state_mutation", id, state)
+    desired_state = state
+    get_obj = function(resp)
+      return resp.data.updatePullRequest.pullRequest
+    end
   end
 
   gh.run {
@@ -712,20 +761,20 @@ function M.change_state(state)
         utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
-        local new_state, obj
-        if buffer:isIssue() then
-          obj = resp.data.updateIssue.issue
-          new_state = obj.state
-        elseif buffer:isPullRequest() then
-          obj = resp.data.updatePullRequest.pullRequest
-          new_state = obj.state
+
+        local obj = get_obj(resp)
+        local new_state = obj.state
+
+        if desired_state ~= new_state then
+          return
         end
-        if state == new_state then
-          buffer.node.state = new_state
-          writers.write_state(bufnr, new_state:upper(), buffer.number)
-          writers.write_details(bufnr, obj, true)
-          utils.info("Issue state changed to: " .. new_state)
-        end
+
+        buffer.node.state = new_state
+
+        local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
+        writers.write_state(bufnr, updated_state:upper(), buffer.number)
+        writers.write_details(bufnr, obj, true)
+        utils.info("Issue state changed to: " .. updated_state)
       end
     end,
   }
@@ -1091,43 +1140,35 @@ function M.pr_checks()
 end
 
 function M.merge_pr(...)
-  local conf = config.values
-  local defaultMergeMethod = conf.default_merge_method
-
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then
     return
   end
+
   local args = { "pr", "merge", tostring(buffer.number) }
   local params = table.pack(...)
-  for i = 1, params.n do
-    if params[i] == "delete" then
-      table.insert(args, "--delete-branch")
+  local conf = config.values
+
+  local merge_method = conf.default_merge_method
+  for _, param in ipairs(params) do
+    if utils.merge_method_to_flag[param] then
+      merge_method = param
     end
   end
-  local has_flag = false
-  for i = 1, params.n do
-    if params[i] == "commit" then
-      table.insert(args, "--merge")
-      has_flag = true
-    elseif params[i] == "squash" then
-      table.insert(args, "--squash")
-      has_flag = true
-    elseif params[i] == "rebase" then
-      table.insert(args, "--rebase")
-      has_flag = true
+  utils.insert_merge_flag(args, merge_method)
+
+  local delete_branch = conf.default_delete_branch
+  for _, param in ipairs(params) do
+    if param == "delete" then
+      delete_branch = true
+    end
+    if param == "nodelete" then
+      delete_branch = false
     end
   end
-  if not has_flag then
-    if defaultMergeMethod == "squash" then
-      table.insert(args, "--squash")
-    elseif defaultMergeMethod == "rebase" then
-      table.insert(args, "--rebase")
-    else
-      table.insert(args, "--merge")
-    end
-  end
+  utils.insert_delete_flag(args, delete_branch)
+
   gh.run {
     args = args,
     cb = function(output, stderr)
@@ -1415,8 +1456,18 @@ function M.remove_project_v2_card()
   end)
 end
 
-function M.reload(bufnr)
-  require("octo").load_buffer(bufnr)
+function M.reload(opts)
+  require("octo").load_buffer(opts)
+end
+
+function M.random_hex_color()
+  local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
+  math.randomseed(os.time())
+  local color = {}
+  for _ = 1, 6 do
+    table.insert(color, chars[math.random(1, 16)])
+  end
+  return table.concat(color, "")
 end
 
 function M.create_label(label)
@@ -1431,20 +1482,17 @@ function M.create_label(label)
   local name, color, description
   if label then
     name = label
+    color = M.random_hex_color()
     description = ""
-    local chars = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
-    math.randomseed(os.time())
-    color = {}
-    for _ = 1, 6 do
-      table.insert(color, chars[math.random(1, 16)])
-    end
-    color = table.concat(color, "")
   else
     vim.fn.inputsave()
     name = vim.fn.input(string.format("Creating label for %s. Enter title: ", buffer.repo))
     color = vim.fn.input "Enter color (RGB): "
     description = vim.fn.input "Enter description: "
     vim.fn.inputrestore()
+    if color == "" then
+      color = M.random_hex_color()
+    end
     color = string.gsub(color, "#", "")
   end
 
@@ -1468,7 +1516,25 @@ function M.create_label(label)
   }
 end
 
-function M.add_label(label)
+local function format(str)
+  return string.format('"%s"', str)
+end
+
+local function create_list(values, fmt)
+  if type(values) == "string" then
+    return fmt(values)
+  end
+
+  local formatted_values = {}
+  for _, value in ipairs(values) do
+    table.insert(formatted_values, fmt(value))
+  end
+  return "[" .. table.concat(formatted_values, ", ") .. "]"
+end
+
+local function label_action(opts)
+  local label = opts.label
+
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -1480,8 +1546,13 @@ function M.add_label(label)
     utils.error "Cannot get issue/pr id"
   end
 
-  local cb = function(label_id)
-    local query = graphql("add_labels_mutation", iid, label_id)
+  local cb = function(labels)
+    local label_ids = {}
+    for _, lbl in ipairs(labels) do
+      table.insert(label_ids, lbl.id)
+    end
+
+    local query = graphql(opts.query_name, iid, create_list(label_ids, format))
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
@@ -1496,57 +1567,33 @@ function M.add_label(label)
       end,
     }
   end
+
   if label then
     local label_id = utils.get_label_id(label)
     if label_id then
-      cb(label_id)
+      cb { { id = label_id } }
     else
       utils.error("Cannot find label: " .. label)
     end
   else
-    picker.labels(cb)
+    opts.labels(cb)
   end
 end
 
+function M.add_label(label)
+  return label_action {
+    query_name = "add_labels_mutation",
+    label = label,
+    labels = picker.labels,
+  }
+end
+
 function M.remove_label(label)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
-  end
-
-  local iid = buffer.node.id
-  if not iid then
-    utils.error "Cannot get issue/pr id"
-  end
-
-  local cb = function(label_id)
-    local query = graphql("remove_labels_mutation", iid, label_id)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
-          end)
-        end
-      end,
-    }
-  end
-
-  if label then
-    local label_id = utils.get_label_id(label)
-    if label_id then
-      cb(label_id)
-    else
-      utils.error("Cannot find label: " .. label)
-    end
-  else
-    picker.assigned_labels(cb)
-  end
+  return label_action {
+    query_name = "remove_labels_mutation",
+    label = label,
+    labels = picker.assigned_labels,
+  }
 end
 
 function M.add_user(subject, login)
@@ -1642,10 +1689,14 @@ end
 function M.copy_url()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
+  local url
+
+  if buffer then
+    url = buffer.node.url
+  else
+    url = utils.get_remote_url()
   end
-  local url = buffer.node.url
+
   vim.fn.setreg("+", url, "c")
   utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
 end

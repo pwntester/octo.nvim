@@ -182,7 +182,7 @@ function FilePanel:highlight_file(file)
   for i, f in ipairs(self.files) do
     if f == file then
       pcall(vim.api.nvim_win_set_cursor, self.winid, { i + header_size, 0 })
-      vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
+      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", i + header_size - 1, 0, -1)
     end
   end
@@ -198,7 +198,7 @@ function FilePanel:highlight_prev_file()
     if f == cur then
       local line = utils.clamp(i + header_size - 1, header_size + 1, #self.files + header_size)
       pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
-      vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
+      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
   end
@@ -214,13 +214,18 @@ function FilePanel:highlight_next_file()
     if f == cur then
       local line = utils.clamp(i + header_size + 1, header_size, #self.files + header_size)
       pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
-      vim.api.nvim_buf_clear_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
+      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
       vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
   end
 end
 
 function FilePanel:render()
+  local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
+
   if not self.render_data then
     return
   end
@@ -232,7 +237,6 @@ function FilePanel:render()
     self.render_data:add_hl(...)
   end
 
-  local current_review = require("octo.reviews").get_current_review()
   local conf = config.values
   local strlen = vim.fn.strlen
   local s = "Files changed"

@@ -76,6 +76,104 @@ local function add_details_line(details, label, value, kind)
   end
 end
 
+function M.write_discussion_details(bufnr, discussion)
+  local details = {}
+
+  -- clear namespace and set vt
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, 0, -1)
+
+  local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
+  local author_bubble = bubbles.make_user_bubble(discussion.author.login, discussion.viewerDidAuthor)
+  vim.list_extend(author_vt, author_bubble)
+  table.insert(details, author_vt)
+
+  local category_vt = {
+    { "Category: ", "OctoDetailsLabel" },
+    { discussion.category.name, "OctoDetailsValue" },
+  }
+  table.insert(details, category_vt)
+
+  add_details_line(details, "Created at", discussion.createdAt, "date")
+  add_details_line(details, "Updated at", discussion.updatedAt, "date")
+
+  local labels_vt = { { "Labels: ", "OctoDetailsLabel" } }
+
+  if #discussion.labels.nodes > 0 then
+    for _, label in ipairs(discussion.labels.nodes) do
+      local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
+      vim.list_extend(labels_vt, label_bubble)
+    end
+  else
+    table.insert(labels_vt, { "None yet", "OctoMissingDetails" })
+  end
+
+  table.insert(details, labels_vt)
+
+  -- Is answered details
+  local answered_vt = {
+    { "Answered: ", "OctoDetailsLabel" },
+  }
+  if discussion.isAnswered ~= vim.NIL and discussion.isAnswered then
+    table.insert(answered_vt, { "Yes", "OctoGreen" })
+  else
+    table.insert(answered_vt, { "Not yet", "OctoMissingDetails" })
+  end
+  table.insert(details, answered_vt)
+
+  add_details_line(details, "Comments", discussion.comments.totalCount)
+
+  M.write_detail_table { bufnr = bufnr, details = details, offset = 3 }
+end
+
+function M.write_detail_table(opts)
+  local bufnr = opts.bufnr
+  local details = opts.details
+  local line = opts.offset
+
+  local empty_lines = {}
+  for _ = 1, #details + 1 do
+    table.insert(empty_lines, "")
+  end
+  M.write_block(bufnr, empty_lines, line)
+  for _, d in ipairs(details) do
+    M.write_virtual_text(bufnr, constants.OCTO_REPO_VT_NS, line - 1, d)
+    line = line + 1
+  end
+end
+
+function M.write_upvotes(bufnr, obj, line)
+  -- clear namespace and set vt
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
+
+  local upvote_symbol = " "
+
+  local upvotes = obj.upvoteCount
+  local viewer_did_upvote = obj.viewerHasUpvoted
+
+  local upvotes_vt = {
+    { upvote_symbol, "OctoDetailsLabel" },
+    { " " .. upvotes, "OctoDetailsValue" },
+  }
+  M.write_block(bufnr, { "" }, line)
+  M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line, upvotes_vt)
+end
+
+function M.write_discussion_answer(bufnr, obj, line)
+  local answer = obj.answer
+
+  local answer_vt = {
+    { "Answered by: ", "OctoDetailsLabel" },
+  }
+  local author_bubble = bubbles.make_user_bubble(answer.author.login, answer.viewerDidAuthor)
+  vim.list_extend(answer_vt, author_bubble)
+  table.insert(answer_vt, { " " .. utils.format_date(answer.createdAt), "OctoDetailsValue" })
+
+  M.write_detail_table { bufnr = bufnr, details = { answer_vt }, offset = line }
+
+  line = line + 10
+  M.write_block(bufnr, answer.body:gsub("\r\n", "\n"), line)
+end
+
 function M.write_repo(bufnr, repo)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
 
@@ -126,7 +224,7 @@ function M.write_repo(bufnr, repo)
       return nil
     end
   end)
-  add_details_line(details, "Mirroed from", function()
+  add_details_line(details, "Mirrored from", function()
     if repo.isMirror == "true" then
       return repo.mirrorUrl
     else
@@ -176,6 +274,7 @@ function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, { title, "" }, line, true)
   vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
   local buffer = octo_buffers[bufnr]
+
   if buffer then
     buffer.titleMetadata = TitleMetadata:new {
       savedBody = title,
@@ -198,7 +297,7 @@ function M.write_state(bufnr, state, number)
   -- title virtual text
   local title_vt = {
     { tostring(number), "OctoIssueId" },
-    { string.format(" [%s] ", state), utils.state_hl_map[state] },
+    { string.format(" [%s] ", state:gsub("_", " ")), utils.state_hl_map[state] },
   }
 
   -- PR virtual text
@@ -232,25 +331,25 @@ function M.write_body(bufnr, issue, line)
 end
 
 function M.write_reactions(bufnr, reaction_groups, line)
+  local reactions_count = utils.count_reactions(reaction_groups)
+  if reactions_count <= 0 then
+    return nil
+  end
+
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
-  local reactions_count = utils.count_reactions(reaction_groups)
-  if reactions_count > 0 then
-    local reactions_vt = {}
-    for _, group in ipairs(reaction_groups) do
-      if group.users.totalCount > 0 then
-        local icon = utils.reaction_map[group.content]
-        local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
-        vim.list_extend(reactions_vt, bubble)
-        table.insert(reactions_vt, { " " .. group.users.totalCount .. " ", "NormalFront" })
-      end
+  local reactions_vt = {}
+  for _, group in ipairs(reaction_groups) do
+    if group.users.totalCount > 0 then
+      local icon = utils.reaction_map[group.content]
+      local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
+      vim.list_extend(reactions_vt, bubble)
+      table.insert(reactions_vt, { " " .. group.users.totalCount .. " ", "NormalFront" })
     end
-    M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
-    return line
-  else
-    return nil
   end
+  M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
+  return line
 end
 
 function M.write_details(bufnr, issue, update)
@@ -269,7 +368,12 @@ function M.write_details(bufnr, issue, update)
 
   -- author
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
-  local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor)
+  local opts = {}
+  if utils.is_blank(issue.author) then
+    issue.author = { login = "ghost" }
+    opts = { ghost = true }
+  end
+  local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
   table.insert(details, author_vt)
@@ -380,19 +484,15 @@ function M.write_details(bufnr, issue, update)
     -- reviewers
     local reviewers = {}
     local collect_reviewer = function(name, state)
-      --if vim.g.octo_viewer ~= name then
       if not reviewers[name] then
-        if not reviewers[name] then
-          reviewers[name] = { state }
-        else
-          local states = reviewers[name]
-          if not vim.tbl_contains(states, state) then
-            table.insert(states, state)
-          end
-          reviewers[name] = states
+        reviewers[name] = { state }
+      else
+        local states = reviewers[name]
+        if not vim.tbl_contains(states, state) then
+          table.insert(states, state)
         end
+        reviewers[name] = states
       end
-      -- end
     end
     local timeline_nodes = {}
     for _, item in ipairs(issue.timelineItems.nodes) do
@@ -458,6 +558,48 @@ function M.write_details(bufnr, issue, update)
         { utils.state_message_map[issue.reviewDecision] },
       }
       table.insert(details, decision_vt)
+    end
+
+    -- checks
+    if issue.statusCheckRollup and issue.statusCheckRollup ~= vim.NIL then
+      local state = issue.statusCheckRollup.state
+      local checks_vt = {
+        { "Checks: ", "OctoDetailsLabel" },
+        { utils.checks_message_map[state], utils.checks_hl_map[state] },
+      }
+      table.insert(details, checks_vt)
+    end
+
+    -- merge state
+    if not issue.merged and issue.mergeable then
+      local merge_state_vt = {
+        { "Merge: ", "OctoDetailsLabel" },
+      }
+
+      if issue.mergeable == "MERGEABLE" then
+        table.insert(
+          merge_state_vt,
+          { utils.merge_state_message_map[issue.mergeStateStatus], utils.merge_state_hl_map[issue.mergeStateStatus] }
+        )
+      else
+        table.insert(
+          merge_state_vt,
+          { utils.mergeable_message_map[issue.mergeable], utils.mergeable_hl_map[issue.mergeable] }
+        )
+      end
+
+      table.insert(details, merge_state_vt)
+    end
+
+    if not issue.merged and issue.autoMergeRequest and issue.autoMergeRequest ~= vim.NIL then
+      local auto_merge_vt = {
+        { "Auto-merge: ", "OctoDetailsLabel" },
+        { "ENABLED", "OctoStateApproved" },
+        { " by " },
+        { issue.autoMergeRequest.enabledBy.login, "OctoUser" },
+        { " (" .. utils.auto_merge_method_map[issue.autoMergeRequest.mergeMethod] .. ")" },
+      }
+      table.insert(details, auto_merge_vt)
     end
 
     -- changes
@@ -531,9 +673,10 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
     --vim.list_extend(header_vt, author_bubble)
     table.insert(header_vt, {
-      comment.author.login .. " ",
+      comment.author.login,
       comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser",
     })
+    table.insert(header_vt, { " ", "OctoTimelineItemHeading" })
     vim.list_extend(header_vt, state_bubble)
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
     if not comment.viewerCanUpdate then
@@ -1079,9 +1222,10 @@ function M.write_issue_summary(bufnr, issue, opts)
   })
 
   -- issue body
+  local state = utils.get_displayed_state(issue.__typename == "Issue", issue.state, issue.stateReason)
   table.insert(chunks, {
     { " " },
-    { "[" .. issue.state .. "] ", utils.state_hl_map[issue.state] },
+    { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
     { issue.title .. " ", "OctoDetailsLabel" },
     { "#" .. issue.number .. " ", "OctoDetailsValue" },
   })
@@ -1123,11 +1267,19 @@ function M.write_issue_summary(bufnr, issue, opts)
   end
 
   -- author line
-  table.insert(chunks, {
-    { " " },
-    { conf.user_icon or " " },
-    { issue.author.login },
-  })
+  if utils.is_blank(issue.author) then
+    table.insert(chunks, {
+      { " " },
+      { conf.ghost_icon or "󰊠 " },
+      { "ghost" },
+    })
+  else
+    table.insert(chunks, {
+      { " " },
+      { conf.user_icon or " " },
+      { issue.author.login },
+    })
+  end
 
   for i = 1, #chunks do
     M.write_block(bufnr, { "" }, i)
@@ -1179,8 +1331,31 @@ function M.write_commit_event(bufnr, item)
   end
   table.insert(vt, { " added ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
-  table.insert(vt, { " '", "OctoTimelineItemHeading" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+function M.write_renamed_title_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if utils.is_blank(item.actor) then
+    table.insert(vt, { "Title renamed", "OctoTimelineItemHeading" })
+    write_event(bufnr, vt)
+    return
+  end
+
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " changed the title ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.previousTitle, "OctoStrikethrough" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.currentTitle, "OctoDetailsLabel" })
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
 end
@@ -1402,7 +1577,14 @@ end
 function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   mode = mode or "extmark"
   if mode == "extmark" then
-    pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, line, 0, { virt_text = chunks, virt_text_pos = "overlay" })
+    pcall(
+      vim.api.nvim_buf_set_extmark,
+      bufnr,
+      ns,
+      line,
+      0,
+      { virt_text = chunks, virt_text_pos = "overlay", hl_mode = "combine" }
+    )
   elseif mode == "vt" then
     pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
   end

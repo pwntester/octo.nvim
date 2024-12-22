@@ -100,10 +100,12 @@ function M.setup()
       for idx, split_scope in ipairs(split) do
         scopes[idx] = string.gsub(split_scope, "'", "")
       end
-      if M.has_scope { "read:project", "project" } and use_proj_v2 then
-        _G.octo_pv2_fragment = fragments.projects_v2_fragment
-      elseif not config.values.suppress_missing_scope.projects_v2 then
-        require("octo.utils").info "Cannot request projects v2, missing scope 'read:project'"
+      if use_proj_v2 then
+        if M.has_scope { "read:project", "project" } then
+          _G.octo_pv2_fragment = fragments.projects_v2_fragment
+        elseif not config.values.suppress_missing_scope.projects_v2 then
+          require("octo.utils").error "Cannot request Projects v2: Missing scope 'read:project' or 'project'"
+        end
       end
     end),
   }):start()

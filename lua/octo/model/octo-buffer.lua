@@ -9,6 +9,7 @@ local graphql = require "octo.gh.graphql"
 local signs = require "octo.ui.signs"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
+local vim = vim
 
 local M = {}
 
@@ -47,7 +48,9 @@ function OctoBuffer:new(opts)
     this.taggable_users = { this.node.author.login }
   elseif this.node and this.number then
     this.kind = "issue"
-    this.taggable_users = { this.node.author.login }
+    if not utils.is_blank(this.node.author) then
+      this.taggable_users = { this.node.author.login }
+    end
   elseif this.node and not this.number then
     this.kind = "repo"
   else
@@ -105,7 +108,8 @@ function OctoBuffer:render_issue()
   writers.write_details(self.bufnr, self.node)
 
   -- write issue/pr status
-  writers.write_state(self.bufnr, self.node.state:upper(), self.number)
+  local state = utils.get_displayed_state(self.kind == "issue", self.node.state, self.node.stateReason)
+  writers.write_state(self.bufnr, state:upper(), self.number)
 
   -- write body
   writers.write_body(self.bufnr, self.node)
@@ -210,6 +214,9 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "ReviewDismissedEvent" then
       writers.write_review_dismissed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "RenamedTitleEvent" then
+      writers.write_renamed_title_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
   if prev_is_event then
@@ -233,19 +240,26 @@ function OctoBuffer:render_threads(threads)
   self.ready = true
 end
 
----Confgiures the buffer
+---Configures the buffer
 function OctoBuffer:configure()
   -- configure buffer
   vim.api.nvim_buf_call(self.bufnr, function()
-    local use_signcolumn = config.values.ui.use_signcolumn
     vim.cmd [[setlocal filetype=octo]]
     vim.cmd [[setlocal buftype=acwrite]]
     vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
     vim.cmd [[setlocal conceallevel=2]]
     vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
-    if use_signcolumn then
+
+    if config.values.ui.use_signcolumn then
       vim.cmd [[setlocal signcolumn=yes]]
-      autocmds.update_signcolumn(self.bufnr)
+      autocmds.update_signs(self.bufnr)
+    end
+    if config.values.ui.use_statuscolumn then
+      vim.opt_local.statuscolumn = [[%!v:lua.require'octo.ui.statuscolumn'.statuscolumn()]]
+      autocmds.update_signs(self.bufnr)
+    end
+    if config.values.ui.use_foldtext then
+      vim.opt_local.foldtext = [[v:lua.require'octo.folds'.foldtext()]]
     end
   end)
 
@@ -389,7 +403,7 @@ function OctoBuffer:do_save_title_and_body()
             self.bodyMetadata = desc_metadata
           end
 
-          self:render_signcolumn()
+          self:render_signs()
           utils.info "Saved!"
         end
       end,
@@ -421,7 +435,7 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
               break
             end
           end
-          self:render_signcolumn()
+          self:render_signs()
         end
       end
     end,
@@ -464,7 +478,7 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
             review:update_threads(threads)
           end
 
-          self:render_signcolumn()
+          self:render_signs()
 
           -- update thread map
           local thread_id
@@ -504,13 +518,17 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
 end
 
 ---Adds a new review comment thread to the current review.
+---@return nil
 function OctoBuffer:do_add_new_thread(comment_metadata)
   --TODO: How to create a new thread on a line where there is already one
 
   local review = require("octo.reviews").get_current_review()
+  if not review then
+    return
+  end
   local layout = review.layout
   local pr = review.pull_request
-  local file = layout:cur_file()
+  local file = layout:get_current_file()
   if not file then
     utils.error "No file selected"
     return
@@ -568,7 +586,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
               if review then
                 review:update_threads(threads)
               end
-              self:render_signcolumn()
+              self:render_signs()
             end
           else
             utils.error "Failed to create thread"
@@ -665,7 +683,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
                   local threads = resp.comment.pullRequest.reviewThreads.nodes
                   review:update_threads(threads)
                 end
-                self:render_signcolumn()
+                self:render_signs()
               end
             else
               utils.error "Failed to create thread"
@@ -713,7 +731,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
                 break
               end
             end
-            self:render_signcolumn()
+            self:render_signs()
           end
         else
           utils.error "Failed to create thread"
@@ -765,7 +783,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
               break
             end
           end
-          self:render_signcolumn()
+          self:render_signs()
         end
       end
     end,
@@ -797,10 +815,11 @@ function OctoBuffer:update_metadata()
   end
 end
 
----Renders the signcolumn
-function OctoBuffer:render_signcolumn()
+---Renders the signs in the signcolumn or statuscolumn
+function OctoBuffer:render_signs()
   local use_signcolumn = config.values.ui.use_signcolumn
-  if not use_signcolumn or not self.ready then
+  local use_statuscolumn = config.values.ui.use_statuscolumn
+  if not self.ready or (not use_statuscolumn and not use_signcolumn) then
     return
   end
 
@@ -899,6 +918,8 @@ function OctoBuffer:get_pr()
   return PullRequest:new {
     bufnr = bufnr,
     repo = self.repo,
+    head_repo = self.node.headRepository.nameWithOwner,
+    head_ref_name = self.node.headRefName,
     number = self.number,
     id = self.node.id,
     left = Rev:new(self.node.baseRefOid),

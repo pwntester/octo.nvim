@@ -1,4 +1,5 @@
 local config = require "octo.config"
+local vim = vim
 
 local M = {}
 
@@ -28,30 +29,49 @@ function M.place(name, bufnr, line)
   if not line then
     return
   end
-  pcall(vim.fn.sign_place, 0, "octo_ns", name, bufnr, { lnum = line + 1 })
+  -- sign column
+  if config.values.ui.use_signcolumn then
+    pcall(vim.fn.sign_place, 0, "octo_ns", name, bufnr, { lnum = line + 1 })
+  end
+  -- status column
+  -- TODO: implement status column support for thread signs
 end
 
 function M.unplace(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
-  pcall(vim.fn.sign_unplace, "octo_ns", { buffer = bufnr })
+  -- sign column
+  if config.values.ui.use_signcolumn then
+    pcall(vim.fn.sign_unplace, "octo_ns", { buffer = bufnr })
+  end
+  -- status column
+  if config.values.ui.use_statuscolumn then
+    require("octo.ui.statuscolumn").reset(bufnr)
+  end
 end
 
 function M.place_signs(bufnr, start_line, end_line, is_dirty)
   if not start_line or not end_line then
     return
   end
-  local dirty_mod = is_dirty and "dirty" or "clean"
+  -- sign column
+  if config.values.ui.use_signcolumn then
+    local dirty_mod = is_dirty and "dirty" or "clean"
 
-  if start_line == end_line or end_line < start_line then
-    M.place(string.format("octo_%s_line", dirty_mod), bufnr, start_line)
-  else
-    M.place(string.format("octo_%s_block_start", dirty_mod), bufnr, start_line)
-    M.place(string.format("octo_%s_block_end", dirty_mod), bufnr, end_line)
-  end
-  if start_line + 1 < end_line then
-    for j = start_line + 1, end_line - 1, 1 do
-      M.place(string.format("octo_%s_block_middle", dirty_mod), bufnr, j)
+    if start_line == end_line or end_line < start_line then
+      M.place(string.format("octo_%s_line", dirty_mod), bufnr, start_line)
+    else
+      M.place(string.format("octo_%s_block_start", dirty_mod), bufnr, start_line)
+      M.place(string.format("octo_%s_block_end", dirty_mod), bufnr, end_line)
     end
+    if start_line + 1 < end_line then
+      for j = start_line + 1, end_line - 1, 1 do
+        M.place(string.format("octo_%s_block_middle", dirty_mod), bufnr, j)
+      end
+    end
+  end
+  -- status column
+  if config.values.ui.use_statuscolumn then
+    return require("octo.ui.statuscolumn").add(bufnr, start_line, end_line, is_dirty)
   end
 end
 

@@ -2,6 +2,8 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 
+local vim = vim
+
 local M = {}
 
 --[[
@@ -29,11 +31,18 @@ function M.open_in_browser(kind, repo, number)
     utils.error "Cannot find repo remote host"
     return
   end
+
   if not kind and not repo then
     local bufnr = vim.api.nvim_get_current_buf()
     local buffer = octo_buffers[bufnr]
     if not buffer then
-      return
+      local owner_repo = utils.get_remote_name()
+      if not owner_repo then
+        utils.error "No remote repository found"
+        return
+      end
+      cmd = string.format("gh repo view --web %s", owner_repo)
+      return pcall(vim.cmd, "silent !" .. cmd)
     end
     if buffer:isPullRequest() then
       cmd = string.format("gh pr view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
@@ -58,6 +67,16 @@ function M.open_in_browser(kind, repo, number)
   pcall(vim.cmd, "silent !" .. cmd)
 end
 
+local function open_file_if_found(path, line)
+  local stat = vim.loop.fs_stat(path)
+  if stat and stat.type then
+    vim.cmd("e " .. path)
+    vim.api.nvim_win_set_cursor(0, { line, 0 })
+    return true
+  end
+  return false
+end
+
 function M.go_to_file()
   local bufnr = vim.api.nvim_get_current_buf()
   local path = ""
@@ -75,12 +94,14 @@ function M.go_to_file()
     local _thread = buffer:get_thread_at_cursor()
     path, line = _thread.path, _thread.line
   end
-  local stat = vim.loop.fs_stat(utils.path_join { vim.fn.getcwd(), path })
-  if stat and stat.type then
-    vim.cmd("e " .. path)
-    vim.api.nvim_win_set_cursor(0, { line, 0 })
-  else
-    utils.error "Cannot find file in CWD"
+  local result = open_file_if_found(utils.path_join { vim.fn.getcwd(), path }, line)
+  if not result then
+    local cmd = "git rev-parse --show-toplevel"
+    local git_root = vim.fn.system(cmd):gsub("\n", "")
+    result = open_file_if_found(utils.path_join { git_root, path }, line)
+  end
+  if not result then
+    utils.error "Cannot find file in CWD or git path"
   end
 end
 

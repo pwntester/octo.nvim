@@ -7,6 +7,8 @@ local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
 
+---@alias ReviewLevel "COMMIT" | "PR"
+
 ---@class Review
 ---@field repo string
 ---@field number integer
@@ -18,12 +20,14 @@ local utils = require "octo.utils"
 local Review = {}
 Review.__index = Review
 
+local default_id = -1
+
 ---Review constructor.
 ---@return Review
 function Review:new(pull_request)
   local this = {
     pull_request = pull_request,
-    id = -1,
+    id = default_id,
     threads = {},
     files = {},
   }
@@ -77,12 +81,7 @@ end
 -- Resumes an existing review
 function Review:resume()
   self:retrieve(function(resp)
-    if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-      utils.error "No pending reviews found"
-      return
-    end
-
-    -- There can only be one pending review for a given user
+    -- There can only be one pending review for a given user, stop at the first one
     for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
       if review.viewerDidAuthor then
         self.id = review.id
@@ -90,7 +89,7 @@ function Review:resume()
       end
     end
 
-    if not self.id then
+    if self.id == default_id then
       vim.error "No pending reviews found for viewer"
       return
     end
@@ -99,6 +98,55 @@ function Review:resume()
     self:update_threads(threads)
     self:initiate()
   end)
+end
+
+-- Resumes an existing review if there is any, else start one
+function Review:start_or_resume()
+  self:retrieve(function(resp)
+    -- There can only be one pending review for a given user
+    for _, review in ipairs(resp.data.repository.pullRequest.reviews.nodes) do
+      if review.viewerDidAuthor then
+        self.id = review.id
+        break
+      end
+    end
+
+    if self.id == default_id then
+      utils.info "No pending review, starting one"
+      self:start()
+      return
+    end
+
+    utils.info "Resuming review"
+    local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+    self:update_threads(threads)
+    self:initiate()
+  end)
+end
+
+---Register freshly fetched files as this review's files
+---Selects and fetches the first unread files
+---Defaults to the first file if all files are VIEWED
+---@param files FileEntry[]
+function Review:set_files_and_select_first(files)
+  local selected_file_idx
+  for idx, file in ipairs(files) do
+    if file.viewed_state ~= "VIEWED" then
+      selected_file_idx = idx
+      break
+    end
+  end
+
+  if not selected_file_idx and #files > 0 then
+    selected_file_idx = 1
+  end
+
+  self.layout.files = files
+  if selected_file_idx then
+    files[selected_file_idx]:fetch()
+    self.layout.selected_file_idx = selected_file_idx
+  end
+  self.layout:update_files()
 end
 
 -- Updates layout to focus on a single commit
@@ -112,12 +160,7 @@ function Review:focus_commit(right, left)
   }
   self.layout:open(self)
   local cb = function(files)
-    -- pre-fetch the first file
-    if #files > 0 then
-      files[1]:fetch()
-    end
-    self.layout.files = files
-    self.layout:update_files()
+    self:set_files_and_select_first(files)
   end
   if right == self.pull_request.right.commit and left == self.pull_request.left.commit then
     pr:get_changed_files(cb)
@@ -131,7 +174,7 @@ function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
   local conf = config.values
-  if conf.use_local_fs and not utils.in_pr_branch(pr.bufnr) then
+  if conf.use_local_fs and not utils.in_pr_branch(pr) then
     local choice = vim.fn.confirm("Currently not in PR branch, would you like to checkout?", "&Yes\n&No", 2)
     if choice == 1 then
       utils.checkout_pr_sync(pr.number)
@@ -140,7 +183,6 @@ function Review:initiate(opts)
 
   -- create the layout
   self.layout = Layout:new {
-    -- TODO: rename to left_rev and right_rev
     left = opts.left or pr.left,
     right = opts.right or pr.right,
     files = {},
@@ -148,12 +190,7 @@ function Review:initiate(opts)
   self.layout:open(self)
 
   pr:get_changed_files(function(files)
-    -- pre-fetch the first file
-    if #files > 0 then
-      files[1]:fetch()
-    end
-    self.layout.files = files
-    self.layout:update_files()
+    self:set_files_and_select_first(files)
   end)
 end
 
@@ -178,11 +215,11 @@ function Review:discard()
           local delete_query = graphql("delete_pull_request_review_mutation", self.id)
           gh.run {
             args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
-            cb = function(output, stderr)
-              if stderr and not utils.is_blank(stderr) then
-                vim.error(stderr)
-              elseif output then
-                self.id = -1
+            cb = function(output_inner, stderr_inner)
+              if stderr_inner and not utils.is_blank(stderr_inner) then
+                vim.error(stderr_inner)
+              elseif output_inner then
+                self.id = default_id
                 self.threads = {}
                 self.files = {}
                 utils.info "Pending review discarded"
@@ -207,19 +244,22 @@ function Review:update_threads(threads)
       thread.startDiffSide = thread.diffSide
       thread.originalStartLine = thread.originalLine
     end
-    self.threads[thread.id] = thread
+    if not thread.isOutdated then
+      self.threads[thread.id] = thread
+    end
   end
   if self.layout then
     self.layout.file_panel:render()
     self.layout.file_panel:redraw()
-    if self.layout:cur_file() then
-      self.layout:cur_file():place_signs()
+    local file = self.layout:get_current_file()
+    if file then
+      file:place_signs()
     end
   end
 end
 
 function Review:collect_submit_info()
-  if self.id == -1 then
+  if self.id == default_id then
     utils.error "No review in progress"
     return
   end
@@ -242,7 +282,7 @@ end
 function Review:submit(event)
   local bufnr = vim.api.nvim_get_current_buf()
   local winid = vim.api.nvim_get_current_win()
-  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, default_id, false)
   local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
   local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = false })
   gh.run {
@@ -284,7 +324,7 @@ function Review:add_comment(isSuggestion)
     return
   end
 
-  local file = self.layout:cur_file()
+  local file = self.layout:get_current_file()
   if not file then
     return
   end
@@ -350,17 +390,17 @@ function Review:add_comment(isSuggestion)
         isResolved = false,
         diffSide = split,
         isCollapsed = false,
-        id = -1,
+        id = default_id,
         comments = {
           nodes = {
             {
-              id = -1,
+              id = default_id,
               author = { login = vim.g.octo_viewer },
               state = "PENDING",
               replyTo = vim.NIL,
               url = vim.NIL,
               diffHunk = diff_hunk,
-              createdAt = vim.fn.strftime "%FT%TZ",
+              createdAt = os.date "!%FT%TZ",
               originalCommit = { oid = commit, abbreviatedOid = commit_abbrev },
               body = " ",
               viewerCanUpdate = true,
@@ -402,21 +442,30 @@ function Review:add_comment(isSuggestion)
       vim.cmd [[diffoff!]]
       vim.cmd [[normal! vvGk]]
       vim.cmd [[startinsert]]
+
+      vim.keymap.set("n", "q", function()
+        thread_panel.hide_thread_buffer(split, file)
+        local file_win = file:get_win(split)
+        if vim.api.nvim_win_is_valid(file_win) then
+          vim.api.nvim_set_current_win(file_win)
+        end
+      end, { buffer = thread_buffer.bufnr })
     end
   else
     utils.error("Cannot find diff window " .. alt_win)
   end
 end
 
+---Get the review level, aka whether the review is at commit or PR level
+---@return ReviewLevel
 function Review:get_level()
-  local review_level = "COMMIT"
   if
     self.layout.left.commit == self.pull_request.left.commit
     and self.layout.right.commit == self.pull_request.right.commit
   then
-    review_level = "PR"
+    return "PR"
   end
-  return review_level
+  return "COMMIT"
 end
 
 local M = {}
@@ -427,15 +476,21 @@ M.Review = Review
 
 function M.add_review_comment(isSuggestion)
   local review = M.get_current_review()
+  if not review then
+    error "Could not find review"
+  end
   review:add_comment(isSuggestion)
 end
 
 function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
+  if not current_review then
+    return
+  end
   for _, file in ipairs(current_review.layout.files) do
     if thread.path == file.path then
       current_review.layout:ensure_layout()
-      current_review.layout:set_file(file)
+      current_review.layout:set_current_file(file)
       local win = file:get_win(thread.diffSide)
       if vim.api.nvim_win_is_valid(win) then
         local review_level = current_review:get_level()
@@ -453,15 +508,19 @@ function M.jump_to_pending_review_thread(thread)
   end
 end
 
+--- Get the current review according to the tab page
+--- @return Review | nil
 function M.get_current_review()
   local current_tabpage = vim.api.nvim_get_current_tabpage()
   return M.reviews[tostring(current_tabpage)]
 end
 
+--- Get the diff Layout of the review if any
+--- @return Layout | nil
 function M.get_current_layout()
   local current_review = M.get_current_review()
   if current_review then
-    return current_review.layout
+    return M.get_current_review().layout
   end
 end
 
@@ -489,42 +548,46 @@ function M.close(tabpage)
   end
 end
 
-function M.start_review()
+--- Get the pull request associated with current buffer.
+--- Fall back to pull request associated with the current branch if not in an Octo buffer.
+--- @param cb function
+local function get_pr_from_buffer_or_current_branch(cb)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
+
   if not buffer then
-    utils.error "No Octo buffer found"
+    -- We are not in an octo buffer, try and fallback to the current branch's pr
+    utils.get_pull_request_for_current_branch(cb)
     return
   end
+
   local pull_request = buffer:get_pr()
   if pull_request then
-    local current_review = Review:new(pull_request)
-    current_review:start()
+    cb(pull_request)
   else
-    pull_request = utils.get_pull_request_for_current_branch(function(pr)
-      local current_review = Review:new(pr)
-      current_review:start()
-    end)
+    pull_request = utils.get_pull_request_for_current_branch(cb)
   end
 end
 
+function M.start_review()
+  get_pr_from_buffer_or_current_branch(function(pull_request)
+    local current_review = Review:new(pull_request)
+    current_review:start()
+  end)
+end
+
 function M.resume_review()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    utils.error "No Octo buffer found"
-    return
-  end
-  local pull_request = buffer:get_pr()
-  if pull_request then
+  get_pr_from_buffer_or_current_branch(function(pull_request)
     local current_review = Review:new(pull_request)
     current_review:resume()
-  else
-    pull_request = utils.get_pull_request_for_current_branch(function(pr)
-      local current_review = Review:new(pr)
-      current_review:resume()
-    end)
-  end
+  end)
+end
+
+function M.start_or_resume_review()
+  get_pr_from_buffer_or_current_branch(function(pull_request)
+    local current_review = Review:new(pull_request)
+    current_review:start_or_resume()
+  end)
 end
 
 function M.discard_review()

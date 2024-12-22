@@ -18,3 +18,7 @@
 
 ### Special notes for reviews
 
+### Checklist
+
+- [ ] Passing tests and linting standards
+- [ ] Documentation updates in README.md and doc/octo.txt

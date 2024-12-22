@@ -1,3 +1,6 @@
+local vim = vim
+local config = require "octo.config"
+
 local create = vim.api.nvim_create_augroup
 local define = vim.api.nvim_create_autocmd
 
@@ -29,8 +32,8 @@ function M.setup()
   define({ "BufReadCmd" }, {
     group = "octo_autocmds",
     pattern = { "octo://*" },
-    callback = function()
-      require("octo").load_buffer()
+    callback = function(ev)
+      require("octo").load_buffer { bufnr = ev.buf }
     end,
   })
   define({ "BufWriteCmd" }, {
@@ -47,13 +50,15 @@ function M.setup()
       require("octo").on_cursor_hold()
     end,
   })
-  define({ "CursorMoved" }, {
-    group = "octo_autocmds",
-    pattern = { "*" },
-    callback = function()
-      require("octo.reviews.thread-panel").show_review_threads()
-    end,
-  })
+  if config.values.reviews.auto_show_threads then
+    define({ "CursorMoved" }, {
+      group = "octo_autocmds",
+      pattern = { "*" },
+      callback = function()
+        require("octo.reviews.thread-panel").show_review_threads()
+      end,
+    })
+  end
   define({ "TabClosed" }, {
     group = "octo_autocmds",
     pattern = { "*" },
@@ -77,12 +82,12 @@ function M.setup()
   })
 end
 
-function M.update_signcolumn(bufnr)
+function M.update_signs(bufnr)
   define({ "TextChanged", "TextChangedI" }, {
     group = "octobuffer_autocmds",
     buffer = bufnr,
     callback = function()
-      require("octo").render_signcolumn()
+      require("octo").render_signs()
     end,
   })
 end

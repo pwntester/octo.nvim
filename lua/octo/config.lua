@@ -4,6 +4,7 @@ local M = {}
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
+---@alias OctoSplit "right" | "left"
 
 ---@class OctoPickerConfig
 ---@field use_emojis boolean
@@ -29,8 +30,17 @@ local M = {}
 
 ---@class OctoConfigUi
 ---@field use_signcolumn boolean
+---@field use_statuscolumn boolean
+---@field use_foldtext boolean
 
 ---@class OctoConfigIssues
+---@field order_by OctoConfigOrderBy
+
+---@class OctoConfigReviews
+---@field auto_show_threads boolean
+---@field focus OctoSplit
+
+---@class OctoConfigDiscussions
 ---@field order_by OctoConfigOrderBy
 
 ---@class OctoConfigPR
@@ -49,9 +59,12 @@ local M = {}
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table
 ---@field default_merge_method string
+---@field default_delete_branch boolean
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
+---@field users string
 ---@field user_icon string
+---@field ghost_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
 ---@field resolved_icon string
@@ -70,11 +83,13 @@ local M = {}
 ---@field suppress_missing_scope OctoMissingScopeConfig
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
+---@field reviews OctoConfigReviews
 ---@field pull_requests OctoConfigPR
 ---@field file_panel OctoConfigFilePanel
 ---@field colors OctoConfigColors
 ---@field mappings { [OctoMappingsWindow]: OctoMappingsList}
 ---@field mappings_disable_default boolean
+---@field discussions OctoConfigDiscussions
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -92,9 +107,12 @@ function M.get_default_values()
     },
     default_remote = { "upstream", "origin" },
     default_merge_method = "commit",
+    default_delete_branch = false,
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
+    users = "search",
     user_icon = " ",
+    ghost_icon = "󰊠 ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
@@ -114,13 +132,25 @@ function M.get_default_values()
       projects_v2 = false,
     },
     ui = {
-      use_signcolumn = true,
+      use_signcolumn = false,
+      use_statuscolumn = true,
+      use_foldtext = true,
     },
     issues = {
       order_by = {
         field = "CREATED_AT",
         direction = "DESC",
       },
+    },
+    discussions = {
+      order_by = {
+        field = "CREATED_AT",
+        direction = "DESC",
+      },
+    },
+    reviews = {
+      auto_show_threads = true,
+      focus = "right",
     },
     pull_requests = {
       order_by = {
@@ -150,89 +180,89 @@ function M.get_default_values()
     mappings_disable_default = false,
     mappings = {
       issue = {
-        close_issue = { lhs = "<space>ic", desc = "close issue" },
-        reopen_issue = { lhs = "<space>io", desc = "reopen issue" },
-        list_issues = { lhs = "<space>il", desc = "list open issues on same repo" },
+        close_issue = { lhs = "<localleader>ic", desc = "close issue" },
+        reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
+        list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
         reload = { lhs = "<C-r>", desc = "reload issue" },
         open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
-        add_assignee = { lhs = "<space>aa", desc = "add assignee" },
-        remove_assignee = { lhs = "<space>ad", desc = "remove assignee" },
-        create_label = { lhs = "<space>lc", desc = "create label" },
-        add_label = { lhs = "<space>la", desc = "add label" },
-        remove_label = { lhs = "<space>ld", desc = "remove label" },
-        goto_issue = { lhs = "<space>gi", desc = "navigate to a local repo issue" },
-        add_comment = { lhs = "<space>ca", desc = "add comment" },
-        delete_comment = { lhs = "<space>cd", desc = "delete comment" },
+        add_assignee = { lhs = "<localleader>aa", desc = "add assignee" },
+        remove_assignee = { lhs = "<localleader>ad", desc = "remove assignee" },
+        create_label = { lhs = "<localleader>lc", desc = "create label" },
+        add_label = { lhs = "<localleader>la", desc = "add label" },
+        remove_label = { lhs = "<localleader>ld", desc = "remove label" },
+        goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
+        add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
         prev_comment = { lhs = "[c", desc = "go to previous comment" },
-        react_hooray = { lhs = "<space>rp", desc = "add/remove 🎉 reaction" },
-        react_heart = { lhs = "<space>rh", desc = "add/remove ❤️ reaction" },
-        react_eyes = { lhs = "<space>re", desc = "add/remove 👀 reaction" },
-        react_thumbs_up = { lhs = "<space>r+", desc = "add/remove 👍 reaction" },
-        react_thumbs_down = { lhs = "<space>r-", desc = "add/remove 👎 reaction" },
-        react_rocket = { lhs = "<space>rr", desc = "add/remove 🚀 reaction" },
-        react_laugh = { lhs = "<space>rl", desc = "add/remove 😄 reaction" },
-        react_confused = { lhs = "<space>rc", desc = "add/remove 😕 reaction" },
+        react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
+        react_heart = { lhs = "<localleader>rh", desc = "add/remove ❤️ reaction" },
+        react_eyes = { lhs = "<localleader>re", desc = "add/remove 👀 reaction" },
+        react_thumbs_up = { lhs = "<localleader>r+", desc = "add/remove 👍 reaction" },
+        react_thumbs_down = { lhs = "<localleader>r-", desc = "add/remove 👎 reaction" },
+        react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
+        react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
+        react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
       },
       pull_request = {
-        checkout_pr = { lhs = "<space>po", desc = "checkout PR" },
-        merge_pr = { lhs = "<space>pm", desc = "merge commit PR" },
-        squash_and_merge_pr = { lhs = "<space>psm", desc = "squash and merge PR" },
-        rebase_and_merge_pr = { lhs = "<space>prm", desc = "rebase and merge PR" },
-        list_commits = { lhs = "<space>pc", desc = "list PR commits" },
-        list_changed_files = { lhs = "<space>pf", desc = "list PR changed files" },
-        show_pr_diff = { lhs = "<space>pd", desc = "show PR diff" },
-        add_reviewer = { lhs = "<space>va", desc = "add reviewer" },
-        remove_reviewer = { lhs = "<space>vd", desc = "remove reviewer request" },
-        close_issue = { lhs = "<space>ic", desc = "close PR" },
-        reopen_issue = { lhs = "<space>io", desc = "reopen PR" },
-        list_issues = { lhs = "<space>il", desc = "list open issues on same repo" },
+        checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
+        merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
+        squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
+        rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
+        list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
+        list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
+        show_pr_diff = { lhs = "<localleader>pd", desc = "show PR diff" },
+        add_reviewer = { lhs = "<localleader>va", desc = "add reviewer" },
+        remove_reviewer = { lhs = "<localleader>vd", desc = "remove reviewer request" },
+        close_issue = { lhs = "<localleader>ic", desc = "close PR" },
+        reopen_issue = { lhs = "<localleader>io", desc = "reopen PR" },
+        list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
         reload = { lhs = "<C-r>", desc = "reload PR" },
         open_in_browser = { lhs = "<C-b>", desc = "open PR in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         goto_file = { lhs = "gf", desc = "go to file" },
-        add_assignee = { lhs = "<space>aa", desc = "add assignee" },
-        remove_assignee = { lhs = "<space>ad", desc = "remove assignee" },
-        create_label = { lhs = "<space>lc", desc = "create label" },
-        add_label = { lhs = "<space>la", desc = "add label" },
-        remove_label = { lhs = "<space>ld", desc = "remove label" },
-        goto_issue = { lhs = "<space>gi", desc = "navigate to a local repo issue" },
-        add_comment = { lhs = "<space>ca", desc = "add comment" },
-        delete_comment = { lhs = "<space>cd", desc = "delete comment" },
+        add_assignee = { lhs = "<localleader>aa", desc = "add assignee" },
+        remove_assignee = { lhs = "<localleader>ad", desc = "remove assignee" },
+        create_label = { lhs = "<localleader>lc", desc = "create label" },
+        add_label = { lhs = "<localleader>la", desc = "add label" },
+        remove_label = { lhs = "<localleader>ld", desc = "remove label" },
+        goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
+        add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
         prev_comment = { lhs = "[c", desc = "go to previous comment" },
-        react_hooray = { lhs = "<space>rp", desc = "add/remove 🎉 reaction" },
-        react_heart = { lhs = "<space>rh", desc = "add/remove ❤️ reaction" },
-        react_eyes = { lhs = "<space>re", desc = "add/remove 👀 reaction" },
-        react_thumbs_up = { lhs = "<space>r+", desc = "add/remove 👍 reaction" },
-        react_thumbs_down = { lhs = "<space>r-", desc = "add/remove 👎 reaction" },
-        react_rocket = { lhs = "<space>rr", desc = "add/remove 🚀 reaction" },
-        react_laugh = { lhs = "<space>rl", desc = "add/remove 😄 reaction" },
-        react_confused = { lhs = "<space>rc", desc = "add/remove 😕 reaction" },
-        review_start = { lhs = "<space>vs", desc = "start a review for the current PR" },
-        review_resume = { lhs = "<space>vr", desc = "resume a pending review for the current PR" },
+        react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
+        react_heart = { lhs = "<localleader>rh", desc = "add/remove ❤️ reaction" },
+        react_eyes = { lhs = "<localleader>re", desc = "add/remove 👀 reaction" },
+        react_thumbs_up = { lhs = "<localleader>r+", desc = "add/remove 👍 reaction" },
+        react_thumbs_down = { lhs = "<localleader>r-", desc = "add/remove 👎 reaction" },
+        react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
+        react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
+        react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+        review_start = { lhs = "<localleader>vs", desc = "start a review for the current PR" },
+        review_resume = { lhs = "<localleader>vr", desc = "resume a pending review for the current PR" },
       },
       review_thread = {
-        goto_issue = { lhs = "<space>gi", desc = "navigate to a local repo issue" },
-        add_comment = { lhs = "<space>ca", desc = "add comment" },
-        add_suggestion = { lhs = "<space>sa", desc = "add suggestion" },
-        delete_comment = { lhs = "<space>cd", desc = "delete comment" },
+        goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
+        add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_suggestion = { lhs = "<localleader>sa", desc = "add suggestion" },
+        delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
         prev_comment = { lhs = "[c", desc = "go to previous comment" },
-        select_next_entry = { lhs = "]q", desc = "move to previous changed file" },
-        select_prev_entry = { lhs = "[q", desc = "move to next changed file" },
+        select_next_entry = { lhs = "]q", desc = "move to next changed file" },
+        select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
         select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
         select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
         close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
-        react_hooray = { lhs = "<space>rp", desc = "add/remove 🎉 reaction" },
-        react_heart = { lhs = "<space>rh", desc = "add/remove ❤️ reaction" },
-        react_eyes = { lhs = "<space>re", desc = "add/remove 👀 reaction" },
-        react_thumbs_up = { lhs = "<space>r+", desc = "add/remove 👍 reaction" },
-        react_thumbs_down = { lhs = "<space>r-", desc = "add/remove 👎 reaction" },
-        react_rocket = { lhs = "<space>rr", desc = "add/remove 🚀 reaction" },
-        react_laugh = { lhs = "<space>rl", desc = "add/remove 😄 reaction" },
-        react_confused = { lhs = "<space>rc", desc = "add/remove 😕 reaction" },
+        react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
+        react_heart = { lhs = "<localleader>rh", desc = "add/remove ❤️ reaction" },
+        react_eyes = { lhs = "<localleader>re", desc = "add/remove 👀 reaction" },
+        react_thumbs_up = { lhs = "<localleader>r+", desc = "add/remove 👍 reaction" },
+        react_thumbs_down = { lhs = "<localleader>r-", desc = "add/remove 👎 reaction" },
+        react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
+        react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
+        react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
       },
       submit_win = {
         approve_review = { lhs = "<C-a>", desc = "approve review" },
@@ -241,37 +271,37 @@ function M.get_default_values()
         close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       },
       review_diff = {
-        submit_review = { lhs = "<leader>vs", desc = "submit review" },
-        discard_review = { lhs = "<leader>vd", desc = "discard review" },
-        add_review_comment = { lhs = "<space>ca", desc = "add a new review comment" },
-        add_review_suggestion = { lhs = "<space>sa", desc = "add a new review suggestion" },
-        focus_files = { lhs = "<leader>e", desc = "move focus to changed file panel" },
-        toggle_files = { lhs = "<leader>b", desc = "hide/show changed files panel" },
+        submit_review = { lhs = "<localleader>vs", desc = "submit review" },
+        discard_review = { lhs = "<localleader>vd", desc = "discard review" },
+        add_review_comment = { lhs = "<localleader>ca", desc = "add a new review comment" },
+        add_review_suggestion = { lhs = "<localleader>sa", desc = "add a new review suggestion" },
+        focus_files = { lhs = "<localleader>e", desc = "move focus to changed file panel" },
+        toggle_files = { lhs = "<localleader>b", desc = "hide/show changed files panel" },
         next_thread = { lhs = "]t", desc = "move to next thread" },
         prev_thread = { lhs = "[t", desc = "move to previous thread" },
-        select_next_entry = { lhs = "]q", desc = "move to previous changed file" },
-        select_prev_entry = { lhs = "[q", desc = "move to next changed file" },
+        select_next_entry = { lhs = "]q", desc = "move to next changed file" },
+        select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
         select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
         select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
         close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
-        toggle_viewed = { lhs = "<leader><space>", desc = "toggle viewer viewed state" },
+        toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
         goto_file = { lhs = "gf", desc = "go to file" },
       },
       file_panel = {
-        submit_review = { lhs = "<leader>vs", desc = "submit review" },
-        discard_review = { lhs = "<leader>vd", desc = "discard review" },
+        submit_review = { lhs = "<localleader>vs", desc = "submit review" },
+        discard_review = { lhs = "<localleader>vd", desc = "discard review" },
         next_entry = { lhs = "j", desc = "move to next changed file" },
         prev_entry = { lhs = "k", desc = "move to previous changed file" },
         select_entry = { lhs = "<cr>", desc = "show selected changed file diffs" },
         refresh_files = { lhs = "R", desc = "refresh changed files panel" },
-        focus_files = { lhs = "<leader>e", desc = "move focus to changed file panel" },
-        toggle_files = { lhs = "<leader>b", desc = "hide/show changed files panel" },
-        select_next_entry = { lhs = "]q", desc = "move to previous changed file" },
-        select_prev_entry = { lhs = "[q", desc = "move to next changed file" },
+        focus_files = { lhs = "<localleader>e", desc = "move focus to changed file panel" },
+        toggle_files = { lhs = "<localleader>b", desc = "hide/show changed files panel" },
+        select_next_entry = { lhs = "]q", desc = "move to next changed file" },
+        select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
         select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
         select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
         close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
-        toggle_viewed = { lhs = "<leader><space>", desc = "toggle viewer viewed state" },
+        toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
       },
       repo = {},
     },
@@ -291,7 +321,7 @@ function M.validate_config()
     errors[value] = msg
   end
 
-  ---Checks if a variable is the correct, type if not it calls err with an error string
+  ---Checks if a variable is the correct type if not it calls err with an error string
   ---@param value any
   ---@param name string
   ---@param expected_types type | type[]
@@ -319,21 +349,30 @@ function M.validate_config()
     return true
   end
 
-  local function validate_pickers()
-    local valid_pickers = { "telescope", "fzf-lua" }
-    if not validate_type(config.picker, "picker", "string") then
-      return
-    end
-    if not vim.tbl_contains(valid_pickers, config.picker) then
-      err(
-        "picker." .. config.picker,
-        string.format(
-          "Expected a valid picker, received '%s', which is not a supported picker! Valid pickers: ",
-          config.picker,
-          table.concat(valid_pickers, ", ")
+  ---Checks if a variable is one of the allowed string value
+  ---@param value any
+  ---@param name string
+  ---@param expected_strings string[]
+  local function validate_string_enum(value, name, expected_strings)
+    -- First check that the value is indeed a string
+    if validate_type(value, name, "string") then
+      -- Then check it matches one of the expected values
+      if not vim.tbl_contains(expected_strings, value) then
+        err(
+          name .. "." .. value,
+          string.format(
+            "Received '%s', which is not supported! Valid values: %s",
+            value,
+            table.concat(expected_strings, ", ")
+          )
         )
-      )
+      end
     end
+  end
+
+  local function validate_pickers()
+    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua" })
+
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
     end
@@ -359,6 +398,15 @@ function M.validate_config()
       validate_type(config.issues.order_by.field, "issues.order_by.field", "string")
       validate_type(config.issues.order_by.direction, "issues.order_by.direction", "string")
     end
+  end
+
+  local function validate_reviews()
+    if not validate_type(config.reviews, "reviews", "table") then
+      return
+    end
+
+    validate_type(config.reviews.auto_show_threads, "reviews.auto_show_threads", "boolean")
+    validate_string_enum(config.reviews.focus, "reviews.focus", { "right", "left" })
   end
 
   local function validate_pull_requests()
@@ -389,9 +437,11 @@ function M.validate_config()
       validate_type(config.suppress_missing_scope.projects_v2, "supress_missing_scope.projects_v2", "boolean")
     end
     validate_type(config.gh_cmd, "gh_cmd", "string")
-    validate_type(config.gh_env, "gh_env", "table")
+    validate_type(config.gh_env, "gh_env", { "table", "function" })
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
+    validate_string_enum(config.users, "users", { "search", "mentionable", "assignable" })
     validate_type(config.user_icon, "user_icon", "string")
+    validate_type(config.ghost_icon, "ghost_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")
@@ -408,6 +458,8 @@ function M.validate_config()
     validate_type(config.default_merge_method, "default_merge_method", "string")
     if validate_type(config.ui, "ui", "table") then
       validate_type(config.ui.use_signcolumn, "ui.use_signcolumn", "boolean")
+      validate_type(config.ui.use_statuscolumn, "ui.use_statuscolumn", "boolean")
+      validate_type(config.ui.use_foldtext, "ui.use_foldtext", "boolean")
     end
     if validate_type(config.colors, "colors", "table") then
       for k, v in pairs(config.colors) do
@@ -416,6 +468,7 @@ function M.validate_config()
     end
 
     validate_issues()
+    validate_reviews()
     validate_pull_requests()
     if validate_type(config.file_panel, "file_panel", "table") then
       validate_type(config.file_panel.size, "file_panel.size", "number")
@@ -472,6 +525,8 @@ function M.setup(opts)
       vim.log.levels.ERROR
     )
   end
+  M.values.ui.use_statuscolumn = M.values.ui.use_statuscolumn and vim.fn.has "nvim-0.9" == 1
+  M.values.ui.use_foldtext = M.values.ui.use_foldtext and vim.fn.has "nvim-0.10" == 1
 end
 
 return M

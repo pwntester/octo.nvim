@@ -262,7 +262,7 @@ M.unmark_file_as_viewed_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.submit_pull_request_review_mutation = [[
   mutation {
-    submitPullRequestReview(input: {pullRequestReviewId: "%s", event: %s, body: "%s"}) {
+    submitPullRequestReview(input: {pullRequestReviewId: "%s", event: %s, body: """%s"""}) {
       pullRequestReview {
         id
         state
@@ -285,7 +285,7 @@ mutation {
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_thread_mutation = [[
 mutation {
-  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", side: %s, line:%d}) {
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: """%s""", path: "%s", side: %s, line:%d}) {
     thread {
       id
       comments(last:100) {
@@ -379,7 +379,7 @@ mutation {
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread_mutation = [[
 mutation {
-  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: "%s", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) {
+  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: """%s""", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) {
     thread {
       id
       comments(last:100) {
@@ -473,7 +473,7 @@ mutation {
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
 M.add_issue_comment_mutation = [[
   mutation {
-    addComment(input: {subjectId: "%s", body: "%s"}) {
+    addComment(input: {subjectId: "%s", body: """%s"""}) {
       commentEdge {
         node {
           id
@@ -487,7 +487,7 @@ M.add_issue_comment_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#updateissuecomment
 M.update_issue_comment_mutation = [[
   mutation {
-    updateIssueComment(input: {id: "%s", body: "%s"}) {
+    updateIssueComment(input: {id: "%s", body: """%s"""}) {
       issueComment {
         id
         body
@@ -499,7 +499,7 @@ M.update_issue_comment_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreviewcomment
 M.update_pull_request_review_comment_mutation = [[
   mutation {
-    updatePullRequestReviewComment(input: {pullRequestReviewCommentId: "%s", body: "%s"}) {
+    updatePullRequestReviewComment(input: {pullRequestReviewCommentId: "%s", body: """%s"""}) {
       pullRequestReviewComment {
         id
         body
@@ -561,7 +561,7 @@ M.update_pull_request_review_comment_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review_mutation = [[
   mutation {
-    updatePullRequestReview(input: {pullRequestReviewId: "%s", body: "%s"}) {
+    updatePullRequestReview(input: {pullRequestReviewId: "%s", body: """%s"""}) {
       pullRequestReview {
         id
         state
@@ -574,7 +574,7 @@ M.update_pull_request_review_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_comment_mutation = [[
   mutation {
-    addPullRequestReviewComment(input: {inReplyTo: "%s", body: "%s", pullRequestReviewId: "%s"}) {
+    addPullRequestReviewComment(input: {inReplyTo: "%s", body: """%s""", pullRequestReviewId: "%s"}) {
       comment {
         id
         body
@@ -636,7 +636,7 @@ M.add_pull_request_review_comment_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_commit_thread_mutation = [[
   mutation {
-    addPullRequestReviewComment(input: {commitOID: "%s", body: "%s", pullRequestReviewId: "%s", path: "%s", position: %d }) {
+    addPullRequestReviewComment(input: {commitOID: "%s", body: """%s""", pullRequestReviewId: "%s", path: "%s", position: %d }) {
       comment {
         id
         body
@@ -698,7 +698,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
 -- M.add_pull_request_review_comment_mutation =
 -- [[
 --   mutation {
---     addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: "%s", body: "%s"}) {
+--     addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: "%s", body: """%s"""}) {
 --       comment{
 --         id
 --         body
@@ -781,7 +781,7 @@ M.delete_pull_request_review_comment_mutation = [[
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
   mutation {
-    updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
+    updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
       issue {
         id
         number
@@ -796,7 +796,7 @@ M.update_issue_mutation = [[
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue_mutation = [[
   mutation {
-    createIssue(input: {repositoryId: "%s", title: "%s", body: "%s"}) {
+    createIssue(input: {repositoryId: "%s", title: """%s""", body: """%s"""}) {
       issue {
         id
         number
@@ -934,7 +934,7 @@ M.create_issue_mutation = [[
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
   mutation {
-    updateIssue(input: {id: "%s", title: "%s", body: "%s"}) {
+    updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
       issue {
         id
         number
@@ -949,6 +949,148 @@ M.update_issue_mutation = [[
   }
 ]]
 
+M.close_issue_mutation = [[
+mutation {
+  closeIssue(input: {issueId: "%s", stateReason: %s}) {
+    issue {
+      id
+      number
+      state
+      stateReason
+      title
+      body
+      createdAt
+      closedAt
+      updatedAt
+      url
+      repository {
+        nameWithOwner
+      }
+      milestone {
+        title
+        state
+      }
+      author {
+        login
+      }
+      participants(first:10) {
+        nodes {
+          login
+        }
+      }
+      reactionGroups {
+        content
+        viewerHasReacted
+        users {
+          totalCount
+        }
+      }
+      comments(first: 100) {
+        nodes {
+          id
+          body
+          createdAt
+          reactionGroups {
+            content
+            viewerHasReacted
+            users {
+              totalCount
+            }
+          }
+          author {
+            login
+          }
+          viewerDidAuthor
+        }
+      }
+      labels(first: 20) {
+        nodes {
+          color
+          name
+        }
+      }
+      assignees(first: 20) {
+        nodes {
+          id
+          login
+          isViewer
+        }
+      }
+      timelineItems(last: 100) {
+        nodes {
+          __typename
+          ... on LabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
+          ... on UnlabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
+          ... on IssueComment {
+            id
+            body
+            createdAt
+            reactionGroups {
+              content
+              viewerHasReacted
+              users {
+                totalCount
+              }
+            }
+            author {
+              login
+            }
+            viewerDidAuthor
+            viewerCanUpdate
+            viewerCanDelete
+          }
+          ... on ClosedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on ReopenedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on AssignedEvent {
+            actor {
+              login
+            }
+            assignee {
+              ... on Organization { name }
+              ... on Bot { login }
+              ... on User {
+                login
+                isViewer
+              }
+              ... on Mannequin { login }
+            }
+            createdAt
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
   mutation {
@@ -957,6 +1099,7 @@ M.update_issue_state_mutation = [[
         id
         number
         state
+        stateReason
         title
         body
         createdAt
@@ -1094,7 +1237,7 @@ M.update_issue_state_mutation = [[
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
   mutation {
-    updatePullRequest(input: {pullRequestId: "%s", title: "%s", body: "%s"}) {
+    updatePullRequest(input: {pullRequestId: "%s", title: """%s""", body: """%s"""}) {
       pullRequest {
         id
         number
@@ -1536,7 +1679,7 @@ query($endCursor: String) {
       closedAt
       updatedAt
       url
-      repository { nameWithOwner }
+      headRepository { nameWithOwner }
       files(first:100) {
         nodes {
           path
@@ -1739,6 +1882,12 @@ query($endCursor: String) {
             viewerCanUpdate
             viewerCanDelete
           }
+          ... on RenamedTitleEvent {
+            actor { login }
+            createdAt
+            previousTitle
+            currentTitle
+          }
           ... on PullRequestReview {
             id
             body
@@ -1868,6 +2017,15 @@ query($endCursor: String) {
           }
         }
       }
+      statusCheckRollup {
+        state
+      }
+      mergeStateStatus
+      mergeable
+      autoMergeRequest {
+        enabledBy { login }
+        mergeMethod
+      }
     }
   }
 }
@@ -1881,6 +2039,7 @@ query($endCursor: String) {
       id
       number
       state
+      stateReason
       title
       body
       createdAt
@@ -1996,6 +2155,12 @@ query($endCursor: String) {
             }
             createdAt
           }
+          ... on RenamedTitleEvent {
+            actor { login }
+            createdAt
+            previousTitle
+            currentTitle
+          }
         }
       }
       labels(first: 20) {
@@ -2055,6 +2220,7 @@ query {
         __typename
         createdAt
         state
+        stateReason
         number
         title
         body
@@ -2108,6 +2274,8 @@ query($endCursor: String) {
         title
         url
         repository { nameWithOwner }
+        state
+        stateReason
       }
       pageInfo {
         hasNextPage
@@ -2129,6 +2297,7 @@ query($endCursor: String) {
         repository { nameWithOwner }
         headRefName
         isDraft
+        state
       }
       pageInfo {
         hasNextPage
@@ -2139,26 +2308,143 @@ query($endCursor: String) {
 }
 ]]
 
+M.search_count_query = [[
+query {
+  search(query: """%s""", type: ISSUE, last: 100) {
+    issueCount
+  }
+}
+]]
+
 M.search_query = [[
 query {
-  search(query: "%s", type: ISSUE, last: 100) {
+  search(query: """%s""", type: ISSUE, last: 100) {
     nodes {
       ... on Issue{
         __typename
         number
         url
         title
+        state
         repository { nameWithOwner }
+        stateReason
       }
       ... on PullRequest {
         __typename
         number
         title
         url
+        state
+        isDraft
         repository { nameWithOwner }
       }
     }
   }
+}
+]]
+
+M.discussions_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+    discussions(first: 100, after: $endCursor, states: OPEN, orderBy: {field: %s, direction: %s}) {
+      nodes {
+        __typename
+        number
+        title
+        url
+        closed
+        isAnswered
+        answer {
+            author { login }
+            body
+        }
+        repository { nameWithOwner }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+]]
+
+M.discussion_query = [[
+query($endCursor: String) {
+    repository(owner: "%s", name: "%s") {
+        discussion(number: %d) {
+            id
+            category {
+                name
+                emoji
+            }
+            number
+            closed
+            isAnswered
+            answer {
+                author { login }
+                body
+                createdAt
+                viewerDidAuthor
+            }
+            title
+            body
+            createdAt
+            closedAt
+            updatedAt
+            url
+            repository { nameWithOwner }
+            author { login }
+            labels(first: 20) {
+                nodes {
+                    color
+                    name
+                }
+            }
+            upvoteCount
+            viewerHasUpvoted
+            reactionGroups {
+                content
+                viewerHasReacted
+                users {
+                    totalCount
+                }
+            }
+            comments(first: 100, after: $endCursor) {
+                totalCount
+                nodes {
+                    id
+                    body
+                    createdAt
+                    lastEditedAt
+                    reactionGroups {
+                        content
+                        viewerHasReacted
+                        reactors {
+                            totalCount
+                        }
+                    }
+                    author {
+                        login
+                    }
+                    viewerDidAuthor
+                    viewerCanUpdate
+                    viewerCanDelete
+                    replies(first: 10) {
+                        totalCount
+                        nodes {
+                            body
+                            author { login }
+                        }
+                    }
+                }
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+            }
+        }
+    }
 }
 ]]
 
@@ -2377,7 +2663,7 @@ M.delete_project_v2_item_mutation = [[
 -- requires application/vnd.github.bane-preview+json
 M.create_label_mutation = [[
   mutation {
-    createLabel(input: {repositoryId: "%s", name: "%s", description: "%s", color: "%s"}) {
+    createLabel(input: {repositoryId: "%s", name: "%s", description: """%s""", color: "%s"}) {
       label {
         id
         name
@@ -2389,7 +2675,7 @@ M.create_label_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation = [[
   mutation {
-    addLabelsToLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+    addLabelsToLabelable(input: {labelableId: "%s", labelIds: %s}) {
       labelable {
         ... on Issue {
           id
@@ -2405,7 +2691,7 @@ M.add_labels_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.remove_labels_mutation = [[
   mutation {
-    removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+    removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: %s}) {
       labelable {
         ... on Issue {
           id
@@ -2679,9 +2965,47 @@ query {
 }
 ]]
 
+M.mentionable_users_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+      mentionableUsers(first: 100, after: $endCursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+        startCursor
+      }
+      nodes {
+        id
+        login
+        name
+      }
+    }
+  }
+}
+]]
+
+M.assignable_users_query = [[
+query($endCursor: String) {
+  repository(owner: "%s", name: "%s") {
+    assignableUsers(first: 100, after: $endCursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+        startCursor
+      }
+      nodes {
+        id
+        login
+        name
+      }
+    }
+  }
+}
+]]
+
 M.users_query = [[
 query($endCursor: String) {
-  search(query: "%s", type: USER, first: 100) {
+  search(query: """%s""", type: USER, first: 100) {
     nodes {
       ... on User {
         id
@@ -2828,7 +3152,7 @@ query($endCursor: String) {
 -- https://docs.github.com/en/graphql/reference/mutations#createpullrequest
 M.create_pr_mutation = [[
   mutation {
-    createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: "%s", body: "%s", draft: %s}) {
+    createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: """%s""", body: """%s""", draft: %s}) {
       pullRequest {
         id
         number
@@ -3193,14 +3517,6 @@ query {
 }
 ]]
 
-local function escape_char(string)
-  local escaped, _ = string.gsub(string, '["\\]', {
-    ['"'] = '\\"',
-    ["\\"] = "\\\\",
-  })
-  return escaped
-end
-
 return function(query, ...)
   local opts = { escape = true }
   for _, v in ipairs { ... } do
@@ -3209,14 +3525,9 @@ return function(query, ...)
       break
     end
   end
-  local escaped = {}
+  local args = {}
   for _, v in ipairs { ... } do
-    if type(v) == "string" and opts.escape then
-      local encoded = escape_char(v)
-      table.insert(escaped, encoded)
-    else
-      table.insert(escaped, v)
-    end
+    table.insert(args, v)
   end
-  return string.format(M[query], unpack(escaped))
+  return string.format(M[query], unpack(args))
 end

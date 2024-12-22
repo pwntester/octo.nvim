@@ -64,6 +64,7 @@ local function get_hl_groups()
     NormalFront = { fg = get_fg "Normal" or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
     Editable = { bg = float_bg },
+    Strikethrough = { fg = colors.grey, gui = "strikethrough" },
   }
 end
 
@@ -73,6 +74,7 @@ local function get_hl_links()
     CursorLine = "CursorLine",
     VertSplit = "VertSplit",
     SignColumn = "Normal",
+    StatusColumn = "SignColumn",
     StatusLine = "StatusLine",
     StatusLineNC = "StatusLineNC",
     EndOfBuffer = "EndOfBuffer",
@@ -113,6 +115,8 @@ local function get_hl_links()
 
     StateOpen = "OctoGreen",
     StateClosed = "OctoRed",
+    StateCompleted = "OctoPurple",
+    StateNotPlanned = "OctoGrey",
     StateMerged = "OctoPurple",
     StatePending = "OctoYellow",
     StateApproved = "OctoGreen",

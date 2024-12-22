@@ -32,7 +32,11 @@ M._null_buffer = {}
 ---@field right_binary boolean|nil
 ---@field left_bufid integer
 ---@field right_bufid integer
+--- If this table is empty, the buffer is not ready to be displayed
+--- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field left_lines string[]
+--- If this table is empty, the buffer is not ready to be displayed
+--- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field right_lines string[]
 ---@field left_winid number
 ---@field right_winid number
@@ -40,7 +44,7 @@ M._null_buffer = {}
 ---@field right_comment_ranges table
 ---@field associated_bufs integer[]
 ---@field diffhunks string[]
----@field viewed_state string
+---@field viewed_state ViewedState
 local FileEntry = {}
 FileEntry.__index = FileEntry
 
@@ -72,6 +76,8 @@ function FileEntry:new(opt)
     right_comment_ranges = right_ranges,
     left_binary = opt.left_binary,
     right_binary = opt.right_binary,
+    left_lines = {},
+    right_lines = {},
     diffhunks = diffhunks,
     associated_bufs = {},
     viewed_state = pr.files[opt.path],
@@ -104,7 +110,6 @@ function FileEntry:toggle_viewed()
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        --local resp = vim.fn.json_decode(output)
         self.viewed_state = next_state
         local current_review = require("octo.reviews").get_current_review()
         if current_review then
@@ -119,53 +124,60 @@ end
 ---FileEntry finalizer
 function FileEntry:destroy()
   self:detach_buffers()
+
   for _, bn in ipairs(self.associated_bufs) do
-    pcall(vim.api.nvim_buf_delete, bn, { force = true })
+    if vim.api.nvim_buf_get_name(bn):match "octo://*" then
+      pcall(vim.api.nvim_buf_delete, bn, { force = true })
+    else
+      signs.unplace(bn)
+      vim.api.nvim_buf_set_option(bn, "modifiable", true)
+      vim.api.nvim_buf_clear_namespace(bn, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
+    end
   end
 end
 
 ---Get the window id for the alternative side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_win(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.right_winid
-  elseif split:lower() == "right" then
-    return self.left_winid
   end
+
+  return self.left_winid
 end
 
 ---Get the buffer id for the alternative side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_buf(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.right_bufid
-  elseif split:lower() == "right" then
-    return self.left_bufid
   end
+
+  return self.left_bufid
 end
 
 ---Get the window id for the side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_win(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.left_winid
-  elseif split:lower() == "right" then
-    return self.right_winid
   end
+
+  return self.right_winid
 end
 
 ---Get the buffer id for the side of the provided buffer
----@param split string
+---@param split OctoSplit
 ---@return integer
 function FileEntry:get_buf(split)
-  if split:lower() == "left" then
+  if split == "left" then
     return self.left_bufid
-  elseif split:lower() == "right" then
-    return self.right_bufid
   end
+
+  return self.right_bufid
 end
 
 ---Fetch file content locally or from GitHub.
@@ -173,6 +185,9 @@ function FileEntry:fetch()
   local right_path = self.path
   local left_path = self.path
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
   local right_sha = current_review.layout.right.commit
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
@@ -208,8 +223,14 @@ function FileEntry:fetch()
 
   -- wait until we have both versions
   return vim.wait(conf.timeout, function()
-    return self.left_lines and self.right_lines
+    return self:is_ready_to_render()
   end)
+end
+
+---Determines whether the file content has been loaded and the file is ready to render
+---@return boolean
+function FileEntry:is_ready_to_render()
+  return #self.left_lines > 0 and #self.right_lines > 0
 end
 
 ---Load the buffers.
@@ -238,7 +259,7 @@ function FileEntry:load_buffers(left_winid, right_winid)
   for _, split in ipairs(splits) do
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
       local conf = config.values
-      local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request.bufnr)
+      local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request)
 
       -- create buffer
       split.bufid = M._create_buffer {
@@ -275,12 +296,15 @@ end
 function FileEntry:show_diff()
   for _, bufid in ipairs { self.left_bufid, self.right_bufid } do
     vim.api.nvim_buf_call(bufid, function()
-      pcall(vim.cmd, [[filetype detect]])
-      pcall(vim.cmd, [[doau BufEnter]])
-      pcall(vim.cmd, [[diffthis]])
+      -- Only trigger ft detect event for non local files to avoid triggering ftplugins for nothing
+      if vim.fn.bufname(bufid):match "octo://*" then
+        pcall(vim.cmd.filetype, [[detect]])
+      end
+      pcall(vim.cmd.doau, [[BufEnter]])
+      pcall(vim.cmd.diffthis)
       -- Scroll to trigger the scrollbind and sync the windows. This works more
       -- consistently than calling `:syncbind`.
-      pcall(vim.cmd, [[exec "normal! \<c-y>"]])
+      pcall(vim.cmd.exec, [["normal! \<c-y>"]])
     end)
   end
 end
@@ -325,6 +349,9 @@ end
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
   local review_level = current_review:get_level()
   local splits = {
     {
@@ -382,7 +409,9 @@ function FileEntry:place_signs()
 
           -- place the virtual text only on first line
           local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
-          local vt_msg = string.format("    %d comments (%s)", #thread.comments.nodes, utils.format_date(last_date))
+          local comments_count = #thread.comments.nodes
+          local comments_word = comments_count == 1 and "comment" or "comments"
+          local vt_msg = string.format("    %d %s (%s)", comments_count, comments_word, utils.format_date(last_date))
           --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
           local opts = {
             virt_text = { { vt_msg, "Comment" } },
@@ -402,12 +431,17 @@ end
 
 function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    return
+  end
   local bufnr
   if opts.use_local then
     -- Use the file from the file system
     -- Pros: LSP powered
     -- Cons: we need to change to the commit branch
     bufnr = vim.fn.bufadd(opts.path)
+    -- vim.fn.bufadd creates the buffer as unlisted by default
+    vim.api.nvim_buf_set_option(bufnr, "buflisted", true)
   else
     bufnr = vim.api.nvim_create_buf(false, false)
     local bufname =
@@ -475,17 +509,12 @@ end
 
 function M._configure_buffer(bufid)
   utils.apply_mappings("review_diff", bufid)
-  -- local conf = config.values
-  -- vim.cmd(string.format("nnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
-  -- vim.cmd(string.format("vnoremap %s :OctoAddReviewComment<CR>", conf.mappings.review_thread.add_comment))
-  -- vim.cmd(string.format("nnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
-  -- vim.cmd(string.format("vnoremap %s :OctoAddReviewSuggestion<CR>", conf.mappings.review_thread.add_suggestion))
 end
 
 function M._detach_buffer(bufid)
   local conf = config.values
-  for _, lhs in pairs(conf.mappings.review_diff) do
-    pcall(vim.keymap.del, "n", lhs, { buffer = bufid })
+  for _, mapping in pairs(conf.mappings.review_diff) do
+    pcall(vim.keymap.del, "n", mapping.lhs, { buffer = bufid })
   end
 end
 

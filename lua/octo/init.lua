@@ -68,7 +68,7 @@ function M.configure_octo_buffer(bufnr)
     -- review diff buffers
     local current_review = reviews.get_current_review()
     if current_review and #current_review.threads > 0 then
-      current_review.layout:cur_file():place_signs()
+      current_review.layout:get_current_file():place_signs()
     end
   elseif buffer then
     -- issue/pr/reviewthread buffers
@@ -82,8 +82,17 @@ function M.save_buffer()
   buffer:save()
 end
 
-function M.load_buffer(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
+---@class ReloadOpts
+---@field bufnr number
+---@field verbose boolean
+
+--- Load issue/pr/repo buffer
+---@param opts ReloadOpts
+---@return nil
+function M.load_buffer(opts)
+  opts = opts or {}
+  local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
   local repo, kind, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
   if not repo then
@@ -100,7 +109,20 @@ function M.load_buffer(bufnr)
     return
   end
   M.load(repo, kind, number, function(obj)
-    M.create_buffer(kind, obj, repo, false)
+    vim.api.nvim_buf_call(bufnr, function()
+      M.create_buffer(kind, obj, repo, false)
+
+      -- One to the left
+      local new_cursor_pos = {
+        cursor_pos[1],
+        math.max(0, cursor_pos[2] - 1),
+      }
+      vim.api.nvim_win_set_cursor(0, new_cursor_pos)
+
+      if opts.verbose then
+        utils.info(string.format("Loaded %s/%s/%d", repo, kind, number))
+      end
+    end)
   end)
 end
 
@@ -137,10 +159,10 @@ function M.load(repo, kind, number, cb)
   }
 end
 
-function M.render_signcolumn()
+function M.render_signs()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  buffer:render_signcolumn()
+  buffer:render_signs()
 end
 
 function M.on_cursor_hold()
