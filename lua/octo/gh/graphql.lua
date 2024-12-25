@@ -1384,6 +1384,11 @@ M.update_pull_request_state_mutation = [[
                 changedFiles
                 additions
                 deletions
+                author {
+                  user {
+                    login
+                  }
+                }
                 committer {
                   user {
                     login
@@ -1795,6 +1800,11 @@ query($endCursor: String) {
               changedFiles
               additions
               deletions
+              author {
+                user {
+                  login
+                }
+              }
               committer {
                 user {
                   login
@@ -3273,6 +3283,11 @@ M.create_pr_mutation = [[
                 changedFiles
                 additions
                 deletions
+                author {
+                  user {
+                    login
+                  }
+                }
                 committer {
                   user {
                     login
