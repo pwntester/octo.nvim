@@ -87,10 +87,12 @@ local issue = defaulter(function(opts)
                 obj = result.data.repository.pullRequest
               end
 
+              local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
+
               writers.write_title(bufnr, obj.title, 1)
               writers.write_details(bufnr, obj)
               writers.write_body(bufnr, obj)
-              writers.write_state(bufnr, obj.state:upper(), number)
+              writers.write_state(bufnr, state:upper(), number)
               local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
               writers.write_block(bufnr, { "", "" }, reactions_line)
               writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
