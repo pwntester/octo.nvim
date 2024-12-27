@@ -33,6 +33,8 @@ M.state_msg_map = {
 M.state_hl_map = {
   MERGED = "OctoStateMerged",
   CLOSED = "OctoStateClosed",
+  COMPLETED = "OctoStateCompleted",
+  NOT_PLANNED = "OctoStateNotPlanned",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -318,18 +320,38 @@ function M.commit_exists(commit, cb)
   }):start()
 end
 
-function M.develop_issue(issue_number)
+function M.develop_issue(issue_repo, issue_number, branch_repo)
   if not Job then
     return
+  end
+
+  if M.is_blank(branch_repo) then
+    branch_repo = M.get_remote_name()
   end
 
   Job:new({
     enable_recording = true,
     command = "gh",
-    args = { "issue", "develop", issue_number, "--checkout" },
-    on_exit = vim.schedule_wrap(function()
-      local output = vim.fn.system "git branch --show-current"
-      M.info("Switched to " .. output)
+    args = {
+      "issue",
+      "develop",
+      "--repo",
+      issue_repo,
+      issue_number,
+      "--checkout",
+      "--branch-repo",
+      branch_repo,
+    },
+    on_exit = vim.schedule_wrap(function(job, code)
+      if code == 0 then
+        local output = vim.fn.system "git branch --show-current"
+        M.info("Switched to " .. output)
+      else
+        local stderr = table.concat(job:stderr_result(), "\n")
+        if not M.is_blank(stderr) then
+          M.error(stderr)
+        end
+      end
     end),
   }):start()
 end
@@ -342,13 +364,10 @@ function M.get_file_at_commit(path, commit, cb)
     enable_recording = true,
     command = "git",
     args = { "show", string.format("%s:%s", commit, path) },
-    on_exit = vim.schedule_wrap(function(j_self, _, _)
-      local output = table.concat(j_self:result(), "\n")
-      local stderr = table.concat(j_self:stderr_result(), "\n")
-      cb(vim.split(output, "\n"), vim.split(stderr, "\n"))
-    end),
   }
-  job:start()
+  local result = job:sync()
+  local output = table.concat(result, "\n")
+  cb(vim.split(output, "\n"))
 end
 
 function M.in_pr_repo()
@@ -379,7 +398,7 @@ function M.in_pr_branch(pr)
   local cmd = "git rev-parse --abbrev-ref --symbolic-full-name @{u}"
   local local_branch_with_local_remote = vim.split(string.gsub(vim.fn.system(cmd), "%s+", ""), "/")
   local local_remote = local_branch_with_local_remote[1]
-  local local_branch = local_branch_with_local_remote[2]
+  local local_branch = table.concat(local_branch_with_local_remote, "/", 2)
 
   -- Github repos are case insensitive, ignore case when comparing to local remotes
   local local_repo = M.get_remote_name({ local_remote }):lower()
@@ -1511,6 +1530,19 @@ function M.convert_vim_mapping_to_fzf(vim_mapping)
   local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
   fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
   return string.lower(fzf_mapping)
+end
+
+--- Logic to determine the state displayed for issue or PR
+---@param isIssue boolean
+---@param state string
+---@param stateReason string | nil
+---@return string
+function M.get_displayed_state(isIssue, state, stateReason)
+  if isIssue and state == "CLOSED" then
+    return stateReason or state
+  end
+
+  return state
 end
 
 return M

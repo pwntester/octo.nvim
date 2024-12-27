@@ -80,10 +80,13 @@ M.issue = function(formatted_issues)
           elseif entry.kind == "pull_request" then
             obj = result.data.repository.pullRequest
           end
+
+          local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
+
           writers.write_title(tmpbuf, obj.title, 1)
           writers.write_details(tmpbuf, obj)
           writers.write_body(tmpbuf, obj)
-          writers.write_state(tmpbuf, obj.state:upper(), number)
+          writers.write_state(tmpbuf, state:upper(), number)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
@@ -139,10 +142,13 @@ M.search = function()
           elseif kind == "pull_request" then
             obj = result.data.repository.pullRequest
           end
+
+          local state = utils.get_displayed_state(kind == "issue", obj.state, obj.stateReason)
+
           writers.write_title(tmpbuf, obj.title, 1)
           writers.write_details(tmpbuf, obj)
           writers.write_body(tmpbuf, obj)
-          writers.write_state(tmpbuf, obj.state:upper(), number)
+          writers.write_state(tmpbuf, state:upper(), number)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)

@@ -44,10 +44,12 @@ return function(cb)
       },
       actions = {
         ["default"] = function(selected)
+          local labels = {}
           for _, row in ipairs(selected) do
             local id, _ = unpack(vim.split(row, " "))
-            cb(id)
+            table.insert(labels, { id = id })
           end
+          cb(labels)
         end,
       },
     })

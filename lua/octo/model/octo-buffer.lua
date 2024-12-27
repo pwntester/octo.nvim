@@ -48,7 +48,9 @@ function OctoBuffer:new(opts)
     this.taggable_users = { this.node.author.login }
   elseif this.node and this.number then
     this.kind = "issue"
-    this.taggable_users = { this.node.author.login }
+    if not utils.is_blank(this.node.author) then
+      this.taggable_users = { this.node.author.login }
+    end
   elseif this.node and not this.number then
     this.kind = "repo"
   else
@@ -106,7 +108,8 @@ function OctoBuffer:render_issue()
   writers.write_details(self.bufnr, self.node)
 
   -- write issue/pr status
-  writers.write_state(self.bufnr, self.node.state:upper(), self.number)
+  local state = utils.get_displayed_state(self.kind == "issue", self.node.state, self.node.stateReason)
+  writers.write_state(self.bufnr, state:upper(), self.number)
 
   -- write body
   writers.write_body(self.bufnr, self.node)
@@ -210,6 +213,9 @@ function OctoBuffer:render_issue()
       prev_is_event = true
     elseif item.__typename == "ReviewDismissedEvent" then
       writers.write_review_dismissed_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "RenamedTitleEvent" then
+      writers.write_renamed_title_event(self.bufnr, item)
       prev_is_event = true
     end
   end
