@@ -166,7 +166,7 @@ function M.run(opts)
     env = get_env(),
   }
   if mode == "sync" then
-    job:sync()
+    job:sync(conf.timeout)
     return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
   else
     job:start()
