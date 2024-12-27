@@ -391,7 +391,6 @@ function M.in_pr_branch(pr)
   return false
 end
 
----Checks out a PR b number
 function M.checkout_pr(pr_number)
   if not Job then
     return
@@ -407,19 +406,25 @@ function M.checkout_pr(pr_number)
   }):start()
 end
 
-function M.checkout_pr_sync(pr_number)
+---@class CheckoutPrSyncOpts
+---@field pr_number number
+---@field timeout number
+
+---@param opts CheckoutPrSyncOpts
+---@return nil
+function M.checkout_pr_sync(opts)
   if not Job then
     return
   end
   Job:new({
     enable_recording = true,
     command = "gh",
-    args = { "pr", "checkout", pr_number },
+    args = { "pr", "checkout", opts.pr_number },
     on_exit = vim.schedule_wrap(function()
       local output = vim.fn.system "git branch --show-current"
       M.info("Switched to " .. output)
     end),
-  }):sync()
+  }):sync(opts.timeout)
 end
 
 M.merge_method_to_flag = {
