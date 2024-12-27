@@ -1328,6 +1328,11 @@ function M.write_commit_event(bufnr, item)
       item.commit.committer.user.login,
       item.commit.committer.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
     })
+  elseif item.commit.author ~= vim.NIL then
+    table.insert(vt, {
+      item.commit.author.user.login,
+      item.commit.author.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+    })
   end
   table.insert(vt, { " added ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
