@@ -1949,6 +1949,39 @@ query($endCursor: String) {
               }
             }
           }
+          ... on ConnectedEvent {
+            actor { login }
+            createdAt
+            isCrossRepository
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
+            subject {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
+          }
         }
       }
       reviewDecision
@@ -2170,6 +2203,72 @@ query($endCursor: String) {
             createdAt
             previousTitle
             currentTitle
+          }
+          ... on ConnectedEvent {
+            actor { login }
+            createdAt
+            isCrossRepository
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
+            subject {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
+          }
+          ... on CrossReferencedEvent {
+            createdAt
+            actor { login }
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
+            target {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
           }
         }
       }
