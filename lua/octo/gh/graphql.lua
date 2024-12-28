@@ -911,6 +911,74 @@ M.create_issue_mutation = [[
               }
               createdAt
             }
+            ... on ConnectedEvent {
+              actor { login }
+              createdAt
+              isCrossRepository
+              source {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+              subject {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+            }
+          ... on CrossReferencedEvent {
+            createdAt
+            actor { login }
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
+            target {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+              }
+            }
+          }
           }
         }
         labels(first: 20) {
@@ -1084,6 +1152,76 @@ mutation {
             }
             createdAt
           }
+            ... on ConnectedEvent {
+              actor { login }
+              createdAt
+              isCrossRepository
+              source {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+              subject {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+            }
+          ... on CrossReferencedEvent {
+            createdAt
+            actor { login }
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+            target {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+          }
         }
       }
     }
@@ -1227,6 +1365,76 @@ M.update_issue_state_mutation = [[
               }
               createdAt
             }
+            ... on ConnectedEvent {
+              actor { login }
+              createdAt
+              isCrossRepository
+              source {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+              subject {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+            }
+          ... on CrossReferencedEvent {
+            createdAt
+            actor { login }
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+            target {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+          }
           }
         }
       }
@@ -1521,6 +1729,76 @@ M.update_pull_request_state_mutation = [[
                 }
               }
             }
+            ... on ConnectedEvent {
+              actor { login }
+              createdAt
+              isCrossRepository
+              source {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+              subject {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+            }
+          ... on CrossReferencedEvent {
+            createdAt
+            actor { login }
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+            target {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+          }
           }
         }
         reviewRequests(first: 20) {
@@ -1965,6 +2243,7 @@ query($endCursor: String) {
                 number
                 title
                 state
+                isDraft
               }
             }
             subject {
@@ -1979,6 +2258,42 @@ query($endCursor: String) {
                 number
                 title
                 state
+                isDraft
+              }
+            }
+          }
+          ... on CrossReferencedEvent {
+            createdAt
+            actor { login }
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+            target {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
               }
             }
           }
@@ -2220,6 +2535,7 @@ query($endCursor: String) {
                 number
                 title
                 state
+                isDraft
               }
             }
             subject {
@@ -2234,6 +2550,7 @@ query($endCursor: String) {
                 number
                 title
                 state
+                isDraft
               }
             }
           }
@@ -2253,6 +2570,7 @@ query($endCursor: String) {
                 number
                 title
                 state
+                isDraft
               }
             }
             target {
@@ -2267,6 +2585,7 @@ query($endCursor: String) {
                 number
                 title
                 state
+                isDraft
               }
             }
           }
@@ -3525,6 +3844,76 @@ M.create_pr_mutation = [[
                 }
               }
             }
+            ... on ConnectedEvent {
+              actor { login }
+              createdAt
+              isCrossRepository
+              source {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+              subject {
+                __typename
+                ... on Issue {
+                  number
+                  title
+                  state
+                  stateReason
+                }
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                }
+              }
+            }
+          ... on CrossReferencedEvent {
+            createdAt
+            actor { login }
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+            target {
+              __typename
+              ... on Issue {
+                number
+                title
+                state
+                stateReason
+              }
+              ... on PullRequest {
+                number
+                title
+                state
+                isDraft
+              }
+            }
+          }
           }
         }
         reviewDecision
