@@ -117,6 +117,7 @@ local function get_hl_links()
     StateClosed = "OctoRed",
     StateCompleted = "OctoPurple",
     StateNotPlanned = "OctoGrey",
+    StateDraft = "OctoGrey",
     StateMerged = "OctoPurple",
     StatePending = "OctoYellow",
     StateApproved = "OctoGreen",

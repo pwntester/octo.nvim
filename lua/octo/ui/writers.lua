@@ -1342,6 +1342,23 @@ function M.write_commit_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+local function write_issue_or_pr(bufnr, item)
+  local vt = {}
+  local state = utils.get_displayed_state(item.__typename == "Issue", item.state, item.stateReason, item.isDraft)
+  local entry = {
+    kind = item.__typename == "Issue" and "issue" or "pull_request",
+    obj = item,
+  }
+  local icon = utils.get_icon(entry)
+  table.insert(vt, { "          ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.title, "OctoDetailsLabel" })
+  table.insert(vt, { " #" .. tostring(item.number) .. " ", "OctoDetailsValue" })
+  table.insert(vt, icon)
+  table.insert(vt, { state, utils.state_hl_map[state] })
+
+  write_event(bufnr, vt)
+end
+
 function M.write_cross_referenced_event(bufnr, item)
   local vt = {}
   local conf = config.values
@@ -1352,16 +1369,17 @@ function M.write_cross_referenced_event(bufnr, item)
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
   })
 
-  local subject = item.target
+  local target = item.target
   local will_close_target = item.willCloseTarget
 
-  if subject.__typename == "PullRequest" and not will_close_target then
-    vim.notify "Need to implement this case"
-  elseif subject.__typename == "PullRequest" then
+  if target.__typename == "PullRequest" and not will_close_target then
+    table.insert(vt, { " mentioned this pull request ", "OctoTimelineItemHeading" })
+    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  elseif target.__typename == "PullRequest" then
     table.insert(vt, { " linked a pull request ", "OctoTimelineItemHeading" })
     table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
     table.insert(vt, { " that will close this issue ", "OctoTimelineItemHeading" })
-  elseif will_close_target == false then
+  elseif not will_close_target then
     table.insert(vt, { " mentioned this issue ", "OctoTimelineItemHeading" })
     table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
   else
@@ -1371,6 +1389,7 @@ function M.write_cross_referenced_event(bufnr, item)
   end
 
   write_event(bufnr, vt)
+  write_issue_or_pr(bufnr, item.source)
 end
 
 function M.write_connected_event(bufnr, item)
@@ -1383,7 +1402,7 @@ function M.write_connected_event(bufnr, item)
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
   })
 
-  local subject = item.subject or item.source
+  local subject = item.subject
 
   if subject.__typename == "PullRequest" then
     table.insert(vt, { " linked a pull request ", "OctoTimelineItemHeading" })
@@ -1396,6 +1415,7 @@ function M.write_connected_event(bufnr, item)
   end
 
   write_event(bufnr, vt)
+  write_issue_or_pr(bufnr, item.subject)
 end
 
 function M.write_renamed_title_event(bufnr, item)
