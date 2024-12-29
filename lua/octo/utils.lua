@@ -323,10 +323,6 @@ end
 
 ---Add a milestone to an issue or PR
 function M.add_milestone(issue, number, milestone_name)
-  if not Job then
-    return
-  end
-
   local command = issue and "issue" or "pr"
   local args = { command, "edit", number, "--milestone", milestone_name }
 
@@ -344,10 +340,6 @@ end
 
 ---Remove a milestone from an issue or PR
 function M.remove_milestone(issue, number)
-  if not Job then
-    return
-  end
-
   local command = issue and "issue" or "pr"
   local args = { command, "edit", number, "--remove-milestone" }
 
@@ -366,10 +358,6 @@ end
 ---https://docs.github.com/en/rest/issues/milestones?apiVersion=2022-11-28#create-a-milestone
 ---Create a new milestone
 function M.create_milestone(title, description)
-  if not Job then
-    return
-  end
-
   if M.is_blank(title) then
     M.error "Title is required to create milestone"
     return
