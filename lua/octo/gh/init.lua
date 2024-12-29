@@ -190,8 +190,9 @@ end
 ---@param fields table key value pairs for graphql query
 ---@param paginate boolean whether to paginate the results
 ---@param slurp boolean whether to slurp the results
+---@param jq string the jq query to apply to the results
 ---@return table
-local create_graphql_args = function(query, fields, paginate, slurp)
+local create_graphql_args = function(query, fields, paginate, slurp, jq)
   local args = { "api", "graphql" }
 
   local formatted_fields = format_fields(fields)
@@ -208,13 +209,19 @@ local create_graphql_args = function(query, fields, paginate, slurp)
   if slurp then
     table.insert(args, "--slurp")
   end
+
+  if jq then
+    table.insert(args, "--jq")
+    table.insert(args, jq)
+  end
+
   return args
 end
 
 function M.query(opts)
   local run_opts = opts.opts or {}
   return M.run {
-    args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp),
+    args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
     mode = run_opts.mode,
     cb = run_opts.cb,
     stream_cb = run_opts.stream_cb,
