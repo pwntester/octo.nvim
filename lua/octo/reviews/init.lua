@@ -90,7 +90,7 @@ function Review:resume()
     end
 
     if self.id == default_id then
-      vim.error "No pending reviews found for viewer"
+      utils.error "No pending reviews found for viewer"
       return
     end
 
@@ -201,7 +201,7 @@ function Review:discard()
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        vim.error(stderr)
+        utils.error(stderr)
       elseif output then
         local resp = vim.fn.json_decode(output)
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
@@ -217,7 +217,7 @@ function Review:discard()
             args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
             cb = function(output_inner, stderr_inner)
               if stderr_inner and not utils.is_blank(stderr_inner) then
-                vim.error(stderr_inner)
+                utils.error(stderr_inner)
               elseif output_inner then
                 self.id = default_id
                 self.threads = {}
