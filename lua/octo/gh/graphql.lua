@@ -1,3 +1,5 @@
+local fragments = require "octo.gh.fragments"
+
 local M = {}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addreaction
@@ -911,74 +913,8 @@ M.create_issue_mutation = [[
               }
               createdAt
             }
-            ... on ConnectedEvent {
-              actor { login }
-              createdAt
-              isCrossRepository
-              source {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-              subject {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-            }
-          ... on CrossReferencedEvent {
-            createdAt
-            actor { login }
-            willCloseTarget
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-              }
-            }
-            target {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-              }
-            }
-          }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
           }
         }
         labels(first: 20) {
@@ -997,7 +933,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.issue
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -1152,82 +1088,14 @@ mutation {
             }
             createdAt
           }
-            ... on ConnectedEvent {
-              actor { login }
-              createdAt
-              isCrossRepository
-              source {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-              subject {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-            }
-          ... on CrossReferencedEvent {
-            createdAt
-            actor { login }
-            willCloseTarget
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            target {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
+          ...ConnectedEventFragment
+          ...CrossReferencedEventFragment
         }
       }
     }
   }
 }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -1365,82 +1233,14 @@ M.update_issue_state_mutation = [[
               }
               createdAt
             }
-            ... on ConnectedEvent {
-              actor { login }
-              createdAt
-              isCrossRepository
-              source {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-              subject {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-            }
-          ... on CrossReferencedEvent {
-            createdAt
-            actor { login }
-            willCloseTarget
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            target {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
           }
         }
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1729,76 +1529,8 @@ M.update_pull_request_state_mutation = [[
                 }
               }
             }
-            ... on ConnectedEvent {
-              actor { login }
-              createdAt
-              isCrossRepository
-              source {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-              subject {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-            }
-          ... on CrossReferencedEvent {
-            createdAt
-            actor { login }
-            willCloseTarget
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            target {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
           }
         }
         reviewRequests(first: 20) {
@@ -1817,7 +1549,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -2227,76 +1959,8 @@ query($endCursor: String) {
               }
             }
           }
-          ... on ConnectedEvent {
-            actor { login }
-            createdAt
-            isCrossRepository
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            subject {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
-          ... on CrossReferencedEvent {
-            createdAt
-            actor { login }
-            willCloseTarget
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            target {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
+          ...ConnectedEventFragment
+          ...CrossReferencedEventFragment
         }
       }
       reviewDecision
@@ -2387,7 +2051,7 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -2519,76 +2183,8 @@ query($endCursor: String) {
             previousTitle
             currentTitle
           }
-          ... on ConnectedEvent {
-            actor { login }
-            createdAt
-            isCrossRepository
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            subject {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
-          ... on CrossReferencedEvent {
-            createdAt
-            actor { login }
-            willCloseTarget
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            target {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
+          ...ConnectedEventFragment
+          ...CrossReferencedEventFragment
         }
       }
       labels(first: 20) {
@@ -2607,7 +2203,7 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -3844,76 +3440,8 @@ M.create_pr_mutation = [[
                 }
               }
             }
-            ... on ConnectedEvent {
-              actor { login }
-              createdAt
-              isCrossRepository
-              source {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-              subject {
-                __typename
-                ... on Issue {
-                  number
-                  title
-                  state
-                  stateReason
-                }
-                ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                }
-              }
-            }
-          ... on CrossReferencedEvent {
-            createdAt
-            actor { login }
-            willCloseTarget
-            source {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-            target {
-              __typename
-              ... on Issue {
-                number
-                title
-                state
-                stateReason
-              }
-              ... on PullRequest {
-                number
-                title
-                state
-                isDraft
-              }
-            }
-          }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
           }
         }
         reviewDecision
@@ -3995,7 +3523,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
