@@ -173,4 +173,54 @@ function M.run(opts)
   end
 end
 
+---Format fields for the graphql query
+---@param fields table key value pairs for graphql query
+---@return table
+local format_fields = function(fields)
+  local formatted_fields = {}
+  for key, value in pairs(fields) do
+    table.insert(formatted_fields, "-F")
+    table.insert(formatted_fields, key .. "=" .. value)
+  end
+  return formatted_fields
+end
+
+---Create the arguments for the graphql query
+---@param query string the graphql query
+---@param fields table key value pairs for graphql query
+---@param paginate boolean whether to paginate the results
+---@param slurp boolean whether to slurp the results
+---@return table
+local create_graphql_args = function(query, fields, paginate, slurp)
+  local args = { "api", "graphql" }
+
+  local formatted_fields = format_fields(fields)
+  for _, field in ipairs(formatted_fields) do
+    table.insert(args, field)
+  end
+  table.insert(args, "-f")
+  table.insert(args, string.format("query=%s", query))
+
+  if paginate then
+    table.insert(args, "--paginate")
+  end
+
+  if slurp then
+    table.insert(args, "--slurp")
+  end
+  return args
+end
+
+function M.query(opts)
+  local run_opts = opts.opts or {}
+  return M.run {
+    args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp),
+    mode = run_opts.mode,
+    cb = run_opts.cb,
+    stream_cb = run_opts.stream_cb,
+    headers = run_opts.headers,
+    hostname = run_opts.hostname,
+  }
+end
+
 return M
