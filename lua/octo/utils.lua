@@ -33,6 +33,7 @@ M.state_msg_map = {
 M.state_hl_map = {
   MERGED = "OctoStateMerged",
   CLOSED = "OctoStateClosed",
+  DRAFT = "OctoStateDraft",
   COMPLETED = "OctoStateCompleted",
   NOT_PLANNED = "OctoStateNotPlanned",
   OPEN = "OctoStateOpen",
@@ -1537,12 +1538,99 @@ end
 ---@param state string
 ---@param stateReason string | nil
 ---@return string
-function M.get_displayed_state(isIssue, state, stateReason)
+function M.get_displayed_state(isIssue, state, stateReason, isDraft)
   if isIssue and state == "CLOSED" then
     return stateReason or state
   end
 
+  if isDraft then
+    return "DRAFT"
+  end
+
   return state
+end
+
+--- @class EntryObject
+--- @field state string
+--- @field isDraft boolean
+--- @field stateReason string
+--- @field isAnswered boolean
+--- @field closed boolean
+
+--- @class Entry
+--- @field kind string
+--- @field obj EntryObject
+
+--- @class Icon
+--- @field [1] string The icon
+--- @field [2] string|nil The highlight group for the icon
+--- @see octo.ui.colors for the available highlight groups
+
+-- Symbols found with "Telescope symbols"
+local icons = {
+  issue = {
+    open = { " ", "OctoGreen" },
+    closed = { " ", "OctoPurple" },
+    not_planned = { " ", "OctoGrey" },
+  },
+  pull_request = {
+    open = { " ", "OctoGreen" },
+    draft = { " ", "OctoGrey" },
+    merged = { " ", "OctoPurple" },
+    closed = { " ", "OctoRed" },
+  },
+  discussion = {
+    open = { " ", "OctoGrey" },
+    answered = { " ", "OctoGreen" },
+    closed = { " ", "OctoRed" },
+  },
+  unknown = { " " },
+}
+
+--- Get the icon for the entry
+---@param entry Entry: The entry to get the icon for
+---@return Icon: The icon for the entry
+function M.get_icon(entry)
+  local kind = entry.kind
+
+  if kind == "issue" then
+    local state = entry.obj.state
+    local stateReason = entry.obj.stateReason
+
+    if state == "OPEN" then
+      return icons.issue.open
+    elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
+      return icons.issue.not_planned
+    elseif state == "CLOSED" then
+      return icons.issue.closed
+    end
+  elseif kind == "pull_request" then
+    local state = entry.obj.state
+    local isDraft = entry.obj.isDraft
+
+    if state == "MERGED" then
+      return icons.pull_request.merged
+    elseif state == "CLOSED" then
+      return icons.pull_request.closed
+    elseif isDraft then
+      return icons.pull_request.draft
+    elseif state == "OPEN" then
+      return icons.pull_request.open
+    end
+  elseif kind == "discussion" then
+    local closed = entry.obj.closed
+    local isAnswered = entry.obj.isAnswered
+
+    if isAnswered ~= vim.NIL and isAnswered then
+      return icons.discussion.answered
+    elseif not closed then
+      return icons.discussion.open
+    else
+      return icons.discussion.closed
+    end
+  end
+
+  return icons.unknown
 end
 
 return M
