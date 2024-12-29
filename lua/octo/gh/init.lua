@@ -218,7 +218,7 @@ local create_graphql_args = function(query, fields, paginate, slurp, jq)
   return args
 end
 
-function M.query(opts)
+function M.graphql(opts)
   local run_opts = opts.opts or {}
   return M.run {
     args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
