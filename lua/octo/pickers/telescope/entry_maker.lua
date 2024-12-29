@@ -340,6 +340,42 @@ function M.gen_from_project_card()
   end
 end
 
+function M.gen_from_milestone()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      { entry.milestone.title, "OctoDetailsLabel" },
+    }
+
+    local displayer = entry_display.create {
+      separator = "",
+      items = {
+        -- { width = 1 },
+        { remaining = true },
+        -- { width = 1 },
+      },
+    }
+
+    return displayer(columns)
+  end
+
+  return function(milestone)
+    if not milestone or vim.tbl_isempty(milestone) then
+      return nil
+    end
+
+    return {
+      value = milestone.id,
+      ordinal = milestone.title,
+      display = make_display,
+      milestone = milestone,
+    }
+  end
+end
+
 function M.gen_from_label()
   local make_display = function(entry)
     if not entry then
