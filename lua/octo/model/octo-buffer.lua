@@ -217,6 +217,12 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "RenamedTitleEvent" then
       writers.write_renamed_title_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "ConnectedEvent" then
+      writers.write_connected_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "CrossReferencedEvent" then
+      writers.write_cross_referenced_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
   if prev_is_event then
