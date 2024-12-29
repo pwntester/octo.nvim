@@ -195,6 +195,7 @@ end
 local create_graphql_args = function(query, fields, paginate, slurp, jq)
   local args = { "api", "graphql" }
 
+  fields = fields or {}
   local formatted_fields = format_fields(fields)
   for _, field in ipairs(formatted_fields) do
     table.insert(args, field)
