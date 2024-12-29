@@ -370,6 +370,11 @@ function M.create_milestone(title, description)
     return
   end
 
+  if M.is_blank(title) then
+    M.error "Title is required to create milestone"
+    return
+  end
+
   local owner, name = M.split_repo(M.get_remote_name())
   local endpoint = string.format("repos/%s/%s/milestones", owner, name)
   local args = { "api", "--method", "POST", endpoint }
