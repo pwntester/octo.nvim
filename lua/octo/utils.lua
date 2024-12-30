@@ -321,6 +321,76 @@ function M.commit_exists(commit, cb)
   }):start()
 end
 
+---Add a milestone to an issue or PR
+function M.add_milestone(issue, number, milestone_name)
+  local command = issue and "issue" or "pr"
+  local args = { command, "edit", number, "--milestone", milestone_name }
+
+  gh.run {
+    args = args,
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif output then
+        M.info("Added milestone " .. milestone_name)
+      end
+    end,
+  }
+end
+
+---Remove a milestone from an issue or PR
+function M.remove_milestone(issue, number)
+  local command = issue and "issue" or "pr"
+  local args = { command, "edit", number, "--remove-milestone" }
+
+  gh.run {
+    args = args,
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif output then
+        M.info "Removed milestone"
+      end
+    end,
+  }
+end
+
+---https://docs.github.com/en/rest/issues/milestones?apiVersion=2022-11-28#create-a-milestone
+---Create a new milestone
+function M.create_milestone(title, description)
+  if M.is_blank(title) then
+    M.error "Title is required to create milestone"
+    return
+  end
+
+  local owner, name = M.split_repo(M.get_remote_name())
+  local endpoint = string.format("repos/%s/%s/milestones", owner, name)
+  local args = { "api", "--method", "POST", endpoint }
+
+  local data = {
+    title = title,
+    description = description,
+    state = "open",
+  }
+
+  for key, value in pairs(data) do
+    table.insert(args, "-f")
+    table.insert(args, string.format("%s=%s", key, value))
+  end
+
+  gh.run {
+    args = args,
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        M.info("Created milestone " .. resp.title)
+      end
+    end,
+  }
+end
+
 function M.develop_issue(issue_repo, issue_number, branch_repo)
   if M.is_blank(branch_repo) then
     branch_repo = M.get_remote_name()

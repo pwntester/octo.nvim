@@ -3548,6 +3548,20 @@ query {
 }
 ]]
 
+M.open_milestones_query = [[
+query($name: String!, $owner: String!, $n_milestones: Int!) {
+  repository(owner: $owner, name: $name) {
+    milestones(first: $n_milestones, states: [OPEN]) {
+      nodes {
+        id
+        title
+        description
+      }
+    }
+  }
+}
+]]
+
 return function(query, ...)
   local opts = { escape = true }
   for _, v in ipairs { ... } do

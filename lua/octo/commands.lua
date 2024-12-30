@@ -13,6 +13,11 @@ local vim = vim
 
 local M = {}
 
+local get_current_buffer = function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  return octo_buffers[bufnr]
+end
+
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     require("octo.commands").octo(unpack(opts.fargs))
@@ -56,6 +61,48 @@ function M.setup()
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
+      end,
+    },
+    milestone = {
+      list = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+        opts.cb = function(item)
+          utils.info("Picked " .. item.title)
+        end
+        picker.milestones(opts)
+      end,
+      add = function(repo, ...)
+        local buffer = get_current_buffer()
+        if not buffer then
+          return
+        end
+
+        local opts = M.process_varargs(repo, ...)
+        opts.cb = function(item)
+          utils.add_milestone(buffer:isIssue(), buffer.number, item.title)
+        end
+        picker.milestones(opts)
+      end,
+      remove = function(repo, ...)
+        local buffer = get_current_buffer()
+        if not buffer then
+          return
+        end
+
+        local milestone = buffer.node.milestone
+        if utils.is_blank(milestone) then
+          utils.error "No milestone to remove"
+          return
+        end
+
+        utils.remove_milestone(buffer:isIssue(), buffer.number)
+      end,
+      create = function(...)
+        vim.fn.inputsave()
+        local title = vim.fn.input "Enter milestone title: "
+        local description = vim.fn.input "Enter milestone description: "
+        vim.fn.inputrestore()
+        utils.create_milestone(title, description)
       end,
     },
     issue = {
