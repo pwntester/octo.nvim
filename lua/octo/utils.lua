@@ -210,7 +210,7 @@ function M.parse_remote_url(url, aliases)
     }
   end
   -- remove trailing ".git"
-  url = string.gsub(url, ".git$", "")
+  url = string.gsub(url, "%.git$", "")
   -- remove protocol scheme
   url = string.gsub(url, "^[^:]+://", "")
   -- remove user
