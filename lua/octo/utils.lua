@@ -322,39 +322,23 @@ function M.commit_exists(commit, cb)
 end
 
 function M.develop_issue(issue_repo, issue_number, branch_repo)
-  if not Job then
-    return
-  end
-
   if M.is_blank(branch_repo) then
     branch_repo = M.get_remote_name()
   end
 
-  Job:new({
-    enable_recording = true,
-    command = "gh",
-    args = {
-      "issue",
-      "develop",
-      "--repo",
-      issue_repo,
-      issue_number,
-      "--checkout",
-      "--branch-repo",
-      branch_repo,
-    },
-    on_exit = vim.schedule_wrap(function(job, code)
-      if code == 0 then
+  local args = { "issue", "develop", "--repo", issue_repo, issue_number, "--checkout", "--branch-repo", branch_repo }
+
+  gh.run {
+    args = args,
+    cb = function(stdout, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif stdout then
         local output = vim.fn.system "git branch --show-current"
         M.info("Switched to " .. output)
-      else
-        local stderr = table.concat(job:stderr_result(), "\n")
-        if not M.is_blank(stderr) then
-          M.error(stderr)
-        end
       end
-    end),
-  }):start()
+    end,
+  }
 end
 
 function M.get_file_at_commit(path, commit, cb)
