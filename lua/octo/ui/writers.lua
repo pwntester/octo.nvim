@@ -1392,6 +1392,39 @@ function M.write_cross_referenced_event(bufnr, item)
   write_issue_or_pr(bufnr, item.source)
 end
 
+local write_milestone_event = function(bufnr, item, add)
+  local verb, preposition
+  if add then
+    verb = "added"
+    preposition = "to"
+  else
+    verb = "removed"
+    preposition = "from"
+  end
+
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " " .. verb .. " this " .. preposition .. " the ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.milestoneTitle, "OctoDetailsLabel" })
+  table.insert(vt, { " milestone ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+function M.write_milestoned_event(bufnr, item)
+  write_milestone_event(bufnr, item, true)
+end
+
+function M.write_demilestoned_event(bufnr, item)
+  write_milestone_event(bufnr, item, false)
+end
+
 function M.write_connected_event(bufnr, item)
   local vt = {}
   local conf = config.values
