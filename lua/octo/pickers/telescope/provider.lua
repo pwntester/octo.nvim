@@ -522,12 +522,13 @@ end
 
 local function get_search_size(prompt)
   local query = graphql("search_count_query", prompt)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  return gh.graphql {
+    query = query,
+    jq = ".data.search.issueCount",
+    opts = {
+      mode = "sync",
+    },
   }
-  local resp = vim.fn.json_decode(output)
-  return resp.data.search.issueCount
 end
 
 function M.search(opts)
@@ -541,7 +542,7 @@ function M.search(opts)
   local width = 6
   if search.single_repo then
     local num_results = get_search_size(search.prompt)
-    width = math.min(#tostring(num_results), width)
+    width = math.min(#num_results, width)
   end
 
   local requester = function()
