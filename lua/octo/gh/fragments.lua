@@ -75,5 +75,19 @@ fragment CrossReferencedEventFragment on CrossReferencedEvent {
   }
 }
 ]]
+M.milestoned_event = [[
+fragment MilestonedEventFragment on MilestonedEvent {
+  actor { login }
+  createdAt
+  milestoneTitle
+}
+]]
+M.demilestoned_event = [[
+fragment DemilestonedEventFragment on DemilestonedEvent {
+  actor { login }
+  createdAt
+  milestoneTitle
+}
+]]
 
 return M
