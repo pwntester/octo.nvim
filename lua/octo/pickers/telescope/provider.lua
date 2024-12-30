@@ -1298,11 +1298,24 @@ function M.milestones(opts)
           return
         end
 
+        local title_width = 0
+        for _, milestone in ipairs(nodes) do
+          title_width = math.max(title_width, #milestone.title)
+        end
+
+        local non_empty_descriptions = false
+        for _, milestone in ipairs(nodes) do
+          if not utils.is_blank(milestone.description) then
+            non_empty_descriptions = true
+            break
+          end
+        end
+
         pickers
           .new(vim.deepcopy(dropdown_opts), {
             finder = finders.new_table {
               results = nodes,
-              entry_maker = entry_maker.gen_from_milestone(),
+              entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
             },
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, map)

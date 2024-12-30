@@ -340,23 +340,31 @@ function M.gen_from_project_card()
   end
 end
 
-function M.gen_from_milestone()
+function M.gen_from_milestone(title_width, show_description)
+  title_width = title_width or 10
+
   local make_display = function(entry)
     if not entry then
       return nil
     end
 
-    local columns = {
-      { entry.milestone.title, "OctoDetailsLabel" },
-    }
+    local columns, items
+    if show_description then
+      columns = {
+        { entry.milestone.title, "OctoDetailsLabel" },
+        { entry.milestone.description },
+      }
+      items = { { width = title_width }, { remaining = true } }
+    else
+      columns = {
+        { entry.milestone.title, "OctoDetailsLabel" },
+      }
+      items = { { width = title_width } }
+    end
 
     local displayer = entry_display.create {
       separator = "",
-      items = {
-        -- { width = 1 },
-        { remaining = true },
-        -- { width = 1 },
-      },
+      items = items,
     }
 
     return displayer(columns)

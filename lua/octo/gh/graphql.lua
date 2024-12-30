@@ -3555,6 +3555,7 @@ query($name: String!, $owner: String!, $n_milestones: Int!) {
       nodes {
         id
         title
+        description
       }
     }
   }
