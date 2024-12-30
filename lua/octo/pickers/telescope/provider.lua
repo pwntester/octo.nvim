@@ -756,6 +756,10 @@ local function select(opts)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     table.insert(items, get_item(selection))
     cb = single_cb
+  elseif multiple_cb == nil then
+    utils.error "Multiple selections are not allowed"
+    actions.close(prompt_bufnr)
+    return
   else
     for _, selection in ipairs(selections) do
       table.insert(items, get_item(selection))
@@ -1268,6 +1272,74 @@ function M.discussions(opts)
   }
 end
 
+function M.milestones(opts)
+  local owner, name = utils.split_repo(opts.repo)
+  local query = graphql "open_milestones_query"
+
+  gh.graphql {
+    query = query,
+    fields = {
+      owner = owner,
+      name = name,
+      n_milestones = 25,
+    },
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+          return
+        end
+
+        local resp = vim.fn.json_decode(output)
+        local nodes = resp.data.repository.milestones.nodes
+
+        if #nodes == 0 then
+          utils.error(string.format("There are no matching milestones in %s.", opts.repo))
+          return
+        end
+
+        local title_width = 0
+        for _, milestone in ipairs(nodes) do
+          title_width = math.max(title_width, #milestone.title)
+        end
+
+        local non_empty_descriptions = false
+        for _, milestone in ipairs(nodes) do
+          if not utils.is_blank(milestone.description) then
+            non_empty_descriptions = true
+            break
+          end
+        end
+
+        pickers
+          .new(vim.deepcopy(dropdown_opts), {
+            finder = finders.new_table {
+              results = nodes,
+              entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
+            },
+            sorter = conf.generic_sorter(opts),
+            attach_mappings = function(_, map)
+              actions.select_default:replace(function(prompt_bufnr)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = function(selected)
+                    opts.cb(selected[1])
+                  end,
+                  multiple_cb = nil,
+                  get_item = function(selected)
+                    return selected.milestone
+                  end,
+                }
+              end)
+              return true
+            end,
+          })
+          :find()
+      end,
+    },
+  }
+end
+
 M.picker = {
   actions = M.actions,
   assigned_labels = M.select_assigned_label,
@@ -1289,6 +1361,7 @@ M.picker = {
   review_commits = M.review_commits,
   search = M.search,
   users = M.select_user,
+  milestones = M.milestones,
 }
 
 return M
