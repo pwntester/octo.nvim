@@ -1307,8 +1307,12 @@ function M.write_assigned_event(bufnr, item)
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-  table.insert(vt, { " assigned this to ", "OctoTimelineItemHeading" })
-  table.insert(vt, { item.assignee.login or item.assignee.name, "OctoDetailsLabel" })
+  if item.actor.login == item.assignee.login then
+    table.insert(vt, { " self-assigned this", "OctoTimelineItemHeading" })
+  else
+    table.insert(vt, { " assigned this to ", "OctoTimelineItemHeading" })
+    table.insert(vt, { item.assignee.login or item.assignee.name, "OctoDetailsLabel" })
+  end
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
 end
