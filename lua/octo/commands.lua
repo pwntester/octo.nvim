@@ -1763,7 +1763,7 @@ end
 function M.actions()
   local flattened_actions = {}
 
-  local user_defined_commands = config.values.commands or {}
+  local user_defined_commands = config.values.commands
   local combined_commands = merge_tables(M.commands, user_defined_commands)
 
   for object, commands in pairs(combined_commands) do

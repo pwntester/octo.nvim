@@ -111,6 +111,7 @@ function M.get_default_values()
     default_delete_branch = false,
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
+    commands = {},
     users = "search",
     user_icon = " ",
     ghost_icon = "󰊠 ",
