@@ -619,7 +619,7 @@ function M.gen_from_gist()
   end
 end
 
-function M.gen_from_octo_actions()
+function M.gen_from_octo_actions(width)
   local make_display = function(entry)
     if not entry then
       return nil
@@ -633,7 +633,7 @@ function M.gen_from_octo_actions()
     local displayer = entry_display.create {
       separator = "",
       items = {
-        { width = 12 },
+        { width = width },
         { remaining = true },
       },
     }

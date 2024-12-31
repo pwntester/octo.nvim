@@ -1157,11 +1157,17 @@ function M.actions(flattened_actions)
     results_title = "",
   }
 
+  local width = 11
+  for _, action in ipairs(flattened_actions) do
+    width = math.max(width, #action.object)
+  end
+  width = width + 1
+
   pickers
     .new(opts, {
       finder = finders.new_table {
         results = flattened_actions,
-        entry_maker = entry_maker.gen_from_octo_actions(),
+        entry_maker = entry_maker.gen_from_octo_actions(width),
       },
       sorter = conf.generic_sorter(opts),
       attach_mappings = function()
