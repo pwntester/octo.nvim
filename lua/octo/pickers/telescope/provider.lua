@@ -1280,7 +1280,13 @@ function M.discussions(opts)
 end
 
 function M.milestones(opts)
-  local owner, name = utils.split_repo(opts.repo)
+  if opts.cb == nil then
+    utils.error "Callback action on milestone is required"
+    return
+  end
+
+  local repo = opts.repo or utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
   local query = graphql "open_milestones_query"
 
   gh.graphql {
@@ -1301,7 +1307,7 @@ function M.milestones(opts)
         local nodes = resp.data.repository.milestones.nodes
 
         if #nodes == 0 then
-          utils.error(string.format("There are no matching milestones in %s.", opts.repo))
+          utils.error(string.format("There are no open milestones in %s.", repo))
           return
         end
 

@@ -352,9 +352,10 @@ function M.gen_from_milestone(title_width, show_description)
     if show_description then
       columns = {
         { entry.milestone.title, "OctoDetailsLabel" },
+        { " " },
         { entry.milestone.description },
       }
-      items = { { width = title_width }, { remaining = true } }
+      items = { { width = title_width }, { width = 1 }, { remaining = true } }
     else
       columns = {
         { entry.milestone.title, "OctoDetailsLabel" },

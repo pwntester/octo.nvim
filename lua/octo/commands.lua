@@ -79,25 +79,34 @@ function M.setup()
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         opts.cb = function(item)
-          utils.info("Picked " .. item.title)
+          local url = item.url
+          utils.info("Opening milestone in browser: " .. url)
+          navigation.open_in_browser_raw(url)
         end
         picker.milestones(opts)
       end,
-      add = function(repo, ...)
+      add = function(milestoneTitle)
         local buffer = get_current_buffer()
         if not buffer then
+          utils.error "No buffer found"
           return
         end
 
-        local opts = M.process_varargs(repo, ...)
+        if not utils.is_blank(milestoneTitle) then
+          utils.add_milestone(buffer:isIssue(), buffer.number, milestoneTitle)
+          return
+        end
+
+        local opts = {}
         opts.cb = function(item)
           utils.add_milestone(buffer:isIssue(), buffer.number, item.title)
         end
         picker.milestones(opts)
       end,
-      remove = function(repo, ...)
+      remove = function()
         local buffer = get_current_buffer()
         if not buffer then
+          utils.error "No buffer found"
           return
         end
 
@@ -109,12 +118,18 @@ function M.setup()
 
         utils.remove_milestone(buffer:isIssue(), buffer.number)
       end,
-      create = function(...)
+      create = function(milestoneTitle)
+        if utils.is_blank(milestoneTitle) then
+          vim.fn.inputsave()
+          milestoneTitle = vim.fn.input "Enter milestone title: "
+          vim.fn.inputrestore()
+        end
+
         vim.fn.inputsave()
-        local title = vim.fn.input "Enter milestone title: "
         local description = vim.fn.input "Enter milestone description: "
         vim.fn.inputrestore()
-        utils.create_milestone(title, description)
+
+        utils.create_milestone(milestoneTitle, description)
       end,
     },
     issue = {

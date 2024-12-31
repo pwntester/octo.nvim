@@ -322,6 +322,9 @@ function M.commit_exists(commit, cb)
 end
 
 ---Add a milestone to an issue or PR
+---@param issue boolean true if issue, false if PR
+---@param number number issue or PR number
+---@param milestone_name string milestone name
 function M.add_milestone(issue, number, milestone_name)
   local command = issue and "issue" or "pr"
   local args = { command, "edit", number, "--milestone", milestone_name }
@@ -339,6 +342,8 @@ function M.add_milestone(issue, number, milestone_name)
 end
 
 ---Remove a milestone from an issue or PR
+---@param issue boolean true if issue, false if PR
+---@param number number issue or PR number
 function M.remove_milestone(issue, number)
   local command = issue and "issue" or "pr"
   local args = { command, "edit", number, "--remove-milestone" }
@@ -357,6 +362,8 @@ end
 
 ---https://docs.github.com/en/rest/issues/milestones?apiVersion=2022-11-28#create-a-milestone
 ---Create a new milestone
+---@param title string
+---@param description string
 function M.create_milestone(title, description)
   if M.is_blank(title) then
     M.error "Title is required to create milestone"

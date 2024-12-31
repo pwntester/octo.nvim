@@ -111,6 +111,14 @@ See |octo-command-examples| for examples.
   unresolve             Mark a review thread as unresolved.
 
 
+:Octo milestone [action]                            *octo-commands-milestone*
+
+  add [milestone]       Add specified milestone or from the open milestone menu to current Issue or PR.
+  remove                Remove the currently assigned milestone from the current Issue or PR.
+  create [milestone]    Create a new milestone.
+  list [repo]           List milestones for the current or specified repo.
+
+
 :Octo label [action]                            *octo-commands-label*
 
   add [label]           Add specified label or from the available label menu.
