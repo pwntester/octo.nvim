@@ -18,6 +18,18 @@ local get_current_buffer = function()
   return octo_buffers[bufnr]
 end
 
+local function merge_tables(t1, t2)
+  local result = vim.deepcopy(t1)
+  for k, v in pairs(t2) do
+    if type(v) == "table" and type(result[k]) == "table" then
+      result[k] = merge_tables(result[k], v)
+    else
+      result[k] = v
+    end
+  end
+  return result
+end
+
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     require("octo.commands").octo(unpack(opts.fargs))
@@ -425,6 +437,9 @@ function M.setup()
       reviews.start_or_resume_review()
     end,
   })
+
+  local user_defined_commands = config.values.commands
+  M.commands = merge_tables(M.commands, user_defined_commands)
 end
 
 function M.process_varargs(repo, ...)
@@ -1748,25 +1763,10 @@ function M.copy_url()
   utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
 end
 
-local function merge_tables(t1, t2)
-  local result = vim.deepcopy(t1)
-  for k, v in pairs(t2) do
-    if type(v) == "table" and type(result[k]) == "table" then
-      result[k] = merge_tables(result[k], v)
-    else
-      result[k] = v
-    end
-  end
-  return result
-end
-
 function M.actions()
   local flattened_actions = {}
 
-  local user_defined_commands = config.values.commands
-  local combined_commands = merge_tables(M.commands, user_defined_commands)
-
-  for object, commands in pairs(combined_commands) do
+  for object, commands in pairs(M.commands) do
     if object ~= "actions" then
       if type(commands) == "table" then
         for name, fun in pairs(commands) do
