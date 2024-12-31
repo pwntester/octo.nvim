@@ -3570,6 +3570,7 @@ query($name: String!, $owner: String!, $n_milestones: Int!) {
         id
         title
         description
+        url
       }
     }
   }
