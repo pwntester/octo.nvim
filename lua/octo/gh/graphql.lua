@@ -2599,9 +2599,8 @@ query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
       mentionableUsers(first: 100, after: $endCursor) {
       pageInfo {
-        hasNextPage
         endCursor
-        startCursor
+        hasNextPage
       }
       nodes {
         id
@@ -2618,9 +2617,8 @@ query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     assignableUsers(first: 100, after: $endCursor) {
       pageInfo {
-        hasNextPage
         endCursor
-        startCursor
+        hasNextPage
       }
       nodes {
         id
