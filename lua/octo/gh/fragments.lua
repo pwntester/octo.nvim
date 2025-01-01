@@ -136,4 +136,19 @@ fragment AssigneeConnectionFragment on UserConnection {
 }
 ]]
 
+M.issue_comment_fragment = [[
+fragment IssueCommentFragment on IssueComment {
+  id
+  body
+  createdAt
+  ...ReactionGroupsFragment
+  author {
+    login
+  }
+  viewerDidAuthor
+  viewerCanUpdate
+  viewerCanDelete
+}
+]]
+
 return M

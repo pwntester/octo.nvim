@@ -782,18 +782,7 @@ M.create_issue_mutation = [[
                 ...LabelFragment
               }
             }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              ...ReactionGroupsFragment
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
+            ...IssueCommentFragment
             ... on ClosedEvent {
               createdAt
               actor {
@@ -836,7 +825,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -925,18 +914,7 @@ mutation {
               ...LabelFragment
             }
           }
-          ... on IssueComment {
-            id
-            body
-            createdAt
-            ...ReactionGroupsFragment
-            author {
-              login
-            }
-            viewerDidAuthor
-            viewerCanUpdate
-            viewerCanDelete
-          }
+          ...IssueCommentFragment
           ... on ClosedEvent {
             createdAt
             actor {
@@ -973,7 +951,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.reaction_groups_fragment .. fragments.assignee_connection_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.reaction_groups_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -1045,18 +1023,7 @@ M.update_issue_state_mutation = [[
                 ...LabelFragment
               }
             }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              ...ReactionGroupsFragment
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
+            ...IssueCommentFragment
             ... on ClosedEvent {
               createdAt
               actor {
@@ -1093,7 +1060,7 @@ M.update_issue_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1294,18 +1261,7 @@ M.update_pull_request_state_mutation = [[
               }
               dismissalMessage
             }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              ...ReactionGroupsFragment
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
+            ...IssueCommentFragment
             ... on PullRequestReview {
               id
               body
@@ -1365,7 +1321,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1680,18 +1636,7 @@ query($endCursor: String) {
             }
             dismissalMessage
           }
-          ... on IssueComment {
-            id
-            body
-            createdAt
-            ...ReactionGroupsFragment
-            author {
-              login
-            }
-            viewerDidAuthor
-            viewerCanUpdate
-            viewerCanDelete
-          }
+          ...IssueCommentFragment
           ... on RenamedTitleEvent {
             actor { login }
             createdAt
@@ -1818,7 +1763,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -1891,18 +1836,7 @@ query($endCursor: String) {
               ...LabelFragment
             }
           }
-          ... on IssueComment {
-            id
-            body
-            createdAt
-            ...ReactionGroupsFragment
-            author {
-              login
-            }
-            viewerDidAuthor
-            viewerCanUpdate
-            viewerCanDelete
-          }
+          ...IssueCommentFragment
           ... on ClosedEvent {
             createdAt
             actor {
@@ -1951,7 +1885,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment .. fragments.assignee_connection_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -3034,18 +2968,7 @@ M.create_pr_mutation = [[
               }
               dismissalMessage
             }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              ...ReactionGroupsFragment
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
+            ...IssueCommentFragment
             ... on PullRequestReview {
               id
               body
@@ -3157,7 +3080,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
