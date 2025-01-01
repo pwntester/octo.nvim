@@ -89,5 +89,28 @@ fragment DemilestonedEventFragment on DemilestonedEvent {
   milestoneTitle
 }
 ]]
+M.reaction_groups_fragment = [[
+fragment ReactionGroupsFragment on Reactable {
+  reactionGroups {
+    content
+    viewerHasReacted
+    users {
+      totalCount
+    }
+  }
+}
+]]
+M.reaction_groups_users_fragment = [[
+fragment ReactionGroupsUsersFragment on Reactable {
+  reactionGroups {
+    content
+    users(last: 100) {
+      nodes {
+        login
+      }
+    }
+  }
+}
+]]
 
 return M

@@ -7,34 +7,22 @@ M.add_reaction_mutation = [[
   mutation {
     addReaction(input: {subjectId: "%s", content: %s}) {
       subject {
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/mutations#removereaction
 M.remove_reaction_mutation = [[
   mutation {
     removeReaction(input: {subjectId: "%s", content: %s}) {
       subject {
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
 M.resolve_review_thread_mutation = [[
@@ -84,13 +72,7 @@ M.resolve_review_thread_mutation = [[
                     state
                   }
                   path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+
                 }
               }
             }
@@ -99,7 +81,7 @@ M.resolve_review_thread_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
 M.unresolve_review_thread_mutation = [[
@@ -149,13 +131,7 @@ M.unresolve_review_thread_mutation = [[
                     state
                   }
                   path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -164,7 +140,7 @@ M.unresolve_review_thread_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.start_review_mutation = [[
@@ -212,13 +188,7 @@ M.start_review_mutation = [[
                     state
                   }
                   path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -227,7 +197,7 @@ M.start_review_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed_mutation = [[
@@ -314,13 +284,7 @@ mutation {
             state
           }
           path
-          reactionGroups {
-            content
-            viewerHasReacted
-            users {
-              totalCount
-            }
-          }
+          ...ReactionGroupsFragment
         }
       }
       pullRequest {
@@ -361,13 +325,7 @@ mutation {
                   state
                 }
                 path
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
+                ...ReactionGroupsFragment
               }
             }
           }
@@ -376,7 +334,7 @@ mutation {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread_mutation = [[
@@ -408,13 +366,7 @@ mutation {
             state
           }
           path
-          reactionGroups {
-            content
-            viewerHasReacted
-            users {
-              totalCount
-            }
-          }
+          ...ReactionGroupsFragment
         }
       }
       pullRequest {
@@ -455,13 +407,7 @@ mutation {
                   state
                 }
                 path
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
+                ...ReactionGroupsFragment
               }
             }
           }
@@ -470,7 +416,7 @@ mutation {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
 M.add_issue_comment_mutation = [[
@@ -543,13 +489,7 @@ M.update_pull_request_review_comment_mutation = [[
                     state
                   }
                   path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -558,7 +498,7 @@ M.update_pull_request_review_comment_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review_mutation = [[
@@ -618,13 +558,7 @@ M.add_pull_request_review_comment_mutation = [[
                     state
                   }
                   path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -633,7 +567,7 @@ M.add_pull_request_review_comment_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_commit_thread_mutation = [[
@@ -680,13 +614,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
                     state
                   }
                   path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -695,7 +623,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- M.add_pull_request_review_comment_mutation =
 -- [[
@@ -763,13 +691,7 @@ M.delete_pull_request_review_comment_mutation = [[
                     state
                   }
                   path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -778,7 +700,7 @@ M.delete_pull_request_review_comment_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -823,13 +745,7 @@ M.create_issue_mutation = [[
             login
           }
         }
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         projectCards(last: 20) {
           nodes {
             id
@@ -872,13 +788,7 @@ M.create_issue_mutation = [[
               id
               body
               createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
               author {
                 login
               }
@@ -935,7 +845,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -984,25 +894,13 @@ mutation {
           login
         }
       }
-      reactionGroups {
-        content
-        viewerHasReacted
-        users {
-          totalCount
-        }
-      }
+      ...ReactionGroupsFragment
       comments(first: 100) {
         nodes {
           id
           body
           createdAt
-          reactionGroups {
-            content
-            viewerHasReacted
-            users {
-              totalCount
-            }
-          }
+          ...ReactionGroupsFragment
           author {
             login
           }
@@ -1049,13 +947,7 @@ mutation {
             id
             body
             createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -1131,25 +1023,13 @@ M.update_issue_state_mutation = [[
             login
           }
         }
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         comments(first: 100) {
           nodes {
             id
             body
             createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -1196,13 +1076,7 @@ M.update_issue_state_mutation = [[
               id
               body
               createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
               author {
                 login
               }
@@ -1246,7 +1120,7 @@ M.update_issue_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1313,25 +1187,13 @@ M.update_pull_request_state_mutation = [[
         author {
           login
         }
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         comments(first: 100) {
           nodes {
             id
             body
             createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -1472,13 +1334,7 @@ M.update_pull_request_state_mutation = [[
               id
               body
               createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
               author {
                 login
               }
@@ -1492,13 +1348,7 @@ M.update_pull_request_state_mutation = [[
               createdAt
               viewerCanUpdate
               viewerCanDelete
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
               author {
                 login
               }
@@ -1525,13 +1375,7 @@ M.update_pull_request_state_mutation = [[
                   state
                   outdated
                   diffHunk
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -1557,7 +1401,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1608,13 +1452,7 @@ query {
                 state
               }
               path
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
             }
           }
         }
@@ -1622,7 +1460,7 @@ query {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads_query = [[
@@ -1667,13 +1505,7 @@ query($endCursor: String) {
               viewerCanDelete
               outdated
               diffHunk
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
             }
             pageInfo {
               hasNextPage
@@ -1685,7 +1517,7 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
 M.pull_request_query = [[
@@ -1747,13 +1579,7 @@ query($endCursor: String) {
       }
       viewerDidAuthor
       viewerCanUpdate
-      reactionGroups {
-        content
-        viewerHasReacted
-        users {
-          totalCount
-        }
-      }
+      ...ReactionGroupsFragment
       projectCards(last: 20) {
         nodes {
           id
@@ -1896,13 +1722,7 @@ query($endCursor: String) {
             id
             body
             createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -1922,13 +1742,7 @@ query($endCursor: String) {
             createdAt
             viewerCanUpdate
             viewerCanDelete
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -1957,13 +1771,7 @@ query($endCursor: String) {
                 state
                 outdated
                 diffHunk
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
+                ...ReactionGroupsFragment
               }
             }
           }
@@ -2012,13 +1820,7 @@ query($endCursor: String) {
               viewerCanDelete
               outdated
               diffHunk
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
             }
           }
         }
@@ -2061,7 +1863,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -2095,13 +1897,7 @@ query($endCursor: String) {
           login
         }
       }
-      reactionGroups {
-        content
-        viewerHasReacted
-        users {
-          totalCount
-        }
-      }
+      ...ReactionGroupsFragment
       projectCards(last: 20) {
         nodes {
           id
@@ -2146,13 +1942,7 @@ query($endCursor: String) {
             id
             body
             createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -2215,7 +2005,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -2439,13 +2229,7 @@ query($endCursor: String) {
             }
             upvoteCount
             viewerHasUpvoted
-            reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                    totalCount
-                }
-            }
+            ...ReactionGroupsFragment
             comments(first: 100, after: $endCursor) {
                 totalCount
                 nodes {
@@ -2453,13 +2237,7 @@ query($endCursor: String) {
                     body
                     createdAt
                     lastEditedAt
-                    reactionGroups {
-                        content
-                        viewerHasReacted
-                        reactors {
-                            totalCount
-                        }
-                    }
+                    ...ReactionGroupsFragment
                     author {
                         login
                     }
@@ -2482,7 +2260,7 @@ query($endCursor: String) {
         }
     }
 }
-]]
+]] .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
@@ -2948,58 +2726,23 @@ M.reactions_for_object_query = [[
 query {
   node(id: "%s") {
     ... on Issue {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on PullRequest {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on PullRequestReviewComment {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on PullRequestReview {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on IssueComment {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
   }
 }
-]]
+]] .. fragments.reaction_groups_users_fragment
 
 M.mentionable_users_query = [[
 query($endCursor: String) {
@@ -3243,13 +2986,7 @@ M.create_pr_mutation = [[
         }
         viewerDidAuthor
         viewerCanUpdate
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         projectCards(last: 20) {
           nodes {
             id
@@ -3387,13 +3124,7 @@ M.create_pr_mutation = [[
               id
               body
               createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
               author {
                 login
               }
@@ -3407,13 +3138,7 @@ M.create_pr_mutation = [[
               createdAt
               viewerCanUpdate
               viewerCanDelete
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReactionGroupsFragment
               author {
                 login
               }
@@ -3442,13 +3167,7 @@ M.create_pr_mutation = [[
                   state
                   outdated
                   diffHunk
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReactionGroupsFragment
                 }
               }
             }
@@ -3497,13 +3216,7 @@ M.create_pr_mutation = [[
                 viewerCanDelete
                 outdated
                 diffHunk
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
+                ...ReactionGroupsFragment
               }
             }
           }
@@ -3537,7 +3250,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
