@@ -770,8 +770,7 @@ M.create_issue_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on UnlabeledEvent {
@@ -780,8 +779,7 @@ M.create_issue_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on IssueComment {
@@ -830,10 +828,7 @@ M.create_issue_mutation = [[
           }
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
           nodes {
@@ -845,7 +840,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -908,10 +903,7 @@ mutation {
         }
       }
       labels(first: 20) {
-        nodes {
-          color
-          name
-        }
+        ...LabelConnectionFragment
       }
       assignees(first: 20) {
         nodes {
@@ -929,8 +921,7 @@ mutation {
             }
             createdAt
             label {
-              color
-              name
+              ...LabelFragment
             }
           }
           ... on UnlabeledEvent {
@@ -939,8 +930,7 @@ mutation {
             }
             createdAt
             label {
-              color
-              name
+              ...LabelFragment
             }
           }
           ... on IssueComment {
@@ -991,7 +981,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.reaction_groups_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -1037,10 +1027,7 @@ M.update_issue_state_mutation = [[
           }
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
           nodes {
@@ -1058,8 +1045,7 @@ M.update_issue_state_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on UnlabeledEvent {
@@ -1068,8 +1054,7 @@ M.update_issue_state_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on IssueComment {
@@ -1120,7 +1105,7 @@ M.update_issue_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1201,10 +1186,7 @@ M.update_pull_request_state_mutation = [[
           }
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
           nodes {
@@ -1222,8 +1204,7 @@ M.update_pull_request_state_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on UnlabeledEvent {
@@ -1232,8 +1213,7 @@ M.update_pull_request_state_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on AssignedEvent {
@@ -1401,7 +1381,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1606,8 +1586,7 @@ query($endCursor: String) {
             }
             createdAt
             label {
-              color
-              name
+              ...LabelFragment
             }
           }
           ... on UnlabeledEvent {
@@ -1616,8 +1595,7 @@ query($endCursor: String) {
             }
             createdAt
             label {
-              color
-              name
+              ...LabelFragment
             }
           }
           ... on AssignedEvent {
@@ -1826,10 +1804,7 @@ query($endCursor: String) {
         }
       }
       labels(first: 20) {
-        nodes {
-          color
-          name
-        }
+        ...LabelConnectionFragment
       }
       assignees(first: 20) {
         nodes {
@@ -1863,7 +1838,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -1924,8 +1899,7 @@ query($endCursor: String) {
             }
             createdAt
             label {
-              color
-              name
+              ...LabelFragment
             }
           }
           ... on UnlabeledEvent {
@@ -1934,8 +1908,7 @@ query($endCursor: String) {
             }
             createdAt
             label {
-              color
-              name
+              ...LabelFragment
             }
           }
           ... on IssueComment {
@@ -1990,10 +1963,7 @@ query($endCursor: String) {
         }
       }
       labels(first: 20) {
-        nodes {
-          color
-          name
-        }
+        ...LabelConnectionFragment
       }
       assignees(first: 20) {
         nodes {
@@ -2005,7 +1975,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -2036,10 +2006,7 @@ query {
         author { login }
         authorAssociation
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
       }
       ... on Issue {
@@ -2054,16 +2021,13 @@ query {
         author { login }
         authorAssociation
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
       }
     }
   }
 }
-]]
+]] .. fragments.label_connection_fragment .. fragments.label_fragment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 M.repository_id_query = [[
@@ -2222,10 +2186,7 @@ query($endCursor: String) {
             repository { nameWithOwner }
             author { login }
             labels(first: 20) {
-                nodes {
-                    color
-                    name
-                }
+              ...LabelConnectionFragment
             }
             upvoteCount
             viewerHasUpvoted
@@ -2260,7 +2221,7 @@ query($endCursor: String) {
         }
     }
 }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment
 
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
@@ -2479,8 +2440,7 @@ M.create_label_mutation = [[
   mutation {
     createLabel(input: {repositoryId: "%s", name: "%s", description: """%s""", color: "%s"}) {
       label {
-        id
-        name
+        ...LabelFragment
       }
     }
   }
@@ -2523,47 +2483,35 @@ M.labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       labels(first: 100) {
-        nodes {
-          id
-          name
-          color
-        }
+        ...LabelConnectionFragment
       }
     }
   }
-]]
+]] .. fragments.label_connection_fragment .. fragments.label_fragment
 
 M.issue_labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       issue(number: %d) {
         labels(first: 100) {
-          nodes {
-            id
-            name
-            color
-          }
+          ...LabelConnectionFragment
         }
       }
     }
   }
-]]
+]] .. fragments.label_connection_fragment .. fragments.label_fragment
 
 M.pull_request_labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       pullRequest(number: %d) {
         labels(first: 100) {
-          nodes {
-            id
-            name
-            color
-          }
+          ...LabelConnectionFragment
         }
       }
     }
   }
-]]
+]] .. fragments.label_connection_fragment .. fragments.label_fragment
 
 M.issue_assignees_query = [[
   query {
@@ -3008,8 +2956,7 @@ M.create_pr_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on UnlabeledEvent {
@@ -3018,8 +2965,7 @@ M.create_pr_mutation = [[
               }
               createdAt
               label {
-                color
-                name
+                ...LabelFragment
               }
             }
             ... on AssignedEvent {
@@ -3222,10 +3168,7 @@ M.create_pr_mutation = [[
           }
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
           nodes {
@@ -3250,7 +3193,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
@@ -3266,14 +3209,11 @@ M.repo_labels_query = [[
 query {
   repository(owner:"%s", name:"%s") {
     labels(first: 100) {
-      nodes {
-        id
-        name
-      }
+      ...LabelConnectionFragment
     }
   }
 }
-]]
+]] .. fragments.label_connection_fragment .. fragments.label_fragment
 
 M.open_milestones_query = [[
 query($name: String!, $owner: String!, $n_milestones: Int!) {

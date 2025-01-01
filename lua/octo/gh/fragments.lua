@@ -112,5 +112,19 @@ fragment ReactionGroupsUsersFragment on Reactable {
   }
 }
 ]]
+M.label_fragment = [[
+fragment LabelFragment on Label {
+  id
+  name
+  color
+}
+]]
+M.label_connection_fragment = [[
+fragment LabelConnectionFragment on LabelConnection {
+  nodes {
+    ...LabelFragment
+  }
+}
+]]
 
 return M
