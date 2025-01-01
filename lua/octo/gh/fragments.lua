@@ -126,5 +126,14 @@ fragment LabelConnectionFragment on LabelConnection {
   }
 }
 ]]
+M.assignee_connection_fragment = [[
+fragment AssigneeConnectionFragment on UserConnection {
+  nodes {
+    id
+    login
+    isViewer
+  }
+}
+]]
 
 return M
