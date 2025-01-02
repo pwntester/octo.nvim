@@ -1025,27 +1025,7 @@ M.update_pull_request_state_mutation = [[
             ...LabeledEventFragment
             ...UnlabeledEventFragment
             ...AssignedEventFragment
-            ... on PullRequestCommit {
-              commit {
-                messageHeadline
-                committedDate
-                oid
-                abbreviatedOid
-                changedFiles
-                additions
-                deletions
-                author {
-                  user {
-                    login
-                  }
-                }
-                committer {
-                  user {
-                    login
-                  }
-                }
-              }
-            }
+            ...PullRequestCommitFragment
             ... on MergedEvent {
               createdAt
               actor {
@@ -1118,7 +1098,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1313,27 +1293,7 @@ query($endCursor: String) {
           ...LabeledEventFragment
           ...UnlabeledEventFragment
           ...AssignedEventFragment
-          ... on PullRequestCommit {
-            commit {
-              messageHeadline
-              committedDate
-              oid
-              abbreviatedOid
-              changedFiles
-              additions
-              deletions
-              author {
-                user {
-                  login
-                }
-              }
-              committer {
-                user {
-                  login
-                }
-              }
-            }
-          }
+          ...PullRequestCommitFragment
           ... on MergedEvent {
             createdAt
             actor {
@@ -1475,7 +1435,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -2511,27 +2471,7 @@ M.create_pr_mutation = [[
             ...LabeledEventFragment
             ...UnlabeledEventFragment
             ...AssignedEventFragment
-            ... on PullRequestCommit {
-              commit {
-                messageHeadline
-                committedDate
-                oid
-                abbreviatedOid
-                changedFiles
-                additions
-                deletions
-                author {
-                  user {
-                    login
-                  }
-                }
-                committer {
-                  user {
-                    login
-                  }
-                }
-              }
-            }
+            ...PullRequestCommitFragment
             ... on MergedEvent {
               createdAt
               actor {
@@ -2658,7 +2598,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[

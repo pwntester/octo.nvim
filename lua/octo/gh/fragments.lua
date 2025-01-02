@@ -263,4 +263,28 @@ fragment ProjectCardFragment on ProjectCard {
 }
 ]]
 
+M.pull_request_commit = [[
+fragment PullRequestCommitFragment on PullRequestCommit {
+  commit {
+    messageHeadline
+    committedDate
+    oid
+    abbreviatedOid
+    changedFiles
+    additions
+    deletions
+    author {
+      user {
+        login
+      }
+    }
+    committer {
+      user {
+        login
+      }
+    }
+  }
+}
+]]
+
 return M
