@@ -1,6 +1,6 @@
 local M = {}
 
-M.projects_v2_fragment = [[
+M.projects_v2 = [[
   projectItems(first: 100) {
     nodes {
       id
@@ -89,7 +89,7 @@ fragment DemilestonedEventFragment on DemilestonedEvent {
   milestoneTitle
 }
 ]]
-M.reaction_groups_fragment = [[
+M.reaction_groups = [[
 fragment ReactionGroupsFragment on Reactable {
   reactionGroups {
     content
@@ -100,7 +100,7 @@ fragment ReactionGroupsFragment on Reactable {
   }
 }
 ]]
-M.reaction_groups_users_fragment = [[
+M.reaction_groups_users = [[
 fragment ReactionGroupsUsersFragment on Reactable {
   reactionGroups {
     content
@@ -112,21 +112,21 @@ fragment ReactionGroupsUsersFragment on Reactable {
   }
 }
 ]]
-M.label_fragment = [[
+M.label = [[
 fragment LabelFragment on Label {
   id
   name
   color
 }
 ]]
-M.label_connection_fragment = [[
+M.label_connection = [[
 fragment LabelConnectionFragment on LabelConnection {
   nodes {
     ...LabelFragment
   }
 }
 ]]
-M.assignee_connection_fragment = [[
+M.assignee_connection = [[
 fragment AssigneeConnectionFragment on UserConnection {
   nodes {
     id
@@ -136,7 +136,7 @@ fragment AssigneeConnectionFragment on UserConnection {
 }
 ]]
 
-M.issue_comment_fragment = [[
+M.issue_comment = [[
 fragment IssueCommentFragment on IssueComment {
   id
   body

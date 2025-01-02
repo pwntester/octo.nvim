@@ -11,7 +11,7 @@ M.add_reaction_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#removereaction
 M.remove_reaction_mutation = [[
@@ -22,7 +22,7 @@ M.remove_reaction_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
 M.resolve_review_thread_mutation = [[
@@ -81,7 +81,7 @@ M.resolve_review_thread_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
 M.unresolve_review_thread_mutation = [[
@@ -140,7 +140,7 @@ M.unresolve_review_thread_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.start_review_mutation = [[
@@ -197,7 +197,7 @@ M.start_review_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed_mutation = [[
@@ -334,7 +334,7 @@ mutation {
     }
   }
 }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread_mutation = [[
@@ -416,7 +416,7 @@ mutation {
     }
   }
 }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
 M.add_issue_comment_mutation = [[
@@ -498,7 +498,7 @@ M.update_pull_request_review_comment_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review_mutation = [[
@@ -567,7 +567,7 @@ M.add_pull_request_review_comment_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_commit_thread_mutation = [[
@@ -623,7 +623,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- M.add_pull_request_review_comment_mutation =
 -- [[
@@ -700,7 +700,7 @@ M.delete_pull_request_review_comment_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -778,7 +778,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -864,7 +864,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.reaction_groups_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -933,7 +933,7 @@ M.update_issue_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1118,7 +1118,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1177,7 +1177,7 @@ query {
     }
   }
 }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads_query = [[
@@ -1234,7 +1234,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.reaction_groups_fragment
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
 M.pull_request_query = [[
@@ -1475,7 +1475,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -1550,7 +1550,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -1602,7 +1602,7 @@ query {
     }
   }
 }
-]] .. fragments.label_connection_fragment .. fragments.label_fragment
+]] .. fragments.label_connection .. fragments.label
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 M.repository_id_query = [[
@@ -1796,7 +1796,7 @@ query($endCursor: String) {
         }
     }
 }
-]] .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label
 
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
@@ -2062,7 +2062,7 @@ M.labels_query = [[
       }
     }
   }
-]] .. fragments.label_connection_fragment .. fragments.label_fragment
+]] .. fragments.label_connection .. fragments.label
 
 M.issue_labels_query = [[
   query {
@@ -2074,7 +2074,7 @@ M.issue_labels_query = [[
       }
     }
   }
-]] .. fragments.label_connection_fragment .. fragments.label_fragment
+]] .. fragments.label_connection .. fragments.label
 
 M.pull_request_labels_query = [[
   query {
@@ -2086,7 +2086,7 @@ M.pull_request_labels_query = [[
       }
     }
   }
-]] .. fragments.label_connection_fragment .. fragments.label_fragment
+]] .. fragments.label_connection .. fragments.label
 
 M.issue_assignees_query = [[
   query {
@@ -2098,7 +2098,7 @@ M.issue_assignees_query = [[
       }
     }
   }
-]] .. fragments.assignee_connection_fragment
+]] .. fragments.assignee_connection
 
 M.pull_request_assignees_query = [[
   query {
@@ -2110,7 +2110,7 @@ M.pull_request_assignees_query = [[
       }
     }
   }
-]] .. fragments.assignee_connection_fragment
+]] .. fragments.assignee_connection
 
 -- https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
 M.add_assignees_mutation = [[
@@ -2257,7 +2257,7 @@ query {
     }
   }
 }
-]] .. fragments.reaction_groups_users_fragment
+]] .. fragments.reaction_groups_users
 
 M.mentionable_users_query = [[
 query($endCursor: String) {
@@ -2658,7 +2658,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
@@ -2678,7 +2678,7 @@ query {
     }
   }
 }
-]] .. fragments.label_connection_fragment .. fragments.label_fragment
+]] .. fragments.label_connection .. fragments.label
 
 M.open_milestones_query = [[
 query($name: String!, $owner: String!, $n_milestones: Int!) {
