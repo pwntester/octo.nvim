@@ -193,4 +193,22 @@ fragment UnlabeledEventFragment on UnlabeledEvent {
 }
 ]]
 
+M.closed_event = [[
+fragment ClosedEventFragment on ClosedEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
+M.reopened_event = [[
+fragment ReopenedEventFragment on ReopenedEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
 return M
