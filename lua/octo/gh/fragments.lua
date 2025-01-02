@@ -358,4 +358,23 @@ fragment ReviewDismissedEventFragment on ReviewDismissedEvent {
 }
 ]]
 
+M.issue_timeline_items_connection = [[
+fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
+  nodes {
+    __typename
+    ...LabeledEventFragment
+    ...UnlabeledEventFragment
+    ...IssueCommentFragment
+    ...ClosedEventFragment
+    ...ReopenedEventFragment
+    ...AssignedEventFragment
+    ...RenamedTitleEventFragment
+    ...ConnectedEventFragment
+    ...CrossReferencedEventFragment
+    ...MilestonedEventFragment
+    ...DemilestonedEventFragment
+  }
+}
+]]
+
 return M

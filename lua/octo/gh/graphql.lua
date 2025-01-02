@@ -755,19 +755,7 @@ M.create_issue_mutation = [[
           nameWithOwner
         }
         timelineItems(first: 100) {
-          nodes {
-            __typename
-            ...LabeledEventFragment
-            ...UnlabeledEventFragment
-            ...IssueCommentFragment
-            ...ClosedEventFragment
-            ...ReopenedEventFragment
-            ...AssignedEventFragment
-            ...ConnectedEventFragment
-            ...CrossReferencedEventFragment
-            ...MilestonedEventFragment
-            ...DemilestonedEventFragment
-          }
+          ...IssueTimelineItemsConnectionFragment
         }
         labels(first: 20) {
           ...LabelConnectionFragment
@@ -778,7 +766,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.issue_timeline_items_connection
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -847,24 +835,12 @@ mutation {
         ...AssigneeConnectionFragment
       }
       timelineItems(last: 100) {
-        nodes {
-          __typename
-          ...LabeledEventFragment
-          ...UnlabeledEventFragment
-          ...IssueCommentFragment
-          ...ClosedEventFragment
-          ...ReopenedEventFragment
-          ...AssignedEventFragment
-          ...ConnectedEventFragment
-          ...CrossReferencedEventFragment
-          ...MilestonedEventFragment
-          ...DemilestonedEventFragment
-        }
+        ...IssueTimelineItemsConnectionFragment
       }
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -916,24 +892,12 @@ M.update_issue_state_mutation = [[
           ...AssigneeConnectionFragment
         }
         timelineItems(last: 100) {
-          nodes {
-            __typename
-            ...LabeledEventFragment
-            ...UnlabeledEventFragment
-            ...IssueCommentFragment
-            ...ClosedEventFragment
-            ...ReopenedEventFragment
-            ...AssignedEventFragment
-            ...ConnectedEventFragment
-            ...CrossReferencedEventFragment
-            ...MilestonedEventFragment
-            ...DemilestonedEventFragment
-          }
+          ...IssueTimelineItemsConnectionFragment
         }
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1388,20 +1352,7 @@ query($endCursor: String) {
           hasNextPage
           endCursor
         }
-        nodes {
-          __typename
-          ...LabeledEventFragment
-          ...UnlabeledEventFragment
-          ...IssueCommentFragment
-          ...ClosedEventFragment
-          ...ReopenedEventFragment
-          ...AssignedEventFragment
-          ...RenamedTitleEventFragment
-          ...ConnectedEventFragment
-          ...CrossReferencedEventFragment
-          ...MilestonedEventFragment
-          ...DemilestonedEventFragment
-        }
+        ...IssueTimelineItemsConnectionFragment
       }
       labels(first: 20) {
         ...LabelConnectionFragment
@@ -1412,7 +1363,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
