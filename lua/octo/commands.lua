@@ -931,7 +931,12 @@ function M.create_pr(is_draft)
     end
     repo = remotes[remote_idx].repo
   else
-    repo = utils.get_remote_name()
+    -- Override the precedence of get_remote, because otherwise upstream is selected
+    -- and the check if the local branch creates on the repo fails.
+    repo = utils.get_remote_name { "origin" }
+    if not repo then
+      repo = utils.get_remote_name()
+    end
     if not repo then
       utils.error "Cant find repo name"
       return
