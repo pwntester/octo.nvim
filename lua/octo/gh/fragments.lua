@@ -478,4 +478,62 @@ fragment ReviewThreadInformationFragment on PullRequestReviewThread {
 }
 ]]
 
+M.discussion_info = [[
+fragment DiscussionInfoFragment on Discussion {
+  id
+  number
+  title
+  url
+  closed
+  isAnswered
+  repository {
+    nameWithOwner
+  }
+  author {
+    login
+  }
+}
+]]
+
+M.discussion_details = [[
+fragment DiscussionDetailsFragment on Discussion {
+  ...DiscussionInfoFragment
+  body
+  category {
+    name
+    emoji
+  }
+  answer {
+    author {
+      login
+    }
+    body
+    createdAt
+    viewerDidAuthor
+  }
+  createdAt
+  closedAt
+  updatedAt
+  upvoteCount
+  viewerHasUpvoted
+  ...ReactionGroupsFragment
+}
+]]
+
+M.discussion_comment = [[
+fragment DiscussionCommentFragment on DiscussionComment {
+  id
+  body
+  createdAt
+  lastEditedAt
+  ...ReactionGroupsFragment
+  author {
+    login
+  }
+  viewerDidAuthor
+  viewerCanUpdate
+  viewerCanDelete
+}
+]]
+
 return M

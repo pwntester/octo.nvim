@@ -1010,16 +1010,13 @@ query($endCursor: String) {
     discussions(first: 100, after: $endCursor, states: OPEN, orderBy: {field: %s, direction: %s}) {
       nodes {
         __typename
-        number
-        title
-        url
-        closed
-        isAnswered
+        ...DiscussionInfoFragment
         answer {
-            author { login }
-            body
+          author {
+            login
+          }
+          body
         }
-        repository { nameWithOwner }
       }
       pageInfo {
         hasNextPage
@@ -1028,71 +1025,39 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.discussion_info
 
 M.discussion_query = [[
 query($endCursor: String) {
-    repository(owner: "%s", name: "%s") {
-        discussion(number: %d) {
-            id
-            category {
-                name
-                emoji
+  repository(owner: "%s", name: "%s") {
+    discussion(number: %d) {
+      ...DiscussionDetailsFragment
+      labels(first: 20) {
+        ...LabelConnectionFragment
+      }
+      comments(first: 100, after: $endCursor) {
+        totalCount
+        nodes {
+          ...DiscussionCommentFragment
+          replies(first: 10) {
+            totalCount
+            nodes {
+              body
+              author {
+                login
+              }
             }
-            number
-            closed
-            isAnswered
-            answer {
-                author { login }
-                body
-                createdAt
-                viewerDidAuthor
-            }
-            title
-            body
-            createdAt
-            closedAt
-            updatedAt
-            url
-            repository { nameWithOwner }
-            author { login }
-            labels(first: 20) {
-              ...LabelConnectionFragment
-            }
-            upvoteCount
-            viewerHasUpvoted
-            ...ReactionGroupsFragment
-            comments(first: 100, after: $endCursor) {
-                totalCount
-                nodes {
-                    id
-                    body
-                    createdAt
-                    lastEditedAt
-                    ...ReactionGroupsFragment
-                    author {
-                        login
-                    }
-                    viewerDidAuthor
-                    viewerCanUpdate
-                    viewerCanDelete
-                    replies(first: 10) {
-                        totalCount
-                        nodes {
-                            body
-                            author { login }
-                        }
-                    }
-                }
-                pageInfo {
-                    hasNextPage
-                    endCursor
-                }
-            }
+          }
         }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
     }
+  }
 }
-]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
 
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
