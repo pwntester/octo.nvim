@@ -407,6 +407,7 @@ fragment IssueInformationFragment on Issue {
   id
   number
   state
+  stateReason
   title
   body
   createdAt
