@@ -1026,54 +1026,12 @@ M.update_pull_request_state_mutation = [[
             ...UnlabeledEventFragment
             ...AssignedEventFragment
             ...PullRequestCommitFragment
-            ... on MergedEvent {
-              createdAt
-              actor {
-                login
-              }
-              commit {
-                oid
-                abbreviatedOid
-              }
-              mergeRefName
-            }
+            ...MergedEventFragment
             ...ClosedEventFragment
             ...ReopenedEventFragment
-            ... on ReviewRequestedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewRequestRemovedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewDismissedEvent {
-              createdAt
-              actor {
-                login
-              }
-              dismissalMessage
-            }
+            ...ReviewRequestedEventFragment
+            ...ReviewRequestRemovedEventFragment
+            ...ReviewDismissedEventFragment
             ...IssueCommentFragment
             ...PullRequestReviewFragment
             ...ConnectedEventFragment
@@ -1098,7 +1056,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1294,65 +1252,14 @@ query($endCursor: String) {
           ...UnlabeledEventFragment
           ...AssignedEventFragment
           ...PullRequestCommitFragment
-          ... on MergedEvent {
-            createdAt
-            actor {
-              login
-            }
-            commit {
-              oid
-              abbreviatedOid
-            }
-            mergeRefName
-          }
+          ...MergedEventFragment
           ...ClosedEventFragment
           ...ReopenedEventFragment
-          ... on ReviewRequestedEvent {
-            createdAt
-            actor {
-              login
-            }
-            requestedReviewer {
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-              ... on Team { name }
-            }
-          }
-          ... on ReviewRequestRemovedEvent {
-            createdAt
-            actor {
-              login
-            }
-            requestedReviewer {
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin {
-                login
-              }
-              ... on Team {
-                name
-              }
-            }
-          }
-          ... on ReviewDismissedEvent {
-            createdAt
-            actor {
-              login
-            }
-            dismissalMessage
-          }
+          ...ReviewRequestedEventFragment
+          ...ReviewRequestRemovedEventFragment
+          ...ReviewDismissedEventFragment
           ...IssueCommentFragment
-          ... on RenamedTitleEvent {
-            actor { login }
-            createdAt
-            previousTitle
-            currentTitle
-          }
+          ...RenamedTitleEventFragment
           ...PullRequestReviewFragment
           ...ConnectedEventFragment
           ...CrossReferencedEventFragment
@@ -1435,7 +1342,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -1489,12 +1396,7 @@ query($endCursor: String) {
           ...ClosedEventFragment
           ...ReopenedEventFragment
           ...AssignedEventFragment
-          ... on RenamedTitleEvent {
-            actor { login }
-            createdAt
-            previousTitle
-            currentTitle
-          }
+          ...RenamedTitleEventFragment
           ...ConnectedEventFragment
           ...CrossReferencedEventFragment
           ...MilestonedEventFragment
@@ -1510,7 +1412,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -2472,58 +2374,12 @@ M.create_pr_mutation = [[
             ...UnlabeledEventFragment
             ...AssignedEventFragment
             ...PullRequestCommitFragment
-            ... on MergedEvent {
-              createdAt
-              actor {
-                login
-              }
-              commit {
-                oid
-                abbreviatedOid
-              }
-              mergeRefName
-            }
+            ...MergedEventFragment
             ...ClosedEventFragment
             ...ReopenedEventFragment
-            ... on ReviewRequestedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewRequestRemovedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin {
-                  login
-                }
-                ... on Team {
-                  name
-                }
-              }
-            }
-            ... on ReviewDismissedEvent {
-              createdAt
-              actor {
-                login
-              }
-              dismissalMessage
-            }
+            ...ReviewRequestedEventFragment
+            ...ReviewRequestRemovedEventFragment
+            ...ReviewDismissedEventFragment
             ...IssueCommentFragment
             ...PullRequestReviewFragment
             ...ConnectedEventFragment
@@ -2598,7 +2454,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[

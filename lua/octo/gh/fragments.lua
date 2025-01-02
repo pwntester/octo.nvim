@@ -287,4 +287,75 @@ fragment PullRequestCommitFragment on PullRequestCommit {
 }
 ]]
 
+M.review_request_removed_event = [[
+fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
+  createdAt
+  actor {
+    login
+  }
+  requestedReviewer {
+    ... on User {
+      login
+      isViewer
+    }
+    ... on Mannequin {
+      login
+    }
+    ... on Team {
+      name
+    }
+  }
+}
+]]
+
+M.review_requested_event = [[
+fragment ReviewRequestedEventFragment on ReviewRequestedEvent {
+  createdAt
+  actor {
+    login
+  }
+  requestedReviewer {
+    ... on User {
+      login
+      isViewer
+    }
+    ... on Mannequin { login }
+    ... on Team { name }
+  }
+}
+]]
+
+M.merged_event = [[
+fragment MergedEventFragment on MergedEvent {
+  createdAt
+  actor {
+    login
+  }
+  commit {
+    oid
+    abbreviatedOid
+  }
+  mergeRefName
+}
+]]
+
+M.renamed_title_event = [[
+fragment RenamedTitleEventFragment on RenamedTitleEvent {
+  actor { login }
+  createdAt
+  previousTitle
+  currentTitle
+}
+]]
+
+M.review_dismissed_event = [[
+fragment ReviewDismissedEventFragment on ReviewDismissedEvent {
+  createdAt
+  actor {
+    login
+  }
+  dismissalMessage
+}
+]]
+
 return M
