@@ -704,18 +704,20 @@ M.delete_pull_request_review_comment_mutation = [[
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
-  mutation {
-    updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
-      issue {
-        id
-        number
-        state
-        title
-        body
-        repository { nameWithOwner }
+mutation {
+  updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
+    issue {
+      id
+      number
+      state
+      title
+      body
+      repository {
+        nameWithOwner
       }
     }
   }
+}
 ]]
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue_mutation = [[
@@ -767,24 +769,6 @@ M.create_issue_mutation = [[
     }
   }
 ]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.issue_timeline_items_connection
-
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
-M.update_issue_mutation = [[
-  mutation {
-    updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
-      issue {
-        id
-        number
-        state
-        title
-        body
-        repository {
-          nameWithOwner
-        }
-      }
-    }
-  }
-]]
 
 M.close_issue_mutation = [[
 mutation {
