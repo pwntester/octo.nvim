@@ -37,42 +37,10 @@ M.resolve_review_thread_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -81,7 +49,7 @@ M.resolve_review_thread_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
 M.unresolve_review_thread_mutation = [[
@@ -96,42 +64,10 @@ M.unresolve_review_thread_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  createdAt
-                  lastEditedAt
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  ...ReactionGroupsFragment
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -140,7 +76,7 @@ M.unresolve_review_thread_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.start_review_mutation = [[
@@ -152,43 +88,10 @@ M.start_review_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              line
-              originalLine
-              startLine
-              originalStartLine
-              diffSide
-              startDiffSide
-              isResolved
-              resolvedBy { login }
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  ...ReactionGroupsFragment
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -197,7 +100,7 @@ M.start_review_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed_mutation = [[
@@ -290,42 +193,10 @@ mutation {
       pullRequest {
         reviewThreads(last:100) {
           nodes {
-            id
-            path
-            diffSide
-            startDiffSide
-            line
-            originalLine
-            startLine
-            originalStartLine
-            isResolved
-            isCollapsed
-            isOutdated
+            ...ReviewThreadInformationFragment
             comments(first:100) {
               nodes {
-                id
-                body
-                diffHunk
-                createdAt
-                lastEditedAt
-                originalCommit {
-                  oid
-                  abbreviatedOid
-                }
-                author {login}
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                state
-                url
-                replyTo { id url }
-                pullRequestReview {
-                  id
-                  state
-                }
-                path
-                ...ReactionGroupsFragment
+                ...ReviewThreadCommentFragment
               }
             }
           }
@@ -334,7 +205,7 @@ mutation {
     }
   }
 }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread_mutation = [[
@@ -372,42 +243,10 @@ mutation {
       pullRequest {
         reviewThreads(last:100) {
           nodes {
-            id
-            path
-            diffSide
-            startDiffSide
-            line
-            originalLine
-            startLine
-            originalStartLine
-            isResolved
-            isCollapsed
-            isOutdated
+            ...ReviewThreadInformationFragment
             comments(first:100) {
               nodes {
-                id
-                body
-                diffHunk
-                createdAt
-                lastEditedAt
-                originalCommit {
-                  oid
-                  abbreviatedOid
-                }
-                author {login}
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                state
-                url
-                replyTo { id url }
-                pullRequestReview {
-                  id
-                  state
-                }
-                path
-                ...ReactionGroupsFragment
+                ...ReviewThreadCommentFragment
               }
             }
           }
@@ -416,7 +255,7 @@ mutation {
     }
   }
 }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
 M.add_issue_comment_mutation = [[
@@ -454,42 +293,10 @@ M.update_pull_request_review_comment_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  ...ReactionGroupsFragment
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -498,7 +305,7 @@ M.update_pull_request_review_comment_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review_mutation = [[
@@ -523,42 +330,10 @@ M.add_pull_request_review_comment_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  ...ReactionGroupsFragment
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -567,7 +342,7 @@ M.add_pull_request_review_comment_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_commit_thread_mutation = [[
@@ -579,42 +354,10 @@ M.add_pull_request_review_commit_thread_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  ...ReactionGroupsFragment
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -623,7 +366,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- M.add_pull_request_review_comment_mutation =
 -- [[
@@ -656,42 +399,10 @@ M.delete_pull_request_review_comment_mutation = [[
           id
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  ...ReactionGroupsFragment
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -700,7 +411,7 @@ M.delete_pull_request_review_comment_mutation = [[
       }
     }
   }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -946,43 +657,10 @@ query {
       }
       reviewThreads(last:100) {
         nodes {
-          id
-          path
-          diffSide
-          startDiffSide
-          line
-          originalLine
-          startLine
-          originalStartLine
-          isResolved
-          resolvedBy { login }
-          isCollapsed
-          isOutdated
+          ...ReviewThreadInformationFragment
           comments(first:100) {
             nodes {
-              id
-              body
-              diffHunk
-              createdAt
-              lastEditedAt
-              originalCommit {
-                oid
-                abbreviatedOid
-              }
-              author {login}
-              authorAssociation
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-              state
-              url
-              replyTo { id url }
-              pullRequestReview {
-                id
-                state
-              }
-              path
-              ...ReactionGroupsFragment
+              ...ReviewThreadCommentFragment
             }
           }
         }
@@ -990,7 +668,7 @@ query {
     }
   }
 }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads_query = [[
@@ -999,43 +677,10 @@ query($endCursor: String) {
     pullRequest(number:%d) {
       reviewThreads(last:80) {
         nodes {
-          id
-          isResolved
-          isCollapsed
-          isOutdated
-          path
-          resolvedBy { login }
-          line
-          originalLine
-          startLine
-          originalStartLine
-          diffSide
+          ...ReviewThreadInformationFragment
           comments(first: 100, after: $endCursor) {
-            nodes{
-              id
-              body
-              createdAt
-              lastEditedAt
-              state
-              originalCommit {
-                oid
-                abbreviatedOid
-              }
-              pullRequestReview {
-                id
-                state
-              }
-              path
-              url
-              replyTo { id url }
-              author { login }
-              authorAssociation
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-              outdated
-              diffHunk
-              ...ReactionGroupsFragment
+            nodes {
+              ...ReviewThreadCommentFragment
             }
             pageInfo {
               hasNextPage
@@ -1047,7 +692,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.reaction_groups
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
 M.pull_request_query = [[
@@ -1126,43 +771,10 @@ query($endCursor: String) {
       reviewDecision
       reviewThreads(last:100) {
         nodes {
-          id
-          isResolved
-          isCollapsed
-          isOutdated
-          path
-          resolvedBy { login }
-          line
-          originalLine
-          startLine
-          originalStartLine
-          diffSide
+          ...ReviewThreadInformationFragment
           comments(first: 100) {
-            nodes{
-              id
-              body
-              createdAt
-              lastEditedAt
-              url
-              replyTo { id url }
-              state
-              originalCommit {
-                oid
-                abbreviatedOid
-              }
-              pullRequestReview {
-                id
-                state
-              }
-              path
-              author { login }
-              authorAssociation
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-              outdated
-              diffHunk
-              ...ReactionGroupsFragment
+            nodes {
+              ...ReviewThreadCommentFragment
             }
           }
         }
@@ -1198,7 +810,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -2195,43 +1807,10 @@ M.create_pr_mutation = [[
         reviewDecision
         reviewThreads(last:100) {
           nodes {
-            id
-            isResolved
-            isCollapsed
-            isOutdated
-            path
-            resolvedBy { login }
-            line
-            originalLine
-            startLine
-            originalStartLine
-            diffSide
+            ...ReviewThreadInformationFragment
             comments(first: 100) {
-              nodes{
-                id
-                body
-                createdAt
-                lastEditedAt
-                url
-                replyTo { id url }
-                state
-                originalCommit {
-                  oid
-                  abbreviatedOid
-                }
-                pullRequestReview {
-                  id
-                  state
-                }
-                path
-                author { login }
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                outdated
-                diffHunk
-                ...ReactionGroupsFragment
+              nodes {
+                ...ReviewThreadCommentFragment
               }
             }
           }
@@ -2258,7 +1837,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[

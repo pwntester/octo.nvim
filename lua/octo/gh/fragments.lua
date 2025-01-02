@@ -425,4 +425,57 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
+M.review_thread_comment = [[
+fragment ReviewThreadCommentFragment on PullRequestReviewComment {
+  id
+  body
+  diffHunk
+  createdAt
+  lastEditedAt
+  outdated
+  originalCommit {
+    oid
+    abbreviatedOid
+  }
+  author {
+    login
+  }
+  authorAssociation
+  viewerDidAuthor
+  viewerCanUpdate
+  viewerCanDelete
+  state
+  url
+  replyTo {
+    id
+    url
+  }
+  pullRequestReview {
+    id
+    state
+  }
+  path
+  ...ReactionGroupsFragment
+}
+]]
+
+M.review_thread_information = [[
+fragment ReviewThreadInformationFragment on PullRequestReview {
+  id
+  path
+  diffSide
+  startDiffSide
+  line
+  originalLine
+  startLine
+  originalStartLine
+  resolvedBy {
+    login
+  }
+  isResolved
+  isCollapsed
+  isOutdated
+}
+]]
+
 return M
