@@ -460,7 +460,7 @@ fragment ReviewThreadCommentFragment on PullRequestReviewComment {
 ]]
 
 M.review_thread_information = [[
-fragment ReviewThreadInformationFragment on PullRequestReview {
+fragment ReviewThreadInformationFragment on PullRequestReviewThread {
   id
   path
   diffSide
