@@ -377,4 +377,29 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
 }
 ]]
 
+M.pull_request_timeline_items_connection = [[
+fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsConnection {
+  nodes {
+    __typename
+    ...AssignedEventFragment
+    ...ClosedEventFragment
+    ...ConnectedEventFragment
+    ...CrossReferencedEventFragment
+    ...DemilestonedEventFragment
+    ...IssueCommentFragment
+    ...LabeledEventFragment
+    ...MergedEventFragment
+    ...MilestonedEventFragment
+    ...PullRequestCommitFragment
+    ...PullRequestReviewFragment
+    ...RenamedTitleEventFragment
+    ...ReopenedEventFragment
+    ...ReviewDismissedEventFragment
+    ...ReviewRequestRemovedEventFragment
+    ...ReviewRequestedEventFragment
+    ...UnlabeledEventFragment
+  }
+}
+]]
+
 return M
