@@ -795,21 +795,7 @@ M.create_issue_mutation = [[
                 login
               }
             }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
+            ...AssignedEventFragment
             ...ConnectedEventFragment
             ...CrossReferencedEventFragment
             ...MilestonedEventFragment
@@ -825,7 +811,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -927,21 +913,7 @@ mutation {
               login
             }
           }
-          ... on AssignedEvent {
-            actor {
-              login
-            }
-            assignee {
-              ... on Organization { name }
-              ... on Bot { login }
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-            }
-            createdAt
-          }
+          ...AssignedEventFragment
           ...ConnectedEventFragment
           ...CrossReferencedEventFragment
           ...MilestonedEventFragment
@@ -951,7 +923,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.reaction_groups_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.reaction_groups_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
@@ -1036,21 +1008,7 @@ M.update_issue_state_mutation = [[
                 login
               }
             }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
+            ...AssignedEventFragment
             ...ConnectedEventFragment
             ...CrossReferencedEventFragment
             ...MilestonedEventFragment
@@ -1060,7 +1018,7 @@ M.update_issue_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1167,21 +1125,7 @@ M.update_pull_request_state_mutation = [[
                 ...LabelFragment
               }
             }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
+            ...AssignedEventFragment
             ... on PullRequestCommit {
               commit {
                 messageHeadline
@@ -1321,7 +1265,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1538,21 +1482,7 @@ query($endCursor: String) {
               ...LabelFragment
             }
           }
-          ... on AssignedEvent {
-            actor {
-              login
-            }
-            assignee {
-              ... on Organization { name }
-              ... on Bot { login }
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-            }
-            createdAt
-          }
+          ...AssignedEventFragment
           ... on PullRequestCommit {
             commit {
               messageHeadline
@@ -1763,7 +1693,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -1849,21 +1779,7 @@ query($endCursor: String) {
               login
             }
           }
-          ... on AssignedEvent {
-            actor {
-              login
-            }
-            assignee {
-              ... on Organization { name }
-              ... on Bot { login }
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-            }
-            createdAt
-          }
+          ...AssignedEventFragment
           ... on RenamedTitleEvent {
             actor { login }
             createdAt
@@ -1885,7 +1801,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -2868,21 +2784,7 @@ M.create_pr_mutation = [[
                 ...LabelFragment
               }
             }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
+            ...AssignedEventFragment
             ... on PullRequestCommit {
               commit {
                 messageHeadline
@@ -3078,7 +2980,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[

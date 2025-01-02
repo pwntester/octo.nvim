@@ -151,4 +151,22 @@ fragment IssueCommentFragment on IssueComment {
 }
 ]]
 
+M.assigned_event = [[
+fragment AssignedEventFragment on AssignedEvent {
+  actor {
+    login
+  }
+  assignee {
+    ... on Organization { name }
+    ... on Bot { login }
+    ... on User {
+      login
+      isViewer
+    }
+    ... on Mannequin { login }
+  }
+  createdAt
+}
+]]
+
 return M
