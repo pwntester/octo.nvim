@@ -169,4 +169,28 @@ fragment AssignedEventFragment on AssignedEvent {
 }
 ]]
 
+M.labeled_event = [[
+fragment LabeledEventFragment on LabeledEvent {
+  actor {
+    login
+  }
+  createdAt
+  label {
+    ...LabelFragment
+  }
+}
+]]
+
+M.unlabeled_event = [[
+fragment UnlabeledEventFragment on UnlabeledEvent {
+  actor {
+    login
+  }
+  createdAt
+  label {
+    ...LabelFragment
+  }
+}
+]]
+
 return M
