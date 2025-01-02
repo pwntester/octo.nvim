@@ -402,4 +402,27 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
 }
 ]]
 
+M.issue_information = [[
+fragment IssueInformationFragment on Issue {
+  id
+  number
+  state
+  title
+  body
+  createdAt
+  closedAt
+  updatedAt
+  url
+  viewerDidAuthor
+  viewerCanUpdate
+  milestone {
+    title
+    state
+  }
+  author {
+    login
+  }
+}
+]]
+
 return M

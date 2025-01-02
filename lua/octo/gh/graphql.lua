@@ -724,24 +724,7 @@ M.create_issue_mutation = [[
   mutation {
     createIssue(input: {repositoryId: "%s", title: """%s""", body: """%s"""}) {
       issue {
-        id
-        number
-        state
-        title
-        body
-        createdAt
-        closedAt
-        updatedAt
-        url
-        viewerDidAuthor
-        viewerCanUpdate
-        milestone {
-          title
-          state
-        }
-        author {
-          login
-        }
+        ...IssueInformationFragment
         participants(first:10) {
           nodes {
             login
@@ -768,32 +751,13 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.issue_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.issue_timeline_items_connection .. fragments.renamed_title_event .. fragments.issue_information
 
 M.close_issue_mutation = [[
 mutation {
   closeIssue(input: {issueId: "%s", stateReason: %s}) {
     issue {
-      id
-      number
-      state
-      stateReason
-      title
-      body
-      createdAt
-      closedAt
-      updatedAt
-      url
-      repository {
-        nameWithOwner
-      }
-      milestone {
-        title
-        state
-      }
-      author {
-        login
-      }
+      ...IssueInformationFragment
       participants(first:10) {
         nodes {
           login
@@ -824,33 +788,14 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
   mutation {
     updateIssue(input: {id: "%s", state: %s}) {
       issue {
-        id
-        number
-        state
-        stateReason
-        title
-        body
-        createdAt
-        closedAt
-        updatedAt
-        url
-        repository {
-          nameWithOwner
-        }
-        milestone {
-          title
-          state
-        }
-        author {
-          login
-        }
+        ...IssueInformationFragment
         participants(first:10) {
           nodes {
             login
@@ -881,7 +826,7 @@ M.update_issue_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1260,28 +1205,7 @@ M.issue_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issue(number: %d) {
-      id
-      number
-      state
-      stateReason
-      title
-      body
-      createdAt
-      closedAt
-      updatedAt
-      url
-      viewerDidAuthor
-      viewerCanUpdate
-      repository {
-        nameWithOwner
-      }
-      milestone {
-        title
-        state
-      }
-      author {
-        login
-      }
+      ...IssueInformationFragment
       participants(first:10) {
         nodes {
           login
@@ -1310,7 +1234,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
