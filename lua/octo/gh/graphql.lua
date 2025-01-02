@@ -1102,43 +1102,7 @@ M.update_pull_request_state_mutation = [[
               dismissalMessage
             }
             ...IssueCommentFragment
-            ... on PullRequestReview {
-              id
-              body
-              createdAt
-              viewerCanUpdate
-              viewerCanDelete
-              ...ReactionGroupsFragment
-              author {
-                login
-              }
-              viewerDidAuthor
-              state
-              comments(last:100) {
-                totalCount
-                nodes{
-                  id
-                  url
-                  replyTo { id url }
-                  body
-                  commit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author { login }
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  originalPosition
-                  position
-                  state
-                  outdated
-                  diffHunk
-                  ...ReactionGroupsFragment
-                }
-              }
-            }
+            ...PullRequestReviewFragment
             ...ConnectedEventFragment
             ...CrossReferencedEventFragment
             ...MilestonedEventFragment
@@ -1161,7 +1125,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1443,45 +1407,7 @@ query($endCursor: String) {
             previousTitle
             currentTitle
           }
-          ... on PullRequestReview {
-            id
-            body
-            createdAt
-            viewerCanUpdate
-            viewerCanDelete
-            ...ReactionGroupsFragment
-            author {
-              login
-            }
-            viewerDidAuthor
-            state
-            comments(last:100) {
-              totalCount
-              nodes{
-                id
-                url
-                replyTo { id url }
-                body
-                commit {
-                  oid
-                  abbreviatedOid
-                }
-                author { login }
-                createdAt
-                lastEditedAt
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                originalPosition
-                position
-                state
-                outdated
-                diffHunk
-                ...ReactionGroupsFragment
-              }
-            }
-          }
+          ...PullRequestReviewFragment
           ...ConnectedEventFragment
           ...CrossReferencedEventFragment
           ...MilestonedEventFragment
@@ -1563,7 +1489,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -2687,45 +2613,7 @@ M.create_pr_mutation = [[
               dismissalMessage
             }
             ...IssueCommentFragment
-            ... on PullRequestReview {
-              id
-              body
-              createdAt
-              viewerCanUpdate
-              viewerCanDelete
-              ...ReactionGroupsFragment
-              author {
-                login
-              }
-              viewerDidAuthor
-              state
-              comments(last:100) {
-                totalCount
-                nodes{
-                  id
-                  url
-                  replyTo { id url }
-                  body
-                  commit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author { login }
-                  createdAt
-                  lastEditedAt
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  originalPosition
-                  position
-                  state
-                  outdated
-                  diffHunk
-                  ...ReactionGroupsFragment
-                }
-              }
-            }
+            ...PullRequestReviewFragment
             ...ConnectedEventFragment
             ...CrossReferencedEventFragment
             ...MilestonedEventFragment
@@ -2798,7 +2686,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[

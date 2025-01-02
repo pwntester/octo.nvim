@@ -211,4 +211,44 @@ fragment ReopenedEventFragment on ReopenedEvent {
 }
 ]]
 
+M.pull_request_review = [[
+fragment PullRequestReviewFragment on PullRequestReview {
+  id
+  body
+  createdAt
+  viewerCanUpdate
+  viewerCanDelete
+  ...ReactionGroupsFragment
+  author {
+    login
+  }
+  viewerDidAuthor
+  state
+  comments(last:100) {
+    totalCount
+    nodes{
+      id
+      url
+      replyTo { id url }
+      body
+      commit {
+        oid
+        abbreviatedOid
+      }
+      author { login }
+      authorAssociation
+      viewerDidAuthor
+      viewerCanUpdate
+      viewerCanDelete
+      originalPosition
+      position
+      state
+      outdated
+      diffHunk
+      ...ReactionGroupsFragment
+    }
+  }
+}
+]]
+
 return M
