@@ -362,17 +362,17 @@ M.issue_timeline_items_connection = [[
 fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   nodes {
     __typename
-    ...LabeledEventFragment
-    ...UnlabeledEventFragment
-    ...IssueCommentFragment
-    ...ClosedEventFragment
-    ...ReopenedEventFragment
     ...AssignedEventFragment
-    ...RenamedTitleEventFragment
+    ...ClosedEventFragment
     ...ConnectedEventFragment
     ...CrossReferencedEventFragment
-    ...MilestonedEventFragment
     ...DemilestonedEventFragment
+    ...IssueCommentFragment
+    ...LabeledEventFragment
+    ...MilestonedEventFragment
+    ...RenamedTitleEventFragment
+    ...ReopenedEventFragment
+    ...UnlabeledEventFragment
   }
 }
 ]]
