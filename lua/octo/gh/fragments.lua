@@ -251,4 +251,16 @@ fragment PullRequestReviewFragment on PullRequestReview {
 }
 ]]
 
+M.project_cards = [[
+fragment ProjectCardFragment on ProjectCard {
+  id
+  note
+  state
+  column {
+    id
+    name
+  }
+}
+]]
+
 return M

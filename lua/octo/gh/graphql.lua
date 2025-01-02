@@ -748,14 +748,7 @@ M.create_issue_mutation = [[
         ...ReactionGroupsFragment
         projectCards(last: 20) {
           nodes {
-            id
-            state
-            column {
-              name
-            }
-            project {
-              name
-            }
+            ...ProjectCardFragment
           }
         }
         repository {
@@ -785,7 +778,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -1306,14 +1299,7 @@ query($endCursor: String) {
       ...ReactionGroupsFragment
       projectCards(last: 20) {
         nodes {
-          id
-          state
-          column {
-            name
-          }
-          project {
-            name
-          }
+          ...ProjectCardFragment
         }
       }
       %s
@@ -1489,7 +1475,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -1526,14 +1512,7 @@ query($endCursor: String) {
       ...ReactionGroupsFragment
       projectCards(last: 20) {
         nodes {
-          id
-          state
-          column {
-            name
-          }
-          project {
-            name
-          }
+          ...ProjectCardFragment
         }
       }
       %s
@@ -1571,7 +1550,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_fragment .. fragments.label_connection_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -2523,14 +2502,7 @@ M.create_pr_mutation = [[
         ...ReactionGroupsFragment
         projectCards(last: 20) {
           nodes {
-            id
-            state
-            column {
-              name
-            }
-            project {
-              name
-            }
+            ...ProjectCardFragment
           }
         }
         timelineItems(first: 100) {
@@ -2686,7 +2658,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups_fragment .. fragments.label_connection_fragment .. fragments.label_fragment .. fragments.assignee_connection_fragment .. fragments.issue_comment_fragment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
