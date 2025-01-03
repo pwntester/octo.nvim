@@ -126,12 +126,14 @@ function FileEntry:destroy()
   self:detach_buffers()
 
   for _, bn in ipairs(self.associated_bufs) do
-    if vim.api.nvim_buf_get_name(bn):match "octo://*" then
-      pcall(vim.api.nvim_buf_delete, bn, { force = true })
-    else
-      signs.unplace(bn)
-      vim.api.nvim_buf_set_option(bn, "modifiable", true)
-      vim.api.nvim_buf_clear_namespace(bn, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
+    if vim.api.nvim_buf_is_valid(bn) then
+      if vim.api.nvim_buf_get_name(bn):match "octo://*" then
+        pcall(vim.api.nvim_buf_delete, bn, { force = true })
+      else
+        signs.unplace(bn)
+        vim.api.nvim_buf_set_option(bn, "modifiable", true)
+        vim.api.nvim_buf_clear_namespace(bn, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
+      end
     end
   end
 end
