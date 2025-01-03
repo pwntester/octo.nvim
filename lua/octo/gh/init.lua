@@ -102,7 +102,7 @@ function M.setup()
       end
       if use_proj_v2 then
         if M.has_scope { "read:project", "project" } then
-          _G.octo_pv2_fragment = fragments.projects_v2_fragment
+          _G.octo_pv2_fragment = fragments.projects_v2
         elseif not config.values.suppress_missing_scope.projects_v2 then
           require("octo.utils").error "Cannot request Projects v2: Missing scope 'read:project' or 'project'"
         end
