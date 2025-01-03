@@ -62,6 +62,7 @@ local M = {}
 ---@field default_delete_branch boolean
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
+---@field commands table
 ---@field users string
 ---@field user_icon string
 ---@field ghost_icon string
@@ -110,6 +111,7 @@ function M.get_default_values()
     default_delete_branch = false,
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
+    commands = {},
     users = "search",
     user_icon = " ",
     ghost_icon = "󰊠 ",

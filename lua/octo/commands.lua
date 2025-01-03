@@ -18,6 +18,18 @@ local get_current_buffer = function()
   return octo_buffers[bufnr]
 end
 
+local function merge_tables(t1, t2)
+  local result = vim.deepcopy(t1)
+  for k, v in pairs(t2) do
+    if type(v) == "table" and type(result[k]) == "table" then
+      result[k] = merge_tables(result[k], v)
+    else
+      result[k] = v
+    end
+  end
+  return result
+end
+
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     require("octo.commands").octo(unpack(opts.fargs))
@@ -440,6 +452,9 @@ function M.setup()
       reviews.start_or_resume_review()
     end,
   })
+
+  local user_defined_commands = config.values.commands
+  M.commands = merge_tables(M.commands, user_defined_commands)
 end
 
 function M.process_varargs(repo, ...)
