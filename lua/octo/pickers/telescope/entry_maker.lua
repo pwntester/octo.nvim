@@ -198,6 +198,16 @@ function M.gen_from_git_changed_files()
   end
 end
 
+function M.gen_from_workflow_run()
+  return function(workflow_run)
+    return {
+      display = workflow_run.display,
+      value = workflow_run,
+      ordinal = workflow_run.display,
+    }
+  end
+end
+
 function M.gen_from_review_thread(linenr_length)
   local make_display = function(entry)
     if not entry then
