@@ -67,4 +67,3 @@ describe("Utils escape_char(): ", function()
     eq(expected, this.escape_char(input))
   end)
 end)
-
