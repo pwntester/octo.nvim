@@ -1281,7 +1281,7 @@ M.create_label_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.label
 
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation = [[
