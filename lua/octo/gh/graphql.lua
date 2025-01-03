@@ -562,6 +562,7 @@ M.update_pull_request_state_mutation = [[
         id
         number
         state
+        isDraft
         title
         body
         createdAt
