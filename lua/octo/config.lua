@@ -171,7 +171,7 @@ function M.get_default_values()
         failed = "❌",
         succeeded = "",
         skipped = "⏩",
-        cancelled = "✖"
+        cancelled = "✖",
       },
     },
     pull_requests = {
@@ -204,7 +204,7 @@ function M.get_default_values()
       runs = {
         expand_step = { lhs = "o", desc = "expand workflow step" },
         open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
-        refresh = { lhs = "<C-r>", desc = "refresh workflow" }
+        refresh = { lhs = "<C-r>", desc = "refresh workflow" },
       },
       issue = {
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },
