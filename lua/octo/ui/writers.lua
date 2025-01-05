@@ -297,7 +297,7 @@ function M.write_state(bufnr, state, number)
   -- title virtual text
   local title_vt = {
     { tostring(number), "OctoIssueId" },
-    { string.format(" [%s] ", state), utils.state_hl_map[state] },
+    { string.format(" [%s] ", state:gsub("_", " ")), utils.state_hl_map[state] },
   }
 
   -- PR virtual text
@@ -1222,9 +1222,10 @@ function M.write_issue_summary(bufnr, issue, opts)
   })
 
   -- issue body
+  local state = utils.get_displayed_state(issue.__typename == "Issue", issue.state, issue.stateReason)
   table.insert(chunks, {
     { " " },
-    { "[" .. issue.state .. "] ", utils.state_hl_map[issue.state] },
+    { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
     { issue.title .. " ", "OctoDetailsLabel" },
     { "#" .. issue.number .. " ", "OctoDetailsValue" },
   })
@@ -1306,8 +1307,12 @@ function M.write_assigned_event(bufnr, item)
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-  table.insert(vt, { " assigned this to ", "OctoTimelineItemHeading" })
-  table.insert(vt, { item.assignee.login or item.assignee.name, "OctoDetailsLabel" })
+  if item.actor.login == item.assignee.login then
+    table.insert(vt, { " self-assigned this", "OctoTimelineItemHeading" })
+  else
+    table.insert(vt, { " assigned this to ", "OctoTimelineItemHeading" })
+    table.insert(vt, { item.assignee.login or item.assignee.name, "OctoDetailsLabel" })
+  end
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
 end
@@ -1327,6 +1332,11 @@ function M.write_commit_event(bufnr, item)
       item.commit.committer.user.login,
       item.commit.committer.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
     })
+  elseif item.commit.author ~= vim.NIL then
+    table.insert(vt, {
+      item.commit.author.user.login,
+      item.commit.author.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+    })
   end
   table.insert(vt, { " added ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
@@ -1334,6 +1344,115 @@ function M.write_commit_event(bufnr, item)
   table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
+end
+
+local function write_issue_or_pr(bufnr, item)
+  local vt = {}
+  local state = utils.get_displayed_state(item.__typename == "Issue", item.state, item.stateReason, item.isDraft)
+  local entry = {
+    kind = item.__typename == "Issue" and "issue" or "pull_request",
+    obj = item,
+  }
+  local icon = utils.get_icon(entry)
+  table.insert(vt, { "          ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.title, "OctoDetailsLabel" })
+  table.insert(vt, { " #" .. tostring(item.number) .. " ", "OctoDetailsValue" })
+  table.insert(vt, icon)
+  table.insert(vt, { state, utils.state_hl_map[state] })
+
+  write_event(bufnr, vt)
+end
+
+function M.write_cross_referenced_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+
+  local target = item.target
+  local will_close_target = item.willCloseTarget
+
+  if target.__typename == "PullRequest" and not will_close_target then
+    table.insert(vt, { " mentioned this pull request ", "OctoTimelineItemHeading" })
+    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  elseif target.__typename == "PullRequest" then
+    table.insert(vt, { " linked a pull request ", "OctoTimelineItemHeading" })
+    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+    table.insert(vt, { " that will close this issue ", "OctoTimelineItemHeading" })
+  elseif not will_close_target then
+    table.insert(vt, { " mentioned this issue ", "OctoTimelineItemHeading" })
+    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  else
+    table.insert(vt, { " linked an issue ", "OctoTimelineItemHeading" })
+    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+    table.insert(vt, { " that may be closed by this pull request ", "OctoTimelineItemHeading" })
+  end
+
+  write_event(bufnr, vt)
+  write_issue_or_pr(bufnr, item.source)
+end
+
+local write_milestone_event = function(bufnr, item, add)
+  local verb, preposition
+  if add then
+    verb = "added"
+    preposition = "to"
+  else
+    verb = "removed"
+    preposition = "from"
+  end
+
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " " .. verb .. " this " .. preposition .. " the ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.milestoneTitle, "OctoDetailsLabel" })
+  table.insert(vt, { " milestone ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+function M.write_milestoned_event(bufnr, item)
+  write_milestone_event(bufnr, item, true)
+end
+
+function M.write_demilestoned_event(bufnr, item)
+  write_milestone_event(bufnr, item, false)
+end
+
+function M.write_connected_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+
+  local subject = item.subject
+
+  if subject.__typename == "PullRequest" then
+    table.insert(vt, { " linked a pull request ", "OctoTimelineItemHeading" })
+    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+    table.insert(vt, { " that will close this issue ", "OctoTimelineItemHeading" })
+  else
+    table.insert(vt, { " linked an issue ", "OctoTimelineItemHeading" })
+    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+    table.insert(vt, { " that may be closed by this pull request ", "OctoTimelineItemHeading" })
+  end
+
+  write_event(bufnr, vt)
+  write_issue_or_pr(bufnr, item.subject)
 end
 
 function M.write_renamed_title_event(bufnr, item)

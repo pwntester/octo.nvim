@@ -166,11 +166,72 @@ function M.run(opts)
     env = get_env(),
   }
   if mode == "sync" then
-    job:sync()
+    job:sync(conf.timeout)
     return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
   else
     job:start()
   end
+end
+
+---Format fields for the graphql query
+---@param fields table key value pairs for graphql query
+---@return table
+local format_fields = function(fields)
+  local formatted_fields = {}
+  for key, value in pairs(fields) do
+    table.insert(formatted_fields, "-F")
+    table.insert(formatted_fields, key .. "=" .. value)
+  end
+  return formatted_fields
+end
+
+---Create the arguments for the graphql query
+---@param query string the graphql query
+---@param fields table key value pairs for graphql query
+---@param paginate boolean whether to paginate the results
+---@param slurp boolean whether to slurp the results
+---@param jq string the jq query to apply to the results
+---@return table
+local create_graphql_args = function(query, fields, paginate, slurp, jq)
+  local args = { "api", "graphql" }
+
+  fields = fields or {}
+  local formatted_fields = format_fields(fields)
+  for _, field in ipairs(formatted_fields) do
+    table.insert(args, field)
+  end
+  table.insert(args, "-f")
+  table.insert(args, string.format("query=%s", query))
+
+  if paginate then
+    table.insert(args, "--paginate")
+  end
+
+  if slurp then
+    table.insert(args, "--slurp")
+  end
+
+  if jq then
+    table.insert(args, "--jq")
+    table.insert(args, jq)
+  end
+
+  return args
+end
+
+---Run a graphql query
+---@param opts table the options for the graphql query
+---@return table
+function M.graphql(opts)
+  local run_opts = opts.opts or {}
+  return M.run {
+    args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
+    mode = run_opts.mode,
+    cb = run_opts.cb,
+    stream_cb = run_opts.stream_cb,
+    headers = run_opts.headers,
+    hostname = run_opts.hostname,
+  }
 end
 
 return M

@@ -108,7 +108,8 @@ function OctoBuffer:render_issue()
   writers.write_details(self.bufnr, self.node)
 
   -- write issue/pr status
-  writers.write_state(self.bufnr, self.node.state:upper(), self.number)
+  local state = utils.get_displayed_state(self.kind == "issue", self.node.state, self.node.stateReason)
+  writers.write_state(self.bufnr, state:upper(), self.number)
 
   -- write body
   writers.write_body(self.bufnr, self.node)
@@ -215,6 +216,18 @@ function OctoBuffer:render_issue()
       prev_is_event = true
     elseif item.__typename == "RenamedTitleEvent" then
       writers.write_renamed_title_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ConnectedEvent" then
+      writers.write_connected_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "CrossReferencedEvent" then
+      writers.write_cross_referenced_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "MilestonedEvent" then
+      writers.write_milestoned_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "DemilestonedEvent" then
+      writers.write_demilestoned_event(self.bufnr, item)
       prev_is_event = true
     end
   end

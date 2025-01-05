@@ -6,89 +6,6 @@ local vim = vim
 
 local M = {}
 
---- @class EntryObject
---- @field state string
---- @field isDraft boolean
---- @field stateReason string
---- @field isAnswered boolean
---- @field closed boolean
-
---- @class Entry
---- @field kind string
---- @field obj EntryObject
-
---- @class Icon
---- @field [1] string The icon
---- @field [2] string|nil The highlight group for the icon
---- @see octo.ui.colors for the available highlight groups
-
--- Symbols found with "Telescope symbols"
-local icons = {
-  issue = {
-    open = { " ", "OctoGreen" },
-    closed = { " ", "OctoPurple" },
-    not_planned = { " ", "OctoGrey" },
-  },
-  pull_request = {
-    open = { " ", "OctoGreen" },
-    draft = { " ", "OctoGrey" },
-    merged = { " ", "OctoPurple" },
-    closed = { " ", "OctoRed" },
-  },
-  discussion = {
-    open = { " ", "OctoGrey" },
-    answered = { " ", "OctoGreen" },
-    closed = { " ", "OctoRed" },
-  },
-  unknown = { " " },
-}
-
---- Get the icon for the entry
----@param entry Entry: The entry to get the icon for
----@return Icon: The icon for the entry
-local function get_icon(entry)
-  local kind = entry.kind
-
-  if kind == "issue" then
-    local state = entry.obj.state
-    local stateReason = entry.obj.stateReason
-
-    if state == "OPEN" then
-      return icons.issue.open
-    elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
-      return icons.issue.not_planned
-    elseif state == "CLOSED" then
-      return icons.issue.closed
-    end
-  elseif kind == "pull_request" then
-    local state = entry.obj.state
-    local isDraft = entry.obj.isDraft
-
-    if state == "MERGED" then
-      return icons.pull_request.merged
-    elseif state == "CLOSED" then
-      return icons.pull_request.closed
-    elseif isDraft then
-      return icons.pull_request.draft
-    elseif state == "OPEN" then
-      return icons.pull_request.open
-    end
-  elseif kind == "discussion" then
-    local closed = entry.obj.closed
-    local isAnswered = entry.obj.isAnswered
-
-    if isAnswered ~= vim.NIL and isAnswered then
-      return icons.discussion.answered
-    elseif not closed then
-      return icons.discussion.open
-    else
-      return icons.discussion.closed
-    end
-  end
-
-  return icons.unknown
-end
-
 function M.gen_from_discussions(max_number)
   local make_display = function(entry)
     if not entry then
@@ -97,7 +14,7 @@ function M.gen_from_discussions(max_number)
 
     local columns = {
       { entry.value, "TelescopeResultsNumber" },
-      get_icon(entry),
+      utils.get_icon(entry),
       { entry.obj.title },
     }
     local layout = {
@@ -157,7 +74,7 @@ function M.gen_from_issue(max_number, print_repo)
     else
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        get_icon(entry),
+        utils.get_icon(entry),
         { entry.obj.title },
       }
       layout = {
@@ -433,6 +350,51 @@ function M.gen_from_project_card()
   end
 end
 
+function M.gen_from_milestone(title_width, show_description)
+  title_width = title_width or 10
+
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns, items
+    if show_description then
+      columns = {
+        { entry.milestone.title, "OctoDetailsLabel" },
+        { " " },
+        { entry.milestone.description },
+      }
+      items = { { width = title_width }, { width = 1 }, { remaining = true } }
+    else
+      columns = {
+        { entry.milestone.title, "OctoDetailsLabel" },
+      }
+      items = { { width = title_width } }
+    end
+
+    local displayer = entry_display.create {
+      separator = "",
+      items = items,
+    }
+
+    return displayer(columns)
+  end
+
+  return function(milestone)
+    if not milestone or vim.tbl_isempty(milestone) then
+      return nil
+    end
+
+    return {
+      value = milestone.id,
+      ordinal = milestone.title,
+      display = make_display,
+      milestone = milestone,
+    }
+  end
+end
+
 function M.gen_from_label()
   local make_display = function(entry)
     if not entry then
@@ -668,7 +630,7 @@ function M.gen_from_gist()
   end
 end
 
-function M.gen_from_octo_actions()
+function M.gen_from_octo_actions(width)
   local make_display = function(entry)
     if not entry then
       return nil
@@ -682,7 +644,7 @@ function M.gen_from_octo_actions()
     local displayer = entry_display.create {
       separator = "",
       items = {
-        { width = 12 },
+        { width = width },
         { remaining = true },
       },
     }

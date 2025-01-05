@@ -1,3 +1,5 @@
+local fragments = require "octo.gh.fragments"
+
 local M = {}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addreaction
@@ -911,6 +913,10 @@ M.create_issue_mutation = [[
               }
               createdAt
             }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
+            ...MilestonedEventFragment
+            ...DemilestonedEventFragment
           }
         }
         labels(first: 20) {
@@ -929,7 +935,7 @@ M.create_issue_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
@@ -949,6 +955,152 @@ M.update_issue_mutation = [[
   }
 ]]
 
+M.close_issue_mutation = [[
+mutation {
+  closeIssue(input: {issueId: "%s", stateReason: %s}) {
+    issue {
+      id
+      number
+      state
+      stateReason
+      title
+      body
+      createdAt
+      closedAt
+      updatedAt
+      url
+      repository {
+        nameWithOwner
+      }
+      milestone {
+        title
+        state
+      }
+      author {
+        login
+      }
+      participants(first:10) {
+        nodes {
+          login
+        }
+      }
+      reactionGroups {
+        content
+        viewerHasReacted
+        users {
+          totalCount
+        }
+      }
+      comments(first: 100) {
+        nodes {
+          id
+          body
+          createdAt
+          reactionGroups {
+            content
+            viewerHasReacted
+            users {
+              totalCount
+            }
+          }
+          author {
+            login
+          }
+          viewerDidAuthor
+        }
+      }
+      labels(first: 20) {
+        nodes {
+          color
+          name
+        }
+      }
+      assignees(first: 20) {
+        nodes {
+          id
+          login
+          isViewer
+        }
+      }
+      timelineItems(last: 100) {
+        nodes {
+          __typename
+          ... on LabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
+          ... on UnlabeledEvent {
+            actor {
+              login
+            }
+            createdAt
+            label {
+              color
+              name
+            }
+          }
+          ... on IssueComment {
+            id
+            body
+            createdAt
+            reactionGroups {
+              content
+              viewerHasReacted
+              users {
+                totalCount
+              }
+            }
+            author {
+              login
+            }
+            viewerDidAuthor
+            viewerCanUpdate
+            viewerCanDelete
+          }
+          ... on ClosedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on ReopenedEvent {
+            createdAt
+            actor {
+              login
+            }
+          }
+          ... on AssignedEvent {
+            actor {
+              login
+            }
+            assignee {
+              ... on Organization { name }
+              ... on Bot { login }
+              ... on User {
+                login
+                isViewer
+              }
+              ... on Mannequin { login }
+            }
+            createdAt
+          }
+          ...ConnectedEventFragment
+          ...CrossReferencedEventFragment
+          ...MilestonedEventFragment
+          ...DemilestonedEventFragment
+        }
+      }
+    }
+  }
+}
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
   mutation {
@@ -957,6 +1109,7 @@ M.update_issue_state_mutation = [[
         id
         number
         state
+        stateReason
         title
         body
         createdAt
@@ -1084,12 +1237,16 @@ M.update_issue_state_mutation = [[
               }
               createdAt
             }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
+            ...MilestonedEventFragment
+            ...DemilestonedEventFragment
           }
         }
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1241,6 +1398,11 @@ M.update_pull_request_state_mutation = [[
                 changedFiles
                 additions
                 deletions
+                author {
+                  user {
+                    login
+                  }
+                }
                 committer {
                   user {
                     login
@@ -1373,6 +1535,10 @@ M.update_pull_request_state_mutation = [[
                 }
               }
             }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
+            ...MilestonedEventFragment
+            ...DemilestonedEventFragment
           }
         }
         reviewRequests(first: 20) {
@@ -1391,7 +1557,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1652,6 +1818,11 @@ query($endCursor: String) {
               changedFiles
               additions
               deletions
+              author {
+                user {
+                  login
+                }
+              }
               committer {
                 user {
                   login
@@ -1796,6 +1967,10 @@ query($endCursor: String) {
               }
             }
           }
+          ...ConnectedEventFragment
+          ...CrossReferencedEventFragment
+          ...MilestonedEventFragment
+          ...DemilestonedEventFragment
         }
       }
       reviewDecision
@@ -1886,7 +2061,7 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
@@ -1896,6 +2071,7 @@ query($endCursor: String) {
       id
       number
       state
+      stateReason
       title
       body
       createdAt
@@ -2017,6 +2193,10 @@ query($endCursor: String) {
             previousTitle
             currentTitle
           }
+          ...ConnectedEventFragment
+          ...CrossReferencedEventFragment
+          ...MilestonedEventFragment
+          ...DemilestonedEventFragment
         }
       }
       labels(first: 20) {
@@ -2035,7 +2215,7 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -2076,6 +2256,7 @@ query {
         __typename
         createdAt
         state
+        stateReason
         number
         title
         body
@@ -2530,7 +2711,7 @@ M.create_label_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation = [[
   mutation {
-    addLabelsToLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+    addLabelsToLabelable(input: {labelableId: "%s", labelIds: %s}) {
       labelable {
         ... on Issue {
           id
@@ -2546,7 +2727,7 @@ M.add_labels_mutation = [[
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.remove_labels_mutation = [[
   mutation {
-    removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: ["%s"]}) {
+    removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: %s}) {
       labelable {
         ... on Issue {
           id
@@ -3128,6 +3309,11 @@ M.create_pr_mutation = [[
                 changedFiles
                 additions
                 deletions
+                author {
+                  user {
+                    login
+                  }
+                }
                 committer {
                   user {
                     login
@@ -3266,6 +3452,10 @@ M.create_pr_mutation = [[
                 }
               }
             }
+            ...ConnectedEventFragment
+            ...CrossReferencedEventFragment
+            ...MilestonedEventFragment
+            ...DemilestonedEventFragment
           }
         }
         reviewDecision
@@ -3347,7 +3537,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
@@ -3366,6 +3556,21 @@ query {
       nodes {
         id
         name
+      }
+    }
+  }
+}
+]]
+
+M.open_milestones_query = [[
+query($name: String!, $owner: String!, $n_milestones: Int!) {
+  repository(owner: $owner, name: $name) {
+    milestones(first: $n_milestones, states: [OPEN]) {
+      nodes {
+        id
+        title
+        description
+        url
       }
     }
   }

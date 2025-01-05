@@ -33,6 +33,9 @@ M.state_msg_map = {
 M.state_hl_map = {
   MERGED = "OctoStateMerged",
   CLOSED = "OctoStateClosed",
+  DRAFT = "OctoStateDraft",
+  COMPLETED = "OctoStateCompleted",
+  NOT_PLANNED = "OctoStateNotPlanned",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -207,7 +210,7 @@ function M.parse_remote_url(url, aliases)
     }
   end
   -- remove trailing ".git"
-  url = string.gsub(url, ".git$", "")
+  url = string.gsub(url, "%.git$", "")
   -- remove protocol scheme
   url = string.gsub(url, "^[^:]+://", "")
   -- remove user
@@ -318,40 +321,101 @@ function M.commit_exists(commit, cb)
   }):start()
 end
 
-function M.develop_issue(issue_repo, issue_number, branch_repo)
-  if not Job then
+---Add a milestone to an issue or PR
+---@param issue boolean true if issue, false if PR
+---@param number number issue or PR number
+---@param milestone_name string milestone name
+function M.add_milestone(issue, number, milestone_name)
+  local command = issue and "issue" or "pr"
+  local args = { command, "edit", number, "--milestone", milestone_name }
+
+  gh.run {
+    args = args,
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif output then
+        M.info("Added milestone " .. milestone_name)
+      end
+    end,
+  }
+end
+
+---Remove a milestone from an issue or PR
+---@param issue boolean true if issue, false if PR
+---@param number number issue or PR number
+function M.remove_milestone(issue, number)
+  local command = issue and "issue" or "pr"
+  local args = { command, "edit", number, "--remove-milestone" }
+
+  gh.run {
+    args = args,
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif output then
+        M.info "Removed milestone"
+      end
+    end,
+  }
+end
+
+---https://docs.github.com/en/rest/issues/milestones?apiVersion=2022-11-28#create-a-milestone
+---Create a new milestone
+---@param title string
+---@param description string
+function M.create_milestone(title, description)
+  if M.is_blank(title) then
+    M.error "Title is required to create milestone"
     return
   end
 
+  local owner, name = M.split_repo(M.get_remote_name())
+  local endpoint = string.format("repos/%s/%s/milestones", owner, name)
+  local args = { "api", "--method", "POST", endpoint }
+
+  local data = {
+    title = title,
+    description = description,
+    state = "open",
+  }
+
+  for key, value in pairs(data) do
+    table.insert(args, "-f")
+    table.insert(args, string.format("%s=%s", key, value))
+  end
+
+  gh.run {
+    args = args,
+    cb = function(output, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif output then
+        local resp = vim.fn.json_decode(output)
+        M.info("Created milestone " .. resp.title)
+      end
+    end,
+  }
+end
+
+function M.develop_issue(issue_repo, issue_number, branch_repo)
   if M.is_blank(branch_repo) then
     branch_repo = M.get_remote_name()
   end
 
-  Job:new({
-    enable_recording = true,
-    command = "gh",
-    args = {
-      "issue",
-      "develop",
-      "--repo",
-      issue_repo,
-      issue_number,
-      "--checkout",
-      "--branch-repo",
-      branch_repo,
-    },
-    on_exit = vim.schedule_wrap(function(job, code)
-      if code == 0 then
+  local args = { "issue", "develop", "--repo", issue_repo, issue_number, "--checkout", "--branch-repo", branch_repo }
+
+  gh.run {
+    args = args,
+    cb = function(stdout, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif stdout then
         local output = vim.fn.system "git branch --show-current"
         M.info("Switched to " .. output)
-      else
-        local stderr = table.concat(job:stderr_result(), "\n")
-        if not M.is_blank(stderr) then
-          M.error(stderr)
-        end
       end
-    end),
-  }):start()
+    end,
+  }
 end
 
 function M.get_file_at_commit(path, commit, cb)
@@ -396,7 +460,7 @@ function M.in_pr_branch(pr)
   local cmd = "git rev-parse --abbrev-ref --symbolic-full-name @{u}"
   local local_branch_with_local_remote = vim.split(string.gsub(vim.fn.system(cmd), "%s+", ""), "/")
   local local_remote = local_branch_with_local_remote[1]
-  local local_branch = local_branch_with_local_remote[2]
+  local local_branch = table.concat(local_branch_with_local_remote, "/", 2)
 
   -- Github repos are case insensitive, ignore case when comparing to local remotes
   local local_repo = M.get_remote_name({ local_remote }):lower()
@@ -408,7 +472,6 @@ function M.in_pr_branch(pr)
   return false
 end
 
----Checks out a PR b number
 function M.checkout_pr(pr_number)
   if not Job then
     return
@@ -424,19 +487,25 @@ function M.checkout_pr(pr_number)
   }):start()
 end
 
-function M.checkout_pr_sync(pr_number)
+---@class CheckoutPrSyncOpts
+---@field pr_number number
+---@field timeout number
+
+---@param opts CheckoutPrSyncOpts
+---@return nil
+function M.checkout_pr_sync(opts)
   if not Job then
     return
   end
   Job:new({
     enable_recording = true,
     command = "gh",
-    args = { "pr", "checkout", pr_number },
+    args = { "pr", "checkout", opts.pr_number },
     on_exit = vim.schedule_wrap(function()
       local output = vim.fn.system "git branch --show-current"
       M.info("Switched to " .. output)
     end),
-  }):sync()
+  }):sync(opts.timeout)
 end
 
 M.merge_method_to_flag = {
@@ -679,8 +748,7 @@ end
 
 --- Escapes a characters on a string to be used as a JSON string
 function M.escape_char(string)
-  return string.gsub(string, '["\\]', {
-    ['"'] = '\\"',
+  return string.gsub(string, "[\\]", {
     ["\\"] = "\\\\",
   })
 end
@@ -1523,6 +1591,106 @@ function M.convert_vim_mapping_to_fzf(vim_mapping)
   local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
   fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
   return string.lower(fzf_mapping)
+end
+
+--- Logic to determine the state displayed for issue or PR
+---@param isIssue boolean
+---@param state string
+---@param stateReason string | nil
+---@return string
+function M.get_displayed_state(isIssue, state, stateReason, isDraft)
+  if isIssue and state == "CLOSED" then
+    return stateReason or state
+  end
+
+  if isDraft then
+    return "DRAFT"
+  end
+
+  return state
+end
+
+--- @class EntryObject
+--- @field state string
+--- @field isDraft boolean
+--- @field stateReason string
+--- @field isAnswered boolean
+--- @field closed boolean
+
+--- @class Entry
+--- @field kind string
+--- @field obj EntryObject
+
+--- @class Icon
+--- @field [1] string The icon
+--- @field [2] string|nil The highlight group for the icon
+--- @see octo.ui.colors for the available highlight groups
+
+-- Symbols found with "Telescope symbols"
+local icons = {
+  issue = {
+    open = { " ", "OctoGreen" },
+    closed = { " ", "OctoPurple" },
+    not_planned = { " ", "OctoGrey" },
+  },
+  pull_request = {
+    open = { " ", "OctoGreen" },
+    draft = { " ", "OctoGrey" },
+    merged = { " ", "OctoPurple" },
+    closed = { " ", "OctoRed" },
+  },
+  discussion = {
+    open = { " ", "OctoGrey" },
+    answered = { " ", "OctoGreen" },
+    closed = { " ", "OctoRed" },
+  },
+  unknown = { " " },
+}
+
+--- Get the icon for the entry
+---@param entry Entry: The entry to get the icon for
+---@return Icon: The icon for the entry
+function M.get_icon(entry)
+  local kind = entry.kind
+
+  if kind == "issue" then
+    local state = entry.obj.state
+    local stateReason = entry.obj.stateReason
+
+    if state == "OPEN" then
+      return icons.issue.open
+    elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
+      return icons.issue.not_planned
+    elseif state == "CLOSED" then
+      return icons.issue.closed
+    end
+  elseif kind == "pull_request" then
+    local state = entry.obj.state
+    local isDraft = entry.obj.isDraft
+
+    if state == "MERGED" then
+      return icons.pull_request.merged
+    elseif state == "CLOSED" then
+      return icons.pull_request.closed
+    elseif isDraft then
+      return icons.pull_request.draft
+    elseif state == "OPEN" then
+      return icons.pull_request.open
+    end
+  elseif kind == "discussion" then
+    local closed = entry.obj.closed
+    local isAnswered = entry.obj.isAnswered
+
+    if isAnswered ~= vim.NIL and isAnswered then
+      return icons.discussion.answered
+    elseif not closed then
+      return icons.discussion.open
+    else
+      return icons.discussion.closed
+    end
+  end
+
+  return icons.unknown
 end
 
 return M

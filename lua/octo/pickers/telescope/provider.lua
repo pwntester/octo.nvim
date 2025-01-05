@@ -522,12 +522,13 @@ end
 
 local function get_search_size(prompt)
   local query = graphql("search_count_query", prompt)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  return gh.graphql {
+    query = query,
+    jq = ".data.search.issueCount",
+    opts = {
+      mode = "sync",
+    },
   }
-  local resp = vim.fn.json_decode(output)
-  return resp.data.search.issueCount
 end
 
 function M.search(opts)
@@ -541,7 +542,7 @@ function M.search(opts)
   local width = 6
   if search.single_repo then
     local num_results = get_search_size(search.prompt)
-    width = math.min(#tostring(num_results), width)
+    width = math.min(#num_results, width)
   end
 
   local requester = function()
@@ -765,6 +766,35 @@ end
 --
 -- LABELS
 --
+
+local function select(opts)
+  local prompt_bufnr = opts.bufnr
+  local single_cb = opts.single_cb
+  local multiple_cb = opts.multiple_cb
+  local get_item = opts.get_item
+
+  local picker = action_state.get_current_picker(prompt_bufnr)
+  local selections = picker:get_multi_selection()
+  local cb
+  local items = {}
+  if #selections == 0 then
+    local selection = action_state.get_selected_entry(prompt_bufnr)
+    table.insert(items, get_item(selection))
+    cb = single_cb
+  elseif multiple_cb == nil then
+    utils.error "Multiple selections are not allowed"
+    actions.close(prompt_bufnr)
+    return
+  else
+    for _, selection in ipairs(selections) do
+      table.insert(items, get_item(selection))
+    end
+    cb = multiple_cb
+  end
+  actions.close(prompt_bufnr)
+  cb(items)
+end
+
 function M.select_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -791,9 +821,14 @@ function M.select_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = cb,
+                  multiple_cb = cb,
+                  get_item = function(selection)
+                    return selection.label
+                  end,
+                }
               end)
               return true
             end,
@@ -836,9 +871,14 @@ function M.select_assigned_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = cb,
+                  multiple_cb = cb,
+                  get_item = function(selection)
+                    return selection.label
+                  end,
+                }
               end)
               return true
             end,
@@ -1141,11 +1181,17 @@ function M.actions(flattened_actions)
     results_title = "",
   }
 
+  local width = 11
+  for _, action in ipairs(flattened_actions) do
+    width = math.max(width, #action.object)
+  end
+  width = width + 1
+
   pickers
     .new(opts, {
       finder = finders.new_table {
         results = flattened_actions,
-        entry_maker = entry_maker.gen_from_octo_actions(),
+        entry_maker = entry_maker.gen_from_octo_actions(width),
       },
       sorter = conf.generic_sorter(opts),
       attach_mappings = function()
@@ -1257,6 +1303,80 @@ function M.discussions(opts)
   }
 end
 
+function M.milestones(opts)
+  if opts.cb == nil then
+    utils.error "Callback action on milestone is required"
+    return
+  end
+
+  local repo = opts.repo or utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
+  local query = graphql "open_milestones_query"
+
+  gh.graphql {
+    query = query,
+    fields = {
+      owner = owner,
+      name = name,
+      n_milestones = 25,
+    },
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+          return
+        end
+
+        local resp = vim.fn.json_decode(output)
+        local nodes = resp.data.repository.milestones.nodes
+
+        if #nodes == 0 then
+          utils.error(string.format("There are no open milestones in %s.", repo))
+          return
+        end
+
+        local title_width = 0
+        for _, milestone in ipairs(nodes) do
+          title_width = math.max(title_width, #milestone.title)
+        end
+
+        local non_empty_descriptions = false
+        for _, milestone in ipairs(nodes) do
+          if not utils.is_blank(milestone.description) then
+            non_empty_descriptions = true
+            break
+          end
+        end
+
+        pickers
+          .new(vim.deepcopy(dropdown_opts), {
+            finder = finders.new_table {
+              results = nodes,
+              entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
+            },
+            sorter = conf.generic_sorter(opts),
+            attach_mappings = function(_, map)
+              actions.select_default:replace(function(prompt_bufnr)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = function(selected)
+                    opts.cb(selected[1])
+                  end,
+                  multiple_cb = nil,
+                  get_item = function(selected)
+                    return selected.milestone
+                  end,
+                }
+              end)
+              return true
+            end,
+          })
+          :find()
+      end,
+    },
+  }
+end
+
 M.picker = {
   actions = M.actions,
   assigned_labels = M.select_assigned_label,
@@ -1278,6 +1398,7 @@ M.picker = {
   review_commits = M.review_commits,
   search = M.search,
   users = M.select_user,
+  milestones = M.milestones,
 }
 
 return M

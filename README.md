@@ -114,6 +114,7 @@ require"octo".setup({
   outdated_icon = "󰅒 ",                    -- outdated indicator
   resolved_icon = " ",                    -- resolved indicator
   reaction_viewer_hint_icon = " ";        -- marker for user reactions
+  commands = {},                           -- additional subcommands made available to `Octo` command
   users = "search",                        -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
   user_icon = " ",                        -- user icon
   ghost_icon = "󰊠 ",                       -- ghost icon
@@ -347,6 +348,10 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
 |          | remove [label]                                    | Remove a label                                                                                                                                         |
 |          | create [label]                                    | Create a new label                                                                                                                                     |
+| milestone | add [milestone]                                   | Add a milestone to current Issue or PR                                                                                                                |
+|          | remove                                           | Remove a milestone from current Issue or PR                                                                                                             |
+|          | create [milestone]                                | Create a new milestone                                                                                                                                 |
+|          | list [repo]                                       | List all milestones for repo or current repo                                                                                                           |
 | assignee | add [login]                                       | Assign a user                                                                                                                                          |
 |          | remove [login]                                    | Unassign a user                                                                                                                                        |
 | reviewer | add [login]                                       | Assign a PR reviewer                                                                                                                                   |
