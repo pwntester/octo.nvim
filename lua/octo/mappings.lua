@@ -118,6 +118,12 @@ return {
   review_resume = function()
     reviews.resume_review()
   end,
+  resolve_thread = function ()
+    require("octo.commands").resolve_thread()
+  end,
+  unresolve_thread = function ()
+    require("octo.commands").unresolve_thread()
+  end,
   discard_review = function()
     reviews.discard_review()
   end,
