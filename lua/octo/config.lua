@@ -244,6 +244,8 @@ function M.get_default_values()
         react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
         review_start = { lhs = "<localleader>vs", desc = "start a review for the current PR" },
         review_resume = { lhs = "<localleader>vr", desc = "resume a pending review for the current PR" },
+        resolve_thread = { lhs = "<localleader>rt", desc = "resolve PR thread" },
+        unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
       },
       review_thread = {
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
