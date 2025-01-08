@@ -173,16 +173,45 @@ function M.run(opts)
   end
 end
 
----Format fields for the graphql query
----@param fields table key value pairs for graphql query
----@return table
-local format_fields = function(fields)
-  local formatted_fields = {}
-  for key, value in pairs(fields) do
-    table.insert(formatted_fields, "-F")
-    table.insert(formatted_fields, key .. "=" .. value)
+local create_flag = function(key)
+  if #key == 1 then
+    return "-" .. key
+  else
+    return "--" .. key
   end
-  return formatted_fields
+end
+
+---Insert the options into the args table
+---@param args table the arguments table
+---@param options table the options to insert
+---@return table the updated args table
+local insert_args = function(args, options)
+  for key, value in pairs(options) do
+    local flag = create_flag(key)
+
+    if type(value) == "table" then
+      for k, v in pairs(value) do
+        if type(v) == "table" then
+          for _, vv in ipairs(v) do
+            table.insert(args, flag)
+            table.insert(args, k .. "[]=" .. vv)
+          end
+        else
+          table.insert(args, flag)
+          table.insert(args, k .. "=" .. v)
+        end
+      end
+    elseif type(value) == "boolean" then
+      if value then
+        table.insert(args, flag)
+      end
+    else
+      table.insert(args, flag)
+      table.insert(args, value)
+    end
+  end
+
+  return args
 end
 
 ---Create the arguments for the graphql query
@@ -195,28 +224,17 @@ end
 local create_graphql_args = function(query, fields, paginate, slurp, jq)
   local args = { "api", "graphql" }
 
-  fields = fields or {}
-  local formatted_fields = format_fields(fields)
-  for _, field in ipairs(formatted_fields) do
-    table.insert(args, field)
-  end
-  table.insert(args, "-f")
-  table.insert(args, string.format("query=%s", query))
+  local opts = {
+    F = {
+      query = query,
+    },
+    f = fields,
+    paginate = paginate,
+    slurp = slurp,
+    jq = jq,
+  }
 
-  if paginate then
-    table.insert(args, "--paginate")
-  end
-
-  if slurp then
-    table.insert(args, "--slurp")
-  end
-
-  if jq then
-    table.insert(args, "--jq")
-    table.insert(args, jq)
-  end
-
-  return args
+  return insert_args(args, opts)
 end
 
 ---Run a graphql query
