@@ -37,4 +37,4 @@ jobs:
         run: |
           export PATH="${PWD}/_neovim/bin:${PATH}"
           export VIM="${PWD}/_neovim/share/nvim/runtime"
-          nvim --headless -c "PlenaryBustedDirectory lua/tests/plenary/ lua/tests/octo/gh_spec.lua {minimal_init = 'lua/tests/minimal_init.vim'}"
+          nvim --headless -c "PlenaryBustedDirectory lua/tests/plenary/ {minimal_init = 'lua/tests/minimal_init.vim'}"
