@@ -14,7 +14,7 @@ describe("gh", function()
     }
     eq(args, expected)
   end)
-  it("single-char", function()
+  it("single-char-has-single-hyphen", function()
     local args = {}
     local opts = {
       F = {
@@ -33,7 +33,19 @@ describe("gh", function()
     }
     eq(args, expected)
   end)
-  it("list", function()
+  it("non-single-char-has-two-hyphens", function()
+    local args = {}
+    local opts = {
+      jq = ".",
+    }
+    gh.insert_args(args, opts)
+    local expected = {
+      "--jq",
+      ".",
+    }
+    eq(args, expected)
+  end)
+  it("list-get-brackets", function()
     local args = {}
     local opts = {
       f = {
