@@ -58,4 +58,18 @@ describe("insert_args:", function()
     }
     eq(args, expected)
   end)
+  it("integer values", function()
+    local args = {}
+    local opts = {
+      f = {
+        num_issues = 15,
+      },
+    }
+    gh.insert_args(args, opts)
+    local expected = {
+      "-f",
+      "num_issues=15",
+    }
+    eq(args, expected)
+  end)
 end)
