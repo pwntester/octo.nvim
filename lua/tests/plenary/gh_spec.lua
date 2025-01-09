@@ -1,8 +1,8 @@
 local gh = require "octo.gh"
 local eq = assert.are.same
 
-describe("gh", function()
-  it("booleans", function()
+describe("insert_args:", function()
+  it("true booleans show up as flags", function()
     local args = {}
     local opts = {
       slurp = false,
@@ -14,7 +14,7 @@ describe("gh", function()
     }
     eq(args, expected)
   end)
-  it("single-char-has-single-hyphen", function()
+  it("single characters have single hyphen", function()
     local args = {}
     local opts = {
       F = {
@@ -28,7 +28,7 @@ describe("gh", function()
     }
     eq(args, expected)
   end)
-  it("non-single-char-has-two-hyphens", function()
+  it("non-single changes have two hyphens", function()
     local args = {}
     local opts = {
       jq = ".",
@@ -40,7 +40,7 @@ describe("gh", function()
     }
     eq(args, expected)
   end)
-  it("list-get-brackets", function()
+  it("list of fields get brackets", function()
     local args = {}
     local opts = {
       f = {
