@@ -225,10 +225,10 @@ local create_graphql_args = function(query, fields, paginate, slurp, jq)
   local args = { "api", "graphql" }
 
   local opts = {
-    F = {
+    f = {
       query = query,
     },
-    f = fields,
+    F = fields,
     paginate = paginate,
     slurp = slurp,
     jq = jq,
