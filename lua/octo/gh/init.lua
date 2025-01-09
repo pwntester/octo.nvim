@@ -185,7 +185,7 @@ end
 ---@param args table the arguments table
 ---@param options table the options to insert
 ---@return table the updated args table
-local insert_args = function(args, options)
+M.insert_args = function(args, options)
   for key, value in pairs(options) do
     local flag = create_flag(key)
 
