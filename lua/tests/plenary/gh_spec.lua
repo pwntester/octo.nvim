@@ -20,14 +20,9 @@ describe("gh", function()
       F = {
         query = "query",
       },
-      f = {
-        foo = "bar",
-      },
     }
     gh.insert_args(args, opts)
     local expected = {
-      "-f",
-      "foo=bar",
       "-F",
       "query=query",
     }
