@@ -26,10 +26,10 @@ describe("gh", function()
     }
     gh.insert_args(args, opts)
     local expected = {
-      "-F",
-      "query=query",
       "-f",
       "foo=bar",
+      "-F",
+      "query=query",
     }
     eq(args, expected)
   end)
