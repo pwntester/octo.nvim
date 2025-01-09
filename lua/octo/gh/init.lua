@@ -234,7 +234,7 @@ local create_graphql_args = function(query, fields, paginate, slurp, jq)
     jq = jq,
   }
 
-  return insert_args(args, opts)
+  return M.insert_args(args, opts)
 end
 
 ---Run a graphql query
