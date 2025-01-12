@@ -7,34 +7,22 @@ M.add_reaction_mutation = [[
   mutation {
     addReaction(input: {subjectId: "%s", content: %s}) {
       subject {
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
       }
     }
   }
-]]
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/graphql/reference/mutations#removereaction
 M.remove_reaction_mutation = [[
   mutation {
     removeReaction(input: {subjectId: "%s", content: %s}) {
       subject {
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
       }
     }
   }
-]]
+]] .. fragments.reaction_groups
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
 M.resolve_review_thread_mutation = [[
@@ -49,48 +37,10 @@ M.resolve_review_thread_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -99,7 +49,7 @@ M.resolve_review_thread_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
 M.unresolve_review_thread_mutation = [[
@@ -114,48 +64,10 @@ M.unresolve_review_thread_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  createdAt
-                  lastEditedAt
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -164,7 +76,7 @@ M.unresolve_review_thread_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.start_review_mutation = [[
@@ -176,49 +88,10 @@ M.start_review_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              line
-              originalLine
-              startLine
-              originalStartLine
-              diffSide
-              startDiffSide
-              isResolved
-              resolvedBy { login }
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -227,7 +100,7 @@ M.start_review_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed_mutation = [[
@@ -314,60 +187,16 @@ mutation {
             state
           }
           path
-          reactionGroups {
-            content
-            viewerHasReacted
-            users {
-              totalCount
-            }
-          }
+          ...ReactionGroupsFragment
         }
       }
       pullRequest {
         reviewThreads(last:100) {
           nodes {
-            id
-            path
-            diffSide
-            startDiffSide
-            line
-            originalLine
-            startLine
-            originalStartLine
-            isResolved
-            isCollapsed
-            isOutdated
+            ...ReviewThreadInformationFragment
             comments(first:100) {
               nodes {
-                id
-                body
-                diffHunk
-                createdAt
-                lastEditedAt
-                originalCommit {
-                  oid
-                  abbreviatedOid
-                }
-                author {login}
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                state
-                url
-                replyTo { id url }
-                pullRequestReview {
-                  id
-                  state
-                }
-                path
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
+                ...ReviewThreadCommentFragment
               }
             }
           }
@@ -376,7 +205,7 @@ mutation {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread_mutation = [[
@@ -408,60 +237,16 @@ mutation {
             state
           }
           path
-          reactionGroups {
-            content
-            viewerHasReacted
-            users {
-              totalCount
-            }
-          }
+          ...ReactionGroupsFragment
         }
       }
       pullRequest {
         reviewThreads(last:100) {
           nodes {
-            id
-            path
-            diffSide
-            startDiffSide
-            line
-            originalLine
-            startLine
-            originalStartLine
-            isResolved
-            isCollapsed
-            isOutdated
+            ...ReviewThreadInformationFragment
             comments(first:100) {
               nodes {
-                id
-                body
-                diffHunk
-                createdAt
-                lastEditedAt
-                originalCommit {
-                  oid
-                  abbreviatedOid
-                }
-                author {login}
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                state
-                url
-                replyTo { id url }
-                pullRequestReview {
-                  id
-                  state
-                }
-                path
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
+                ...ReviewThreadCommentFragment
               }
             }
           }
@@ -470,7 +255,7 @@ mutation {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
 M.add_issue_comment_mutation = [[
@@ -508,48 +293,10 @@ M.update_pull_request_review_comment_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -558,7 +305,7 @@ M.update_pull_request_review_comment_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review_mutation = [[
@@ -583,48 +330,10 @@ M.add_pull_request_review_comment_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -633,7 +342,7 @@ M.add_pull_request_review_comment_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_commit_thread_mutation = [[
@@ -645,48 +354,10 @@ M.add_pull_request_review_commit_thread_mutation = [[
         pullRequest {
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -695,7 +366,7 @@ M.add_pull_request_review_commit_thread_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- M.add_pull_request_review_comment_mutation =
 -- [[
@@ -728,48 +399,10 @@ M.delete_pull_request_review_comment_mutation = [[
           id
           reviewThreads(last:100) {
             nodes {
-              id
-              path
-              diffSide
-              startDiffSide
-              line
-              originalLine
-              startLine
-              originalStartLine
-              isResolved
-              isCollapsed
-              isOutdated
+              ...ReviewThreadInformationFragment
               comments(first:100) {
                 nodes {
-                  id
-                  body
-                  diffHunk
-                  createdAt
-                  lastEditedAt
-                  originalCommit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author {login}
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  state
-                  url
-                  replyTo { id url }
-                  pullRequestReview {
-                    id
-                    state
-                  }
-                  path
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
+                  ...ReviewThreadCommentFragment
                 }
               }
             }
@@ -778,231 +411,76 @@ M.delete_pull_request_review_comment_mutation = [[
       }
     }
   }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_mutation = [[
-  mutation {
-    updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
-      issue {
-        id
-        number
-        state
-        title
-        body
-        repository { nameWithOwner }
+mutation {
+  updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
+    issue {
+      id
+      number
+      state
+      title
+      body
+      repository {
+        nameWithOwner
       }
     }
   }
+}
 ]]
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue_mutation = [[
   mutation {
     createIssue(input: {repositoryId: "%s", title: """%s""", body: """%s"""}) {
       issue {
-        id
-        number
-        state
-        title
-        body
-        createdAt
-        closedAt
-        updatedAt
-        url
-        viewerDidAuthor
-        viewerCanUpdate
-        milestone {
-          title
-          state
-        }
-        author {
-          login
-        }
+        ...IssueInformationFragment
         participants(first:10) {
           nodes {
             login
           }
         }
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         projectCards(last: 20) {
           nodes {
-            id
-            state
-            column {
-              name
-            }
-            project {
-              name
-            }
+            ...ProjectCardFragment
           }
         }
         repository {
           nameWithOwner
         }
         timelineItems(first: 100) {
-          nodes {
-            __typename
-            ... on LabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on UnlabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
-            ... on ClosedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReopenedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
-            ...ConnectedEventFragment
-            ...CrossReferencedEventFragment
-            ...MilestonedEventFragment
-            ...DemilestonedEventFragment
-          }
+          ...IssueTimelineItemsConnectionFragment
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
-          nodes {
-            id
-            login
-            isViewer
-          }
+          ...AssigneeConnectionFragment
         }
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
-
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
-M.update_issue_mutation = [[
-  mutation {
-    updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
-      issue {
-        id
-        number
-        state
-        title
-        body
-        repository {
-          nameWithOwner
-        }
-      }
-    }
-  }
-]]
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.issue_timeline_items_connection .. fragments.renamed_title_event .. fragments.issue_information
 
 M.close_issue_mutation = [[
 mutation {
   closeIssue(input: {issueId: "%s", stateReason: %s}) {
     issue {
-      id
-      number
-      state
-      stateReason
-      title
-      body
-      createdAt
-      closedAt
-      updatedAt
-      url
-      repository {
-        nameWithOwner
-      }
-      milestone {
-        title
-        state
-      }
-      author {
-        login
-      }
+      ...IssueInformationFragment
       participants(first:10) {
         nodes {
           login
         }
       }
-      reactionGroups {
-        content
-        viewerHasReacted
-        users {
-          totalCount
-        }
-      }
+      ...ReactionGroupsFragment
       comments(first: 100) {
         nodes {
           id
           body
           createdAt
-          reactionGroups {
-            content
-            viewerHasReacted
-            users {
-              totalCount
-            }
-          }
+          ...ReactionGroupsFragment
           author {
             login
           }
@@ -1010,146 +488,37 @@ mutation {
         }
       }
       labels(first: 20) {
-        nodes {
-          color
-          name
-        }
+        ...LabelConnectionFragment
       }
       assignees(first: 20) {
-        nodes {
-          id
-          login
-          isViewer
-        }
+        ...AssigneeConnectionFragment
       }
       timelineItems(last: 100) {
-        nodes {
-          __typename
-          ... on LabeledEvent {
-            actor {
-              login
-            }
-            createdAt
-            label {
-              color
-              name
-            }
-          }
-          ... on UnlabeledEvent {
-            actor {
-              login
-            }
-            createdAt
-            label {
-              color
-              name
-            }
-          }
-          ... on IssueComment {
-            id
-            body
-            createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
-            author {
-              login
-            }
-            viewerDidAuthor
-            viewerCanUpdate
-            viewerCanDelete
-          }
-          ... on ClosedEvent {
-            createdAt
-            actor {
-              login
-            }
-          }
-          ... on ReopenedEvent {
-            createdAt
-            actor {
-              login
-            }
-          }
-          ... on AssignedEvent {
-            actor {
-              login
-            }
-            assignee {
-              ... on Organization { name }
-              ... on Bot { login }
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-            }
-            createdAt
-          }
-          ...ConnectedEventFragment
-          ...CrossReferencedEventFragment
-          ...MilestonedEventFragment
-          ...DemilestonedEventFragment
-        }
+        ...IssueTimelineItemsConnectionFragment
       }
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state_mutation = [[
   mutation {
     updateIssue(input: {id: "%s", state: %s}) {
       issue {
-        id
-        number
-        state
-        stateReason
-        title
-        body
-        createdAt
-        closedAt
-        updatedAt
-        url
-        repository {
-          nameWithOwner
-        }
-        milestone {
-          title
-          state
-        }
-        author {
-          login
-        }
+        ...IssueInformationFragment
         participants(first:10) {
           nodes {
             login
           }
         }
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         comments(first: 100) {
           nodes {
             id
             body
             createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -1157,96 +526,18 @@ M.update_issue_state_mutation = [[
           }
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
-          nodes {
-            id
-            login
-            isViewer
-          }
+          ...AssigneeConnectionFragment
         }
         timelineItems(last: 100) {
-          nodes {
-            __typename
-            ... on LabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on UnlabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
-            ... on ClosedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReopenedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
-            ...ConnectedEventFragment
-            ...CrossReferencedEventFragment
-            ...MilestonedEventFragment
-            ...DemilestonedEventFragment
-          }
+          ...IssueTimelineItemsConnectionFragment
         }
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
@@ -1271,6 +562,7 @@ M.update_pull_request_state_mutation = [[
         id
         number
         state
+        isDraft
         title
         body
         createdAt
@@ -1313,25 +605,13 @@ M.update_pull_request_state_mutation = [[
         author {
           login
         }
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         comments(first: 100) {
           nodes {
             id
             body
             createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
+            ...ReactionGroupsFragment
             author {
               login
             }
@@ -1339,207 +619,13 @@ M.update_pull_request_state_mutation = [[
           }
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
-          nodes {
-            id
-            login
-            isViewer
-          }
+          ...AssigneeConnectionFragment
         }
         timelineItems(last: 100) {
-          nodes {
-            __typename
-            ... on LabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on UnlabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
-            ... on PullRequestCommit {
-              commit {
-                messageHeadline
-                committedDate
-                oid
-                abbreviatedOid
-                changedFiles
-                additions
-                deletions
-                author {
-                  user {
-                    login
-                  }
-                }
-                committer {
-                  user {
-                    login
-                  }
-                }
-              }
-            }
-            ... on MergedEvent {
-              createdAt
-              actor {
-                login
-              }
-              commit {
-                oid
-                abbreviatedOid
-              }
-              mergeRefName
-            }
-            ... on ClosedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReopenedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReviewRequestedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewRequestRemovedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewDismissedEvent {
-              createdAt
-              actor {
-                login
-              }
-              dismissalMessage
-            }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
-            ... on PullRequestReview {
-              id
-              body
-              createdAt
-              viewerCanUpdate
-              viewerCanDelete
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
-              author {
-                login
-              }
-              viewerDidAuthor
-              state
-              comments(last:100) {
-                totalCount
-                nodes{
-                  id
-                  url
-                  replyTo { id url }
-                  body
-                  commit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author { login }
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  originalPosition
-                  position
-                  state
-                  outdated
-                  diffHunk
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
-                }
-              }
-            }
-            ...ConnectedEventFragment
-            ...CrossReferencedEventFragment
-            ...MilestonedEventFragment
-            ...DemilestonedEventFragment
-          }
+          ...PullRequestTimelineItemsConnectionFragment
         }
         reviewRequests(first: 20) {
           totalCount
@@ -1557,7 +643,7 @@ M.update_pull_request_state_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads_query = [[
@@ -1572,49 +658,10 @@ query {
       }
       reviewThreads(last:100) {
         nodes {
-          id
-          path
-          diffSide
-          startDiffSide
-          line
-          originalLine
-          startLine
-          originalStartLine
-          isResolved
-          resolvedBy { login }
-          isCollapsed
-          isOutdated
+          ...ReviewThreadInformationFragment
           comments(first:100) {
             nodes {
-              id
-              body
-              diffHunk
-              createdAt
-              lastEditedAt
-              originalCommit {
-                oid
-                abbreviatedOid
-              }
-              author {login}
-              authorAssociation
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-              state
-              url
-              replyTo { id url }
-              pullRequestReview {
-                id
-                state
-              }
-              path
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+              ...ReviewThreadCommentFragment
             }
           }
         }
@@ -1622,7 +669,7 @@ query {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads_query = [[
@@ -1631,49 +678,10 @@ query($endCursor: String) {
     pullRequest(number:%d) {
       reviewThreads(last:80) {
         nodes {
-          id
-          isResolved
-          isCollapsed
-          isOutdated
-          path
-          resolvedBy { login }
-          line
-          originalLine
-          startLine
-          originalStartLine
-          diffSide
+          ...ReviewThreadInformationFragment
           comments(first: 100, after: $endCursor) {
-            nodes{
-              id
-              body
-              createdAt
-              lastEditedAt
-              state
-              originalCommit {
-                oid
-                abbreviatedOid
-              }
-              pullRequestReview {
-                id
-                state
-              }
-              path
-              url
-              replyTo { id url }
-              author { login }
-              authorAssociation
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-              outdated
-              diffHunk
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+            nodes {
+              ...ReviewThreadCommentFragment
             }
             pageInfo {
               hasNextPage
@@ -1685,7 +693,7 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
 M.pull_request_query = [[
@@ -1747,23 +755,10 @@ query($endCursor: String) {
       }
       viewerDidAuthor
       viewerCanUpdate
-      reactionGroups {
-        content
-        viewerHasReacted
-        users {
-          totalCount
-        }
-      }
+      ...ReactionGroupsFragment
       projectCards(last: 20) {
         nodes {
-          id
-          state
-          column {
-            name
-          }
-          project {
-            name
-          }
+          ...ProjectCardFragment
         }
       }
       %s
@@ -1772,269 +767,24 @@ query($endCursor: String) {
           hasNextPage
           endCursor
         }
-        nodes {
-          __typename
-          ... on LabeledEvent {
-            actor {
-              login
-            }
-            createdAt
-            label {
-              color
-              name
-            }
-          }
-          ... on UnlabeledEvent {
-            actor {
-              login
-            }
-            createdAt
-            label {
-              color
-              name
-            }
-          }
-          ... on AssignedEvent {
-            actor {
-              login
-            }
-            assignee {
-              ... on Organization { name }
-              ... on Bot { login }
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-            }
-            createdAt
-          }
-          ... on PullRequestCommit {
-            commit {
-              messageHeadline
-              committedDate
-              oid
-              abbreviatedOid
-              changedFiles
-              additions
-              deletions
-              author {
-                user {
-                  login
-                }
-              }
-              committer {
-                user {
-                  login
-                }
-              }
-            }
-          }
-          ... on MergedEvent {
-            createdAt
-            actor {
-              login
-            }
-            commit {
-              oid
-              abbreviatedOid
-            }
-            mergeRefName
-          }
-          ... on ClosedEvent {
-            createdAt
-            actor {
-              login
-            }
-          }
-          ... on ReopenedEvent {
-            createdAt
-            actor {
-              login
-            }
-          }
-          ... on ReviewRequestedEvent {
-            createdAt
-            actor {
-              login
-            }
-            requestedReviewer {
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-              ... on Team { name }
-            }
-          }
-          ... on ReviewRequestRemovedEvent {
-            createdAt
-            actor {
-              login
-            }
-            requestedReviewer {
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin {
-                login
-              }
-              ... on Team {
-                name
-              }
-            }
-          }
-          ... on ReviewDismissedEvent {
-            createdAt
-            actor {
-              login
-            }
-            dismissalMessage
-          }
-          ... on IssueComment {
-            id
-            body
-            createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
-            author {
-              login
-            }
-            viewerDidAuthor
-            viewerCanUpdate
-            viewerCanDelete
-          }
-          ... on RenamedTitleEvent {
-            actor { login }
-            createdAt
-            previousTitle
-            currentTitle
-          }
-          ... on PullRequestReview {
-            id
-            body
-            createdAt
-            viewerCanUpdate
-            viewerCanDelete
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
-            author {
-              login
-            }
-            viewerDidAuthor
-            state
-            comments(last:100) {
-              totalCount
-              nodes{
-                id
-                url
-                replyTo { id url }
-                body
-                commit {
-                  oid
-                  abbreviatedOid
-                }
-                author { login }
-                createdAt
-                lastEditedAt
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                originalPosition
-                position
-                state
-                outdated
-                diffHunk
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
-              }
-            }
-          }
-          ...ConnectedEventFragment
-          ...CrossReferencedEventFragment
-          ...MilestonedEventFragment
-          ...DemilestonedEventFragment
-        }
+        ...PullRequestTimelineItemsConnectionFragment
       }
       reviewDecision
       reviewThreads(last:100) {
         nodes {
-          id
-          isResolved
-          isCollapsed
-          isOutdated
-          path
-          resolvedBy { login }
-          line
-          originalLine
-          startLine
-          originalStartLine
-          diffSide
+          ...ReviewThreadInformationFragment
           comments(first: 100) {
-            nodes{
-              id
-              body
-              createdAt
-              lastEditedAt
-              url
-              replyTo { id url }
-              state
-              originalCommit {
-                oid
-                abbreviatedOid
-              }
-              pullRequestReview {
-                id
-                state
-              }
-              path
-              author { login }
-              authorAssociation
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-              outdated
-              diffHunk
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
+            nodes {
+              ...ReviewThreadCommentFragment
             }
           }
         }
       }
       labels(first: 20) {
-        nodes {
-          color
-          name
-        }
+        ...LabelConnectionFragment
       }
       assignees(first: 20) {
-        nodes {
-          id
-          login
-          isViewer
-        }
+        ...AssigneeConnectionFragment
       }
       reviewRequests(first: 20) {
         totalCount
@@ -2061,57 +811,23 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 M.issue_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issue(number: %d) {
-      id
-      number
-      state
-      stateReason
-      title
-      body
-      createdAt
-      closedAt
-      updatedAt
-      url
-      viewerDidAuthor
-      viewerCanUpdate
-      repository {
-        nameWithOwner
-      }
-      milestone {
-        title
-        state
-      }
-      author {
-        login
-      }
+      ...IssueInformationFragment
       participants(first:10) {
         nodes {
           login
         }
       }
-      reactionGroups {
-        content
-        viewerHasReacted
-        users {
-          totalCount
-        }
-      }
+      ...ReactionGroupsFragment
       projectCards(last: 20) {
         nodes {
-          id
-          state
-          column {
-            name
-          }
-          project {
-            name
-          }
+          ...ProjectCardFragment
         }
       }
       %s
@@ -2120,102 +836,18 @@ query($endCursor: String) {
           hasNextPage
           endCursor
         }
-        nodes {
-          __typename
-          ... on LabeledEvent {
-            actor {
-              login
-            }
-            createdAt
-            label {
-              color
-              name
-            }
-          }
-          ... on UnlabeledEvent {
-            actor {
-              login
-            }
-            createdAt
-            label {
-              color
-              name
-            }
-          }
-          ... on IssueComment {
-            id
-            body
-            createdAt
-            reactionGroups {
-              content
-              viewerHasReacted
-              users {
-                totalCount
-              }
-            }
-            author {
-              login
-            }
-            viewerDidAuthor
-            viewerCanUpdate
-            viewerCanDelete
-          }
-          ... on ClosedEvent {
-            createdAt
-            actor {
-              login
-            }
-          }
-          ... on ReopenedEvent {
-            createdAt
-            actor {
-              login
-            }
-          }
-          ... on AssignedEvent {
-            actor {
-              login
-            }
-            assignee {
-              ... on Organization { name }
-              ... on Bot { login }
-              ... on User {
-                login
-                isViewer
-              }
-              ... on Mannequin { login }
-            }
-            createdAt
-          }
-          ... on RenamedTitleEvent {
-            actor { login }
-            createdAt
-            previousTitle
-            currentTitle
-          }
-          ...ConnectedEventFragment
-          ...CrossReferencedEventFragment
-          ...MilestonedEventFragment
-          ...DemilestonedEventFragment
-        }
+        ...IssueTimelineItemsConnectionFragment
       }
       labels(first: 20) {
-        nodes {
-          color
-          name
-        }
+        ...LabelConnectionFragment
       }
       assignees(first: 20) {
-        nodes {
-          id
-          login
-          isViewer
-        }
+        ...AssigneeConnectionFragment
       }
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
@@ -2246,10 +878,7 @@ query {
         author { login }
         authorAssociation
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
       }
       ... on Issue {
@@ -2264,16 +893,13 @@ query {
         author { login }
         authorAssociation
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
       }
     }
   }
 }
-]]
+]] .. fragments.label_connection .. fragments.label
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 M.repository_id_query = [[
@@ -2385,16 +1011,13 @@ query($endCursor: String) {
     discussions(first: 100, after: $endCursor, states: OPEN, orderBy: {field: %s, direction: %s}) {
       nodes {
         __typename
-        number
-        title
-        url
-        closed
-        isAnswered
+        ...DiscussionInfoFragment
         answer {
-            author { login }
-            body
+          author {
+            login
+          }
+          body
         }
-        repository { nameWithOwner }
       }
       pageInfo {
         hasNextPage
@@ -2403,86 +1026,39 @@ query($endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.discussion_info
 
 M.discussion_query = [[
 query($endCursor: String) {
-    repository(owner: "%s", name: "%s") {
-        discussion(number: %d) {
-            id
-            category {
-                name
-                emoji
+  repository(owner: "%s", name: "%s") {
+    discussion(number: %d) {
+      ...DiscussionDetailsFragment
+      labels(first: 20) {
+        ...LabelConnectionFragment
+      }
+      comments(first: 100, after: $endCursor) {
+        totalCount
+        nodes {
+          ...DiscussionCommentFragment
+          replies(first: 10) {
+            totalCount
+            nodes {
+              body
+              author {
+                login
+              }
             }
-            number
-            closed
-            isAnswered
-            answer {
-                author { login }
-                body
-                createdAt
-                viewerDidAuthor
-            }
-            title
-            body
-            createdAt
-            closedAt
-            updatedAt
-            url
-            repository { nameWithOwner }
-            author { login }
-            labels(first: 20) {
-                nodes {
-                    color
-                    name
-                }
-            }
-            upvoteCount
-            viewerHasUpvoted
-            reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                    totalCount
-                }
-            }
-            comments(first: 100, after: $endCursor) {
-                totalCount
-                nodes {
-                    id
-                    body
-                    createdAt
-                    lastEditedAt
-                    reactionGroups {
-                        content
-                        viewerHasReacted
-                        reactors {
-                            totalCount
-                        }
-                    }
-                    author {
-                        login
-                    }
-                    viewerDidAuthor
-                    viewerCanUpdate
-                    viewerCanDelete
-                    replies(first: 10) {
-                        totalCount
-                        nodes {
-                            body
-                            author { login }
-                        }
-                    }
-                }
-                pageInfo {
-                    hasNextPage
-                    endCursor
-                }
-            }
+          }
         }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
     }
+  }
 }
-]]
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
 
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects_query = [[
@@ -2701,12 +1277,11 @@ M.create_label_mutation = [[
   mutation {
     createLabel(input: {repositoryId: "%s", name: "%s", description: """%s""", color: "%s"}) {
       label {
-        id
-        name
+        ...LabelFragment
       }
     }
   }
-]]
+]] .. fragments.label
 
 -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
 M.add_labels_mutation = [[
@@ -2745,79 +1320,59 @@ M.labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       labels(first: 100) {
-        nodes {
-          id
-          name
-          color
-        }
+        ...LabelConnectionFragment
       }
     }
   }
-]]
+]] .. fragments.label_connection .. fragments.label
 
 M.issue_labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       issue(number: %d) {
         labels(first: 100) {
-          nodes {
-            id
-            name
-            color
-          }
+          ...LabelConnectionFragment
         }
       }
     }
   }
-]]
+]] .. fragments.label_connection .. fragments.label
 
 M.pull_request_labels_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       pullRequest(number: %d) {
         labels(first: 100) {
-          nodes {
-            id
-            name
-            color
-          }
+          ...LabelConnectionFragment
         }
       }
     }
   }
-]]
+]] .. fragments.label_connection .. fragments.label
 
 M.issue_assignees_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       issue(number: %d) {
         assignees(first: 100) {
-          nodes {
-            id
-            login
-            isViewer
-          }
+          ...AssigneeConnectionFragment
         }
       }
     }
   }
-]]
+]] .. fragments.assignee_connection
 
 M.pull_request_assignees_query = [[
   query {
     repository(owner: "%s", name: "%s") {
       pullRequest(number: %d) {
         assignees(first: 100) {
-          nodes {
-            id
-            login
-            isViewer
-          }
+          ...AssigneeConnectionFragment
         }
       }
     }
   }
-]]
+]] .. fragments.assignee_connection
 
 -- https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
 M.add_assignees_mutation = [[
@@ -2948,67 +1503,31 @@ M.reactions_for_object_query = [[
 query {
   node(id: "%s") {
     ... on Issue {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on PullRequest {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on PullRequestReviewComment {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on PullRequestReview {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
     ... on IssueComment {
-      reactionGroups {
-        content
-        users(last: 100) {
-          nodes {
-            login
-          }
-        }
-      }
+      ...ReactionGroupsUsersFragment
     }
   }
 }
-]]
+]] .. fragments.reaction_groups_users
 
 M.mentionable_users_query = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
       mentionableUsers(first: 100, after: $endCursor) {
       pageInfo {
-        hasNextPage
         endCursor
-        startCursor
+        hasNextPage
       }
       nodes {
         id
@@ -3025,9 +1544,8 @@ query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     assignableUsers(first: 100, after: $endCursor) {
       pageInfo {
-        hasNextPage
         endCursor
-        startCursor
+        hasNextPage
       }
       nodes {
         id
@@ -3243,283 +1761,31 @@ M.create_pr_mutation = [[
         }
         viewerDidAuthor
         viewerCanUpdate
-        reactionGroups {
-          content
-          viewerHasReacted
-          users {
-            totalCount
-          }
-        }
+        ...ReactionGroupsFragment
         projectCards(last: 20) {
           nodes {
-            id
-            state
-            column {
-              name
-            }
-            project {
-              name
-            }
+            ...ProjectCardFragment
           }
         }
         timelineItems(first: 100) {
-          nodes {
-            __typename
-            ... on LabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on UnlabeledEvent {
-              actor {
-                login
-              }
-              createdAt
-              label {
-                color
-                name
-              }
-            }
-            ... on AssignedEvent {
-              actor {
-                login
-              }
-              assignee {
-                ... on Organization { name }
-                ... on Bot { login }
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-              }
-              createdAt
-            }
-            ... on PullRequestCommit {
-              commit {
-                messageHeadline
-                committedDate
-                oid
-                abbreviatedOid
-                changedFiles
-                additions
-                deletions
-                author {
-                  user {
-                    login
-                  }
-                }
-                committer {
-                  user {
-                    login
-                  }
-                }
-              }
-            }
-            ... on MergedEvent {
-              createdAt
-              actor {
-                login
-              }
-              commit {
-                oid
-                abbreviatedOid
-              }
-              mergeRefName
-            }
-            ... on ClosedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReopenedEvent {
-              createdAt
-              actor {
-                login
-              }
-            }
-            ... on ReviewRequestedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin { login }
-                ... on Team { name }
-              }
-            }
-            ... on ReviewRequestRemovedEvent {
-              createdAt
-              actor {
-                login
-              }
-              requestedReviewer {
-                ... on User {
-                  login
-                  isViewer
-                }
-                ... on Mannequin {
-                  login
-                }
-                ... on Team {
-                  name
-                }
-              }
-            }
-            ... on ReviewDismissedEvent {
-              createdAt
-              actor {
-                login
-              }
-              dismissalMessage
-            }
-            ... on IssueComment {
-              id
-              body
-              createdAt
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
-              author {
-                login
-              }
-              viewerDidAuthor
-              viewerCanUpdate
-              viewerCanDelete
-            }
-            ... on PullRequestReview {
-              id
-              body
-              createdAt
-              viewerCanUpdate
-              viewerCanDelete
-              reactionGroups {
-                content
-                viewerHasReacted
-                users {
-                  totalCount
-                }
-              }
-              author {
-                login
-              }
-              viewerDidAuthor
-              state
-              comments(last:100) {
-                totalCount
-                nodes{
-                  id
-                  url
-                  replyTo { id url }
-                  body
-                  commit {
-                    oid
-                    abbreviatedOid
-                  }
-                  author { login }
-                  createdAt
-                  lastEditedAt
-                  authorAssociation
-                  viewerDidAuthor
-                  viewerCanUpdate
-                  viewerCanDelete
-                  originalPosition
-                  position
-                  state
-                  outdated
-                  diffHunk
-                  reactionGroups {
-                    content
-                    viewerHasReacted
-                    users {
-                      totalCount
-                    }
-                  }
-                }
-              }
-            }
-            ...ConnectedEventFragment
-            ...CrossReferencedEventFragment
-            ...MilestonedEventFragment
-            ...DemilestonedEventFragment
-          }
+          ...PullRequestTimelineItemsConnectionFragment
         }
         reviewDecision
         reviewThreads(last:100) {
           nodes {
-            id
-            isResolved
-            isCollapsed
-            isOutdated
-            path
-            resolvedBy { login }
-            line
-            originalLine
-            startLine
-            originalStartLine
-            diffSide
+            ...ReviewThreadInformationFragment
             comments(first: 100) {
-              nodes{
-                id
-                body
-                createdAt
-                lastEditedAt
-                url
-                replyTo { id url }
-                state
-                originalCommit {
-                  oid
-                  abbreviatedOid
-                }
-                pullRequestReview {
-                  id
-                  state
-                }
-                path
-                author { login }
-                authorAssociation
-                viewerDidAuthor
-                viewerCanUpdate
-                viewerCanDelete
-                outdated
-                diffHunk
-                reactionGroups {
-                  content
-                  viewerHasReacted
-                  users {
-                    totalCount
-                  }
-                }
+              nodes {
+                ...ReviewThreadCommentFragment
               }
             }
           }
         }
         labels(first: 20) {
-          nodes {
-            color
-            name
-          }
+          ...LabelConnectionFragment
         }
         assignees(first: 20) {
-          nodes {
-            id
-            login
-            isViewer
-          }
+          ...AssigneeConnectionFragment
         }
         reviewRequests(first: 20) {
           totalCount
@@ -3537,7 +1803,7 @@ M.create_pr_mutation = [[
       }
     }
   }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
@@ -3553,14 +1819,11 @@ M.repo_labels_query = [[
 query {
   repository(owner:"%s", name:"%s") {
     labels(first: 100) {
-      nodes {
-        id
-        name
-      }
+      ...LabelConnectionFragment
     }
   }
 }
-]]
+]] .. fragments.label_connection .. fragments.label
 
 M.open_milestones_query = [[
 query($name: String!, $owner: String!, $n_milestones: Int!) {
