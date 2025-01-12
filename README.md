@@ -255,6 +255,8 @@ require"octo".setup({
       react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
       react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
       react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+      resolve_thread = { lhs = "<localleader>rt", desc = "resolve PR thread" },
+      unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
     },
     submit_win = {
       approve_review = { lhs = "<C-a>", desc = "approve review" },
