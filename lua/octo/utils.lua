@@ -748,8 +748,7 @@ end
 
 --- Escapes a characters on a string to be used as a JSON string
 function M.escape_char(string)
-  return string.gsub(string, '["\\]', {
-    ['"'] = '\\"',
+  return string.gsub(string, "[\\]", {
     ["\\"] = "\\\\",
   })
 end
