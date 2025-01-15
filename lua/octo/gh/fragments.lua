@@ -294,6 +294,9 @@ fragment PullRequestCommitFragment on PullRequestCommit {
         login
       }
     }
+    statusCheckRollup {
+      state
+    }
     committer {
       user {
         login
