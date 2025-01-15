@@ -563,9 +563,11 @@ function M.write_details(bufnr, issue, update)
     -- checks
     if issue.statusCheckRollup and issue.statusCheckRollup ~= vim.NIL then
       local state = issue.statusCheckRollup.state
+      local state_info = utils.state_map[state]
+      local message = state_info.symbol .. state
       local checks_vt = {
         { "Checks: ", "OctoDetailsLabel" },
-        { utils.checks_message_map[state], utils.checks_hl_map[state] },
+        { message, state_info.hl },
       }
       table.insert(details, checks_vt)
     end
@@ -1317,6 +1319,17 @@ function M.write_assigned_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+local get_status_check = function(statusCheckRollup)
+  if utils.is_blank(statusCheckRollup) then
+    return { "  " }
+  end
+
+  local state = statusCheckRollup.state
+  local state_info = utils.state_map[state]
+
+  return { state_info.symbol, state_info.hl }
+end
+
 function M.write_commit_event(bufnr, item)
   local vt = {}
   local conf = config.values
@@ -1338,7 +1351,9 @@ function M.write_commit_event(bufnr, item)
       item.commit.author.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
     })
   end
+
   table.insert(vt, { " added ", "OctoTimelineItemHeading" })
+  table.insert(vt, get_status_check(item.commit.statusCheckRollup))
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
   table.insert(vt, { " ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
