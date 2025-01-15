@@ -260,10 +260,31 @@ local function create_log_child(value, indent)
   }
 end
 
+local function create_unique_tmpname()
+  local depth = 50
+  local attempts = 0
+  local tmpname
+
+  while attempts < depth do
+    tmpname = os.tmpname()
+    local file = io.open(tmpname, "r")
+
+    if not file then
+      return tmpname
+    else
+      file:close()
+    end
+
+    attempts = attempts + 1
+  end
+
+  error("Failed to create a unique temporary file name after " .. depth .. " attempts.")
+end
+
 -- Accepts zip contents and writes and then unzips them
 ---@param stdout string - The zip content to write
 local function write_and_unzip_file(stdout)
-  local temp_location = os.tmpname()
+  local temp_location = create_unique_tmpname()
   local zip_location = temp_location .. ".zip"
   local file = io.open(zip_location, "wb")
   if not file then
