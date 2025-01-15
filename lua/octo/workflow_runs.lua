@@ -370,7 +370,9 @@ local function get_logs(id)
       table.insert(node.children, log_child)
     end
   end)
-  cleanup()
+  if cleanup then
+    cleanup()
+  end
 end
 
 local keymaps = {
@@ -392,7 +394,11 @@ local tree_keymaps = {
       node.expanded = true
       if node.type == "step" then
         -- only refresh logs aggressively if step is in_progress
-        if (not next(node.children)) or node.conclusion == "in_progress" then
+        if node.conclusion == "in_progress" then
+          octo_error "Cant view logs of running workflow..."
+          return
+        end
+        if not next(node.children) then
           get_logs(M.current_wf.databaseId)
         end
       end
@@ -525,7 +531,6 @@ end
 
 local function populate_preview_buffer(id, buf)
   local cached = M.wf_cache[id]
-  --TODO: check outcome and if running refresh otherwise cached value is valid
   if cached and vim.api.nvim_buf_is_valid(buf) then
     M.current_wf = cached
     M.tree = generate_workflow_tree(cached)
