@@ -539,6 +539,46 @@ M.update_issue_state_mutation = [[
   }
 ]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event
 
+-- https://docs.github.com/en/graphql/reference/mutations#reopenissue
+M.reopen_issue_mutation = [[
+mutation($issueId: ID!) {
+  reopenIssue(input: {
+    issueId: $issueId
+  }) {
+    issue {
+      ...IssueInformationFragment
+      participants(first:10) {
+        nodes {
+          login
+        }
+      }
+      ...ReactionGroupsFragment
+      comments(first: 100) {
+        nodes {
+          id
+          body
+          createdAt
+          ...ReactionGroupsFragment
+          author {
+            login
+          }
+          viewerDidAuthor
+        }
+      }
+      labels(first: 20) {
+        ...LabelConnectionFragment
+      }
+      assignees(first: 20) {
+        ...AssigneeConnectionFragment
+      }
+      timelineItems(last: 100) {
+        ...IssueTimelineItemsConnectionFragment
+      }
+    }
+  }
+}
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_mutation = [[
   mutation {
