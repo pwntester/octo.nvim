@@ -142,6 +142,16 @@ require"octo".setup({
     auto_show_threads = true,              -- automatically show comment threads on cursor move
     focus             = "right",           -- focus right buffer on diff open
   },
+  runs = {
+    icons = {
+      pending = "🕖",
+      in_progress = "🔄",
+      failed = "❌",
+      succeeded = "",
+      skipped = "⏩",
+      cancelled = "✖",
+    },
+  },
   pull_requests = {
     order_by = {                           -- criteria to sort the results of `Octo pr list`
       field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
@@ -169,6 +179,11 @@ require"octo".setup({
   },
   mappings_disable_default = false,        -- disable default mappings if true, but will still adapt user mappings
   mappings = {
+    runs = {
+      expand_step = { lhs = "o", desc = "expand workflow step" },
+      open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
+      refresh = { lhs = "<C-r>", desc = "refresh workflow" },
+    },
     issue = {
       close_issue = { lhs = "<localleader>ic", desc = "close issue" },
       reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
@@ -379,6 +394,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | close                                             | Close the review window and return to the PR                                                                                                           |
 | actions  |                                                   | Lists all available Octo actions                                                                                                                       |
 | search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
+| run      | list                                              | List workflow runs                                                                                                                                     |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
