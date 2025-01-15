@@ -820,50 +820,65 @@ function M.change_state(state)
   end
 
   local id = buffer.node.id
-  local query, get_obj, desired_state
-  if buffer:isIssue() and (state == "CLOSED" or state == "OPEN") then
+  local query, get_obj, desired_state, fields
+  if buffer:isIssue() and state == "CLOSED" then
     query = graphql("update_issue_state_mutation", id, state)
     desired_state = state
     get_obj = function(resp)
       return resp.data.updateIssue.issue
     end
+    fields = {}
+  elseif buffer:isIssue() and state == "OPEN" then
+    query = graphql "reopen_issue_mutation"
+    desired_state = "OPEN"
+    get_obj = function(resp)
+      return resp.data.reopenIssue.issue
+    end
+    fields = { issueId = id }
   elseif buffer:isIssue() then
     query = graphql("close_issue_mutation", id, state)
     desired_state = "CLOSED"
     get_obj = function(resp)
       return resp.data.closeIssue.issue
     end
+    fields = {}
   elseif buffer:isPullRequest() then
     query = graphql("update_pull_request_state_mutation", id, state)
     desired_state = state
     get_obj = function(resp)
       return resp.data.updatePullRequest.pullRequest
     end
+    fields = {}
   end
 
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
+  local cb = function(output, stderr)
+    if stderr and not utils.is_blank(stderr) then
+      utils.error(stderr)
+    elseif output then
+      local resp = vim.fn.json_decode(output)
 
-        local obj = get_obj(resp)
-        local new_state = obj.state
+      local obj = get_obj(resp)
+      local new_state = obj.state
 
-        if desired_state ~= new_state then
-          return
-        end
-
-        buffer.node.state = new_state
-
-        local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
-        writers.write_state(bufnr, updated_state:upper(), buffer.number)
-        writers.write_details(bufnr, obj, true)
-        utils.info("Issue state changed to: " .. updated_state)
+      if desired_state ~= new_state then
+        return
       end
-    end,
+
+      buffer.node.state = new_state
+
+      local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
+      writers.write_state(bufnr, updated_state:upper(), buffer.number)
+      writers.write_details(bufnr, obj, true)
+      utils.info("Issue state changed to: " .. updated_state)
+    end
+  end
+
+  gh.graphql {
+    query = query,
+    fields = fields,
+    opts = {
+      cb = cb,
+    },
   }
 end
 

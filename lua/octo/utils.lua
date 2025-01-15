@@ -77,20 +77,13 @@ M.file_status_map = {
   renamed = "R",
 }
 
-M.checks_hl_map = {
-  ERROR = "OctoStateDismissed",
-  EXPECTED = "OctoStatePending",
-  FAILURE = "OctoStateDismissed",
-  PENDING = "OctoStatePending",
-  SUCCESS = "OctoStateApproved",
-}
-
-M.checks_message_map = {
-  ERROR = "× ERRORED",
-  EXPECTED = " EXPECTED",
-  FAILURE = "× FAILED",
-  PENDING = " PENDING",
-  SUCCESS = "✓ PASSED",
+-- https://docs.github.com/en/graphql/reference/enums#statusstate
+M.state_map = {
+  ERROR = { symbol = "× ", hl = "OctoStateDismissed" },
+  FAILURE = { symbol = "× ", hl = "OctoStateDismissed" },
+  EXPECTED = { symbol = " ", hl = "OctoStatePending" },
+  PENDING = { symbol = " ", hl = "OctoStatePending" },
+  SUCCESS = { symbol = "✓ ", hl = "OctoStateApproved" },
 }
 
 M.mergeable_hl_map = {
