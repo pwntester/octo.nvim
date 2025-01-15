@@ -77,6 +77,7 @@ M.file_status_map = {
   renamed = "R",
 }
 
+-- https://docs.github.com/en/graphql/reference/enums#statusstate
 M.state_map = {
   ERROR = { symbol = "× ", hl = "OctoStateDismissed" },
   FAILURE = { symbol = "× ", hl = "OctoStateDismissed" },
