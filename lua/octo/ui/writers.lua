@@ -1363,6 +1363,32 @@ local function write_issue_or_pr(bufnr, item)
   write_event(bufnr, vt)
 end
 
+local write_reference_commit = function(bufnr, commit)
+  local vt = {}
+  table.insert(vt, { "          ", "OctoTimelineItemHeading" })
+  table.insert(vt, { commit.message, "OctoTimelineItemHeading" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
+  table.insert(vt, { commit.abbreviatedOid, "OctoTimelineItemHeading" })
+  write_event(bufnr, vt)
+end
+
+function M.write_referenced_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " added a commit to ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.commit.repository.nameWithOwner, "OctoDetailsLabel" })
+  table.insert(vt, { " that referenced this issue ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+  write_reference_commit(bufnr, item.commit)
+end
+
 function M.write_cross_referenced_event(bufnr, item)
   local vt = {}
   local conf = config.values

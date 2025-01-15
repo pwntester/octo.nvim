@@ -223,6 +223,9 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "CrossReferencedEvent" then
       writers.write_cross_referenced_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "ReferencedEvent" then
+      writers.write_referenced_event(self.bufnr, item)
+      prev_is_event = true
     elseif item.__typename == "MilestonedEvent" then
       writers.write_milestoned_event(self.bufnr, item)
       prev_is_event = true

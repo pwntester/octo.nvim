@@ -58,6 +58,22 @@ fragment ConnectedEventFragment on ConnectedEvent {
   }
 }
 ]]
+M.referenced_event = [[
+fragment ReferencedEventFragment on ReferencedEvent {
+  createdAt
+  actor {
+    login
+  }
+  commit {
+    __typename
+    abbreviatedOid
+    message
+    repository {
+      nameWithOwner
+    }
+  }
+}
+]]
 M.cross_referenced_event = [[
 fragment CrossReferencedEventFragment on CrossReferencedEvent {
   createdAt
@@ -365,6 +381,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...AssignedEventFragment
     ...ClosedEventFragment
     ...ConnectedEventFragment
+    ...ReferencedEventFragment
     ...CrossReferencedEventFragment
     ...DemilestonedEventFragment
     ...IssueCommentFragment
