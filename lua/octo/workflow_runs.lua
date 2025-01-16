@@ -260,29 +260,16 @@ local function create_log_child(value, indent)
   }
 end
 
-local function create_unique_tmpname()
-  local depth = 50
-  local attempts = 0
-  local tmpname
-
-  while attempts < depth do
-    tmpname = os.tmpname()
-    local success = pcall(vim.fn.readfile, tmpname)
-    if success == false then
-      return tmpname
-    end
-
-    attempts = attempts + 1
-  end
-
-  error("Failed to create a unique temporary file name after " .. depth .. " attempts.")
+local function get_filename()
+  local randlowercase = string.char(math.random(65, 65 + 25)):lower()
+  return randlowercase
 end
 
 -- Accepts zip contents and writes and then unzips them
 ---@param stdout string - The zip content to write
 local function write_and_unzip_file(stdout)
-  local temp_location = create_unique_tmpname()
-  local zip_location = temp_location .. ".zip"
+  local temp_location = get_filename()
+  local zip_location = get_filename()
   local file = io.open(zip_location, "wb")
   if not file then
     octo_error "Failed to create temporary file"
