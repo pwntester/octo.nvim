@@ -260,9 +260,13 @@ local function create_log_child(value, indent)
   }
 end
 
-local function get_filename()
-  local randlowercase = string.char(math.random(65, 65 + 25)):lower()
-  return randlowercase
+local function get_filename(length)
+  length = length or 7
+  local name = ""
+  while length > #name do
+    name = name .. string.char(math.random(65, 65 + 25)):lower()
+  end
+  return name
 end
 
 -- Accepts zip contents and writes and then unzips them
