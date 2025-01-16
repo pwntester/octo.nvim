@@ -267,12 +267,9 @@ local function create_unique_tmpname()
 
   while attempts < depth do
     tmpname = os.tmpname()
-    local file = io.open(tmpname, "r")
-
-    if not file then
+    local success = pcall(vim.fn.readfile, tmpname)
+    if success == false then
       return tmpname
-    else
-      file:close()
     end
 
     attempts = attempts + 1
