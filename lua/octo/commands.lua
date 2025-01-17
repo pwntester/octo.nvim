@@ -151,7 +151,10 @@ function M.setup()
           utils.develop_issue(buffer.repo, buffer.node.number, repo)
         else
           local opts = M.process_varargs(repo, ...)
-          picker.issues(opts, true)
+          opts.cb = function(selected)
+            utils.develop_issue(selected.repo, selected.obj.number, repo)
+          end
+          picker.issues(opts)
         end
       end,
       reopen = function()
