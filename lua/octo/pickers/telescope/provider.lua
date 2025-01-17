@@ -122,21 +122,26 @@ local function copy_url()
   end
 end
 
---
--- ISSUES
---
-local function open_issue_buffer(prompt_bufnr, type)
+local function open_buffer(prompt_bufnr, type)
   open(type)(prompt_bufnr)
 end
 
-local function develop_issue(prompt_bufnr, type)
-  local selection = action_state.get_selected_entry(prompt_bufnr)
-  actions.close(prompt_bufnr)
+--
+-- ISSUES
+--
 
-  utils.develop_issue(selection.repo, selection.obj.number, nil)
+--- Create a replace function for the picker
+--- @param cb function Callback function to call with the selected entry
+--- @return function Replace function that takes a prompt_bufnr and calls the callback with the selected entry
+local create_replace = function(cb)
+  return function(prompt_bufnr, _)
+    local selected = action_state.get_selected_entry()
+    actions.close(prompt_bufnr)
+    cb(selected)
+  end
 end
 
-function M.issues(opts, develop)
+function M.issues(opts)
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -150,12 +155,7 @@ function M.issues(opts, develop)
     return
   end
 
-  local replace
-  if develop then
-    replace = develop_issue
-  else
-    replace = open_issue_buffer
-  end
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
   local owner, name = utils.split_repo(opts.repo)
   local cfg = octo_config.values
@@ -301,6 +301,8 @@ function M.pull_requests(opts)
     return
   end
 
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
+
   local owner, name = utils.split_repo(opts.repo)
   local cfg = octo_config.values
   local order_by = cfg.pull_requests.order_by
@@ -337,9 +339,7 @@ function M.pull_requests(opts)
             sorter = conf.generic_sorter(opts),
             previewer = previewers.issue.new(opts),
             attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
+              action_set.select:replace(replace)
               map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
               map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
               map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
@@ -545,6 +545,8 @@ function M.search(opts)
     width = math.min(#num_results, width)
   end
 
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
+
   local requester = function()
     return function(prompt)
       if utils.is_blank(opts.prompt) and utils.is_blank(prompt) then
@@ -591,9 +593,7 @@ function M.search(opts)
       sorter = conf.generic_sorter(opts),
       previewer = previewers.issue.new(opts),
       attach_mappings = function(_, map)
-        action_set.select:replace(function(prompt_bufnr, type)
-          open(type)(prompt_bufnr)
-        end)
+        action_set.select:replace(replace)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
         map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
         if opts.search_prs then
@@ -1215,6 +1215,10 @@ end
 function M.discussions(opts)
   opts = opts or {}
 
+  if utils.is_blank(opts.repo) then
+    opts.repo = utils.get_remote_name()
+  end
+
   if opts.cb == nil then
     opts.cb = function(selected, _)
       local url = selected.obj.url
@@ -1223,6 +1227,8 @@ function M.discussions(opts)
   end
 
   local cfg = octo_config.values
+
+  local replace = create_replace(opts.cb)
 
   local cb = function(output, stderr)
     if stderr and not utils.is_blank(stderr) then
@@ -1245,12 +1251,6 @@ function M.discussions(opts)
       return
     end
 
-    local replace = function(prompt_bufnr, type)
-      local selected = action_state.get_selected_entry(prompt_bufnr)
-      actions.close(prompt_bufnr)
-      opts.cb(selected, prompt_bufnr, type)
-    end
-
     opts.preview_title = opts.preview_title or ""
 
     pickers
@@ -1263,7 +1263,6 @@ function M.discussions(opts)
         previewer = previewers.discussion.new(opts),
         attach_mappings = function(_, map)
           action_set.select:replace(replace)
-
           map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
           return true
         end,
