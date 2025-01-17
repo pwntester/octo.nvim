@@ -62,8 +62,10 @@ local M = {}
 ---@field default_delete_branch boolean
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
+---@field commands table
 ---@field users string
 ---@field user_icon string
+---@field ghost_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
 ---@field resolved_icon string
@@ -109,8 +111,10 @@ function M.get_default_values()
     default_delete_branch = false,
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
+    commands = {},
     users = "search",
     user_icon = " ",
+    ghost_icon = "󰊠 ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
@@ -240,6 +244,8 @@ function M.get_default_values()
         react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
         review_start = { lhs = "<localleader>vs", desc = "start a review for the current PR" },
         review_resume = { lhs = "<localleader>vr", desc = "resume a pending review for the current PR" },
+        resolve_thread = { lhs = "<localleader>rt", desc = "resolve PR thread" },
+        unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
       },
       review_thread = {
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
@@ -261,6 +267,8 @@ function M.get_default_values()
         react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
         react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
         react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+        resolve_thread = { lhs = "<localleader>rt", desc = "resolve PR thread" },
+        unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
       },
       submit_win = {
         approve_review = { lhs = "<C-a>", desc = "approve review" },
@@ -442,6 +450,7 @@ function M.validate_config()
     validate_type(config.reaction_viewer_hint_icon, "reaction_viewer_hint_icon", "string")
     validate_string_enum(config.users, "users", { "search", "mentionable", "assignable" })
     validate_type(config.user_icon, "user_icon", "string")
+    validate_type(config.ghost_icon, "ghost_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")

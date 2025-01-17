@@ -47,3 +47,23 @@ describe("Utils module:", function()
     end)
   end)
 end)
+
+describe("Utils escape_char(): ", function()
+  it("escapes backslash characters in a string", function()
+    local input = [[hello \\ world]]
+    local expected = [[hello \\\\ world]]
+    eq(expected, this.escape_char(input))
+  end)
+
+  it("returns the same string if no escape characters", function()
+    local input = [['hello/ ~^'*$"world%]]
+    local expected = [['hello/ ~^'*$"world%]]
+    eq(expected, this.escape_char(input))
+  end)
+
+  it("handles an empty string", function()
+    local input = ""
+    local expected = ""
+    eq(expected, this.escape_char(input))
+  end)
+end)

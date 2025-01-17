@@ -107,7 +107,7 @@ function M.gen_from_discussions(max_number)
 
     local columns = {
       { entry.value, "TelescopeResultsNumber" },
-      get_icon(entry),
+      utils.get_icon(entry),
       { entry.obj.title },
     }
     local layout = {
@@ -167,7 +167,7 @@ function M.gen_from_issue(max_number, print_repo)
     else
       columns = {
         { entry.value, "TelescopeResultsNumber" },
-        get_icon(entry),
+        utils.get_icon(entry),
         { entry.obj.title },
       }
       layout = {
@@ -433,6 +433,51 @@ function M.gen_from_project_card()
   end
 end
 
+function M.gen_from_milestone(title_width, show_description)
+  title_width = title_width or 10
+
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns, items
+    if show_description then
+      columns = {
+        { entry.milestone.title, "OctoDetailsLabel" },
+        { " " },
+        { entry.milestone.description },
+      }
+      items = { { width = title_width }, { width = 1 }, { remaining = true } }
+    else
+      columns = {
+        { entry.milestone.title, "OctoDetailsLabel" },
+      }
+      items = { { width = title_width } }
+    end
+
+    local displayer = entry_display.create {
+      separator = "",
+      items = items,
+    }
+
+    return displayer(columns)
+  end
+
+  return function(milestone)
+    if not milestone or vim.tbl_isempty(milestone) then
+      return nil
+    end
+
+    return {
+      value = milestone.id,
+      ordinal = milestone.title,
+      display = make_display,
+      milestone = milestone,
+    }
+  end
+end
+
 function M.gen_from_label()
   local make_display = function(entry)
     if not entry then
@@ -668,7 +713,7 @@ function M.gen_from_gist()
   end
 end
 
-function M.gen_from_octo_actions()
+function M.gen_from_octo_actions(width)
   local make_display = function(entry)
     if not entry then
       return nil
@@ -682,7 +727,7 @@ function M.gen_from_octo_actions()
     local displayer = entry_display.create {
       separator = "",
       items = {
-        { width = 16 },
+        { width = width },
         { remaining = true },
       },
     }

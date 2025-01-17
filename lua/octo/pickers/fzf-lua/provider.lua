@@ -28,6 +28,7 @@ M.picker = {
   search = require "octo.pickers.fzf-lua.pickers.search",
   users = require "octo.pickers.fzf-lua.pickers.users",
   notifications = M.not_implemented,
+  milestones = M.not_implemented,
 }
 
 return M

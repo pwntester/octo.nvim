@@ -122,28 +122,26 @@ local function copy_url()
   end
 end
 
---
--- ISSUES
---
-local function open_issue_buffer(prompt_bufnr, type)
+local function open_buffer(prompt_bufnr, type)
   open(type)(prompt_bufnr)
 end
 
-local function develop_issue(prompt_bufnr, type)
-  local selection = action_state.get_selected_entry(prompt_bufnr)
-  actions.close(prompt_bufnr)
+--
+-- ISSUES
+--
 
-  utils.develop_issue(selection.obj.number)
+--- Create a replace function for the picker
+--- @param cb function Callback function to call with the selected entry
+--- @return function Replace function that takes a prompt_bufnr and calls the callback with the selected entry
+local create_replace = function(cb)
+  return function(prompt_bufnr, _)
+    local selected = action_state.get_selected_entry()
+    actions.close(prompt_bufnr)
+    cb(selected)
+  end
 end
 
-function M.issues(opts, develop)
-  local replace
-  if develop then
-    replace = develop_issue
-  else
-    replace = open_issue_buffer
-  end
-
+function M.issues(opts)
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -156,6 +154,8 @@ function M.issues(opts, develop)
     utils.error "Cannot find repo"
     return
   end
+
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
   local owner, name = utils.split_repo(opts.repo)
   local cfg = octo_config.values
@@ -301,6 +301,8 @@ function M.pull_requests(opts)
     return
   end
 
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
+
   local owner, name = utils.split_repo(opts.repo)
   local cfg = octo_config.values
   local order_by = cfg.pull_requests.order_by
@@ -337,9 +339,7 @@ function M.pull_requests(opts)
             sorter = conf.generic_sorter(opts),
             previewer = previewers.issue.new(opts),
             attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
+              action_set.select:replace(replace)
               map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
               map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
               map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
@@ -502,16 +502,55 @@ end
 ---
 -- SEARCH
 ---
+
+local function get_search_query(prompt)
+  local full_prompt = prompt[1]
+  local parts = vim.split(full_prompt, " ")
+  for _, part in ipairs(parts) do
+    if string.match(part, "^repo:") then
+      return {
+        single_repo = true,
+        prompt = part,
+      }
+    end
+  end
+  return {
+    single_repo = false,
+    prompt = full_prompt,
+  }
+end
+
+local function get_search_size(prompt)
+  local query = graphql("search_count_query", prompt)
+  return gh.graphql {
+    query = query,
+    jq = ".data.search.issueCount",
+    opts = {
+      mode = "sync",
+    },
+  }
+end
+
 function M.search(opts)
   opts = opts or {}
   local cfg = octo_config.values
+  if type(opts.prompt) == "string" then
+    opts.prompt = { opts.prompt }
+  end
+
+  local search = get_search_query(opts.prompt)
+  local width = 6
+  if search.single_repo then
+    local num_results = get_search_size(search.prompt)
+    width = math.min(#num_results, width)
+  end
+
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
+
   local requester = function()
     return function(prompt)
-      if not opts.prompt and utils.is_blank(prompt) then
+      if utils.is_blank(opts.prompt) and utils.is_blank(prompt) then
         return {}
-      end
-      if type(opts.prompt) == "string" then
-        opts.prompt = { opts.prompt }
       end
       local results = {}
       for _, val in ipairs(opts.prompt) do
@@ -536,13 +575,13 @@ function M.search(opts)
   end
   local finder = finders.new_dynamic {
     fn = requester(),
-    entry_maker = entry_maker.gen_from_issue(6),
+    entry_maker = entry_maker.gen_from_issue(width),
   }
   if opts.static then
     local results = requester() ""
     finder = finders.new_table {
       results = results,
-      entry_maker = entry_maker.gen_from_issue(6, true),
+      entry_maker = entry_maker.gen_from_issue(width, true),
     }
   end
   opts.preview_title = opts.preview_title or ""
@@ -554,9 +593,7 @@ function M.search(opts)
       sorter = conf.generic_sorter(opts),
       previewer = previewers.issue.new(opts),
       attach_mappings = function(_, map)
-        action_set.select:replace(function(prompt_bufnr, type)
-          open(type)(prompt_bufnr)
-        end)
+        action_set.select:replace(replace)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
         map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
         if opts.search_prs then
@@ -705,6 +742,35 @@ end
 --
 -- LABELS
 --
+
+local function select(opts)
+  local prompt_bufnr = opts.bufnr
+  local single_cb = opts.single_cb
+  local multiple_cb = opts.multiple_cb
+  local get_item = opts.get_item
+
+  local picker = action_state.get_current_picker(prompt_bufnr)
+  local selections = picker:get_multi_selection()
+  local cb
+  local items = {}
+  if #selections == 0 then
+    local selection = action_state.get_selected_entry(prompt_bufnr)
+    table.insert(items, get_item(selection))
+    cb = single_cb
+  elseif multiple_cb == nil then
+    utils.error "Multiple selections are not allowed"
+    actions.close(prompt_bufnr)
+    return
+  else
+    for _, selection in ipairs(selections) do
+      table.insert(items, get_item(selection))
+    end
+    cb = multiple_cb
+  end
+  actions.close(prompt_bufnr)
+  cb(items)
+end
+
 function M.select_label(cb)
   local opts = vim.deepcopy(dropdown_opts)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -731,9 +797,14 @@ function M.select_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = cb,
+                  multiple_cb = cb,
+                  get_item = function(selection)
+                    return selection.label
+                  end,
+                }
               end)
               return true
             end,
@@ -776,9 +847,14 @@ function M.select_assigned_label(cb)
             sorter = conf.generic_sorter(opts),
             attach_mappings = function(_, _)
               actions.select_default:replace(function(prompt_bufnr)
-                local selected_label = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_label.label.id)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = cb,
+                  multiple_cb = cb,
+                  get_item = function(selection)
+                    return selection.label
+                  end,
+                }
               end)
               return true
             end,
@@ -1081,11 +1157,17 @@ function M.actions(flattened_actions)
     results_title = "",
   }
 
+  local width = 11
+  for _, action in ipairs(flattened_actions) do
+    width = math.max(width, #action.object)
+  end
+  width = width + 1
+
   pickers
     .new(opts, {
       finder = finders.new_table {
         results = flattened_actions,
-        entry_maker = entry_maker.gen_from_octo_actions(),
+        entry_maker = entry_maker.gen_from_octo_actions(width),
       },
       sorter = conf.generic_sorter(opts),
       attach_mappings = function()
@@ -1196,6 +1278,10 @@ end
 function M.discussions(opts)
   opts = opts or {}
 
+  if utils.is_blank(opts.repo) then
+    opts.repo = utils.get_remote_name()
+  end
+
   if opts.cb == nil then
     opts.cb = function(selected, _)
       local url = selected.obj.url
@@ -1203,60 +1289,143 @@ function M.discussions(opts)
     end
   end
 
-  local owner, name = utils.split_repo(opts.repo)
   local cfg = octo_config.values
+
+  local replace = create_replace(opts.cb)
+
+  local cb = function(output, stderr)
+    if stderr and not utils.is_blank(stderr) then
+      utils.error(stderr)
+      return
+    end
+
+    local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
+    local discussions = resp.data.repository.discussions.nodes
+
+    local max_number = -1
+    for _, discussion in ipairs(discussions) do
+      if #tostring(discussion.number) > max_number then
+        max_number = #tostring(discussion.number)
+      end
+    end
+
+    if #discussions == 0 then
+      utils.error(string.format("There are no matching discussions in %s.", opts.repo))
+      return
+    end
+
+    opts.preview_title = opts.preview_title or ""
+
+    pickers
+      .new(opts, {
+        finder = finders.new_table {
+          results = discussions,
+          entry_maker = entry_maker.gen_from_discussions(max_number),
+        },
+        sorter = conf.generic_sorter(opts),
+        previewer = previewers.discussion.new(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(replace)
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          return true
+        end,
+      })
+      :find()
+  end
+
+  local owner, name = utils.split_repo(opts.repo)
   local order_by = cfg.discussions.order_by
-  local query = graphql("discussions_query", owner, name, order_by.field, order_by.direction, { escape = false })
+  local query = graphql "discussions_query"
   utils.info "Fetching discussions (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-        return
-      end
 
-      local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
-      local discussions = resp.data.repository.discussions.nodes
+  gh.graphql {
+    query = query,
+    fields = {
+      owner = owner,
+      name = name,
+      states = { "OPEN" },
+      orderBy = order_by.field,
+      direction = order_by.direction,
+    },
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = cb,
+    },
+  }
+end
 
-      local max_number = -1
-      for _, discussion in ipairs(discussions) do
-        if #tostring(discussion.number) > max_number then
-          max_number = #tostring(discussion.number)
+function M.milestones(opts)
+  if opts.cb == nil then
+    utils.error "Callback action on milestone is required"
+    return
+  end
+
+  local repo = opts.repo or utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
+  local query = graphql "open_milestones_query"
+
+  gh.graphql {
+    query = query,
+    fields = {
+      owner = owner,
+      name = name,
+      n_milestones = 25,
+    },
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+          return
         end
-      end
 
-      if #discussions == 0 then
-        utils.error(string.format("There are no matching discussions in %s.", opts.repo))
-        return
-      end
+        local resp = vim.fn.json_decode(output)
+        local nodes = resp.data.repository.milestones.nodes
 
-      local cfg = octo_config.values
-      local replace = function(prompt_bufnr, type)
-        local selected = action_state.get_selected_entry(prompt_bufnr)
-        actions.close(prompt_bufnr)
-        opts.cb(selected, prompt_bufnr, type)
-      end
+        if #nodes == 0 then
+          utils.error(string.format("There are no open milestones in %s.", repo))
+          return
+        end
 
-      opts.preview_title = opts.preview_title or ""
+        local title_width = 0
+        for _, milestone in ipairs(nodes) do
+          title_width = math.max(title_width, #milestone.title)
+        end
 
-      pickers
-        .new(opts, {
-          finder = finders.new_table {
-            results = discussions,
-            entry_maker = entry_maker.gen_from_discussions(max_number),
-          },
-          sorter = conf.generic_sorter(opts),
-          previewer = previewers.discussion.new(opts),
-          attach_mappings = function(_, map)
-            action_set.select:replace(replace)
+        local non_empty_descriptions = false
+        for _, milestone in ipairs(nodes) do
+          if not utils.is_blank(milestone.description) then
+            non_empty_descriptions = true
+            break
+          end
+        end
 
-            map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-            return true
-          end,
-        })
-        :find()
-    end,
+        pickers
+          .new(vim.deepcopy(dropdown_opts), {
+            finder = finders.new_table {
+              results = nodes,
+              entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
+            },
+            sorter = conf.generic_sorter(opts),
+            attach_mappings = function(_, map)
+              actions.select_default:replace(function(prompt_bufnr)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = function(selected)
+                    opts.cb(selected[1])
+                  end,
+                  multiple_cb = nil,
+                  get_item = function(selected)
+                    return selected.milestone
+                  end,
+                }
+              end)
+              return true
+            end,
+          })
+          :find()
+      end,
+    },
   }
 end
 
@@ -1282,6 +1451,7 @@ M.picker = {
   review_commits = M.review_commits,
   search = M.search,
   users = M.select_user,
+  milestones = M.milestones,
 }
 
 return M

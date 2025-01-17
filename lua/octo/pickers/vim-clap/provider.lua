@@ -28,6 +28,7 @@ M.picker = {
   review_commits = M.not_implemented,
   search = M.not_implemented,
   users = M.not_implemented,
+  milestones = M.not_implemented,
 }
 
 return M

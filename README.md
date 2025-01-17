@@ -96,7 +96,7 @@ use {
 require"octo".setup({
   use_local_fs = false,                    -- use local files on right side of reviews
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
-  default_remote = {"upstream", "origin"}; -- order to try remotes
+  default_remote = {"upstream", "origin"}, -- order to try remotes
   default_merge_method = "commit",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `commit`, `rebase` or `squash`
   default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
@@ -113,15 +113,17 @@ require"octo".setup({
   comment_icon = "▎",                      -- comment marker
   outdated_icon = "󰅒 ",                    -- outdated indicator
   resolved_icon = " ",                    -- resolved indicator
-  reaction_viewer_hint_icon = " ";        -- marker for user reactions
+  reaction_viewer_hint_icon = " ",        -- marker for user reactions
+  commands = {},                           -- additional subcommands made available to `Octo` command
   users = "search",                        -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
-  user_icon = " ";                        -- user icon
-  timeline_marker = " ";                  -- timeline marker
-  timeline_indent = "2";                   -- timeline indentation
-  right_bubble_delimiter = "";            -- bubble delimiter
-  left_bubble_delimiter = "";             -- bubble delimiter
-  github_hostname = "";                    -- GitHub Enterprise host
-  snippet_context_lines = 4;               -- number or lines around commented lines
+  user_icon = " ",                        -- user icon
+  ghost_icon = "󰊠 ",                       -- ghost icon
+  timeline_marker = " ",                  -- timeline marker
+  timeline_indent = "2",                   -- timeline indentation
+  right_bubble_delimiter = "",            -- bubble delimiter
+  left_bubble_delimiter = "",             -- bubble delimiter
+  github_hostname = "",                    -- GitHub Enterprise host
+  snippet_context_lines = 4,               -- number or lines around commented lines
   gh_cmd = "gh",                           -- Command to use when calling Github CLI
   gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
   timeout = 5000,                          -- timeout for requests between the remote server
@@ -230,6 +232,8 @@ require"octo".setup({
       react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
       review_start = { lhs = "<localleader>vs", desc = "start a review for the current PR" },
       review_resume = { lhs = "<localleader>vr", desc = "resume a pending review for the current PR" },
+      resolve_thread = { lhs = "<localleader>rt", desc = "resolve PR thread" },
+      unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
     },
     review_thread = {
       goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
@@ -251,6 +255,8 @@ require"octo".setup({
       react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
       react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
       react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+      resolve_thread = { lhs = "<localleader>rt", desc = "resolve PR thread" },
+      unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
     },
     submit_win = {
       approve_review = { lhs = "<C-a>", desc = "approve review" },
@@ -349,6 +355,10 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
 |          | remove [label]                                    | Remove a label                                                                                                                                         |
 |          | create [label]                                    | Create a new label                                                                                                                                     |
+| milestone | add [milestone]                                   | Add a milestone to current Issue or PR                                                                                                                |
+|          | remove                                           | Remove a milestone from current Issue or PR                                                                                                             |
+|          | create [milestone]                                | Create a new milestone                                                                                                                                 |
+|          | list [repo]                                       | List all milestones for repo or current repo                                                                                                           |
 | assignee | add [login]                                       | Assign a user                                                                                                                                          |
 |          | remove [login]                                    | Unassign a user                                                                                                                                        |
 | reviewer | add [login]                                       | Assign a PR reviewer                                                                                                                                   |

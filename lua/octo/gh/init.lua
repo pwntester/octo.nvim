@@ -102,7 +102,7 @@ function M.setup()
       end
       if use_proj_v2 then
         if M.has_scope { "read:project", "project" } then
-          _G.octo_pv2_fragment = fragments.projects_v2_fragment
+          _G.octo_pv2_fragment = fragments.projects_v2
         elseif not config.values.suppress_missing_scope.projects_v2 then
           require("octo.utils").error "Cannot request Projects v2: Missing scope 'read:project' or 'project'"
         end
@@ -166,11 +166,90 @@ function M.run(opts)
     env = get_env(),
   }
   if mode == "sync" then
-    job:sync()
+    job:sync(conf.timeout)
     return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
   else
     job:start()
   end
+end
+
+local create_flag = function(key)
+  if #key == 1 then
+    return "-" .. key
+  else
+    return "--" .. key
+  end
+end
+
+---Insert the options into the args table
+---@param args table the arguments table
+---@param options table the options to insert
+---@return table the updated args table
+M.insert_args = function(args, options)
+  for key, value in pairs(options) do
+    local flag = create_flag(key)
+
+    if type(value) == "table" then
+      for k, v in pairs(value) do
+        if type(v) == "table" then
+          for _, vv in ipairs(v) do
+            table.insert(args, flag)
+            table.insert(args, k .. "[]=" .. vv)
+          end
+        else
+          table.insert(args, flag)
+          table.insert(args, k .. "=" .. v)
+        end
+      end
+    elseif type(value) == "boolean" then
+      if value then
+        table.insert(args, flag)
+      end
+    else
+      table.insert(args, flag)
+      table.insert(args, value)
+    end
+  end
+
+  return args
+end
+
+---Create the arguments for the graphql query
+---@param query string the graphql query
+---@param fields table key value pairs for graphql query
+---@param paginate boolean whether to paginate the results
+---@param slurp boolean whether to slurp the results
+---@param jq string the jq query to apply to the results
+---@return table
+local create_graphql_args = function(query, fields, paginate, slurp, jq)
+  local args = { "api", "graphql" }
+
+  local opts = {
+    f = {
+      query = query,
+    },
+    F = fields,
+    paginate = paginate,
+    slurp = slurp,
+    jq = jq,
+  }
+
+  return M.insert_args(args, opts)
+end
+
+---Run a graphql query
+---@param opts table the options for the graphql query
+---@return table
+function M.graphql(opts)
+  local run_opts = opts.opts or {}
+  return M.run {
+    args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
+    mode = run_opts.mode,
+    cb = run_opts.cb,
+    stream_cb = run_opts.stream_cb,
+    headers = run_opts.headers,
+    hostname = run_opts.hostname,
+  }
 end
 
 return M
