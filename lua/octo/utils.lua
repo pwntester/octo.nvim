@@ -466,18 +466,17 @@ function M.in_pr_branch(pr)
 end
 
 function M.checkout_pr(pr_number)
-  if not Job then
-    return
-  end
-  Job:new({
-    enable_recording = true,
-    command = "gh",
+  gh.run {
     args = { "pr", "checkout", pr_number },
-    on_exit = vim.schedule_wrap(function()
-      local output = vim.fn.system "git branch --show-current"
-      M.info("Switched to " .. output)
-    end),
-  }):start()
+    cb = function(stdout, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif stdout then
+        local output = vim.fn.system "git branch --show-current"
+        M.info("Switched to " .. output)
+      end
+    end,
+  }
 end
 
 ---@class CheckoutPrSyncOpts
