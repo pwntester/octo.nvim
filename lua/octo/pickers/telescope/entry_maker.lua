@@ -662,6 +662,8 @@ function M.gen_from_notification()
       return nil
     end
 
+    local icons = utils.icons
+
     local columns = {
       entry.obj.unread == true and icons.notification[entry.kind].unread or icons.notification[entry.kind].read,
       { "#" .. (entry.obj.subject.url:match "/(%d+)$" or "NA") },

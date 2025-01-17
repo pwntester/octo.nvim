@@ -1619,7 +1619,7 @@ end
 --- @see octo.ui.colors for the available highlight groups
 
 -- Symbols found with "Telescope symbols"
-local icons = {
+M.icons = {
   issue = {
     open = { " ", "OctoGreen" },
     closed = { " ", "OctoPurple" },
@@ -1636,6 +1636,16 @@ local icons = {
     answered = { " ", "OctoGreen" },
     closed = { " ", "OctoRed" },
   },
+  notification = {
+    issue = {
+      unread = { " ", "OctoBlue" },
+      read = { " ", "OctoGrey" },
+    },
+    pull_request = {
+      unread = { " ", "OctoBlue" },
+      read = { " ", "OctoGrey" },
+    },
+  },
   unknown = { " " },
 }
 
@@ -1650,39 +1660,39 @@ function M.get_icon(entry)
     local stateReason = entry.obj.stateReason
 
     if state == "OPEN" then
-      return icons.issue.open
+      return M.icons.issue.open
     elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
-      return icons.issue.not_planned
+      return M.icons.issue.not_planned
     elseif state == "CLOSED" then
-      return icons.issue.closed
+      return M.icons.issue.closed
     end
   elseif kind == "pull_request" then
     local state = entry.obj.state
     local isDraft = entry.obj.isDraft
 
     if state == "MERGED" then
-      return icons.pull_request.merged
+      return M.icons.pull_request.merged
     elseif state == "CLOSED" then
-      return icons.pull_request.closed
+      return M.icons.pull_request.closed
     elseif isDraft then
-      return icons.pull_request.draft
+      return M.icons.pull_request.draft
     elseif state == "OPEN" then
-      return icons.pull_request.open
+      return M.icons.pull_request.open
     end
   elseif kind == "discussion" then
     local closed = entry.obj.closed
     local isAnswered = entry.obj.isAnswered
 
     if isAnswered ~= vim.NIL and isAnswered then
-      return icons.discussion.answered
+      return M.icons.discussion.answered
     elseif not closed then
-      return icons.discussion.open
+      return M.icons.discussion.open
     else
-      return icons.discussion.closed
+      return M.icons.discussion.closed
     end
   end
 
-  return icons.unknown
+  return M.icons.unknown
 end
 
 return M
