@@ -675,7 +675,7 @@ function M.gen_from_notification()
       separator = " ",
       items = {
         { width = 2 },
-        { width = 12 },
+        { width = 6 },
         { width = math.min(#entry.obj.repository.full_name, 50) },
         { width = math.min(#entry.obj.subject.title, 100) },
       },
