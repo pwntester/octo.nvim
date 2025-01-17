@@ -46,6 +46,7 @@ local M = {}
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
+---@field limit number
 
 ---@class OctoConfigOrderBy
 ---@field field string
@@ -159,6 +160,7 @@ function M.get_default_values()
         field = "CREATED_AT",
         direction = "DESC",
       },
+      limit = 100,
       always_select_remote_on_create = false,
     },
     file_panel = {
@@ -423,7 +425,12 @@ function M.validate_config()
       validate_type(config.pull_requests.order_by.field, "pull_requests.order_by.field", "string")
       validate_type(config.pull_requests.order_by.direction, "pull_requests.order_by.direction", "string")
     end
-    validate_type(config.pull_requests.always_select_remote_on_create, "always_select_remote_on_create", "boolean")
+    validate_type(
+      config.pull_requests.always_select_remote_on_create,
+      "pull_requests.always_select_remote_on_create",
+      "boolean"
+    )
+    validate_type(config.pull_requests.limit, "pull_requests.limit", "number")
   end
 
   local function validate_mappings()
