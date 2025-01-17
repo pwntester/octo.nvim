@@ -1222,60 +1222,74 @@ function M.discussions(opts)
     end
   end
 
-  local owner, name = utils.split_repo(opts.repo)
   local cfg = octo_config.values
+
+  local cb = function(output, stderr)
+    if stderr and not utils.is_blank(stderr) then
+      utils.error(stderr)
+      return
+    end
+
+    local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
+    local discussions = resp.data.repository.discussions.nodes
+
+    local max_number = -1
+    for _, discussion in ipairs(discussions) do
+      if #tostring(discussion.number) > max_number then
+        max_number = #tostring(discussion.number)
+      end
+    end
+
+    if #discussions == 0 then
+      utils.error(string.format("There are no matching discussions in %s.", opts.repo))
+      return
+    end
+
+    local replace = function(prompt_bufnr, type)
+      local selected = action_state.get_selected_entry(prompt_bufnr)
+      actions.close(prompt_bufnr)
+      opts.cb(selected, prompt_bufnr, type)
+    end
+
+    opts.preview_title = opts.preview_title or ""
+
+    pickers
+      .new(opts, {
+        finder = finders.new_table {
+          results = discussions,
+          entry_maker = entry_maker.gen_from_discussions(max_number),
+        },
+        sorter = conf.generic_sorter(opts),
+        previewer = previewers.discussion.new(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(replace)
+
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          return true
+        end,
+      })
+      :find()
+  end
+
+  local owner, name = utils.split_repo(opts.repo)
   local order_by = cfg.discussions.order_by
-  local query = graphql("discussions_query", owner, name, order_by.field, order_by.direction, { escape = false })
+  local query = graphql "discussions_query"
   utils.info "Fetching discussions (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-        return
-      end
 
-      local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
-      local discussions = resp.data.repository.discussions.nodes
-
-      local max_number = -1
-      for _, discussion in ipairs(discussions) do
-        if #tostring(discussion.number) > max_number then
-          max_number = #tostring(discussion.number)
-        end
-      end
-
-      if #discussions == 0 then
-        utils.error(string.format("There are no matching discussions in %s.", opts.repo))
-        return
-      end
-
-      local cfg = octo_config.values
-      local replace = function(prompt_bufnr, type)
-        local selected = action_state.get_selected_entry(prompt_bufnr)
-        actions.close(prompt_bufnr)
-        opts.cb(selected, prompt_bufnr, type)
-      end
-
-      opts.preview_title = opts.preview_title or ""
-
-      pickers
-        .new(opts, {
-          finder = finders.new_table {
-            results = discussions,
-            entry_maker = entry_maker.gen_from_discussions(max_number),
-          },
-          sorter = conf.generic_sorter(opts),
-          previewer = previewers.discussion.new(opts),
-          attach_mappings = function(_, map)
-            action_set.select:replace(replace)
-
-            map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-            return true
-          end,
-        })
-        :find()
-    end,
+  gh.graphql {
+    query = query,
+    fields = {
+      owner = owner,
+      name = name,
+      states = { "OPEN" },
+      orderBy = order_by.field,
+      direction = order_by.direction,
+    },
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = cb,
+    },
   }
 end
 
