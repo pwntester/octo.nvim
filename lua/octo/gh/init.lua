@@ -239,7 +239,7 @@ end
 
 ---Run a graphql query
 ---@param opts table the options for the graphql query
----@return table
+---@return table|nil
 function M.graphql(opts)
   local run_opts = opts.opts or {}
   return M.run {
@@ -251,5 +251,46 @@ function M.graphql(opts)
     hostname = run_opts.hostname,
   }
 end
+
+M.api = {
+  graphql = M.graphql,
+}
+
+local create_subcommand = function(command)
+  local subcommand = {}
+  subcommand.command = command
+
+  setmetatable(subcommand, {
+    __index = function(t, key)
+      return function(opts)
+        opts = opts or {}
+
+        local run_opts = opts.opts or {}
+
+        local args = {
+          t.command,
+          key,
+        }
+
+        opts.opts = nil
+        args = M.insert_args(args, opts)
+
+        return M.run {
+          args = args,
+          mode = run_opts.mode,
+          cb = run_opts.cb,
+        }
+      end
+    end,
+  })
+
+  return subcommand
+end
+
+setmetatable(M, {
+  __index = function(_, key)
+    return create_subcommand(key)
+  end,
+})
 
 return M
