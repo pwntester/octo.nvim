@@ -279,6 +279,9 @@ local create_subcommand = function(command)
           args = args,
           mode = run_opts.mode,
           cb = run_opts.cb,
+          stream_cb = run_opts.stream_cb,
+          headers = run_opts.headers,
+          hostname = run_opts.hostname,
         }
       end
     end,
