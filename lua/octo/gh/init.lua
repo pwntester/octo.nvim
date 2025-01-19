@@ -187,27 +187,31 @@ end
 ---@return table the updated args table
 M.insert_args = function(args, options)
   for key, value in pairs(options) do
-    local flag = create_flag(key)
-
-    if type(value) == "table" then
-      for k, v in pairs(value) do
-        if type(v) == "table" then
-          for _, vv in ipairs(v) do
-            table.insert(args, flag)
-            table.insert(args, k .. "[]=" .. vv)
-          end
-        else
-          table.insert(args, flag)
-          table.insert(args, k .. "=" .. v)
-        end
-      end
-    elseif type(value) == "boolean" then
-      if value then
-        table.insert(args, flag)
-      end
-    else
-      table.insert(args, flag)
+    if type(key) == "number" then
       table.insert(args, value)
+    else
+      local flag = create_flag(key)
+
+      if type(value) == "table" then
+        for k, v in pairs(value) do
+          if type(v) == "table" then
+            for _, vv in ipairs(v) do
+              table.insert(args, flag)
+              table.insert(args, k .. "[]=" .. vv)
+            end
+          else
+            table.insert(args, flag)
+            table.insert(args, k .. "=" .. v)
+          end
+        end
+      elseif type(value) == "boolean" then
+        if value then
+          table.insert(args, flag)
+        end
+      else
+        table.insert(args, flag)
+        table.insert(args, value)
+      end
     end
   end
 
