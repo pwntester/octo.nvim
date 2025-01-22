@@ -1,7 +1,7 @@
 local vim = vim
 local M = {}
 
----@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo"
+---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "notification"
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua"
 ---@alias OctoSplit "right" | "left"
@@ -308,6 +308,9 @@ function M.get_default_values()
         select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
         close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
         toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
+      },
+      notification = {
+        read = { lhs = "<localleader>nr", desc = "mark notification as read" },
       },
       repo = {},
     },
