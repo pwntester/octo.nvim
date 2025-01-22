@@ -1570,8 +1570,8 @@ function M.get_lines_from_context(calling_context)
     line_number_start = vim.fn.line "."
     line_number_end = line_number_start
   elseif calling_context == "visual" then
-    line_number_start = vim.fn.line "v"
-    line_number_end = vim.fn.line "."
+    line_number_start = vim.fn.line "'<"
+    line_number_end = vim.fn.line "'>"
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
