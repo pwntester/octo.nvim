@@ -205,6 +205,11 @@ function M.setup()
         local bufnr = vim.api.nvim_get_current_buf()
         local buffer = octo_buffers[bufnr]
         if not buffer or not buffer:isPullRequest() then
+          picker.prs {
+            cb = function(selected)
+              utils.checkout_pr(selected.obj.number)
+            end,
+          }
           return
         end
         if not utils.in_pr_repo() then
