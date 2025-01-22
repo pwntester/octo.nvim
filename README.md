@@ -297,6 +297,9 @@ require"octo".setup({
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
     },
+    notification = {
+      read = { lhs = "<localleader>rn", desc = "mark notification as read" },
+    },
   },
 })
 ```
@@ -379,6 +382,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | close                                             | Close the review window and return to the PR                                                                                                           |
 | actions  |                                                   | Lists all available Octo actions                                                                                                                       |
 | search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
+| notification | list                                          | Shows current unread notifications |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
