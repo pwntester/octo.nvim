@@ -38,8 +38,8 @@ function M.bufferPreviewer:gen_winopts()
 end
 
 function M.bufferPreviewer:update_border(title)
-  self.win:update_title(title)
-  self.win:update_scrollbar()
+  self.win:update_preview_title(title)
+  self.win:update_preview_scrollbar()
 end
 
 M.issue = function(formatted_issues)
@@ -159,7 +159,7 @@ M.search = function()
 
     self:set_preview_buf(tmpbuf)
     -- self:update_border(number.." "..description)
-    self.win:update_scrollbar()
+    self.win:update_preview_scrollbar()
   end
 
   return previewer
@@ -387,7 +387,7 @@ M.issue_template = function(formatted_templates)
 
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.value)
-    self.win:update_scrollbar()
+    self.win:update_preview_scrollbar()
   end
 
   return previewer
