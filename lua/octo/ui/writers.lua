@@ -409,9 +409,11 @@ function M.write_details(bufnr, issue, update)
     for _, card in ipairs(issue.projectCards.nodes) do
       if card.column ~= vim.NIL then
         table.insert(projects_vt, { card.column.name })
-        table.insert(projects_vt, { " (", "OctoDetailsLabel" })
-        table.insert(projects_vt, { card.project.name })
-        table.insert(projects_vt, { ")", "OctoDetailsLabel" })
+        if not utils.is_blank(card.project) then
+          table.insert(projects_vt, { " (", "OctoDetailsLabel" })
+          table.insert(projects_vt, { card.project.name })
+          table.insert(projects_vt, { ")", "OctoDetailsLabel" })
+        end
       end
     end
     table.insert(details, projects_vt)
