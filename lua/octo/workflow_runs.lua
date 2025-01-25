@@ -635,13 +635,19 @@ local function get_workflow_runs_sync(co)
       on_stdout = function(_, data)
         local json = vim.fn.json_decode(table.concat(data))
         for _, value in ipairs(json) do
+          local status = value.status == "queued" and icons.pending
+            or value.status == "in_progress" and icons.in_progress
+            or value.conclusion == "failure" and icons.failed
+            or icons.succeeded
+
+          local conclusion = value.conclusion == "skipped" and icons.skipped
+            or value.conclusion == "failure" and icons.failed
+            or ""
+
           local wf_run = {
-            status = value.status == "queued" and icons.pending
-              or value.status == "in_progress" and icons.in_progress
-              or value.conclusion == "failure" and icons.failed
-              or icons.succeeded,
+            status = status,
             title = value.displayTitle,
-            display = value.displayTitle,
+            display = value.displayTitle .. " " .. conclusion,
             value = value.databaseId,
             branch = value.headBranch,
             name = value.name,
