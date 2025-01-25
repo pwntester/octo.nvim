@@ -146,7 +146,7 @@ local function generate_workflow_tree(data)
     children = {},
   }
 
-  for _, job in ipairs(data.jobs) do
+  for _, job in ipairs(data.jobs or {}) do
     local jobNode = {
       id = job.name,
       job_id = job.name,
@@ -162,7 +162,7 @@ local function generate_workflow_tree(data)
       children = {},
     }
 
-    for _, step in ipairs(job.steps) do
+    for _, step in ipairs(job.steps or {}) do
       ---@type WorkflowNode
       local stepNode = {
         id = step.name,
@@ -260,20 +260,20 @@ local function create_log_child(value, indent)
   }
 end
 
-local function get_filename(length)
+local function get_temp_filepath(length)
   length = length or 7
   local name = ""
   while length > #name do
     name = name .. string.char(math.random(65, 65 + 25)):lower()
   end
-  return name
+  return vim.fs.joinpath(vim.fs.normalize(vim.fn.stdpath "cache"), name)
 end
 
 -- Accepts zip contents and writes and then unzips them
 ---@param stdout string - The zip content to write
 local function write_and_unzip_file(stdout)
-  local temp_location = get_filename()
-  local zip_location = get_filename()
+  local temp_location = get_temp_filepath()
+  local zip_location = get_temp_filepath()
   local file = io.open(zip_location, "wb")
   if not file then
     octo_error "Failed to create temporary file"
@@ -331,7 +331,7 @@ local function get_logs(id)
 
   ---@param node WorkflowNode
   M.traverse(M.tree, function(node)
-    if node.type ~= "step" then
+    if node.type ~= "step" or node.conclusion == "skipped" then
       return
     end
 
