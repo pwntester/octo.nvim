@@ -187,27 +187,31 @@ end
 ---@return table the updated args table
 M.insert_args = function(args, options)
   for key, value in pairs(options) do
-    local flag = create_flag(key)
-
-    if type(value) == "table" then
-      for k, v in pairs(value) do
-        if type(v) == "table" then
-          for _, vv in ipairs(v) do
-            table.insert(args, flag)
-            table.insert(args, k .. "[]=" .. vv)
-          end
-        else
-          table.insert(args, flag)
-          table.insert(args, k .. "=" .. v)
-        end
-      end
-    elseif type(value) == "boolean" then
-      if value then
-        table.insert(args, flag)
-      end
-    else
-      table.insert(args, flag)
+    if type(key) == "number" then
       table.insert(args, value)
+    else
+      local flag = create_flag(key)
+
+      if type(value) == "table" then
+        for k, v in pairs(value) do
+          if type(v) == "table" then
+            for _, vv in ipairs(v) do
+              table.insert(args, flag)
+              table.insert(args, k .. "[]=" .. vv)
+            end
+          else
+            table.insert(args, flag)
+            table.insert(args, k .. "=" .. v)
+          end
+        end
+      elseif type(value) == "boolean" then
+        if value then
+          table.insert(args, flag)
+        end
+      else
+        table.insert(args, flag)
+        table.insert(args, value)
+      end
     end
   end
 
@@ -239,7 +243,7 @@ end
 
 ---Run a graphql query
 ---@param opts table the options for the graphql query
----@return table
+---@return table|nil
 function M.graphql(opts)
   local run_opts = opts.opts or {}
   return M.run {
@@ -251,5 +255,49 @@ function M.graphql(opts)
     hostname = run_opts.hostname,
   }
 end
+
+M.api = {
+  graphql = M.graphql,
+}
+
+local create_subcommand = function(command)
+  local subcommand = {}
+  subcommand.command = command
+
+  setmetatable(subcommand, {
+    __index = function(t, key)
+      return function(opts)
+        opts = opts or {}
+
+        local run_opts = opts.opts or {}
+
+        local args = {
+          t.command,
+          key,
+        }
+
+        opts.opts = nil
+        args = M.insert_args(args, opts)
+
+        return M.run {
+          args = args,
+          mode = run_opts.mode,
+          cb = run_opts.cb,
+          stream_cb = run_opts.stream_cb,
+          headers = run_opts.headers,
+          hostname = run_opts.hostname,
+        }
+      end
+    end,
+  })
+
+  return subcommand
+end
+
+setmetatable(M, {
+  __index = function(_, key)
+    return create_subcommand(key)
+  end,
+})
 
 return M

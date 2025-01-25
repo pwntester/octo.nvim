@@ -449,9 +449,14 @@ end
 --- Determines if we are locally are in a branch matching the pr head ref
 --- @param pr PullRequest
 --- @return boolean
-function M.in_pr_branch(pr)
+function M.in_pr_branch_locally_tracked(pr)
   local cmd = "git rev-parse --abbrev-ref --symbolic-full-name @{u}"
-  local local_branch_with_local_remote = vim.split(string.gsub(vim.fn.system(cmd), "%s+", ""), "/")
+  local cmd_out = vim.fn.system(cmd)
+  if vim.v.shell_error ~= 0 then
+    return false
+  end
+
+  local local_branch_with_local_remote = vim.split(string.gsub(cmd_out, "%s+", ""), "/")
   local local_remote = local_branch_with_local_remote[1]
   local local_branch = table.concat(local_branch_with_local_remote, "/", 2)
 
@@ -465,19 +470,85 @@ function M.in_pr_branch(pr)
   return false
 end
 
-function M.checkout_pr(pr_number)
-  if not Job then
-    return
+-- the gh cli stores the remote info for a PR branch in a branch specific
+-- config value.
+--
+-- this function searches for the upstream info, if it exists, for the current
+-- checked out branch, within git config branch specific values.
+--
+-- if a config value is found the upstream branch name is returned, verbatim.
+-- if no config value is found an empty string is returned.
+--
+-- this is useful when you want to determine if the currently checked out branch
+-- maps to a PR HEAD, when 'gh pr checkout' is used.
+function M.get_upstream_branch_from_config()
+  local branch_cmd = "git rev-parse --abbrev-ref HEAD"
+  local branch = vim.fn.system(branch_cmd)
+  if vim.v.shell_error ~= 0 then
+    return ""
   end
-  Job:new({
-    enable_recording = true,
-    command = "gh",
+
+  if #branch == 0 then
+    return ""
+  end
+
+  -- trim white space off branch
+  branch = string.gsub(branch, "%s+", "")
+
+  local merge_config_cmd = string.format('git config --get-regexp "^branch\\.%s\\.merge"', branch)
+
+  local merge_config = vim.fn.system(merge_config_cmd)
+  if vim.v.shell_error ~= 0 then
+    return ""
+  end
+
+  if #merge_config == 0 then
+    return ""
+  end
+
+  -- split merge_config to key, value with space delimeter
+  local merge_config_kv = vim.split(merge_config, "%s+")
+  -- use > 2 since there maybe some garbage white space at the end of the map.
+  if #merge_config_kv < 2 then
+    return ""
+  end
+
+  local upstream_branch_ref = merge_config_kv[2]
+
+  -- remove the prefix /refs/heads/ from upstream_branch_ref resulting in
+  -- branch's name.
+  local upstream_branch_name = string.gsub(upstream_branch_ref, "^refs/heads/", "")
+
+  return upstream_branch_name
+end
+
+-- Determines if we are locally in a branch matting the pr head ref when
+-- the remote and branch information is stored in the branch's git config values
+-- The gh CLI tool stores remote info directly in {branch.{branch}.x} configuration
+-- fields and does not create a remote
+function M.in_pr_branch_config_tracked(pr)
+  return M.get_upstream_branch_from_config():lower() == pr.head_ref_name
+end
+
+--- Determines if we are locally are in a branch matching the pr head ref
+--- @param pr PullRequest
+--- @return boolean
+function M.in_pr_branch(pr)
+  return M.in_pr_branch_locally_tracked(pr) or M.in_pr_branch_config_tracked(pr)
+end
+
+function M.checkout_pr(pr_number)
+  gh.run {
     args = { "pr", "checkout", pr_number },
-    on_exit = vim.schedule_wrap(function()
-      local output = vim.fn.system "git branch --show-current"
-      M.info("Switched to " .. output)
-    end),
-  }):start()
+    cb = function(stdout, stderr)
+      if stderr and not M.is_blank(stderr) then
+        M.error(stderr)
+      elseif stdout then
+        local output = vim.fn.system "git branch --show-current"
+        M.info("Switched to " .. output)
+      end
+    end,
+  }
 end
 
 ---@class CheckoutPrSyncOpts
@@ -1571,8 +1642,8 @@ function M.get_lines_from_context(calling_context)
     line_number_start = vim.fn.line "."
     line_number_end = line_number_start
   elseif calling_context == "visual" then
-    line_number_start = vim.fn.line "v"
-    line_number_end = vim.fn.line "."
+    line_number_start = vim.fn.line "'<"
+    line_number_end = vim.fn.line "'>"
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
@@ -1620,7 +1691,7 @@ end
 --- @see octo.ui.colors for the available highlight groups
 
 -- Symbols found with "Telescope symbols"
-local icons = {
+M.icons = {
   issue = {
     open = { " ", "OctoGreen" },
     closed = { " ", "OctoPurple" },
@@ -1637,6 +1708,16 @@ local icons = {
     answered = { " ", "OctoGreen" },
     closed = { " ", "OctoRed" },
   },
+  notification = {
+    issue = {
+      unread = { " ", "OctoBlue" },
+      read = { " ", "OctoGrey" },
+    },
+    pull_request = {
+      unread = { " ", "OctoBlue" },
+      read = { " ", "OctoGrey" },
+    },
+  },
   unknown = { " " },
 }
 
@@ -1651,39 +1732,39 @@ function M.get_icon(entry)
     local stateReason = entry.obj.stateReason
 
     if state == "OPEN" then
-      return icons.issue.open
+      return M.icons.issue.open
     elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
-      return icons.issue.not_planned
+      return M.icons.issue.not_planned
     elseif state == "CLOSED" then
-      return icons.issue.closed
+      return M.icons.issue.closed
     end
   elseif kind == "pull_request" then
     local state = entry.obj.state
     local isDraft = entry.obj.isDraft
 
     if state == "MERGED" then
-      return icons.pull_request.merged
+      return M.icons.pull_request.merged
     elseif state == "CLOSED" then
-      return icons.pull_request.closed
+      return M.icons.pull_request.closed
     elseif isDraft then
-      return icons.pull_request.draft
+      return M.icons.pull_request.draft
     elseif state == "OPEN" then
-      return icons.pull_request.open
+      return M.icons.pull_request.open
     end
   elseif kind == "discussion" then
     local closed = entry.obj.closed
     local isAnswered = entry.obj.isAnswered
 
     if isAnswered ~= vim.NIL and isAnswered then
-      return icons.discussion.answered
+      return M.icons.discussion.answered
     elseif not closed then
-      return icons.discussion.open
+      return M.icons.discussion.open
     else
-      return icons.discussion.closed
+      return M.icons.discussion.closed
     end
   end
 
-  return icons.unknown
+  return M.icons.unknown
 end
 
 return M

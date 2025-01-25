@@ -111,9 +111,12 @@ function M.load_buffer(opts)
     vim.api.nvim_buf_call(bufnr, function()
       M.create_buffer(kind, obj, repo, false)
 
+      -- get size of newly created buffer
+      local lines = vim.api.nvim_buf_line_count(bufnr)
+
       -- One to the left
       local new_cursor_pos = {
-        cursor_pos[1],
+        math.min(cursor_pos[1], lines),
         math.max(0, cursor_pos[2] - 1),
       }
       vim.api.nvim_win_set_cursor(0, new_cursor_pos)

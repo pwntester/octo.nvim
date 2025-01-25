@@ -33,7 +33,7 @@ end
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     require("octo.commands").octo(unpack(opts.fargs))
-  end, { complete = require("octo.completion").octo_command_complete, nargs = "*" })
+  end, { complete = require("octo.completion").octo_command_complete, nargs = "*", range = true })
   local conf = config.values
 
   local card_commands
@@ -161,7 +161,10 @@ function M.setup()
           utils.develop_issue(buffer.repo, buffer.node.number, repo)
         else
           local opts = M.process_varargs(repo, ...)
-          picker.issues(opts, true)
+          opts.cb = function(selected)
+            utils.develop_issue(selected.repo, selected.obj.number, repo)
+          end
+          picker.issues(opts)
         end
       end,
       reopen = function()
@@ -447,6 +450,11 @@ function M.setup()
         M.remove_project_card()
       end,
     },
+    notification = {
+      list = function()
+        picker.notifications()
+      end,
+    },
   }
 
   setmetatable(M.commands.pr, {
@@ -460,6 +468,12 @@ function M.setup()
   setmetatable(M.commands.review, {
     __call = function(_)
       reviews.start_or_resume_review()
+    end,
+  })
+
+  setmetatable(M.commands.notification, {
+    __call = function(_)
+      picker.notifications()
     end,
   })
 

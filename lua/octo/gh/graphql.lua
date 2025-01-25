@@ -1046,9 +1046,16 @@ query {
 ]]
 
 M.discussions_query = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
-    discussions(first: 100, after: $endCursor, states: OPEN, orderBy: {field: %s, direction: %s}) {
+query(
+  $owner: String!,
+  $name: String!,
+  $states: [DiscussionState!],
+  $orderBy: DiscussionOrderField!,
+  $direction: OrderDirection!,
+  $endCursor: String
+) {
+  repository(owner: $owner, name: $name) {
+    discussions(first: 100, after: $endCursor, states: $states, orderBy: {field: $orderBy, direction: $direction}) {
       nodes {
         __typename
         ...DiscussionInfoFragment

@@ -27,6 +27,7 @@ M.picker = {
   review_commits = require "octo.pickers.fzf-lua.pickers.review_commits",
   search = require "octo.pickers.fzf-lua.pickers.search",
   users = require "octo.pickers.fzf-lua.pickers.users",
+  notifications = M.not_implemented,
   milestones = M.not_implemented,
 }
 

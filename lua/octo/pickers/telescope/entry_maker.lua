@@ -666,6 +666,66 @@ function M.gen_from_octo_actions(width)
   end
 end
 
+function M.gen_from_notification()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local icons = utils.icons
+
+    local columns = {
+      entry.obj.unread == true and icons.notification[entry.kind].unread or icons.notification[entry.kind].read,
+      { "#" .. (entry.obj.subject.url:match "/(%d+)$" or "NA") },
+      { string.sub(entry.obj.repository.full_name, 1, 50), "TelescopeResultsNumber" },
+      { string.sub(entry.obj.subject.title, 1, 100) },
+    }
+
+    local displayer = entry_display.create {
+      separator = " ",
+      items = {
+        { width = 2 },
+        { width = 6 },
+        { width = math.min(#entry.obj.repository.full_name, 50) },
+        { width = math.min(#entry.obj.subject.title, 100) },
+      },
+    }
+
+    return displayer(columns)
+  end
+
+  return function(notification)
+    if not notification or vim.tbl_isempty(notification) then
+      return nil
+    end
+
+    notification.kind = (function(type)
+      if type == "Issue" then
+        return "issue"
+      elseif type == "PullRequest" then
+        return "pull_request"
+      end
+      return "unknown"
+    end)(notification.subject.type)
+
+    if notification.kind == "unknown" then
+      return nil
+    end
+    local ref = notification.subject.url:match "/(%d+)$"
+
+    return {
+      value = ref,
+      ordinal = notification.subject.title .. " " .. notification.repository.full_name .. " " .. ref,
+      display = make_display,
+      obj = notification,
+      repo = notification.repository.full_name,
+      kind = notification.kind,
+      thread_id = notification.id,
+      url = notification.subject.url,
+    }
+  end
+end
+
 function M.gen_from_issue_templates()
   local make_display = function(entry)
     if not entry then

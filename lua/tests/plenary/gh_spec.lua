@@ -73,3 +73,34 @@ describe("insert_args:", function()
     eq(args, expected)
   end)
 end)
+
+describe("CLI commands", function()
+  it("gh.<something> returns table", function()
+    local commands = {
+      "issue",
+      "pr",
+      "repo",
+      "gist",
+      "random",
+    }
+
+    for _, command in ipairs(commands) do
+      local actual = gh[command]
+      eq(actual.command, command)
+      assert.is_table(actual)
+    end
+  end)
+  it("gh.<something>.<another-thing> is a function", function()
+    local subcommands = {
+      "list",
+      "view",
+      "develop",
+      "create",
+      "random",
+    }
+    for _, subcommand in ipairs(subcommands) do
+      local actual = gh.issue[subcommand]
+      assert.is_function(actual)
+    end
+  end)
+end)

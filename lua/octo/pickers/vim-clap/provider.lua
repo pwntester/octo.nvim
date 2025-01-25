@@ -17,6 +17,7 @@ M.picker = {
   issue_templates = M.not_implemented,
   issues = M.not_implemented,
   labels = M.not_implemented,
+  notifications = M.not_implemented,
   pending_threads = M.not_implemented,
   project_cards = M.not_implemented,
   project_cards_v2 = M.not_implemented,
