@@ -189,6 +189,9 @@ local function generate_workflow_tree(data)
 end
 
 local function extract_after_timestamp(logLine)
+  if logLine == nil then
+    return ""
+  end
   local result = logLine:match "%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d%.%d+Z%s*(.*)"
   return result or ""
 end
@@ -271,8 +274,7 @@ end
 
 -- Accepts zip contents and writes and then unzips them
 ---@param stdout string - The zip content to write
-local function write_and_unzip_file(stdout)
-  local temp_location = get_temp_filepath()
+local function write_zipped_file(stdout)
   local zip_location = get_temp_filepath()
   local file = io.open(zip_location, "wb")
   if not file then
@@ -283,24 +285,10 @@ local function write_and_unzip_file(stdout)
   file:write(stdout)
   file:close()
 
-  local unzipOutput = vim.system({ "unzip", "-d", temp_location, zip_location }):wait()
-
-  if unzipOutput.code ~= 0 then
-    octo_error("Failed to unzip logs: " .. (unzipOutput.stderr or "Unknown error"))
-  end
-
-  local success, err = pcall(function()
-    vim.loop.fs_unlink(zip_location)
-  end)
-
-  if not success then
-    octo_error("Error deleting zip archive: " .. err)
-  end
-
-  return temp_location,
+  return zip_location,
     function()
       local unlink_success, unlink_error = pcall(function()
-        vim.loop.fs_unlink(temp_location)
+        vim.loop.fs_unlink(zip_location)
       end)
 
       if not unlink_success then
@@ -312,22 +300,20 @@ end
 
 local function get_logs(id)
   vim.notify "Fetching workflow logs (this may take a while) ..."
-  --TODO: check if logs are "fresh"
   local reponame = get_repo_name()
-  local out = vim
-    .system({
-      "gh",
-      "api",
-      string.format("repos/%s/actions/runs/%s/logs", reponame, id, 0),
-    })
-    :wait()
+  local cmd = {
+    "gh",
+    "api",
+    string.format("repos/%s/actions/runs/%s/logs", reponame, id, 0),
+  }
+  local out = vim.system(cmd):wait()
 
   if out.code ~= 0 then
     octo_error("Failed to fetch logs: " .. (out.stderr or "Unknown error"))
     return
   end
 
-  local temp_location, cleanup = write_and_unzip_file(out.stdout)
+  local zip_location, cleanup = write_zipped_file(out.stdout)
 
   ---@param node WorkflowNode
   M.traverse(M.tree, function(node)
@@ -335,10 +321,27 @@ local function get_logs(id)
       return
     end
 
-    local sanitized_name = node.id:gsub("/", "")
+    local sanitized_name = node.id:gsub("/", ""):gsub(":", ""):gsub(">", "")
+    --Make more than 3 consecutive dots at the end of line into ...
+    local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.%.%.%.+$", "...")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
-    local path = vim.fs.normalize(vim.fs.joinpath(temp_location, node.job_id, file_name))
-    local lines = vim.fn.readfile(path)
+    local path = vim.fs.normalize(vim.fs.joinpath(sanitized_job_id, file_name))
+    local res = vim
+      .system({
+        "unzip",
+        "-p",
+        zip_location,
+        path,
+      })
+      :wait()
+
+    if res.code ~= 0 then
+      octo_error("Failed to extract logs for " .. node.id)
+    end
+
+    local lines = vim.tbl_filter(function(i)
+      return i ~= nil and i ~= ""
+    end, vim.split(res.stdout, "\n"))
 
     node.children = {}
 
