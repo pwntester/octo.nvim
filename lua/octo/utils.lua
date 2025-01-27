@@ -481,7 +481,7 @@ end
 --
 -- this is useful when you want to determine if the currently checked out branch
 -- maps to a PR HEAD, when 'gh pr checkout' is used.
-function M.get_upstream_branch_from_config()
+function M.get_upstream_branch_from_config(pr)
   local branch_cmd = "git rev-parse --abbrev-ref HEAD"
   local branch = vim.fn.system(branch_cmd)
   if vim.v.shell_error ~= 0 then
@@ -515,11 +515,20 @@ function M.get_upstream_branch_from_config()
 
   local upstream_branch_ref = merge_config_kv[2]
 
-  -- remove the prefix /refs/heads/ from upstream_branch_ref resulting in
-  -- branch's name.
-  local upstream_branch_name = string.gsub(upstream_branch_ref, "^refs/heads/", "")
+  -- branch config can be in "refs/pull/{pr_number}/head" format
+  if string.find(upstream_branch_ref, "^refs/pull/") then
+    local pr_number = vim.split(upstream_branch_ref, "/")[3]
+    -- tonumber handles any whitespace/quoting issues
+    if tonumber(pr_number) == tonumber(pr.number) then
+      return branch
+    end
+  else
+    -- branch config can also be in "refs/heads/{upstream_branch_name} format"
+    local upstream_branch_name = string.gsub(upstream_branch_ref, "^refs/heads/", "")
+    return upstream_branch_name
+  end
 
-  return upstream_branch_name
+  return ""
 end
 
 -- Determines if we are locally in a branch matting the pr head ref when
@@ -527,7 +536,7 @@ end
 -- The gh CLI tool stores remote info directly in {branch.{branch}.x} configuration
 -- fields and does not create a remote
 function M.in_pr_branch_config_tracked(pr)
-  return M.get_upstream_branch_from_config():lower() == pr.head_ref_name
+  return M.get_upstream_branch_from_config(pr):lower() == pr.head_ref_name
 end
 
 --- Determines if we are locally are in a branch matching the pr head ref
