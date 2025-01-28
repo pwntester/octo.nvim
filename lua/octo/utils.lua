@@ -552,6 +552,7 @@ function M.checkout_pr(pr_number)
 end
 
 ---@class CheckoutPrSyncOpts
+---@field repo string
 ---@field pr_number number
 ---@field timeout number
 
@@ -564,7 +565,7 @@ function M.checkout_pr_sync(opts)
   Job:new({
     enable_recording = true,
     command = "gh",
-    args = { "pr", "checkout", opts.pr_number },
+    args = { "pr", "checkout", opts.pr_number, "--repo", opts.repo },
     on_exit = vim.schedule_wrap(function()
       local output = vim.fn.system "git branch --show-current"
       M.info("Switched to " .. output)
