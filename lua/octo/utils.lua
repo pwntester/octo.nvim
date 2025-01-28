@@ -829,9 +829,9 @@ function M.get_repo_number_from_varargs(...)
     repo = M.get_remote_name()
     number = tonumber(args[1])
   elseif args.n == 2 then
-    -- eg: Octo issue pwntester/octo.nvim 1
-    repo = args[1]
-    number = tonumber(args[2])
+    -- eg: Octo issue 1 pwntester/octo.nvim
+    repo = args[2]
+    number = tonumber(args[1])
   else
     M.error "Unexpected arguments"
     return
