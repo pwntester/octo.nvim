@@ -32,12 +32,12 @@ M._null_buffer = {}
 ---@field right_binary boolean|nil
 ---@field left_bufid integer
 ---@field right_bufid integer
---- If this table is empty, the buffer is not ready to be displayed
---- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field left_lines string[]
---- If this table is empty, the buffer is not ready to be displayed
---- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field right_lines string[]
+--- If either left_fetched or right_fetched is false,
+--- the buffer is not ready to be displayed.
+---@field left_fetched boolean
+---@field right_fetched boolean
 ---@field left_winid number
 ---@field right_winid number
 ---@field left_comment_ranges table
@@ -78,6 +78,8 @@ function FileEntry:new(opt)
     right_binary = opt.right_binary,
     left_lines = {},
     right_lines = {},
+    left_fetched = false,
+    right_fetched = false,
     diffhunks = diffhunks,
     associated_bufs = {},
     viewed_state = pr.files[opt.path],
@@ -205,10 +207,12 @@ function FileEntry:fetch()
   if self.pull_request.local_right then
     utils.get_file_at_commit(right_path, right_sha, function(lines)
       self.right_lines = lines
+      self.right_fetched = true
     end)
   else
     utils.get_file_contents(self.pull_request.repo, right_abbrev, right_path, function(lines)
       self.right_lines = lines
+      self.right_fetched = true
     end)
   end
 
@@ -216,10 +220,12 @@ function FileEntry:fetch()
   if self.pull_request.local_left then
     utils.get_file_at_commit(left_path, left_sha, function(lines)
       self.left_lines = lines
+      self.left_fetched = true
     end)
   else
     utils.get_file_contents(self.pull_request.repo, left_abbrev, left_path, function(lines)
       self.left_lines = lines
+      self.left_fetched = true
     end)
   end
 
@@ -232,7 +238,7 @@ end
 ---Determines whether the file content has been loaded and the file is ready to render
 ---@return boolean
 function FileEntry:is_ready_to_render()
-  return #self.left_lines > 0 and #self.right_lines > 0
+  return self.left_fetched and self.right_fetched
 end
 
 ---Load the buffers.
