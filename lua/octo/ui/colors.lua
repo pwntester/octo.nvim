@@ -79,6 +79,7 @@ local function get_hl_links()
     StatusLineNC = "StatusLineNC",
     EndOfBuffer = "EndOfBuffer",
     FilePanelFileName = "NormalFront",
+    FilePanelSelectedFile = "Type",
     FilePanelPath = "Comment",
     StatusAdded = "OctoGreen",
     StatusUntracked = "OctoGreen",
@@ -153,7 +154,9 @@ function M.setup()
   end
 
   for from, to in pairs(get_hl_links()) do
-    vim.cmd("hi def link Octo" .. from .. " " .. to)
+    if vim.fn.hlexists("Octo" .. from) == 0 then
+      vim.cmd("hi def link Octo" .. from .. " " .. to)
+    end
   end
 end
 
