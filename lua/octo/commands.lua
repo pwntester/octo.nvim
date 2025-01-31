@@ -11,6 +11,15 @@ local config = require "octo.config"
 local colors = require "octo.ui.colors"
 local vim = vim
 
+-- a global variable where command handlers can access the details of the last
+-- command ran.
+--
+-- this came into existence since some commands like "comment add" need to
+-- understand the line range the comment should be created on.
+-- this is problematic without the command options as you exit visual mode when
+-- enterting the command line.
+OctoLastCmdOpts = nil
+
 local M = {}
 
 local get_current_buffer = function()
@@ -32,7 +41,9 @@ end
 
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
+    OctoLastCmdOpts = opts
     require("octo.commands").octo(unpack(opts.fargs))
+    OctoLastCmdOpts = nil
   end, { complete = require("octo.completion").octo_command_complete, nargs = "*", range = true })
   local conf = config.values
 
@@ -205,6 +216,11 @@ function M.setup()
         local bufnr = vim.api.nvim_get_current_buf()
         local buffer = octo_buffers[bufnr]
         if not buffer or not buffer:isPullRequest() then
+          picker.prs {
+            cb = function(selected)
+              utils.checkout_pr(selected.obj.number)
+            end,
+          }
           return
         end
         if not utils.in_pr_repo() then
@@ -536,6 +552,7 @@ function M.octo(object, action, ...)
       utils.error(action and "Incorrect action: " .. action or "No action specified")
       return
     end
+
     res = pcall(a, ...)
     if not res then
       utils.error(action and "Failed action: " .. action)

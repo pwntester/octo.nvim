@@ -26,6 +26,7 @@ local env_vars = {
   http_proxy = vim.env["http_proxy"],
   https_proxy = vim.env["https_proxy"],
   no_proxy = vim.env["no_proxy"],
+  SSH_AUTH_SOCK = vim.env["SSH_AUTH_SOCK"],
 }
 
 local function get_env()

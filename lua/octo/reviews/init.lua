@@ -329,8 +329,15 @@ function Review:add_comment(isSuggestion)
     return
   end
 
-  -- get visual selected line range
+  -- get visual selected line range, used if coming from a keymap where current
+  -- mode can be evaluated.
   local line1, line2 = utils.get_lines_from_context "visual"
+  -- if we came from the command line the command options will provide line
+  -- range
+  if OctoLastCmdOpts ~= nil then
+    line1 = OctoLastCmdOpts.line1
+    line2 = OctoLastCmdOpts.line2
+  end
 
   local comment_ranges, current_bufnr
   if split == "RIGHT" then
