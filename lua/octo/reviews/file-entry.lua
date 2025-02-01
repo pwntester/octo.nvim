@@ -451,9 +451,15 @@ function M._create_buffer(opts)
     -- vim.fn.bufadd creates the buffer as unlisted by default
     vim.api.nvim_buf_set_option(bufnr, "buflisted", true)
   else
-    bufnr = vim.api.nvim_create_buf(false, false)
     local bufname =
       string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
+    local existing_bufnr = utils.find_named_buffer(bufname)
+    if existing_bufnr then
+      -- Buffer already exists, most likely because review is already opened
+      return existing_bufnr
+    end
+
+    bufnr = vim.api.nvim_create_buf(false, false)
     vim.api.nvim_buf_set_name(bufnr, bufname)
     if opts.binary then
       vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
