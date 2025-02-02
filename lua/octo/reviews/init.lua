@@ -177,7 +177,7 @@ function Review:initiate(opts)
   if conf.use_local_fs and not utils.in_pr_branch(pr) then
     local choice = vim.fn.confirm("Currently not in PR branch, would you like to checkout?", "&Yes\n&No", 2)
     if choice == 1 then
-      utils.checkout_pr_sync { pr_number = pr.number, timeout = conf.timeout }
+      utils.checkout_pr_sync { repo = pr.repo, pr_number = pr.number, timeout = conf.timeout }
     end
   end
 
@@ -329,8 +329,15 @@ function Review:add_comment(isSuggestion)
     return
   end
 
-  -- get visual selected line range
+  -- get visual selected line range, used if coming from a keymap where current
+  -- mode can be evaluated.
   local line1, line2 = utils.get_lines_from_context "visual"
+  -- if we came from the command line the command options will provide line
+  -- range
+  if OctoLastCmdOpts ~= nil then
+    line1 = OctoLastCmdOpts.line1
+    line2 = OctoLastCmdOpts.line2
+  end
 
   local comment_ranges, current_bufnr
   if split == "RIGHT" then

@@ -476,43 +476,76 @@ Octo provides a built-in omnifunc completion for issues, PRs and users that you 
 
 ## 🎨 Colors
 
-| Highlight Group             | Defaults to     |
-| --------------------------- | --------------- |
-| _OctoDirty_                 | ErrorMsg        |
-| _OctoIssueTitle_            | PreProc         |
-| _OctoIssueId_               | Question        |
-| _OctoEmpty_                 | Comment         |
-| _OctoFloat_                 | NormalNC        |
-| _OctoDate_                  | Comment         |
-| _OctoSymbol_                | Comment         |
-| _OctoTimelineItemHeading_   | Comment         |
-| _OctoDetailsLabel_          | Title           |
-| _OctoMissingDetails_        | Comment         |
-| _OctoDetailsValue_          | Identifier      |
-| _OctoDiffHunkPosition_      | NormalFloat     |
-| _OctoCommentLine_           | TabLineSel      |
-| _OctoEditable_              | NormalFloat bg  |
-| _OctoViewer_                | GitHub color    |
-| _OctoBubble_                | NormalFloat     |
-| _OctoBubbleGreen_           | GitHub color    |
-| _OctoBubbleRed_             | GitHub color    |
-| _OctoUser_                  | OctoBubble      |
-| _OctoUserViewer_            | OctoViewer      |
-| _OctoReaction_              | OctoBubble      |
-| _OctoReactionViewer_        | OctoViewer      |
-| _OctoPassingTest_           | GitHub color    |
-| _OctoFailingTest_           | GitHub color    |
-| _OctoPullAdditions_         | GitHub color    |
-| _OctoPullDeletions_         | GitHub color    |
-| _OctoPullModifications_     | GitHub color    |
-| _OctoStateOpen_             | GitHub color    |
-| _OctoStateClosed_           | GitHub color    |
-| _OctoStateMerge_            | GitHub color    |
-| _OctoStatePending_          | GitHub color    |
-| _OctoStateApproved_         | OctoStateOpen   |
-| _OctoStateChangesRequested_ | OctoStateClosed |
-| _OctoStateCommented_        | Normal          |
-| _OctoStateDismissed_        | OctoStateClosed |
+| Highlight Group                   | Linked To          |
+|-----------------------------------|--------------------|
+| _OctoNormal_                      | Normal             |
+| _OctoCursorLine_                  | CursorLine         |
+| _OctoVertSplit_                   | VertSplit          |
+| _OctoSignColumn_                  | Normal             |
+| _OctoStatusColumn_                | SignColumn         |
+| _OctoStatusLine_                  | StatusLine         |
+| _OctoStatusLineNC_                | StatusLineNC       |
+| _OctoEndOfBuffer_                 | EndOfBuffer        |
+| _OctoFilePanelFileName_           | NormalFront        |
+| _OctoFilePanelSelectedFile_       | Type               |
+| _OctoFilePanelPath_               | Comment            |
+| _OctoStatusAdded_                 | OctoGreen          |
+| _OctoStatusUntracked_             | OctoGreen          |
+| _OctoStatusModified_              | OctoBlue           |
+| _OctoStatusRenamed_               | OctoBlue           |
+| _OctoStatusCopied_                | OctoBlue           |
+| _OctoStatusTypeChange_            | OctoBlue           |
+| _OctoStatusUnmerged_              | OctoBlue           |
+| _OctoStatusUnknown_               | OctoYellow         |
+| _OctoStatusDeleted_               | OctoRed            |
+| _OctoStatusBroken_                | OctoRed            |
+| _OctoDirty_                       | OctoRed            |
+| _OctoIssueId_                     | NormalFloat        |
+| _OctoIssueTitle_                  | PreProc            |
+| _OctoFloat_                       | NormalFloat        |
+| _OctoTimelineItemHeading_         | Comment            |
+| _OctoTimelineMarker_              | Identifier         |
+| _OctoSymbol_                      | Comment            |
+| _OctoDate_                        | Comment            |
+| _OctoDetailsLabel_                | Title              |
+| _OctoDetailsValue_                | Identifier         |
+| _OctoMissingDetails_              | Comment            |
+| _OctoEmpty_                       | NormalFloat        |
+| _OctoBubble_                      | NormalFloat        |
+| _OctoUser_                        | OctoBubble         |
+| _OctoUserViewer_                  | OctoViewer         |
+| _OctoReaction_                    | OctoBubble         |
+| _OctoReactionViewer_              | OctoViewer         |
+| _OctoPassingTest_                 | OctoGreen          |
+| _OctoFailingTest_                 | OctoRed            |
+| _OctoPullAdditions_               | OctoGreen          |
+| _OctoPullDeletions_               | OctoRed            |
+| _OctoPullModifications_           | OctoGrey           |
+| _OctoStateOpen_                   | OctoGreen          |
+| _OctoStateClosed_                 | OctoRed            |
+| _OctoStateCompleted_              | OctoPurple         |
+| _OctoStateNotPlanned_             | OctoGrey           |
+| _OctoStateDraft_                  | OctoGrey           |
+| _OctoStateMerge_                  | OctoPurple         |
+| _OctoStatePending_                | OctoYellow         |
+| _OctoStateApproved_               | OctoGreen          |
+| _OctoStateChangesRequested_       | OctoRed            |
+| _OctoStateDismissed_              | OctoRed            |
+| _OctoStateCommented_              | OctoBlue           |
+| _OctoStateSubmitted_              | OctoGreen          |
+| _OctoStateOpenBubble_             | OctoBubbleGreen    |
+| _OctoStateClosedBubble_           | OctoBubbleRed      |
+| _OctoStateMergedBubble_           | OctoBubblePurple   |
+| _OctoStatePendingBubble_          | OctoBubbleYellow   |
+| _OctoStateApprovedBubble_         | OctoBubbleGreen    |
+| _OctoStateChangesRequestedBubble_ | OctoBubbleRed    |
+| _OctoStateDismissedBubble_        | OctoBubbleRed      |
+| _OctoStateCommentedBubble_        | OctoBubbleBlue     |
+| _OctoStateSubmittedBubble_        | OctoBubbleGreen    |
+| _OctoStateOpenFloat_              | OctoGreenFloat     |
+| _OctoStateClosedFloat_            | OctoRedFloat       |
+| _OctoStateMergedFloat_            | OctoPurpleFloat    |
+| _OctoStateDraftFloat_             | OctoGreyFloat      |
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.

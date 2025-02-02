@@ -221,6 +221,7 @@ function M.parse_remote_url(url, aliases)
   end
 
   for alias, rhost in pairs(aliases) do
+    alias = alias:gsub("%-", "%%-")
     host = host:gsub("^" .. alias .. "$", rhost, 1)
   end
   if not M.is_blank(host) and not M.is_blank(repo) then
@@ -481,7 +482,7 @@ end
 --
 -- this is useful when you want to determine if the currently checked out branch
 -- maps to a PR HEAD, when 'gh pr checkout' is used.
-function M.get_upstream_branch_from_config()
+function M.get_upstream_branch_from_config(pr)
   local branch_cmd = "git rev-parse --abbrev-ref HEAD"
   local branch = vim.fn.system(branch_cmd)
   if vim.v.shell_error ~= 0 then
@@ -515,11 +516,20 @@ function M.get_upstream_branch_from_config()
 
   local upstream_branch_ref = merge_config_kv[2]
 
-  -- remove the prefix /refs/heads/ from upstream_branch_ref resulting in
-  -- branch's name.
-  local upstream_branch_name = string.gsub(upstream_branch_ref, "^refs/heads/", "")
+  -- branch config can be in "refs/pull/{pr_number}/head" format
+  if string.find(upstream_branch_ref, "^refs/pull/") then
+    local pr_number = vim.split(upstream_branch_ref, "/")[3]
+    -- tonumber handles any whitespace/quoting issues
+    if tonumber(pr_number) == tonumber(pr.number) then
+      return branch
+    end
+  else
+    -- branch config can also be in "refs/heads/{upstream_branch_name} format"
+    local upstream_branch_name = string.gsub(upstream_branch_ref, "^refs/heads/", "")
+    return upstream_branch_name
+  end
 
-  return upstream_branch_name
+  return ""
 end
 
 -- Determines if we are locally in a branch matting the pr head ref when
@@ -527,7 +537,7 @@ end
 -- The gh CLI tool stores remote info directly in {branch.{branch}.x} configuration
 -- fields and does not create a remote
 function M.in_pr_branch_config_tracked(pr)
-  return M.get_upstream_branch_from_config():lower() == pr.head_ref_name
+  return M.get_upstream_branch_from_config(pr):lower() == pr.head_ref_name
 end
 
 --- Determines if we are locally are in a branch matching the pr head ref
@@ -552,6 +562,7 @@ function M.checkout_pr(pr_number)
 end
 
 ---@class CheckoutPrSyncOpts
+---@field repo string
 ---@field pr_number number
 ---@field timeout number
 
@@ -564,7 +575,7 @@ function M.checkout_pr_sync(opts)
   Job:new({
     enable_recording = true,
     command = "gh",
-    args = { "pr", "checkout", opts.pr_number },
+    args = { "pr", "checkout", opts.pr_number, "--repo", opts.repo },
     on_exit = vim.schedule_wrap(function()
       local output = vim.fn.system "git branch --show-current"
       M.info("Switched to " .. output)
@@ -1642,8 +1653,8 @@ function M.get_lines_from_context(calling_context)
     line_number_start = vim.fn.line "."
     line_number_end = line_number_start
   elseif calling_context == "visual" then
-    line_number_start = vim.fn.line "'<"
-    line_number_end = vim.fn.line "'>"
+    line_number_start = vim.fn.line "v"
+    line_number_end = vim.fn.line "."
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
