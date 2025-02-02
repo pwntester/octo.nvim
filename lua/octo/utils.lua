@@ -221,6 +221,7 @@ function M.parse_remote_url(url, aliases)
   end
 
   for alias, rhost in pairs(aliases) do
+    alias = alias:gsub("%-", "%%-")
     host = host:gsub("^" .. alias .. "$", rhost, 1)
   end
   if not M.is_blank(host) and not M.is_blank(repo) then

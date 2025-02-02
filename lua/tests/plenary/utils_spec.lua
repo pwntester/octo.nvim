@@ -67,3 +67,55 @@ describe("Utils escape_char(): ", function()
     eq(expected, this.escape_char(input))
   end)
 end)
+
+describe("Utils parse_remote_url(): ", function()
+  it("Should replace remote url with alias", function()
+    local ssh_aliases = {
+      ["github.com-work"] = "github.com",
+    }
+    local url = "git@github.com-work:pwntester/octo.nvim.git"
+
+    local expected = {
+      host = "github.com",
+      repo = "pwntester/octo.nvim",
+    }
+
+    eq(expected, this.parse_remote_url(url, ssh_aliases))
+  end)
+
+  it("Should replace multiple hyphens in remote url with alias", function()
+    local ssh_aliases = {
+      ["github.com-octo-work"] = "github.com",
+    }
+    local url = "git@github.com-octo-work:pwntester/octo.nvim.git"
+
+    local expected = {
+      host = "github.com",
+      repo = "pwntester/octo.nvim",
+    }
+
+    eq(expected, this.parse_remote_url(url, ssh_aliases))
+  end)
+
+  it("Should not replace remote url with alias", function()
+    local url = "git@github.com-work:pwntester/octo.nvim.git"
+    local expected = {
+      host = "github.com-work",
+      repo = "pwntester/octo.nvim",
+    }
+
+    eq(expected, this.parse_remote_url(url, {}))
+  end)
+
+  it("Should keep the original url", function()
+    local ssh_aliases = {
+      ["github.com-work"] = "github.com",
+    }
+    local url = "git@github.com:pwntester/octo.nvim.git"
+    local expected = {
+      host = "github.com",
+      repo = "pwntester/octo.nvim",
+    }
+    eq(expected, this.parse_remote_url(url, ssh_aliases))
+  end)
+end)
