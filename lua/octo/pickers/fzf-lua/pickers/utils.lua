@@ -64,7 +64,7 @@ function M.open(command, entry)
   elseif command == "tab" then
     vim.cmd [[:tab sb %]]
   end
-  utils.get(entry.kind, entry.repo, entry.value)
+  utils.get(entry.kind, entry.value, entry.repo)
 end
 
 --[[
