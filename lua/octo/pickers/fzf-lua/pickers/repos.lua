@@ -17,7 +17,7 @@ return function(opts)
     end
   end
 
-  local formatted_repos = {}
+  local formatted_repos = {} ---@type table<string, table> entry.ordinal -> entry
 
   local get_contents = function(fzf_cb)
     local query = graphql("repos_query", opts.login)

@@ -43,7 +43,7 @@ return function(opts)
   local query =
     graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
 
-  local formatted_pulls = {}
+  local formatted_pulls = {} ---@type table<string, table> entry.ordinal -> entry
 
   local get_contents = function(fzf_cb)
     gh.run {

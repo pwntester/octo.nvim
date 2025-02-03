@@ -161,6 +161,11 @@ M.reaction_map = {
   ["EYES"] = "👀 ",
 }
 
+---@param tbl unknown[]
+---@param first integer
+---@param last integer
+---@param step integer?
+---@return unknown[]
 function M.tbl_slice(tbl, first, last, step)
   local sliced = {}
   for i = first or 1, last or #tbl, step or 1 do
@@ -385,7 +390,7 @@ function M.create_milestone(title, description)
       if stderr and not M.is_blank(stderr) then
         M.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         M.info("Created milestone " .. resp.title)
       end
     end,
@@ -705,7 +710,7 @@ function M.get_repo_id(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     local id = resp.data.repository.id
     repo_id_cache[repo] = id
     return id
@@ -731,7 +736,7 @@ function M.get_repo_info(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     local info = resp.data.repository
     repo_info_cache[repo] = info
     return info
@@ -749,7 +754,7 @@ function M.get_repo_templates(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     local templates = resp.data.repository
 
     -- add an option to not use a template
@@ -766,11 +771,13 @@ function M.get_repo_templates(repo)
 end
 
 ---Helper method to aggregate an API paginated response
+---@param text string
+---@return table[]
 function M.get_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
   for _, page in ipairs(page_outputs) do
-    local decoded_page = vim.fn.json_decode(page)
+    local decoded_page = vim.json.decode(page)
     table.insert(results, decoded_page)
   end
   return results
@@ -781,7 +788,7 @@ function M.get_flatten_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
   for _, page in ipairs(page_outputs) do
-    local decoded_page = vim.fn.json_decode(page)
+    local decoded_page = vim.json.decode(page)
     for _, result in ipairs(decoded_page) do
       table.insert(results, result)
     end
@@ -790,6 +797,9 @@ function M.get_flatten_pages(text)
 end
 
 --- Helper method to aggregate an API paginated response
+---@param text string
+---@param aggregation_key string
+---@return table
 function M.aggregate_pages(text, aggregation_key)
   -- aggregation key can be at any level (eg: comments)
   -- take the first response and extend it with elements from the
@@ -807,18 +817,18 @@ function M.aggregate_pages(text, aggregation_key)
 end
 
 --- Helper method to aggregate an API paginated response
+---@param obj table<string, unknown>
+---@param prop string
+---@return unknown
 function M.get_nested_prop(obj, prop)
-  while true do
-    local parts = vim.split(prop, "%.")
-    if #parts == 1 then
-      break
-    else
-      local part = parts[1]
-      local remaining = table.concat(M.tbl_slice(parts, 2, #parts), ".")
-      return M.get_nested_prop(obj[part], remaining)
-    end
+  local parts = vim.split(prop, "%.")
+  if #parts == 1 then
+    return obj[prop]
+  else
+    local part = parts[1]
+    local remaining = table.concat(M.tbl_slice(parts, 2, #parts), ".")
+    return M.get_nested_prop(obj[part], remaining)
   end
-  return obj[prop]
 end
 
 --- Escapes a characters on a string to be used as a JSON string
@@ -933,7 +943,7 @@ function M.get_file_contents(repo, commit, path, cb)
       if stderr and not M.is_blank(stderr) then
         M.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local blob = resp.data.repository.object
         local lines = {}
         if blob and blob ~= vim.NIL and type(blob.text) == "string" then
@@ -1415,7 +1425,7 @@ function M.get_pull_request_for_current_branch(cb)
         M.error "No pr found for current branch"
         return
       end
-      local pr = vim.fn.json_decode(out)
+      local pr = vim.json.decode(out)
       local base_owner
       local base_name
       if pr.number then
@@ -1519,7 +1529,7 @@ function M.get_user_id(login)
     mode = "sync",
   }
   if output then
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     if resp.data.user and resp.data.user ~= vim.NIL then
       return resp.data.user.id
     end
@@ -1541,7 +1551,7 @@ function M.get_label_id(label)
     mode = "sync",
   }
   if output then
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     if resp.data.repository.labels.nodes and resp.data.repository.labels.nodes ~= vim.NIL then
       for _, l in ipairs(resp.data.repository.labels.nodes) do
         if l.name == label then
@@ -1622,6 +1632,8 @@ function M.extract_rest_id(comment_url)
 end
 
 --- Apply mappings to a buffer
+---@param kind string
+---@param bufnr integer
 function M.apply_mappings(kind, bufnr)
   local mappings = require "octo.mappings"
   local conf = config.values

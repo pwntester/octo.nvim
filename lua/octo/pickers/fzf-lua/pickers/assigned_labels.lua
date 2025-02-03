@@ -28,7 +28,7 @@ return function(cb)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local labels = resp.data.repository[key].labels.nodes
 
           for _, label in ipairs(labels) do

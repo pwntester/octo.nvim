@@ -7,6 +7,11 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 
+---@param fzf_cb function
+---@param issue table
+---@param max_id_length integer
+---@param formatted_issues table<string, table> entry.ordinal -> entry
+---@param co thread
 local handle_entry = function(fzf_cb, issue, max_id_length, formatted_issues, co)
   local entry = entry_maker.gen_from_issue(issue)
   if entry ~= nil then
@@ -25,7 +30,7 @@ end
 return function(opts)
   opts = opts or {}
 
-  local formatted_items = {}
+  local formatted_items = {} ---@type table<string, table> entry.ordinal -> entry
 
   local contents = function(query)
     return function(fzf_cb)
@@ -54,7 +59,7 @@ return function(opts)
             return {}
           end
 
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local max_id_length = 1
           for _, issue in ipairs(resp.data.search.nodes) do
             local s = tostring(issue.number)

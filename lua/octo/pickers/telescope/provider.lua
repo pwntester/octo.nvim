@@ -52,7 +52,7 @@ local function get_filter(opts, kind)
         -- string
         val = opts[value]
       end
-      val = vim.fn.json_encode(val)
+      val = vim.json.encode(val)
       val = string.gsub(val, '"OPEN"', "OPEN")
       val = string.gsub(val, '"CLOSED"', "CLOSED")
       val = string.gsub(val, '"MERGED"', "MERGED")
@@ -370,7 +370,7 @@ function M.commits()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local results = vim.fn.json_decode(output)
+        local results = vim.json.decode(output)
         pickers
           .new({}, {
             prompt_title = false,
@@ -410,7 +410,7 @@ function M.review_commits(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local results = vim.fn.json_decode(output)
+        local results = vim.json.decode(output)
 
         -- add a fake entry to represent the entire pull request
         table.insert(results, {
@@ -474,7 +474,7 @@ function M.changed_files()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local results = vim.fn.json_decode(output)
+        local results = vim.json.decode(output)
         pickers
           .new({}, {
             prompt_title = false,
@@ -564,7 +564,7 @@ function M.search(opts)
           mode = "sync",
         }
         if output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           for _, issue in ipairs(resp.data.search.nodes) do
             table.insert(results, issue)
           end
@@ -686,7 +686,7 @@ function M.select_target_project_column(cb)
     args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
     cb = function(output)
       if output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local projects = {}
         local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
         local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
@@ -786,7 +786,7 @@ function M.select_label(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local labels = resp.data.repository.labels.nodes
         pickers
           .new(opts, {
@@ -836,7 +836,7 @@ function M.select_assigned_label(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local labels = resp.data.repository[key].labels.nodes
         pickers
           .new(opts, {
@@ -1062,7 +1062,7 @@ function M.select_assignee(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local assignees = resp.data.repository[key].assignees.nodes
         pickers
           .new(opts, {
@@ -1219,7 +1219,7 @@ function M.notifications()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         pickers
           .new(opts, {
 
@@ -1379,7 +1379,7 @@ function M.milestones(opts)
           return
         end
 
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local nodes = resp.data.repository.milestones.nodes
 
         if #nodes == 0 then
