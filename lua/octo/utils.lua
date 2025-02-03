@@ -9,7 +9,8 @@ local M = {}
 
 ---@class OctoRepo
 ---@field host string
----@field name string
+---@field name string?
+---@field repo string?
 
 local repo_id_cache = {}
 local repo_templates_cache = {}
@@ -294,6 +295,8 @@ function M.get_all_remotes()
   return vim.tbl_values(M.parse_git_remote())
 end
 
+---@param remote table|nil
+---@return string?
 function M.get_remote_name(remote)
   return M.get_remote(remote).repo
 end
@@ -839,8 +842,11 @@ function M.escape_char(string)
 end
 
 --- Extracts repo and number from Octo command varargs
+---@param ... string|number
+---@return string? repo
+---@return integer? number
 function M.get_repo_number_from_varargs(...)
-  local repo, number
+  local repo, number ---@type string|nil, integer|nil
   local args = table.pack(...)
   if args.n == 0 then
     M.error "Missing arguments"
@@ -861,8 +867,12 @@ function M.get_repo_number_from_varargs(...)
     M.error "Can not find repo name"
     return
   end
-  if not number then
-    M.error "Missing issue/PR number"
+  if type(repo) ~= "string" then
+    M.error(("Expected repo name, received %s"):format(args[2]))
+    return
+  end
+  if not number or type(number) ~= "number" then
+    M.error(("Expected issue/PR number, received %s"):format(args[1]))
     return
   end
   return repo, number
