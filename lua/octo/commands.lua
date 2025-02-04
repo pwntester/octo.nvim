@@ -466,7 +466,7 @@ function M.setup()
   setmetatable(M.commands.pr, {
     __call = function(_)
       utils.get_pull_request_for_current_branch(function(pr)
-        vim.cmd("e " .. utils.get_pull_request_uri(pr.repo, pr.number))
+        vim.cmd("e " .. utils.get_pull_request_uri(pr.number, pr.repo))
       end)
     end,
   })
@@ -530,9 +530,9 @@ function M.octo(object, action, ...)
   if not o then
     local repo, number, kind = utils.parse_url(object)
     if repo and number and kind == "issue" then
-      utils.get_issue(repo, number)
+      utils.get_issue(number, repo)
     elseif repo and number and kind == "pull" then
-      utils.get_pull_request(repo, number)
+      utils.get_pull_request(number, repo)
     else
       utils.error("Incorrect argument: " .. object)
       return
