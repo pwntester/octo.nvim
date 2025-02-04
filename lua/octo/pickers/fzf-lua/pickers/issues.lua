@@ -46,7 +46,7 @@ return function(opts)
           utils.error(err)
           fzf_cb()
         elseif data then
-          local resp = utils.aggregate_pages(data, "data.repository.issues.nodes")
+          local resp = utils.aggregate_pages(data, "data.repository.issues.nodes") ---@type {data: {repository: octo.gh.Repository}}
           local issues = resp.data.repository.issues.nodes
 
           for _, issue in ipairs(issues) do

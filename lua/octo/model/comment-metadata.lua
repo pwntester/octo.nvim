@@ -10,7 +10,7 @@ local M = {}
 ---@field startLine integer
 ---@field endLine integer
 ---@field namespace integer
----@field reactionGroups table[]
+---@field reactionGroups octo.gh.ReactionGroup
 ---@field reactionLine integer
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean

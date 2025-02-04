@@ -59,7 +59,7 @@ return function(opts)
             return {}
           end
 
-          local resp = vim.json.decode(output)
+          local resp = vim.json.decode(output) ---@type {data: {search: {nodes: octo.gh.Issue[]}}}
           local max_id_length = 1
           for _, issue in ipairs(resp.data.search.nodes) do
             local s = tostring(issue.number)

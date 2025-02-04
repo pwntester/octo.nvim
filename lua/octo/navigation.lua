@@ -126,6 +126,7 @@ function M.go_to_issue()
     opts = {
       cb = gh.create_callback {
         failure = vim.api.nvim_err_writeln,
+        ---@param kind string
         success = function(kind)
           if kind == "Issue" then
             utils.get_issue(number, repo)

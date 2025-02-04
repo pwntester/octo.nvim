@@ -7,6 +7,9 @@ local colors = require "octo.ui.colors"
 -- background. The bubble shape gets especially defined by the outer delimiters.
 -- An examplary usage in this plugin are for label assigned to an issue.
 
+---@param content string
+---@param highlight_group string
+---@param opts table
 local function make_bubble(content, highlight_group, opts)
   opts = opts or {}
   local conf = config.values
@@ -52,6 +55,9 @@ local function make_user_bubble(name, is_viewer, opts)
   return make_bubble(content, highlight, opts)
 end
 
+---@param icon string
+---@param includes_viewer boolean
+---@param opts table?
 local function make_reaction_bubble(icon, includes_viewer, opts)
   local conf = config.values
   local highlight = includes_viewer and "OctoReactionViewer" or "OctoReaction"

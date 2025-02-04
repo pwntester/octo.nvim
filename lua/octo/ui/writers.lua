@@ -11,13 +11,17 @@ local vim = vim
 
 local M = {}
 
+---@param bufnr integer?
+---@param lines string|string[]
+---@param line integer?
+---@param mark boolean?
 function M.write_block(bufnr, lines, line, mark)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   line = line or vim.api.nvim_buf_line_count(bufnr) + 1
   mark = mark or false
 
   if type(lines) == "string" then
-    lines = vim.split(lines, "\n", true)
+    lines = vim.split(lines, "\n", { trimempty = true })
   end
 
   -- write content lines
@@ -125,6 +129,7 @@ function M.write_discussion_details(bufnr, discussion)
   M.write_detail_table { bufnr = bufnr, details = details, offset = 3 }
 end
 
+---@param opts table
 function M.write_detail_table(opts)
   local bufnr = opts.bufnr
   local details = opts.details
@@ -158,6 +163,9 @@ function M.write_upvotes(bufnr, obj, line)
   M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line, upvotes_vt)
 end
 
+---@param bufnr integer
+---@param obj octo.gh.Discussion | vim.NIL
+---@param line integer
 function M.write_discussion_answer(bufnr, obj, line)
   local answer = obj.answer
 
@@ -270,6 +278,9 @@ function M.write_repo(bufnr, repo)
   end
 end
 
+---@param bufnr integer
+---@param title string
+---@param line integer
 function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, { title, "" }, line, true)
   vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
@@ -285,6 +296,9 @@ function M.write_title(bufnr, title, line)
   end
 end
 
+---@param bufnr integer
+---@param state string
+---@param number number
 function M.write_state(bufnr, state, number)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -309,13 +323,16 @@ function M.write_state(bufnr, state, number)
   vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
+---@param bufnr integer
+---@param issue octo.gh.Issue | octo.gh.PullRequest | octo.gh.Discussion | vim.NIL
+---@param line integer?
 function M.write_body(bufnr, issue, line)
   local body = utils.trim(issue.body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
     body = " "
   end
   local description = body:gsub("\r\n", "\n")
-  local lines = vim.split(description, "\n", true)
+  local lines = vim.split(description, "\n", { trimempty = true })
   vim.list_extend(lines, { "" })
   local desc_mark = M.write_block(bufnr, lines, line, true)
   local buffer = octo_buffers[bufnr]
@@ -330,6 +347,10 @@ function M.write_body(bufnr, issue, line)
   end
 end
 
+---@param bufnr integer
+---@param reaction_groups octo.gh.ReactionGroup[]
+---@param line integer
+---@return integer|nil
 function M.write_reactions(bufnr, reaction_groups, line)
   local reactions_count = utils.count_reactions(reaction_groups)
   if reactions_count <= 0 then
@@ -339,7 +360,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
-  local reactions_vt = {}
+  local reactions_vt = {} ---@type {[1]: string, [2]: string}[]
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
       local icon = utils.reaction_map[group.content]
@@ -352,6 +373,9 @@ function M.write_reactions(bufnr, reaction_groups, line)
   return line
 end
 
+---@param bufnr integer
+---@param issue table
+---@param update boolean?
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
@@ -1081,6 +1105,11 @@ local function chunk_length(max_length, chunk)
   return math.max(max_length, length)
 end
 
+---@param bufnr integer
+---@param user octo.gh.User
+---@param opts table?
+---@return integer num_chunks
+---@return integer max_lenght
 function M.write_user_profile(bufnr, user, opts)
   opts = opts or {}
   local max_width = opts.max_width or 80
@@ -1739,6 +1768,11 @@ function M.write_threads(bufnr, threads)
   return comment_end
 end
 
+---@param bufnr integer
+---@param ns integer
+---@param line integer
+---@param chunks {[1]: string, [2]: string}[]
+---@param mode string?
 function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   mode = mode or "extmark"
   if mode == "extmark" then

@@ -796,7 +796,7 @@ function M.delete_comment()
       cb = function(output)
         -- TODO: deleting the last review thread comment, it deletes the whole thread and review
         -- In issue buffers, we should hide the thread snippet
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {deletePullRequestReviewComment: octo.gh.DeletePullRequestReviewCommentPayload?}}
 
         -- remove comment lines from the buffer
         if comment.reactionLine then
@@ -887,6 +887,10 @@ function M.delete_comment()
   end
 end
 
+---@param bufnr integer
+---@param thread octo.gh.PullRequestReviewThread
+---@param thread_id string
+---@param thread_line integer
 local function update_review_thread_header(bufnr, thread, thread_id, thread_line)
   local start_line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine
   local end_line = thread.originalLine
@@ -930,9 +934,10 @@ function M.resolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {resolveReviewThread: octo.gh.ResolveReviewThreadPayload}}
         local thread = resp.data.resolveReviewThread.thread
-        if thread.isResolved then
+        if thread ~= vim.NIL and thread.isResolved then
+          ---@cast thread -vim.NIL
           update_review_thread_header(bufnr, thread, thread_id, thread_line)
           --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
         end
@@ -960,9 +965,10 @@ function M.unresolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {unresolveReviewThread: octo.gh.UnresolveReviewThreadPayload}}
         local thread = resp.data.unresolveReviewThread.thread
-        if not thread.isResolved then
+        if thread ~= vim.NIL and not thread.isResolved then
+          ---@cast thread -vim.NIL
           update_review_thread_header(bufnr, thread, thread_id, thread_line)
         end
       end
@@ -1096,7 +1102,7 @@ function M.save_issue(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {createIssue: octo.gh.CreateIssuePayload}}
         require("octo").create_buffer("issue", resp.data.createIssue.issue, opts.repo, true)
         vim.fn.execute "normal! Gk"
         vim.fn.execute "startinsert"
@@ -1310,7 +1316,7 @@ function M.save_pr(opts)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.json.decode(output)
+          local resp = vim.json.decode(output) ---@type {data: {createPullRequest: octo.gh.CreatePullRequestPayload}}
           local pr = resp.data.createPullRequest.pullRequest
           utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
           require("octo").create_buffer("pull", pr, opts.repo, true)
@@ -1359,8 +1365,8 @@ function M.pr_checks()
   end
 
   local show_checks = function(output)
-    local max_lengths = {}
-    local parts = {}
+    local max_lengths = {} ---@type integer[]
+    local parts = {} ---@type string[][]
     for _, l in pairs(vim.split(output, "\n")) do
       local line_parts = vim.split(l, "\t")
       for i, p in pairs(line_parts) do
@@ -1466,6 +1472,9 @@ function M.show_pr_diff()
   }
 end
 
+---@param bufnr integer
+---@param extmark integer
+---@return integer
 local function get_reaction_line(bufnr, extmark)
   local prev_extmark = extmark
   local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, constants.OCTO_COMMENT_NS, prev_extmark, { details = true })
@@ -1473,8 +1482,14 @@ local function get_reaction_line(bufnr, extmark)
   return end_line + 3
 end
 
+---@param bufnr integer
+---@param buffer OctoBuffer
+---@return integer reaction_line
+---@return octo.gh.ReactionGroup[] reaction_groups
+---@return boolean insert_line
+---@return string id
 local function get_reaction_info(bufnr, buffer)
-  local reaction_groups, reaction_line, insert_line, id
+  local reaction_groups, reaction_line, insert_line, id ---@type octo.gh.ReactionGroup[], integer, boolean, string
   local comment = buffer:get_comment_at_cursor()
   if comment then
     -- found a comment at cursor
@@ -1515,7 +1530,7 @@ function M.reaction_action(reaction)
 
   local reaction_line, reaction_groups, insert_line, id = get_reaction_info(bufnr, buffer)
 
-  local action
+  local action ---@type "add" | "remove"
   for _, reaction_group in ipairs(reaction_groups) do
     if reaction_group.content == reaction and reaction_group.viewerHasReacted then
       action = "remove"
@@ -1539,8 +1554,10 @@ function M.reaction_action(reaction)
       elseif output then
         local resp = vim.json.decode(output)
         if action == "add" then
+          ---@cast resp {data: {addReaction: octo.gh.AddReactionPayload}}
           reaction_groups = resp.data.addReaction.subject.reactionGroups
         elseif action == "remove" then
+          ---@cast resp {data: {removeReaction: octo.gh.RemoveReactionPayload}}
           reaction_groups = resp.data.removeReaction.subject.reactionGroups
         end
 
@@ -1663,7 +1680,7 @@ function M.set_project_v2_card()
         if add_stderr and not utils.is_blank(add_stderr) then
           utils.error(add_stderr)
         elseif add_output then
-          local resp = vim.json.decode(add_output)
+          local resp = vim.json.decode(add_output) ---@type {data: {addProjectV2ItemById: octo.gh.AddProjectV2ItemByIdPayload}}
           local update_query = graphql(
             "update_project_v2_item_mutation",
             project_id,

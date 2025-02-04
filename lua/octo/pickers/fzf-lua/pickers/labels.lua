@@ -21,7 +21,7 @@ return function(opts)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.json.decode(output)
+          local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
           local labels = resp.data.repository.labels.nodes
 
           for _, label in ipairs(labels) do

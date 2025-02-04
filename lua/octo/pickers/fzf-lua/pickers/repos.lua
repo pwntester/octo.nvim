@@ -28,7 +28,7 @@ return function(opts)
           utils.error(stderr)
           fzf_cb()
         elseif output then
-          local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
+          local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes") ---@type {data: {repositoryOwner: octo.gh.RepositoryOwner}}
           local repos = resp.data.repositoryOwner.repositories.nodes
           if #repos == 0 then
             utils.error(string.format("There are no matching repositories for %s.", opts.login))

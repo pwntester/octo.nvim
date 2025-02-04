@@ -15,7 +15,7 @@ return function(threads)
   local titles = {}
 
   for _, thread in ipairs(threads) do
-    local entry = entry_maker.gen_from_review_thread(max_linenr_length, thread)
+    local entry = entry_maker.gen_from_review_thread(thread)
 
     if entry ~= nil then
       formatted_threads[entry.ordinal] = entry

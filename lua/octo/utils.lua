@@ -13,8 +13,8 @@ local M = {}
 ---@field repo string?
 
 local repo_id_cache = {}
-local repo_templates_cache = {}
-local repo_info_cache = {}
+local repo_templates_cache = {} ---@type table<string, octo.gh.Repository>
+local repo_info_cache = {} ---@type table<string, octo.gh.Repository>
 local path_sep = package.config:sub(1, 1)
 
 M.viewed_state_map = {
@@ -127,13 +127,16 @@ M.auto_merge_method_map = {
   SQUASH = "squash",
 }
 
+---@param str string
+---@return string
 function M.trim(str)
   if type(vim.fn.trim) == "function" then
     return vim.fn.trim(str)
   elseif type(vim.trim) == "function" then
     return vim.trim(str)
   else
-    return str:gsub("^%s*(.-)%s*$", "%1")
+    local trimmed = str:gsub("^%s*(.-)%s*$", "%1")
+    return trimmed
   end
 end
 
@@ -191,6 +194,8 @@ function table.pack(...)
   return { n = select("#", ...), ... }
 end
 
+---@param s nil|vim.NIL|string|table
+---@return boolean
 function M.is_blank(s)
   return (
     s == nil
@@ -721,6 +726,8 @@ function M.cwd_is_git()
 end
 
 ---Gets repo info
+---@param repo string
+---@return octo.gh.Repository
 function M.get_repo_info(repo)
   if repo_info_cache[repo] then
     return repo_info_cache[repo]
@@ -734,7 +741,8 @@ function M.get_repo_info(repo)
     jq = ".data.repository",
     opts = { mode = "sync" },
   }
-  local info = vim.json.decode(output)
+  local info = vim.json.decode(output) ---@type octo.gh.Repository
+
   repo_info_cache[repo] = info
   return info
 end
@@ -753,7 +761,7 @@ function M.get_repo_templates(repo)
     jq = ".data.repository",
     opts = { mode = "sync" },
   }
-  local templates = vim.json.decode(output)
+  local templates = vim.json.decode(output) ---@type octo.gh.Repository
 
   -- add an option to not use a template
   table.insert(templates.issueTemplates, {
@@ -947,7 +955,7 @@ function M.get_file_contents(repo, commit, path, cb)
       if stderr and not M.is_blank(stderr) then
         M.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
         local blob = resp.data.repository.object
         local lines = {}
         if blob and blob ~= vim.NIL and type(blob.text) == "string" then
@@ -992,9 +1000,13 @@ function M.cursor_in_col_range(start_col, end_col)
   return false
 end
 
+---@param repo string
+---@return string owner
+---@return string name
 function M.split_repo(repo)
-  local owner = vim.split(repo, "/")[1]
-  local name = vim.split(repo, "/")[2]
+  local splitted = vim.split(repo, "/")
+  local owner = splitted[1]
+  local name = splitted[2]
   return owner, name
 end
 
@@ -1103,6 +1115,8 @@ function M.text_wrap(text, width)
   return result
 end
 
+---@param reaction_groups octo.gh.ReactionGroup[]
+---@return integer
 function M.count_reactions(reaction_groups)
   local reactions_count = 0
   for _, group in ipairs(reaction_groups) do
@@ -1430,8 +1444,8 @@ function M.get_pull_request_for_current_branch(cb)
         return
       end
       local pr = vim.json.decode(out)
-      local base_owner
-      local base_name
+      local base_owner ---@type string
+      local base_name ---@type string
       if pr.number then
         if pr.isCrossRepository then
           -- Parsing the pr url is the only way to get the target repo owner if the pr is cross repo
@@ -1543,6 +1557,8 @@ function M.get_user_id(login)
   return id
 end
 
+---@param label string
+---@return string|nil
 function M.get_label_id(label)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -1688,12 +1704,13 @@ end
 
 --- Logic to determine the state displayed for issue or PR
 ---@param isIssue boolean
----@param state string
----@param stateReason string | nil
+---@param state octo.gh.IssueState | octo.gh.PullRequestState
+---@param stateReason octo.gh.IssueStateReason | vim.NIL | nil
 ---@return string
 function M.get_displayed_state(isIssue, state, stateReason, isDraft)
   if isIssue and state == "CLOSED" then
-    return stateReason or state
+    ---@cast stateReason -vim.NIL
+    return (stateReason and stateReason ~= vim.NIL) and stateReason or state
   end
 
   if isDraft then

@@ -44,6 +44,7 @@ function Layout:new(opt)
   return this
 end
 
+---@param review Review
 function Layout:open(review)
   vim.cmd "tab split"
   self.tabpage = vim.api.nvim_get_current_tabpage()

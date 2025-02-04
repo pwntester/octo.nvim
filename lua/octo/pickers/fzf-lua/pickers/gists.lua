@@ -39,7 +39,7 @@ return function(opts)
     privacy = "ALL"
   end
 
-  local formatted_gists = {}
+  local formatted_gists = {} ---@type table<string, table>
 
   local get_contents = function(fzf_cb)
     local query = graphql("gists_query", privacy)
@@ -51,7 +51,7 @@ return function(opts)
           utils.error(stderr)
         elseif output then
           local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
-          local gists = resp.data.viewer.gists.nodes
+          local gists = resp.data.viewer.gists.nodes ---@type octo.gh.Gist[]
 
           for _, gist in ipairs(gists) do
             local entry = entry_maker.gen_from_gist(gist)

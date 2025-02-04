@@ -12,7 +12,7 @@ return function(cb)
     return
   end
 
-  local formatted_projects = {}
+  local formatted_projects = {} ---@type table<string, table>
   local common_fzf_opts = vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
     fzf_opts = {
       ["--delimiter"] = "' '",
@@ -26,15 +26,18 @@ return function(cb)
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output)
         if output then
-          local resp = vim.json.decode(output)
+          local resp = vim.json.decode(output) ---@type {data: {user: octo.gh.User?, repository: octo.gh.Repository?, organization: octo.gh.Organization?}, errors: unknown}
 
-          local projects = {}
-          local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
-          local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
-          local org_projects = not resp.errors and resp.data.organization.projects.nodes or {}
-          vim.list_extend(projects, repo_projects)
-          vim.list_extend(projects, user_projects)
-          vim.list_extend(projects, org_projects)
+          local projects = {} ---@type octo.gh.Project[]
+          if resp.data.user then
+            vim.list_extend(projects, resp.data.user.projects.nodes)
+          end
+          if resp.data.repository then
+            vim.list_extend(projects, resp.data.repository.projects.nodes)
+          end
+          if not resp.errors then
+            vim.list_extend(projects, resp.data.organization.projects.nodes)
+          end
 
           if #projects == 0 then
             utils.error(string.format("There are no matching projects for %s.", buffer.repo))
