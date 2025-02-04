@@ -654,7 +654,7 @@ function M.delete_comment()
       cb = function(output)
         -- TODO: deleting the last review thread comment, it deletes the whole thread and review
         -- In issue buffers, we should hide the thread snippet
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
 
         -- remove comment lines from the buffer
         if comment.reactionLine then
@@ -788,7 +788,7 @@ function M.resolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local thread = resp.data.resolveReviewThread.thread
         if thread.isResolved then
           update_review_thread_header(bufnr, thread, thread_id, thread_line)
@@ -818,7 +818,7 @@ function M.unresolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local thread = resp.data.unresolveReviewThread.thread
         if not thread.isResolved then
           update_review_thread_header(bufnr, thread, thread_id, thread_line)
@@ -876,7 +876,7 @@ function M.change_state(state)
     if stderr and not utils.is_blank(stderr) then
       utils.error(stderr)
     elseif output then
-      local resp = vim.fn.json_decode(output)
+      local resp = vim.json.decode(output)
 
       local obj = get_obj(resp)
       local new_state = obj.state
@@ -961,7 +961,7 @@ function M.save_issue(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         require("octo").create_buffer("issue", resp.data.createIssue.issue, opts.repo, true)
         vim.fn.execute "normal! Gk"
         vim.fn.execute "startinsert"
@@ -1175,7 +1175,7 @@ function M.save_pr(opts)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local pr = resp.data.createPullRequest.pullRequest
           utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
           require("octo").create_buffer("pull", pr, opts.repo, true)
@@ -1401,7 +1401,7 @@ function M.reaction_action(reaction)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         if action == "add" then
           reaction_groups = resp.data.addReaction.subject.reactionGroups
         elseif action == "remove" then
@@ -1527,7 +1527,7 @@ function M.set_project_v2_card()
         if add_stderr and not utils.is_blank(add_stderr) then
           utils.error(add_stderr)
         elseif add_output then
-          local resp = vim.fn.json_decode(add_output)
+          local resp = vim.json.decode(add_output)
           local update_query = graphql(
             "update_project_v2_item_mutation",
             project_id,
@@ -1631,7 +1631,7 @@ function M.create_label(label)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local label = resp.data.createLabel.label
         utils.info("Created label: " .. label.name)
 

@@ -101,7 +101,7 @@ function PullRequest:get_changed_files(callback)
         utils.error(stderr)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
-        local results = vim.fn.json_decode(output)
+        local results = vim.json.decode(output)
         results = merge_pages(results)
         local files = {}
         for _, result in ipairs(results) do
@@ -135,7 +135,7 @@ function PullRequest:get_commit_changed_files(rev, callback)
         utils.error(stderr)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
-        local results = vim.fn.json_decode(output)
+        local results = vim.json.decode(output)
         results = merge_pages(results)
         local files = {}
         if results.files then

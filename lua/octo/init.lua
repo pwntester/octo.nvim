@@ -152,7 +152,7 @@ function M.load(repo, kind, number, cb)
           local obj = resp.data.repository[key]
           cb(obj)
         elseif kind == "repo" then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local obj = resp.data.repository
           cb(obj)
         end
@@ -184,7 +184,7 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local reactions = {}
           local reactionGroups = resp.data.node.reactionGroups
           for _, reactionGroup in ipairs(reactionGroups) do
@@ -220,7 +220,7 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local user = resp.data.user
           local popup_bufnr = vim.api.nvim_create_buf(false, true)
           local lines, max_length = writers.write_user_profile(popup_bufnr, user)
@@ -248,7 +248,7 @@ function M.on_cursor_hold()
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local issue = resp.data.repository.issueOrPullRequest
         local popup_bufnr = vim.api.nvim_create_buf(false, true)
         local max_length = 80

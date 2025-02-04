@@ -44,7 +44,7 @@ function Review:create(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         callback(resp)
       end
     end,
@@ -71,7 +71,7 @@ function Review:retrieve(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         callback(resp)
       end
     end,
@@ -203,7 +203,7 @@ function Review:discard()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
           utils.error "No pending reviews found"
           return

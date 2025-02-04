@@ -73,7 +73,7 @@ M.issue = function(formatted_issues)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.fn.json_decode(output)
+          local result = vim.json.decode(output)
           local obj
           if entry.kind == "issue" then
             obj = result.data.repository.issue
@@ -135,7 +135,7 @@ M.search = function()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.fn.json_decode(output)
+          local result = vim.json.decode(output)
           local obj
           if kind == "issue" then
             obj = result.data.repository.issue
@@ -340,7 +340,7 @@ M.repo = function(formatted_repos)
         -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
         -- and `tmpbuf` within this context is already cleared and invalidated
         if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           buffer.node = resp.data.repository
           buffer:render_repo()
         end

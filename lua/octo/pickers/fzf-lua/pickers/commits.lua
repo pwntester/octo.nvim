@@ -23,7 +23,7 @@ return function(opts)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local results = vim.fn.json_decode(output)
+          local results = vim.json.decode(output)
 
           for _, result in ipairs(results) do
             local entry = entry_maker.gen_from_git_commits(result)
