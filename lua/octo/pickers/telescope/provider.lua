@@ -77,7 +77,7 @@ local function open(command)
       vim.cmd [[:tab sb %]]
     end
     if selection then
-      utils.get(selection.kind, selection.repo, selection.value)
+      utils.get(selection.kind, selection.value, selection.repo)
     end
   end
 end

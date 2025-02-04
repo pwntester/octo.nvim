@@ -109,11 +109,11 @@ function M.gen_from_issue(max_number, print_repo)
 
     local filename
     if kind == "issue" then
-      filename = utils.get_issue_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_issue_uri(obj.number, obj.repository.nameWithOwner)
     elseif kind == "pull_request" then
-      filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_pull_request_uri(obj.number, obj.repository.nameWithOwner)
     else
-      filename = utils.get_discussion_uri(obj.respository.nameWithOwner, obj.number)
+      filename = utils.get_discussion_uri(obj.number, obj.respository.nameWithOwner)
     end
 
     return {
