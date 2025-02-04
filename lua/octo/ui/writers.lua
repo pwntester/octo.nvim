@@ -1390,6 +1390,10 @@ local write_reference_commit = function(bufnr, commit)
 end
 
 function M.write_referenced_event(bufnr, item)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
   local vt = {}
   local conf = config.values
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
