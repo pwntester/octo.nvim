@@ -1658,11 +1658,8 @@ function M.apply_mappings(kind, bufnr)
         value.desc = ""
       end
       local mapping_opts = { silent = true, noremap = true, buffer = bufnr, desc = value.desc }
-      vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
-      -- TODO: These should probably be part of the config
-      if action == "add_review_comment" or action == "add_review_suggestion" then
-        vim.keymap.set("x", value.lhs, mappings[action], mapping_opts)
-      end
+      local mode = value.mode or "n"
+      vim.keymap.set(mode, value.lhs, mappings[action], mapping_opts)
     end
   end
 end
