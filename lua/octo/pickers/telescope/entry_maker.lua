@@ -36,7 +36,7 @@ function M.gen_from_discussions(max_number)
     end
 
     local kind = "discussion"
-    local filename = utils.get_discussion_uri(obj.repository.nameWithOwner, obj.number)
+    local filename = utils.get_discussion_uri(obj.number, obj.repository.nameWithOwner)
 
     return {
       filename = filename,
