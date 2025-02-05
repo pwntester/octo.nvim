@@ -497,19 +497,28 @@ end
 function M._get_null_buffer()
   local msg = "Loading ..."
   local bn = M._null_buffer[msg]
-  if not bn or vim.api.nvim_buf_is_loaded(bn) then
-    local nbn = vim.api.nvim_create_buf(false, false)
-    vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
-    local bufname = utils.path_join { "octo", "null" }
-    vim.api.nvim_buf_set_option(nbn, "modified", false)
-    vim.api.nvim_buf_set_option(nbn, "modifiable", false)
-    local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
-    if not ok then
-      utils.wipe_named_buffer(bufname)
-      vim.api.nvim_buf_set_name(nbn, bufname)
-    end
-    M._null_buffer[msg] = nbn
+
+  if bn and vim.api.nvim_buf_is_valid(bn) then
+    -- Null buffer already exists and is loaded
+    return bn
   end
+
+  -- Create the null buffer
+  local nbn = vim.api.nvim_create_buf(false, false)
+
+  vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
+  local bufname = utils.path_join { "octo", "null" }
+  vim.api.nvim_buf_set_option(nbn, "modified", false)
+  vim.api.nvim_buf_set_option(nbn, "modifiable", false)
+
+  local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
+  if not ok then
+    utils.wipe_named_buffer(bufname)
+    vim.api.nvim_buf_set_name(nbn, bufname)
+  end
+
+  M._null_buffer[msg] = nbn
+
   return M._null_buffer[msg]
 end
 
