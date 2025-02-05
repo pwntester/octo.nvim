@@ -339,7 +339,7 @@ function M.setup()
         end
       end,
       thread = function()
-        require("octo.reviews.thread-panel").show_review_threads { jump_to_buffer = true }
+        require("octo.reviews.thread-panel").show_review_threads(true)
       end,
     },
     gist = {
