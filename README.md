@@ -149,6 +149,9 @@ require"octo".setup({
     },
     always_select_remote_on_create = false -- always give prompt to select base remote repo when creating PRs
   },
+  notifications = {
+    current_repo = false,                  -- show notifications for current repo only
+  },
   file_panel = {
     size = 10,                             -- changed files panel rows
     use_icons = true                       -- use web-devicons in file panel (if false, nvim-web-devicons does not need to be installed)

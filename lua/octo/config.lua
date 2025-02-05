@@ -43,6 +43,9 @@ local M = {}
 ---@class OctoConfigDiscussions
 ---@field order_by OctoConfigOrderBy
 
+---@class OctoConfigNotifications
+---@field current_repo boolean
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -91,6 +94,7 @@ local M = {}
 ---@field mappings { [OctoMappingsWindow]: OctoMappingsList}
 ---@field mappings_disable_default boolean
 ---@field discussions OctoConfigDiscussions
+---@field notifications OctoConfigNotifications
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -149,6 +153,9 @@ function M.get_default_values()
         field = "CREATED_AT",
         direction = "DESC",
       },
+    },
+    notifications = {
+      current_repo = false,
     },
     reviews = {
       auto_show_threads = true,
