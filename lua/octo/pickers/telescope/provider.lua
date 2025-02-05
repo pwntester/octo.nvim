@@ -1204,28 +1204,46 @@ local function mark_notification_read()
   end
 end
 
-function M.notifications()
+function M.notifications(opts)
+  opts = opts or {}
   local cfg = octo_config.values
-  local opts = {
-    preview_title = "",
-    prompt_title = "Github Notifications",
-    results_title = "",
-  }
+
+  if cfg.notifications.current_repo then
+    opts.repo = utils.get_remote_name()
+  end
+
+  local endpoint = "/notifications"
+  opts.prompt_title = "Github Notifications"
+  if opts.repo then
+    local owner, name = utils.split_repo(opts.repo)
+    endpoint = string.format("/repos/%s/%s/notifications", owner, name)
+    opts.prompt_title = string.format("%s Notifications", opts.repo)
+  end
+
+  opts.preview_title = ""
+  opts.results_title = ""
 
   gh.run {
-    args = { "api", "--paginate", "/notifications" },
+    args = { "api", "--paginate", endpoint },
     headers = { "Accept: application/vnd.github.v3.diff" },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
         local resp = vim.json.decode(output)
+
+        if #resp == 0 then
+          utils.error "There are no notifications"
+          return
+        end
+
         pickers
           .new(opts, {
-
             finder = finders.new_table {
               results = resp,
-              entry_maker = entry_maker.gen_from_notification(),
+              entry_maker = entry_maker.gen_from_notification {
+                show_repo = not opts.repo,
+              },
             },
             sorter = conf.generic_sorter(opts),
             previewer = previewers.issue.new(opts),
