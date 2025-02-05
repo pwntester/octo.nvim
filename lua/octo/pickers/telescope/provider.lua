@@ -1233,7 +1233,7 @@ function M.notifications(opts)
         local resp = vim.json.decode(output)
 
         if #resp == 0 then
-          utils.error "There are no notifications"
+          utils.info "There are no notifications"
           return
         end
 
