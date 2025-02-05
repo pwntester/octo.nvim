@@ -1213,12 +1213,11 @@ function M.notifications(opts)
   end
 
   local endpoint = "/notifications"
-  opts.prompt_title = "Github Notifications"
   if opts.repo then
     local owner, name = utils.split_repo(opts.repo)
     endpoint = string.format("/repos/%s/%s/notifications", owner, name)
-    opts.prompt_title = string.format("%s Notifications", opts.repo)
   end
+  opts.prompt_title = opts.repo and string.format("%s Notifications", opts.repo) or "Github Notifications"
 
   opts.preview_title = ""
   opts.results_title = ""
