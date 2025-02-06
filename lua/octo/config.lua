@@ -43,6 +43,9 @@ local M = {}
 ---@class OctoConfigDiscussions
 ---@field order_by OctoConfigOrderBy
 
+---@class OctoConfigNotifications
+---@field current_repo_only boolean
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -91,6 +94,7 @@ local M = {}
 ---@field mappings { [OctoMappingsWindow]: OctoMappingsList}
 ---@field mappings_disable_default boolean
 ---@field discussions OctoConfigDiscussions
+---@field notifications OctoConfigNotifications
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -149,6 +153,9 @@ function M.get_default_values()
         field = "CREATED_AT",
         direction = "DESC",
       },
+    },
+    notifications = {
+      current_repo_only = false,
     },
     reviews = {
       auto_show_threads = true,
@@ -429,6 +436,14 @@ function M.validate_config()
     validate_type(config.pull_requests.always_select_remote_on_create, "always_select_remote_on_create", "boolean")
   end
 
+  local function validate_notifications()
+    if not validate_type(config.notifications, "notifications", "table") then
+      err("notifications", "Expected notifications to be a table")
+      return
+    end
+    validate_type(config.notifications.current_repo_only, "notifications.current_repo_only", "boolean")
+  end
+
   local function validate_mappings()
     -- TODO(jarviliam): Validate each keymap
     if not validate_type(config.mappings, "mappings", "table") then
@@ -479,6 +494,7 @@ function M.validate_config()
     validate_issues()
     validate_reviews()
     validate_pull_requests()
+    validate_notifications()
     if validate_type(config.file_panel, "file_panel", "table") then
       validate_type(config.file_panel.size, "file_panel.size", "number")
       validate_type(config.file_panel.use_icons, "file_panel.use_icons", "boolean")

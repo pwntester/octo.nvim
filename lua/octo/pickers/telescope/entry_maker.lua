@@ -656,7 +656,8 @@ function M.gen_from_octo_actions(width)
   end
 end
 
-function M.gen_from_notification()
+function M.gen_from_notification(opts)
+  opts = opts or { show_repo_info = false }
   local make_display = function(entry)
     if not entry then
       return nil
@@ -670,15 +671,21 @@ function M.gen_from_notification()
       { string.sub(entry.obj.repository.full_name, 1, 50), "TelescopeResultsNumber" },
       { string.sub(entry.obj.subject.title, 1, 100) },
     }
+    local items = {
+      { width = 2 },
+      { width = 6 },
+      { width = math.min(#entry.obj.repository.full_name, 50) },
+      { width = math.min(#entry.obj.subject.title, 100) },
+    }
+
+    if not opts.show_repo_info then
+      table.remove(columns, 3)
+      table.remove(items, 3)
+    end
 
     local displayer = entry_display.create {
       separator = " ",
-      items = {
-        { width = 2 },
-        { width = 6 },
-        { width = math.min(#entry.obj.repository.full_name, 50) },
-        { width = math.min(#entry.obj.subject.title, 100) },
-      },
+      items = items,
     }
 
     return displayer(columns)
