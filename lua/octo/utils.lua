@@ -967,28 +967,9 @@ function M.get_file_contents(repo, commit, path, cb)
   }
 end
 
-function M.set_timeout(delay, callback, ...)
-  local timer = vim.loop.new_timer()
-  local args = { ... }
-  vim.loop.timer_start(timer, delay, 0, function()
-    vim.loop.timer_stop(timer)
-    vim.loop.close(timer)
-    callback(unpack(args))
-  end)
-  return timer
-end
-
-function M.getwin4buf(bufnr)
-  local tabpage = vim.api.nvim_get_current_tabpage()
-  local wins = vim.api.nvim_tabpage_list_wins(tabpage)
-  for _, w in ipairs(wins) do
-    if bufnr == vim.api.nvim_win_get_buf(w) then
-      return w
-    end
-  end
-  return -1
-end
-
+---@param start_col integer
+---@param end_col integer
+---@return boolean
 function M.cursor_in_col_range(start_col, end_col)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local col = cursor[2] + 1
@@ -1010,13 +991,17 @@ function M.split_repo(repo)
   return owner, name
 end
 
+---@param pattern string
+---@param line integer?
+---@param offset integer?
+---@return string ...
 function M.extract_pattern_at_cursor(pattern, line, offset)
   line = line or vim.api.nvim_get_current_line()
   offset = offset or 0
   if offset > 0 and pattern:sub(1, 1) == "^" then
     return
   end
-  local res = table.pack(line:find(pattern))
+  local res = table.pack(line:find(pattern)) ---@type string[]
   if #res == 0 then
     return
   end
@@ -1030,6 +1015,9 @@ function M.extract_pattern_at_cursor(pattern, line, offset)
   return M.extract_pattern_at_cursor(pattern, line:sub(end_col + 1), offset + end_col)
 end
 
+---@param current_repo string
+---@return string repo
+---@return string number
 function M.extract_issue_at_cursor(current_repo)
   local repo, number = M.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
   if not repo or not number then
@@ -1050,6 +1038,9 @@ function M.extract_issue_at_cursor(current_repo)
   return repo, number
 end
 
+---@param str string
+---@param pattern string
+---@return string[]
 function M.pattern_split(str, pattern)
   -- https://gist.github.com/boredom101/0074f1af6bd5cd6c7848ac6af3e88e85
   local words = {}
@@ -1059,14 +1050,17 @@ function M.pattern_split(str, pattern)
   return words
 end
 
+---@param text string
+---@param width integer
+---@return string[]
 function M.text_wrap(text, width)
   -- https://gist.github.com/boredom101/0074f1af6bd5cd6c7848ac6af3e88e85
 
   width = width or math.floor((vim.fn.winwidth(0) * 3) / 4)
   local lines = M.pattern_split(text, "[^\r\n]+")
-  local widthLeft
-  local result = {}
-  local line = {}
+  local widthLeft ---@type integer
+  local result = {} ---@type string[]
+  local line = {} ---@type string[]
 
   -- Insert each source line into the result, one-by-one
   for k = 1, #lines do
@@ -1127,6 +1121,8 @@ function M.count_reactions(reaction_groups)
   return reactions_count
 end
 
+---@param bufnr integer
+---@return string[]
 function M.get_sorted_comment_lines(bufnr)
   local lines = {}
   local marks = vim.api.nvim_buf_get_extmarks(bufnr, constants.OCTO_COMMENT_NS, 0, -1, { details = true })
@@ -1137,6 +1133,9 @@ function M.get_sorted_comment_lines(bufnr)
   return lines
 end
 
+---@param thread table
+---@param bufnr integer
+---@return boolean
 function M.is_thread_placed_in_buffer(thread, bufnr)
   local split, path = M.get_split_and_path(bufnr)
   if split == thread.diffSide and path == thread.path then
@@ -1145,6 +1144,9 @@ function M.is_thread_placed_in_buffer(thread, bufnr)
   return false
 end
 
+---@param bufnr integer
+---@return string? split
+---@return string? path
 function M.get_split_and_path(bufnr)
   local ok, props = pcall(vim.api.nvim_buf_get_var, bufnr, "octo_diff_props")
   if ok and props then
@@ -1152,6 +1154,8 @@ function M.get_split_and_path(bufnr)
   end
 end
 
+---@param bufnr integer
+---@return boolean
 function M.in_diff_window(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local ok, props = pcall(vim.api.nvim_buf_get_var, bufnr, "octo_diff_props")
@@ -1172,6 +1176,10 @@ function M.clear_history()
   vim.o.undolevels = old_undolevels
 end
 
+---@param value number
+---@param min number
+---@param max number
+---@return number
 function M.clamp(value, min, max)
   if value < min then
     return min
@@ -1182,13 +1190,8 @@ function M.clamp(value, min, max)
   return value
 end
 
-function M.enum(t)
-  for i, v in ipairs(t) do
-    t[v] = i
-  end
-  return t
-end
-
+---@param name string
+---@return integer? buf
 function M.find_named_buffer(name)
   for _, v in ipairs(vim.api.nvim_list_bufs()) do
     if vim.fn.bufname(v) == name then
@@ -1198,6 +1201,7 @@ function M.find_named_buffer(name)
   return nil
 end
 
+---@param name string
 function M.wipe_named_buffer(name)
   local bn = M.find_named_buffer(name)
   if bn then
@@ -1215,52 +1219,8 @@ function M.wipe_named_buffer(name)
   end
 end
 
-function M.str_shorten(s, new_length)
-  if string.len(s) > new_length - 1 then
-    return "…" .. s:sub(string.len(s) - new_length + 1, string.len(s))
-  end
-  return s
-end
-
----Get a path relative to another path.
 ---@param path string
----@param relative_to string
 ---@return string
-function M.path_relative(path, relative_to)
-  local p, _ = path:gsub("^" .. M.path_to_matching_str(M.path_add_trailing(relative_to)), "")
-  return p
-end
-
-function M.path_to_matching_str(path)
-  return path:gsub("(%-)", "(%%-)"):gsub("(%.)", "(%%.)"):gsub("(%_)", "(%%_)")
-end
-
-function M.path_add_trailing(path)
-  if path:sub(-1) == path_sep then
-    return path
-  end
-
-  return path .. path_sep
-end
-
----Get the path to the parent directory of the given path. Returns `nil` if the
----path has no parent.
----@param path string
----@param remove_trailing boolean
----@return string|nil
-function M.path_parent(path, remove_trailing)
-  path = " " .. M.path_remove_trailing(path)
-  local i = path:match("^.+()" .. path_sep)
-  if not i then
-    return nil
-  end
-  path = path:sub(2, i)
-  if remove_trailing then
-    path = M.path_remove_trailing(path)
-  end
-  return path
-end
-
 function M.path_remove_trailing(path)
   local p, _ = path:gsub(path_sep .. "$", "")
   return p
@@ -1278,22 +1238,28 @@ function M.path_basename(path)
   return path:sub(i + 1, #path)
 end
 
+---@param path string
+---@return string
 function M.path_extension(path)
   path = M.path_basename(path)
   return path:match ".*%.(.*)"
 end
 
+---@param paths string[]
+---@return string
 function M.path_join(paths)
   return table.concat(paths, path_sep)
 end
 
 --- Extract diffhunks from a diff file
+---@param diff string
+---@return table<string, string>
 function M.extract_diffhunks_from_diff(diff)
   local lines = vim.split(diff, "\n")
-  local diffhunks = {}
-  local current_diffhunk = {}
-  local current_path
-  local state
+  local diffhunks = {} ---@type table<string, string>
+  local current_diffhunk = {} ---@type string[]
+  local current_path ---@type string
+  local state ---@type "diff" | "index" | "fileA" | "fileB" | "diffhunk"
   for _, line in ipairs(lines) do
     if vim.startswith(line, "diff --git ") then
       if #current_diffhunk > 0 then
@@ -1385,6 +1351,11 @@ function M.diffstat(stats)
   }
 end
 
+---@param bufnr integer
+---@param mark vim.api.keyset.get_extmark_item
+---@return integer? start_line
+---@return integer? end_line
+---@return string? text
 function M.get_extmark_region(bufnr, mark)
   -- extmarks are placed on
   -- start line - 1 (except for line 0)
@@ -1416,21 +1387,12 @@ function M.fork_repo()
   M.info(vim.fn.system('echo "n" | gh repo fork ' .. buffer.repo .. " 2>&1 | cat "))
 end
 
-function M.notify(msg, level)
-  if level == 1 then
-    level = vim.log.levels.INFO
-  elseif level == 2 then
-    level = vim.log.levels.ERROR
-  else
-    level = vim.log.levels.INFO
-  end
-  vim.notify(msg, level, { title = "Octo.nvim" })
-end
-
+---@param msg string
 function M.info(msg)
   vim.notify(msg, vim.log.levels.INFO, { title = "Octo.nvim" })
 end
 
+---@param msg string
 function M.error(msg)
   vim.notify(msg, vim.log.levels.ERROR, { title = "Octo.nvim" })
 end
@@ -1497,6 +1459,8 @@ function M.get_pull_request_for_current_branch(cb)
   }
 end
 
+---@param winnr integer
+---@param bufnrs integer
 local function close_preview_window(winnr, bufnrs)
   vim.schedule(function()
     -- exit if we are in one of ignored buffers
@@ -1540,6 +1504,7 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
   end
 end
 
+---@param login string
 function M.get_user_id(login)
   local query = graphql "user_query"
 
@@ -1644,6 +1609,8 @@ function M.generate_line2position_map(diffhunk)
 end
 
 --- Extract REST Id from comment
+---@param comment_url string
+---@return string?
 function M.extract_rest_id(comment_url)
   if M.is_blank(comment_url) then
     return
@@ -1680,9 +1647,12 @@ function M.apply_mappings(kind, bufnr)
 end
 
 -- Returns the starting and ending lines to be commented based on the calling context.
+---@param calling_context "line" | "visual" | "motion"
+---@return integer line_number_start
+---@return integer line_number_end
 function M.get_lines_from_context(calling_context)
-  local line_number_start = nil
-  local line_number_end = nil
+  local line_number_start = nil ---@type integer
+  local line_number_end = nil ---@type integer
   if calling_context == "line" then
     line_number_start = vim.fn.line "."
     line_number_end = line_number_start
@@ -1696,6 +1666,8 @@ function M.get_lines_from_context(calling_context)
   return line_number_start, line_number_end
 end
 
+---@param vim_mapping string
+---@return string
 function M.convert_vim_mapping_to_fzf(vim_mapping)
   local fzf_mapping = string.gsub(vim_mapping, "<[cC]%-(.*)>", "ctrl-%1")
   fzf_mapping = string.gsub(fzf_mapping, "<[amAM]%-(.*)>", "alt-%1")
