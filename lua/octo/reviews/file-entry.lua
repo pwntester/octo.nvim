@@ -144,7 +144,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_win(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.right_winid
   end
 
@@ -155,7 +155,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_buf(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.right_bufid
   end
 
@@ -166,7 +166,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_win(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.left_winid
   end
 
@@ -177,7 +177,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_buf(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.left_bufid
   end
 

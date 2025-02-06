@@ -55,7 +55,7 @@ function M.setup()
       group = "octo_autocmds",
       pattern = { "*" },
       callback = function()
-        require("octo.reviews.thread-panel").show_review_threads()
+        require("octo.reviews.thread-panel").show_review_threads(false)
       end,
     })
   end

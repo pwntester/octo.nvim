@@ -339,7 +339,7 @@ function M.setup()
         end
       end,
       thread = function()
-        require("octo.reviews.thread-panel").show_review_threads { jump_to_buffer = true }
+        require("octo.reviews.thread-panel").show_review_threads(true)
       end,
     },
     gist = {
@@ -367,7 +367,7 @@ function M.setup()
         if current_review and utils.in_diff_window() then
           current_review:add_comment(false)
         else
-          M.add_comment()
+          M.add_pr_issue_or_review_thread_comment()
         end
       end,
       delete = function()
@@ -561,8 +561,8 @@ function M.octo(object, action, ...)
   end
 end
 
---- Adds a new comment to an issue/PR
-function M.add_comment()
+--- Adds a new comment to an issue/PR or a review thread
+function M.add_pr_issue_or_review_thread_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
