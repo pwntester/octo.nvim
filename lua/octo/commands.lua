@@ -457,8 +457,16 @@ function M.setup()
       end,
     },
     notification = {
-      list = function()
-        picker.notifications()
+      list = function(repo)
+        local opts = {}
+
+        if repo then
+          opts.repo = repo
+        elseif config.values.notifications.current_repo_only then
+          opts.repo = utils.get_remote_name()
+        end
+
+        picker.notifications(opts)
       end,
     },
   }
