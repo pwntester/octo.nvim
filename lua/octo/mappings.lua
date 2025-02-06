@@ -80,7 +80,7 @@ return {
     require("octo.navigation").prev_comment()
   end,
   add_comment = function()
-    require("octo.commands").add_comment()
+    require("octo.commands").add_pr_issue_or_review_thread_comment()
   end,
   add_suggestion = function()
     require("octo.commands").add_suggestion()

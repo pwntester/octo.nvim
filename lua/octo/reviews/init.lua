@@ -6,6 +6,7 @@ local graphql = require "octo.gh.graphql"
 local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
+local ReviewThread = require("octo.reviews.thread").ReviewThread
 
 ---@alias ReviewLevel "COMMIT" | "PR"
 
@@ -389,49 +390,22 @@ function Review:add_comment(isSuggestion)
       commit_abbrev = self.layout.right:abbrev()
     end
     local threads = {
-      {
-        originalStartLine = line1,
-        originalLine = line2,
-        path = file.path,
-        isOutdated = false,
-        isResolved = false,
-        diffSide = split,
-        isCollapsed = false,
-        id = default_id,
-        comments = {
-          nodes = {
-            {
-              id = default_id,
-              author = { login = vim.g.octo_viewer },
-              state = "PENDING",
-              replyTo = vim.NIL,
-              url = vim.NIL,
-              diffHunk = diff_hunk,
-              createdAt = os.date "!%FT%TZ",
-              originalCommit = { oid = commit, abbreviatedOid = commit_abbrev },
-              body = " ",
-              viewerCanUpdate = true,
-              viewerCanDelete = true,
-              viewerDidAuthor = true,
-              pullRequestReview = { id = self.id },
-              reactionGroups = {
-                { content = "THUMBS_UP", users = { totalCount = 0 } },
-                { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-                { content = "LAUGH", users = { totalCount = 0 } },
-                { content = "HOORAY", users = { totalCount = 0 } },
-                { content = "CONFUSED", users = { totalCount = 0 } },
-                { content = "HEART", users = { totalCount = 0 } },
-                { content = "ROCKET", users = { totalCount = 0 } },
-                { content = "EYES", users = { totalCount = 0 } },
-              },
-            },
-          },
-        },
+      ReviewThread:stub {
+        line1 = line1,
+        line2 = line2,
+        file_path = file.path,
+        split = split,
+        diff_hunk = diff_hunk,
+        commit = commit,
+        commit_abbrev = commit_abbrev,
+        review_id = self.id,
       },
     }
 
-    -- TODO: if there are threads for that line, there should be a buffer already showing them
-    -- or maybe not if the user is very quick
+    -- Make sure review thread panel is visible if not already
+    -- The thread panel could be hidden if user has `reviews.auto_show_threads` set to false in their config
+    -- or, less likely, if the add comment command is invoked before the autocmd has concluded,
+    thread_panel.show_review_threads(false)
     local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)

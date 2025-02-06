@@ -585,27 +585,43 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
           vim.api.nvim_err_writeln(stderr)
         elseif output then
           local resp = vim.json.decode(output).data.addPullRequestReviewThread
-          if not utils.is_blank(resp.thread) then
-            local new_comment = resp.thread.comments.nodes[1]
-            if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
-              local comments = self.commentsMetadata
-              for i, c in ipairs(comments) do
-                if tonumber(c.id) == -1 then
-                  comments[i].id = new_comment.id
-                  comments[i].savedBody = new_comment.body
-                  comments[i].dirty = false
-                  break
-                end
-              end
-              local threads = resp.thread.pullRequest.reviewThreads.nodes
-              if review then
-                review:update_threads(threads)
-              end
-              self:render_signs()
-            end
-          else
+
+          if utils.is_blank(resp) then
             utils.error "Failed to create thread"
             return
+          end
+
+          -- Register new thread id
+          local threads = self.threadsMetadata
+          local new_thread = nil
+          for _, t in pairs(threads) do
+            if tonumber(t.threadId) == -1 then
+              new_thread = t
+              break
+            end
+          end
+
+          -- Register new comment data
+          local new_comment = resp.thread.comments.nodes[1]
+          if new_thread then
+            new_thread.threadId = resp.thread.id
+            new_thread.replyTo = new_comment.id
+          end
+          if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
+            local comments = self.commentsMetadata
+            for i, c in ipairs(comments) do
+              if tonumber(c.id) == -1 then
+                comments[i].id = new_comment.id
+                comments[i].savedBody = new_comment.body
+                comments[i].dirty = false
+                break
+              end
+            end
+            local threads = resp.thread.pullRequest.reviewThreads.nodes
+            if review then
+              review:update_threads(threads)
+            end
+            self:render_signs()
           end
         end
       end,
