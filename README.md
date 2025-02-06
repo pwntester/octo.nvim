@@ -150,7 +150,7 @@ require"octo".setup({
     always_select_remote_on_create = false -- always give prompt to select base remote repo when creating PRs
   },
   notifications = {
-    current_repo = false,                  -- show notifications for current repo only
+    current_repo_only = false,             -- show notifications for current repo only
   },
   file_panel = {
     size = 10,                             -- changed files panel rows

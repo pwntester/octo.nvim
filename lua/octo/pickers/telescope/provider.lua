@@ -1208,7 +1208,7 @@ function M.notifications(opts)
   opts = opts or {}
   local cfg = octo_config.values
 
-  if cfg.notifications.current_repo then
+  if cfg.notifications.current_repo_only then
     opts.repo = utils.get_remote_name()
   end
 
