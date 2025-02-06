@@ -657,7 +657,7 @@ function M.gen_from_octo_actions(width)
 end
 
 function M.gen_from_notification(opts)
-  opts = opts or { show_repo = false }
+  opts = opts or { show_repo_info = false }
   local make_display = function(entry)
     if not entry then
       return nil
@@ -678,7 +678,7 @@ function M.gen_from_notification(opts)
       { width = math.min(#entry.obj.subject.title, 100) },
     }
 
-    if not opts.show_repo then
+    if not opts.show_repo_info then
       table.remove(columns, 3)
       table.remove(items, 3)
     end

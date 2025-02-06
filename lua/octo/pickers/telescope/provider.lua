@@ -1241,7 +1241,7 @@ function M.notifications(opts)
             finder = finders.new_table {
               results = resp,
               entry_maker = entry_maker.gen_from_notification {
-                show_repo = not opts.repo,
+                show_repo_info = not opts.repo,
               },
             },
             sorter = conf.generic_sorter(opts),
