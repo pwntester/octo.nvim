@@ -97,8 +97,8 @@ M.issues = function(opts)
           win = {
             input = {
               keys = {
-                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = "i" },
-                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = "i" },
+                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
+                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
               },
             },
           },
@@ -176,10 +176,10 @@ function M.pull_requests(opts)
           win = {
             input = {
               keys = {
-                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = "i" },
-                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = "i" },
-                [cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = "i" },
-                [cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = "i" },
+                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
+                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
+                [cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = { "n", "i" } },
+                [cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = { "n", "i" } },
               },
             },
           },
@@ -235,7 +235,7 @@ function M.notifications(opts)
 
         local safe_notifications = {}
 
-        for idx, notification in ipairs(notifications) do
+        for _, notification in ipairs(notifications) do
           local safe = false
           notification.subject.number = notification.subject.url:match "%d+$"
           notification.text = string.format("#%d %s", notification.subject.number, notification.subject.title)
@@ -275,9 +275,9 @@ function M.notifications(opts)
           win = {
             input = {
               keys = {
-                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = "i" },
-                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = "i" },
-                [cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = "i" },
+                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
+                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
+                [cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = { "n", "i" } },
               },
             },
           },
@@ -290,8 +290,21 @@ function M.notifications(opts)
               vim.fn.setreg("+", url, "c")
               utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
             end,
-            mark_notification_read = function(_picker, _item)
-              M.not_implemented()
+            mark_notification_read = function(picker, item)
+              local url = string.format("/notifications/threads/%s", item.id)
+              gh.run {
+                args = { "api", "--method", "PATCH", url },
+                headers = { "Accept: application/vnd.github.v3.diff" },
+                cb = function(_, stderr)
+                  if stderr and not utils.is_blank(stderr) then
+                    utils.error(stderr)
+                    return
+                  end
+                end,
+              }
+              -- TODO: No current way to redraw the list/remove just this item
+              picker:close()
+              M.notifications(opts)
             end,
           },
         }
