@@ -71,7 +71,11 @@ M.issues = function(opts)
           utils.error(string.format("There are no matching issues in %s.", opts.repo))
           return
         end
+        local max_number = -1
         for _, issue in ipairs(issues) do
+          if issue.number > max_number then
+            max_number = issue.number
+          end
           issue.text = string.format("#%d %s", issue.number, issue.title)
           issue.file = utils.get_issue_uri(issue.number, issue.repository.nameWithOwner)
           issue.kind = issue.__typename:lower()
@@ -84,9 +88,9 @@ M.issues = function(opts)
             ---@type snacks.picker.Highlight[]
             local ret = {}
             ---@diagnostic disable-next-line: assign-type-mismatch
-            ret[#ret + 1] = utils.icons[item.kind][item.state:lower()]
+            ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
             ret[#ret + 1] = { string.format("#%d", item.number), "Comment" }
-            ret[#ret + 1] = { " " }
+            ret[#ret + 1] = { (" "):rep(#tostring(max_number) - #tostring(item.number) + 1) }
             ret[#ret + 1] = { item.title, "Normal" }
             return ret
           end,
@@ -148,6 +152,9 @@ function M.pull_requests(opts)
         end
         local max_number = -1
         for _, pull in ipairs(pull_requests) do
+          if pull.number > max_number then
+            max_number = pull.number
+          end
           pull.text = string.format("#%d %s", pull.number, pull.title)
           pull.file = utils.get_pull_request_uri(pull.number, pull.repository.nameWithOwner)
           pull.kind = pull.__typename:lower() == "pullrequest" and "pull_request" or "unknown"
@@ -160,9 +167,9 @@ function M.pull_requests(opts)
             ---@type snacks.picker.Highlight[]
             local ret = {}
             ---@diagnostic disable-next-line: assign-type-mismatch
-            ret[#ret + 1] = utils.icons[item.kind][item.state:lower()]
+            ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
             ret[#ret + 1] = { string.format("#%d", item.number), "Comment" }
-            ret[#ret + 1] = { " " }
+            ret[#ret + 1] = { (" "):rep(#tostring(max_number) - #tostring(item.number) + 1) }
             ret[#ret + 1] = { item.title, "Normal" }
             return ret
           end,
