@@ -53,9 +53,6 @@ M.issue = function(formatted_issues)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_issues[entry_str]
 
@@ -113,9 +110,6 @@ M.search = function()
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local match = string.gmatch(entry_str, "[^%s]+")
     local kind = match()
@@ -175,9 +169,6 @@ M.commit = function(formatted_commits, repo)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_commits[entry_str]
 
@@ -225,9 +216,6 @@ M.changed_files = function(formatted_files)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_files[entry_str]
 
@@ -254,9 +242,6 @@ M.review_thread = function(formatted_threads)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_threads[entry_str]
 
@@ -287,9 +272,6 @@ M.gist = function(formatted_gists)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
 
     local entry = formatted_gists[entry_str]
@@ -321,9 +303,6 @@ M.repo = function(formatted_repos)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_repos[entry_str]
 
@@ -373,9 +352,6 @@ M.issue_template = function(formatted_templates)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_templates[entry_str]
     local template = entry.template.body
