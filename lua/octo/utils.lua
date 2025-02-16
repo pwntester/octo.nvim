@@ -515,7 +515,7 @@ function M.get_upstream_branch_from_config(pr)
     return ""
   end
 
-  -- split merge_config to key, value with space delimeter
+  -- split merge_config to key, value with space delimiter
   local merge_config_kv = vim.split(merge_config, "%s+")
   -- use > 2 since there maybe some garbage white space at the end of the map.
   if #merge_config_kv < 2 then
@@ -1033,7 +1033,7 @@ function M.extract_issue_at_cursor(current_repo)
     end
   end
   if not repo or not number then
-    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_LINE_BEGGINING_PATTERN)
+    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_LINE_BEGINNING_PATTERN)
     if number then
       repo = current_repo
     end
@@ -1071,7 +1071,7 @@ function M.text_wrap(text, width)
       local word = words[l]
       -- If the word is longer than an entire line:
       if #word > width then
-        -- In case the word is longer than multible lines:
+        -- In case the word is longer than multiple lines:
         while #word > width do
           -- Fit as much as possible
           table.insert(line, word:sub(0, widthLeft))

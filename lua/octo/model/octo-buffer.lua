@@ -283,7 +283,7 @@ end
 
 ---Accumulates all the taggable users into a single list that
 --gets set as a buffer variable `taggable_users`. If this list of users
----is needed syncronously, this function will need to be refactored.
+---is needed synchronously, this function will need to be refactored.
 ---The list of taggable users should contain:
 --  - The PR author
 --  - The authors of all the existing comments

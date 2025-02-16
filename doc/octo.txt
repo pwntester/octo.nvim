@@ -285,7 +285,7 @@ FAQ                                             *octo-faq*
 How can I disable bubbles for XYZ?~
 
   Each text-object that makes use of a bubble (except labels) do use their own
-  highlight group that linkes per default to the main bubble highlight group.
+  highlight group that links per default to the main bubble highlight group.
   To disable most bubbles at once you can simply link `OctoBubble` to
   `Normal`. To only disable them for a certain plain do the same for the
   specific sub-group (e.g. `OctoUser`).

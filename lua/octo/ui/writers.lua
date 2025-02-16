@@ -916,7 +916,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
     snippet_end = #side_lines
   end
   if not snippet_start then
-    -- could not find comment sart line in the diff hunk,
+    -- could not find comment start line in the diff hunk,
     -- defaulting to last diff hunk line - 3
     snippet_start = #side_lines - 3
   end
@@ -1338,11 +1338,11 @@ function M.write_commit_event(bufnr, item)
   table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   if item.commit.committer.user ~= vim.NIL then
-    -- local commiter_bubble = bubbles.make_user_bubble(
+    -- local committer_bubble = bubbles.make_user_bubble(
     --   item.commit.committer.user.login,
     --   item.commit.committer.user.login == vim.g.octo_viewer
     -- )
-    -- vim.list_extend(vt, commiter_bubble)
+    -- vim.list_extend(vt, committer_bubble)
     table.insert(vt, {
       item.commit.committer.user.login,
       item.commit.committer.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",

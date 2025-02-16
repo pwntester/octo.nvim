@@ -995,7 +995,7 @@ function M.create_pr(is_draft)
       utils.error "Aborting PR creation"
       return
     elseif remote_idx > #remotes then
-      utils.error "Invaild index."
+      utils.error "Invalid index."
       return
     end
     repo = remotes[remote_idx].repo
