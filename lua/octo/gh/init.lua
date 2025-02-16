@@ -148,6 +148,9 @@ function M.run(opts)
       table.insert(opts.args, header)
     end
   end
+  if opts.return_args_only then
+    return opts.args
+  end
   local job = Job:new {
     enable_recording = true,
     command = config.values.gh_cmd,

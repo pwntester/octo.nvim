@@ -214,102 +214,88 @@ function M.notifications(opts)
     local owner, name = utils.split_repo(opts.repo)
     endpoint = string.format("/repos/%s/%s/notifications", owner, name)
   end
-  opts.prompt_title = opts.repo and string.format("%s Notifications", opts.repo) or "Github Notifications"
 
-  opts.preview_title = ""
-  opts.results_title = ""
-
-  gh.run {
+  local args = gh.run {
     args = { "api", "--paginate", endpoint },
     headers = { "Accept: application/vnd.github.v3.diff" },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local notifications = vim.json.decode(output)
-
-        if #notifications == 0 then
-          utils.info "There are no notifications"
-          return
-        end
-
-        local safe_notifications = {}
-
-        for _, notification in ipairs(notifications) do
-          local safe = false
-          notification.subject.number = notification.subject.url:match "%d+$"
-          notification.text = string.format("#%d %s", notification.subject.number, notification.subject.title)
-          notification.kind = notification.subject.type:lower()
-          if notification.kind == "pullrequest" then
-            notification.kind = "pull_request"
+    return_args_only = true,
+  }
+  Snacks.picker.pick {
+    finder = function(_opts, ctx)
+      --TODO: function to get items from args
+      return require("snacks.picker.source.proc").proc({
+        cmd = cfg.gh_cmd,
+        args = args,
+        sep = "},{",
+        ---@param item snacks.picker.finder.Item
+        transform = function(item)
+          local json = item.text:sub(2):gsub("}]", "") .. "}"
+          local notification = vim.json.decode(json)
+          item.id = notification.id
+          item.number = notification.subject.url:match "%d+$"
+          item.status = item.unread and "unread" or "read"
+          item.subject = notification.subject
+          item.repository = notification.repository
+          item.kind = notification.subject.type:lower() == "pullrequest" and "pull_request"
+            or notification.subject.type:lower()
+          if item.kind == "issue" then
+            item.file = utils.get_issue_uri(item.number, item.repository.full_name)
+          elseif item.kind == "pull_request" then
+            item.file = utils.get_pull_request_uri(item.number, item.repository.full_name)
           end
-          notification.status = notification.unread and "unread" or "read"
-          if notification.kind == "issue" then
-            notification.file = utils.get_issue_uri(notification.subject.number, notification.repository.full_name)
-            safe = true
-          elseif notification.kind == "pull_request" then
-            notification.file =
-              utils.get_pull_request_uri(notification.subject.number, notification.repository.full_name)
-            safe = true
+          if not vim.tbl_contains({ "pull_request", "issue" }, item.kind) then
+            -- Return false to remove non-displayable items
+            return false
           end
-          if safe then
-            safe_notifications[#safe_notifications + 1] = notification
-          end
-        end
-
-        Snacks.picker.pick {
-          title = opts.preview_title or "",
-          items = safe_notifications,
-          format = function(item, _)
-            ---@type snacks.picker.Highlight[]
-            local ret = {}
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            ret[#ret + 1] = utils.icons.notification[item.kind][item.status]
-            ret[#ret + 1] = { string.format("#%d", item.subject.number), "Comment" }
-            ret[#ret + 1] = { " " }
-            ret[#ret + 1] = { item.repository.full_name, "Function" }
-            ret[#ret + 1] = { " " }
-            ret[#ret + 1] = { item.subject.title, "Normal" }
-            return ret
-          end,
-          win = {
-            input = {
-              keys = {
-                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
-                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
-                [cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = { "n", "i" } },
-              },
-            },
-          },
-          actions = {
-            open_in_browser = function(_picker, item)
-              navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
-            end,
-            copy_url = function(_picker, item)
-              local url = item.url
-              vim.fn.setreg("+", url, "c")
-              utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
-            end,
-            mark_notification_read = function(picker, item)
-              local url = string.format("/notifications/threads/%s", item.id)
-              gh.run {
-                args = { "api", "--method", "PATCH", url },
-                headers = { "Accept: application/vnd.github.v3.diff" },
-                cb = function(_, stderr)
-                  if stderr and not utils.is_blank(stderr) then
-                    utils.error(stderr)
-                    return
-                  end
-                end,
-              }
-              -- TODO: No current way to redraw the list/remove just this item
-              picker:close()
-              M.notifications(opts)
-            end,
-          },
-        }
-      end
+        end,
+      }, ctx)
     end,
+    format = function(item, _)
+      ---@type snacks.picker.Highlight[]
+      local ret = {}
+      ret[#ret + 1] = utils.icons.notification[item.kind][item.status]
+      ret[#ret + 1] = { string.format("#%d", item.number), "Comment" }
+      ret[#ret + 1] = { " " }
+      ret[#ret + 1] = { item.repository.full_name, "Function" }
+      ret[#ret + 1] = { " " }
+      ret[#ret + 1] = { item.subject.title, "Normal" }
+      return ret
+    end,
+    win = {
+      input = {
+        keys = {
+          [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
+          [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
+          [cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = { "n", "i" } },
+        },
+      },
+    },
+    actions = {
+      open_in_browser = function(_picker, item)
+        navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
+      end,
+      copy_url = function(_picker, item)
+        local url = item.url
+        vim.fn.setreg("+", url, "c")
+        utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+      end,
+      mark_notification_read = function(picker, item)
+        local url = string.format("/notifications/threads/%s", item.id)
+        gh.run {
+          args = { "api", "--method", "PATCH", url },
+          headers = { "Accept: application/vnd.github.v3.diff" },
+          cb = function(_, stderr)
+            if stderr and not utils.is_blank(stderr) then
+              utils.error(stderr)
+              return
+            end
+          end,
+          vim.defer_fn(function()
+            picker:find()
+          end, 100),
+        }
+      end,
+    },
   }
 end
 
