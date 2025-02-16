@@ -99,7 +99,7 @@ function M.hide_thread_buffer(split, file)
   if vim.api.nvim_win_is_valid(alt_win) and vim.api.nvim_buf_is_valid(alt_buf) then
     local current_alt_bufnr = vim.api.nvim_win_get_buf(alt_win)
     if current_alt_bufnr ~= alt_buf then
-      -- if we are not showing the corresponging alternative diff buffer, do so
+      -- if we are not showing the corresponding alternative diff buffer, do so
       vim.api.nvim_win_set_buf(alt_win, alt_buf)
 
       -- show the diff

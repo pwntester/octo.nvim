@@ -2,7 +2,7 @@ local config = require "octo.config"
 local colors = require "octo.ui.colors"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
--- Sometimes they are also called Chips in WebUI framworks. After all they wrap
+-- Sometimes they are also called Chips in WebUI frameworks. After all they wrap
 -- some content (usually text and icons) in a bubble kind-of-shape with a colorful
 -- background. The bubble shape gets especially defined by the outer delimiters.
 -- An examplary usage in this plugin are for label assigned to an issue.

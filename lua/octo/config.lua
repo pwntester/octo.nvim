@@ -457,8 +457,8 @@ function M.validate_config()
     validate_type(config.snippet_context_lines, "snippet_context_lines", "number")
     validate_type(config.timeout, "timeout", "number")
     validate_type(config.default_to_projects_v2, "default_to_projects_v2", "boolean")
-    if validate_type(config.suppress_missing_scope, "supress_missing_scope", "table") then
-      validate_type(config.suppress_missing_scope.projects_v2, "supress_missing_scope.projects_v2", "boolean")
+    if validate_type(config.suppress_missing_scope, "suppress_missing_scope", "table") then
+      validate_type(config.suppress_missing_scope.projects_v2, "suppress_missing_scope.projects_v2", "boolean")
     end
     validate_type(config.gh_cmd, "gh_cmd", "string")
     validate_type(config.gh_env, "gh_env", { "table", "function" })

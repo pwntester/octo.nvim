@@ -21,7 +21,7 @@ M.NO_BODY_MSG = "No description provided."
 
 M.LONG_ISSUE_PATTERN = "([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(%d+)"
 M.SHORT_ISSUE_PATTERN = "[^%w%d]+#(%d+)"
-M.SHORT_ISSUE_LINE_BEGGINING_PATTERN = "^#(%d+)"
+M.SHORT_ISSUE_LINE_BEGINNING_PATTERN = "^#(%d+)"
 M.URL_ISSUE_PATTERN = "[htps]+://[^/]+/([^/]+/[^/]+)/([pulisue]+)/(%d+)"
 
 M.USER_PATTERN = "@([%w-]+)"
