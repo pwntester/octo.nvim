@@ -112,6 +112,24 @@ function M.setup()
   }):start()
 end
 
+--- Create a callback function for the job
+function M.create_callback(opts)
+  opts = opts or {}
+
+  local utils = require "octo.utils"
+
+  opts.success = opts.success or utils.info
+  opts.failure = opts.failure or utils.error
+
+  return function(output, stderr)
+    if stderr and not utils.is_blank(stderr) then
+      opts.failure(stderr)
+    elseif output then
+      opts.success(output)
+    end
+  end
+end
+
 function M.run(opts)
   if not Job then
     return
@@ -148,6 +166,7 @@ function M.run(opts)
       table.insert(opts.args, header)
     end
   end
+
   local job = Job:new {
     enable_recording = true,
     command = config.values.gh_cmd,
