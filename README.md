@@ -476,7 +476,7 @@ Octo search assignee:pwntester is:pr
 
 ## 🍞 Completion
 
-Octo provides a built-in omnifunc completion for issues, PRs and users that you can trigger using `<C-x><C-o>`. Alternately, if you use [`nvim-cmp`](https://github.com/hrsh7th/nvim-cmp) for completion, you can use the [`cmp-git`](https://github.com/petertriho/cmp-git/) source to provide issues, PRs, commits and users completion.
+Octo provides a built-in omnifunc completion for issues, PRs and users that you can trigger using `<C-x><C-o>`. Alternately, if you use [`nvim-cmp`](https://github.com/hrsh7th/nvim-cmp) or [`blink.cmp`](https://github.com/Saghen/blink.cmp) for completion, you can use the [`cmp-git`](https://github.com/petertriho/cmp-git/) for [`nvim-cmp`](https://github.com/hrsh7th/nvim-cmp) or [`blink-cmp-git`](https://github.com/Kaiser-Yang/blink-cmp-git) for [`blink.cmp`](https://github.com/Saghen/blink.cmp) source to provide issues, PRs, commits and users completion.
 
 ## 🎨 Colors
 
