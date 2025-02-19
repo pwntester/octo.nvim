@@ -4,15 +4,15 @@ local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
-return function(cb)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+return function(opts)
+  opts = opts or {}
 
-  if not buffer then
-    return
-  end
+  local cb = opts.cb
 
-  local query = graphql("labels_query", buffer.owner, buffer.name)
+  opts.repo = opts.repo or utils.get_remote_name()
+  local owner, name = utils.split_repo(opts.repo)
+
+  local query = graphql("labels_query", owner, name)
 
   local get_contents = function(fzf_cb)
     gh.run {

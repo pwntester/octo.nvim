@@ -4,7 +4,10 @@ local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
-return function(cb)
+return function(opts)
+  opts = opts or {}
+  local cb = opts.cb
+
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
 
