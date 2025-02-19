@@ -69,6 +69,7 @@ Edit and review GitHub issues and pull requests from the comfort of your favorit
 - Install one of:
   - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
   - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
+  - [snacks.nvim](https://github.com/folke/snacks.nvim)
 - Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 
 ## 📦 Installation
