@@ -771,57 +771,69 @@ local function select(opts)
   cb(items)
 end
 
-function M.select_label(cb)
-  local opts = vim.deepcopy(dropdown_opts)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
-    return
+function M.select_label(opts)
+  opts = opts or {}
+
+  local cb = opts.cb
+  local repo = opts.repo
+
+  if not repo then
+    repo = utils.get_remote_name()
+  end
+  local owner, name = utils.split_repo(repo)
+
+  opts = vim.tbl_deep_extend("force", dropdown_opts, opts)
+
+  local create_picker = function(output)
+    local labels = vim.json.decode(output)
+
+    pickers
+      .new(opts, {
+        finder = finders.new_table {
+          results = labels,
+          entry_maker = entry_maker.gen_from_label(),
+        },
+        sorter = conf.generic_sorter(opts),
+        attach_mappings = function(_, _)
+          actions.select_default:replace(function(prompt_bufnr)
+            select {
+              bufnr = prompt_bufnr,
+              single_cb = cb,
+              multiple_cb = cb,
+              get_item = function(selection)
+                return selection.label
+              end,
+            }
+          end)
+          return true
+        end,
+      })
+      :find()
   end
 
-  local query = graphql("labels_query", buffer.owner, buffer.name)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local labels = resp.data.repository.labels.nodes
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = labels,
-              entry_maker = entry_maker.gen_from_label(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _)
-              actions.select_default:replace(function(prompt_bufnr)
-                select {
-                  bufnr = prompt_bufnr,
-                  single_cb = cb,
-                  multiple_cb = cb,
-                  get_item = function(selection)
-                    return selection.label
-                  end,
-                }
-              end)
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+  local query = graphql("labels_query", owner, name)
+  gh.api.graphql {
+    query = query,
+    jq = ".data.repository.labels.nodes",
+    opts = {
+      cb = gh.create_callback {
+        success = create_picker,
+      },
+    },
   }
 end
 
-function M.select_assigned_label(cb)
-  local opts = vim.deepcopy(dropdown_opts)
+function M.select_assigned_label(opts)
+  opts = opts or {}
+  local cb = opts.cb
+  opts = vim.tbl_deep_extend("force", opts, dropdown_opts)
+
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
     return
   end
+
   local query, key
   if buffer:isIssue() then
     query = graphql("issue_labels_query", buffer.owner, buffer.name, buffer.number)
@@ -830,38 +842,42 @@ function M.select_assigned_label(cb)
     query = graphql("pull_request_labels_query", buffer.owner, buffer.name, buffer.number)
     key = "pullRequest"
   end
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local labels = resp.data.repository[key].labels.nodes
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = labels,
-              entry_maker = entry_maker.gen_from_label(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _)
-              actions.select_default:replace(function(prompt_bufnr)
-                select {
-                  bufnr = prompt_bufnr,
-                  single_cb = cb,
-                  multiple_cb = cb,
-                  get_item = function(selection)
-                    return selection.label
-                  end,
-                }
-              end)
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+
+  local create_picker = function(output)
+    local labels = vim.json.decode(output)
+
+    pickers
+      .new(opts, {
+        finder = finders.new_table {
+          results = labels,
+          entry_maker = entry_maker.gen_from_label(),
+        },
+        sorter = conf.generic_sorter(opts),
+        attach_mappings = function(_, _)
+          actions.select_default:replace(function(prompt_bufnr)
+            select {
+              bufnr = prompt_bufnr,
+              single_cb = cb,
+              multiple_cb = cb,
+              get_item = function(selection)
+                return selection.label
+              end,
+            }
+          end)
+          return true
+        end,
+      })
+      :find()
+  end
+
+  gh.api.graphql {
+    query = query,
+    jq = ".data.repository." .. key .. ".labels.nodes",
+    opts = {
+      cb = gh.create_callback {
+        success = create_picker,
+      },
+    },
   }
 end
 

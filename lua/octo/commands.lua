@@ -1632,23 +1632,24 @@ function M.create_label(label)
     color = string.gsub(color, "#", "")
   end
 
-  local query = graphql("create_label_mutation", repo_id, name, description, color)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local label = resp.data.createLabel.label
-        utils.info("Created label: " .. label.name)
+  local refresh_details = function()
+    require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+      writers.write_details(bufnr, obj, true)
+    end)
+  end
 
-        -- refresh issue/pr details
-        require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-          writers.write_details(bufnr, obj, true)
-        end)
-      end
-    end,
+  local query = graphql("create_label_mutation", repo_id, name, description, color)
+  gh.api.graphql {
+    query = query,
+    jq = ".data.createLabel.label.name",
+    opts = {
+      cb = gh.create_callback {
+        success = function(label_name)
+          utils.info("Created label: " .. label_name)
+          refresh_details()
+        end,
+      },
+    },
   }
 end
 
@@ -1688,19 +1689,20 @@ local function label_action(opts)
       table.insert(label_ids, lbl.id)
     end
 
+    local refresh_details = function()
+      require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+        writers.write_details(bufnr, obj, true)
+      end)
+    end
+
     local query = graphql(opts.query_name, iid, create_list(label_ids, format))
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
-          end)
-        end
-      end,
+    gh.api.graphql {
+      query = query,
+      opts = {
+        cb = gh.create_callback {
+          success = refresh_details,
+        },
+      },
     }
   end
 
@@ -1712,7 +1714,10 @@ local function label_action(opts)
       utils.error("Cannot find label: " .. label)
     end
   else
-    opts.labels(cb)
+    opts.labels {
+      repo = buffer.owner .. "/" .. buffer.name,
+      cb = cb,
+    }
   end
 end
 
