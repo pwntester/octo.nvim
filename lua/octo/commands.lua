@@ -1608,6 +1608,11 @@ end
 
 function M.create_label(label)
   local repo = utils.get_remote_name()
+  if repo == nil then
+    utils.error "Cannot find repo name"
+    return
+  end
+
   local repo_id = utils.get_repo_id(repo)
 
   local name, color, description
