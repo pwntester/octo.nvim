@@ -1607,13 +1607,13 @@ function M.random_hex_color()
 end
 
 function M.create_label(label)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
+  local repo = utils.get_remote_name()
+  if repo == nil then
+    utils.error "Cannot find repo name"
     return
   end
 
-  local repo_id = utils.get_repo_id(buffer.repo)
+  local repo_id = utils.get_repo_id(repo)
 
   local name, color, description
   if label then
@@ -1622,7 +1622,7 @@ function M.create_label(label)
     description = ""
   else
     vim.fn.inputsave()
-    name = vim.fn.input(string.format("Creating label for %s. Enter title: ", buffer.repo))
+    name = vim.fn.input(string.format("Creating label for %s. Enter title: ", repo))
     color = vim.fn.input "Enter color (RGB): "
     description = vim.fn.input "Enter description: "
     vim.fn.inputrestore()
@@ -1630,12 +1630,6 @@ function M.create_label(label)
       color = M.random_hex_color()
     end
     color = string.gsub(color, "#", "")
-  end
-
-  local refresh_details = function()
-    require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-      writers.write_details(bufnr, obj, true)
-    end)
   end
 
   local query = graphql("create_label_mutation", repo_id, name, description, color)
@@ -1646,7 +1640,6 @@ function M.create_label(label)
       cb = gh.create_callback {
         success = function(label_name)
           utils.info("Created label: " .. label_name)
-          refresh_details()
         end,
       },
     },
