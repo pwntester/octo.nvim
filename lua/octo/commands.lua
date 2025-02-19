@@ -384,6 +384,44 @@ function M.setup()
       remove = function(label)
         M.remove_label(label)
       end,
+      delete = function(label)
+        local delete_labels = function(labels)
+          for _, label in ipairs(labels) do
+            if vim.fn.confirm("Delete label: " .. label.name .. "?", "&Yes\n&No", 2) == 1 then
+              gh.label.delete {
+                label.name,
+                yes = true,
+                opts = {
+                  cb = gh.create_callback {
+                    success = function()
+                      utils.info("Deleted label: " .. label.name)
+                    end,
+                  },
+                },
+              }
+            else
+              utils.info("Skipped deleting label: " .. label.name)
+            end
+          end
+        end
+
+        local delete_labels_callback = function(labels)
+          if #labels == 0 then
+            utils.info "Nothing to delete"
+            return
+          end
+
+          delete_labels(labels)
+        end
+
+        if utils.is_blank(label) then
+          picker.labels {
+            cb = delete_labels_callback,
+          }
+        else
+          delete_labels { { name = label } }
+        end
+      end,
     },
     assignee = {
       add = function(login)
