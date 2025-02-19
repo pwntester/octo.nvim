@@ -384,6 +384,92 @@ function M.setup()
       remove = function(label)
         M.remove_label(label)
       end,
+      edit = function(label)
+        --- Get the description of a label
+        --- @param search string
+        --- @return table label_info
+        local get_label_info = function(opts)
+          local item = gh.label.list {
+            json = "name,description",
+            search = opts.search,
+            jq = ".[0]",
+            opts = {
+              mode = "sync",
+            },
+          }
+          if item == "" then
+            return {}
+          end
+
+          return vim.json.decode(item)
+        end
+
+        --- Change the name or description of a label
+        --- @param label string
+        --- @param kind string
+        --- @param current_value string
+        local change_label_info = function(label, kind, current_value)
+          vim.ui.input({
+            prompt = "New " .. kind .. " for " .. label .. ": ",
+            default = current_value,
+          }, function(new_value)
+            if utils.is_blank(new_value) then
+              new_value = current_value
+            end
+
+            new_value = vim.fn.trim(new_value)
+
+            if new_value == current_value then
+              utils.info("No changes made to " .. kind .. " for " .. label)
+              return
+            end
+
+            local opts = { label }
+            opts[kind] = new_value
+            gh.label.edit(opts)
+
+            utils.info("Updated " .. kind .. " for " .. label .. " to " .. new_value)
+          end)
+        end
+
+        local cb = function(name)
+          local info = get_label_info {
+            search = name,
+          }
+
+          if utils.is_blank(info) then
+            utils.error("Nothing found for " .. name)
+            return
+          end
+
+          vim.ui.select(
+            { "name", "description" },
+            { prompt = "Edit name or description of label: " .. info.name },
+            function(kind)
+              if utils.is_blank(kind) then
+                return
+              end
+
+              change_label_info(info.name, kind, info[kind])
+            end
+          )
+        end
+
+        if utils.is_blank(label) then
+          picker.labels {
+            cb = function(labels)
+              if #labels ~= 1 then
+                utils.error "Please select a single label"
+                return
+              end
+
+              cb(labels[1].name)
+            end,
+          }
+        else
+          cb(label)
+        end
+      end,
       delete = function(label)
         local delete_labels = function(labels)
           for _, label in ipairs(labels) do
