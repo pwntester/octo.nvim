@@ -124,7 +124,8 @@ See |octo-command-examples| for examples.
   add [label]           Add specified label or from the available label menu.
   remove [label]        Remove the specified label or from the menu.
   create [label]        Create a new label.
-  delete [label]        Delete the specific label or from the available label menu.
+  delete [label]        Delete the specified label or from the available label menu.
+  edit [label]          Edit name or description of a specified label or from the available label menu.
 
 
 :Octo assignee [action]                         *octo-commands-assignee*
