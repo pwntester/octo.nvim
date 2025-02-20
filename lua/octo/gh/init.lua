@@ -285,7 +285,11 @@ end
 
 local rest = function(method, opts)
   local run_opts = opts.opts or {}
-  local args = { "api", "--method", method }
+  local args = { "api" }
+  if method ~= nil then
+    table.insert(args, "--method")
+    table.insert(args, method)
+  end
 
   opts.opts = nil
   args = M.insert_args(args, opts)
@@ -318,7 +322,7 @@ M.api = {
 
 setmetatable(M.api, {
   __call = function(_, opts)
-    return M.api.get(opts)
+    return rest(nil, opts)
   end,
 })
 
