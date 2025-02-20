@@ -4,6 +4,7 @@ local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local octo_error = require("octo.utils").error
+local gh = require "octo.gh"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
@@ -486,23 +487,22 @@ local function update_job_details(id)
     M.refresh()
     return
   end
-  local cmd = string.format("gh run view %s --json %s", id, fields)
-  vim.fn.jobstart(cmd, {
-    stdout_buffered = true,
-    on_stdout = function(_, data)
-      job_details = vim.fn.json_decode(table.concat(data, "\n"))
-      M.wf_cache[id] = job_details
-    end,
-    on_exit = function(_, b)
-      if b == 0 then
+
+  gh.run {
+    args = { "run", "view", id, "--json", fields },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.api.nvim_err_writeln(stderr)
+        octo_error("Failed to get workflow run for " .. id)
+      elseif output then
+        job_details = vim.fn.json_decode(output)
+        M.wf_cache[id] = job_details
         M.current_wf = job_details
         M.tree = generate_workflow_tree(job_details)
         M.refresh()
-      else
-        octo_error("Failed to get workflow run for " .. id)
       end
     end,
-  })
+  }
 end
 
 local function populate_preview_buffer(id, buf)
