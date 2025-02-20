@@ -36,7 +36,7 @@ function M.gen_from_discussions(max_number)
     end
 
     local kind = "discussion"
-    local filename = utils.get_discussion_uri(obj.repository.nameWithOwner, obj.number)
+    local filename = utils.get_discussion_uri(obj.number, obj.repository.nameWithOwner)
 
     return {
       filename = filename,
@@ -109,11 +109,11 @@ function M.gen_from_issue(max_number, print_repo)
 
     local filename
     if kind == "issue" then
-      filename = utils.get_issue_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_issue_uri(obj.number, obj.repository.nameWithOwner)
     elseif kind == "pull_request" then
-      filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_pull_request_uri(obj.number, obj.repository.nameWithOwner)
     else
-      filename = utils.get_discussion_uri(obj.respository.nameWithOwner, obj.number)
+      filename = utils.get_discussion_uri(obj.number, obj.repository.nameWithOwner)
     end
 
     return {
@@ -666,7 +666,8 @@ function M.gen_from_octo_actions(width)
   end
 end
 
-function M.gen_from_notification()
+function M.gen_from_notification(opts)
+  opts = opts or { show_repo_info = false }
   local make_display = function(entry)
     if not entry then
       return nil
@@ -680,15 +681,21 @@ function M.gen_from_notification()
       { string.sub(entry.obj.repository.full_name, 1, 50), "TelescopeResultsNumber" },
       { string.sub(entry.obj.subject.title, 1, 100) },
     }
+    local items = {
+      { width = 2 },
+      { width = 6 },
+      { width = math.min(#entry.obj.repository.full_name, 50) },
+      { width = math.min(#entry.obj.subject.title, 100) },
+    }
+
+    if not opts.show_repo_info then
+      table.remove(columns, 3)
+      table.remove(items, 3)
+    end
 
     local displayer = entry_display.create {
       separator = " ",
-      items = {
-        { width = 2 },
-        { width = 6 },
-        { width = math.min(#entry.obj.repository.full_name, 50) },
-        { width = math.min(#entry.obj.subject.title, 100) },
-      },
+      items = items,
     }
 
     return displayer(columns)

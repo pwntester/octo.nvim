@@ -3,7 +3,7 @@ local M = {}
 
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "notification" | "runs"
 ---@alias OctoMappingsList { [string]: table}
----@alias OctoPickers "telescope" | "fzf-lua"
+---@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
 ---@alias OctoSplit "right" | "left"
 
 ---@class OctoPickerConfig
@@ -54,6 +54,9 @@ local M = {}
 ---@class OctoConfigRuns
 ---@field icons OctoConfigWorkflowIcons
 
+---@class OctoConfigNotifications
+---@field current_repo_only boolean
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -103,6 +106,7 @@ local M = {}
 ---@field mappings { [OctoMappingsWindow]: OctoMappingsList}
 ---@field mappings_disable_default boolean
 ---@field discussions OctoConfigDiscussions
+---@field notifications OctoConfigNotifications
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -161,6 +165,9 @@ function M.get_default_values()
         field = "CREATED_AT",
         direction = "DESC",
       },
+    },
+    notifications = {
+      current_repo_only = false,
     },
     reviews = {
       auto_show_threads = true,
@@ -298,16 +305,16 @@ function M.get_default_values()
         unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
       },
       submit_win = {
-        approve_review = { lhs = "<C-a>", desc = "approve review" },
-        comment_review = { lhs = "<C-m>", desc = "comment review" },
-        request_changes = { lhs = "<C-r>", desc = "request changes review" },
-        close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
+        approve_review = { lhs = "<C-a>", desc = "approve review", mode = { "n", "i" } },
+        comment_review = { lhs = "<C-m>", desc = "comment review", mode = { "n", "i" } },
+        request_changes = { lhs = "<C-r>", desc = "request changes review", mode = { "n", "i" } },
+        close_review_tab = { lhs = "<C-c>", desc = "close review tab", mode = { "n", "i" } },
       },
       review_diff = {
         submit_review = { lhs = "<localleader>vs", desc = "submit review" },
         discard_review = { lhs = "<localleader>vd", desc = "discard review" },
-        add_review_comment = { lhs = "<localleader>ca", desc = "add a new review comment" },
-        add_review_suggestion = { lhs = "<localleader>sa", desc = "add a new review suggestion" },
+        add_review_comment = { lhs = "<localleader>ca", desc = "add a new review comment", mode = { "n", "x" } },
+        add_review_suggestion = { lhs = "<localleader>sa", desc = "add a new review suggestion", mode = { "n", "x" } },
         focus_files = { lhs = "<localleader>e", desc = "move focus to changed file panel" },
         toggle_files = { lhs = "<localleader>b", desc = "hide/show changed files panel" },
         next_thread = { lhs = "]t", desc = "move to next thread" },
@@ -407,7 +414,7 @@ function M.validate_config()
   end
 
   local function validate_pickers()
-    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua" })
+    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks" })
 
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
@@ -456,6 +463,14 @@ function M.validate_config()
     validate_type(config.pull_requests.always_select_remote_on_create, "always_select_remote_on_create", "boolean")
   end
 
+  local function validate_notifications()
+    if not validate_type(config.notifications, "notifications", "table") then
+      err("notifications", "Expected notifications to be a table")
+      return
+    end
+    validate_type(config.notifications.current_repo_only, "notifications.current_repo_only", "boolean")
+  end
+
   local function validate_mappings()
     -- TODO(jarviliam): Validate each keymap
     if not validate_type(config.mappings, "mappings", "table") then
@@ -469,8 +484,8 @@ function M.validate_config()
     validate_type(config.snippet_context_lines, "snippet_context_lines", "number")
     validate_type(config.timeout, "timeout", "number")
     validate_type(config.default_to_projects_v2, "default_to_projects_v2", "boolean")
-    if validate_type(config.suppress_missing_scope, "supress_missing_scope", "table") then
-      validate_type(config.suppress_missing_scope.projects_v2, "supress_missing_scope.projects_v2", "boolean")
+    if validate_type(config.suppress_missing_scope, "suppress_missing_scope", "table") then
+      validate_type(config.suppress_missing_scope.projects_v2, "suppress_missing_scope.projects_v2", "boolean")
     end
     validate_type(config.gh_cmd, "gh_cmd", "string")
     validate_type(config.gh_env, "gh_env", { "table", "function" })
@@ -506,6 +521,7 @@ function M.validate_config()
     validate_issues()
     validate_reviews()
     validate_pull_requests()
+    validate_notifications()
     if validate_type(config.file_panel, "file_panel", "table") then
       validate_type(config.file_panel.size, "file_panel.size", "number")
       validate_type(config.file_panel.use_icons, "file_panel.use_icons", "boolean")

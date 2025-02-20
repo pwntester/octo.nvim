@@ -9,7 +9,8 @@ local M = {}
 
 ---@class OctoRepo
 ---@field host string
----@field name string
+---@field name string?
+---@field repo string?
 
 local repo_id_cache = {}
 local repo_templates_cache = {}
@@ -161,6 +162,11 @@ M.reaction_map = {
   ["EYES"] = "👀 ",
 }
 
+---@param tbl unknown[]
+---@param first integer
+---@param last integer
+---@param step integer?
+---@return unknown[]
 function M.tbl_slice(tbl, first, last, step)
   local sliced = {}
   for i = first or 1, last or #tbl, step or 1 do
@@ -221,6 +227,7 @@ function M.parse_remote_url(url, aliases)
   end
 
   for alias, rhost in pairs(aliases) do
+    alias = alias:gsub("%-", "%%-")
     host = host:gsub("^" .. alias .. "$", rhost, 1)
   end
   if not M.is_blank(host) and not M.is_blank(repo) then
@@ -288,6 +295,8 @@ function M.get_all_remotes()
   return vim.tbl_values(M.parse_git_remote())
 end
 
+---@param remote table|nil
+---@return string?
 function M.get_remote_name(remote)
   return M.get_remote(remote).repo
 end
@@ -320,17 +329,17 @@ end
 ---@param milestone_name string milestone name
 function M.add_milestone(issue, number, milestone_name)
   local command = issue and "issue" or "pr"
-  local args = { command, "edit", number, "--milestone", milestone_name }
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        M.info("Added milestone " .. milestone_name)
-      end
-    end,
+  gh[command].edit {
+    number,
+    milestone = milestone_name,
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info("Added milestone " .. milestone_name)
+        end,
+      },
+    },
   }
 end
 
@@ -339,17 +348,17 @@ end
 ---@param number number issue or PR number
 function M.remove_milestone(issue, number)
   local command = issue and "issue" or "pr"
-  local args = { command, "edit", number, "--remove-milestone" }
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        M.info "Removed milestone"
-      end
-    end,
+  gh[command].edit {
+    number,
+    remove_milestone = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info "Removed milestone"
+        end,
+      },
+    },
   }
 end
 
@@ -384,7 +393,7 @@ function M.create_milestone(title, description)
       if stderr and not M.is_blank(stderr) then
         M.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         M.info("Created milestone " .. resp.title)
       end
     end,
@@ -481,7 +490,7 @@ end
 --
 -- this is useful when you want to determine if the currently checked out branch
 -- maps to a PR HEAD, when 'gh pr checkout' is used.
-function M.get_upstream_branch_from_config()
+function M.get_upstream_branch_from_config(pr)
   local branch_cmd = "git rev-parse --abbrev-ref HEAD"
   local branch = vim.fn.system(branch_cmd)
   if vim.v.shell_error ~= 0 then
@@ -506,7 +515,7 @@ function M.get_upstream_branch_from_config()
     return ""
   end
 
-  -- split merge_config to key, value with space delimeter
+  -- split merge_config to key, value with space delimiter
   local merge_config_kv = vim.split(merge_config, "%s+")
   -- use > 2 since there maybe some garbage white space at the end of the map.
   if #merge_config_kv < 2 then
@@ -515,11 +524,20 @@ function M.get_upstream_branch_from_config()
 
   local upstream_branch_ref = merge_config_kv[2]
 
-  -- remove the prefix /refs/heads/ from upstream_branch_ref resulting in
-  -- branch's name.
-  local upstream_branch_name = string.gsub(upstream_branch_ref, "^refs/heads/", "")
+  -- branch config can be in "refs/pull/{pr_number}/head" format
+  if string.find(upstream_branch_ref, "^refs/pull/") then
+    local pr_number = vim.split(upstream_branch_ref, "/")[3]
+    -- tonumber handles any whitespace/quoting issues
+    if tonumber(pr_number) == tonumber(pr.number) then
+      return branch
+    end
+  else
+    -- branch config can also be in "refs/heads/{upstream_branch_name} format"
+    local upstream_branch_name = string.gsub(upstream_branch_ref, "^refs/heads/", "")
+    return upstream_branch_name
+  end
 
-  return upstream_branch_name
+  return ""
 end
 
 -- Determines if we are locally in a branch matting the pr head ref when
@@ -527,7 +545,7 @@ end
 -- The gh CLI tool stores remote info directly in {branch.{branch}.x} configuration
 -- fields and does not create a remote
 function M.in_pr_branch_config_tracked(pr)
-  return M.get_upstream_branch_from_config():lower() == pr.head_ref_name
+  return M.get_upstream_branch_from_config(pr):lower() == pr.head_ref_name
 end
 
 --- Determines if we are locally are in a branch matching the pr head ref
@@ -552,6 +570,7 @@ function M.checkout_pr(pr_number)
 end
 
 ---@class CheckoutPrSyncOpts
+---@field repo string
 ---@field pr_number number
 ---@field timeout number
 
@@ -564,7 +583,7 @@ function M.checkout_pr_sync(opts)
   Job:new({
     enable_recording = true,
     command = "gh",
-    args = { "pr", "checkout", opts.pr_number },
+    args = { "pr", "checkout", opts.pr_number, "--repo", opts.repo },
     on_exit = vim.schedule_wrap(function()
       local output = vim.fn.system "git branch --show-current"
       M.info("Switched to " .. output)
@@ -694,7 +713,7 @@ function M.get_repo_id(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     local id = resp.data.repository.id
     repo_id_cache[repo] = id
     return id
@@ -720,7 +739,7 @@ function M.get_repo_info(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     local info = resp.data.repository
     repo_info_cache[repo] = info
     return info
@@ -738,7 +757,7 @@ function M.get_repo_templates(repo)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     local templates = resp.data.repository
 
     -- add an option to not use a template
@@ -755,11 +774,13 @@ function M.get_repo_templates(repo)
 end
 
 ---Helper method to aggregate an API paginated response
+---@param text string
+---@return table[]
 function M.get_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
   for _, page in ipairs(page_outputs) do
-    local decoded_page = vim.fn.json_decode(page)
+    local decoded_page = vim.json.decode(page)
     table.insert(results, decoded_page)
   end
   return results
@@ -770,7 +791,7 @@ function M.get_flatten_pages(text)
   local results = {}
   local page_outputs = vim.split(text, "\n")
   for _, page in ipairs(page_outputs) do
-    local decoded_page = vim.fn.json_decode(page)
+    local decoded_page = vim.json.decode(page)
     for _, result in ipairs(decoded_page) do
       table.insert(results, result)
     end
@@ -779,6 +800,9 @@ function M.get_flatten_pages(text)
 end
 
 --- Helper method to aggregate an API paginated response
+---@param text string
+---@param aggregation_key string
+---@return table
 function M.aggregate_pages(text, aggregation_key)
   -- aggregation key can be at any level (eg: comments)
   -- take the first response and extend it with elements from the
@@ -796,18 +820,18 @@ function M.aggregate_pages(text, aggregation_key)
 end
 
 --- Helper method to aggregate an API paginated response
+---@param obj table<string, unknown>
+---@param prop string
+---@return unknown
 function M.get_nested_prop(obj, prop)
-  while true do
-    local parts = vim.split(prop, "%.")
-    if #parts == 1 then
-      break
-    else
-      local part = parts[1]
-      local remaining = table.concat(M.tbl_slice(parts, 2, #parts), ".")
-      return M.get_nested_prop(obj[part], remaining)
-    end
+  local parts = vim.split(prop, "%.")
+  if #parts == 1 then
+    return obj[prop]
+  else
+    local part = parts[1]
+    local remaining = table.concat(M.tbl_slice(parts, 2, #parts), ".")
+    return M.get_nested_prop(obj[part], remaining)
   end
-  return obj[prop]
 end
 
 --- Escapes a characters on a string to be used as a JSON string
@@ -818,8 +842,11 @@ function M.escape_char(string)
 end
 
 --- Extracts repo and number from Octo command varargs
+---@param ... string|number
+---@return string? repo
+---@return integer? number
 function M.get_repo_number_from_varargs(...)
-  local repo, number
+  local repo, number ---@type string|nil, integer|nil
   local args = table.pack(...)
   if args.n == 0 then
     M.error "Missing arguments"
@@ -829,9 +856,9 @@ function M.get_repo_number_from_varargs(...)
     repo = M.get_remote_name()
     number = tonumber(args[1])
   elseif args.n == 2 then
-    -- eg: Octo issue pwntester/octo.nvim 1
-    repo = args[1]
-    number = tonumber(args[2])
+    -- eg: Octo issue 1 pwntester/octo.nvim
+    repo = args[2]
+    number = tonumber(args[1])
   else
     M.error "Unexpected arguments"
     return
@@ -840,8 +867,12 @@ function M.get_repo_number_from_varargs(...)
     M.error "Can not find repo name"
     return
   end
-  if not number then
-    M.error "Missing issue/PR number"
+  if type(repo) ~= "string" then
+    M.error(("Expected repo name, received %s"):format(args[2]))
+    return
+  end
+  if not number or type(number) ~= "number" then
+    M.error(("Expected issue/PR number, received %s"):format(args[1]))
     return
   end
   return repo, number
@@ -922,7 +953,7 @@ function M.get_file_contents(repo, commit, path, cb)
       if stderr and not M.is_blank(stderr) then
         M.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local blob = resp.data.repository.object
         local lines = {}
         if blob and blob ~= vim.NIL and type(blob.text) == "string" then
@@ -1002,7 +1033,7 @@ function M.extract_issue_at_cursor(current_repo)
     end
   end
   if not repo or not number then
-    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_LINE_BEGGINING_PATTERN)
+    number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_LINE_BEGINNING_PATTERN)
     if number then
       repo = current_repo
     end
@@ -1040,7 +1071,7 @@ function M.text_wrap(text, width)
       local word = words[l]
       -- If the word is longer than an entire line:
       if #word > width then
-        -- In case the word is longer than multible lines:
+        -- In case the word is longer than multiple lines:
         while #word > width do
           -- Fit as much as possible
           table.insert(line, word:sub(0, widthLeft))
@@ -1404,7 +1435,7 @@ function M.get_pull_request_for_current_branch(cb)
         M.error "No pr found for current branch"
         return
       end
-      local pr = vim.fn.json_decode(out)
+      local pr = vim.json.decode(out)
       local base_owner
       local base_name
       if pr.number then
@@ -1508,7 +1539,7 @@ function M.get_user_id(login)
     mode = "sync",
   }
   if output then
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     if resp.data.user and resp.data.user ~= vim.NIL then
       return resp.data.user.id
     end
@@ -1530,7 +1561,7 @@ function M.get_label_id(label)
     mode = "sync",
   }
   if output then
-    local resp = vim.fn.json_decode(output)
+    local resp = vim.json.decode(output)
     if resp.data.repository.labels.nodes and resp.data.repository.labels.nodes ~= vim.NIL then
       for _, l in ipairs(resp.data.repository.labels.nodes) do
         if l.name == label then
@@ -1611,6 +1642,8 @@ function M.extract_rest_id(comment_url)
 end
 
 --- Apply mappings to a buffer
+---@param kind string
+---@param bufnr integer
 function M.apply_mappings(kind, bufnr)
   local mappings = require "octo.mappings"
   local conf = config.values
@@ -1625,11 +1658,8 @@ function M.apply_mappings(kind, bufnr)
         value.desc = ""
       end
       local mapping_opts = { silent = true, noremap = true, buffer = bufnr, desc = value.desc }
-      vim.keymap.set("n", value.lhs, mappings[action], mapping_opts)
-      -- TODO: These should probably be part of the config
-      if action == "add_review_comment" or action == "add_review_suggestion" then
-        vim.keymap.set("x", value.lhs, mappings[action], mapping_opts)
-      end
+      local mode = value.mode or "n"
+      vim.keymap.set(mode, value.lhs, mappings[action], mapping_opts)
     end
   end
 end
@@ -1642,8 +1672,8 @@ function M.get_lines_from_context(calling_context)
     line_number_start = vim.fn.line "."
     line_number_end = line_number_start
   elseif calling_context == "visual" then
-    line_number_start = vim.fn.line "'<"
-    line_number_end = vim.fn.line "'>"
+    line_number_start = vim.fn.line "v"
+    line_number_end = vim.fn.line "."
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]

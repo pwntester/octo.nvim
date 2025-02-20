@@ -13,7 +13,7 @@ return function(cb)
     return
   end
 
-  local formatted_projects = {}
+  local formatted_projects = {} ---@type table<string, table> entry.ordinal -> entry
   local common_fzf_opts = vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
     fzf_opts = {
       ["--delimiter"] = "' '",
@@ -27,7 +27,7 @@ return function(cb)
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output)
         if output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
 
           local unsorted_projects = {}
           local user_projects = resp.data.user and resp.data.user.projects.nodes or {}

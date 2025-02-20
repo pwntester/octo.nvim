@@ -44,7 +44,7 @@ return function(thread_cb)
           utils.error(err)
           fzf_cb()
         elseif output then
-          local results = vim.fn.json_decode(output)
+          local results = vim.json.decode(output)
 
           if #formatted_commits == 0 then
             local full_pr = entry_maker.gen_from_git_commits(make_full_pr(current_review))

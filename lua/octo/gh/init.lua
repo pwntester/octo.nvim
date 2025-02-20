@@ -26,6 +26,7 @@ local env_vars = {
   http_proxy = vim.env["http_proxy"],
   https_proxy = vim.env["https_proxy"],
   no_proxy = vim.env["no_proxy"],
+  SSH_AUTH_SOCK = vim.env["SSH_AUTH_SOCK"],
 }
 
 local function get_env()
@@ -111,6 +112,24 @@ function M.setup()
   }):start()
 end
 
+--- Create a callback function for the job
+function M.create_callback(opts)
+  opts = opts or {}
+
+  local utils = require "octo.utils"
+
+  opts.success = opts.success or utils.info
+  opts.failure = opts.failure or utils.error
+
+  return function(output, stderr)
+    if stderr and not utils.is_blank(stderr) then
+      opts.failure(stderr)
+    elseif output then
+      opts.success(output)
+    end
+  end
+end
+
 function M.run(opts)
   if not Job then
     return
@@ -147,6 +166,7 @@ function M.run(opts)
       table.insert(opts.args, header)
     end
   end
+
   local job = Job:new {
     enable_recording = true,
     command = config.values.gh_cmd,
@@ -184,12 +204,19 @@ end
 ---Insert the options into the args table
 ---@param args table the arguments table
 ---@param options table the options to insert
+---@param replace table|nil key value pairs to replace in the key of the options
 ---@return table the updated args table
-M.insert_args = function(args, options)
+M.insert_args = function(args, options, replace)
+  replace = replace or {}
+
   for key, value in pairs(options) do
     if type(key) == "number" then
       table.insert(args, value)
     else
+      for k, v in pairs(replace) do
+        key = string.gsub(key, k, v)
+      end
+
       local flag = create_flag(key)
 
       if type(value) == "table" then
@@ -256,9 +283,48 @@ function M.graphql(opts)
   }
 end
 
+local rest = function(method, opts)
+  local run_opts = opts.opts or {}
+  local args = { "api" }
+  if method ~= nil then
+    table.insert(args, "--method")
+    table.insert(args, method)
+  end
+
+  opts.opts = nil
+  args = M.insert_args(args, opts)
+
+  M.run {
+    args = args,
+    mode = run_opts.mode,
+    cb = run_opts.cb,
+    stream_cb = run_opts.stream_cb,
+    headers = run_opts.headers,
+    hostname = run_opts.hostname,
+  }
+end
+
 M.api = {
   graphql = M.graphql,
+  get = function(opts)
+    return rest("GET", opts)
+  end,
+  post = function(opts)
+    return rest("POST", opts)
+  end,
+  patch = function(opts)
+    return rest("PATCH", opts)
+  end,
+  delete = function(opts)
+    return rest("DELETE", opts)
+  end,
 }
+
+setmetatable(M.api, {
+  __call = function(_, opts)
+    return rest(nil, opts)
+  end,
+})
 
 local create_subcommand = function(command)
   local subcommand = {}
@@ -277,7 +343,7 @@ local create_subcommand = function(command)
         }
 
         opts.opts = nil
-        args = M.insert_args(args, opts)
+        args = M.insert_args(args, opts, { ["_"] = "-" })
 
         return M.run {
           args = args,

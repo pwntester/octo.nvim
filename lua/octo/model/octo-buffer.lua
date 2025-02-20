@@ -283,7 +283,7 @@ end
 
 ---Accumulates all the taggable users into a single list that
 --gets set as a buffer variable `taggable_users`. If this list of users
----is needed syncronously, this function will need to be refactored.
+---is needed synchronously, this function will need to be refactored.
 ---The list of taggable users should contain:
 --  - The PR author
 --  - The authors of all the existing comments
@@ -306,7 +306,7 @@ function OctoBuffer:async_fetch_taggable_users()
     args = { "api", string.format("repos/%s/contributors", self.repo) },
     cb = function(response)
       if not utils.is_blank(response) then
-        local resp = vim.fn.json_decode(response)
+        local resp = vim.json.decode(response)
         for _, contributor in ipairs(resp) do
           table.insert(users, contributor.login)
         end
@@ -322,7 +322,7 @@ function OctoBuffer:async_fetch_issues()
     args = { "api", string.format("repos/%s/issues", self.repo) },
     cb = function(response)
       local issues_metadata = {}
-      local resp = vim.fn.json_decode(response)
+      local resp = vim.json.decode(response)
       for _, issue in ipairs(resp) do
         table.insert(issues_metadata, { number = issue.number, title = issue.title })
       end
@@ -399,7 +399,7 @@ function OctoBuffer:do_save_title_and_body()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local obj
           if self:isPullRequest() then
             obj = resp.data.updatePullRequest.pullRequest
@@ -437,7 +437,7 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local respBody = resp.data.addComment.commentEdge.node.body
         local respId = resp.data.addComment.commentEdge.node.id
         if utils.trim(comment_metadata.body) == utils.trim(respBody) then
@@ -472,7 +472,7 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local resp_comment = resp.data.addPullRequestReviewComment.comment
         local comment_end
         if utils.trim(comment_metadata.body) == utils.trim(resp_comment.body) then
@@ -584,28 +584,44 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output).data.addPullRequestReviewThread
-          if not utils.is_blank(resp.thread) then
-            local new_comment = resp.thread.comments.nodes[1]
-            if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
-              local comments = self.commentsMetadata
-              for i, c in ipairs(comments) do
-                if tonumber(c.id) == -1 then
-                  comments[i].id = new_comment.id
-                  comments[i].savedBody = new_comment.body
-                  comments[i].dirty = false
-                  break
-                end
-              end
-              local threads = resp.thread.pullRequest.reviewThreads.nodes
-              if review then
-                review:update_threads(threads)
-              end
-              self:render_signs()
-            end
-          else
+          local resp = vim.json.decode(output).data.addPullRequestReviewThread
+
+          if utils.is_blank(resp) then
             utils.error "Failed to create thread"
             return
+          end
+
+          -- Register new thread id
+          local threads = self.threadsMetadata
+          local new_thread = nil
+          for _, t in pairs(threads) do
+            if tonumber(t.threadId) == -1 then
+              new_thread = t
+              break
+            end
+          end
+
+          -- Register new comment data
+          local new_comment = resp.thread.comments.nodes[1]
+          if new_thread then
+            new_thread.threadId = resp.thread.id
+            new_thread.replyTo = new_comment.id
+          end
+          if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
+            local comments = self.commentsMetadata
+            for i, c in ipairs(comments) do
+              if tonumber(c.id) == -1 then
+                comments[i].id = new_comment.id
+                comments[i].savedBody = new_comment.body
+                comments[i].dirty = false
+                break
+              end
+            end
+            local threads = resp.thread.pullRequest.reviewThreads.nodes
+            if review then
+              review:update_threads(threads)
+            end
+            self:render_signs()
           end
         end
       end,
@@ -681,7 +697,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
           if stderr and not utils.is_blank(stderr) then
             vim.api.nvim_err_writeln(stderr)
           elseif output then
-            local r = vim.fn.json_decode(output)
+            local r = vim.json.decode(output)
             local resp = r.data.addPullRequestReviewComment
             if not utils.is_blank(resp.comment) then
               if utils.trim(comment_metadata.body) == utils.trim(resp.comment.body) then
@@ -734,7 +750,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
       if not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         if not utils.is_blank(resp) then
           if utils.trim(comment_metadata.body) == utils.trim(resp.body) then
             local comments = self.commentsMetadata
@@ -774,7 +790,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local resp_comment
         if comment_metadata.kind == "IssueComment" then
           resp_comment = resp.data.updateIssueComment.issueComment

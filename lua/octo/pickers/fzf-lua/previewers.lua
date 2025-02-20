@@ -53,9 +53,6 @@ M.issue = function(formatted_issues)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_issues[entry_str]
 
@@ -73,7 +70,7 @@ M.issue = function(formatted_issues)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.fn.json_decode(output)
+          local result = vim.json.decode(output)
           local obj
           if entry.kind == "issue" then
             obj = result.data.repository.issue
@@ -113,9 +110,6 @@ M.search = function()
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local match = string.gmatch(entry_str, "[^%s]+")
     local kind = match()
@@ -135,7 +129,7 @@ M.search = function()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.fn.json_decode(output)
+          local result = vim.json.decode(output)
           local obj
           if kind == "issue" then
             obj = result.data.repository.issue
@@ -175,9 +169,6 @@ M.commit = function(formatted_commits, repo)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_commits[entry_str]
 
@@ -225,9 +216,6 @@ M.changed_files = function(formatted_files)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_files[entry_str]
 
@@ -254,9 +242,6 @@ M.review_thread = function(formatted_threads)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_threads[entry_str]
 
@@ -287,9 +272,6 @@ M.gist = function(formatted_gists)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
 
     local entry = formatted_gists[entry_str]
@@ -321,9 +303,6 @@ M.repo = function(formatted_repos)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_repos[entry_str]
 
@@ -340,7 +319,7 @@ M.repo = function(formatted_repos)
         -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
         -- and `tmpbuf` within this context is already cleared and invalidated
         if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           buffer.node = resp.data.repository
           buffer:render_repo()
         end
@@ -373,9 +352,6 @@ M.issue_template = function(formatted_templates)
   end
 
   function previewer:populate_preview_buf(entry_str)
-    if entry_str == "" then
-      return
-    end
     local tmpbuf = self:get_tmp_buffer()
     local entry = formatted_templates[entry_str]
     local template = entry.template.body

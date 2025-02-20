@@ -28,7 +28,7 @@ FilePanel.winopts = {
   foldenable = false,
   spell = false,
   wrap = false,
-  cursorline = false,
+  cursorline = true,
   signcolumn = "yes",
   foldmethod = "manual",
   foldcolumn = "0",
@@ -38,7 +38,6 @@ FilePanel.winopts = {
   winhl = table.concat({
     "EndOfBuffer:OctoEndOfBuffer",
     "Normal:OctoNormal",
-    --'CursorLine:OctoCursorLine',
     "VertSplit:OctoVertSplit",
     "SignColumn:OctoNormal",
     "StatusLine:OctoStatusLine",
@@ -183,7 +182,14 @@ function FilePanel:highlight_file(file)
     if f == file then
       pcall(vim.api.nvim_win_set_cursor, self.winid, { i + header_size, 0 })
       vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
-      vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", i + header_size - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(
+        self.bufid,
+        constants.OCTO_FILE_PANEL_NS,
+        "OctoFilePanelSelectedFile",
+        i + header_size - 1,
+        0,
+        -1
+      )
     end
   end
 end
@@ -198,8 +204,6 @@ function FilePanel:highlight_prev_file()
     if f == cur then
       local line = utils.clamp(i + header_size - 1, header_size + 1, #self.files + header_size)
       pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
-      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
-      vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
   end
 end
@@ -214,8 +218,6 @@ function FilePanel:highlight_next_file()
     if f == cur then
       local line = utils.clamp(i + header_size + 1, header_size, #self.files + header_size)
       pcall(vim.api.nvim_win_set_cursor, self.winid, { line, 0 })
-      vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
-      vim.api.nvim_buf_add_highlight(self.bufid, constants.OCTO_FILE_PANEL_NS, "CursorLine", line - 1, 0, -1)
     end
   end
 end

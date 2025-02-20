@@ -14,6 +14,41 @@ describe("insert_args:", function()
     }
     eq(args, expected)
   end)
+  it("Replace mapping default", function()
+    local args = {}
+    local opts = {
+      remove_label = "Some label",
+    }
+    gh.insert_args(args, opts)
+    local expected = {
+      "--remove_label",
+      "Some label",
+    }
+    eq(args, expected)
+  end)
+  it("Replace mapping underscores", function()
+    local args = {}
+    local opts = {
+      remove_label = "Some label",
+    }
+    gh.insert_args(args, opts, { ["_"] = "-" })
+    local expected = {
+      "--remove-label",
+      "Some label",
+    }
+    eq(args, expected)
+  end)
+  it("Replace mapping underscores boolean", function()
+    local args = {}
+    local opts = {
+      remove_milestone = true,
+    }
+    gh.insert_args(args, opts, { ["_"] = "-" })
+    local expected = {
+      "--remove-milestone",
+    }
+    eq(args, expected)
+  end)
   it("single characters have single hyphen", function()
     local args = {}
     local opts = {

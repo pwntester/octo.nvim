@@ -1887,6 +1887,9 @@ query($name: String!, $owner: String!, $n_milestones: Int!) {
 }
 ]]
 
+---@param query string
+---@param ... string|table
+---@return string
 return function(query, ...)
   local opts = { escape = true }
   for _, v in ipairs { ... } do

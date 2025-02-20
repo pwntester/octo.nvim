@@ -26,7 +26,7 @@ return function(cb)
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output)
         if output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
 
           local projects = {}
           local user_projects = resp.data.user and resp.data.user.projects.nodes or {}

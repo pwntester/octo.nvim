@@ -11,6 +11,15 @@ local config = require "octo.config"
 local colors = require "octo.ui.colors"
 local vim = vim
 
+-- a global variable where command handlers can access the details of the last
+-- command ran.
+--
+-- this came into existence since some commands like "comment add" need to
+-- understand the line range the comment should be created on.
+-- this is problematic without the command options as you exit visual mode when
+-- enterting the command line.
+OctoLastCmdOpts = nil
+
 local M = {}
 
 local get_current_buffer = function()
@@ -32,7 +41,9 @@ end
 
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
+    OctoLastCmdOpts = opts
     require("octo.commands").octo(unpack(opts.fargs))
+    OctoLastCmdOpts = nil
   end, { complete = require("octo.completion").octo_command_complete, nargs = "*", range = true })
   local conf = config.values
 
@@ -215,6 +226,11 @@ function M.setup()
         local bufnr = vim.api.nvim_get_current_buf()
         local buffer = octo_buffers[bufnr]
         if not buffer or not buffer:isPullRequest() then
+          picker.prs {
+            cb = function(selected)
+              utils.checkout_pr(selected.obj.number)
+            end,
+          }
           return
         end
         if not utils.in_pr_repo() then
@@ -333,7 +349,7 @@ function M.setup()
         end
       end,
       thread = function()
-        require("octo.reviews.thread-panel").show_review_threads { jump_to_buffer = true }
+        require("octo.reviews.thread-panel").show_review_threads(true)
       end,
     },
     gist = {
@@ -361,7 +377,7 @@ function M.setup()
         if current_review and utils.in_diff_window() then
           current_review:add_comment(false)
         else
-          M.add_comment()
+          M.add_pr_issue_or_review_thread_comment()
         end
       end,
       delete = function()
@@ -377,6 +393,130 @@ function M.setup()
       end,
       remove = function(label)
         M.remove_label(label)
+      end,
+      edit = function(label)
+        --- Get the description of a label
+        --- @param search string
+        --- @return table label_info
+        local get_label_info = function(opts)
+          local item = gh.label.list {
+            json = "name,description",
+            search = opts.search,
+            jq = ".[0]",
+            opts = {
+              mode = "sync",
+            },
+          }
+          if item == "" then
+            return {}
+          end
+
+          return vim.json.decode(item)
+        end
+
+        --- Change the name or description of a label
+        --- @param label string
+        --- @param kind string
+        --- @param current_value string
+        local change_label_info = function(label, kind, current_value)
+          vim.ui.input({
+            prompt = "New " .. kind .. " for " .. label .. ": ",
+            default = current_value,
+          }, function(new_value)
+            if utils.is_blank(new_value) then
+              new_value = current_value
+            end
+
+            new_value = vim.fn.trim(new_value)
+
+            if new_value == current_value then
+              utils.info("No changes made to " .. kind .. " for " .. label)
+              return
+            end
+
+            local opts = { label }
+            opts[kind] = new_value
+            gh.label.edit(opts)
+
+            utils.info("Updated " .. kind .. " for " .. label .. " to " .. new_value)
+          end)
+        end
+
+        local cb = function(name)
+          local info = get_label_info {
+            search = name,
+          }
+
+          if utils.is_blank(info) then
+            utils.error("Nothing found for " .. name)
+            return
+          end
+
+          vim.ui.select(
+            { "name", "description" },
+            { prompt = "Edit name or description of label: " .. info.name },
+            function(kind)
+              if utils.is_blank(kind) then
+                return
+              end
+
+              change_label_info(info.name, kind, info[kind])
+            end
+          )
+        end
+
+        if utils.is_blank(label) then
+          picker.labels {
+            cb = function(labels)
+              if #labels ~= 1 then
+                utils.error "Please select a single label"
+                return
+              end
+
+              cb(labels[1].name)
+            end,
+          }
+        else
+          cb(label)
+        end
+      end,
+      delete = function(label)
+        local delete_labels = function(labels)
+          for _, label in ipairs(labels) do
+            if vim.fn.confirm("Delete label: " .. label.name .. "?", "&Yes\n&No", 2) == 1 then
+              gh.label.delete {
+                label.name,
+                yes = true,
+                opts = {
+                  cb = gh.create_callback {
+                    success = function()
+                      utils.info("Deleted label: " .. label.name)
+                    end,
+                  },
+                },
+              }
+            else
+              utils.info("Skipped deleting label: " .. label.name)
+            end
+          end
+        end
+
+        local delete_labels_callback = function(labels)
+          if #labels == 0 then
+            utils.info "Nothing to delete"
+            return
+          end
+
+          delete_labels(labels)
+        end
+
+        if utils.is_blank(label) then
+          picker.labels {
+            cb = delete_labels_callback,
+          }
+        else
+          delete_labels { { name = label } }
+        end
       end,
     },
     assignee = {
@@ -451,8 +591,16 @@ function M.setup()
       end,
     },
     notification = {
-      list = function()
-        picker.notifications()
+      list = function(repo)
+        local opts = {}
+
+        if repo then
+          opts.repo = repo
+        elseif config.values.notifications.current_repo_only then
+          opts.repo = utils.get_remote_name()
+        end
+
+        picker.notifications(opts)
       end,
     },
   }
@@ -460,7 +608,7 @@ function M.setup()
   setmetatable(M.commands.pr, {
     __call = function(_)
       utils.get_pull_request_for_current_branch(function(pr)
-        vim.cmd("e " .. utils.get_pull_request_uri(pr.repo, pr.number))
+        vim.cmd("e " .. utils.get_pull_request_uri(pr.number, pr.repo))
       end)
     end,
   })
@@ -524,9 +672,9 @@ function M.octo(object, action, ...)
   if not o then
     local repo, number, kind = utils.parse_url(object)
     if repo and number and kind == "issue" then
-      utils.get_issue(repo, number)
+      utils.get_issue(number, repo)
     elseif repo and number and kind == "pull" then
-      utils.get_pull_request(repo, number)
+      utils.get_pull_request(number, repo)
     else
       utils.error("Incorrect argument: " .. object)
       return
@@ -546,6 +694,7 @@ function M.octo(object, action, ...)
       utils.error(action and "Incorrect action: " .. action or "No action specified")
       return
     end
+
     res = pcall(a, ...)
     if not res then
       utils.error(action and "Failed action: " .. action)
@@ -554,8 +703,8 @@ function M.octo(object, action, ...)
   end
 end
 
---- Adds a new comment to an issue/PR
-function M.add_comment()
+--- Adds a new comment to an issue/PR or a review thread
+function M.add_pr_issue_or_review_thread_comment()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer then
@@ -647,7 +796,7 @@ function M.delete_comment()
       cb = function(output)
         -- TODO: deleting the last review thread comment, it deletes the whole thread and review
         -- In issue buffers, we should hide the thread snippet
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
 
         -- remove comment lines from the buffer
         if comment.reactionLine then
@@ -781,7 +930,7 @@ function M.resolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local thread = resp.data.resolveReviewThread.thread
         if thread.isResolved then
           update_review_thread_header(bufnr, thread, thread_id, thread_line)
@@ -811,7 +960,7 @@ function M.unresolve_thread()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         local thread = resp.data.unresolveReviewThread.thread
         if not thread.isResolved then
           update_review_thread_header(bufnr, thread, thread_id, thread_line)
@@ -869,7 +1018,7 @@ function M.change_state(state)
     if stderr and not utils.is_blank(stderr) then
       utils.error(stderr)
     elseif output then
-      local resp = vim.fn.json_decode(output)
+      local resp = vim.json.decode(output)
 
       local obj = get_obj(resp)
       local new_state = obj.state
@@ -954,7 +1103,7 @@ function M.save_issue(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         require("octo").create_buffer("issue", resp.data.createIssue.issue, opts.repo, true)
         vim.fn.execute "normal! Gk"
         vim.fn.execute "startinsert"
@@ -980,7 +1129,7 @@ function M.create_pr(is_draft)
       utils.error "Aborting PR creation"
       return
     elseif remote_idx > #remotes then
-      utils.error "Invaild index."
+      utils.error "Invalid index."
       return
     end
     repo = remotes[remote_idx].repo
@@ -1168,7 +1317,7 @@ function M.save_pr(opts)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local pr = resp.data.createPullRequest.pullRequest
           utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
           require("octo").create_buffer("pull", pr, opts.repo, true)
@@ -1394,7 +1543,7 @@ function M.reaction_action(reaction)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         if action == "add" then
           reaction_groups = resp.data.addReaction.subject.reactionGroups
         elseif action == "remove" then
@@ -1520,7 +1669,7 @@ function M.set_project_v2_card()
         if add_stderr and not utils.is_blank(add_stderr) then
           utils.error(add_stderr)
         elseif add_output then
-          local resp = vim.fn.json_decode(add_output)
+          local resp = vim.json.decode(add_output)
           local update_query = graphql(
             "update_project_v2_item_mutation",
             project_id,
@@ -1592,13 +1741,13 @@ function M.random_hex_color()
 end
 
 function M.create_label(label)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer then
+  local repo = utils.get_remote_name()
+  if repo == nil then
+    utils.error "Cannot find repo name"
     return
   end
 
-  local repo_id = utils.get_repo_id(buffer.repo)
+  local repo_id = utils.get_repo_id(repo)
 
   local name, color, description
   if label then
@@ -1607,7 +1756,7 @@ function M.create_label(label)
     description = ""
   else
     vim.fn.inputsave()
-    name = vim.fn.input(string.format("Creating label for %s. Enter title: ", buffer.repo))
+    name = vim.fn.input(string.format("Creating label for %s. Enter title: ", repo))
     color = vim.fn.input "Enter color (RGB): "
     description = vim.fn.input "Enter description: "
     vim.fn.inputrestore()
@@ -1618,22 +1767,16 @@ function M.create_label(label)
   end
 
   local query = graphql("create_label_mutation", repo_id, name, description, color)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local label = resp.data.createLabel.label
-        utils.info("Created label: " .. label.name)
-
-        -- refresh issue/pr details
-        require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-          writers.write_details(bufnr, obj, true)
-        end)
-      end
-    end,
+  gh.api.graphql {
+    query = query,
+    jq = ".data.createLabel.label.name",
+    opts = {
+      cb = gh.create_callback {
+        success = function(label_name)
+          utils.info("Created label: " .. label_name)
+        end,
+      },
+    },
   }
 end
 
@@ -1673,19 +1816,20 @@ local function label_action(opts)
       table.insert(label_ids, lbl.id)
     end
 
+    local refresh_details = function()
+      require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+        writers.write_details(bufnr, obj, true)
+      end)
+    end
+
     local query = graphql(opts.query_name, iid, create_list(label_ids, format))
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
-          end)
-        end
-      end,
+    gh.api.graphql {
+      query = query,
+      opts = {
+        cb = gh.create_callback {
+          success = refresh_details,
+        },
+      },
     }
   end
 
@@ -1697,7 +1841,10 @@ local function label_action(opts)
       utils.error("Cannot find label: " .. label)
     end
   else
-    opts.labels(cb)
+    opts.labels {
+      repo = buffer.owner .. "/" .. buffer.name,
+      cb = cb,
+    }
   end
 end
 
