@@ -204,7 +204,7 @@ end
 ---Insert the options into the args table
 ---@param args table the arguments table
 ---@param options table the options to insert
----@param replace table key value pairs to replace in the key of the options
+---@param replace table|nil key value pairs to replace in the key of the options
 ---@return table the updated args table
 M.insert_args = function(args, options, replace)
   replace = replace or {}
@@ -283,9 +283,48 @@ function M.graphql(opts)
   }
 end
 
+local rest = function(method, opts)
+  local run_opts = opts.opts or {}
+  local args = { "api" }
+  if method ~= nil then
+    table.insert(args, "--method")
+    table.insert(args, method)
+  end
+
+  opts.opts = nil
+  args = M.insert_args(args, opts)
+
+  M.run {
+    args = args,
+    mode = run_opts.mode,
+    cb = run_opts.cb,
+    stream_cb = run_opts.stream_cb,
+    headers = run_opts.headers,
+    hostname = run_opts.hostname,
+  }
+end
+
 M.api = {
   graphql = M.graphql,
+  get = function(opts)
+    return rest("GET", opts)
+  end,
+  post = function(opts)
+    return rest("POST", opts)
+  end,
+  patch = function(opts)
+    return rest("PATCH", opts)
+  end,
+  delete = function(opts)
+    return rest("DELETE", opts)
+  end,
 }
+
+setmetatable(M.api, {
+  __call = function(_, opts)
+    return rest(nil, opts)
+  end,
+})
 
 local create_subcommand = function(command)
   local subcommand = {}
