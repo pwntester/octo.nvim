@@ -1319,36 +1319,36 @@ function M.save_pr(opts)
   end
 end
 
-function M.pr_ready_for_review()
+--- Change PR state to ready for review or draft
+--- @param opts table
+--- @field undo boolean Whether to undo from ready to draft
+local change_to_ready = function(opts)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then
     return
   end
-  gh.run {
-    args = { "pr", "ready", tostring(buffer.number) },
-    cb = function(output, stderr)
-      utils.info(output)
-      utils.error(stderr)
-      writers.write_state(bufnr)
-    end,
+
+  gh.pr.ready {
+    buffer.number,
+    undo = opts.undo,
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          utils.info(output)
+          writers.write_state(bufnr)
+        end,
+      },
+    },
   }
 end
 
+function M.pr_ready_for_review()
+  change_to_ready { undo = false }
+end
+
 function M.pr_draft()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-  gh.run {
-    args = { "pr", "ready", tostring(buffer.number), "--undo" },
-    cb = function(output, stderr)
-      utils.info(output)
-      utils.error(stderr)
-      writers.write_state(bufnr)
-    end,
-  }
+  change_to_ready { undo = true }
 end
 
 function M.pr_checks()
