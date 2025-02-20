@@ -1334,10 +1334,12 @@ local change_to_ready = function(opts)
     undo = opts.undo,
     opts = {
       cb = gh.create_callback {
-        success = function(output)
+        -- There seems to be something wrong with the CLI output. It comes back as stderr
+        failure = function(output)
           utils.info(output)
           writers.write_state(bufnr)
         end,
+        success = utils.error,
       },
     },
   }
