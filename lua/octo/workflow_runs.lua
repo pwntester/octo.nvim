@@ -81,21 +81,6 @@ local M = {
   wf_cache = {},
 }
 
-local function get_repo_name()
-  local result = vim.system({ "gh", "repo", "view", "--json", "nameWithOwner" }, { text = true }):wait()
-
-  if result.code ~= 0 then
-    error("Failed to execute 'gh repo view': " .. (result.stderr or "Unknown error"))
-  end
-
-  local ok, decoded = pcall(vim.json.decode, result.stdout)
-  if not ok or not decoded or not decoded.nameWithOwner then
-    error "Failed to parse repository name from 'gh repo view' output"
-  end
-
-  return decoded.nameWithOwner
-end
-
 ---@return string | nil
 local function get_job_highlight(status, conclusion)
   if status == "queued" then
@@ -300,7 +285,7 @@ end
 
 local function get_logs(id)
   vim.notify "Fetching workflow logs (this may take a while) ..."
-  local reponame = get_repo_name()
+  local reponame = utils.get_remote_name()
   local cmd = {
     "gh",
     "api",
