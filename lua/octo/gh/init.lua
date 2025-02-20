@@ -204,12 +204,19 @@ end
 ---Insert the options into the args table
 ---@param args table the arguments table
 ---@param options table the options to insert
+---@param replace table key value pairs to replace in the key of the options
 ---@return table the updated args table
-M.insert_args = function(args, options)
+M.insert_args = function(args, options, replace)
+  replace = replace or {}
+
   for key, value in pairs(options) do
     if type(key) == "number" then
       table.insert(args, value)
     else
+      for k, v in pairs(replace) do
+        key = string.gsub(key, k, v)
+      end
+
       local flag = create_flag(key)
 
       if type(value) == "table" then
@@ -297,7 +304,7 @@ local create_subcommand = function(command)
         }
 
         opts.opts = nil
-        args = M.insert_args(args, opts)
+        args = M.insert_args(args, opts, { ["_"] = "-" })
 
         return M.run {
           args = args,
