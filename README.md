@@ -481,6 +481,8 @@ Octo search assignee:pwntester is:pr
 
 Octo provides a built-in omnifunc completion for issues, PRs and users that you can trigger using `<C-x><C-o>`. Alternately, if you use [`nvim-cmp`](https://github.com/hrsh7th/nvim-cmp) or [`blink.cmp`](https://github.com/Saghen/blink.cmp) for completion, you can use the [`cmp-git`](https://github.com/petertriho/cmp-git/) or [`blink-cmp-git`](https://github.com/Kaiser-Yang/blink-cmp-git) source to provide issues, PRs, commits and users completion.
 
+Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-emoji.nvim`](https://github.com/moyiz/blink-emoji.nvim) to get markdown emoji completion.
+
 ## 🎨 Colors
 
 | Highlight Group                   | Linked To          |
