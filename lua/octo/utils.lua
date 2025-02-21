@@ -329,17 +329,17 @@ end
 ---@param milestone_name string milestone name
 function M.add_milestone(issue, number, milestone_name)
   local command = issue and "issue" or "pr"
-  local args = { command, "edit", number, "--milestone", milestone_name }
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        M.info("Added milestone " .. milestone_name)
-      end
-    end,
+  gh[command].edit {
+    number,
+    milestone = milestone_name,
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info("Added milestone " .. milestone_name)
+        end,
+      },
+    },
   }
 end
 
@@ -348,17 +348,17 @@ end
 ---@param number number issue or PR number
 function M.remove_milestone(issue, number)
   local command = issue and "issue" or "pr"
-  local args = { command, "edit", number, "--remove-milestone" }
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        M.info "Removed milestone"
-      end
-    end,
+  gh[command].edit {
+    number,
+    remove_milestone = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info "Removed milestone"
+        end,
+      },
+    },
   }
 end
 
