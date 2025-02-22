@@ -374,29 +374,21 @@ function M.create_milestone(title, description)
 
   local owner, name = M.split_repo(M.get_remote_name())
   local endpoint = string.format("repos/%s/%s/milestones", owner, name)
-  local args = { "api", "--method", "POST", endpoint }
 
-  local data = {
-    title = title,
-    description = description,
-    state = "open",
-  }
-
-  for key, value in pairs(data) do
-    table.insert(args, "-f")
-    table.insert(args, string.format("%s=%s", key, value))
-  end
-
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        M.info("Created milestone " .. resp.title)
-      end
-    end,
+  gh.api.post {
+    endpoint,
+    f = {
+      title = title,
+      description = description,
+      state = "open",
+    },
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info("Created milestone " .. title)
+        end,
+      },
+    },
   }
 end
 
