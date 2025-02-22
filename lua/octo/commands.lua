@@ -1319,9 +1319,11 @@ function M.save_pr(opts)
   end
 end
 
---- Change PR state to ready for review or draft
---- @param opts table
+--- @class PRReadyOpts
 --- @field undo boolean Whether to undo from ready to draft
+
+--- Change PR state to ready for review or draft
+--- @param opts PRReadyOpts
 M.gh_pr_ready = function(opts)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
