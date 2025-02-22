@@ -318,8 +318,12 @@ M.api = {
   delete = function(opts)
     return rest("DELETE", opts)
   end,
+  put = function(opts)
+    return rest("PUT", opts)
+  end,
 }
 
+---Call the api without specifying the method. GitHub CLI determines the method based on the arguments
 setmetatable(M.api, {
   __call = function(_, opts)
     return rest(nil, opts)
