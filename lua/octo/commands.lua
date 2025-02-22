@@ -1326,6 +1326,7 @@ local change_to_ready = function(opts)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then
+    utils.error "Not a PR buffer"
     return
   end
 
