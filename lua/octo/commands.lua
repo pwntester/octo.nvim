@@ -247,10 +247,10 @@ function M.setup()
         M.pr_checks()
       end,
       ready = function()
-        M.pr_ready_for_review()
+        M.gh_pr_ready { undo = false }
       end,
       draft = function()
-        M.pr_draft()
+        M.gh_pr_ready { undo = true }
       end,
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
@@ -1319,35 +1319,32 @@ function M.save_pr(opts)
   end
 end
 
-function M.pr_ready_for_review()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-  gh.run {
-    args = { "pr", "ready", tostring(buffer.number) },
-    cb = function(output, stderr)
-      utils.info(output)
-      utils.error(stderr)
-      writers.write_state(bufnr)
-    end,
-  }
-end
+--- @class PRReadyOpts
+--- @field undo boolean Whether to undo from ready to draft
 
-function M.pr_draft()
+--- Change PR state to ready for review or draft
+--- @param opts PRReadyOpts
+M.gh_pr_ready = function(opts)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then
+    utils.error "Not a PR buffer"
     return
   end
-  gh.run {
-    args = { "pr", "ready", tostring(buffer.number), "--undo" },
-    cb = function(output, stderr)
-      utils.info(output)
-      utils.error(stderr)
-      writers.write_state(bufnr)
-    end,
+
+  gh.pr.ready {
+    buffer.number,
+    undo = opts.undo,
+    opts = {
+      cb = gh.create_callback {
+        -- There seems to be something wrong with the CLI output. It comes back as stderr
+        failure = function(output)
+          utils.info(output)
+          writers.write_state(bufnr)
+        end,
+        success = utils.error,
+      },
+    },
   }
 end
 
