@@ -1354,45 +1354,49 @@ function M.pr_checks()
   if not buffer or not buffer:isPullRequest() then
     return
   end
-  gh.run {
-    args = { "pr", "checks", tostring(buffer.number), "-R", buffer.repo },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local max_lengths = {}
-        local parts = {}
-        for _, l in pairs(vim.split(output, "\n")) do
-          local line_parts = vim.split(l, "\t")
-          for i, p in pairs(line_parts) do
-            if max_lengths[i] == nil or max_lengths[i] < #p then
-              max_lengths[i] = #p
-            end
-          end
-          table.insert(parts, line_parts)
-        end
-        local lines = {}
-        for _, p in pairs(parts) do
-          local line = {}
-          for i, pp in pairs(p) do
-            table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
-          end
-          table.insert(lines, table.concat(line, "  "))
-        end
-        local _, wbufnr = window.create_centered_float {
-          header = "Checks",
-          content = lines,
-        }
-        local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
-        for i, l in ipairs(buf_lines) do
-          if #vim.split(l, "pass") > 1 then
-            vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoPassingTest", i - 1, 0, -1)
-          elseif #vim.split(l, "fail") > 1 then
-            vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoFailingTest", i - 1, 0, -1)
-          end
+
+  local show_checks = function(output)
+    local max_lengths = {}
+    local parts = {}
+    for _, l in pairs(vim.split(output, "\n")) do
+      local line_parts = vim.split(l, "\t")
+      for i, p in pairs(line_parts) do
+        if max_lengths[i] == nil or max_lengths[i] < #p then
+          max_lengths[i] = #p
         end
       end
-    end,
+      table.insert(parts, line_parts)
+    end
+    local lines = {}
+    for _, p in pairs(parts) do
+      local line = {}
+      for i, pp in pairs(p) do
+        table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
+      end
+      table.insert(lines, table.concat(line, "  "))
+    end
+    local _, wbufnr = window.create_centered_float {
+      header = "Checks",
+      content = lines,
+    }
+    local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
+    for i, l in ipairs(buf_lines) do
+      if #vim.split(l, "pass") > 1 then
+        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoPassingTest", i - 1, 0, -1)
+      elseif #vim.split(l, "fail") > 1 then
+        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoFailingTest", i - 1, 0, -1)
+      end
+    end
+  end
+
+  gh.pr.checks {
+    buffer.number,
+    repo = buffer.repo,
+    opts = {
+      cb = gh.create_callback {
+        success = show_checks,
+      },
+    },
   }
 end
 
