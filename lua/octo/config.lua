@@ -214,6 +214,7 @@ function M.get_default_values()
         expand_step = { lhs = "o", desc = "expand workflow step" },
         open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
         refresh = { lhs = "<C-r>", desc = "refresh workflow" },
+        copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       },
       issue = {
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },
