@@ -529,7 +529,7 @@ local function format_node(node)
     or ""
 
   local indent = string.rep(" ", node.indent)
-  local preIcon = node.type ~= "step_log" and (node.expanded == true and "> " or "> ") or ""
+  local preIcon = node.type ~= "step_log" and (node.expanded == true and "∨ " or "> ") or ""
   local formatted = string.format("%s%s%s %s", indent, preIcon, node.display, status)
   return formatted
 end
