@@ -669,7 +669,7 @@ M.previewer = function(self, entry)
 end
 
 M.list = function()
-  vim.notify "Fetching workflow runs (this may take a while) ..."
+  utils.info "Fetching workflow runs (this may take a while) ..."
   local co = coroutine.running()
   local wf_runs = get_workflow_runs_sync(co)
 
