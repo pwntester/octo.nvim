@@ -1009,7 +1009,12 @@ function M.change_state(state)
     local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
     writers.write_state(bufnr, updated_state:upper(), buffer.number)
     writers.write_details(bufnr, obj, true)
-    local kind = "Issue" and buffer:isIssue() or "Pull Request"
+    local kind
+    if buffer:isIssue() then
+      kind = "Issue"
+    else
+      kind = "Pull Request"
+    end
     utils.info(kind .. " state changed to: " .. updated_state)
   end
 
