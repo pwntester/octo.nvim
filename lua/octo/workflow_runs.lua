@@ -613,15 +613,18 @@ end
 
 local workflow_limit = 100
 
+local run_list_fields = "conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId"
+
 local function get_workflow_runs_sync(co)
   local lines = {}
-  vim.fn.jobstart(
-    "gh run list --json conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId -L "
-      .. workflow_limit,
-    {
-      stdout_buffered = true,
-      on_stdout = function(_, data)
-        local json = vim.fn.json_decode(table.concat(data))
+  gh.run {
+    args = { "run", "list", "--json", run_list_fields, "-L", workflow_limit },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        vim.api.nvim_err_writeln(stderr)
+        octo_error "Failed to get workflow runs"
+      elseif output then
+        local json = vim.fn.json_decode(output)
         for _, value in ipairs(json) do
           local status = value.status == "queued" and icons.pending
             or value.status == "in_progress" and icons.in_progress
@@ -644,12 +647,10 @@ local function get_workflow_runs_sync(co)
           }
           table.insert(lines, wf_run)
         end
-      end,
-      on_exit = function()
-        coroutine.resume(co)
-      end,
-    }
-  )
+      end
+      coroutine.resume(co)
+    end,
+  }
   coroutine.yield()
   return lines
 end
