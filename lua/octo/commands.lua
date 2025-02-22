@@ -247,10 +247,10 @@ function M.setup()
         M.pr_checks()
       end,
       ready = function()
-        M.pr_ready_for_review()
+        M.gh_pr_ready { undo = false }
       end,
       draft = function()
-        M.pr_draft()
+        M.gh_pr_ready { undo = true }
       end,
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
@@ -1322,7 +1322,7 @@ end
 --- Change PR state to ready for review or draft
 --- @param opts table
 --- @field undo boolean Whether to undo from ready to draft
-local change_to_ready = function(opts)
+M.gh_pr_ready = function(opts)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then
@@ -1344,14 +1344,6 @@ local change_to_ready = function(opts)
       },
     },
   }
-end
-
-function M.pr_ready_for_review()
-  change_to_ready { undo = false }
-end
-
-function M.pr_draft()
-  change_to_ready { undo = true }
 end
 
 function M.pr_checks()
