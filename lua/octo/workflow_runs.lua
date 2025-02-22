@@ -369,9 +369,36 @@ local keymaps = {
   end,
 }
 
+local function find_parent(tree, target_id)
+  if not tree or not tree.children then
+    return nil
+  end
+
+  for _, child in pairs(tree.children) do
+    if child.id == target_id then
+      return tree
+    end
+    local parent = find_parent(child, target_id)
+    if parent then
+      return parent
+    end
+  end
+
+  return nil
+end
+
 local tree_keymaps = {
   ---@param node WorkflowNode
   [mappings.expand_step.lhs] = function(node)
+    if node.type == "step_log" and not next(node.children) then
+      local parent = find_parent(M.tree, node.id)
+      if parent then
+        parent.expanded = false
+        M.refresh()
+        return
+      end
+    end
+
     if node.expanded == false then
       node.expanded = true
       if node.type == "step" then
