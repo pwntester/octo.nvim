@@ -130,6 +130,17 @@ function M.create_callback(opts)
   end
 end
 
+---@class RunOpts
+---@field args table
+---@field mode string
+---@field cb fun(stdout: string, stderr: string)
+---@field stream_cb fun(stdout: string, stderr: string)
+---@field headers table
+---@field hostname string
+
+---Run a gh command
+---@param opts RunOpts
+---@return string[]|nil
 function M.run(opts)
   if not Job then
     return
