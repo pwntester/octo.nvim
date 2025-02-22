@@ -309,9 +309,9 @@ local function get_logs(id)
 
     local sanitized_name = node.id:gsub("/", ""):gsub(":", ""):gsub(">", "")
     --Make more than 3 consecutive dots at the end of line into ...
-    local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.%.%.%.+$", "...")
+    local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
-    local path = vim.fs.normalize(vim.fs.joinpath(sanitized_job_id, file_name))
+    local path = sanitized_job_id .. file_name
     local res = vim
       .system({
         "unzip",
