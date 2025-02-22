@@ -673,7 +673,7 @@ M.list = function()
   local co = coroutine.running()
   local wf_runs = get_workflow_runs_sync(co)
 
-  require("octo.pickers.telescope.provider").workflow_runs(wf_runs, "Workflow runs", render)
+  require("octo.picker").workflow_runs(wf_runs, "Workflow runs", render)
 end
 
 M.refetch = function()

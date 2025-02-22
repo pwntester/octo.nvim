@@ -1496,6 +1496,7 @@ M.picker = {
   notifications = M.notifications,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
+  workflow_runs = M.workflow_runs,
   project_cards_v2 = M.not_implemented,
   project_columns = M.select_target_project_column,
   project_columns_v2 = M.not_implemented,
