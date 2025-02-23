@@ -3,7 +3,6 @@ local mappings = require("octo.config").values.mappings.runs
 local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
-local octo_error = require("octo.utils").error
 local gh = require "octo.gh"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
@@ -264,7 +263,7 @@ local function write_zipped_file(stdout)
   local zip_location = get_temp_filepath()
   local file = io.open(zip_location, "wb")
   if not file then
-    octo_error "Failed to create temporary file"
+    utils.error "Failed to create temporary file"
     return
   end
 
@@ -278,14 +277,14 @@ local function write_zipped_file(stdout)
       end)
 
       if not unlink_success then
-        octo_error("Error deleting logs archive: " .. unlink_error)
+        utils.error("Error deleting logs archive: " .. unlink_error)
       end
     end
   --TODO: return handler for deleting file
 end
 
 local function get_logs(id)
-  vim.notify "Fetching workflow logs (this may take a while) ..."
+  utils.info "Fetching workflow logs (this may take a while) ..."
   local reponame = utils.get_remote_name()
   local cmd = {
     "gh",
@@ -295,7 +294,7 @@ local function get_logs(id)
   local out = vim.system(cmd):wait()
 
   if out.code ~= 0 then
-    octo_error("Failed to fetch logs: " .. (out.stderr or "Unknown error"))
+    utils.error("Failed to fetch logs: " .. (out.stderr or "Unknown error"))
     return
   end
 
@@ -322,7 +321,7 @@ local function get_logs(id)
       :wait()
 
     if res.code ~= 0 then
-      octo_error("Failed to extract logs for " .. node.id)
+      utils.error("Failed to extract logs for " .. node.id)
     end
 
     local lines = vim.tbl_filter(function(i)
@@ -355,7 +354,7 @@ end
 local keymaps = {
   ---@param api Handler
   [mappings.refresh.lhs] = function(api)
-    vim.notify "refreshing..."
+    utils.info "refreshing..."
     api.refetch()
   end,
   [mappings.open_in_browser.lhs] = function(api)
@@ -404,7 +403,7 @@ local tree_keymaps = {
       if node.type == "step" then
         -- only refresh logs aggressively if step is in_progress
         if node.conclusion == "in_progress" then
-          octo_error "Cant view logs of running workflow..."
+          utils.error "Cant view logs of running workflow..."
           return
         end
         if not next(node.children) then
@@ -525,7 +524,7 @@ local function update_job_details(id)
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
-        octo_error("Failed to get workflow run for " .. id)
+        utils.error("Failed to get workflow run for " .. id)
       elseif output then
         job_details = vim.fn.json_decode(output)
         M.wf_cache[id] = job_details
@@ -654,7 +653,7 @@ local function get_workflow_runs_sync(co)
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
-        octo_error "Failed to get workflow runs"
+        utils.error "Failed to get workflow runs"
       elseif output then
         local json = vim.fn.json_decode(output)
         for _, value in ipairs(json) do
