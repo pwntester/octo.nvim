@@ -308,7 +308,8 @@ local function get_logs(id)
     --Make more than 3 consecutive dots at the end of line into */. This avoids a bug with unreliable filename endings
     local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
-    local path = sanitized_job_id .. file_name
+    local path = vim.fs.joinpath(sanitized_job_id, file_name)
+    print(path)
     local res = vim
       .system({
         "unzip",
@@ -516,20 +517,23 @@ local function update_job_details(id)
     return
   end
 
-  gh.run {
-    args = { "run", "view", id, "--json", fields },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-        utils.error("Failed to get workflow run for " .. id)
-      elseif output then
-        job_details = vim.fn.json_decode(output)
-        M.wf_cache[id] = job_details
-        M.current_wf = job_details
-        M.tree = generate_workflow_tree(job_details)
-        M.refresh()
-      end
-    end,
+  gh.run.view {
+    id,
+    json = fields,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+          utils.error("Failed to get workflow run for " .. id)
+        elseif output then
+          job_details = vim.fn.json_decode(output)
+          M.wf_cache[id] = job_details
+          M.current_wf = job_details
+          M.tree = generate_workflow_tree(job_details)
+          M.refresh()
+        end
+      end,
+    },
   }
 end
 
