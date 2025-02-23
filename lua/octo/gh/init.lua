@@ -141,7 +141,7 @@ end
 ---Run a gh command
 ---@param opts RunOpts
 ---@return string[]|nil
-function M.run(opts)
+local function run(opts)
   if not Job then
     return
   end
@@ -284,7 +284,7 @@ end
 ---@return table|nil
 function M.graphql(opts)
   local run_opts = opts.opts or {}
-  return M.run {
+  return run {
     args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
     mode = run_opts.mode,
     cb = run_opts.cb,
@@ -305,7 +305,7 @@ local rest = function(method, opts)
   opts.opts = nil
   args = M.insert_args(args, opts)
 
-  M.run {
+  run {
     args = args,
     mode = run_opts.mode,
     cb = run_opts.cb,
@@ -346,6 +346,11 @@ local create_subcommand = function(command)
   subcommand.command = command
 
   setmetatable(subcommand, {
+    __call = function(_, opts)
+      if command == "run" then
+        return run(opts)
+      end
+    end,
     __index = function(t, key)
       return function(opts)
         opts = opts or {}
@@ -360,7 +365,7 @@ local create_subcommand = function(command)
         opts.opts = nil
         args = M.insert_args(args, opts, { ["_"] = "-" })
 
-        return M.run {
+        return run {
           args = args,
           mode = run_opts.mode,
           cb = run_opts.cb,
