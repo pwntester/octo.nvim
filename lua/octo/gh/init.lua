@@ -279,10 +279,13 @@ local create_graphql_args = function(query, fields, paginate, slurp, jq)
   return M.insert_args(args, opts)
 end
 
+--- The gh.api commands
+M.api = {}
+
 ---Run a graphql query
 ---@param opts table the options for the graphql query
 ---@return table|nil
-function M.graphql(opts)
+function M.api.graphql(opts)
   local run_opts = opts.opts or {}
   return run {
     args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
@@ -315,24 +318,25 @@ local rest = function(method, opts)
   }
 end
 
-M.api = {
-  graphql = M.graphql,
-  get = function(opts)
-    return rest("GET", opts)
-  end,
-  post = function(opts)
-    return rest("POST", opts)
-  end,
-  patch = function(opts)
-    return rest("PATCH", opts)
-  end,
-  delete = function(opts)
-    return rest("DELETE", opts)
-  end,
-  put = function(opts)
-    return rest("PUT", opts)
-  end,
-}
+M.api.get = function(opts)
+  return rest("GET", opts)
+end
+
+M.api.post = function(opts)
+  return rest("POST", opts)
+end
+
+M.api.patch = function(opts)
+  return rest("PATCH", opts)
+end
+
+M.api.delete = function(opts)
+  return rest("DELETE", opts)
+end
+
+M.api.put = function(opts)
+  return rest("PUT", opts)
+end
 
 ---Call the api without specifying the method. GitHub CLI determines the method based on the arguments
 setmetatable(M.api, {
