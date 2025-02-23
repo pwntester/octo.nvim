@@ -943,8 +943,8 @@ query {
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
 M.repository_id_query = [[
-query {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
     id
   }
 }
@@ -954,8 +954,8 @@ query {
 -- https://docs.github.com/en/graphql/reference/objects#issuetemplate
 -- https://docs.github.com/en/graphql/reference/objects#pullrequesttemplate
 M.repository_templates_query = [[
-query {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
     issueTemplates { body about name title  }
     pullRequestTemplates { body filename }
   }
@@ -1667,8 +1667,8 @@ query($endCursor: String) {
 ]]
 
 M.repository_query = [[
-query {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
     id
     nameWithOwner
     description
@@ -1854,8 +1854,8 @@ M.create_pr_mutation = [[
 
 -- https://docs.github.com/en/graphql/reference/queries#user
 M.user_query = [[
-query {
-  user(login:"%s") {
+query($login: String!) {
+  user(login: $login) {
     id
   }
 }
@@ -1863,8 +1863,8 @@ query {
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.repo_labels_query = [[
-query {
-  repository(owner:"%s", name:"%s") {
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
     labels(first: 100) {
       ...LabelConnectionFragment
     }
