@@ -297,16 +297,50 @@ function M.api.graphql(opts)
   }
 end
 
-local rest = function(method, opts)
-  local run_opts = opts.opts or {}
+---Format the endpoint with the format table
+---@param endpoint string the endpoint to format
+---@param format table<key, value> the format table
+local format_endpoint = function(endpoint, format)
+  for key, value in pairs(format) do
+    endpoint = endpoint:gsub("{" .. key .. "}", value)
+  end
+  return endpoint
+end
+
+---@param method string the rest method
+---@param opts table the options for the rest command
+---@return table|nil
+M.create_rest_args = function(method, opts)
+  local format = opts.format or {}
+
+  local endpoint = opts[1]
+  if not endpoint then
+    return
+  end
+  endpoint = format_endpoint(endpoint, format)
+  opts[1] = endpoint
+
   local args = { "api" }
   if method ~= nil then
     table.insert(args, "--method")
     table.insert(args, method)
   end
 
+  opts.format = nil
   opts.opts = nil
-  args = M.insert_args(args, opts)
+  return M.insert_args(args, opts)
+end
+
+---Run a rest command
+local rest = function(method, opts)
+  local run_opts = opts.opts or {}
+
+  local args = M.create_rest_args(method, opts)
+  if not args then
+    local utils = require "octo.utils"
+    utils.error "Endpoint is required"
+    return
+  end
 
   run {
     args = args,
