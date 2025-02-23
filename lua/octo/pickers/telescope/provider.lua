@@ -522,7 +522,7 @@ end
 
 local function get_search_size(prompt)
   local query = graphql("search_count_query", prompt)
-  return gh.graphql {
+  return gh.api.graphql {
     query = query,
     jq = ".data.search.issueCount",
     opts = {
@@ -1391,7 +1391,7 @@ function M.discussions(opts)
   local query = graphql "discussions_query"
   utils.info "Fetching discussions (this may take a while) ..."
 
-  gh.graphql {
+  gh.api.graphql {
     query = query,
     fields = {
       owner = owner,
@@ -1418,7 +1418,7 @@ function M.milestones(opts)
   local owner, name = utils.split_repo(repo)
   local query = graphql "open_milestones_query"
 
-  gh.graphql {
+  gh.api.graphql {
     query = query,
     fields = {
       owner = owner,
