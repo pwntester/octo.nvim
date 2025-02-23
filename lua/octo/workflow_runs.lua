@@ -646,43 +646,42 @@ local workflow_limit = 100
 
 local run_list_fields = "conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId"
 
-local function get_workflow_runs_sync(co)
+local function get_workflow_runs_sync()
   local lines = {}
-  gh.run {
-    args = { "run", "list", "--json", run_list_fields, "-L", workflow_limit },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-        utils.error "Failed to get workflow runs"
-      elseif output then
-        local json = vim.fn.json_decode(output)
-        for _, value in ipairs(json) do
-          local status = value.status == "queued" and icons.pending
-            or value.status == "in_progress" and icons.in_progress
-            or value.conclusion == "failure" and icons.failed
-            or icons.succeeded
-
-          local conclusion = value.conclusion == "skipped" and icons.skipped
-            or value.conclusion == "failure" and icons.failed
-            or ""
-
-          local wf_run = {
-            status = status,
-            title = value.displayTitle,
-            display = value.displayTitle .. " " .. conclusion,
-            value = value.databaseId,
-            branch = value.headBranch,
-            name = value.name,
-            age = utils.format_date(value.updatedAt),
-            id = value.databaseId,
-          }
-          table.insert(lines, wf_run)
-        end
-      end
-      coroutine.resume(co)
-    end,
+  local output, stderr = gh.run.list {
+    json = run_list_fields,
+    limit = workflow_limit,
+    opts = { mode = "sync" },
   }
-  coroutine.yield()
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to get workflow runs"
+  elseif output then
+    local json = vim.fn.json_decode(output)
+    for _, value in ipairs(json) do
+      local status = value.status == "queued" and icons.pending
+        or value.status == "in_progress" and icons.in_progress
+        or value.conclusion == "failure" and icons.failed
+        or icons.succeeded
+
+      local conclusion = value.conclusion == "skipped" and icons.skipped
+        or value.conclusion == "failure" and icons.failed
+        or ""
+
+      local wf_run = {
+        status = status,
+        title = value.displayTitle,
+        display = value.displayTitle .. " " .. conclusion,
+        value = value.databaseId,
+        branch = value.headBranch,
+        name = value.name,
+        age = utils.format_date(value.updatedAt),
+        id = value.databaseId,
+      }
+      table.insert(lines, wf_run)
+    end
+  end
+
   return lines
 end
 
@@ -702,8 +701,7 @@ end
 
 M.list = function()
   utils.info "Fetching workflow runs (this may take a while) ..."
-  local co = coroutine.running()
-  local wf_runs = get_workflow_runs_sync(co)
+  local wf_runs = get_workflow_runs_sync()
 
   require("octo.picker").workflow_runs(wf_runs, "Workflow runs", render)
 end
