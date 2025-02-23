@@ -347,6 +347,7 @@ local create_subcommand = function(command)
 
   setmetatable(subcommand, {
     __call = function(_, opts)
+      --- Allow for backwards compatibility with the old API gh.run { ... }
       if command == "run" then
         return run(opts)
       end
