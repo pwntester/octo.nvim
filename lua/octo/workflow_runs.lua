@@ -257,7 +257,6 @@ local function get_temp_filepath(length)
   return vim.fs.joinpath(vim.fs.normalize(vim.fn.stdpath "cache"), name)
 end
 
--- Accepts zip contents and writes and then unzips them
 ---@param stdout string - The zip content to write
 local function write_zipped_file(stdout)
   local zip_location = get_temp_filepath()
@@ -280,7 +279,6 @@ local function write_zipped_file(stdout)
         utils.error("Error deleting logs archive: " .. unlink_error)
       end
     end
-  --TODO: return handler for deleting file
 end
 
 local function get_logs(id)
@@ -307,7 +305,7 @@ local function get_logs(id)
     end
 
     local sanitized_name = node.id:gsub("/", ""):gsub(":", ""):gsub(">", "")
-    --Make more than 3 consecutive dots at the end of line into ...
+    --Make more than 3 consecutive dots at the end of line into */. This avoids a bug with unreliable filename endings
     local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
     local path = sanitized_job_id .. file_name
@@ -401,7 +399,6 @@ local tree_keymaps = {
     if node.expanded == false then
       node.expanded = true
       if node.type == "step" then
-        -- only refresh logs aggressively if step is in_progress
         if node.conclusion == "in_progress" then
           utils.error "Cant view logs of running workflow..."
           return
