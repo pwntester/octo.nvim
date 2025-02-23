@@ -742,27 +742,27 @@ end
 function M.get_repo_templates(repo)
   if repo_templates_cache[repo] then
     return repo_templates_cache[repo]
-  else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_templates_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
-    local resp = vim.json.decode(output)
-    local templates = resp.data.repository
-
-    -- add an option to not use a template
-    table.insert(templates.issueTemplates, {
-      name = "DO NOT USE A TEMPLATE",
-      about = "Create issue with no template",
-      title = "",
-      body = "",
-    })
-
-    repo_templates_cache[repo] = templates
-    return templates
   end
+
+  local owner, name = M.split_repo(repo)
+  local query = graphql("repository_templates_query", owner, name)
+  local output = gh.api.graphql {
+    query = query,
+    jq = ".data.repository",
+    opts = { mode = "sync" },
+  }
+  local templates = vim.json.decode(output)
+
+  -- add an option to not use a template
+  table.insert(templates.issueTemplates, {
+    name = "DO NOT USE A TEMPLATE",
+    about = "Create issue with no template",
+    title = "",
+    body = "",
+  })
+
+  repo_templates_cache[repo] = templates
+  return templates
 end
 
 ---Helper method to aggregate an API paginated response
