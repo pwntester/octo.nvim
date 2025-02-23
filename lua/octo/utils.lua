@@ -698,18 +698,18 @@ end
 function M.get_repo_id(repo)
   if repo_id_cache[repo] then
     return repo_id_cache[repo]
-  else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_id_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
-    local resp = vim.json.decode(output)
-    local id = resp.data.repository.id
-    repo_id_cache[repo] = id
-    return id
   end
+
+  local owner, name = M.split_repo(repo)
+  local query = graphql "repository_id_query"
+  local id = gh.api.graphql {
+    query = query,
+    fields = { owner = owner, name = name },
+    jq = ".data.repository.id",
+    opts = { mode = "sync" },
+  }
+  repo_id_cache[repo] = id
+  return id
 end
 
 -- Checks if the current cwd is in a git repo
@@ -724,18 +724,19 @@ end
 function M.get_repo_info(repo)
   if repo_info_cache[repo] then
     return repo_info_cache[repo]
-  else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
-    local resp = vim.json.decode(output)
-    local info = resp.data.repository
-    repo_info_cache[repo] = info
-    return info
   end
+
+  local owner, name = M.split_repo(repo)
+  local query = graphql "repository_query"
+  local output = gh.api.graphql {
+    query = query,
+    fields = { owner = owner, name = name },
+    jq = ".data.repository",
+    opts = { mode = "sync" },
+  }
+  local info = vim.json.decode(output)
+  repo_info_cache[repo] = info
+  return info
 end
 
 ---Gets repo's templates
@@ -745,9 +746,10 @@ function M.get_repo_templates(repo)
   end
 
   local owner, name = M.split_repo(repo)
-  local query = graphql("repository_templates_query", owner, name)
+  local query = graphql "repository_templates_query"
   local output = gh.api.graphql {
     query = query,
+    fields = { owner = owner, name = name },
     jq = ".data.repository",
     opts = { mode = "sync" },
   }
@@ -1525,17 +1527,20 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
 end
 
 function M.get_user_id(login)
-  local query = graphql("user_query", login)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  local query = graphql "user_query"
+
+  local id = gh.api.graphql {
+    query = query,
+    fields = { login = login },
+    jq = ".data.user.id",
+    opts = { mode = "sync" },
   }
-  if output then
-    local resp = vim.json.decode(output)
-    if resp.data.user and resp.data.user ~= vim.NIL then
-      return resp.data.user.id
-    end
+
+  if id == "" then
+    return
   end
+
+  return id
 end
 
 function M.get_label_id(label)
@@ -1547,21 +1552,23 @@ function M.get_label_id(label)
   end
 
   local owner, name = M.split_repo(buffer.repo)
-  local query = graphql("repo_labels_query", owner, name)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  local query = graphql "repo_labels_query"
+  local jq = ([[
+    .data.repository.labels.nodes
+    | map(select(.name == "{label}"))
+    | .[0].id
+  ]]):gsub("{label}", label)
+  local id = gh.api.graphql {
+    query = query,
+    fields = { owner = owner, name = name },
+    jq = jq,
+    opts = { mode = "sync" },
   }
-  if output then
-    local resp = vim.json.decode(output)
-    if resp.data.repository.labels.nodes and resp.data.repository.labels.nodes ~= vim.NIL then
-      for _, l in ipairs(resp.data.repository.labels.nodes) do
-        if l.name == label then
-          return l.id
-        end
-      end
-    end
+  if id == "" then
+    return
   end
+
+  return id
 end
 
 --- Generate maps from diffhunk line to code line:
