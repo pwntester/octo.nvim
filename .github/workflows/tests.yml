@@ -23,6 +23,8 @@ jobs:
           path: _neovim
           key: ${{ runner.os }}-${{ matrix.url }}-${{ hashFiles('todays-date') }}
       - name: Prepare
+        env: 
+          GH_TOKEN: ${{ github.token }}
         run: |
           ${{ matrix.manager }} update
           ${{ matrix.manager }} install ${{ matrix.packages }}
