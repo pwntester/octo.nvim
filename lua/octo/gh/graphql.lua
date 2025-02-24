@@ -891,9 +891,9 @@ query($endCursor: String) {
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    issueOrPullRequest(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issueOrPullRequest(number: $number) {
       __typename
     }
   }
@@ -1076,9 +1076,9 @@ query(
 ]] .. fragments.discussion_info
 
 M.discussion_query = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
-    discussion(number: %d) {
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    discussion(number: $number) {
       ...DiscussionDetailsFragment
       labels(first: 20) {
         ...LabelConnectionFragment

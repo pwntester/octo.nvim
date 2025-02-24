@@ -257,7 +257,6 @@ local function get_temp_filepath(length)
   return vim.fs.joinpath(vim.fs.normalize(vim.fn.stdpath "cache"), name)
 end
 
--- Accepts zip contents and writes and then unzips them
 ---@param stdout string - The zip content to write
 local function write_zipped_file(stdout)
   local zip_location = get_temp_filepath()
@@ -280,7 +279,6 @@ local function write_zipped_file(stdout)
         utils.error("Error deleting logs archive: " .. unlink_error)
       end
     end
-  --TODO: return handler for deleting file
 end
 
 local function get_logs(id)
@@ -307,10 +305,11 @@ local function get_logs(id)
     end
 
     local sanitized_name = node.id:gsub("/", ""):gsub(":", ""):gsub(">", "")
-    --Make more than 3 consecutive dots at the end of line into ...
+    --Make more than 3 consecutive dots at the end of line into */. This avoids a bug with unreliable filename endings
     local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
-    local path = sanitized_job_id .. file_name
+    local path = vim.fs.joinpath(sanitized_job_id, file_name)
+    print(path)
     local res = vim
       .system({
         "unzip",
@@ -401,7 +400,6 @@ local tree_keymaps = {
     if node.expanded == false then
       node.expanded = true
       if node.type == "step" then
-        -- only refresh logs aggressively if step is in_progress
         if node.conclusion == "in_progress" then
           utils.error "Cant view logs of running workflow..."
           return
@@ -519,20 +517,23 @@ local function update_job_details(id)
     return
   end
 
-  gh.run {
-    args = { "run", "view", id, "--json", fields },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-        utils.error("Failed to get workflow run for " .. id)
-      elseif output then
-        job_details = vim.fn.json_decode(output)
-        M.wf_cache[id] = job_details
-        M.current_wf = job_details
-        M.tree = generate_workflow_tree(job_details)
-        M.refresh()
-      end
-    end,
+  gh.run.view {
+    id,
+    json = fields,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          vim.api.nvim_err_writeln(stderr)
+          utils.error("Failed to get workflow run for " .. id)
+        elseif output then
+          job_details = vim.fn.json_decode(output)
+          M.wf_cache[id] = job_details
+          M.current_wf = job_details
+          M.tree = generate_workflow_tree(job_details)
+          M.refresh()
+        end
+      end,
+    },
   }
 end
 
@@ -646,43 +647,42 @@ local workflow_limit = 100
 
 local run_list_fields = "conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId"
 
-local function get_workflow_runs_sync(co)
+local function get_workflow_runs_sync()
   local lines = {}
-  gh.run {
-    args = { "run", "list", "--json", run_list_fields, "-L", workflow_limit },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-        utils.error "Failed to get workflow runs"
-      elseif output then
-        local json = vim.fn.json_decode(output)
-        for _, value in ipairs(json) do
-          local status = value.status == "queued" and icons.pending
-            or value.status == "in_progress" and icons.in_progress
-            or value.conclusion == "failure" and icons.failed
-            or icons.succeeded
-
-          local conclusion = value.conclusion == "skipped" and icons.skipped
-            or value.conclusion == "failure" and icons.failed
-            or ""
-
-          local wf_run = {
-            status = status,
-            title = value.displayTitle,
-            display = value.displayTitle .. " " .. conclusion,
-            value = value.databaseId,
-            branch = value.headBranch,
-            name = value.name,
-            age = utils.format_date(value.updatedAt),
-            id = value.databaseId,
-          }
-          table.insert(lines, wf_run)
-        end
-      end
-      coroutine.resume(co)
-    end,
+  local output, stderr = gh.run.list {
+    json = run_list_fields,
+    limit = workflow_limit,
+    opts = { mode = "sync" },
   }
-  coroutine.yield()
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to get workflow runs"
+  elseif output then
+    local json = vim.fn.json_decode(output)
+    for _, value in ipairs(json) do
+      local status = value.status == "queued" and icons.pending
+        or value.status == "in_progress" and icons.in_progress
+        or value.conclusion == "failure" and icons.failed
+        or icons.succeeded
+
+      local conclusion = value.conclusion == "skipped" and icons.skipped
+        or value.conclusion == "failure" and icons.failed
+        or ""
+
+      local wf_run = {
+        status = status,
+        title = value.displayTitle,
+        display = value.displayTitle .. " " .. conclusion,
+        value = value.databaseId,
+        branch = value.headBranch,
+        name = value.name,
+        age = utils.format_date(value.updatedAt),
+        id = value.databaseId,
+      }
+      table.insert(lines, wf_run)
+    end
+  end
+
   return lines
 end
 
@@ -702,8 +702,7 @@ end
 
 M.list = function()
   utils.info "Fetching workflow runs (this may take a while) ..."
-  local co = coroutine.running()
-  local wf_runs = get_workflow_runs_sync(co)
+  local wf_runs = get_workflow_runs_sync()
 
   require("octo.picker").workflow_runs(wf_runs, "Workflow runs", render)
 end
