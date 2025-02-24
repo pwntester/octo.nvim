@@ -109,6 +109,74 @@ describe("insert_args:", function()
   end)
 end)
 
+local tables_have_same_elements = function(t1, t2)
+  if #t1 ~= #t2 then
+    return false
+  end
+  for _, v in ipairs(t1) do
+    if not vim.tbl_contains(t2, v) then
+      return false
+    end
+  end
+  for _, v in ipairs(t2) do
+    if not vim.tbl_contains(t1, v) then
+      return false
+    end
+  end
+  return true
+end
+
+local assert_tables_have_same_elements = function(t1, t2)
+  assert(
+    tables_have_same_elements(t1, t2),
+    string.format("Expected tables to have the same elements:\n%s\n%s", vim.inspect(t1), vim.inspect(t2))
+  )
+end
+
+describe("REST API args", function()
+  it("no args", function()
+    local actual = gh.create_rest_args(nil, {})
+    eq(actual, nil)
+  end)
+  it("Endpoint is required", function()
+    local actual = gh.create_rest_args(nil, { format = { owner = "pwntester" }, json = "id", jq = ".id" })
+    eq(actual, nil)
+  end)
+  it("Returns table with untouched endpoint", function()
+    local actual = gh.create_rest_args("GET", {
+      "repos/pwntester/octo.nvim/pulls",
+      jq = ".[].number",
+      paginate = true,
+    })
+    assert_tables_have_same_elements(actual, {
+      "api",
+      "--method",
+      "GET",
+      "repos/pwntester/octo.nvim/pulls",
+      "--jq",
+      ".[].number",
+      "--paginate",
+    })
+  end)
+  it("Returns table with formated endpoint", function()
+    local actual = gh.create_rest_args("GET", {
+      "repos/{owner}/{name}/pulls",
+      format = { owner = "pwntester", name = "octo.nvim" },
+      jq = ".[].number",
+      paginate = true,
+    })
+    assert_tables_have_same_elements(actual, {
+      "api",
+      "--method",
+      "GET",
+      "repos/pwntester/octo.nvim/pulls",
+      "--jq",
+      ".[].number",
+      "--paginate",
+    })
+  end)
+end)
+
 describe("create_graphql_opts:", function()
   local query = "example query"
   local login = "pwntester"
