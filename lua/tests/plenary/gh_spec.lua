@@ -113,6 +113,22 @@ describe("create_graphql_opts:", function()
   local query = "example query"
   local login = "pwntester"
   local repo = "octo.nvim"
+  local jq = ".data.user.login"
+
+  it("previous behavior", function()
+    local actual = gh.create_graphql_opts {
+      query = query,
+      fields = { login = login, repo = repo },
+      jq = jq,
+    }
+
+    eq(actual.f.query, query)
+    eq(actual.query, nil)
+    eq(actual.F.login, login)
+    eq(actual.F.repo, repo)
+    eq(actual.fields, nil)
+    eq(actual.jq, jq)
+  end)
 
   it("query added to f", function()
     local actual = gh.create_graphql_opts {
