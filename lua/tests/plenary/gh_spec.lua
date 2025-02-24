@@ -130,6 +130,13 @@ describe("create_graphql_opts:", function()
     eq(actual.jq, jq)
   end)
 
+  it("query is required", function()
+    local actual = gh.create_graphql_opts {
+      f = { login = login },
+    }
+    eq(actual, nil)
+  end)
+
   it("query added to f", function()
     local actual = gh.create_graphql_opts {
       query = query,
