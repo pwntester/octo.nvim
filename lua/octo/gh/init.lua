@@ -256,27 +256,41 @@ M.insert_args = function(args, options, replace)
   return args
 end
 
+---@class GraphQLOpts
+---@field query string|nil
+---@field fields table|nil
+---@field paginate boolean|nil
+---@field slurp boolean|nil
+---@field F table|nil field
+---@field f table|nil raw-field
+---@field jq string|nil
+
 ---Create the arguments for the graphql query
----@param query string the graphql query
----@param fields table key value pairs for graphql query
----@param paginate boolean whether to paginate the results
----@param slurp boolean whether to slurp the results
----@param jq string the jq query to apply to the results
----@return table
-local create_graphql_args = function(query, fields, paginate, slurp, jq)
+---@param opts GraphQLOpts
+---@return table|nil
+M.create_graphql_args = function(opts)
   local args = { "api", "graphql" }
 
-  local opts = {
-    f = {
-      query = query,
-    },
-    F = fields,
-    paginate = paginate,
-    slurp = slurp,
-    jq = jq,
-  }
+  -- add query to the existing raw-field
+  local f = opts.f or {}
+  local query = opts.query or f.query
+  if not query then
+    return
+  end
+  opts.query = nil
 
-  return M.insert_args(args, opts)
+  f.query = query
+  opts.f = f
+
+  -- Join F and fields together
+  local F = opts.F or {}
+  local fields = opts.fields or {}
+
+  opts.fields = nil
+
+  opts.F = vim.tbl_extend("force", F, fields)
+
+  return M.insert_args(args, opts, { ["_"] = "-" })
 end
 
 --- The gh.api commands
@@ -286,9 +300,20 @@ M.api = {}
 ---@param opts table the options for the graphql query
 ---@return table|nil
 function M.api.graphql(opts)
+  opts = opts or {}
   local run_opts = opts.opts or {}
+
+  opts.opts = nil
+  local args = M.create_graphql_args(opts)
+
+  if not args then
+    local utils = require "octo.utils"
+    utils.error "Provide query directly or in the f table."
+    return
+  end
+
   return run {
-    args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
+    args = args,
     mode = run_opts.mode,
     cb = run_opts.cb,
     stream_cb = run_opts.stream_cb,
