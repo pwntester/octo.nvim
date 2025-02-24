@@ -51,6 +51,7 @@ FileEntry.__index = FileEntry
 FileEntry.winopts = {
   foldmethod = "diff",
   foldlevel = 0,
+  cursorlineopt = "number", -- disable cursorline due to Neovim bug https://github.com/neovim/neovim/issues/9800
 }
 
 ---FileEntry constructor
