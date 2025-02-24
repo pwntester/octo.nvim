@@ -174,7 +174,8 @@ describe("REST API args", function()
       ".[].number",
       "--paginate",
     })
-
+  end)
+end)
 
 describe("create_graphql_opts:", function()
   local query = "example query"
