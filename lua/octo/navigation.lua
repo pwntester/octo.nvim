@@ -118,22 +118,23 @@ function M.go_to_issue()
     return
   end
   local owner, name = utils.split_repo(repo)
-  local query = graphql("issue_kind_query", owner, name, number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local kind = resp.data.repository.issueOrPullRequest.__typename
-        if kind == "Issue" then
-          utils.get_issue(number, repo)
-        elseif kind == "PullRequest" then
-          utils.get_pull_request(number, repo)
-        end
-      end
-    end,
+
+  gh.api.graphql {
+    query = graphql "issue_kind_query",
+    fields = { owner = owner, name = name, number = number },
+    jq = ".data.repository.issueOrPullRequest.__typename",
+    opts = {
+      cb = gh.create_callback {
+        failure = vim.api.nvim_err_writeln,
+        success = function(kind)
+          if kind == "Issue" then
+            utils.get_issue(number, repo)
+          elseif kind == "PullRequest" then
+            utils.get_pull_request(number, repo)
+          end
+        end,
+      },
+    },
   }
 end
 
