@@ -28,7 +28,7 @@ jobs:
           ${{ matrix.manager }} update
           ${{ matrix.manager }} install ${{ matrix.packages }}
           latest_version=$(gh release list --limit 1 --repo neovim/neovim --exclude-drafts --exclude-pre-releases --json tagName --jq '.[0].tagName')
-          url="https://github.com/neovim/neovim/releases/download/$latest_version/nvim-linux-arm64.tar.gz"
+          url="https://github.com/neovim/neovim/releases/download/$latest_version/nvim-linux-x86_64.tar.gz"
           test -d _neovim || {
             mkdir -p _neovim
             curl -sL $url | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
