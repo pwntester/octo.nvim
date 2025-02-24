@@ -268,9 +268,7 @@ end
 ---Create the arguments for the graphql query
 ---@param opts GraphQLOpts
 ---@return table|nil
-M.create_graphql_args = function(opts)
-  local args = { "api", "graphql" }
-
+M.create_graphql_opts = function(opts)
   -- add query to the existing raw-field
   local f = opts.f or {}
   local query = opts.query or f.query
@@ -290,7 +288,7 @@ M.create_graphql_args = function(opts)
 
   opts.F = vim.tbl_extend("force", F, fields)
 
-  return M.insert_args(args, opts, { ["_"] = "-" })
+  return opts
 end
 
 --- The gh.api commands
@@ -304,13 +302,16 @@ function M.api.graphql(opts)
   local run_opts = opts.opts or {}
 
   opts.opts = nil
-  local args = M.create_graphql_args(opts)
+  local graphql_opts = M.create_graphql_opts(opts)
 
-  if not args then
+  if not graphql_opts then
     local utils = require "octo.utils"
     utils.error "Provide query directly or in the f table."
     return
   end
+
+  local args = { "api", "graphql" }
+  args = M.insert_args(args, graphql_opts, { ["_"] = "-" })
 
   return run {
     args = args,

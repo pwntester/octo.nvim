@@ -109,6 +109,43 @@ describe("insert_args:", function()
   end)
 end)
 
+describe("create_graphql_opts:", function()
+  local query = "example query"
+  local login = "pwntester"
+  local repo = "octo.nvim"
+
+  it("query added to f", function()
+    local actual = gh.create_graphql_opts {
+      query = query,
+      f = { login = login },
+    }
+    eq(actual.f.query, query)
+    eq(actual.query, nil)
+    --- Stays the same
+    eq(actual.f.login, login)
+  end)
+
+  it("fields appended to F", function()
+    local actual = gh.create_graphql_opts {
+      query = query,
+      fields = { login = login },
+      F = { repo = repo },
+    }
+    eq(actual.F.login, login)
+    eq(actual.F.repo, repo)
+    eq(actual.fields, nil)
+  end)
+
+  it("other fields stay", function()
+    local actual = gh.create_graphql_opts {
+      query = query,
+      raw_field = { login = login },
+      F = { repo = repo },
+    }
+    eq(actual.raw_field.login, login)
+  end)
+end)
+
 describe("CLI commands", function()
   it("gh.<something> returns table", function()
     local commands = {
