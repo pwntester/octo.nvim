@@ -370,6 +370,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | view                                              | Open a repo by path ({organization}/{name})                                                                                                            |
 | gist     | list [repo] [key=value] (4)                       | List user gists                                                                                                                                        |
 | comment  | add                                               | Add a new comment                                                                                                                                      |
+|          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
 | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
@@ -407,6 +408,8 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
+| discussion   | list [repo]                                          | List open discussions for current or specified repo |
+|    | create [repo]                                          | Create discussion for current or specified repo |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

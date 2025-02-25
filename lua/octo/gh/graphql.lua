@@ -891,9 +891,9 @@ query($endCursor: String) {
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind_query = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    issueOrPullRequest(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issueOrPullRequest(number: $number) {
       __typename
     }
   }
@@ -1075,10 +1075,40 @@ query(
 }
 ]] .. fragments.discussion_info
 
+M.discussion_categories_query = [[
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    discussionCategories(first: 20) {
+      nodes {
+        id
+        name
+        emoji
+      }
+    }
+  }
+}
+]]
+
+M.create_discussion_mutation = [[
+mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
+  createDiscussion(input: {
+    repositoryId: $repo_id,
+    categoryId: $category_id,
+    title: $title,
+    body: $body
+  }) {
+    discussion {
+      id
+      url
+    }
+  }
+}
+]]
+
 M.discussion_query = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
-    discussion(number: %d) {
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    discussion(number: $number) {
       ...DiscussionDetailsFragment
       labels(first: 20) {
         ...LabelConnectionFragment
@@ -1701,6 +1731,7 @@ query($owner: String!, $name: String!) {
     isMirror
     mirrorUrl
     hasProjectsEnabled
+    hasDiscussionsEnabled
     projectsUrl
     homepageUrl
     primaryLanguage {

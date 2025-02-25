@@ -722,9 +722,8 @@ function M.get_repo_info(repo)
   end
 
   local owner, name = M.split_repo(repo)
-  local query = graphql "repository_query"
   local output = gh.api.graphql {
-    query = query,
+    query = graphql "repository_query",
     fields = { owner = owner, name = name },
     jq = ".data.repository",
     opts = { mode = "sync" },
@@ -1789,6 +1788,21 @@ function M.get_icon(entry)
   end
 
   return M.icons.unknown
+end
+
+--
+M.copy_url = function(url, register)
+  register = register or "+"
+  vim.fn.setreg(register, url, "c")
+  M.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+end
+
+M.input = function(opts)
+  vim.fn.inputsave()
+  local value = vim.fn.input(opts)
+  vim.fn.inputrestore()
+
+  return value
 end
 
 return M

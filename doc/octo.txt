@@ -81,6 +81,14 @@ See |octo-command-examples| for examples.
                         system clipboard.
 
 
+:Octo discussion [action] {args}                *octo-commands-discussion*
+
+  list [repo]           Lists all open discussions for the current or specified repo.
+                        In-menu mappings: 
+                          <C-y>   Copy URL to system clipboard.
+  create [repo]         Creates a new discussion for the current or specified repo.
+
+
 :Octo repo [action]                             *octo-commands-repo*
 
   list                  Lists repos the user owns, contributes, or belongs to.
@@ -102,6 +110,7 @@ See |octo-command-examples| for examples.
 :Octo comment [action]                          *octo-commands-comment*
 
   add                   Add a new comment.
+  suggest               Add a new suggestion.
   delete                Delete a comment.
 
 
