@@ -15,13 +15,11 @@ return function(opts)
     return
   end
 
-  local query, key
+  local query ---@type string
   if buffer:isIssue() then
     query = graphql("issue_labels_query", buffer.owner, buffer.name, buffer.number)
-    key = "issue"
   elseif buffer:isPullRequest() then
     query = graphql("pull_request_labels_query", buffer.owner, buffer.name, buffer.number)
-    key = "pullRequest"
   end
 
   local get_contents = function(fzf_cb)
@@ -31,8 +29,13 @@ return function(opts)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.json.decode(output)
-          local labels = resp.data.repository[key].labels.nodes
+          local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
+          local labels ---@type octo.gh.Label[]
+          if buffer:isIssue() then
+            labels = resp.data.repository.issue.labels.nodes
+          elseif buffer:isPullRequest() then
+            labels = resp.data.repository.pullRequest.labels.nodes
+          end
 
           for _, label in ipairs(labels) do
             local colored_name = picker_utils.color_string_with_hex(label.name, "#" .. label.color)

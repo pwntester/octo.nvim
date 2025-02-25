@@ -61,7 +61,7 @@ return function(opts)
           utils.error(err)
           fzf_cb()
         elseif data then
-          local resp = utils.aggregate_pages(data, "data.repository.pullRequests.nodes")
+          local resp = utils.aggregate_pages(data, "data.repository.pullRequests.nodes") ---@type {data: {repository: octo.gh.Repository}}
           local pull_requests = resp.data.repository.pullRequests.nodes
 
           for _, pull in ipairs(pull_requests) do
@@ -69,7 +69,7 @@ return function(opts)
 
             if entry ~= nil then
               formatted_pulls[entry.ordinal] = entry
-              local highlight
+              local highlight ---@type string
               if entry.obj.isDraft then
                 highlight = "OctoSymbol"
               else

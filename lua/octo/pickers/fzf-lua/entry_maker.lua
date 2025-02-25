@@ -3,29 +3,30 @@ local fzf = require "fzf-lua"
 
 local M = {}
 
----@param issue_table table
+---@param issue octo.gh.Issue | octo.gh.PullRequest
 ---@return table|nil
-function M.gen_from_issue(issue_table)
-  if not issue_table or vim.tbl_isempty(issue_table) then
+function M.gen_from_issue(issue)
+  if not issue or vim.tbl_isempty(issue) then
     return nil
   end
-  local kind = issue_table.__typename == "Issue" and "issue" or "pull_request"
+  local kind = issue.__typename == "Issue" and "issue" or "pull_request"
   local filename ---@type string
   if kind == "issue" then
-    filename = utils.get_issue_uri(issue_table.number, issue_table.repository.nameWithOwner)
+    filename = utils.get_issue_uri(issue.number, issue.repository.nameWithOwner)
   else
-    filename = utils.get_pull_request_uri(issue_table.number, issue_table.repository.nameWithOwner)
+    filename = utils.get_pull_request_uri(issue.number, issue.repository.nameWithOwner)
   end
   return {
     filename = filename,
     kind = kind,
-    value = issue_table.number,
-    ordinal = issue_table.number .. " " .. issue_table.title,
-    obj = issue_table,
-    repo = issue_table.repository.nameWithOwner,
+    value = issue.number,
+    ordinal = issue.number .. " " .. issue.title,
+    obj = issue,
+    repo = issue.repository.nameWithOwner,
   }
 end
 
+---@return table|nil
 function M.gen_from_git_commits(entry)
   if not entry then
     return nil
@@ -43,6 +44,7 @@ function M.gen_from_git_commits(entry)
   }
 end
 
+---@return table|nil
 function M.gen_from_git_changed_files(entry)
   if not entry then
     return nil
@@ -56,7 +58,8 @@ function M.gen_from_git_changed_files(entry)
   }
 end
 
-function M.gen_from_review_thread(linenr_length, thread)
+---@return table|nil
+function M.gen_from_review_thread(thread)
   if not thread or vim.tbl_isempty(thread) then
     return nil
   end
@@ -68,6 +71,8 @@ function M.gen_from_review_thread(linenr_length, thread)
   }
 end
 
+---@param project octo.gh.Project
+---@return table|nil
 function M.gen_from_project(project)
   if not project or vim.tbl_isempty(project) then
     return nil
@@ -80,6 +85,8 @@ function M.gen_from_project(project)
   }
 end
 
+---@param column octo.gh.ProjectColumn
+---@return table|nil
 function M.gen_from_project_column(column)
   if not column or vim.tbl_isempty(column) then
     return nil
@@ -91,6 +98,8 @@ function M.gen_from_project_column(column)
   }
 end
 
+---@param card octo.gh.ProjectCard
+---@return table|nil
 function M.gen_from_project_card(card)
   if not card or vim.tbl_isempty(card) then
     return nil
@@ -103,6 +112,8 @@ function M.gen_from_project_card(card)
   }
 end
 
+---@param project octo.gh.ProjectV2
+---@return table|nil
 function M.gen_from_project_v2(project)
   if not project or vim.tbl_isempty(project) then
     return nil
@@ -124,6 +135,7 @@ function M.gen_from_project_v2(project)
   }
 end
 
+---@return table|nil
 function M.gen_from_project_v2_column(column)
   if not column or vim.tbl_isempty(column) then
     return nil
@@ -135,6 +147,8 @@ function M.gen_from_project_v2_column(column)
   }
 end
 
+---@param label octo.gh.Label
+---@return table|nil
 function M.gen_from_label(label)
   if not label or vim.tbl_isempty(label) then
     return nil
@@ -147,6 +161,8 @@ function M.gen_from_label(label)
   }
 end
 
+---@param team octo.gh.Team
+---@return table|nil
 function M.gen_from_team(team)
   if not team or vim.tbl_isempty(team) then
     return nil
@@ -159,6 +175,8 @@ function M.gen_from_team(team)
   }
 end
 
+---@param user octo.gh.User
+---@return table|nil
 function M.gen_from_user(user)
   if not user or vim.tbl_isempty(user) then
     return nil
@@ -171,16 +189,15 @@ function M.gen_from_user(user)
   }
 end
 
---[[
-  Generates an entry from a raw repo table.
-
-  TODO use these in Phase 2. Repo is not a part of the first change.
-
-  @param max_nameWithOwner Length of longest name + owner string.
-  @param max_forkCount Length of longest fork count string.
-  @param max_stargazerCount Length of longest stargazer count string.
-  @param repo The raw repo table from GitHub.
-]]
+---Generates an entry from a raw repo table.
+---
+--TODO use these in Phase 2. Repo is not a part of the first change.
+--@param max_nameWithOwner integer Length of longest name + owner string.
+--@param max_forkCount integer Length of longest fork count string.
+--@param max_stargazerCount integer Length of longest stargazer count string.
+---@param repo octo.gh.Repository The raw repo table from GitHub.
+---@return table|nil entry
+---@return string|nil entry_str
 function M.gen_from_repo(repo)
   if not repo or vim.tbl_isempty(repo) then
     return nil, nil
@@ -220,6 +237,8 @@ function M.gen_from_repo(repo)
   return entry, entry_str
 end
 
+---@param gist octo.gh.Gist
+---@return table|nil
 function M.gen_from_gist(gist)
   if not gist or vim.tbl_isempty(gist) then
     return

@@ -168,7 +168,7 @@ function M.issues(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
+        local resp = utils.aggregate_pages(output, "data.repository.issues.nodes") ---@type {data: {repository: octo.gh.Repository}}
         local issues = resp.data.repository.issues.nodes
         if #issues == 0 then
           utils.error(string.format("There are no matching issues in %s.", opts.repo))
@@ -243,7 +243,7 @@ function M.gists(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
+        local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes") ---@type {data: {viewer: octo.gh.User}}
         local gists = resp.data.viewer.gists.nodes
         opts.preview_title = opts.preview_title or ""
         opts.prompt_title = opts.prompt_title or ""
@@ -315,7 +315,7 @@ function M.pull_requests(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
+        local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes") ---@type {data: {repository: octo.gh.Repository}}
         local pull_requests = resp.data.repository.pullRequests.nodes
         if #pull_requests == 0 then
           utils.error(string.format("There are no matching pull requests in %s.", opts.repo))
@@ -520,6 +520,8 @@ local function get_search_query(prompt)
   }
 end
 
+---@param prompt string
+---@return string|nil
 local function get_search_size(prompt)
   local query = graphql("search_count_query", prompt)
   return gh.api.graphql {
@@ -564,7 +566,7 @@ function M.search(opts)
           mode = "sync",
         }
         if output then
-          local resp = vim.json.decode(output)
+          local resp = vim.json.decode(output) ---@type {data: {search: {nodes: octo.gh.Issue[]}}}
           for _, issue in ipairs(resp.data.search.nodes) do
             table.insert(results, issue)
           end
@@ -711,13 +713,16 @@ function M.select_target_project_column(cb)
     cb = function(output)
       if output then
         local resp = vim.json.decode(output)
-        local projects = {}
-        local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
-        local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
-        local org_projects = not resp.errors and resp.data.organization.projects.nodes or {}
-        vim.list_extend(projects, repo_projects)
-        vim.list_extend(projects, user_projects)
-        vim.list_extend(projects, org_projects)
+        local projects = {} ---@type octo.gh.Project[]
+        if resp.data.user then
+          vim.list_extend(projects, resp.data.user.projects.nodes)
+        end
+        if resp.data.repository then
+          vim.list_extend(projects, resp.data.repository.projects.nodes)
+        end
+        if not resp.errors then
+          vim.list_extend(projects, resp.data.organization.projects.nodes)
+        end
         if #projects == 0 then
           utils.error(string.format("There are no matching projects for %s.", buffer.repo))
           return
@@ -809,7 +814,7 @@ function M.select_label(opts)
   opts = vim.tbl_deep_extend("force", dropdown_opts, opts)
 
   local create_picker = function(output)
-    local labels = vim.json.decode(output)
+    local labels = vim.json.decode(output) ---@type octo.gh.Label[]
 
     pickers
       .new(opts, {
@@ -858,7 +863,7 @@ function M.select_assigned_label(opts)
     return
   end
 
-  local query, key
+  local query, key ---@type string, string
   if buffer:isIssue() then
     query = graphql("issue_labels_query", buffer.owner, buffer.name, buffer.number)
     key = "issue"
@@ -919,13 +924,13 @@ local function get_user_requester()
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    if output then
+    if not output then
       return {}
     end
 
-    local users = {}
-    local orgs = {}
-    local responses = utils.get_pages(output)
+    local users = {} ---@type table<string, {id: string, login: string, name: string | vim.NIL}>
+    local orgs = {} ---@type table<string, {id: string, login: string, teams: octo.gh.Team[]}>
+    local responses = utils.get_pages(output) ---@type {data: {search: {nodes: (octo.gh.User | octo.gh.Organization)[]}}}[]
     for _, resp in ipairs(responses) do
       for _, user in ipairs(resp.data.search.nodes) do
         if not user.teams then
@@ -965,6 +970,8 @@ local function get_user_requester()
   end
 end
 
+---@param query_name string
+---@param node_name string
 local function get_users(query_name, node_name)
   local repo = utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
@@ -977,12 +984,12 @@ local function get_users(query_name, node_name)
     return {}
   end
 
-  local responses = utils.get_pages(output)
+  local responses = utils.get_pages(output) ---@type {data: {repository: octo.gh.Repository}}[]
 
-  local users = {}
+  local users = {} ---@type octo.gh.User[]
 
   for _, resp in ipairs(responses) do
-    local nodes = resp.data.repository[node_name].nodes
+    local nodes = resp.data.repository[node_name].nodes ---@type octo.gh.User[]
     for _, user in ipairs(nodes) do
       table.insert(users, {
         id = user.id,
@@ -1102,8 +1109,13 @@ function M.select_assignee(cb)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
-        local assignees = resp.data.repository[key].assignees.nodes
+        local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
+        local assignees ---@type octo.gh.User[]
+        if buffer:isIssue() then
+          assignees = resp.data.repository.issue.assignees.nodes
+        elseif buffer:isPullRequest() then
+          assignees = resp.data.repository.pullRequest.assignees.nodes
+        end
         pickers
           .new(opts, {
             finder = finders.new_table {
@@ -1148,7 +1160,7 @@ function M.repos(opts)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
+        local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes") ---@type {data: {repositoryOwner: octo.gh.RepositoryOwner}}
         local repos = resp.data.repositoryOwner.repositories.nodes
         if #repos == 0 then
           utils.error(string.format("There are no matching repositories for %s.", opts.login))

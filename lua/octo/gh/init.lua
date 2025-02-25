@@ -140,7 +140,7 @@ end
 
 ---Run a gh command
 ---@param opts RunOpts
----@return string[]|nil
+---@return string|nil
 local function run(opts)
   if not Job then
     return
@@ -296,7 +296,7 @@ M.api = {}
 
 ---Run a graphql query
 ---@param opts table the options for the graphql query
----@return table|nil
+---@return string|nil
 function M.api.graphql(opts)
   opts = opts or {}
   local run_opts = opts.opts or {}

@@ -19,9 +19,9 @@ return function(cb)
       mode = "sync",
     }
     if output then
-      local users = {}
-      local orgs = {}
-      local responses = utils.get_pages(output)
+      local users = {} ---@type table<string, {id: string, login: string}>
+      local orgs = {} ---@type table<string, {id: string, login: string, teams: octo.gh.Team[]}>
+      local responses = utils.get_pages(output) ---@type {data: {search: {nodes: (octo.gh.User | octo.gh.Organization)[]}}}[]
       for _, resp in ipairs(responses) do
         for _, user in ipairs(resp.data.search.nodes) do
           if not user.teams then

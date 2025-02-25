@@ -15,8 +15,8 @@ local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local vim = vim
 
-_G.octo_repo_issues = {}
-_G.octo_buffers = {}
+_G.octo_repo_issues = {} ---@type table<string, {number: integer, title: string}> repo -> issues_metadata
+_G.octo_buffers = {} ---@type table<integer, OctoBuffer> buffer -> OctoBuffer
 _G.octo_colors_loaded = false
 
 local M = {}
@@ -128,9 +128,13 @@ function M.load_buffer(opts)
   end)
 end
 
+---@param repo string
+---@param kind string
+---@param number integer
+---@param cb function
 function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
-  local query, key
+  local query, key ---@type string, string
 
   if kind == "pull" then
     query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
@@ -184,12 +188,12 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.json.decode(output)
-          local reactions = {}
+          local resp = vim.json.decode(output) ---@type {data: {node: {reactionGroups: octo.gh.ReactionGroup[]}}}
+          local reactions = {} ---@type table<octo.gh.ReactionContent, string[]>
           local reactionGroups = resp.data.node.reactionGroups
           for _, reactionGroup in ipairs(reactionGroups) do
             local users = reactionGroup.users.nodes
-            local logins = {}
+            local logins = {} ---@type string[]
             for _, user in ipairs(users) do
               table.insert(logins, user.login)
             end
@@ -220,7 +224,7 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.json.decode(output)
+          local resp = vim.json.decode(output) ---@type {data: {user: octo.gh.User}}
           local user = resp.data.user
           local popup_bufnr = vim.api.nvim_create_buf(false, true)
           local lines, max_length = writers.write_user_profile(popup_bufnr, user)
@@ -248,7 +252,7 @@ function M.on_cursor_hold()
       if stderr and not utils.is_blank(stderr) then
         vim.api.nvim_err_writeln(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
         local issue = resp.data.repository.issueOrPullRequest
         local popup_bufnr = vim.api.nvim_create_buf(false, true)
         local max_length = 80
@@ -263,13 +267,17 @@ function M.on_cursor_hold()
   }
 end
 
+---@param kind string
+---@param obj {number: integer, id: string}
+---@param repo string
+---@param create boolean
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
     utils.error("Cannot find " .. repo)
     return
   end
 
-  local bufnr
+  local bufnr ---@type integer
   if create then
     bufnr = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_set_current_buf(bufnr)

@@ -42,6 +42,7 @@ function M.bufferPreviewer:update_border(title)
   self.win:update_preview_scrollbar()
 end
 
+---@param formatted_issues table<string, table>
 M.issue = function(formatted_issues)
   local previewer = M.bufferPreviewer:extend()
 
@@ -70,8 +71,8 @@ M.issue = function(formatted_issues)
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.json.decode(output)
-          local obj
+          local result = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
+          local obj ---@type octo.gh.Issue | octo.gh.PullRequest | vim.NIL
           if entry.kind == "issue" then
             obj = result.data.repository.issue
           elseif entry.kind == "pull_request" then
@@ -129,8 +130,8 @@ M.search = function()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local result = vim.json.decode(output)
-          local obj
+          local result = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
+          local obj ---@type octo.gh.Issue | octo.gh.PullRequest | vim.NIL
           if kind == "issue" then
             obj = result.data.repository.issue
           elseif kind == "pull_request" then
@@ -319,7 +320,7 @@ M.repo = function(formatted_repos)
         -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
         -- and `tmpbuf` within this context is already cleared and invalidated
         if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local resp = vim.json.decode(output)
+          local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
           buffer.node = resp.data.repository
           buffer:render_repo()
         end

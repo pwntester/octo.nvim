@@ -10,13 +10,11 @@ return function(cb)
   if not buffer then
     return
   end
-  local query, key
+  local query ---@type string
   if buffer:isIssue() then
     query = graphql("issue_assignees_query", buffer.owner, buffer.name, buffer.number)
-    key = "issue"
   elseif buffer:isPullRequest() then
     query = graphql("pull_request_assignees_query", buffer.owner, buffer.name, buffer.number)
-    key = "pullRequest"
   end
 
   local get_contents = function(fzf_cb)
@@ -26,8 +24,13 @@ return function(cb)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.json.decode(output)
-          local assignees = resp.data.repository[key].assignees.nodes
+          local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
+          local assignees ---@type octo.gh.Assignee[]
+          if buffer:isIssue() then
+            assignees = resp.data.repository.issue.assignees.nodes
+          elseif buffer:isPullRequest() then
+            assignees = resp.data.repository.pullRequest.assignees.nodes
+          end
 
           for _, user in ipairs(assignees) do
             fzf_cb(string.format("%s %s", user.id, user.login))

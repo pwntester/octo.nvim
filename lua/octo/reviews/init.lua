@@ -13,7 +13,7 @@ local ReviewThread = require("octo.reviews.thread").ReviewThread
 ---@class Review
 ---@field repo string
 ---@field number integer
----@field id integer
+---@field id string
 ---@field threads table[]
 ---@field files FileEntry[]
 ---@field layout Layout
@@ -37,6 +37,7 @@ function Review:new(pull_request)
 end
 
 -- Creates a new review
+---@param callback fun(resp: {data: {addPullRequestReview: octo.gh.AddPullRequestReviewPayload}})
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
   gh.run {
@@ -45,7 +46,7 @@ function Review:create(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {addPullRequestReview: octo.gh.AddPullRequestReviewPayload}}
         callback(resp)
       end
     end,
@@ -63,6 +64,7 @@ function Review:start()
 end
 
 -- Retrieves existing review
+---@param callback fun(resp: {data: {repository: octo.gh.Repository}})
 function Review:retrieve(callback)
   local query =
     graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
@@ -72,7 +74,7 @@ function Review:retrieve(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
         callback(resp)
       end
     end,
@@ -204,7 +206,7 @@ function Review:discard()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.json.decode(output)
+        local resp = vim.json.decode(output) ---@type {data: {repository: octo.gh.Repository}}
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
           utils.error "No pending reviews found"
           return
@@ -234,6 +236,7 @@ function Review:discard()
   }
 end
 
+---@param threads octo.gh.PullRequestReviewThread[]
 function Review:update_threads(threads)
   self.threads = {}
   for _, thread in ipairs(threads) do
@@ -451,7 +454,7 @@ end
 
 local M = {}
 
-M.reviews = {}
+M.reviews = {} ---@type table<string, Review>
 
 M.Review = Review
 
