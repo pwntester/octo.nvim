@@ -119,3 +119,48 @@ describe("Utils parse_remote_url(): ", function()
     eq(expected, this.parse_remote_url(url, ssh_aliases))
   end)
 end)
+describe("get_pages", function()
+  it("handles empty single page", function()
+    local text = "[]"
+    local actual = this.get_pages(text)
+
+    eq(actual, { {} })
+  end)
+  it("handles multiple pages", function()
+    local text = vim.trim [[
+      [1,2,3]
+      [4,5,6]
+      [7,8,9]
+    ]]
+
+    local actual = this.get_pages(text)
+    eq(actual, { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } })
+  end)
+end)
+describe("get_flatten_pages", function()
+  it("handles empty single page", function()
+    local text = "[]"
+    local actual = this.get_flatten_pages(text)
+
+    eq(actual, {})
+  end)
+  it("handles multiple list pages", function()
+    local text = vim.trim [[
+      [1,2,3]
+      [4,5,6]
+      [7,8,9]
+    ]]
+    local actual = this.get_flatten_pages(text)
+
+    eq(actual, { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
+  end)
+  it("handles multiple json pages", function()
+    local text = vim.trim [[
+      [{"a": 1},{"b": 2, "name": "foo"}]
+      [{"c": 3}]
+      [{"d": 4}]
+    ]]
+    local actual = this.get_flatten_pages(text)
+    eq(actual, { { a = 1 }, { b = 2, name = "foo" }, { c = 3 }, { d = 4 } })
+  end)
+end)
