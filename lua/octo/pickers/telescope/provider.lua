@@ -1396,7 +1396,7 @@ function M.discussions(opts)
     opts = {
       cb = gh.create_callback {
         success = function(output)
-          local discussions = utils.concatenate_pages(output)
+          local discussions = utils.get_flatten_pages(output)
           create_discussion_picker(discussions)
         end,
       },

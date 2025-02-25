@@ -776,10 +776,6 @@ function M.callback_per_page(text, cb)
   return results
 end
 
-function M.concatenate_pages(text)
-  return M.callback_per_page(text, vim.list_extend)
-end
-
 ---Helper method to aggregate an API paginated response
 ---@param text string
 ---@return table[]
@@ -789,12 +785,7 @@ end
 
 --- Helper method to aggregate an API paginated response
 function M.get_flatten_pages(text)
-  local callback = function(results, page)
-    for _, result in ipairs(page) do
-      table.insert(results, result)
-    end
-  end
-  return M.callback_per_page(text, callback)
+  return M.callback_per_page(text, vim.list_extend)
 end
 
 --- Helper method to aggregate an API paginated response
