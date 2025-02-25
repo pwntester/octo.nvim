@@ -383,12 +383,21 @@ function M.setup()
     },
     comment = {
       add = function()
-        local current_review = require("octo.reviews").get_current_review()
+        local current_review = reviews.get_current_review()
         if current_review and utils.in_diff_window() then
           current_review:add_comment(false)
         else
           M.add_pr_issue_or_review_thread_comment()
         end
+      end,
+      suggest = function()
+        local current_review = reviews.get_current_review()
+        if not current_review then
+          utils.error "Please start or resume a review first"
+          return
+        end
+
+        current_review:add_comment(true)
       end,
       delete = function()
         M.delete_comment()

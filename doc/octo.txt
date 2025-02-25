@@ -110,6 +110,7 @@ See |octo-command-examples| for examples.
 :Octo comment [action]                          *octo-commands-comment*
 
   add                   Add a new comment.
+  suggest               Add a new suggestion.
   delete                Delete a comment.
 
 
