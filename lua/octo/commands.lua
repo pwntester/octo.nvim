@@ -95,6 +95,16 @@ function M.setup()
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
       end,
+      create = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+
+        if not opts.repo then
+          utils.error "No repo found"
+          return
+        end
+
+        require("octo.discussions").create(opts)
+      end,
     },
     milestone = {
       list = function(repo, ...)
