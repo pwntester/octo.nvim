@@ -1346,14 +1346,7 @@ function M.discussions(opts)
 
   local replace = create_replace(opts.cb)
 
-  local cb = function(output, stderr)
-    if stderr and not utils.is_blank(stderr) then
-      utils.error(stderr)
-      return
-    end
-
-    local discussions = utils.concatenate_pages(output)
-
+  local create_discussion_picker = function(discussions)
     if #discussions == 0 then
       utils.error(string.format("There are no matching discussions in %s.", opts.repo))
       return
@@ -1401,7 +1394,12 @@ function M.discussions(opts)
     paginate = true,
     jq = ".data.repository.discussions.nodes",
     opts = {
-      cb = cb,
+      cb = gh.create_callback {
+        success = function(output)
+          local discussions = utils.concatenate_pages(output)
+          create_discussion_picker(discussions)
+        end,
+      },
     },
   }
 end
