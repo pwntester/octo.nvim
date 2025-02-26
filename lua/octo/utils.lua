@@ -761,30 +761,26 @@ function M.get_repo_templates(repo)
   return templates
 end
 
----Helper method to aggregate an API paginated response
----@param text string
----@return table[]
-function M.get_pages(text)
+function M.callback_per_page(text, cb)
   local results = {}
-  local page_outputs = vim.split(text, "\n")
-  for _, page in ipairs(page_outputs) do
+  local page_output = vim.split(text, "\n")
+  for _, page in ipairs(page_output) do
     local decoded_page = vim.json.decode(page)
-    table.insert(results, decoded_page)
+    cb(results, decoded_page)
   end
   return results
 end
 
+---Helper method to aggregate an API paginated response
+---@param text string
+---@return table[]
+function M.get_pages(text)
+  return M.callback_per_page(text, table.insert)
+end
+
 --- Helper method to aggregate an API paginated response
 function M.get_flatten_pages(text)
-  local results = {}
-  local page_outputs = vim.split(text, "\n")
-  for _, page in ipairs(page_outputs) do
-    local decoded_page = vim.json.decode(page)
-    for _, result in ipairs(decoded_page) do
-      table.insert(results, result)
-    end
-  end
-  return results
+  return M.callback_per_page(text, vim.list_extend)
 end
 
 --- Helper method to aggregate an API paginated response

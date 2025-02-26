@@ -1346,25 +1346,17 @@ function M.discussions(opts)
 
   local replace = create_replace(opts.cb)
 
-  local cb = function(output, stderr)
-    if stderr and not utils.is_blank(stderr) then
-      utils.error(stderr)
+  local create_discussion_picker = function(discussions)
+    if #discussions == 0 then
+      utils.error(string.format("There are no matching discussions in %s.", opts.repo))
       return
     end
-
-    local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
-    local discussions = resp.data.repository.discussions.nodes
 
     local max_number = -1
     for _, discussion in ipairs(discussions) do
       if #tostring(discussion.number) > max_number then
         max_number = #tostring(discussion.number)
       end
-    end
-
-    if #discussions == 0 then
-      utils.error(string.format("There are no matching discussions in %s.", opts.repo))
-      return
     end
 
     opts.preview_title = opts.preview_title or ""
@@ -1388,11 +1380,10 @@ function M.discussions(opts)
 
   local owner, name = utils.split_repo(opts.repo)
   local order_by = cfg.discussions.order_by
-  local query = graphql "discussions_query"
   utils.info "Fetching discussions (this may take a while) ..."
 
   gh.api.graphql {
-    query = query,
+    query = graphql "discussions_query",
     fields = {
       owner = owner,
       name = name,
@@ -1401,9 +1392,14 @@ function M.discussions(opts)
       direction = order_by.direction,
     },
     paginate = true,
-    jq = ".",
+    jq = ".data.repository.discussions.nodes",
     opts = {
-      cb = cb,
+      cb = gh.create_callback {
+        success = function(output)
+          local discussions = utils.get_flatten_pages(output)
+          create_discussion_picker(discussions)
+        end,
+      },
     },
   }
 end
