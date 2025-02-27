@@ -1011,18 +1011,18 @@ query($endCursor: String) {
 ]]
 
 M.search_count_query = [[
-query {
-  search(query: """%s""", type: ISSUE, last: 100) {
+query($prompt: String!, $type: SearchType = ISSUE) {
+  search(query: $prompt, type: $type, last: 100) {
     issueCount
   }
 }
 ]]
 
 M.search_query = [[
-query {
-  search(query: """%s""", type: ISSUE, last: 100) {
+query($prompt: String!, $type: SearchType = ISSUE) {
+  search(query: $prompt, type: $type, last: 100) {
     nodes {
-      ... on Issue{
+      ... on Issue {
         __typename
         number
         url
