@@ -130,34 +130,41 @@ end
 
 function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
-  local query, key
 
+  local query, key, fields
   if kind == "pull" then
     query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
     key = "pullRequest"
+    fields = {}
   elseif kind == "issue" then
     query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
     key = "issue"
+    fields = {}
   elseif kind == "repo" then
-    query = graphql("repository_query", owner, name)
+    query = graphql "repository_query"
+    fields = { owner = owner, name = name }
   end
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        if kind == "pull" or kind == "issue" then
-          local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
-          local obj = resp.data.repository[key]
-          cb(obj)
-        elseif kind == "repo" then
-          local resp = vim.json.decode(output)
-          local obj = resp.data.repository
-          cb(obj)
-        end
-      end
-    end,
+
+  local load_buffer = function(output)
+    if kind == "pull" or kind == "issue" then
+      local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+      local obj = resp.data.repository[key]
+      cb(obj)
+    elseif kind == "repo" then
+      local resp = vim.json.decode(output)
+      local obj = resp.data.repository
+      cb(obj)
+    end
+  end
+
+  gh.api.graphql {
+    query = query,
+    fields = fields,
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = gh.create_callback { failure = vim.api.nvim_err_writeln, success = load_buffer },
+    },
   }
 end
 
