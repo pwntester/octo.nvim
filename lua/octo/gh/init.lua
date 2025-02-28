@@ -130,7 +130,18 @@ function M.create_callback(opts)
   end
 end
 
-function M.run(opts)
+---@class RunOpts
+---@field args table
+---@field mode string
+---@field cb fun(stdout: string, stderr: string)
+---@field stream_cb fun(stdout: string, stderr: string)
+---@field headers table
+---@field hostname string
+
+---Run a gh command
+---@param opts RunOpts
+---@return string[]|nil
+local function run(opts)
   if not Job then
     return
   end
@@ -204,12 +215,19 @@ end
 ---Insert the options into the args table
 ---@param args table the arguments table
 ---@param options table the options to insert
+---@param replace table|nil key value pairs to replace in the key of the options
 ---@return table the updated args table
-M.insert_args = function(args, options)
+M.insert_args = function(args, options, replace)
+  replace = replace or {}
+
   for key, value in pairs(options) do
     if type(key) == "number" then
       table.insert(args, value)
     else
+      for k, v in pairs(replace) do
+        key = string.gsub(key, k, v)
+      end
+
       local flag = create_flag(key)
 
       if type(value) == "table" then
@@ -238,36 +256,65 @@ M.insert_args = function(args, options)
   return args
 end
 
+---@class GraphQLOpts
+---@field query string|nil
+---@field fields table|nil
+---@field paginate boolean|nil
+---@field slurp boolean|nil
+---@field F table|nil field
+---@field f table|nil raw-field
+---@field jq string|nil
+
 ---Create the arguments for the graphql query
----@param query string the graphql query
----@param fields table key value pairs for graphql query
----@param paginate boolean whether to paginate the results
----@param slurp boolean whether to slurp the results
----@param jq string the jq query to apply to the results
----@return table
-local create_graphql_args = function(query, fields, paginate, slurp, jq)
-  local args = { "api", "graphql" }
+---@param opts GraphQLOpts
+---@return table|nil
+M.create_graphql_opts = function(opts)
+  -- add query to the existing raw-field
+  local f = opts.f or {}
+  local query = opts.query or f.query
+  if not query then
+    return
+  end
+  opts.query = nil
 
-  local opts = {
-    f = {
-      query = query,
-    },
-    F = fields,
-    paginate = paginate,
-    slurp = slurp,
-    jq = jq,
-  }
+  f.query = query
+  opts.f = f
 
-  return M.insert_args(args, opts)
+  -- Join F and fields together
+  local F = opts.F or {}
+  local fields = opts.fields or {}
+
+  opts.fields = nil
+
+  opts.F = vim.tbl_extend("force", F, fields)
+
+  return opts
 end
+
+--- The gh.api commands
+M.api = {}
 
 ---Run a graphql query
 ---@param opts table the options for the graphql query
 ---@return table|nil
-function M.graphql(opts)
+function M.api.graphql(opts)
+  opts = opts or {}
   local run_opts = opts.opts or {}
-  return M.run {
-    args = create_graphql_args(opts.query, opts.fields, opts.paginate, opts.slurp, opts.jq),
+
+  opts.opts = nil
+  local graphql_opts = M.create_graphql_opts(opts)
+
+  if not graphql_opts then
+    local utils = require "octo.utils"
+    utils.error "Provide query directly or in the f table."
+    return
+  end
+
+  local args = { "api", "graphql" }
+  args = M.insert_args(args, graphql_opts, { ["_"] = "-" })
+
+  return run {
+    args = args,
     mode = run_opts.mode,
     cb = run_opts.cb,
     stream_cb = run_opts.stream_cb,
@@ -276,15 +323,99 @@ function M.graphql(opts)
   }
 end
 
-M.api = {
-  graphql = M.graphql,
-}
+---Format the endpoint with the format table
+---@param endpoint string the endpoint to format
+---@param format table<key, value> the format table
+local format_endpoint = function(endpoint, format)
+  for key, value in pairs(format) do
+    endpoint = endpoint:gsub("{" .. key .. "}", value)
+  end
+  return endpoint
+end
+
+---@param method string the rest method
+---@param opts table the options for the rest command
+---@return table|nil
+M.create_rest_args = function(method, opts)
+  local format = opts.format or {}
+
+  local endpoint = opts[1]
+  if not endpoint then
+    return
+  end
+  endpoint = format_endpoint(endpoint, format)
+  opts[1] = endpoint
+
+  local args = { "api" }
+  if method ~= nil then
+    table.insert(args, "--method")
+    table.insert(args, method)
+  end
+
+  opts.format = nil
+  opts.opts = nil
+  return M.insert_args(args, opts)
+end
+
+---Run a rest command
+local rest = function(method, opts)
+  local run_opts = opts.opts or {}
+
+  local args = M.create_rest_args(method, opts)
+  if not args then
+    local utils = require "octo.utils"
+    utils.error "Endpoint is required"
+    return
+  end
+
+  run {
+    args = args,
+    mode = run_opts.mode,
+    cb = run_opts.cb,
+    stream_cb = run_opts.stream_cb,
+    headers = run_opts.headers,
+    hostname = run_opts.hostname,
+  }
+end
+
+M.api.get = function(opts)
+  return rest("GET", opts)
+end
+
+M.api.post = function(opts)
+  return rest("POST", opts)
+end
+
+M.api.patch = function(opts)
+  return rest("PATCH", opts)
+end
+
+M.api.delete = function(opts)
+  return rest("DELETE", opts)
+end
+
+M.api.put = function(opts)
+  return rest("PUT", opts)
+end
+
+---Call the api without specifying the method. GitHub CLI determines the method based on the arguments
+setmetatable(M.api, {
+  __call = function(_, opts)
+    return rest(nil, opts)
+  end,
+})
 
 local create_subcommand = function(command)
   local subcommand = {}
   subcommand.command = command
 
   setmetatable(subcommand, {
+    __call = function(_, opts)
+      --- Allow for backwards compatibility with the old API gh.run { ... }
+      if command == "run" then
+        return run(opts)
+      end
+    end,
     __index = function(t, key)
       return function(opts)
         opts = opts or {}
@@ -297,9 +428,9 @@ local create_subcommand = function(command)
         }
 
         opts.opts = nil
-        args = M.insert_args(args, opts)
+        args = M.insert_args(args, opts, { ["_"] = "-" })
 
-        return M.run {
+        return run {
           args = args,
           mode = run_opts.mode,
           cb = run_opts.cb,

@@ -329,17 +329,17 @@ end
 ---@param milestone_name string milestone name
 function M.add_milestone(issue, number, milestone_name)
   local command = issue and "issue" or "pr"
-  local args = { command, "edit", number, "--milestone", milestone_name }
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        M.info("Added milestone " .. milestone_name)
-      end
-    end,
+  gh[command].edit {
+    number,
+    milestone = milestone_name,
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info("Added milestone " .. milestone_name)
+        end,
+      },
+    },
   }
 end
 
@@ -348,17 +348,17 @@ end
 ---@param number number issue or PR number
 function M.remove_milestone(issue, number)
   local command = issue and "issue" or "pr"
-  local args = { command, "edit", number, "--remove-milestone" }
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        M.info "Removed milestone"
-      end
-    end,
+  gh[command].edit {
+    number,
+    remove_milestone = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info "Removed milestone"
+        end,
+      },
+    },
   }
 end
 
@@ -374,29 +374,21 @@ function M.create_milestone(title, description)
 
   local owner, name = M.split_repo(M.get_remote_name())
   local endpoint = string.format("repos/%s/%s/milestones", owner, name)
-  local args = { "api", "--method", "POST", endpoint }
 
-  local data = {
-    title = title,
-    description = description,
-    state = "open",
-  }
-
-  for key, value in pairs(data) do
-    table.insert(args, "-f")
-    table.insert(args, string.format("%s=%s", key, value))
-  end
-
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        M.info("Created milestone " .. resp.title)
-      end
-    end,
+  gh.api.post {
+    endpoint,
+    f = {
+      title = title,
+      description = description,
+      state = "open",
+    },
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          M.info("Created milestone " .. title)
+        end,
+      },
+    },
   }
 end
 
@@ -706,18 +698,18 @@ end
 function M.get_repo_id(repo)
   if repo_id_cache[repo] then
     return repo_id_cache[repo]
-  else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_id_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
-    local resp = vim.json.decode(output)
-    local id = resp.data.repository.id
-    repo_id_cache[repo] = id
-    return id
   end
+
+  local owner, name = M.split_repo(repo)
+  local query = graphql "repository_id_query"
+  local id = gh.api.graphql {
+    query = query,
+    fields = { owner = owner, name = name },
+    jq = ".data.repository.id",
+    opts = { mode = "sync" },
+  }
+  repo_id_cache[repo] = id
+  return id
 end
 
 -- Checks if the current cwd is in a git repo
@@ -732,71 +724,68 @@ end
 function M.get_repo_info(repo)
   if repo_info_cache[repo] then
     return repo_info_cache[repo]
-  else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
-    local resp = vim.json.decode(output)
-    local info = resp.data.repository
-    repo_info_cache[repo] = info
-    return info
   end
+
+  local owner, name = M.split_repo(repo)
+  local output = gh.api.graphql {
+    query = graphql "repository_query",
+    fields = { owner = owner, name = name },
+    jq = ".data.repository",
+    opts = { mode = "sync" },
+  }
+  local info = vim.json.decode(output)
+  repo_info_cache[repo] = info
+  return info
 end
 
 ---Gets repo's templates
 function M.get_repo_templates(repo)
   if repo_templates_cache[repo] then
     return repo_templates_cache[repo]
-  else
-    local owner, name = M.split_repo(repo)
-    local query = graphql("repository_templates_query", owner, name)
-    local output = gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      mode = "sync",
-    }
-    local resp = vim.json.decode(output)
-    local templates = resp.data.repository
-
-    -- add an option to not use a template
-    table.insert(templates.issueTemplates, {
-      name = "DO NOT USE A TEMPLATE",
-      about = "Create issue with no template",
-      title = "",
-      body = "",
-    })
-
-    repo_templates_cache[repo] = templates
-    return templates
   end
+
+  local owner, name = M.split_repo(repo)
+  local query = graphql "repository_templates_query"
+  local output = gh.api.graphql {
+    query = query,
+    fields = { owner = owner, name = name },
+    jq = ".data.repository",
+    opts = { mode = "sync" },
+  }
+  local templates = vim.json.decode(output)
+
+  -- add an option to not use a template
+  table.insert(templates.issueTemplates, {
+    name = "DO NOT USE A TEMPLATE",
+    about = "Create issue with no template",
+    title = "",
+    body = "",
+  })
+
+  repo_templates_cache[repo] = templates
+  return templates
+end
+
+function M.callback_per_page(text, cb)
+  local results = {}
+  local page_output = vim.split(text, "\n")
+  for _, page in ipairs(page_output) do
+    local decoded_page = vim.json.decode(page)
+    cb(results, decoded_page)
+  end
+  return results
 end
 
 ---Helper method to aggregate an API paginated response
 ---@param text string
 ---@return table[]
 function M.get_pages(text)
-  local results = {}
-  local page_outputs = vim.split(text, "\n")
-  for _, page in ipairs(page_outputs) do
-    local decoded_page = vim.json.decode(page)
-    table.insert(results, decoded_page)
-  end
-  return results
+  return M.callback_per_page(text, table.insert)
 end
 
 --- Helper method to aggregate an API paginated response
 function M.get_flatten_pages(text)
-  local results = {}
-  local page_outputs = vim.split(text, "\n")
-  for _, page in ipairs(page_outputs) do
-    local decoded_page = vim.json.decode(page)
-    for _, result in ipairs(decoded_page) do
-      table.insert(results, result)
-    end
-  end
-  return results
+  return M.callback_per_page(text, vim.list_extend)
 end
 
 --- Helper method to aggregate an API paginated response
@@ -1533,17 +1522,20 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
 end
 
 function M.get_user_id(login)
-  local query = graphql("user_query", login)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  local query = graphql "user_query"
+
+  local id = gh.api.graphql {
+    query = query,
+    fields = { login = login },
+    jq = ".data.user.id",
+    opts = { mode = "sync" },
   }
-  if output then
-    local resp = vim.json.decode(output)
-    if resp.data.user and resp.data.user ~= vim.NIL then
-      return resp.data.user.id
-    end
+
+  if id == "" then
+    return
   end
+
+  return id
 end
 
 function M.get_label_id(label)
@@ -1555,21 +1547,23 @@ function M.get_label_id(label)
   end
 
   local owner, name = M.split_repo(buffer.repo)
-  local query = graphql("repo_labels_query", owner, name)
-  local output = gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  local query = graphql "repo_labels_query"
+  local jq = ([[
+    .data.repository.labels.nodes
+    | map(select(.name == "{label}"))
+    | .[0].id
+  ]]):gsub("{label}", label)
+  local id = gh.api.graphql {
+    query = query,
+    fields = { owner = owner, name = name },
+    jq = jq,
+    opts = { mode = "sync" },
   }
-  if output then
-    local resp = vim.json.decode(output)
-    if resp.data.repository.labels.nodes and resp.data.repository.labels.nodes ~= vim.NIL then
-      for _, l in ipairs(resp.data.repository.labels.nodes) do
-        if l.name == label then
-          return l.id
-        end
-      end
-    end
+  if id == "" then
+    return
   end
+
+  return id
 end
 
 --- Generate maps from diffhunk line to code line:
@@ -1795,6 +1789,21 @@ function M.get_icon(entry)
   end
 
   return M.icons.unknown
+end
+
+--
+M.copy_url = function(url, register)
+  register = register or "+"
+  vim.fn.setreg(register, url, "c")
+  M.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+end
+
+M.input = function(opts)
+  vim.fn.inputsave()
+  local value = vim.fn.input(opts)
+  vim.fn.inputrestore()
+
+  return value
 end
 
 return M

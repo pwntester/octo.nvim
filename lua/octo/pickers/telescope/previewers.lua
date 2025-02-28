@@ -7,6 +7,7 @@ local previewers = require "telescope.previewers"
 local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
 local defaulter = ts_utils.make_default_callable
+local workflow_runs_previewer = require("octo.workflow_runs").previewer
 
 local vim = vim
 
@@ -25,32 +26,32 @@ local discussion = defaulter(function(opts)
 
       local number = entry.value
       local owner, name = utils.split_repo(entry.repo)
-      local query = graphql("discussion_query", owner, name, number)
 
-      gh.run {
-        args = { "api", "graphql", "-f", string.format("query=%s", query) },
-        cb = function(output, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            vim.api.nvim_err_writeln(stderr)
-          elseif output and vim.api.nvim_buf_is_valid(bufnr) then
-            -- clear the buffer
-            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+      gh.api.graphql {
+        query = graphql "discussion_query",
+        fields = { owner = owner, name = name, number = number },
+        jq = ".data.repository.discussion",
+        opts = {
+          cb = gh.create_callback {
+            failure = vim.api.nvim_err_writeln,
+            success = function(output)
+              -- clear the buffer
+              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
-            local result = vim.json.decode(output)
-            local obj = result.data.repository.discussion
+              local obj = vim.json.decode(output)
+              writers.write_title(bufnr, tostring(obj.title), 1)
+              writers.write_discussion_details(bufnr, obj)
+              writers.write_body(bufnr, obj, 11)
 
-            writers.write_title(bufnr, tostring(obj.title), 1)
-            writers.write_discussion_details(bufnr, obj)
-            writers.write_body(bufnr, obj, 11)
+              if obj.answer ~= vim.NIL then
+                local line = vim.api.nvim_buf_line_count(bufnr) + 1
+                writers.write_discussion_answer(bufnr, obj, line)
+              end
 
-            if obj.answer ~= vim.NIL then
-              local line = vim.api.nvim_buf_line_count(bufnr) + 1
-              writers.write_discussion_answer(bufnr, obj, line)
-            end
-
-            vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
-          end
-        end,
+              vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+            end,
+          },
+        },
       }
     end,
   }
@@ -224,7 +225,14 @@ local issue_template = defaulter(function(opts)
   }
 end, {})
 
+local workflow_runs = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    define_preview = workflow_runs_previewer,
+  }
+end, {})
+
 return {
+  workflow_runs = workflow_runs,
   discussion = discussion,
   issue = issue,
   gist = gist,

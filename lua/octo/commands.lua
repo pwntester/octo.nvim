@@ -74,6 +74,16 @@ function M.setup()
 
   -- supported commands
   M.commands = {
+    run = {
+      list = function()
+        local function co_wrapper()
+          require("octo.workflow_runs").list()
+        end
+
+        local co = coroutine.create(co_wrapper)
+        coroutine.resume(co)
+      end,
+    },
     actions = function()
       M.actions()
     end,
@@ -84,6 +94,16 @@ function M.setup()
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
+      end,
+      create = function(repo, ...)
+        local opts = M.process_varargs(repo, ...)
+
+        if not opts.repo then
+          utils.error "No repo found"
+          return
+        end
+
+        require("octo.discussions").create(opts)
       end,
     },
     milestone = {
@@ -247,10 +267,10 @@ function M.setup()
         M.pr_checks()
       end,
       ready = function()
-        M.pr_ready_for_review()
+        M.gh_pr_ready { undo = false }
       end,
       draft = function()
-        M.pr_draft()
+        M.gh_pr_ready { undo = true }
       end,
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
@@ -366,7 +386,7 @@ function M.setup()
     },
     comment = {
       add = function()
-        local current_review = require("octo.reviews").get_current_review()
+        local current_review = reviews.get_current_review()
         if current_review and utils.in_diff_window() then
           -- if we have a current_review but no id, we are in browse mode.
           -- for now, we cannot create comments.
@@ -380,6 +400,15 @@ function M.setup()
         else
           M.add_pr_issue_or_review_thread_comment()
         end
+      end,
+      suggest = function()
+        local current_review = reviews.get_current_review()
+        if not current_review then
+          utils.error "Please start or resume a review first"
+          return
+        end
+
+        current_review:add_comment(true)
       end,
       delete = function()
         M.delete_comment()
@@ -992,64 +1021,57 @@ function M.change_state(state)
   end
 
   local id = buffer.node.id
-  local query, get_obj, desired_state, fields
+  local query, jq, desired_state, fields
   if buffer:isIssue() and state == "CLOSED" then
     query = graphql("update_issue_state_mutation", id, state)
     desired_state = state
-    get_obj = function(resp)
-      return resp.data.updateIssue.issue
-    end
+    jq = ".data.updateIssue.issue"
     fields = {}
   elseif buffer:isIssue() and state == "OPEN" then
     query = graphql "reopen_issue_mutation"
     desired_state = "OPEN"
-    get_obj = function(resp)
-      return resp.data.reopenIssue.issue
-    end
+    jq = ".data.reopenIssue.issue"
     fields = { issueId = id }
   elseif buffer:isIssue() then
     query = graphql("close_issue_mutation", id, state)
     desired_state = "CLOSED"
-    get_obj = function(resp)
-      return resp.data.closeIssue.issue
-    end
+    jq = ".data.closeIssue.issue"
     fields = {}
   elseif buffer:isPullRequest() then
     query = graphql("update_pull_request_state_mutation", id, state)
     desired_state = state
-    get_obj = function(resp)
-      return resp.data.updatePullRequest.pullRequest
-    end
+    jq = ".data.updatePullRequest.pullRequest"
     fields = {}
   end
 
-  local cb = function(output, stderr)
-    if stderr and not utils.is_blank(stderr) then
-      utils.error(stderr)
-    elseif output then
-      local resp = vim.json.decode(output)
+  local update_state = function(output)
+    local obj = vim.json.decode(output)
+    local new_state = obj.state
 
-      local obj = get_obj(resp)
-      local new_state = obj.state
-
-      if desired_state ~= new_state then
-        return
-      end
-
-      buffer.node.state = new_state
-
-      local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
-      writers.write_state(bufnr, updated_state:upper(), buffer.number)
-      writers.write_details(bufnr, obj, true)
-      utils.info("Issue state changed to: " .. updated_state)
+    if desired_state ~= new_state then
+      return
     end
+
+    buffer.node.state = new_state
+
+    local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
+    writers.write_state(bufnr, updated_state:upper(), buffer.number)
+    writers.write_details(bufnr, obj, true)
+    local kind
+    if buffer:isIssue() then
+      kind = "Issue"
+    else
+      kind = "Pull Request"
+    end
+    utils.info(kind .. " state changed to: " .. updated_state)
   end
 
-  gh.graphql {
+  gh.api.graphql {
     query = query,
+    jq = jq,
     fields = fields,
     opts = {
-      cb = cb,
+      cb = gh.create_callback { success = update_state },
     },
   }
 end
@@ -1338,35 +1360,32 @@ function M.save_pr(opts)
   end
 end
 
-function M.pr_ready_for_review()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-  gh.run {
-    args = { "pr", "ready", tostring(buffer.number) },
-    cb = function(output, stderr)
-      utils.info(output)
-      utils.error(stderr)
-      writers.write_state(bufnr)
-    end,
-  }
-end
+--- @class PRReadyOpts
+--- @field undo boolean Whether to undo from ready to draft
 
-function M.pr_draft()
+--- Change PR state to ready for review or draft
+--- @param opts PRReadyOpts
+M.gh_pr_ready = function(opts)
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
   if not buffer or not buffer:isPullRequest() then
+    utils.error "Not a PR buffer"
     return
   end
-  gh.run {
-    args = { "pr", "ready", tostring(buffer.number), "--undo" },
-    cb = function(output, stderr)
-      utils.info(output)
-      utils.error(stderr)
-      writers.write_state(bufnr)
-    end,
+
+  gh.pr.ready {
+    buffer.number,
+    undo = opts.undo,
+    opts = {
+      cb = gh.create_callback {
+        -- There seems to be something wrong with the CLI output. It comes back as stderr
+        failure = function(output)
+          utils.info(output)
+          writers.write_state(bufnr)
+        end,
+        success = utils.error,
+      },
+    },
   }
 end
 
@@ -1376,45 +1395,49 @@ function M.pr_checks()
   if not buffer or not buffer:isPullRequest() then
     return
   end
-  gh.run {
-    args = { "pr", "checks", tostring(buffer.number), "-R", buffer.repo },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local max_lengths = {}
-        local parts = {}
-        for _, l in pairs(vim.split(output, "\n")) do
-          local line_parts = vim.split(l, "\t")
-          for i, p in pairs(line_parts) do
-            if max_lengths[i] == nil or max_lengths[i] < #p then
-              max_lengths[i] = #p
-            end
-          end
-          table.insert(parts, line_parts)
-        end
-        local lines = {}
-        for _, p in pairs(parts) do
-          local line = {}
-          for i, pp in pairs(p) do
-            table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
-          end
-          table.insert(lines, table.concat(line, "  "))
-        end
-        local _, wbufnr = window.create_centered_float {
-          header = "Checks",
-          content = lines,
-        }
-        local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
-        for i, l in ipairs(buf_lines) do
-          if #vim.split(l, "pass") > 1 then
-            vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoPassingTest", i - 1, 0, -1)
-          elseif #vim.split(l, "fail") > 1 then
-            vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoFailingTest", i - 1, 0, -1)
-          end
+
+  local show_checks = function(output)
+    local max_lengths = {}
+    local parts = {}
+    for _, l in pairs(vim.split(output, "\n")) do
+      local line_parts = vim.split(l, "\t")
+      for i, p in pairs(line_parts) do
+        if max_lengths[i] == nil or max_lengths[i] < #p then
+          max_lengths[i] = #p
         end
       end
-    end,
+      table.insert(parts, line_parts)
+    end
+    local lines = {}
+    for _, p in pairs(parts) do
+      local line = {}
+      for i, pp in pairs(p) do
+        table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
+      end
+      table.insert(lines, table.concat(line, "  "))
+    end
+    local _, wbufnr = window.create_centered_float {
+      header = "Checks",
+      content = lines,
+    }
+    local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
+    for i, l in ipairs(buf_lines) do
+      if #vim.split(l, "pass") > 1 then
+        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoPassingTest", i - 1, 0, -1)
+      elseif #vim.split(l, "fail") > 1 then
+        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoFailingTest", i - 1, 0, -1)
+      end
+    end
+  end
+
+  gh.pr.checks {
+    buffer.number,
+    repo = buffer.repo,
+    opts = {
+      cb = gh.create_callback {
+        success = show_checks,
+      },
+    },
   }
 end
 

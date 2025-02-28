@@ -332,6 +332,7 @@ M.picker = {
   project_columns_v2 = M.not_implemented,
   prs = M.pull_requests,
   repos = M.not_implemented,
+  workflow_runs = M.not_implemented,
   review_commits = M.not_implemented,
   search = M.not_implemented,
   users = M.not_implemented,

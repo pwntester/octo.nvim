@@ -522,7 +522,7 @@ end
 
 local function get_search_size(prompt)
   local query = graphql("search_count_query", prompt)
-  return gh.graphql {
+  return gh.api.graphql {
     query = query,
     jq = ".data.search.issueCount",
     opts = {
@@ -631,6 +631,30 @@ function M.pending_threads(threads)
           local thread = action_state.get_selected_entry(prompt_bufnr).thread
           actions.close(prompt_bufnr)
           reviews.jump_to_pending_review_thread(thread)
+        end)
+        return true
+      end,
+    })
+    :find()
+end
+
+function M.workflow_runs(workflow_runs, title, on_select_cb)
+  pickers
+    .new({}, {
+      prompt_title = title or false,
+      results_title = false,
+      preview_title = false,
+      finder = finders.new_table {
+        results = workflow_runs,
+        entry_maker = entry_maker.gen_from_workflow_run(),
+      },
+      sorter = conf.generic_sorter {},
+      previewer = previewers.workflow_runs.new {},
+      attach_mappings = function()
+        actions.select_default:replace(function(prompt_bufnr)
+          local selection = action_state.get_selected_entry(prompt_bufnr)
+          actions.close(prompt_bufnr)
+          on_select_cb(selection.value)
         end)
         return true
       end,
@@ -1322,25 +1346,17 @@ function M.discussions(opts)
 
   local replace = create_replace(opts.cb)
 
-  local cb = function(output, stderr)
-    if stderr and not utils.is_blank(stderr) then
-      utils.error(stderr)
+  local create_discussion_picker = function(discussions)
+    if #discussions == 0 then
+      utils.error(string.format("There are no matching discussions in %s.", opts.repo))
       return
     end
-
-    local resp = utils.aggregate_pages(output, "data.repository.discussions.node")
-    local discussions = resp.data.repository.discussions.nodes
 
     local max_number = -1
     for _, discussion in ipairs(discussions) do
       if #tostring(discussion.number) > max_number then
         max_number = #tostring(discussion.number)
       end
-    end
-
-    if #discussions == 0 then
-      utils.error(string.format("There are no matching discussions in %s.", opts.repo))
-      return
     end
 
     opts.preview_title = opts.preview_title or ""
@@ -1364,11 +1380,10 @@ function M.discussions(opts)
 
   local owner, name = utils.split_repo(opts.repo)
   local order_by = cfg.discussions.order_by
-  local query = graphql "discussions_query"
   utils.info "Fetching discussions (this may take a while) ..."
 
-  gh.graphql {
-    query = query,
+  gh.api.graphql {
+    query = graphql "discussions_query",
     fields = {
       owner = owner,
       name = name,
@@ -1377,9 +1392,14 @@ function M.discussions(opts)
       direction = order_by.direction,
     },
     paginate = true,
-    jq = ".",
+    jq = ".data.repository.discussions.nodes",
     opts = {
-      cb = cb,
+      cb = gh.create_callback {
+        success = function(output)
+          local discussions = utils.get_flatten_pages(output)
+          create_discussion_picker(discussions)
+        end,
+      },
     },
   }
 end
@@ -1394,7 +1414,7 @@ function M.milestones(opts)
   local owner, name = utils.split_repo(repo)
   local query = graphql "open_milestones_query"
 
-  gh.graphql {
+  gh.api.graphql {
     query = query,
     fields = {
       owner = owner,
@@ -1472,6 +1492,7 @@ M.picker = {
   notifications = M.notifications,
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
+  workflow_runs = M.workflow_runs,
   project_cards_v2 = M.not_implemented,
   project_columns = M.select_target_project_column,
   project_columns_v2 = M.not_implemented,

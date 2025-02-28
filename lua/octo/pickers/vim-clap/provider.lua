@@ -29,6 +29,7 @@ M.picker = {
   search = M.not_implemented,
   users = M.not_implemented,
   milestones = M.not_implemented,
+  workflow_runs = M.not_implemented,
 }
 
 return M

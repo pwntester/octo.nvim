@@ -198,6 +198,16 @@ function M.gen_from_git_changed_files()
   end
 end
 
+function M.gen_from_workflow_run()
+  return function(workflow_run)
+    return {
+      display = workflow_run.display,
+      value = workflow_run,
+      ordinal = workflow_run.display,
+    }
+  end
+end
+
 function M.gen_from_review_thread(linenr_length)
   local make_display = function(entry)
     if not entry then
@@ -506,24 +516,24 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
     end
 
     local fork_str = ""
-    if entry.repo.isFork then
+    if entry.obj.isFork then
       fork_str = "fork"
     end
 
     local access_str = "public"
-    if entry.repo.isPrivate then
+    if entry.obj.isPrivate then
       access_str = "private"
     end
 
     local columns = {
-      { string.sub(entry.repo.nameWithOwner, 1, 50), "TelescopeResultsNumber" },
+      { string.sub(entry.obj.nameWithOwner, 1, 50), "TelescopeResultsNumber" },
       { "s:", "TelescopeResultsNumber" },
-      { entry.repo.stargazerCount },
+      { entry.obj.stargazerCount },
       { "f:", "TelescopeResultsNumber" },
-      { entry.repo.forkCount },
+      { entry.obj.forkCount },
       { access_str },
       { fork_str },
-      { entry.repo.description },
+      { entry.obj.description },
     }
 
     local displayer = entry_display.create {
@@ -558,7 +568,8 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
       value = repo.nameWithOwner,
       ordinal = repo.nameWithOwner .. " " .. repo.description,
       display = make_display,
-      repo = repo,
+      obj = repo,
+      repo = repo.nameWithOwner,
     }
   end
 end
