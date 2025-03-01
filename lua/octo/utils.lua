@@ -392,23 +392,26 @@ function M.create_milestone(title, description)
   }
 end
 
+local branch_switch_message = function()
+  local output = vim.fn.system "git branch --show-current"
+  M.info("Switched to " .. vim.fn.trim(output))
+end
+
 function M.develop_issue(issue_repo, issue_number, branch_repo)
   if M.is_blank(branch_repo) then
     branch_repo = M.get_remote_name()
   end
 
-  local args = { "issue", "develop", "--repo", issue_repo, issue_number, "--checkout", "--branch-repo", branch_repo }
-
-  gh.run {
-    args = args,
-    cb = function(stdout, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif stdout then
-        local output = vim.fn.system "git branch --show-current"
-        M.info("Switched to " .. output)
-      end
-    end,
+  gh.issue.develop {
+    issue_number,
+    repo = issue_repo,
+    checkout = true,
+    branch_repo = branch_repo,
+    opts = {
+      cb = gh.create_callback {
+        success = branch_switch_message,
+      },
+    },
   }
 end
 
@@ -548,39 +551,31 @@ function M.in_pr_branch(pr)
 end
 
 function M.checkout_pr(pr_number)
-  gh.run {
-    args = { "pr", "checkout", pr_number },
-    cb = function(stdout, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif stdout then
-        local output = vim.fn.system "git branch --show-current"
-        M.info("Switched to " .. output)
-      end
-    end,
+  gh.pr.checkout {
+    pr_number,
+    opts = {
+      cb = gh.create_callback {
+        success = branch_switch_message,
+      },
+    },
   }
 end
 
 ---@class CheckoutPrSyncOpts
 ---@field repo string
 ---@field pr_number number
----@field timeout number
 
 ---@param opts CheckoutPrSyncOpts
 ---@return nil
 function M.checkout_pr_sync(opts)
-  if not Job then
-    return
-  end
-  Job:new({
-    enable_recording = true,
-    command = "gh",
-    args = { "pr", "checkout", opts.pr_number, "--repo", opts.repo },
-    on_exit = vim.schedule_wrap(function()
-      local output = vim.fn.system "git branch --show-current"
-      M.info("Switched to " .. output)
-    end),
-  }):sync(opts.timeout)
+  gh.pr.checkout {
+    opts.pr_number,
+    repo = opts.repo,
+    opts = {
+      mode = "sync",
+    },
+  }
+  branch_switch_message()
 end
 
 M.merge_method_to_flag = {
