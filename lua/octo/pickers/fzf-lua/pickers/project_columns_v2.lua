@@ -22,7 +22,7 @@ return function(cb)
   })
 
   local get_projects = function(fzf_cb)
-    local query = graphql("projects_query_v2", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
+    local query = graphql("projects_v2_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output)
