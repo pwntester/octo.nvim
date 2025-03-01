@@ -578,61 +578,61 @@ query {
 
 -- https://docs.github.com/en/graphql/reference/objects#label
 M.labels = [[
-  query {
-    repository(owner: "%s", name: "%s") {
+query {
+  repository(owner: "%s", name: "%s") {
+    labels(first: 100) {
+      ...LabelConnectionFragment
+    }
+  }
+}
+]] .. fragments.label_connection .. fragments.label
+
+M.issue_labels = [[
+query {
+  repository(owner: "%s", name: "%s") {
+    issue(number: %d) {
       labels(first: 100) {
         ...LabelConnectionFragment
       }
     }
   }
-]] .. fragments.label_connection .. fragments.label
-
-M.issue_labels = [[
-  query {
-    repository(owner: "%s", name: "%s") {
-      issue(number: %d) {
-        labels(first: 100) {
-          ...LabelConnectionFragment
-        }
-      }
-    }
-  }
+}
 ]] .. fragments.label_connection .. fragments.label
 
 M.pull_request_labels = [[
-  query {
-    repository(owner: "%s", name: "%s") {
-      pullRequest(number: %d) {
-        labels(first: 100) {
-          ...LabelConnectionFragment
-        }
+query {
+  repository(owner: "%s", name: "%s") {
+    pullRequest(number: %d) {
+      labels(first: 100) {
+        ...LabelConnectionFragment
       }
     }
   }
+}
 ]] .. fragments.label_connection .. fragments.label
 
 M.issue_assignees = [[
-  query {
-    repository(owner: "%s", name: "%s") {
-      issue(number: %d) {
-        assignees(first: 100) {
-          ...AssigneeConnectionFragment
-        }
+query {
+  repository(owner: "%s", name: "%s") {
+    issue(number: %d) {
+      assignees(first: 100) {
+        ...AssigneeConnectionFragment
       }
     }
   }
+}
 ]] .. fragments.assignee_connection
 
 M.pull_request_assignees = [[
-  query {
-    repository(owner: "%s", name: "%s") {
-      pullRequest(number: %d) {
-        assignees(first: 100) {
-          ...AssigneeConnectionFragment
-        }
+query {
+  repository(owner: "%s", name: "%s") {
+    pullRequest(number: %d) {
+      assignees(first: 100) {
+        ...AssigneeConnectionFragment
       }
     }
   }
+}
 ]] .. fragments.assignee_connection
 
 M.user_profile = [[
