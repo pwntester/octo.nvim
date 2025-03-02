@@ -79,6 +79,7 @@ See |octo-command-examples| for examples.
   browser               Open current PR in the browser.
   url                   Copies the URL of the currently opened PR to the
                         system clipboard.
+  runs                  Show all workflow runs for the PR.
 
 
 :Octo discussion [action] {args}                *octo-commands-discussion*

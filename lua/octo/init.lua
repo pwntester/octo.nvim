@@ -76,8 +76,7 @@ function M.configure_octo_buffer(bufnr)
 end
 
 function M.save_buffer()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   buffer:save()
 end
 
@@ -169,14 +168,12 @@ function M.load(repo, kind, number, cb)
 end
 
 function M.render_signs()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   buffer:render_signs()
 end
 
 function M.on_cursor_hold()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end

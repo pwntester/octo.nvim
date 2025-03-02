@@ -7,8 +7,7 @@ local utils = require "octo.utils"
 
 return function(opts)
   opts = opts or {}
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     return
   end
