@@ -222,6 +222,16 @@ function M.setup()
       edit = function(...)
         utils.get_pull_request(...)
       end,
+      runs = function()
+        local buffer = get_current_buffer()
+        if not buffer or not buffer:isPullRequest() then
+          utils.error "Not a pull request buffer"
+          return
+        end
+        local headRefName = buffer.node.headRefName
+
+        require("octo.workflow_runs").list { branch = headRefName }
+      end,
       close = function()
         M.change_state "CLOSED"
       end,
