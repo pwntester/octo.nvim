@@ -647,11 +647,14 @@ local workflow_limit = 100
 
 local run_list_fields = "conclusion,displayTitle,event,headBranch,name,number,status,updatedAt,databaseId"
 
-local function get_workflow_runs_sync()
+local function get_workflow_runs_sync(opts)
+  opts = opts or {}
+
   local lines = {}
   local output, stderr = gh.run.list {
     json = run_list_fields,
     limit = workflow_limit,
+    branch = opts.branch,
     opts = { mode = "sync" },
   }
   if stderr and not utils.is_blank(stderr) then
@@ -669,10 +672,17 @@ local function get_workflow_runs_sync()
         or value.conclusion == "failure" and icons.failed
         or ""
 
+      local display
+      if opts.branch == nil then
+        display = string.format("%s (%s)", value.name, value.headBranch)
+      else
+        display = value.name
+      end
+
       local wf_run = {
         status = status,
         title = value.displayTitle,
-        display = value.displayTitle .. " " .. conclusion,
+        display = display .. " " .. conclusion,
         value = value.databaseId,
         branch = value.headBranch,
         name = value.name,
@@ -700,9 +710,9 @@ M.previewer = function(self, entry)
   populate_preview_buffer(id, self.state.bufnr)
 end
 
-M.list = function()
+M.list = function(opts)
   utils.info "Fetching workflow runs (this may take a while) ..."
-  local wf_runs = get_workflow_runs_sync()
+  local wf_runs = get_workflow_runs_sync(opts)
 
   require("octo.picker").workflow_runs(wf_runs, "Workflow runs", render)
 end
