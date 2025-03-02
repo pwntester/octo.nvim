@@ -107,8 +107,7 @@ function M.go_to_file()
 end
 
 function M.go_to_issue()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -138,12 +137,11 @@ function M.go_to_issue()
 end
 
 function M.next_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = utils.get_sorted_comment_lines(bufnr)
+    local lines = utils.get_sorted_comment_lines(buffer.bufnr)
     if not buffer:isReviewThread() then
       -- skil title and body
       lines = utils.tbl_slice(lines, 3, #lines)
@@ -171,12 +169,11 @@ function M.next_comment()
 end
 
 function M.prev_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = utils.get_sorted_comment_lines(bufnr)
+    local lines = utils.get_sorted_comment_lines(buffer.bufnr)
     lines = utils.tbl_slice(lines, 3, #lines)
     if not lines or not current_line then
       return
