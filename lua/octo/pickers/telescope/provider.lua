@@ -357,8 +357,7 @@ end
 -- COMMITS
 --
 function M.commits()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     return
   end
@@ -462,8 +461,7 @@ end
 -- FILES
 --
 function M.changed_files()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     return
   end
@@ -666,8 +664,7 @@ end
 -- PROJECTS
 ---
 function M.select_project_card(cb)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   local cards = buffer.node.projectCards
   if not cards or #cards.nodes == 0 then
     utils.error "Cant find any project cards"
@@ -699,8 +696,7 @@ function M.select_project_card(cb)
 end
 
 function M.select_target_project_column(cb)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -852,8 +848,7 @@ function M.select_assigned_label(opts)
   local cb = opts.cb
   opts = vim.tbl_deep_extend("force", opts, dropdown_opts)
 
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1083,8 +1078,7 @@ end
 --
 function M.select_assignee(cb)
   local opts = vim.deepcopy(dropdown_opts)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end

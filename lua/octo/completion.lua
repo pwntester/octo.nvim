@@ -1,5 +1,6 @@
 local M = {}
 local vim = vim
+local utils = require "octo.utils"
 
 function M.octo_command_complete(argLead, cmdLine)
   -- ArgLead		the leading portion of the argument currently being completed on
@@ -33,8 +34,7 @@ end
 
 function M.setup()
   function _G.octo_omnifunc(findstart, base)
-    local bufnr = vim.api.nvim_get_current_buf()
-    local buffer = octo_buffers[bufnr]
+    local buffer = utils.get_current_buffer()
     -- :help complete-functions
     if findstart == 1 then
       -- findstart
