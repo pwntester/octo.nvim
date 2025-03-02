@@ -22,11 +22,6 @@ OctoLastCmdOpts = nil
 
 local M = {}
 
-local get_current_buffer = function()
-  local bufnr = vim.api.nvim_get_current_buf()
-  return octo_buffers[bufnr]
-end
-
 local function merge_tables(t1, t2)
   local result = vim.deepcopy(t1)
   for k, v in pairs(t2) do
@@ -117,7 +112,7 @@ function M.setup()
         picker.milestones(opts)
       end,
       add = function(milestoneTitle)
-        local buffer = get_current_buffer()
+        local buffer = utils.get_current_buffer()
         if not buffer then
           utils.error "No buffer found"
           return
@@ -135,7 +130,7 @@ function M.setup()
         picker.milestones(opts)
       end,
       remove = function()
-        local buffer = get_current_buffer()
+        local buffer = utils.get_current_buffer()
         if not buffer then
           utils.error "No buffer found"
           return
@@ -175,8 +170,7 @@ function M.setup()
         M.change_state(stateReason)
       end,
       develop = function(repo, ...)
-        local bufnr = vim.api.nvim_get_current_buf()
-        local buffer = octo_buffers[bufnr]
+        local buffer = utils.get_current_buffer()
 
         if buffer and buffer.kind and buffer.kind == "issue" then
           utils.develop_issue(buffer.repo, buffer.node.number, repo)
@@ -243,8 +237,8 @@ function M.setup()
         picker.prs(opts)
       end,
       checkout = function()
-        local bufnr = vim.api.nvim_get_current_buf()
-        local buffer = octo_buffers[bufnr]
+        local buffer = utils.get_current_buffer()
+
         if not buffer or not buffer:isPullRequest() then
           picker.prs {
             cb = function(selected)
@@ -734,11 +728,13 @@ end
 
 --- Adds a new comment to an issue/PR or a review thread
 function M.add_pr_issue_or_review_thread_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = M.get_current_buffer()
+
   if not buffer then
     return
   end
+
+  local bufnr = buffer.bufnr
 
   local comment_kind
   local comment = {
@@ -795,11 +791,13 @@ function M.add_pr_issue_or_review_thread_comment()
 end
 
 function M.delete_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
+
+  local bufnr = buffer.bufnr
+
   local comment = buffer:get_comment_at_cursor()
   if not comment then
     utils.error "The cursor does not seem to be located at any comment"
@@ -941,11 +939,14 @@ local function update_review_thread_header(bufnr, thread, thread_id, thread_line
 end
 
 function M.resolve_thread()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
+
   if not buffer then
     return
   end
+
+  local bufnr = buffer.bufnr
+
   local _thread = buffer:get_thread_at_cursor()
   if not _thread then
     return

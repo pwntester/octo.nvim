@@ -1806,4 +1806,9 @@ M.input = function(opts)
   return value
 end
 
+M.get_current_buffer = function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  return octo_buffers[bufnr]
+end
+
 return M
