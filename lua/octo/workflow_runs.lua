@@ -674,7 +674,7 @@ local function get_workflow_runs_sync(opts)
 
       local display
       if opts.branch == nil then
-        display = value.displayTitle
+        display = string.format("%s (%s)", value.name, value.headBranch)
       else
         display = value.name
       end
