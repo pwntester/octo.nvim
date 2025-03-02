@@ -672,10 +672,17 @@ local function get_workflow_runs_sync(opts)
         or value.conclusion == "failure" and icons.failed
         or ""
 
+      local display
+      if opts.branch == nil then
+        display = value.displayTitle
+      else
+        display = value.name
+      end
+
       local wf_run = {
         status = status,
         title = value.displayTitle,
-        display = value.displayTitle .. " " .. conclusion,
+        display = display .. " " .. conclusion,
         value = value.databaseId,
         branch = value.headBranch,
         name = value.name,
