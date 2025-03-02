@@ -217,7 +217,7 @@ function M.setup()
         utils.get_pull_request(...)
       end,
       runs = function()
-        local buffer = get_current_buffer()
+        local buffer = utils.get_current_buffer()
         if not buffer or not buffer:isPullRequest() then
           utils.error "Not a pull request buffer"
           return
