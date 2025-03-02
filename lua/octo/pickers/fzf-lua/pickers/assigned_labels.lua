@@ -8,8 +8,7 @@ return function(opts)
   opts = opts or {}
   local cb = opts.cb
 
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
 
   if not buffer then
     return

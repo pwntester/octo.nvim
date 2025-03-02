@@ -33,8 +33,7 @@ function M.open_in_browser(kind, repo, number)
   end
 
   if not kind and not repo then
-    local bufnr = vim.api.nvim_get_current_buf()
-    local buffer = octo_buffers[bufnr]
+    local buffer = utils.get_current_buffer()
     if not buffer then
       local owner_repo = utils.get_remote_name()
       if not owner_repo then

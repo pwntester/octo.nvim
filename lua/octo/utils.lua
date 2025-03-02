@@ -427,8 +427,7 @@ function M.get_file_at_commit(path, commit, cb)
 end
 
 function M.in_pr_repo()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = M.get_current_buffer()
   if not buffer then
     M.error "Not in Octo buffer"
     return
@@ -1387,8 +1386,7 @@ function M.get_extmark_region(bufnr, mark)
 end
 
 function M.fork_repo()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = M.get_current_buffer()
 
   if not buffer or not buffer:isRepo() then
     return
@@ -1539,8 +1537,7 @@ function M.get_user_id(login)
 end
 
 function M.get_label_id(label)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = M.get_current_buffer()
   if not buffer then
     M.error "Not in Octo buffer"
     return
