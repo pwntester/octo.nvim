@@ -357,7 +357,6 @@ function M.write_details(bufnr, issue, update)
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
   local details = {}
-  local buffer = octo_buffers[bufnr]
 
   -- repo
   local repo_vt = {
