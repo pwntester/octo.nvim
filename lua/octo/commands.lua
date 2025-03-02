@@ -728,7 +728,7 @@ end
 
 --- Adds a new comment to an issue/PR or a review thread
 function M.add_pr_issue_or_review_thread_comment()
-  local buffer = M.get_current_buffer()
+  local buffer = utils.get_current_buffer()
 
   if not buffer then
     return
