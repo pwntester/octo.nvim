@@ -568,8 +568,7 @@ end
 --- Fall back to pull request associated with the current branch if not in an Octo buffer.
 --- @param cb function
 local function get_pr_from_buffer_or_current_branch(cb)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
 
   if not buffer then
     -- We are not in an octo buffer, try and fallback to the current branch's pr

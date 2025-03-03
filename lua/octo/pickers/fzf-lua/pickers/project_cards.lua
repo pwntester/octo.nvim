@@ -4,8 +4,7 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
 return function(callback)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   local cards = buffer.node.projectCards
   if not cards or #cards.nodes == 0 then
     utils.error "Can't find any project cards"

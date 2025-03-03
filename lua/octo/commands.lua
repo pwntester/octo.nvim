@@ -22,11 +22,6 @@ OctoLastCmdOpts = nil
 
 local M = {}
 
-local get_current_buffer = function()
-  local bufnr = vim.api.nvim_get_current_buf()
-  return octo_buffers[bufnr]
-end
-
 local function merge_tables(t1, t2)
   local result = vim.deepcopy(t1)
   for k, v in pairs(t2) do
@@ -117,7 +112,7 @@ function M.setup()
         picker.milestones(opts)
       end,
       add = function(milestoneTitle)
-        local buffer = get_current_buffer()
+        local buffer = utils.get_current_buffer()
         if not buffer then
           utils.error "No buffer found"
           return
@@ -135,7 +130,7 @@ function M.setup()
         picker.milestones(opts)
       end,
       remove = function()
-        local buffer = get_current_buffer()
+        local buffer = utils.get_current_buffer()
         if not buffer then
           utils.error "No buffer found"
           return
@@ -175,8 +170,7 @@ function M.setup()
         M.change_state(stateReason)
       end,
       develop = function(repo, ...)
-        local bufnr = vim.api.nvim_get_current_buf()
-        local buffer = octo_buffers[bufnr]
+        local buffer = utils.get_current_buffer()
 
         if buffer and buffer.kind and buffer.kind == "issue" then
           utils.develop_issue(buffer.repo, buffer.node.number, repo)
@@ -222,6 +216,16 @@ function M.setup()
       edit = function(...)
         utils.get_pull_request(...)
       end,
+      runs = function()
+        local buffer = utils.get_current_buffer()
+        if not buffer or not buffer:isPullRequest() then
+          utils.error "Not a pull request buffer"
+          return
+        end
+        local headRefName = buffer.node.headRefName
+
+        require("octo.workflow_runs").list { branch = headRefName }
+      end,
       close = function()
         M.change_state "CLOSED"
       end,
@@ -233,8 +237,8 @@ function M.setup()
         picker.prs(opts)
       end,
       checkout = function()
-        local bufnr = vim.api.nvim_get_current_buf()
-        local buffer = octo_buffers[bufnr]
+        local buffer = utils.get_current_buffer()
+
         if not buffer or not buffer:isPullRequest() then
           picker.prs {
             cb = function(selected)
@@ -735,8 +739,8 @@ end
 
 --- Adds a new comment to an issue/PR or a review thread
 function M.add_pr_issue_or_review_thread_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
+
   if not buffer then
     return
   end
@@ -789,12 +793,18 @@ function M.add_pr_issue_or_review_thread_comment()
   end
 
   if comment_kind == "IssueComment" then
-    writers.write_comment(bufnr, comment, comment_kind)
+    writers.write_comment(buffer.bufnr, comment, comment_kind)
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
   elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
-    vim.api.nvim_buf_set_lines(bufnr, _thread.bufferEndLine, _thread.bufferEndLine, false, { "x", "x", "x", "x" })
-    writers.write_comment(bufnr, comment, comment_kind, _thread.bufferEndLine + 1)
+    vim.api.nvim_buf_set_lines(
+      buffer.bufnr,
+      _thread.bufferEndLine,
+      _thread.bufferEndLine,
+      false,
+      { "x", "x", "x", "x" }
+    )
+    writers.write_comment(buffer.bufnr, comment, comment_kind, _thread.bufferEndLine + 1)
     vim.fn.execute(":" .. _thread.bufferEndLine + 3)
     vim.cmd [[startinsert]]
   end
@@ -804,11 +814,11 @@ function M.add_pr_issue_or_review_thread_comment()
 end
 
 function M.delete_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
+
   local comment = buffer:get_comment_at_cursor()
   if not comment then
     utils.error "The cursor does not seem to be located at any comment"
@@ -838,13 +848,13 @@ function M.delete_comment()
 
         -- remove comment lines from the buffer
         if comment.reactionLine then
-          vim.api.nvim_buf_set_lines(bufnr, start_line - 2, end_line + 1, false, {})
-          vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
+          vim.api.nvim_buf_set_lines(buffer.bufnr, start_line - 2, end_line + 1, false, {})
+          vim.api.nvim_buf_clear_namespace(buffer.bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
         else
-          vim.api.nvim_buf_set_lines(bufnr, start_line - 2, end_line - 1, false, {})
+          vim.api.nvim_buf_set_lines(buffer.bufnr, start_line - 2, end_line - 1, false, {})
         end
-        vim.api.nvim_buf_clear_namespace(bufnr, comment.namespace, 0, -1)
-        vim.api.nvim_buf_del_extmark(bufnr, constants.OCTO_COMMENT_NS, comment.extmark)
+        vim.api.nvim_buf_clear_namespace(buffer.bufnr, comment.namespace, 0, -1)
+        vim.api.nvim_buf_del_extmark(buffer.bufnr, constants.OCTO_COMMENT_NS, comment.extmark)
         local comments = buffer.commentsMetadata
         if comments then
           local updated = {}
@@ -897,8 +907,8 @@ function M.delete_comment()
           if thread_was_deleted then
             -- this was the last comment, close the thread buffer
             -- No comments left
-            utils.error("Deleting buffer " .. tostring(bufnr))
-            local bufname = vim.api.nvim_buf_get_name(bufnr)
+            utils.error("Deleting buffer " .. tostring(buffer.bufnr))
+            local bufname = vim.api.nvim_buf_get_name(buffer.bufnr)
             local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
             if split then
               local layout = reviews.get_current_review().layout
@@ -912,7 +922,7 @@ function M.delete_comment()
               -- restore the diff buffer so that window is not closed when deleting thread buffer
               vim.api.nvim_win_set_buf(thread_win, original_buf)
               -- delete the thread buffer
-              pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+              pcall(vim.api.nvim_buf_delete, buffer.bufnr, { force = true })
               -- refresh signs and virtual text
               file:place_signs()
               -- diff buffers
@@ -950,11 +960,12 @@ local function update_review_thread_header(bufnr, thread, thread_id, thread_line
 end
 
 function M.resolve_thread()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
+
   if not buffer then
     return
   end
+
   local _thread = buffer:get_thread_at_cursor()
   if not _thread then
     return
@@ -971,7 +982,7 @@ function M.resolve_thread()
         local resp = vim.json.decode(output)
         local thread = resp.data.resolveReviewThread.thread
         if thread.isResolved then
-          update_review_thread_header(bufnr, thread, thread_id, thread_line)
+          update_review_thread_header(buffer.bufnr, thread, thread_id, thread_line)
           --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
         end
       end
@@ -980,8 +991,8 @@ function M.resolve_thread()
 end
 
 function M.unresolve_thread()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
+
   if not buffer then
     return
   end
@@ -1001,7 +1012,7 @@ function M.unresolve_thread()
         local resp = vim.json.decode(output)
         local thread = resp.data.unresolveReviewThread.thread
         if not thread.isResolved then
-          update_review_thread_header(bufnr, thread, thread_id, thread_line)
+          update_review_thread_header(buffer.bufnr, thread, thread_id, thread_line)
         end
       end
     end,
@@ -1009,8 +1020,8 @@ function M.unresolve_thread()
 end
 
 function M.change_state(state)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
+
   if not buffer then
     return
   end
@@ -1055,8 +1066,8 @@ function M.change_state(state)
     buffer.node.state = new_state
 
     local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
-    writers.write_state(bufnr, updated_state:upper(), buffer.number)
-    writers.write_details(bufnr, obj, true)
+    writers.write_state(buffer.bufnr, updated_state:upper(), buffer.number)
+    writers.write_details(buffer.bufnr, obj, true)
     local kind
     if buffer:isIssue() then
       kind = "Issue"
@@ -1366,8 +1377,7 @@ end
 --- Change PR state to ready for review or draft
 --- @param opts PRReadyOpts
 M.gh_pr_ready = function(opts)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     utils.error "Not a PR buffer"
     return
@@ -1381,7 +1391,7 @@ M.gh_pr_ready = function(opts)
         -- There seems to be something wrong with the CLI output. It comes back as stderr
         failure = function(output)
           utils.info(output)
-          writers.write_state(bufnr)
+          writers.write_state(buffer.bufnr)
         end,
         success = utils.error,
       },
@@ -1390,8 +1400,8 @@ M.gh_pr_ready = function(opts)
 end
 
 function M.pr_checks()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
+
   if not buffer or not buffer:isPullRequest() then
     return
   end
@@ -1442,8 +1452,7 @@ function M.pr_checks()
 end
 
 function M.merge_pr(...)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     return
   end
@@ -1475,17 +1484,17 @@ function M.merge_pr(...)
     args = args,
     cb = function(output, stderr)
       utils.info(output .. " " .. stderr)
-      writers.write_state(bufnr)
+      writers.write_state(buffer.bufnr)
     end,
   }
 end
 
 function M.show_pr_diff()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     return
   end
+
   local url = string.format("/repos/%s/pulls/%s", buffer.repo, buffer.number)
   gh.run {
     args = { "api", "--paginate", url },
@@ -1535,8 +1544,7 @@ local function get_reaction_info(bufnr, buffer)
 end
 
 function M.reaction_action(reaction)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1551,7 +1559,7 @@ function M.reaction_action(reaction)
     reaction = "HOORAY"
   end
 
-  local reaction_line, reaction_groups, insert_line, id = get_reaction_info(bufnr, buffer)
+  local reaction_line, reaction_groups, insert_line, id = get_reaction_info(buffer.bufnr, buffer)
 
   local action
   for _, reaction_group in ipairs(reaction_groups) do
@@ -1585,13 +1593,18 @@ function M.reaction_action(reaction)
         buffer:update_reactions_at_cursor(reaction_groups, reaction_line)
         if action == "remove" and utils.count_reactions(reaction_groups) == 0 then
           -- delete lines
-          vim.api.nvim_buf_set_lines(bufnr, reaction_line - 1, reaction_line + 1, false, {})
-          vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, reaction_line - 1, reaction_line + 1)
+          vim.api.nvim_buf_set_lines(buffer.bufnr, reaction_line - 1, reaction_line + 1, false, {})
+          vim.api.nvim_buf_clear_namespace(
+            buffer.bufnr,
+            constants.OCTO_REACTIONS_VT_NS,
+            reaction_line - 1,
+            reaction_line + 1
+          )
         elseif action == "add" and insert_line then
           -- add lines
-          vim.api.nvim_buf_set_lines(bufnr, reaction_line - 1, reaction_line - 1, false, { "", "" })
+          vim.api.nvim_buf_set_lines(buffer.bufnr, reaction_line - 1, reaction_line - 1, false, { "", "" })
         end
-        writers.write_reactions(bufnr, reaction_groups, reaction_line)
+        writers.write_reactions(buffer.bufnr, reaction_groups, reaction_line)
         buffer:update_metadata()
       end
     end,
@@ -1599,8 +1612,7 @@ function M.reaction_action(reaction)
 end
 
 function M.add_project_card()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1617,7 +1629,7 @@ function M.add_project_card()
         elseif output then
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
+            writers.write_details(buffer.bufnr, obj, true)
             buffer.node.projectCards = obj.projectCards
           end)
         end
@@ -1627,8 +1639,7 @@ function M.add_project_card()
 end
 
 function M.remove_project_card()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1646,7 +1657,7 @@ function M.remove_project_card()
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             buffer.node.projectCards = obj.projectCards
-            writers.write_details(bufnr, obj, true)
+            writers.write_details(buffer.bufnr, obj, true)
           end)
         end
       end,
@@ -1655,8 +1666,7 @@ function M.remove_project_card()
 end
 
 function M.move_project_card()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1675,7 +1685,7 @@ function M.move_project_card()
             -- refresh issue/pr details
             require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
               buffer.node.projectCards = obj.projectCards
-              writers.write_details(bufnr, obj, true)
+              writers.write_details(buffer.bufnr, obj, true)
             end)
           end
         end,
@@ -1685,8 +1695,7 @@ function M.move_project_card()
 end
 
 function M.set_project_v2_card()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1718,7 +1727,7 @@ function M.set_project_v2_card()
                 -- TODO do update here
                 -- refresh issue/pr details
                 require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-                  writers.write_details(bufnr, obj, true)
+                  writers.write_details(buffer.bufnr, obj, true)
                   buffer.node.projectCards = obj.projectCards
                 end)
               end
@@ -1731,8 +1740,7 @@ function M.set_project_v2_card()
 end
 
 function M.remove_project_v2_card()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1750,7 +1758,7 @@ function M.remove_project_v2_card()
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             buffer.node.projectCards = obj.projectCards
-            writers.write_details(bufnr, obj, true)
+            writers.write_details(buffer.bufnr, obj, true)
           end)
         end
       end,
@@ -1831,8 +1839,7 @@ end
 local function label_action(opts)
   local label = opts.label
 
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1850,7 +1857,7 @@ local function label_action(opts)
 
     local refresh_details = function()
       require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-        writers.write_details(bufnr, obj, true)
+        writers.write_details(buffer.bufnr, obj, true)
       end)
     end
 
@@ -1897,8 +1904,7 @@ function M.remove_label(label)
 end
 
 function M.add_user(subject, login)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     utils.error "No Octo buffer"
     return
@@ -1927,7 +1933,7 @@ function M.add_user(subject, login)
         elseif output then
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
+            writers.write_details(buffer.bufnr, obj, true)
             vim.cmd [[stopinsert]]
           end)
         end
@@ -1947,8 +1953,7 @@ function M.add_user(subject, login)
 end
 
 function M.remove_assignee(login)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -1968,7 +1973,7 @@ function M.remove_assignee(login)
         elseif output then
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(bufnr, obj, true)
+            writers.write_details(buffer.bufnr, obj, true)
           end)
         end
       end,
@@ -1987,8 +1992,7 @@ function M.remove_assignee(login)
 end
 
 function M.copy_url()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   local url
 
   if buffer then
