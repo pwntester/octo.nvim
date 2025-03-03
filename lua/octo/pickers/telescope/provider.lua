@@ -473,6 +473,18 @@ function M.changed_files()
         utils.error(stderr)
       elseif output then
         local results = vim.json.decode(output)
+
+        local max_additions = -1
+        local max_deletions = -1
+        for _, result in ipairs(results) do
+          if result.additions > max_additions then
+            max_additions = result.additions
+          end
+          if result.deletions > max_deletions then
+            max_deletions = result.deletions
+          end
+        end
+
         pickers
           .new({}, {
             prompt_title = false,
@@ -480,7 +492,10 @@ function M.changed_files()
             preview_title = false,
             finder = finders.new_table {
               results = results,
-              entry_maker = entry_maker.gen_from_git_changed_files(),
+              entry_maker = entry_maker.gen_from_git_changed_files {
+                max_additions = max_additions,
+                max_deletions = max_deletions,
+              },
             },
             sorter = conf.generic_sorter {},
             previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
