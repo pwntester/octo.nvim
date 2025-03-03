@@ -473,6 +473,18 @@ function M.changed_files()
         utils.error(stderr)
       elseif output then
         local results = vim.json.decode(output)
+
+        local max_additions = -1
+        local max_deletions = -1
+        for _, result in ipairs(results) do
+          if result.additions > max_additions then
+            max_additions = result.additions
+          end
+          if result.deletions > max_deletions then
+            max_deletions = result.deletions
+          end
+        end
+
         pickers
           .new({}, {
             prompt_title = false,
@@ -480,7 +492,10 @@ function M.changed_files()
             preview_title = false,
             finder = finders.new_table {
               results = results,
-              entry_maker = entry_maker.gen_from_git_changed_files(),
+              entry_maker = entry_maker.gen_from_git_changed_files {
+                max_additions = max_additions,
+                max_deletions = max_deletions,
+              },
             },
             sorter = conf.generic_sorter {},
             previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
@@ -1234,8 +1249,18 @@ local function mark_notification_read()
   end
 end
 
+---@class NotificationOpts
+---@field repo string
+---@field all boolean Whether to show all of the notifications including read ones
+---@field preview_title string
+---@field prompt_title string
+---@field results_title string
+
+---@param opts NotificationOpts
 function M.notifications(opts)
   opts = opts or {}
+
+  opts.all = opts.all or false
   local cfg = octo_config.values
 
   local endpoint = "/notifications"
@@ -1248,43 +1273,46 @@ function M.notifications(opts)
   opts.preview_title = ""
   opts.results_title = ""
 
-  gh.run {
-    args = { "api", "--paginate", endpoint },
-    headers = { "Accept: application/vnd.github.v3.diff" },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
+  local create_notification_picker = function(output)
+    local resp = vim.json.decode(output)
 
-        if #resp == 0 then
-          utils.info "There are no notifications"
-          return
-        end
+    if #resp == 0 then
+      utils.info "There are no notifications"
+      return
+    end
 
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = resp,
-              entry_maker = entry_maker.gen_from_notification {
-                show_repo_info = not opts.repo,
-              },
-            },
-            sorter = conf.generic_sorter(opts),
-            previewer = previewers.issue.new(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+    pickers
+      .new(opts, {
+        finder = finders.new_table {
+          results = resp,
+          entry_maker = entry_maker.gen_from_notification {
+            show_repo_info = not opts.repo,
+          },
+        },
+        sorter = conf.generic_sorter(opts),
+        previewer = previewers.issue.new(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(function(prompt_bufnr, type)
+            open(type)(prompt_bufnr)
+          end)
+          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
+          return true
+        end,
+      })
+      :find()
+  end
+
+  gh.api.get {
+    endpoint,
+    F = {
+      all = opts.all,
+    },
+    opts = {
+      headers = { "Accept: application/vnd.github.v3.diff" },
+      cb = gh.create_callback { success = create_notification_picker },
+    },
   }
 end
 
