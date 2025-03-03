@@ -161,14 +161,16 @@ function M.gen_from_git_commits()
   end
 end
 
-function M.gen_from_git_changed_files()
+function M.gen_from_git_changed_files(opts)
+  opts = opts or {}
+
   local displayer = entry_display.create {
     separator = " ",
     items = {
-      { width = 8 },
+      { width = 7 },
       { width = string.len "modified" },
-      { width = 5 },
-      { width = 5 },
+      { width = #tostring(opts.max_additions) + 1 },
+      { width = #tostring(opts.max_deletions) + 1 },
       { remaining = true },
     },
   }
