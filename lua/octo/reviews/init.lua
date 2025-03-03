@@ -52,6 +52,33 @@ function Review:create(callback)
   }
 end
 
+-- Get review threads without start a review.
+function Review:populate_threads(callback)
+  local query =
+    graphql("review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
+  gh.api.graphql {
+    query = query,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = vim.fn.json_decode(output)
+          callback(resp)
+        end
+      end,
+    },
+  }
+end
+
+function Review:browse()
+  self:populate_threads(function(resp)
+    local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+    self:update_threads(threads)
+    self:initiate()
+  end)
+end
+
 -- Starts a new review
 function Review:start()
   self:create(function(resp)
@@ -457,9 +484,17 @@ M.Review = Review
 
 function M.add_review_comment(isSuggestion)
   local review = M.get_current_review()
+
   if not review then
     error "Could not find review"
   end
+
+  -- we maybe in browse mode, where no review has been started.
+  if review.id == -1 then
+    vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+    return
+  end
+
   review:add_comment(isSuggestion)
 end
 
@@ -546,12 +581,34 @@ local function get_pr_from_buffer_or_current_branch(cb)
     cb(pull_request)
   else
     pull_request = utils.get_pull_request_for_current_branch(cb)
+    cb(pull_request)
   end
 end
 
-function M.start_review()
+function M.browse_review()
+  local current_review = M.get_current_review()
+
+  if current_review and current_review.id ~= -1 then
+    vim.notify("Cannot browse when a review has been started", vim.log.levels.ERROR)
+    return
+  end
+
   get_pr_from_buffer_or_current_branch(function(pull_request)
-    local current_review = Review:new(pull_request)
+    current_review = Review:new(pull_request)
+    current_review:browse()
+  end)
+end
+
+function M.start_review()
+  -- its possible we are already browsing a review with 'Octo review browse'
+  local current_review = M.get_current_review()
+  if current_review then
+    current_review:start()
+    return
+  end
+
+  get_pr_from_buffer_or_current_branch(function(pull_request)
+    current_review = Review:new(pull_request)
     current_review:start()
   end)
 end
@@ -572,7 +629,7 @@ end
 
 function M.discard_review()
   local current_review = M.get_current_review()
-  if current_review then
+  if current_review and current_review.id ~= -1 then
     current_review:discard()
   else
     utils.error "Please start or resume a review first"
@@ -581,7 +638,7 @@ end
 
 function M.submit_review()
   local current_review = M.get_current_review()
-  if current_review then
+  if current_review and current_review.id ~= -1 then
     current_review:collect_submit_info()
   else
     utils.error "Please start or resume a review first"
