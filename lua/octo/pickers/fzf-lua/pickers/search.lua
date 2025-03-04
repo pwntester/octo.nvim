@@ -50,25 +50,27 @@ return function(opts)
           if val then
             _prompt = string.format("%s %s", val, _prompt)
           end
-          local output = gh.run {
-            args = { "api", "graphql", "-f", string.format("query=%s", graphql("search_query", _prompt)) },
-            mode = "sync",
+          local output = gh.api.graphql {
+            query = graphql "search_query",
+            fields = { prompt = _prompt },
+            jq = ".data.search.nodes",
+            opts = { mode = "sync" },
           }
 
           if not output then
             return {}
           end
+          local issues = vim.json.decode(output)
 
-          local resp = vim.json.decode(output)
           local max_id_length = 1
-          for _, issue in ipairs(resp.data.search.nodes) do
+          for _, issue in ipairs(issues) do
             local s = tostring(issue.number)
             if #s > max_id_length then
               max_id_length = #s
             end
           end
 
-          for _, issue in ipairs(resp.data.search.nodes) do
+          for _, issue in ipairs(issues) do
             vim.schedule(function()
               handle_entry(fzf_cb, issue, max_id_length, formatted_items, co)
             end)
