@@ -61,7 +61,7 @@ local function get_hl_groups()
 
     FilePanelTitle = { fg = get_fg "Directory" or colors.blue, gui = "bold" },
     FilePanelCounter = { fg = get_fg "Identifier" or colors.purple, gui = "bold" },
-    NormalFront = { fg = get_fg "Normal" or colors.white },
+    NormalFloat = { fg = get_fg "Normal" or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
     Editable = { bg = float_bg },
     Strikethrough = { fg = colors.grey, gui = "strikethrough" },
@@ -78,7 +78,7 @@ local function get_hl_links()
     StatusLine = "StatusLine",
     StatusLineNC = "StatusLineNC",
     EndOfBuffer = "EndOfBuffer",
-    FilePanelFileName = "NormalFront",
+    FilePanelFileName = "NormalFloat",
     FilePanelSelectedFile = "Type",
     FilePanelPath = "Comment",
     StatusAdded = "OctoGreen",

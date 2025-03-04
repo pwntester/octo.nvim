@@ -345,7 +345,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
       local icon = utils.reaction_map[group.content]
       local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
       vim.list_extend(reactions_vt, bubble)
-      table.insert(reactions_vt, { " " .. group.users.totalCount .. " ", "NormalFront" })
+      table.insert(reactions_vt, { " " .. group.users.totalCount .. " ", "NormalFloat" })
     end
   end
   M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, reactions_vt)
