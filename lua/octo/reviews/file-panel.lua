@@ -38,7 +38,7 @@ FilePanel.winopts = {
   winhl = table.concat({
     "EndOfBuffer:OctoEndOfBuffer",
     "Normal:OctoNormal",
-    "VertSplit:OctoVertSplit",
+    "WinSeparator:OctoWinSeparator",
     "SignColumn:OctoNormal",
     "StatusLine:OctoStatusLine",
     "StatusLineNC:OctoStatuslineNC",
