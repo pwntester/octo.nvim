@@ -817,6 +817,9 @@ function OctoBuffer:do_update_comment(comment_metadata)
     update_query = graphql("update_pull_request_review_comment_mutation", comment_metadata.id, comment_metadata.body)
   elseif comment_metadata.kind == "PullRequestReview" then
     update_query = graphql("update_pull_request_review_mutation", comment_metadata.id, comment_metadata.body)
+  elseif comment_metadata.kind == "DiscussionComment" then
+    --- TODO: https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#updatediscussioncomment
+    utils.error "Not implemented just yet"
   end
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", update_query) },
