@@ -86,6 +86,9 @@ function M.setup()
       M.search(...)
     end,
     discussion = {
+      reload = function()
+        M.reload { verbose = true }
+      end,
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
