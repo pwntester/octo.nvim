@@ -97,6 +97,28 @@ function OctoBuffer:render_repo()
   self.ready = true
 end
 
+function OctoBuffer:render_discussion()
+  self:clear()
+
+  local obj = self.node
+  writers.write_title(self.bufnr, tostring(obj.title), 1)
+  writers.write_discussion_details(self.bufnr, obj)
+  writers.write_body(self.bufnr, obj, 11)
+
+  if obj.answer ~= vim.NIL then
+    local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
+    writers.write_discussion_answer(self.bufnr, obj, line)
+  end
+
+  for _, comment in ipairs(obj.comments.nodes) do
+    local start_line, end_line = writers.write_comment(self.bufnr, comment, "DiscussionComment")
+  end
+
+  vim.api.nvim_buf_set_option(self.bufnr, "filetype", "octo")
+
+  self.ready = true
+end
+
 ---Writes an issue or pull request to the buffer.
 function OctoBuffer:render_issue()
   self:clear()
