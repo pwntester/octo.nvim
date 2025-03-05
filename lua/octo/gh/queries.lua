@@ -414,7 +414,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
       labels(first: 20) {
         ...LabelConnectionFragment
       }
-      comments(first: 100, after: $endCursor) {
+      comments(first: 25, after: $endCursor) {
         totalCount
         nodes {
           ...DiscussionCommentFragment
@@ -720,6 +720,12 @@ query {
       ...ReactionGroupsUsersFragment
     }
     ... on IssueComment {
+      ...ReactionGroupsUsersFragment
+    }
+    ... on Discussion {
+      ...ReactionGroupsUsersFragment
+    }
+    ... on DiscussionComment {
       ...ReactionGroupsUsersFragment
     }
   }
