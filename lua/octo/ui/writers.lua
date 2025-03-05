@@ -652,6 +652,7 @@ function M.write_comment(bufnr, comment, kind, line)
   ---- PullRequestReview
   ---- PullRequestReviewComment
   ---- PullRequestComment (regular comment (not associated to any review) to a PR review comment)
+  ---- DiscussionComment
 
   local buffer = octo_buffers[bufnr]
   local conf = config.values
@@ -714,7 +715,7 @@ function M.write_comment(bufnr, comment, kind, line)
     if not comment.viewerCanUpdate then
       table.insert(header_vt, { " ", "OctoRed" })
     end
-  elseif kind == "IssueComment" then
+  elseif kind == "IssueComment" or kind == "DiscussionComment" then
     -- Issue comments
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
@@ -727,6 +728,7 @@ function M.write_comment(bufnr, comment, kind, line)
       table.insert(header_vt, { " ", "OctoRed" })
     end
   end
+
   local comment_vt_ns = vim.api.nvim_create_namespace ""
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
 

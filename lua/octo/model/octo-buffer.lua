@@ -108,6 +108,7 @@ function OctoBuffer:render_discussion()
   if obj.answer ~= vim.NIL then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
     writers.write_discussion_answer(self.bufnr, obj, line)
+    writers.write_block(self.bufnr, { "" })
   end
 
   for _, comment in ipairs(obj.comments.nodes) do
