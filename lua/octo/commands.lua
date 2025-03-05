@@ -790,12 +790,12 @@ function M.add_pr_issue_or_review_thread_comment()
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
   elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
-    comment_kind = "IssueComment"
+    comment_kind = "IssueComment" and buffer:isIssue() or "DiscussionComment"
   elseif utils.is_blank(_thread) and buffer:isReviewThread() then
     utils.error "Error adding a comment to a review thread"
   end
 
-  if comment_kind == "IssueComment" then
+  if comment_kind == "IssueComment" or comment_kind == "DiscussionComment" then
     writers.write_comment(buffer.bufnr, comment, comment_kind)
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
