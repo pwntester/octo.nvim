@@ -543,6 +543,7 @@ fragment DiscussionDetailsFragment on Discussion {
 
 M.discussion_comment = [[
 fragment DiscussionCommentFragment on DiscussionComment {
+  __typename
   id
   body
   createdAt

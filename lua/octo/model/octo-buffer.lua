@@ -43,11 +43,12 @@ function OctoBuffer:new(opts)
   if this.repo then
     this.owner, this.name = utils.split_repo(this.repo)
   end
+
   if this.node and this.node.commits then
     this.kind = "pull"
     this.taggable_users = { this.node.author.login }
   elseif this.node and this.number then
-    this.kind = "issue"
+    this.kind = opts.kind or "issue"
     if not utils.is_blank(this.node.author) then
       this.taggable_users = { this.node.author.login }
     end
@@ -56,6 +57,7 @@ function OctoBuffer:new(opts)
   else
     this.kind = "reviewthread"
   end
+
   setmetatable(this, self)
   octo_buffers[this.bufnr] = this
   return this
@@ -93,6 +95,29 @@ function OctoBuffer:render_repo()
 
   -- reset modified option
   vim.api.nvim_buf_set_option(self.bufnr, "modified", false)
+
+  self.ready = true
+end
+
+function OctoBuffer:render_discussion()
+  self:clear()
+
+  local obj = self.node
+  writers.write_title(self.bufnr, tostring(obj.title), 1)
+  writers.write_discussion_details(self.bufnr, obj)
+  writers.write_body(self.bufnr, obj, 11)
+
+  if obj.answer ~= vim.NIL then
+    local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
+    writers.write_discussion_answer(self.bufnr, obj, line)
+    writers.write_block(self.bufnr, { "" })
+  end
+
+  for _, comment in ipairs(obj.comments.nodes) do
+    local start_line, end_line = writers.write_comment(self.bufnr, comment, "DiscussionComment")
+  end
+
+  vim.api.nvim_buf_set_option(self.bufnr, "filetype", "octo")
 
   self.ready = true
 end
@@ -339,7 +364,7 @@ function OctoBuffer:save()
   self:update_metadata()
 
   -- title & body
-  if self.kind == "issue" or self.kind == "pull" then
+  if self.kind == "issue" or self.kind == "pull" or self.kind == "discussion" then
     self:do_save_title_and_body()
   end
 
@@ -350,6 +375,9 @@ function OctoBuffer:save()
         -- we use -1 as an indicator for new comments for which we dont currently have a GH id
         if comment_metadata.kind == "IssueComment" then
           self:do_add_issue_comment(comment_metadata)
+        elseif comment_metadata.kind == "DiscussionComment" then
+          --- TODO: https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#adddiscussioncomment
+          utils.error "Not implemented just yet"
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           if not utils.is_blank(comment_metadata.replyTo) then
             -- comment is a reply to a thread comment
@@ -392,6 +420,8 @@ function OctoBuffer:do_save_title_and_body()
       query = graphql("update_issue_mutation", id, title_metadata.body, desc_metadata.body)
     elseif self:isPullRequest() then
       query = graphql("update_pull_request_mutation", id, title_metadata.body, desc_metadata.body)
+    elseif self:isDiscussion() then
+      query = graphql("update_discussion_mutation", id, title_metadata.body, desc_metadata.body)
     end
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -401,11 +431,15 @@ function OctoBuffer:do_save_title_and_body()
         elseif output then
           local resp = vim.json.decode(output)
           local obj
+
           if self:isPullRequest() then
             obj = resp.data.updatePullRequest.pullRequest
           elseif self:isIssue() then
             obj = resp.data.updateIssue.issue
+          elseif self:isDiscussion() then
+            obj = resp.data.updateDiscussion.discussion
           end
+
           if title_metadata.body == obj.title then
             title_metadata.savedBody = obj.title
             title_metadata.dirty = false
@@ -783,6 +817,9 @@ function OctoBuffer:do_update_comment(comment_metadata)
     update_query = graphql("update_pull_request_review_comment_mutation", comment_metadata.id, comment_metadata.body)
   elseif comment_metadata.kind == "PullRequestReview" then
     update_query = graphql("update_pull_request_review_mutation", comment_metadata.id, comment_metadata.body)
+  elseif comment_metadata.kind == "DiscussionComment" then
+    --- TODO: https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#updatediscussioncomment
+    utils.error "Not implemented just yet"
   end
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", update_query) },
@@ -827,7 +864,7 @@ function OctoBuffer:update_metadata()
     return
   end
   local metadata_objs = {}
-  if self.kind == "issue" or self.kind == "pull" then
+  if self.kind == "issue" or self.kind == "pull" or self.kind == "discussion" then
     table.insert(metadata_objs, self.titleMetadata)
     table.insert(metadata_objs, self.bodyMetadata)
   end
@@ -866,7 +903,7 @@ function OctoBuffer:render_signs()
   vim.api.nvim_buf_clear_namespace(self.bufnr, constants.OCTO_EMPTY_MSG_VT_NS, 0, -1)
 
   local metadata
-  if self.kind == "issue" or self.kind == "pull" then
+  if self.kind == "issue" or self.kind == "pull" or self.kind == "discussion" then
     -- title
     metadata = self.titleMetadata
     if metadata then
@@ -919,6 +956,10 @@ end
 --- Checks if the buffer represents a review comment thread
 function OctoBuffer:isReviewThread()
   return self.kind == "reviewthread"
+end
+
+function OctoBuffer:isDiscussion()
+  return self.kind == "discussion"
 end
 
 --- Checks if the buffer represents a Pull Request
