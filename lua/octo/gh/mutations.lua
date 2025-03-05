@@ -307,6 +307,22 @@ mutation {
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
+M.update_discussion = [[
+mutation {
+  updateDiscussion(input: {
+    discussionId: "%s",
+    title: """%s""",
+    body: """%s"""
+  }) {
+    discussion {
+      id
+      title
+      body
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review = [[
 mutation {

@@ -364,7 +364,7 @@ function OctoBuffer:save()
   self:update_metadata()
 
   -- title & body
-  if self.kind == "issue" or self.kind == "pull" then
+  if self.kind == "issue" or self.kind == "pull" or self.kind == "discussion" then
     self:do_save_title_and_body()
   end
 
@@ -375,6 +375,9 @@ function OctoBuffer:save()
         -- we use -1 as an indicator for new comments for which we dont currently have a GH id
         if comment_metadata.kind == "IssueComment" then
           self:do_add_issue_comment(comment_metadata)
+        elseif comment_metadata.kind == "DiscussionComment" then
+          --- TODO: https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#adddiscussioncomment
+          utils.error "Not implemented just yet"
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           if not utils.is_blank(comment_metadata.replyTo) then
             -- comment is a reply to a thread comment
@@ -417,6 +420,8 @@ function OctoBuffer:do_save_title_and_body()
       query = graphql("update_issue_mutation", id, title_metadata.body, desc_metadata.body)
     elseif self:isPullRequest() then
       query = graphql("update_pull_request_mutation", id, title_metadata.body, desc_metadata.body)
+    elseif self:isDiscussion() then
+      query = graphql("update_discussion_mutation", id, title_metadata.body, desc_metadata.body)
     end
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
@@ -426,11 +431,15 @@ function OctoBuffer:do_save_title_and_body()
         elseif output then
           local resp = vim.json.decode(output)
           local obj
+
           if self:isPullRequest() then
             obj = resp.data.updatePullRequest.pullRequest
           elseif self:isIssue() then
             obj = resp.data.updateIssue.issue
+          elseif self:isDiscussion() then
+            obj = resp.data.updateDiscussion.discussion
           end
+
           if title_metadata.body == obj.title then
             title_metadata.savedBody = obj.title
             title_metadata.dirty = false
@@ -852,7 +861,7 @@ function OctoBuffer:update_metadata()
     return
   end
   local metadata_objs = {}
-  if self.kind == "issue" or self.kind == "pull" then
+  if self.kind == "issue" or self.kind == "pull" or self.kind == "discussion" then
     table.insert(metadata_objs, self.titleMetadata)
     table.insert(metadata_objs, self.bodyMetadata)
   end
@@ -891,7 +900,7 @@ function OctoBuffer:render_signs()
   vim.api.nvim_buf_clear_namespace(self.bufnr, constants.OCTO_EMPTY_MSG_VT_NS, 0, -1)
 
   local metadata
-  if self.kind == "issue" or self.kind == "pull" then
+  if self.kind == "issue" or self.kind == "pull" or self.kind == "discussion" then
     -- title
     metadata = self.titleMetadata
     if metadata then
