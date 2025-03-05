@@ -6,6 +6,7 @@ local commands = require "octo.commands"
 local completion = require "octo.completion"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
@@ -142,6 +143,9 @@ function M.load(repo, kind, number, cb)
   elseif kind == "repo" then
     query = graphql "repository_query"
     fields = { owner = owner, name = name }
+  elseif kind == "discussion" then
+    query = queries.discussion
+    fields = { owner = owner, name = name, number = number }
   end
 
   local load_buffer = function(output)
@@ -152,6 +156,10 @@ function M.load(repo, kind, number, cb)
     elseif kind == "repo" then
       local resp = vim.json.decode(output)
       local obj = resp.data.repository
+      cb(obj)
+    elseif kind == "discussion" then
+      local resp = utils.aggregate_pages(output, "data.repository.discussion.comments.nodes")
+      local obj = resp.data.repository.discussion
       cb(obj)
     end
   end
@@ -292,6 +300,8 @@ function M.create_buffer(kind, obj, repo, create)
   octo_buffer:configure()
   if kind == "repo" then
     octo_buffer:render_repo()
+  elseif kind == "discussion" then
+    octo_buffer:render_discussion()
   else
     octo_buffer:render_issue()
     octo_buffer:async_fetch_taggable_users()
