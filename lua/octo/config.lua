@@ -210,6 +210,9 @@ function M.get_default_values()
     },
     mappings_disable_default = false,
     mappings = {
+      discussion = {
+        copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+      },
       runs = {
         expand_step = { lhs = "o", desc = "expand workflow step" },
         open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
@@ -541,6 +544,7 @@ function M.setup(opts)
       -- clear default mappings before merging user mappings
       M.values.mappings = {
         issue = {},
+        discussion = {},
         pull_request = {},
         review_thread = {},
         submit_win = {},

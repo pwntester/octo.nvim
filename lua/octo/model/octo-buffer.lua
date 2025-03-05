@@ -43,11 +43,12 @@ function OctoBuffer:new(opts)
   if this.repo then
     this.owner, this.name = utils.split_repo(this.repo)
   end
+
   if this.node and this.node.commits then
     this.kind = "pull"
     this.taggable_users = { this.node.author.login }
   elseif this.node and this.number then
-    this.kind = "issue"
+    this.kind = opts.kind or "issue"
     if not utils.is_blank(this.node.author) then
       this.taggable_users = { this.node.author.login }
     end
@@ -56,6 +57,7 @@ function OctoBuffer:new(opts)
   else
     this.kind = "reviewthread"
   end
+
   setmetatable(this, self)
   octo_buffers[this.bufnr] = this
   return this
@@ -942,6 +944,10 @@ end
 --- Checks if the buffer represents a review comment thread
 function OctoBuffer:isReviewThread()
   return self.kind == "reviewthread"
+end
+
+function OctoBuffer:isDiscussion()
+  return self.kind == "discussion"
 end
 
 --- Checks if the buffer represents a Pull Request

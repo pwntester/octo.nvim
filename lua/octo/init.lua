@@ -295,6 +295,7 @@ function M.create_buffer(kind, obj, repo, create)
     number = obj.number,
     repo = repo,
     node = obj,
+    kind = kind,
   }
 
   octo_buffer:configure()
