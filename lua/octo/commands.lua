@@ -1575,7 +1575,12 @@ function M.mark(opts)
     query = opts.undo and mutations.unmark_answer or mutations.mark_answer,
     f = { id = comment.id },
     opts = {
-      cb = gh.create_callback {},
+      cb = gh.create_callback {
+        success = function(_)
+          local msg = opts.undo and "unmarked" or "marked"
+          utils.info("Comment " .. msg)
+        end,
+      },
     },
   }
 end
