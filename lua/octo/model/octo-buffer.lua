@@ -853,8 +853,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
   elseif comment_metadata.kind == "PullRequestReview" then
     update_query = graphql("update_pull_request_review_mutation", comment_metadata.id, comment_metadata.body)
   elseif comment_metadata.kind == "DiscussionComment" then
-    --- TODO: https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#updatediscussioncomment
-    utils.error "Not implemented just yet"
+    update_query = graphql("update_discussion_comment_mutation", comment_metadata.id, comment_metadata.body)
   end
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", update_query) },
@@ -863,9 +862,12 @@ function OctoBuffer:do_update_comment(comment_metadata)
         vim.api.nvim_err_writeln(stderr)
       elseif output then
         local resp = vim.json.decode(output)
+
         local resp_comment
         if comment_metadata.kind == "IssueComment" then
           resp_comment = resp.data.updateIssueComment.issueComment
+        elseif comment_metadata.kind == "DiscussionComment" then
+          resp_comment = resp.data.updateDiscussionComment.comment
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           resp_comment = resp.data.updatePullRequestReviewComment.pullRequestReviewComment
           local threads =
@@ -877,6 +879,7 @@ function OctoBuffer:do_update_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReview" then
           resp_comment = resp.data.updatePullRequestReview.pullRequestReview
         end
+
         if resp_comment and utils.trim(comment_metadata.body) == utils.trim(resp_comment.body) then
           local comments = self.commentsMetadata
           for i, c in ipairs(comments) do

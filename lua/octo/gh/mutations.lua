@@ -283,6 +283,18 @@ mutation {
 }
 ]]
 
+--- https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#updatediscussioncomment
+M.update_discussion_comment = [[
+mutation {
+  updateDiscussionComment(input: {commentId: "%s", body: """%s"""}) {
+    comment {
+      id
+      body
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreviewcomment
 M.update_pull_request_review_comment = [[
 mutation {
