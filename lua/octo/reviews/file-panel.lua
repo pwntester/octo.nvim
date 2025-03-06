@@ -29,6 +29,7 @@ FilePanel.winopts = {
   spell = false,
   wrap = false,
   cursorline = true,
+  cursorlineopt = "line",
   signcolumn = "yes",
   foldmethod = "manual",
   foldcolumn = "0",
