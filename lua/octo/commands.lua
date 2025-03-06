@@ -797,7 +797,7 @@ function M.add_pr_issue_or_review_thread_comment()
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
   elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
-    comment_kind = "IssueComment" and buffer:isIssue() or "DiscussionComment"
+    comment_kind = buffer:isIssue() and "IssueComment" or "DiscussionComment"
   elseif utils.is_blank(_thread) and buffer:isReviewThread() then
     utils.error "Error adding a comment to a review thread"
   end
