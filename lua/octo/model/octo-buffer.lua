@@ -108,6 +108,16 @@ function OctoBuffer:render_discussion()
   writers.write_discussion_details(self.bufnr, obj)
   writers.write_body(self.bufnr, obj, 11)
 
+  -- write body reactions
+  local reaction_line
+  if utils.count_reactions(self.node.reactionGroups) > 0 then
+    local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
+    writers.write_block(self.bufnr, { "", "" }, line)
+    reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)
+  end
+  self.bodyMetadata.reactionGroups = self.node.reactionGroups
+  self.bodyMetadata.reactionLine = reaction_line
+
   if obj.answer ~= vim.NIL then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
     writers.write_discussion_answer(self.bufnr, obj, line)

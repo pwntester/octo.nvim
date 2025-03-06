@@ -1538,7 +1538,7 @@ local function get_reaction_info(bufnr, buffer)
     if not comment.reactionLine then
       insert_line = true
     end
-  elseif buffer:isIssue() or buffer:isPullRequest() then
+  elseif buffer:isIssue() or buffer:isPullRequest() or buffer:isDiscussion() then
     -- using the issue body instead
     id = buffer.node.id
     reaction_groups = buffer.bodyMetadata.reactionGroups
