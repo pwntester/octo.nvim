@@ -72,7 +72,7 @@ local function get_hl_links()
   return {
     Normal = "Normal",
     CursorLine = "CursorLine",
-    VertSplit = "VertSplit",
+    WinSeparator = "WinSeparator",
     SignColumn = "Normal",
     StatusColumn = "SignColumn",
     StatusLine = "StatusLine",
