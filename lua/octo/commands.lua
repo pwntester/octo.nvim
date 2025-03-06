@@ -1,6 +1,7 @@
 local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
+local mutations = require "octo.gh.mutations"
 local graphql = require "octo.gh.graphql"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
@@ -88,6 +89,12 @@ function M.setup()
     discussion = {
       reload = function()
         M.reload { verbose = true }
+      end,
+      mark = function()
+        M.mark()
+      end,
+      unmark = function()
+        M.mark { undo = true }
       end,
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
@@ -1548,6 +1555,27 @@ local function get_reaction_info(bufnr, buffer)
     end
   end
   return reaction_line, reaction_groups, insert_line, id
+end
+
+function M.mark(opts)
+  local buffer = utils.get_current_buffer()
+  if not buffer:isDiscussion() then
+    return
+  end
+
+  local comment = buffer:get_comment_at_cursor()
+
+  if not comment then
+    return
+  end
+
+  gh.api.graphql {
+    query = mutations.mark_answer and not opts.undo or mutations.unmark_answer,
+    f = { id = comment.id },
+    opts = {
+      cb = gh.create_callback {},
+    },
+  }
 end
 
 function M.reaction_action(reaction)
