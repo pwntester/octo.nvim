@@ -1558,6 +1558,8 @@ local function get_reaction_info(bufnr, buffer)
 end
 
 function M.mark(opts)
+  opts = opts or {}
+
   local buffer = utils.get_current_buffer()
   if not buffer:isDiscussion() then
     return
@@ -1570,7 +1572,7 @@ function M.mark(opts)
   end
 
   gh.api.graphql {
-    query = mutations.mark_answer and not opts.undo or mutations.unmark_answer,
+    query = opts.undo and mutations.unmark_answer or mutations.mark_answer,
     f = { id = comment.id },
     opts = {
       cb = gh.create_callback {},
