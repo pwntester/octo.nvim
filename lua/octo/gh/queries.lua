@@ -599,6 +599,18 @@ query {
 }
 ]] .. fragments.label_connection .. fragments.label
 
+M.discussion_labels = [[
+query {
+  repository(owner: "%s", name: "%s") {
+    discussion(number: %d) {
+      labels(first: 100) {
+        ...LabelConnectionFragment
+      }
+    }
+  }
+}
+]] .. fragments.label_connection .. fragments.label
+
 M.pull_request_labels = [[
 query {
   repository(owner: "%s", name: "%s") {

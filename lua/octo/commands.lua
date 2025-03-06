@@ -1889,7 +1889,7 @@ local function label_action(opts)
 
   local iid = buffer.node.id
   if not iid then
-    utils.error "Cannot get issue/pr id"
+    utils.error "Cannot get issue/pr/discussion id"
   end
 
   local cb = function(labels)
@@ -1900,7 +1900,11 @@ local function label_action(opts)
 
     local refresh_details = function()
       require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-        writers.write_details(buffer.bufnr, obj, true)
+        if buffer:isDiscussion() then
+          writers.write_discussion_details(buffer.bufnr, obj)
+        else
+          writers.write_details(buffer.bufnr, obj, true)
+        end
       end)
     end
 

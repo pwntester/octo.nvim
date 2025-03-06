@@ -875,6 +875,9 @@ function M.select_assigned_label(opts)
   elseif buffer:isPullRequest() then
     query = graphql("pull_request_labels_query", buffer.owner, buffer.name, buffer.number)
     key = "pullRequest"
+  elseif buffer:isDiscussion() then
+    query = graphql("discussion_labels_query", buffer.owner, buffer.name, buffer.number)
+    key = "discussion"
   end
 
   local create_picker = function(output)
