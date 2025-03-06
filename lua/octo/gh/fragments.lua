@@ -546,6 +546,7 @@ fragment DiscussionCommentFragment on DiscussionComment {
   __typename
   id
   body
+  url
   createdAt
   lastEditedAt
   ...ReactionGroupsFragment
