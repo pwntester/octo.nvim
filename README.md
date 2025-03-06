@@ -516,7 +516,7 @@ Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-
 | _OctoStatusLine_                  | StatusLine         |
 | _OctoStatusLineNC_                | StatusLineNC       |
 | _OctoEndOfBuffer_                 | EndOfBuffer        |
-| _OctoFilePanelFileName_           | NormalFront        |
+| _OctoFilePanelFileName_           | NormalFloat        |
 | _OctoFilePanelSelectedFile_       | Type               |
 | _OctoFilePanelPath_               | Comment            |
 | _OctoStatusAdded_                 | OctoGreen          |
