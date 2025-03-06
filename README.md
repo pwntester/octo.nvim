@@ -511,13 +511,13 @@ Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-
 |-----------------------------------|--------------------|
 | _OctoNormal_                      | Normal             |
 | _OctoCursorLine_                  | CursorLine         |
-| _OctoVertSplit_                   | VertSplit          |
+| _OctoWinSeparator_                | WinSeparator       |
 | _OctoSignColumn_                  | Normal             |
 | _OctoStatusColumn_                | SignColumn         |
 | _OctoStatusLine_                  | StatusLine         |
 | _OctoStatusLineNC_                | StatusLineNC       |
 | _OctoEndOfBuffer_                 | EndOfBuffer        |
-| _OctoFilePanelFileName_           | NormalFront        |
+| _OctoFilePanelFileName_           | NormalFloat        |
 | _OctoFilePanelSelectedFile_       | Type               |
 | _OctoFilePanelPath_               | Comment            |
 | _OctoStatusAdded_                 | OctoGreen          |
@@ -569,7 +569,7 @@ Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-
 | _OctoStateMergedBubble_           | OctoBubblePurple   |
 | _OctoStatePendingBubble_          | OctoBubbleYellow   |
 | _OctoStateApprovedBubble_         | OctoBubbleGreen    |
-| _OctoStateChangesRequestedBubble_ | OctoBubbleRed    |
+| _OctoStateChangesRequestedBubble_ | OctoBubbleRed      |
 | _OctoStateDismissedBubble_        | OctoBubbleRed      |
 | _OctoStateCommentedBubble_        | OctoBubbleBlue     |
 | _OctoStateSubmittedBubble_        | OctoBubbleGreen    |
