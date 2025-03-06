@@ -829,6 +829,7 @@ function M.delete_comment()
   end
   local start_line = comment.bufferStartLine
   local end_line = comment.bufferEndLine
+
   local query, threadId
   if comment.kind == "IssueComment" then
     query = graphql("delete_issue_comment_mutation", comment.id)
@@ -836,10 +837,13 @@ function M.delete_comment()
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
     local _thread = buffer:get_thread_at_cursor()
     threadId = _thread.threadId
+  elseif comment.kind == "DiscussionComment" then
+    query = graphql("delete_discussion_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
   end
+
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
     gh.run {

@@ -6,6 +6,7 @@ local constants = require "octo.constants"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local mutations = require "octo.gh.mutations"
 local signs = require "octo.ui.signs"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
@@ -377,7 +378,7 @@ function OctoBuffer:save()
           self:do_add_issue_comment(comment_metadata)
         elseif comment_metadata.kind == "DiscussionComment" then
           --- TODO: https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#adddiscussioncomment
-          utils.error "Not implemented just yet"
+          self:do_add_discussion_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           if not utils.is_blank(comment_metadata.replyTo) then
             -- comment is a reply to a thread comment
@@ -458,6 +459,40 @@ function OctoBuffer:do_save_title_and_body()
       end,
     }
   end
+end
+
+function OctoBuffer:do_add_discussion_comment(comment_metadata)
+  gh.api.graphql {
+    query = mutations.add_discussion_comment,
+    f = {
+      discussion_id = self.node.id,
+      body = comment_metadata.body,
+    },
+    jq = ".data.addDiscussionComment.comment",
+    opts = {
+      cb = gh.create_callback {
+        failure = vim.api.nvim_err_writeln,
+        success = function(output)
+          local resp = vim.json.decode(output)
+
+          if utils.trim(comment_metadata.body) ~= utils.trim(resp.body) then
+            return
+          end
+
+          for i, comment in ipairs(self.commentsMetadata) do
+            if comment.id == -1 then
+              self.commentsMetadata[i].id = resp.id
+              self.commentsMetadata[i].savedBody = resp.body
+              self.commentsMetadata[i].dirty = false
+              break
+            end
+          end
+
+          self:render_signs()
+        end,
+      },
+    },
+  }
 end
 
 ---Add a new comment to the issue/PR

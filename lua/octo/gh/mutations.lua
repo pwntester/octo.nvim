@@ -323,6 +323,20 @@ mutation {
 }
 ]]
 
+M.add_discussion_comment = [[
+mutation($discussion_id: ID!, $body: String!) {
+  addDiscussionComment(input: {
+    discussionId: $discussion_id,
+    body: $body
+  }) {
+    comment {
+      id
+      body
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review = [[
 mutation {
@@ -399,6 +413,14 @@ mutation {
 M.delete_issue_comment = [[
 mutation {
   deleteIssueComment(input: {id: "%s"}) {
+    clientMutationId
+  }
+}
+]]
+
+M.delete_discussion_comment = [[
+mutation {
+  deleteDiscussionComment(input: {id: "%s"}) {
     clientMutationId
   }
 }
