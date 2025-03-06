@@ -1577,6 +1577,7 @@ function M.mark(opts)
     opts = {
       cb = gh.create_callback {
         success = function(_)
+          -- TODO: Update the buffer to reflect the changes
           local msg = opts.undo and "unmarked" or "marked"
           utils.info("Comment " .. msg)
         end,
