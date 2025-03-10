@@ -63,7 +63,7 @@ function Review:populate_threads(callback)
         if stderr and not utils.is_blank(stderr) then
           utils.error(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           callback(resp)
         end
       end,

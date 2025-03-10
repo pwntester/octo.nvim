@@ -25,7 +25,7 @@ local function get_filter(opts, kind)
         -- string
         val = opts[value]
       end
-      val = vim.fn.json_encode(val)
+      val = vim.json.encode(val)
       val = string.gsub(val, '"OPEN"', "OPEN")
       val = string.gsub(val, '"CLOSED"', "CLOSED")
       val = string.gsub(val, '"MERGED"', "MERGED")
