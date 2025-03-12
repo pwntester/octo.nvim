@@ -953,6 +953,9 @@ query($id: ID!) {
     ... on PullRequestReviewComment {
       url
     }
+    ... on PullRequestReview {
+      url
+    }
     ... on DiscussionComment {
       url
     }
