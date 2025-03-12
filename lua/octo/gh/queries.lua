@@ -944,4 +944,23 @@ query($name: String!, $owner: String!, $n_milestones: Int!) {
 }
 ]]
 
+M.comment_url = [[
+query($id: ID!) {
+  node(id: $id) {
+    ... on IssueComment {
+      url
+    }
+    ... on PullRequestReviewComment {
+      url
+    }
+    ... on PullRequestReview {
+      url
+    }
+    ... on DiscussionComment {
+      url
+    }
+  }
+}
+]]
+
 return M

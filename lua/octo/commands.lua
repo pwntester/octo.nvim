@@ -2,6 +2,7 @@ local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local window = require "octo.ui.window"
@@ -413,6 +414,26 @@ function M.setup()
         end
 
         current_review:add_comment(true)
+      end,
+      url = function()
+        local buffer = utils.get_current_buffer()
+
+        if not buffer then
+          return
+        end
+
+        local comment = buffer:get_comment_at_cursor()
+        if not comment then
+          utils.error "The cursor does not seem to be located at any comment"
+          return
+        end
+
+        gh.api.graphql {
+          query = queries.comment_url,
+          f = { id = comment.id },
+          jq = ".data.node.url",
+          opts = { cb = gh.create_callback { success = utils.copy_url } },
+        }
       end,
       delete = function()
         M.delete_comment()
