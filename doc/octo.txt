@@ -114,6 +114,8 @@ See |octo-command-examples| for examples.
   add                   Add a new comment.
   suggest               Add a new suggestion.
   delete                Delete a comment.
+  url                   Copies the URL of the current comment to the system 
+                        clipboard.
 
 
 :Octo thread [action]                           *octo-commands-thread*
