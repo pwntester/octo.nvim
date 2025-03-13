@@ -232,6 +232,12 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "DemilestonedEvent" then
       writers.write_demilestoned_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "PinnedEvent" then
+      writers.write_pinned_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "UnpinnedEvent" then
+      writers.write_unpinned_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
   if prev_is_event then

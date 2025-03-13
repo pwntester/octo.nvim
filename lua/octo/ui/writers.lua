@@ -1442,6 +1442,34 @@ function M.write_cross_referenced_event(bufnr, item)
   write_issue_or_pr(bufnr, item.source)
 end
 
+local write_pinned_event = function(bufnr, item, add)
+  local verb
+  if add then
+    verb = "pinned"
+  else
+    verb = "unpinned"
+  end
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " " .. verb .. " this issue ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+M.write_pinned_event = function(bufnr, item)
+  write_pinned_event(bufnr, item, true)
+end
+
+M.write_unpinned_event = function(bufnr, item)
+  write_pinned_event(bufnr, item, false)
+end
+
 local write_milestone_event = function(bufnr, item, add)
   local verb, preposition
   if add then

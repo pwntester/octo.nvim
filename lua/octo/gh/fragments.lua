@@ -377,6 +377,24 @@ fragment ReviewDismissedEventFragment on ReviewDismissedEvent {
 }
 ]]
 
+M.pinned_event = [[
+fragment PinnedEventFragment on PinnedEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
+M.unpinned_event = [[
+fragment UnpinnedEventFragment on UnpinnedEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
 M.issue_timeline_items_connection = [[
 fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   nodes {
@@ -393,6 +411,8 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...RenamedTitleEventFragment
     ...ReopenedEventFragment
     ...UnlabeledEventFragment
+    ...PinnedEventFragment
+    ...UnpinnedEventFragment
   }
 }
 ]]
