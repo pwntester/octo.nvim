@@ -727,8 +727,8 @@ query {
 ]] .. fragments.reaction_groups_users
 
 M.mentionable_users = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
       mentionableUsers(first: 100, after: $endCursor) {
       pageInfo {
         endCursor
@@ -745,8 +745,8 @@ query($endCursor: String) {
 ]]
 
 M.assignable_users = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String! $endCursor: String) {
+  repository(owner: $owner, name: $name) {
     assignableUsers(first: 100, after: $endCursor) {
       pageInfo {
         endCursor
