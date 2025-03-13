@@ -126,6 +126,11 @@ function OctoBuffer:render_discussion()
 
   for _, comment in ipairs(obj.comments.nodes) do
     local start_line, end_line = writers.write_comment(self.bufnr, comment, "DiscussionComment")
+    if comment.replies.totalCount > 0 then
+      for _, reply in ipairs(comment.replies.nodes) do
+        writers.write_comment(self.bufnr, reply, "DiscussionComment")
+      end
+    end
   end
 
   vim.api.nvim_buf_set_option(self.bufnr, "filetype", "octo")

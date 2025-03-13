@@ -718,7 +718,11 @@ function M.write_comment(bufnr, comment, kind, line)
   elseif kind == "IssueComment" or kind == "DiscussionComment" then
     -- Issue comments
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
+    if utils.is_blank(comment.replyTo) then
+      table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
+    else
+      table.insert(header_vt, { "REPLY: ", "OctoTimelineItemHeading" })
+    end
     --vim.list_extend(header_vt, author_bubble)
     if comment.author ~= vim.NIL then
       table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
