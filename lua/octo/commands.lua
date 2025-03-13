@@ -3,6 +3,7 @@ local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
+local mutations = require "octo.gh.mutations"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local window = require "octo.ui.window"
@@ -169,6 +170,66 @@ function M.setup()
       close = function(stateReason)
         stateReason = stateReason or "CLOSED"
         M.change_state(stateReason)
+      end,
+      unpin = function()
+        local buffer = utils.get_current_buffer()
+
+        if not buffer then
+          return
+        end
+
+        if not buffer:isIssue() then
+          utils.error "Not an issue buffer"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.unpin_issue,
+          F = { issue_id = buffer.node.id },
+          jq = ".data.unpinIssue.issue.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function(id)
+                if id ~= buffer.node.id then
+                  utils.error "Failed to unpin issue"
+                  return
+                end
+
+                utils.info "Unpinned issue"
+              end,
+            },
+          },
+        }
+      end,
+      pin = function()
+        local buffer = utils.get_current_buffer()
+
+        if not buffer then
+          return
+        end
+
+        if not buffer:isIssue() then
+          utils.error "Not an issue buffer"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.pin_issue,
+          F = { issue_id = buffer.node.id },
+          jq = ".data.pinIssue.issue.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function(id)
+                if id ~= buffer.node.id then
+                  utils.error "Failed to pin issue"
+                  return
+                end
+
+                utils.info "Pinned issue"
+              end,
+            },
+          },
+        }
       end,
       develop = function(repo, ...)
         local buffer = utils.get_current_buffer()
