@@ -392,7 +392,6 @@ function OctoBuffer:save()
         if comment_metadata.kind == "IssueComment" then
           self:do_add_issue_comment(comment_metadata)
         elseif comment_metadata.kind == "DiscussionComment" then
-          --- TODO: https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#adddiscussioncomment
           self:do_add_discussion_comment(comment_metadata)
         elseif comment_metadata.kind == "PullRequestReviewComment" then
           if not utils.is_blank(comment_metadata.replyTo) then
@@ -477,12 +476,16 @@ function OctoBuffer:do_save_title_and_body()
 end
 
 function OctoBuffer:do_add_discussion_comment(comment_metadata)
+  local f = {
+    discussion_id = self.node.id,
+    body = comment_metadata.body,
+  }
+  if comment_metadata.replyTo then
+    f.reply_to_id = comment_metadata.replyTo
+  end
   gh.api.graphql {
     query = mutations.add_discussion_comment,
-    f = {
-      discussion_id = self.node.id,
-      body = comment_metadata.body,
-    },
+    f = f,
     jq = ".data.addDiscussionComment.comment",
     opts = {
       cb = gh.create_callback {

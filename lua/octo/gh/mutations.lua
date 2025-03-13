@@ -336,10 +336,11 @@ mutation {
 ]]
 
 M.add_discussion_comment = [[
-mutation($discussion_id: ID!, $body: String!) {
+mutation($discussion_id: ID!, $body: String!, $reply_to_id: ID) {
   addDiscussionComment(input: {
     discussionId: $discussion_id,
     body: $body
+    replyToId: $reply_to_id
   }) {
     comment {
       id

@@ -823,10 +823,30 @@ function M.add_pr_issue_or_review_thread_comment()
     utils.error "Error adding a comment to a review thread"
   end
 
-  if comment_kind == "IssueComment" or comment_kind == "DiscussionComment" then
+  if comment_kind == "IssueComment" then
     writers.write_comment(buffer.bufnr, comment, comment_kind)
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
+  elseif comment_kind == "DiscussionComment" then
+    local comment_under_cursor = buffer:get_comment_at_cursor()
+    if not utils.is_blank(comment_under_cursor) and vim.fn.confirm("Reply to comment?", "&Yes\n&No", 2) == 1 then
+      comment.replyTo = not utils.is_blank(comment_under_cursor.replyTo) and comment_under_cursor.replyTo.id
+        or comment_under_cursor.id
+      vim.api.nvim_buf_set_lines(
+        buffer.bufnr,
+        comment_under_cursor.bufferEndLine,
+        comment_under_cursor.bufferEndLine,
+        false,
+        { "x", "x", "x", "x" }
+      )
+      writers.write_comment(buffer.bufnr, comment, comment_kind, comment_under_cursor.bufferEndLine + 1)
+      vim.fn.execute(":" .. comment_under_cursor.bufferEndLine + 3)
+      vim.cmd [[startinsert]]
+    else
+      writers.write_comment(buffer.bufnr, comment, comment_kind)
+      vim.cmd [[normal Gk]]
+      vim.cmd [[startinsert]]
+    end
   elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
     vim.api.nvim_buf_set_lines(
       buffer.bufnr,
