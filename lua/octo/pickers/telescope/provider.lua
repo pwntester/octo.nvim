@@ -535,9 +535,9 @@ local function get_search_query(prompt)
 end
 
 local function get_search_size(prompt)
-  local query = graphql("search_count_query", prompt)
   return gh.api.graphql {
-    query = query,
+    query = queries.search_count,
+    fields = { prompt = prompt },
     jq = ".data.search.issueCount",
     opts = {
       mode = "sync",
@@ -572,17 +572,13 @@ function M.search(opts)
         if val then
           _prompt = string.format("%s %s", val, _prompt)
         end
-        local query = graphql("search_query", _prompt)
-        local output = gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          mode = "sync",
+        local output = gh.api.graphql {
+          query = queries.search,
+          fields = { prompt = _prompt },
+          jq = ".data.search.nodes",
+          opts = { mode = "sync" },
         }
-        if output then
-          local resp = vim.json.decode(output)
-          for _, issue in ipairs(resp.data.search.nodes) do
-            table.insert(results, issue)
-          end
-        end
+        vim.list_extend(results, vim.json.decode(output))
       end
       return results
     end
