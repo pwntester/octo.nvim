@@ -3,6 +3,7 @@ local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
+local mutations = require "octo.gh.mutations"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local window = require "octo.ui.window"
@@ -170,6 +171,12 @@ function M.setup()
         stateReason = stateReason or "CLOSED"
         M.change_state(stateReason)
       end,
+      unpin = M.within_issue(function(buffer)
+        M.pin_issue { obj = buffer.node, add = false }
+      end),
+      pin = M.within_issue(function(buffer)
+        M.pin_issue { obj = buffer.node, add = true }
+      end),
       develop = function(repo, ...)
         local buffer = utils.get_current_buffer()
 
@@ -2050,6 +2057,57 @@ function M.search(...)
   local args = table.pack(...)
   picker.search {
     prompt = table.concat(args, " "),
+  }
+end
+
+M.within_issue = function(cb)
+  return function()
+    local buffer = utils.get_current_buffer()
+    if not buffer or not buffer:isIssue() then
+      utils.error "Not an issue buffer"
+      return
+    end
+
+    cb(buffer)
+  end
+end
+
+--- @class PinIssueOpts
+--- @field add boolean Whether to pin or unpin the issue
+--- @field obj table The issue object
+
+--- Pin or unpin an issue
+--- @param opts PinIssueOpts
+M.pin_issue = function(opts)
+  local query_info = opts.add
+      and {
+        query = mutations.pin_issue,
+        jq = ".data.pinIssue.issue.id",
+        error = "pin",
+        success = "Pinned",
+      }
+    or {
+      query = mutations.unpin_issue,
+      jq = ".data.unpinIssue.issue.id",
+      error = "unpin",
+      success = "Unpinned",
+    }
+  gh.api.graphql {
+    query = query_info.query,
+    F = { issue_id = opts.obj.id },
+    jq = query_info.jq,
+    opts = {
+      cb = gh.create_callback {
+        success = function(id)
+          if id ~= opts.obj.id then
+            utils.error("Failed to " .. query_info.error .. " issue")
+            return
+          end
+
+          utils.info(query_info.success .. " issue")
+        end,
+      },
+    },
   }
 end
 

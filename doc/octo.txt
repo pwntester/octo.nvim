@@ -47,6 +47,8 @@ See |octo-command-examples| for examples.
   browser               Open current issue in the browser.
   url                   Copies the URL of the currently opened issue to the
                         system clipboard.
+  pin                   Pin the current issue to the top of the list.
+  unpin                 Unpin the current issue from the top of the list.
 
 
 :Octo pr [action] {args}                        *octo-commands-pr*
