@@ -65,6 +65,7 @@ local issue = defaulter(function(opts)
     end,
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
+
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
         local number = entry.value
         local owner, name = utils.split_repo(entry.repo)
@@ -87,6 +88,10 @@ local issue = defaulter(function(opts)
               success = function(output)
                 local obj = vim.json.decode(output)
                 local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
+
+                if not vim.api.nvim_buf_is_loaded(bufnr) then
+                  return
+                end
 
                 writers.write_title(bufnr, obj.title, 1)
                 writers.write_details(bufnr, obj)
