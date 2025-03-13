@@ -553,6 +553,9 @@ fragment DiscussionCommentFragment on DiscussionComment {
   author {
     login
   }
+  replyTo {
+    id
+  }
   viewerDidAuthor
   viewerCanUpdate
   viewerCanDelete

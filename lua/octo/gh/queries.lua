@@ -418,10 +418,16 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
         totalCount
         nodes {
           ...DiscussionCommentFragment
-          replies(first: 10) {
+          replies(first: 15) {
             totalCount
             nodes {
+              __typename
+              id
               body
+              createdAt
+              replyTo {
+                id
+              }
               author {
                 login
               }
