@@ -536,7 +536,7 @@ end
 
 local function get_search_size(prompt)
   return gh.api.graphql {
-    query = graphql "search_count_query",
+    query = queries.search_count,
     fields = { prompt = prompt },
     jq = ".data.search.issueCount",
     opts = {
@@ -573,7 +573,7 @@ function M.search(opts)
           _prompt = string.format("%s %s", val, _prompt)
         end
         local output = gh.api.graphql {
-          query = graphql "search_query",
+          query = queries.search,
           fields = { prompt = _prompt },
           jq = ".data.search.nodes",
           opts = { mode = "sync" },

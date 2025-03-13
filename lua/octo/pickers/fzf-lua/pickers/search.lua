@@ -2,6 +2,7 @@ local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
@@ -51,15 +52,16 @@ return function(opts)
             _prompt = string.format("%s %s", val, _prompt)
           end
           local output = gh.api.graphql {
-            query = graphql "search_query",
+            query = queries.search,
             fields = { prompt = _prompt },
             jq = ".data.search.nodes",
             opts = { mode = "sync" },
           }
 
-          if not output then
+          if utils.is_blank(output) then
             return {}
           end
+
           local issues = vim.json.decode(output)
 
           local max_id_length = 1
