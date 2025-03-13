@@ -727,8 +727,8 @@ query {
 ]] .. fragments.reaction_groups_users
 
 M.mentionable_users = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
       mentionableUsers(first: 100, after: $endCursor) {
       pageInfo {
         endCursor
@@ -745,8 +745,8 @@ query($endCursor: String) {
 ]]
 
 M.assignable_users = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String! $endCursor: String) {
+  repository(owner: $owner, name: $name) {
     assignableUsers(first: 100, after: $endCursor) {
       pageInfo {
         endCursor
@@ -939,6 +939,25 @@ query($name: String!, $owner: String!, $n_milestones: Int!) {
         description
         url
       }
+    }
+  }
+}
+]]
+
+M.comment_url = [[
+query($id: ID!) {
+  node(id: $id) {
+    ... on IssueComment {
+      url
+    }
+    ... on PullRequestReviewComment {
+      url
+    }
+    ... on PullRequestReview {
+      url
+    }
+    ... on DiscussionComment {
+      url
     }
   }
 }

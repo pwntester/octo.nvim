@@ -2,6 +2,7 @@ local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local window = require "octo.ui.window"
@@ -325,6 +326,9 @@ function M.setup()
       end,
     },
     review = {
+      browse = function()
+        reviews.browse_review()
+      end,
       start = function()
         reviews.start_review()
       end,
@@ -389,6 +393,14 @@ function M.setup()
       add = function()
         local current_review = reviews.get_current_review()
         if current_review and utils.in_diff_window() then
+          -- if we have a current_review but no id, we are in browse mode.
+          -- for now, we cannot create comments.
+          -- TODO: implement 'non-review' commits here, which adds a diff commit
+          -- but outside of a review.
+          if current_review.id == -1 then
+            vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+            return
+          end
           current_review:add_comment(false)
         else
           M.add_pr_issue_or_review_thread_comment()
@@ -402,6 +414,26 @@ function M.setup()
         end
 
         current_review:add_comment(true)
+      end,
+      url = function()
+        local buffer = utils.get_current_buffer()
+
+        if not buffer then
+          return
+        end
+
+        local comment = buffer:get_comment_at_cursor()
+        if not comment then
+          utils.error "The cursor does not seem to be located at any comment"
+          return
+        end
+
+        gh.api.graphql {
+          query = queries.comment_url,
+          f = { id = comment.id },
+          jq = ".data.node.url",
+          opts = { cb = gh.create_callback { success = utils.copy_url } },
+        }
       end,
       delete = function()
         M.delete_comment()
@@ -758,7 +790,15 @@ function M.add_pr_issue_or_review_thread_comment()
   local _thread = buffer:get_thread_at_cursor()
   if not utils.is_blank(_thread) and buffer:isReviewThread() then
     comment_kind = "PullRequestReviewComment"
-    comment.pullRequestReview = { id = reviews.get_current_review().id }
+
+    -- are we trying to add a review comment while in 'review browse' mode?
+    local current_review = reviews.get_current_review()
+    if current_review == nil or current_review.id == -1 then
+      vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+      return
+    end
+
+    comment.pullRequestReview = { id = current_review.id }
     comment.state = "PENDING"
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest

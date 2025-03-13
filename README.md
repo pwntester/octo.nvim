@@ -373,6 +373,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | comment  | add                                               | Add a new comment                                                                                                                                      |
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
+|          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
 | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
@@ -510,13 +511,13 @@ Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-
 |-----------------------------------|--------------------|
 | _OctoNormal_                      | Normal             |
 | _OctoCursorLine_                  | CursorLine         |
-| _OctoVertSplit_                   | VertSplit          |
+| _OctoWinSeparator_                | WinSeparator       |
 | _OctoSignColumn_                  | Normal             |
 | _OctoStatusColumn_                | SignColumn         |
 | _OctoStatusLine_                  | StatusLine         |
 | _OctoStatusLineNC_                | StatusLineNC       |
 | _OctoEndOfBuffer_                 | EndOfBuffer        |
-| _OctoFilePanelFileName_           | NormalFront        |
+| _OctoFilePanelFileName_           | NormalFloat        |
 | _OctoFilePanelSelectedFile_       | Type               |
 | _OctoFilePanelPath_               | Comment            |
 | _OctoStatusAdded_                 | OctoGreen          |
@@ -568,7 +569,7 @@ Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-
 | _OctoStateMergedBubble_           | OctoBubblePurple   |
 | _OctoStatePendingBubble_          | OctoBubbleYellow   |
 | _OctoStateApprovedBubble_         | OctoBubbleGreen    |
-| _OctoStateChangesRequestedBubble_ | OctoBubbleRed    |
+| _OctoStateChangesRequestedBubble_ | OctoBubbleRed      |
 | _OctoStateDismissedBubble_        | OctoBubbleRed      |
 | _OctoStateCommentedBubble_        | OctoBubbleBlue     |
 | _OctoStateSubmittedBubble_        | OctoBubbleGreen    |

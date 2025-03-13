@@ -113,6 +113,8 @@ See |octo-command-examples| for examples.
   add                   Add a new comment.
   suggest               Add a new suggestion.
   delete                Delete a comment.
+  url                   Copies the URL of the current comment to the system 
+                        clipboard.
 
 
 :Octo thread [action]                           *octo-commands-thread*
@@ -174,6 +176,7 @@ See |octo-command-examples| for examples.
   no review is in progress.
 
   start                 Start a new review.
+  browse                View the review without starting a review
   submit                Submit the review.
   resume                Edit a pending review for the current PR.
   discard               Deletes a pending review for the current PR, if any.
