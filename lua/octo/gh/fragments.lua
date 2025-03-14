@@ -419,6 +419,30 @@ fragment SubIssueRemovedEventFragment on SubIssueRemovedEvent {
 }
 ]]
 
+M.parent_issue_added_event = [[
+fragment ParentIssueAddedEventFragment on ParentIssueAddedEvent {
+  actor {
+    login
+  }
+  createdAt
+  parent {
+    ...IssueFields
+  }
+}
+]]
+
+M.parent_issue_removed_event = [[
+fragment ParentIssueRemovedEventFragment on ParentIssueRemovedEvent {
+  actor {
+    login
+  }
+  createdAt
+  parent {
+    ...IssueFields
+  }
+}
+]]
+
 M.issue_timeline_items_connection = [[
 fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   nodes {
@@ -439,6 +463,8 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...UnpinnedEventFragment
     ...SubIssueAddedEventFragment
     ...SubIssueRemovedEventFragment
+    ...ParentIssueAddedEventFragment
+    ...ParentIssueRemovedEventFragment
   }
 }
 ]]
