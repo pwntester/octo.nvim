@@ -1409,6 +1409,35 @@ function M.write_referenced_event(bufnr, item)
   write_reference_commit(bufnr, item.commit)
 end
 
+function M.write_subissue_events(bufnr, items, action)
+  local previous_actor = ""
+  for _, item in ipairs(items) do
+    local vt = {}
+    local conf = config.values
+    if item.actor.login ~= previous_actor then
+      table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+      table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+      table.insert(vt, {
+        item.actor.login,
+        item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+      })
+      local next_actor = items[_ + 1] and items[_ + 1].actor and items[_ + 1].actor.login or ""
+      if next_actor == item.actor.login then
+        table.insert(vt, { " " .. action .. " sub-issues ", "OctoTimelineItemHeading" })
+      else
+        table.insert(vt, { " " .. action .. " a sub-issue ", "OctoTimelineItemHeading" })
+      end
+      table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+      write_event(bufnr, vt)
+    end
+    local subIssue = item.subIssue
+    subIssue.__typename = "Issue"
+    write_issue_or_pr(bufnr, subIssue)
+
+    previous_actor = item.actor.login
+  end
+end
+
 function M.write_cross_referenced_event(bufnr, item)
   local vt = {}
   local conf = config.values
