@@ -1471,6 +1471,32 @@ function M.write_cross_referenced_event(bufnr, item)
   write_issue_or_pr(bufnr, item.source)
 end
 
+local write_parent_issue_event = function(bufnr, item, add)
+  local verb = add and "added" or "removed"
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " " .. verb .. " a parent issue ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+  local parent = item.parent
+  parent.__typename = "Issue"
+  write_issue_or_pr(bufnr, parent)
+end
+
+M.write_parent_issue_added_event = function(bufnr, item)
+  write_parent_issue_event(bufnr, item, true)
+end
+
+M.write_parent_issue_removed_event = function(bufnr, item)
+  write_parent_issue_event(bufnr, item, false)
+end
+
 local write_pinned_event = function(bufnr, item, add)
   local verb
   if add then
