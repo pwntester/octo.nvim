@@ -1,5 +1,6 @@
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local navigation = require "octo.navigation"
 local previewers = require "octo.pickers.telescope.previewers"
 local entry_maker = require "octo.pickers.telescope.entry_maker"
@@ -534,9 +535,9 @@ local function get_search_query(prompt)
 end
 
 local function get_search_size(prompt)
-  local query = graphql("search_count_query", prompt)
   return gh.api.graphql {
-    query = query,
+    query = queries.search_count,
+    fields = { prompt = prompt },
     jq = ".data.search.issueCount",
     opts = {
       mode = "sync",
@@ -571,17 +572,13 @@ function M.search(opts)
         if val then
           _prompt = string.format("%s %s", val, _prompt)
         end
-        local query = graphql("search_query", _prompt)
-        local output = gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          mode = "sync",
+        local output = gh.api.graphql {
+          query = queries.search,
+          fields = { prompt = _prompt },
+          jq = ".data.search.nodes",
+          opts = { mode = "sync" },
         }
-        if output then
-          local resp = vim.json.decode(output)
-          for _, issue in ipairs(resp.data.search.nodes) do
-            table.insert(results, issue)
-          end
-        end
+        vim.list_extend(results, vim.json.decode(output))
       end
       return results
     end
@@ -981,39 +978,26 @@ end
 local function get_users(query_name, node_name)
   local repo = utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
-  local query = graphql(query_name, owner, name, { escape = true })
-  local output = gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  local output = gh.api.graphql {
+    query = queries[query_name],
+    f = { owner = owner, name = name },
+    paginate = true,
+    jq = ".data.repository." .. node_name .. ".nodes",
+    opts = { mode = "sync" },
   }
-  if not output then
+  if utils.is_blank(output) then
     return {}
   end
 
-  local responses = utils.get_pages(output)
-
-  local users = {}
-
-  for _, resp in ipairs(responses) do
-    local nodes = resp.data.repository[node_name].nodes
-    for _, user in ipairs(nodes) do
-      table.insert(users, {
-        id = user.id,
-        login = user.login,
-        name = user.name,
-      })
-    end
-  end
-
-  return users
+  return utils.get_flatten_pages(output)
 end
 
 local function get_assignable_users()
-  return get_users("assignable_users_query", "assignableUsers")
+  return get_users("assignable_users", "assignableUsers")
 end
 
 local function get_mentionable_users()
-  return get_users("mentionable_users_query", "mentionableUsers")
+  return get_users("mentionable_users", "mentionableUsers")
 end
 
 local function create_user_finder()

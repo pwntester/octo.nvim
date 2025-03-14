@@ -168,6 +168,8 @@ function OctoBuffer:render_issue()
   -- write timeline items
   local unrendered_labeled_events = {}
   local unrendered_unlabeled_events = {}
+  local unrendered_subissue_added_events = {}
+  local unrendered_subissue_removed_events = {}
   local prev_is_event = false
 
   local timeline_nodes = {}
@@ -176,6 +178,10 @@ function OctoBuffer:render_issue()
       table.insert(timeline_nodes, item)
     end
   end
+
+  --- Empty timeline node to ensure the last
+  --- labeled/unlabeled events or subissues events are rendered
+  table.insert(timeline_nodes, {})
 
   for _, item in ipairs(timeline_nodes) do
     if item.__typename ~= "LabeledEvent" and #unrendered_labeled_events > 0 then
@@ -186,6 +192,16 @@ function OctoBuffer:render_issue()
     if item.__typename ~= "UnlabeledEvent" and #unrendered_unlabeled_events > 0 then
       writers.write_labeled_events(self.bufnr, unrendered_unlabeled_events, "removed")
       unrendered_unlabeled_events = {}
+      prev_is_event = true
+    end
+    if item.__typename ~= "SubIssueAddedEvent" and #unrendered_subissue_added_events > 0 then
+      writers.write_subissue_events(self.bufnr, unrendered_subissue_added_events, "added")
+      unrendered_subissue_added_events = {}
+      prev_is_event = true
+    end
+    if item.__typename ~= "SubIssueRemovedEvent" and #unrendered_subissue_removed_events > 0 then
+      writers.write_subissue_events(self.bufnr, unrendered_subissue_removed_events, "removed")
+      unrendered_subissue_removed_events = {}
       prev_is_event = true
     end
 
@@ -273,8 +289,25 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "DemilestonedEvent" then
       writers.write_demilestoned_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "PinnedEvent" then
+      writers.write_pinned_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "UnpinnedEvent" then
+      writers.write_unpinned_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "SubIssueAddedEvent" then
+      table.insert(unrendered_subissue_added_events, item)
+    elseif item.__typename == "SubIssueRemovedEvent" then
+      table.insert(unrendered_subissue_removed_events, item)
+    elseif item.__typename == "ParentIssueAddedEvent" then
+      writers.write_parent_issue_added_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ParentIssueRemovedEvent" then
+      writers.write_parent_issue_removed_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
+
   if prev_is_event then
     writers.write_block(self.bufnr, { "" })
   end

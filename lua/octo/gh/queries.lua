@@ -204,7 +204,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.referenced_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind = [[
@@ -328,18 +328,18 @@ query($endCursor: String) {
 ]]
 
 M.search_count = [[
-query {
-  search(query: """%s""", type: ISSUE, last: 100) {
+query($prompt: String!, $type: SearchType = ISSUE) {
+  search(query: $prompt, type: $type, last: 100) {
     issueCount
   }
 }
 ]]
 
 M.search = [[
-query {
-  search(query: """%s""", type: ISSUE, last: 100) {
+query($prompt: String!, $type: SearchType = ISSUE) {
+  search(query: $prompt, type: $type, last: 100) {
     nodes {
-      ... on Issue{
+      ... on Issue {
         __typename
         number
         url
@@ -742,8 +742,8 @@ query {
 ]] .. fragments.reaction_groups_users
 
 M.mentionable_users = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
       mentionableUsers(first: 100, after: $endCursor) {
       pageInfo {
         endCursor
@@ -760,8 +760,8 @@ query($endCursor: String) {
 ]]
 
 M.assignable_users = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String! $endCursor: String) {
+  repository(owner: $owner, name: $name) {
     assignableUsers(first: 100, after: $endCursor) {
       pageInfo {
         endCursor

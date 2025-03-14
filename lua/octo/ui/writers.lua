@@ -1415,6 +1415,35 @@ function M.write_referenced_event(bufnr, item)
   write_reference_commit(bufnr, item.commit)
 end
 
+function M.write_subissue_events(bufnr, items, action)
+  local previous_actor = ""
+  for _, item in ipairs(items) do
+    local vt = {}
+    local conf = config.values
+    if item.actor.login ~= previous_actor then
+      table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+      table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+      table.insert(vt, {
+        item.actor.login,
+        item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+      })
+      local next_actor = items[_ + 1] and items[_ + 1].actor and items[_ + 1].actor.login or ""
+      if next_actor == item.actor.login then
+        table.insert(vt, { " " .. action .. " sub-issues ", "OctoTimelineItemHeading" })
+      else
+        table.insert(vt, { " " .. action .. " a sub-issue ", "OctoTimelineItemHeading" })
+      end
+      table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+      write_event(bufnr, vt)
+    end
+    local subIssue = item.subIssue
+    subIssue.__typename = "Issue"
+    write_issue_or_pr(bufnr, subIssue)
+
+    previous_actor = item.actor.login
+  end
+end
+
 function M.write_cross_referenced_event(bufnr, item)
   local vt = {}
   local conf = config.values
@@ -1446,6 +1475,60 @@ function M.write_cross_referenced_event(bufnr, item)
 
   write_event(bufnr, vt)
   write_issue_or_pr(bufnr, item.source)
+end
+
+local write_parent_issue_event = function(bufnr, item, add)
+  local verb = add and "added" or "removed"
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " " .. verb .. " a parent issue ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+  local parent = item.parent
+  parent.__typename = "Issue"
+  write_issue_or_pr(bufnr, parent)
+end
+
+M.write_parent_issue_added_event = function(bufnr, item)
+  write_parent_issue_event(bufnr, item, true)
+end
+
+M.write_parent_issue_removed_event = function(bufnr, item)
+  write_parent_issue_event(bufnr, item, false)
+end
+
+local write_pinned_event = function(bufnr, item, add)
+  local verb
+  if add then
+    verb = "pinned"
+  else
+    verb = "unpinned"
+  end
+  local vt = {}
+  local conf = config.values
+  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " " .. verb .. " this issue ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+M.write_pinned_event = function(bufnr, item)
+  write_pinned_event(bufnr, item, true)
+end
+
+M.write_unpinned_event = function(bufnr, item)
+  write_pinned_event(bufnr, item, false)
 end
 
 local write_milestone_event = function(bufnr, item, add)

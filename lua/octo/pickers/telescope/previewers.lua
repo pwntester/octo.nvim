@@ -73,41 +73,45 @@ local issue = defaulter(function(opts)
     end,
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
+
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
         local number = entry.value
         local owner, name = utils.split_repo(entry.repo)
-        local query
+
+        local query, jq
         if entry.kind == "issue" then
           query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
+          jq = ".data.repository.issue"
         elseif entry.kind == "pull_request" then
           query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
+          jq = ".data.repository.pullRequest"
         end
-        gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
-            if stderr and not utils.is_blank(stderr) then
-              vim.api.nvim_err_writeln(stderr)
-            elseif output and vim.api.nvim_buf_is_valid(bufnr) then
-              local result = vim.json.decode(output)
-              local obj
-              if entry.kind == "issue" then
-                obj = result.data.repository.issue
-              elseif entry.kind == "pull_request" then
-                obj = result.data.repository.pullRequest
-              end
 
-              local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
+        gh.api.graphql {
+          query = query,
+          jq = jq,
+          opts = {
+            cb = gh.create_callback {
+              failure = vim.api.nvim_err_writeln,
+              success = function(output)
+                local obj = vim.json.decode(output)
+                local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
 
-              writers.write_title(bufnr, obj.title, 1)
-              writers.write_details(bufnr, obj)
-              writers.write_body(bufnr, obj)
-              writers.write_state(bufnr, state:upper(), number)
-              local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
-              writers.write_block(bufnr, { "", "" }, reactions_line)
-              writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
-              vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
-            end
-          end,
+                if not vim.api.nvim_buf_is_loaded(bufnr) then
+                  return
+                end
+
+                writers.write_title(bufnr, obj.title, 1)
+                writers.write_details(bufnr, obj)
+                writers.write_body(bufnr, obj)
+                writers.write_state(bufnr, state:upper(), number)
+                local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
+                writers.write_block(bufnr, { "", "" }, reactions_line)
+                writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
+                vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+              end,
+            },
+          },
         }
       end
     end,
