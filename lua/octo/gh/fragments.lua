@@ -395,6 +395,30 @@ fragment UnpinnedEventFragment on UnpinnedEvent {
 }
 ]]
 
+M.subissue_added_event = [[
+fragment SubIssueAddedEventFragment on SubIssueAddedEvent {
+  actor {
+    login
+  }
+  createdAt
+  subIssue {
+    ...IssueFields
+  }
+}
+]]
+
+M.subissue_removed_event = [[
+fragment SubIssueRemovedEventFragment on SubIssueRemovedEvent {
+  actor {
+    login
+  }
+  createdAt
+  subIssue {
+    ...IssueFields
+  }
+}
+]]
+
 M.issue_timeline_items_connection = [[
 fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   nodes {
@@ -413,6 +437,8 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...UnlabeledEventFragment
     ...PinnedEventFragment
     ...UnpinnedEventFragment
+    ...SubIssueAddedEventFragment
+    ...SubIssueRemovedEventFragment
   }
 }
 ]]
