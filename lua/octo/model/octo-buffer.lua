@@ -258,6 +258,12 @@ function OctoBuffer:render_issue()
       table.insert(unrendered_subissue_added_events, item)
     elseif item.__typename == "SubIssueRemovedEvent" then
       table.insert(unrendered_subissue_removed_events, item)
+    elseif item.__typename == "ParentIssueAddedEvent" then
+      writers.write_parent_issue_added_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ParentIssueRemovedEvent" then
+      writers.write_parent_issue_removed_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
 
