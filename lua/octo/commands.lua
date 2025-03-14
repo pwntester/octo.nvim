@@ -1609,7 +1609,8 @@ function M.mark(opts)
   opts = opts or {}
 
   local buffer = utils.get_current_buffer()
-  if not buffer:isDiscussion() then
+  if not buffer or not buffer:isDiscussion() then
+    utils.error "Not a discussion buffer"
     return
   end
 
