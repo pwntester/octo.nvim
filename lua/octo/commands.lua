@@ -112,6 +112,33 @@ function M.setup()
 
         require("octo.discussions").create(opts)
       end,
+      reopen = function()
+        local buffer = utils.get_current_buffer()
+        if not buffer then
+          utils.error "No buffer found"
+          return
+        end
+
+        if not buffer:isDiscussion() then
+          utils.error "Not a discussion buffer"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.reopen_discussion,
+          fields = { discussion_id = buffer.node.id },
+          jq = ".data.reopenDiscussion.discussion.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function(response_id)
+                if response_id == buffer.node.id then
+                  utils.info "Discussion reopened"
+                end
+              end,
+            },
+          },
+        }
+      end,
       close = function()
         local buffer = utils.get_current_buffer()
         if not buffer then
