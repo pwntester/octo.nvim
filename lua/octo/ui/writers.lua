@@ -303,7 +303,7 @@ function M.write_state(bufnr, state, number)
   -- PR virtual text
   if buffer and buffer:isPullRequest() then
     if buffer.node.isDraft then
-      table.insert(title_vt, { "[DRAFT] ", "OctoStateDraftFloat" })
+      table.insert(title_vt, { "[DRAFT]", "OctoStateDraftFloat" })
     end
   end
   vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
@@ -652,6 +652,7 @@ function M.write_comment(bufnr, comment, kind, line)
   ---- PullRequestReview
   ---- PullRequestReviewComment
   ---- PullRequestComment (regular comment (not associated to any review) to a PR review comment)
+  ---- DiscussionComment
 
   local buffer = octo_buffers[bufnr]
   local conf = config.values
@@ -714,10 +715,14 @@ function M.write_comment(bufnr, comment, kind, line)
     if not comment.viewerCanUpdate then
       table.insert(header_vt, { " ", "OctoRed" })
     end
-  elseif kind == "IssueComment" then
+  elseif kind == "IssueComment" or kind == "DiscussionComment" then
     -- Issue comments
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
+    if utils.is_blank(comment.replyTo) then
+      table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
+    else
+      table.insert(header_vt, { "REPLY: ", "OctoTimelineItemHeading" })
+    end
     --vim.list_extend(header_vt, author_bubble)
     if comment.author ~= vim.NIL then
       table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
@@ -727,6 +732,7 @@ function M.write_comment(bufnr, comment, kind, line)
       table.insert(header_vt, { " ", "OctoRed" })
     end
   end
+
   local comment_vt_ns = vim.api.nvim_create_namespace ""
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
 

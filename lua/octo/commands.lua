@@ -1,6 +1,7 @@
 local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
+local mutations = require "octo.gh.mutations"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
@@ -88,6 +89,15 @@ function M.setup()
       M.search(...)
     end,
     discussion = {
+      reload = function()
+        M.reload { verbose = true }
+      end,
+      mark = function()
+        M.mark()
+      end,
+      unmark = function()
+        M.mark { undo = true }
+      end,
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
@@ -815,7 +825,7 @@ function M.add_pr_issue_or_review_thread_comment()
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
   elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
-    comment_kind = "IssueComment"
+    comment_kind = buffer:isDiscussion() and "DiscussionComment" or "IssueComment"
   elseif utils.is_blank(_thread) and buffer:isReviewThread() then
     utils.error "Error adding a comment to a review thread"
   end
@@ -824,6 +834,26 @@ function M.add_pr_issue_or_review_thread_comment()
     writers.write_comment(buffer.bufnr, comment, comment_kind)
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
+  elseif comment_kind == "DiscussionComment" then
+    local comment_under_cursor = buffer:get_comment_at_cursor()
+    if not utils.is_blank(comment_under_cursor) and vim.fn.confirm("Reply to comment?", "&Yes\n&No", 2) == 1 then
+      comment.replyTo = not utils.is_blank(comment_under_cursor.replyTo) and comment_under_cursor.replyTo.id
+        or comment_under_cursor.id
+      vim.api.nvim_buf_set_lines(
+        buffer.bufnr,
+        comment_under_cursor.bufferEndLine,
+        comment_under_cursor.bufferEndLine,
+        false,
+        { "x", "x", "x", "x" }
+      )
+      writers.write_comment(buffer.bufnr, comment, comment_kind, comment_under_cursor.bufferEndLine + 1)
+      vim.fn.execute(":" .. comment_under_cursor.bufferEndLine + 3)
+      vim.cmd [[startinsert]]
+    else
+      writers.write_comment(buffer.bufnr, comment, comment_kind)
+      vim.cmd [[normal Gk]]
+      vim.cmd [[startinsert]]
+    end
   elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
     vim.api.nvim_buf_set_lines(
       buffer.bufnr,
@@ -854,6 +884,7 @@ function M.delete_comment()
   end
   local start_line = comment.bufferStartLine
   local end_line = comment.bufferEndLine
+
   local query, threadId
   if comment.kind == "IssueComment" then
     query = graphql("delete_issue_comment_mutation", comment.id)
@@ -861,10 +892,13 @@ function M.delete_comment()
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
     local _thread = buffer:get_thread_at_cursor()
     threadId = _thread.threadId
+  elseif comment.kind == "DiscussionComment" then
+    query = graphql("delete_discussion_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
   end
+
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
     gh.run {
@@ -1559,7 +1593,7 @@ local function get_reaction_info(bufnr, buffer)
     if not comment.reactionLine then
       insert_line = true
     end
-  elseif buffer:isIssue() or buffer:isPullRequest() then
+  elseif buffer:isIssue() or buffer:isPullRequest() or buffer:isDiscussion() then
     -- using the issue body instead
     id = buffer.node.id
     reaction_groups = buffer.bodyMetadata.reactionGroups
@@ -1569,6 +1603,36 @@ local function get_reaction_info(bufnr, buffer)
     end
   end
   return reaction_line, reaction_groups, insert_line, id
+end
+
+function M.mark(opts)
+  opts = opts or {}
+
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isDiscussion() then
+    utils.error "Not a discussion buffer"
+    return
+  end
+
+  local comment = buffer:get_comment_at_cursor()
+
+  if not comment then
+    return
+  end
+
+  gh.api.graphql {
+    query = opts.undo and mutations.unmark_answer or mutations.mark_answer,
+    f = { id = comment.id },
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          -- TODO: Update the buffer to reflect the changes
+          local msg = opts.undo and "unmarked" or "marked"
+          utils.info("Comment " .. msg)
+        end,
+      },
+    },
+  }
 end
 
 function M.reaction_action(reaction)
@@ -1874,7 +1938,7 @@ local function label_action(opts)
 
   local iid = buffer.node.id
   if not iid then
-    utils.error "Cannot get issue/pr id"
+    utils.error "Cannot get issue/pr/discussion id"
   end
 
   local cb = function(labels)
@@ -1885,7 +1949,11 @@ local function label_action(opts)
 
     local refresh_details = function()
       require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-        writers.write_details(buffer.bufnr, obj, true)
+        if buffer:isDiscussion() then
+          writers.write_discussion_details(buffer.bufnr, obj)
+        else
+          writers.write_details(buffer.bufnr, obj, true)
+        end
       end)
     end
 

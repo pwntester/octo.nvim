@@ -872,6 +872,9 @@ function M.select_assigned_label(opts)
   elseif buffer:isPullRequest() then
     query = graphql("pull_request_labels_query", buffer.owner, buffer.name, buffer.number)
     key = "pullRequest"
+  elseif buffer:isDiscussion() then
+    query = graphql("discussion_labels_query", buffer.owner, buffer.name, buffer.number)
+    key = "discussion"
   end
 
   local create_picker = function(output)
@@ -1341,16 +1344,9 @@ function M.discussions(opts)
     opts.repo = utils.get_remote_name()
   end
 
-  if opts.cb == nil then
-    opts.cb = function(selected, _)
-      local url = selected.obj.url
-      navigation.open_in_browser_raw(url)
-    end
-  end
-
   local cfg = octo_config.values
 
-  local replace = create_replace(opts.cb)
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
   local create_discussion_picker = function(discussions)
     if #discussions == 0 then

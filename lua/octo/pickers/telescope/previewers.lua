@@ -20,6 +20,10 @@ local discussion = defaulter(function(opts)
     define_preview = function(self, entry)
       local bufnr = self.state.bufnr
 
+      if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+      end
+
       if self.state.bufname == entry.value and vim.api.nvim_buf_line_count(bufnr) ~= 1 then
         return
       end
@@ -35,6 +39,10 @@ local discussion = defaulter(function(opts)
           cb = gh.create_callback {
             failure = vim.api.nvim_err_writeln,
             success = function(output)
+              if not vim.api.nvim_buf_is_valid(bufnr) then
+                return
+              end
+
               -- clear the buffer
               vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
