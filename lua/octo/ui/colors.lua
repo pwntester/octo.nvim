@@ -279,6 +279,9 @@ function M.octo_highlight_groups(example_text)
   for v, _ in pairs(get_hl_groups()) do
     table.insert(groups, "Octo" .. v)
   end
+  for v, _ in pairs(get_hl_links()) do
+    table.insert(groups, "Octo" .. v)
+  end
 
   display_highlight_groups(groups, example_text)
 end
