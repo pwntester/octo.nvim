@@ -409,7 +409,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | commit                                            | Pick a specific commit to review                                                                                                                       |
 |          | close                                             | Close the review window and return to the PR                                                                                                           |
 | actions  |                                                   | Lists all available Octo actions                                                                                                                       |
-| search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
+| search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) or Discussions with `is:discussion`|
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |

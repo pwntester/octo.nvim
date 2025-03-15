@@ -198,7 +198,9 @@ See |octo-command-examples| for examples.
   
 :Octo search [query]                            *octo-commands-search*
 
-  Search GitHub for issues and PRs matching the query (https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests)
+  Search GitHub for issues and PRs matching the query (https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) or Discussions 
+  by the query
+  (https://docs.github.com/en/search-github/searching-on-github/searching-discussions) and including `is:discussion`
 
 COMMAND EXAMPLES                                *octo-command-examples*
 >
