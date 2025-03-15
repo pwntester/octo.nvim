@@ -409,7 +409,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | commit                                            | Pick a specific commit to review                                                                                                                       |
 |          | close                                             | Close the review window and return to the PR                                                                                                           |
 | actions  |                                                   | Lists all available Octo actions                                                                                                                       |
-| search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
+| search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) or Discussions with `is:discussion`|
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
@@ -419,6 +419,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |    | mark                                                 | Mark the discussion comment as answer |
 |    | unmark                                                 | Unmark the discussion comment as answer |
 |    | reopen                                                 | Reopen the current discussion |
+|    | search                                                 | Search discussions |
 
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
@@ -487,6 +488,7 @@ Octo issue edit 1
 Octo issue list createdBy=pwntester
 Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 Octo search assignee:pwntester is:pr
+Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
 ## 📋 PR reviews

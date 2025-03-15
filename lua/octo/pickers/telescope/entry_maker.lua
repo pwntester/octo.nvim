@@ -6,7 +6,7 @@ local vim = vim
 
 local M = {}
 
-function M.gen_from_discussions(max_number)
+function M.gen_from_discussion(max_number)
   local make_display = function(entry)
     if not entry then
       return nil
