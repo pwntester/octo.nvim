@@ -245,6 +245,17 @@ function M.setup()
       end,
     },
     parent = {
+      edit = M.within_issue(function(buffer)
+        local parent = buffer.node.parent
+
+        if utils.is_blank(parent) then
+          utils.error "No parent issue found"
+          return
+        end
+
+        local uri = string.format("octo://%s/issue/%s", buffer.repo, parent.number)
+        vim.cmd.edit(uri)
+      end),
       remove = M.within_issue(function(buffer)
         local parent = buffer.node.parent
 
