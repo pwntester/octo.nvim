@@ -94,6 +94,7 @@ See |octo-command-examples| for examples.
   close                 Close the discussion
   mark                  Mark the discussion comment as answered
   unmark                Mark the discussion comment as unanswered
+  reopen                Reopen the discussion
 
 
 :Octo repo [action]                             *octo-commands-repo*

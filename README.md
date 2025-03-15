@@ -418,6 +418,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |    | close                                                 | Close the discussion |
 |    | mark                                                 | Mark the discussion comment as answer |
 |    | unmark                                                 | Unmark the discussion comment as answer |
+|    | reopen                                                 | Reopen the current discussion |
 
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
