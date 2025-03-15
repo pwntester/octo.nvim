@@ -488,6 +488,7 @@ Octo issue edit 1
 Octo issue list createdBy=pwntester
 Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 Octo search assignee:pwntester is:pr
+Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
 ## 📋 PR reviews
