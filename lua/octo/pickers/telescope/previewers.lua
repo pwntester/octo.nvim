@@ -1,6 +1,7 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local previewers = require "telescope.previewers"
@@ -10,6 +11,22 @@ local defaulter = ts_utils.make_default_callable
 local workflow_runs_previewer = require("octo.workflow_runs").previewer
 
 local vim = vim
+
+local discussion_preview = function(obj, bufnr)
+  -- clear the buffer
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+
+  writers.write_title(bufnr, tostring(obj.title), 1)
+  writers.write_discussion_details(bufnr, obj)
+  writers.write_body(bufnr, obj, 11)
+
+  if obj.answer ~= vim.NIL then
+    local line = vim.api.nvim_buf_line_count(bufnr) + 1
+    writers.write_discussion_answer(bufnr, obj, line)
+  end
+
+  vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+end
 
 local discussion = defaulter(function(opts)
   return previewers.new_buffer_previewer {
@@ -43,20 +60,8 @@ local discussion = defaulter(function(opts)
                 return
               end
 
-              -- clear the buffer
-              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
-
               local obj = vim.json.decode(output)
-              writers.write_title(bufnr, tostring(obj.title), 1)
-              writers.write_discussion_details(bufnr, obj)
-              writers.write_body(bufnr, obj, 11)
-
-              if obj.answer ~= vim.NIL then
-                local line = vim.api.nvim_buf_line_count(bufnr) + 1
-                writers.write_discussion_answer(bufnr, obj, line)
-              end
-
-              vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+              discussion_preview(obj, bufnr)
             end,
           },
         },
@@ -64,6 +69,18 @@ local discussion = defaulter(function(opts)
     end,
   }
 end)
+
+local issue_preview = function(obj, bufnr)
+  local state = utils.get_displayed_state(obj.__typename == "Issue", obj.state, obj.stateReason)
+  writers.write_title(bufnr, obj.title, 1)
+  writers.write_details(bufnr, obj)
+  writers.write_body(bufnr, obj)
+  writers.write_state(bufnr, state:upper(), obj.number)
+  local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
+  writers.write_block(bufnr, { "", "" }, reactions_line)
+  writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
+  vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+end
 
 local issue = defaulter(function(opts)
   return previewers.new_buffer_previewer {
@@ -95,20 +112,68 @@ local issue = defaulter(function(opts)
               failure = vim.api.nvim_err_writeln,
               success = function(output)
                 local obj = vim.json.decode(output)
-                local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
 
                 if not vim.api.nvim_buf_is_loaded(bufnr) then
                   return
                 end
 
-                writers.write_title(bufnr, obj.title, 1)
-                writers.write_details(bufnr, obj)
-                writers.write_body(bufnr, obj)
-                writers.write_state(bufnr, state:upper(), number)
-                local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
-                writers.write_block(bufnr, { "", "" }, reactions_line)
-                writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
-                vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
+                issue_preview(obj, bufnr)
+              end,
+            },
+          },
+        }
+      end
+    end,
+  }
+end)
+
+--- Supports Issues, Pull Requests, and Discussions
+local notification = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    title = opts.preview_title,
+    get_buffer_by_name = function(_, entry)
+      return entry.value
+    end,
+    define_preview = function(self, entry)
+      local bufnr = self.state.bufnr
+
+      if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
+        local number = entry.value
+        local owner, name = utils.split_repo(entry.repo)
+
+        local query, fields, jq, preview
+        if entry.kind == "issue" then
+          query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
+          fields = {}
+          jq = ".data.repository.issue"
+          preview = issue_preview
+        elseif entry.kind == "pull_request" then
+          query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
+          fields = {}
+          jq = ".data.repository.pullRequest"
+          preview = issue_preview
+        elseif entry.kind == "discussion" then
+          query = queries.discussion
+          fields = { owner = owner, name = name, number = number }
+          jq = ".data.repository.discussion"
+          preview = discussion_preview
+        end
+
+        gh.api.graphql {
+          query = query,
+          fields = fields,
+          jq = jq,
+          opts = {
+            cb = gh.create_callback {
+              failure = vim.api.nvim_err_writeln,
+              success = function(output)
+                if not vim.api.nvim_buf_is_loaded(bufnr) then
+                  return
+                end
+
+                local obj = vim.json.decode(output)
+
+                preview(obj, bufnr)
               end,
             },
           },
@@ -252,4 +317,5 @@ return {
   changed_files = changed_files,
   review_thread = review_thread,
   issue_template = issue_template,
+  notification = notification,
 }

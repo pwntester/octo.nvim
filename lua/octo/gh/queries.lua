@@ -357,10 +357,13 @@ query($prompt: String!, $type: SearchType = ISSUE) {
         isDraft
         repository { nameWithOwner }
       }
+      ... on Discussion {
+        ...DiscussionInfoFragment
+      }
     }
   }
 }
-]]
+]] .. fragments.discussion_info
 
 M.discussions = [[
 query(

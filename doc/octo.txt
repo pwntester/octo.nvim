@@ -91,6 +91,11 @@ See |octo-command-examples| for examples.
                           <C-y>   Copy URL to system clipboard.
   create [repo]         Creates a new discussion for the current or specified repo.
   reload                Reload discussion. Same as doing `e!`.
+  close                 Close the discussion
+  mark                  Mark the discussion comment as answered
+  unmark                Mark the discussion comment as unanswered
+  reopen                Reopen the discussion
+  search                Live discussion search.
 
 
 :Octo repo [action]                             *octo-commands-repo*
@@ -193,7 +198,9 @@ See |octo-command-examples| for examples.
   
 :Octo search [query]                            *octo-commands-search*
 
-  Search GitHub for issues and PRs matching the query (https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests)
+  Search GitHub for issues and PRs matching the query (https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) or Discussions 
+  by the query
+  (https://docs.github.com/en/search-github/searching-on-github/searching-discussions) and including `is:discussion`
 
 COMMAND EXAMPLES                                *octo-command-examples*
 >

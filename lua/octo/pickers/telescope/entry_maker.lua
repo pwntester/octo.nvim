@@ -6,7 +6,7 @@ local vim = vim
 
 local M = {}
 
-function M.gen_from_discussions(max_number)
+function M.gen_from_discussion(max_number)
   local make_display = function(entry)
     if not entry then
       return nil
@@ -714,6 +714,8 @@ function M.gen_from_notification(opts)
         return "issue"
       elseif type == "PullRequest" then
         return "pull_request"
+      elseif type == "Discussion" then
+        return "discussion"
       end
       return "unknown"
     end)(notification.subject.type)
