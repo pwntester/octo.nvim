@@ -215,6 +215,17 @@ fragment ClosedEventFragment on ClosedEvent {
     login
   }
   createdAt
+  stateReason
+  closable {
+    __typename
+    ... on Issue {
+      state
+      stateReason
+    }
+    ... on PullRequest {
+      state
+    }
+  }
 }
 ]]
 
