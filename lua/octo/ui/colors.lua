@@ -65,6 +65,7 @@ local function get_hl_groups()
     Viewer = { fg = colors.black, bg = colors.blue },
     Editable = { bg = float_bg },
     Strikethrough = { fg = colors.grey, gui = "strikethrough" },
+    Underline = { fg = colors.white, gui = "underline" },
   }
 end
 
