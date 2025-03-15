@@ -228,4 +228,59 @@ function M.create_highlight(rgb_hex, options)
   return highlight_name
 end
 
+local function display_highlight_groups(groups)
+  -- Check if input is a table
+  if type(groups) ~= "table" then
+    print "Please provide a table of highlight group names"
+    return
+  end
+
+  local example_text = "Sample Text"
+
+  local format_str = "%-30s %-10s %-10s %-10s %-10s %-10s %s"
+  -- print(string.format(format_str, "Group", "fg", "bg", "bold", "italic", "underline", "Example"))
+  -- print(string.rep("-", 86 + #example_text))
+  vim.api.nvim_echo({
+    { string.format(format_str, "Group", "fg", "bg", "bold", "italic", "underline", "Example"), "None" },
+  }, false, {})
+  vim.api.nvim_echo({
+    { string.rep("-", 86 + #example_text), "None" },
+  }, false, {})
+
+  for _, group_name in ipairs(groups) do
+    local hl = vim.api.nvim_get_hl(0, { name = group_name, link = false })
+    if hl then
+      local fg = hl.fg and string.format("#%06x", hl.fg) or "none"
+      local bg = hl.bg and string.format("#%06x", hl.bg) or "none"
+      local bold = hl.bold and "yes" or "no"
+      local italic = hl.italic and "yes" or "no"
+      local underline = hl.underline and "yes" or "no"
+
+      -- Create a sample text with the highlight applied
+      local output = string.format(format_str, group_name, fg, bg, bold, italic, underline, "")
+
+      -- Output the sample with syntax highlighting in a separate line
+      vim.api.nvim_echo({
+        { output, "None" },
+        { example_text, group_name },
+      }, false, {})
+    else
+      vim.api.nvim_echo(
+        { { string.format(format_str, group_name, "not found", "", "", "", "", ""), "None" } },
+        false,
+        {}
+      )
+    end
+  end
+end
+
+function M.octo_highlight_groups()
+  local groups = {}
+  for v, _ in pairs(get_hl_groups()) do
+    table.insert(groups, "Octo" .. v)
+  end
+
+  display_highlight_groups(groups)
+end
+
 return M
