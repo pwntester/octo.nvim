@@ -91,6 +91,7 @@ See |octo-command-examples| for examples.
                           <C-y>   Copy URL to system clipboard.
   create [repo]         Creates a new discussion for the current or specified repo.
   reload                Reload discussion. Same as doing `e!`.
+  close                 Close the discussion
 
 
 :Octo repo [action]                             *octo-commands-repo*
