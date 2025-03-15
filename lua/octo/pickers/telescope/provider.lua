@@ -1281,7 +1281,7 @@ function M.notifications(opts)
           },
         },
         sorter = conf.generic_sorter(opts),
-        previewer = previewers.issue.new(opts),
+        previewer = previewers.notification.new(opts),
         attach_mappings = function(_, map)
           action_set.select:replace(function(prompt_bufnr, type)
             open(type)(prompt_bufnr)
