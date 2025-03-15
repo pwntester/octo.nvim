@@ -2197,9 +2197,15 @@ end
 
 function M.search(...)
   local args = table.pack(...)
-  picker.search {
-    prompt = table.concat(args, " "),
-  }
+  local prompt = table.concat(args, " ")
+
+  local type = "ISSUE"
+  if string.match(prompt, "is:discussion") then
+    type = "DISCUSSION"
+    prompt = string.gsub(prompt, "is:discussion", "")
+  end
+
+  picker.search { prompt = prompt, type = type }
 end
 
 M.within_issue = function(cb)
