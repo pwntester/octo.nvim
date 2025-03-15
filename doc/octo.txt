@@ -95,6 +95,7 @@ See |octo-command-examples| for examples.
   mark                  Mark the discussion comment as answered
   unmark                Mark the discussion comment as unanswered
   reopen                Reopen the discussion
+  search                Live discussion search.
 
 
 :Octo repo [action]                             *octo-commands-repo*
