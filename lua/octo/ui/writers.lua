@@ -303,7 +303,7 @@ function M.write_state(bufnr, state, number)
   -- PR virtual text
   if buffer and buffer:isPullRequest() then
     if buffer.node.isDraft then
-      table.insert(title_vt, { "[DRAFT] ", "OctoStateDraftFloat" })
+      table.insert(title_vt, { "[DRAFT]", "OctoStateDraftFloat" })
     end
   end
   vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
