@@ -714,6 +714,8 @@ function M.gen_from_notification(opts)
         return "issue"
       elseif type == "PullRequest" then
         return "pull_request"
+      elseif type == "Discussion" then
+        return "discussion"
       end
       return "unknown"
     end)(notification.subject.type)
