@@ -92,6 +92,8 @@ See |octo-command-examples| for examples.
   create [repo]         Creates a new discussion for the current or specified repo.
   reload                Reload discussion. Same as doing `e!`.
   close                 Close the discussion
+  mark                  Mark the discussion comment as answered
+  unmark                Mark the discussion comment as unanswered
 
 
 :Octo repo [action]                             *octo-commands-repo*
