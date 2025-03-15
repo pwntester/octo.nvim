@@ -141,6 +141,8 @@ function M.setup()
       search = function(...)
         local args = table.pack(...)
         local prompt = table.concat(args, " ")
+        local repo = utils.get_remote_name()
+        prompt = "repo:" .. repo .. " " .. prompt
         picker.search { prompt = prompt, type = "DISCUSSION" }
       end,
       close = function()
