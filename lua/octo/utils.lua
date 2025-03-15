@@ -1738,6 +1738,10 @@ M.icons = {
       unread = { " ", "OctoBlue" },
       read = { " ", "OctoGrey" },
     },
+    discussion = {
+      unread = { " ", "OctoBlue" },
+      read = { " ", "OctoGrey" },
+    },
   },
   unknown = { " " },
 }

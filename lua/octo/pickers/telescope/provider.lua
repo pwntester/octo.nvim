@@ -547,6 +547,21 @@ end
 
 function M.search(opts)
   opts = opts or {}
+  opts.type = opts.type or "ISSUE"
+
+  local settings = opts.type == "ISSUE"
+      and {
+        previewer = previewers.issue,
+        entry_maker = entry_maker.gen_from_issue,
+        entry_maker_static = function(width)
+          return entry_maker.gen_from_issue(width, true)
+        end,
+      }
+    or {
+      previewer = previewers.discussion,
+      entry_maker = entry_maker.gen_from_discussion,
+    }
+
   local cfg = octo_config.values
   if type(opts.prompt) == "string" then
     opts.prompt = { opts.prompt }
@@ -572,9 +587,10 @@ function M.search(opts)
         if val then
           _prompt = string.format("%s %s", val, _prompt)
         end
+
         local output = gh.api.graphql {
           query = queries.search,
-          fields = { prompt = _prompt },
+          fields = { prompt = _prompt, type = opts.type },
           jq = ".data.search.nodes",
           opts = { mode = "sync" },
         }
@@ -585,13 +601,13 @@ function M.search(opts)
   end
   local finder = finders.new_dynamic {
     fn = requester(),
-    entry_maker = entry_maker.gen_from_issue(width),
+    entry_maker = settings.entry_maker(width),
   }
   if opts.static then
     local results = requester() ""
     finder = finders.new_table {
       results = results,
-      entry_maker = entry_maker.gen_from_issue(width, true),
+      entry_maker = settings.entry_maker_static(width),
     }
   end
   opts.preview_title = opts.preview_title or ""
@@ -601,7 +617,7 @@ function M.search(opts)
     .new(opts, {
       finder = finder,
       sorter = conf.generic_sorter(opts),
-      previewer = previewers.issue.new(opts),
+      previewer = settings.previewer.new(opts),
       attach_mappings = function(_, map)
         action_set.select:replace(replace)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
@@ -1281,7 +1297,7 @@ function M.notifications(opts)
           },
         },
         sorter = conf.generic_sorter(opts),
-        previewer = previewers.issue.new(opts),
+        previewer = previewers.notification.new(opts),
         attach_mappings = function(_, map)
           action_set.select:replace(function(prompt_bufnr, type)
             open(type)(prompt_bufnr)
@@ -1367,7 +1383,7 @@ function M.discussions(opts)
       .new(opts, {
         finder = finders.new_table {
           results = discussions,
-          entry_maker = entry_maker.gen_from_discussions(max_number),
+          entry_maker = entry_maker.gen_from_discussion(max_number),
         },
         sorter = conf.generic_sorter(opts),
         previewer = previewers.discussion.new(opts),

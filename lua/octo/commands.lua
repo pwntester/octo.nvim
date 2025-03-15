@@ -1,7 +1,6 @@
 local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
-local mutations = require "octo.gh.mutations"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
@@ -111,6 +110,81 @@ function M.setup()
         end
 
         require("octo.discussions").create(opts)
+      end,
+      reopen = function()
+        local buffer = utils.get_current_buffer()
+        if not buffer then
+          utils.error "No buffer found"
+          return
+        end
+
+        if not buffer:isDiscussion() then
+          utils.error "Not a discussion buffer"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.reopen_discussion,
+          fields = { discussion_id = buffer.node.id },
+          jq = ".data.reopenDiscussion.discussion.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function(response_id)
+                if response_id == buffer.node.id then
+                  utils.info "Discussion reopened"
+                end
+              end,
+            },
+          },
+        }
+      end,
+      search = function(...)
+        local args = table.pack(...)
+        local prompt = table.concat(args, " ")
+        local repo = utils.get_remote_name()
+        prompt = "repo:" .. repo .. " " .. prompt
+        picker.search { prompt = prompt, type = "DISCUSSION" }
+      end,
+      close = function()
+        local buffer = utils.get_current_buffer()
+        if not buffer then
+          utils.error "No buffer found"
+          return
+        end
+
+        if not buffer:isDiscussion() then
+          utils.error "Not a discussion buffer"
+          return
+        end
+
+        --https://docs.github.com/en/graphql/reference/enums#discussionclosereason
+        local reasons = {
+          "Duplicate",
+          "Outdated",
+          "Resolved",
+        }
+        vim.ui.select(reasons, {
+          prompt = "Select a reason for closing the discussion:",
+        }, function(reason)
+          if not reason then
+            return
+          end
+
+          gh.api.graphql {
+            query = mutations.close_discussion,
+            fields = { discussion_id = buffer.node.id, reason = string.upper(reason) },
+            jq = ".data.closeDiscussion.discussion.id",
+            opts = {
+              cb = gh.create_callback {
+                success = function(response_id)
+                  if response_id == buffer.node.id then
+                    utils.info("Discussion closed with reason: " .. reason)
+                  end
+                end,
+              },
+            },
+          }
+        end)
       end,
     },
     milestone = {
@@ -2123,9 +2197,15 @@ end
 
 function M.search(...)
   local args = table.pack(...)
-  picker.search {
-    prompt = table.concat(args, " "),
-  }
+  local prompt = table.concat(args, " ")
+
+  local type = "ISSUE"
+  if string.match(prompt, "is:discussion") then
+    type = "DISCUSSION"
+    prompt = string.gsub(prompt, "is:discussion", "")
+  end
+
+  picker.search { prompt = prompt, type = type }
 end
 
 M.within_issue = function(cb)
