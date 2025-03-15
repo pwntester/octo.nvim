@@ -1069,4 +1069,14 @@ mutation($issue_id: ID!) {
 }
 ]]
 
+M.close_discussion = [[
+mutation($discussion_id: ID!, $reason: DiscussionCloseReason) {
+  closeDiscussion(input: {discussionId: $discussion_id, reason: $reason}) {
+    discussion {
+      id
+    }
+  }
+}
+]]
+
 return M

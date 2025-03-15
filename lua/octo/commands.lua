@@ -112,6 +112,47 @@ function M.setup()
 
         require("octo.discussions").create(opts)
       end,
+      close = function()
+        local buffer = utils.get_current_buffer()
+        if not buffer then
+          utils.error "No buffer found"
+          return
+        end
+
+        if not buffer:isDiscussion() then
+          utils.error "Not a discussion buffer"
+          return
+        end
+
+        --https://docs.github.com/en/graphql/reference/enums#discussionclosereason
+        local reasons = {
+          "Duplicate",
+          "Outdated",
+          "Resolved",
+        }
+        vim.ui.select(reasons, {
+          prompt = "Select a reason for closing the discussion:",
+        }, function(reason)
+          if not reason then
+            return
+          end
+
+          gh.api.graphql {
+            query = mutations.close_discussion,
+            fields = { discussion_id = buffer.node.id, reason = string.upper(reason) },
+            jq = ".data.closeDiscussion.discussion.id",
+            opts = {
+              cb = gh.create_callback {
+                success = function(response_id)
+                  if response_id == buffer.node.id then
+                    utils.info("Discussion closed with reason: " .. reason)
+                  end
+                end,
+              },
+            },
+          }
+        end)
+      end,
     },
     milestone = {
       list = function(repo, ...)
