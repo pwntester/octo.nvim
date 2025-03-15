@@ -43,7 +43,7 @@ local function get_hl_groups()
     PurpleFloat = { fg = colors.purple, bg = float_bg },
     YellowFloat = { fg = colors.yellow, bg = float_bg },
     BlueFloat = { fg = colors.blue, bg = float_bg },
-    GreyFloat = { fg = colors.grey, bg = float_bg },
+    GreyFloat = { bg = float_bg },
 
     BubbleGreen = { fg = colors.grey, bg = colors.dark_green },
     BubbleRed = { fg = colors.grey, bg = colors.dark_red },
@@ -228,14 +228,14 @@ function M.create_highlight(rgb_hex, options)
   return highlight_name
 end
 
-local function display_highlight_groups(groups)
+local function display_highlight_groups(groups, example_text)
   -- Check if input is a table
   if type(groups) ~= "table" then
     print "Please provide a table of highlight group names"
     return
   end
 
-  local example_text = "Sample Text"
+  example_text = example_text or "Sample Text"
 
   local format_str = "%-30s %-10s %-10s %-10s %-10s %-10s %s"
   -- print(string.format(format_str, "Group", "fg", "bg", "bold", "italic", "underline", "Example"))
@@ -274,13 +274,13 @@ local function display_highlight_groups(groups)
   end
 end
 
-function M.octo_highlight_groups()
+function M.octo_highlight_groups(example_text)
   local groups = {}
   for v, _ in pairs(get_hl_groups()) do
     table.insert(groups, "Octo" .. v)
   end
 
-  display_highlight_groups(groups)
+  display_highlight_groups(groups, example_text)
 end
 
 return M
