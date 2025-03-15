@@ -1089,4 +1089,30 @@ mutation($discussion_id: ID!) {
 }
 ]]
 
+M.add_subissue = [[
+mutation($parent_id: ID!, $child_id: ID!) {
+  addSubIssue(input: {issueId: $parent_id, subIssueId: $child_id}) {
+    issue {
+      id
+    }
+    subIssue {
+      id
+    }
+  }
+}
+]]
+
+M.remove_subissue = [[
+mutation($parent_id: ID!, $child_id: ID!) {
+  removeSubIssue(input: {issueId: $parent_id, subIssueId: $child_id}) {
+    issue {
+      id
+    }
+    subIssue {
+      id
+    }
+  }
+}
+]]
+
 return M
