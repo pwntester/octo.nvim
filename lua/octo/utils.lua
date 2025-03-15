@@ -924,6 +924,8 @@ function M.parse_url(url)
     return repo, number, "issue"
   elseif repo and number and kind == "pull" then
     return repo, number, kind
+  elseif repo and number and kind == "discussions" then
+    return repo, number, "discussion"
   end
 end
 

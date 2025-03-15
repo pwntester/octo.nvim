@@ -873,6 +873,8 @@ function M.octo(object, action, ...)
       utils.get_issue(number, repo)
     elseif repo and number and kind == "pull" then
       utils.get_pull_request(number, repo)
+    elseif repo and number and kind == "discussion" then
+      utils.get_discussion(number, repo)
     else
       utils.error("Incorrect argument: " .. object)
       return
