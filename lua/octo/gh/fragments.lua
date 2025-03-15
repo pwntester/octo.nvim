@@ -615,13 +615,18 @@ fragment DiscussionDetailsFragment on Discussion {
 
 M.discussion_comment = [[
 fragment DiscussionCommentFragment on DiscussionComment {
+  __typename
   id
   body
+  url
   createdAt
   lastEditedAt
   ...ReactionGroupsFragment
   author {
     login
+  }
+  replyTo {
+    id
   }
   viewerDidAuthor
   viewerCanUpdate

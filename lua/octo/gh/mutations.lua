@@ -283,6 +283,18 @@ mutation {
 }
 ]]
 
+--- https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#updatediscussioncomment
+M.update_discussion_comment = [[
+mutation {
+  updateDiscussionComment(input: {commentId: "%s", body: """%s"""}) {
+    comment {
+      id
+      body
+    }
+  }
+}
+]]
+
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreviewcomment
 M.update_pull_request_review_comment = [[
 mutation {
@@ -306,6 +318,37 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+
+M.update_discussion = [[
+mutation {
+  updateDiscussion(input: {
+    discussionId: "%s",
+    title: """%s""",
+    body: """%s"""
+  }) {
+    discussion {
+      id
+      title
+      body
+    }
+  }
+}
+]]
+
+M.add_discussion_comment = [[
+mutation($discussion_id: ID!, $body: String!, $reply_to_id: ID) {
+  addDiscussionComment(input: {
+    discussionId: $discussion_id,
+    body: $body
+    replyToId: $reply_to_id
+  }) {
+    comment {
+      id
+      body
+    }
+  }
+}
+]]
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review = [[
@@ -383,6 +426,14 @@ mutation {
 M.delete_issue_comment = [[
 mutation {
   deleteIssueComment(input: {id: "%s"}) {
+    clientMutationId
+  }
+}
+]]
+
+M.delete_discussion_comment = [[
+mutation {
+  deleteDiscussionComment(input: {id: "%s"}) {
     clientMutationId
   }
 }
@@ -797,6 +848,9 @@ mutation {
       ... on PullRequest {
         id
       }
+      ... on Discussion {
+        id
+      }
     }
   }
 }
@@ -811,6 +865,9 @@ mutation {
         id
       }
       ... on PullRequest {
+        id
+      }
+      ... on Discussion {
         id
       }
     }
@@ -975,6 +1032,22 @@ mutation {
   }
 }
 ]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event
+
+M.mark_answer = [[
+mutation($id: ID!) {
+  markDiscussionCommentAsAnswer(input: {id: $id}) {
+    clientMutationId
+  }
+}
+]]
+
+M.unmark_answer = [[
+mutation($id: ID!) {
+  unmarkDiscussionCommentAsAnswer(input: {id: $id}) {
+    clientMutationId
+  }
+}
+]]
 
 M.pin_issue = [[
 mutation($issue_id: ID!) {

@@ -21,7 +21,7 @@
 
 # :octopus: Octo.nvim
 
-Edit and review GitHub issues and pull requests from the comfort of your favorite editor.
+Edit and review GitHub issues, pull requests, and discussions from the comfort of your favorite editor.
 
 [<img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="BuyMeACoffee" width="140">](https://www.buymeacoffee.com/pwntester)
 
@@ -414,6 +414,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
 |    | create [repo]                                          | Create discussion for current or specified repo |
+|    | reload                                                 | Reload the current discussion buffer |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

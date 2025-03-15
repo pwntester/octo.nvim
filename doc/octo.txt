@@ -6,8 +6,8 @@ License: MIT License
 
 INTRODUCTION                                    *octo*
 
-Edit and review GitHub issues and pull requests from the comfort of your
-favorite editor.
+Edit and review GitHub issues, pull requests, and discussions from the comfort
+of your favorite editor.
 
 Use `gO` to access the contents of this helpfile.
 
@@ -90,6 +90,7 @@ See |octo-command-examples| for examples.
                         In-menu mappings: 
                           <C-y>   Copy URL to system clipboard.
   create [repo]         Creates a new discussion for the current or specified repo.
+  reload                Reload discussion. Same as doing `e!`.
 
 
 :Octo repo [action]                             *octo-commands-repo*

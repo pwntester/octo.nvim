@@ -414,17 +414,14 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
       labels(first: 20) {
         ...LabelConnectionFragment
       }
-      comments(first: 100, after: $endCursor) {
+      comments(first: 25, after: $endCursor) {
         totalCount
         nodes {
           ...DiscussionCommentFragment
-          replies(first: 10) {
+          replies(first: 15) {
             totalCount
             nodes {
-              body
-              author {
-                login
-              }
+              ...DiscussionCommentFragment
             }
           }
         }
@@ -599,6 +596,18 @@ query {
 }
 ]] .. fragments.label_connection .. fragments.label
 
+M.discussion_labels = [[
+query {
+  repository(owner: "%s", name: "%s") {
+    discussion(number: %d) {
+      labels(first: 100) {
+        ...LabelConnectionFragment
+      }
+    }
+  }
+}
+]] .. fragments.label_connection .. fragments.label
+
 M.pull_request_labels = [[
 query {
   repository(owner: "%s", name: "%s") {
@@ -720,6 +729,12 @@ query {
       ...ReactionGroupsUsersFragment
     }
     ... on IssueComment {
+      ...ReactionGroupsUsersFragment
+    }
+    ... on Discussion {
+      ...ReactionGroupsUsersFragment
+    }
+    ... on DiscussionComment {
       ...ReactionGroupsUsersFragment
     }
   }

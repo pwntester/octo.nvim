@@ -210,6 +210,23 @@ function M.get_default_values()
     },
     mappings_disable_default = false,
     mappings = {
+      discussion = {
+        copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+        add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
+        add_label = { lhs = "<localleader>la", desc = "add label" },
+        remove_label = { lhs = "<localleader>ld", desc = "remove label" },
+        next_comment = { lhs = "]c", desc = "go to next comment" },
+        prev_comment = { lhs = "[c", desc = "go to previous comment" },
+        react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
+        react_heart = { lhs = "<localleader>rh", desc = "add/remove ❤️ reaction" },
+        react_eyes = { lhs = "<localleader>re", desc = "add/remove 👀 reaction" },
+        react_thumbs_up = { lhs = "<localleader>r+", desc = "add/remove 👍 reaction" },
+        react_thumbs_down = { lhs = "<localleader>r-", desc = "add/remove 👎 reaction" },
+        react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
+        react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
+        react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+      },
       runs = {
         expand_step = { lhs = "o", desc = "expand workflow step" },
         open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
@@ -541,6 +558,7 @@ function M.setup(opts)
       -- clear default mappings before merging user mappings
       M.values.mappings = {
         issue = {},
+        discussion = {},
         pull_request = {},
         review_thread = {},
         submit_win = {},
