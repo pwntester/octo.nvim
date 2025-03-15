@@ -1,7 +1,6 @@
 local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
-local mutations = require "octo.gh.mutations"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
@@ -138,6 +137,11 @@ function M.setup()
             },
           },
         }
+      end,
+      search = function(...)
+        local args = table.pack(...)
+        local prompt = table.concat(args, " ")
+        picker.search { prompt = prompt, type = "DISCUSSION" }
       end,
       close = function()
         local buffer = utils.get_current_buffer()
