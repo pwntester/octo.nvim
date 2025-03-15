@@ -181,6 +181,9 @@ query($endCursor: String) {
           login
         }
       }
+      parent {
+        ...IssueFields
+      }
       ...ReactionGroupsFragment
       projectCards(last: 20) {
         nodes {
@@ -289,6 +292,7 @@ query($endCursor: String) {
     issues(first: 100, after: $endCursor, filterBy: {%s}, orderBy: {field: %s, direction: %s}) {
       nodes {
         __typename
+        id
         number
         title
         url

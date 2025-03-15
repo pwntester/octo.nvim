@@ -27,6 +27,7 @@ M.projects_v2 = [[
 
 M.issue = [[
 fragment IssueFields on Issue {
+  id
   number
   title
   state

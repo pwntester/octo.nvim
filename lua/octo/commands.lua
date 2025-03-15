@@ -244,6 +244,58 @@ function M.setup()
         utils.create_milestone(milestoneTitle, description)
       end,
     },
+    parent = {
+      remove = M.within_issue(function(buffer)
+        local parent = buffer.node.parent
+
+        if utils.is_blank(parent) then
+          utils.error "No parent issue found"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.remove_subissue,
+          fields = {
+            parent_id = parent.id,
+            child_id = buffer.node.id,
+          },
+          jq = ".data.removeSubIssue.subIssue.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function(response_id)
+                if response_id == buffer.node.id then
+                  utils.info "Issue removed as sub-issue"
+                end
+              end,
+            },
+          },
+        }
+      end),
+      add = M.within_issue(function(buffer)
+        local opts = {}
+        opts.cb = function(selected)
+          gh.api.graphql {
+            query = mutations.add_subissue,
+            fields = {
+              parent_id = selected.obj.id,
+              child_id = buffer.node.id,
+            },
+            jq = ".data.addSubIssue.subIssue.id",
+            opts = {
+              cb = gh.create_callback {
+                success = function(response_id)
+                  if response_id == buffer.node.id then
+                    utils.info "Issue added as sub-issue"
+                  end
+                end,
+              },
+            },
+          }
+        end
+
+        picker.issues(opts)
+      end),
+    },
     issue = {
       create = function(repo)
         M.create_issue(repo)
@@ -821,6 +873,8 @@ function M.octo(object, action, ...)
       utils.get_issue(number, repo)
     elseif repo and number and kind == "pull" then
       utils.get_pull_request(number, repo)
+    elseif repo and number and kind == "discussion" then
+      utils.get_discussion(number, repo)
     else
       utils.error("Incorrect argument: " .. object)
       return

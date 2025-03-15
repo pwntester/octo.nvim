@@ -98,6 +98,12 @@ See |octo-command-examples| for examples.
   search                Live discussion search.
 
 
+:Octo parent [action] {args}                *octo-commands-parent*
+
+  add                   Add a parent to the current issue
+  remove                Remove the parent from the current issue
+
+
 :Octo repo [action]                             *octo-commands-repo*
 
   list                  Lists repos the user owns, contributes, or belongs to.
