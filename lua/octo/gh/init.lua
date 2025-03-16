@@ -373,7 +373,7 @@ local rest = function(method, opts)
     return
   end
 
-  run {
+  return run {
     args = args,
     mode = run_opts.mode,
     cb = run_opts.cb,
