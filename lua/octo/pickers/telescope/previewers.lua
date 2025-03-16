@@ -18,7 +18,7 @@ local discussion_preview = function(obj, bufnr)
 
   writers.write_title(bufnr, tostring(obj.title), 1)
   writers.write_discussion_details(bufnr, obj)
-  writers.write_body(bufnr, obj, 11)
+  writers.write_body(bufnr, obj, 12)
 
   if obj.answer ~= vim.NIL then
     local line = vim.api.nvim_buf_line_count(bufnr) + 1
