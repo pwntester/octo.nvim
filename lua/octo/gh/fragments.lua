@@ -580,6 +580,7 @@ fragment DiscussionInfoFragment on Discussion {
   url
   closed
   isAnswered
+  viewerDidAuthor
   repository {
     nameWithOwner
   }
@@ -610,6 +611,7 @@ fragment DiscussionDetailsFragment on Discussion {
   updatedAt
   upvoteCount
   viewerHasUpvoted
+  viewerDidAuthor
   ...ReactionGroupsFragment
 }
 ]]
