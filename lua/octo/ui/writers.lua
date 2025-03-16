@@ -82,6 +82,11 @@ function M.write_discussion_details(bufnr, discussion)
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, 0, -1)
 
+  table.insert(details, {
+    { "Repo: ", "OctoDetailsLabel" },
+    { " " .. utils.parse_url(discussion.url), "OctoDetailsValue" },
+  })
+
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
   local author_bubble = bubbles.make_user_bubble(discussion.author.login, discussion.viewerDidAuthor)
   vim.list_extend(author_vt, author_bubble)
