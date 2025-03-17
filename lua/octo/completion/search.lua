@@ -1,3 +1,6 @@
+--- Completions while using the search command
+--- https://docs.github.com/en/search-github/searching-on-github
+--- See https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests
 local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
@@ -70,7 +73,7 @@ local get_milestones = function(repoWithOwner)
   return milestones
 end
 
-local get_valid = function(name, valid, argLead)
+local get_closest_valid = function(name, valid, argLead)
   local desired = string.gsub(argLead, name .. ":", "")
   local valid_types = {}
   for _, type in ipairs(valid) do
@@ -85,9 +88,13 @@ local get_valid = function(name, valid, argLead)
   return valid_types
 end
 
-M.complete = function(argLead, cmdLine, cursorPos)
+--- Complete function for search commands. This includes
+--- Octo search and Octo pr/issue/discussion search
+--- @param argLead string: The argument lead
+--- @param cmdLine string: The command line
+M.complete = function(argLead, cmdLine)
   if not string.match(argLead, ":") then
-    local possible = {
+    local qualifiers = {
       "repo",
       "is",
       "state",
@@ -130,7 +137,7 @@ M.complete = function(argLead, cmdLine, cursorPos)
     }
 
     local valid = {}
-    for _, p in ipairs(possible) do
+    for _, p in ipairs(qualifiers) do
       if string.match(p, argLead) then
         table.insert(valid, p .. ":")
       end
@@ -176,7 +183,7 @@ M.complete = function(argLead, cmdLine, cursorPos)
       "open",
       "closed",
     }
-    return get_valid("state", states, argLead)
+    return get_closest_valid("state", states, argLead)
   end
 
   if vim.startswith(argLead, "reason") then
@@ -184,7 +191,7 @@ M.complete = function(argLead, cmdLine, cursorPos)
       "completed",
       "not planned",
     }
-    return get_valid("reason", reasons, argLead)
+    return get_closest_valid("reason", reasons, argLead)
   end
 
   if vim.startswith(argLead, "milestone") then
@@ -213,7 +220,7 @@ M.complete = function(argLead, cmdLine, cursorPos)
       "issue",
       "pr",
     }
-    return get_valid("type", types, argLead)
+    return get_closest_valid("type", types, argLead)
   end
 
   if vim.startswith(argLead, "label") then
@@ -238,16 +245,31 @@ M.complete = function(argLead, cmdLine, cursorPos)
       "body",
       "comments",
     }
-    return get_valid("in", types, argLead)
+    return get_closest_valid("in", types, argLead)
   end
 
   if vim.startswith(argLead, "no") then
-    return get_valid("no", {
+    return get_closest_valid("no", {
       "label",
       "milestone",
       "assignee",
       "project",
     }, argLead)
+  end
+
+  local user_related = {
+    "author",
+    "assignee",
+    "reviewer",
+    "commenter",
+    "reviewed-by",
+    "answered-by",
+  }
+
+  for _, qualifier in ipairs(user_related) do
+    if vim.startswith(argLead, qualifier) then
+      return get_closest_valid(qualifier, { "@me" }, argLead)
+    end
   end
 
   if vim.startswith(argLead, "is") then
@@ -280,7 +302,7 @@ M.complete = function(argLead, cmdLine, cursorPos)
       table.insert(combined, state)
     end
 
-    return get_valid("is", combined, argLead)
+    return get_closest_valid("is", combined, argLead)
   end
 
   return {}
