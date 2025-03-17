@@ -50,6 +50,28 @@ local get_labels = function(search, repo)
   return vim.json.decode(output)
 end
 
+local get_repos = function(owner, name)
+  local query = name .. " owner:" .. owner
+
+  local output = gh.api.graphql {
+    query = queries.search,
+    fields = { prompt = query, type = "REPOSITORY" },
+    jq = ".data.search.nodes | map(.name)",
+    opts = { mode = "sync" },
+  }
+  return vim.json.decode(output)
+end
+
+local get_users = function(prompt)
+  local output = gh.api.graphql {
+    query = queries.search,
+    f = { prompt = prompt, type = "USER" },
+    jq = ".data.search.nodes | map(.login)",
+    opts = { mode = "sync" },
+  }
+  return vim.json.decode(output)
+end
+
 local get_milestones = function(repoWithOwner)
   if utils.is_blank(repoWithOwner) then
     repoWithOwner = utils.get_remote_name()
@@ -109,6 +131,40 @@ local get_closest_valid = function(name, valid, argLead)
     end
   end
   return valid_types
+end
+
+local complete_repo = function(argLead, cmdLine)
+  local repoWithName = string.match(cmdLine, "repo:([%w%-%./_]+)")
+  if utils.is_blank(repoWithName) then
+    return {}
+  end
+
+  local owner, repo = utils.split_repo(repoWithName)
+
+  local has_slash = string.match(argLead, "/")
+
+  if not has_slash then
+    local users = get_users(owner)
+    local valid_users = {}
+
+    for _, user in ipairs(users) do
+      if not utils.is_blank(user) then
+        table.insert(valid_users, "repo:" .. user .. "/")
+      end
+    end
+    return valid_users
+  end
+
+  local repos = get_repos(owner, repo)
+  local valid_repos = {}
+  for _, repo in ipairs(repos) do
+    if string.match(repo, " ") then
+      repo = '"' .. repo .. '"'
+    end
+
+    table.insert(valid_repos, "repo:" .. owner .. "/" .. repo)
+  end
+  return valid_repos
 end
 
 --- Complete function for search commands. This includes
@@ -301,6 +357,10 @@ M.complete = function(argLead, cmdLine)
     if vim.startswith(argLead, qualifier) then
       return get_closest_valid(qualifier, { "@me" }, argLead)
     end
+  end
+
+  if vim.startswith(argLead, "repo") then
+    return complete_repo(argLead, cmdLine)
   end
 
   if vim.startswith(argLead, "is") then
