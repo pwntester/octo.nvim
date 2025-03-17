@@ -73,6 +73,29 @@ local get_milestones = function(repoWithOwner)
   return milestones
 end
 
+local get_categories = function(repoWithOwner)
+  if utils.is_blank(repoWithOwner) then
+    repoWithOwner = utils.get_remote_name()
+  end
+
+  local owner, name = utils.split_repo(repoWithOwner)
+
+  local output = gh.api.graphql {
+    query = queries.discussion_categories,
+    fields = { owner = owner, name = name },
+    jq = ".data.repository.discussionCategories.nodes | map(.name)",
+    opts = { mode = "sync" },
+  }
+
+  local categories = vim.json.decode(output)
+
+  if #categories == 0 then
+    utils.error("No categories found for " .. repoWithOwner)
+  end
+
+  return categories
+end
+
 local get_closest_valid = function(name, valid, argLead)
   local desired = string.gsub(argLead, name .. ":", "")
   local valid_types = {}
@@ -203,6 +226,24 @@ M.complete = function(argLead, cmdLine)
     return valid_milestones
   end
 
+  if vim.startswith(argLead, "category") then
+    local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
+
+    local desired_category = string.gsub(argLead, "category:", "")
+    local categories = get_categories(repo)
+    local valid_categories = {}
+    for _, category in ipairs(categories) do
+      if string.match(category, " ") then
+        category = '"' .. category .. '"'
+      end
+
+      if string.match(category, desired_category) then
+        table.insert(valid_categories, "category:" .. category)
+      end
+    end
+    return valid_categories
+  end
+
   if vim.startswith(argLead, "type") then
     local types = {
       "Bug",
@@ -256,7 +297,6 @@ M.complete = function(argLead, cmdLine)
     "reviewed-by",
     "answered-by",
   }
-
   for _, qualifier in ipairs(user_related) do
     if vim.startswith(argLead, qualifier) then
       return get_closest_valid(qualifier, { "@me" }, argLead)
