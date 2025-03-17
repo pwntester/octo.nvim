@@ -20,13 +20,17 @@ function M.octo_command_complete(argLead, cmdLine)
     return valid_options
   end
 
-  if #parts == 1 then
+  local search = parts[2] == "search" or parts[3] == "search"
+
+  if search then
+    return require("octo.completion.search").complete(argLead, cmdLine)
+  elseif #parts == 1 then
     return command_keys
   elseif #parts == 2 and not vim.tbl_contains(command_keys, parts[2]) then
     return get_options(command_keys)
   elseif #parts == 2 and vim.tbl_contains(command_keys, parts[2]) or #parts == 3 then
     local obj = octo_commands.commands[parts[2]]
-    if type(obj) == "table" then
+    if type(obj) == "table" and not search then
       return get_options(vim.tbl_keys(obj))
     end
   end
