@@ -364,6 +364,23 @@ query($prompt: String!, $type: SearchType = ISSUE) {
       ... on Discussion {
         ...DiscussionInfoFragment
       }
+      ... on Repository {
+        __typename
+        name
+        nameWithOwner
+        description
+        url
+      }
+      ... on Organization {
+        __typename
+        login
+        name
+        url
+      }
+      ... on User {
+        __typename
+        login
+      }
     }
   }
 }
