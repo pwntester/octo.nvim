@@ -130,8 +130,8 @@ M.complete = function(argLead, cmdLine)
       "archived",
       "involves",
       "linked",
-      --- Discussions
       "org",
+      --- Discussions
       "answered-by",
       "category",
     }
@@ -145,37 +145,28 @@ M.complete = function(argLead, cmdLine)
     return valid
   end
 
-  if vim.startswith(argLead, "head") then
-    local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
+  local branch_related = {
+    "head",
+    "base",
+  }
+  for _, qualifier in ipairs(branch_related) do
+    if vim.startswith(argLead, qualifier) then
+      local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
-    local branches = get_branches(repo)
-    local valid_branches = {}
-    for _, branch in ipairs(branches) do
-      if string.match(branch, " ") then
-        branch = '"' .. branch .. '"'
+      local desired_branch = string.gsub(argLead, qualifier .. ":", "")
+      local branches = get_branches(repo)
+      local valid_branches = {}
+      for _, branch in ipairs(branches) do
+        if string.match(branch, " ") then
+          branch = '"' .. branch .. '"'
+        end
+
+        if string.match(branch, desired_branch) then
+          table.insert(valid_branches, qualifier .. ":" .. branch)
+        end
       end
-
-      table.insert(valid_branches, "head:" .. branch)
+      return valid_branches
     end
-    return valid_branches
-  end
-
-  if vim.startswith(argLead, "base") then
-    local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
-
-    local desired_branch = string.gsub(argLead, "base:", "")
-    local branches = get_branches(repo)
-    local valid_branches = {}
-    for _, branch in ipairs(branches) do
-      if string.match(branch, " ") then
-        branch = '"' .. branch .. '"'
-      end
-
-      if string.match(branch, desired_branch) then
-        table.insert(valid_branches, "base:" .. branch)
-      end
-    end
-    return valid_branches
   end
 
   if vim.startswith(argLead, "state") then
