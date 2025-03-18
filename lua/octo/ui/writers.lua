@@ -1431,24 +1431,22 @@ end
 
 function M.write_subissue_events(bufnr, items, action)
   local previous_actor = ""
-  for _, item in ipairs(items) do
+  for i, item in ipairs(items) do
     local vt = {}
     local conf = config.values
-    local spaces
+    local spaces = conf.use_timeline_icons and 3 or 10
     if item.actor.login ~= previous_actor then
       if conf.use_timeline_icons then
         table.insert(vt, { conf.timeline_icons.subissue, "OctoTimelineMarker" })
-        spaces = 3
       else
         table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
         table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-        spaces = 10
       end
       table.insert(vt, {
         item.actor.login,
         item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
       })
-      local next_actor = items[_ + 1] and items[_ + 1].actor and items[_ + 1].actor.login or ""
+      local next_actor = items[i + 1] and items[i + 1].actor and items[i + 1].actor.login or ""
       if next_actor == item.actor.login then
         table.insert(vt, { " " .. action .. " sub-issues ", "OctoTimelineItemHeading" })
       else
