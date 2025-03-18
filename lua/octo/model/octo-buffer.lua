@@ -108,7 +108,7 @@ function OctoBuffer:render_discussion()
   writers.write_title(self.bufnr, tostring(obj.title), 1)
   writers.write_state(self.bufnr, state, self.number)
   writers.write_discussion_details(self.bufnr, obj)
-  writers.write_body(self.bufnr, obj, 12)
+  writers.write_body(self.bufnr, obj, 13)
 
   -- write body reactions
   local reaction_line
