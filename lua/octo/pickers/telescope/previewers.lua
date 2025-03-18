@@ -16,7 +16,9 @@ local discussion_preview = function(obj, bufnr)
   -- clear the buffer
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
+  local state = obj.closed and "CLOSED" or "OPEN"
   writers.write_title(bufnr, tostring(obj.title), 1)
+  writers.write_state(bufnr, state, obj.number)
   writers.write_discussion_details(bufnr, obj)
   writers.write_body(bufnr, obj, 12)
 
