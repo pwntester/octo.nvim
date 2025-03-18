@@ -170,8 +170,13 @@ end
 local create_complete_user = function(qualifier)
   return function(argLead, cmdLine)
     local partial_user = remove_through_colon(qualifier, argLead)
+    local valid_users = { qualifier .. ":@me" }
+
+    if utils.is_blank(partial_user) then
+      return valid_users
+    end
+
     local users = get_users(partial_user)
-    local valid_users = {}
 
     for _, user in ipairs(users) do
       if not utils.is_blank(user) then
