@@ -132,6 +132,20 @@ local get_closest_valid = function(name, valid, argLead)
   end
   return valid_types
 end
+local create_complete_user = function(qualifier)
+  return function(argLead, cmdLine)
+    local partial_user = string.gsub(argLead, qualifier .. ":", "")
+    local users = get_users(partial_user)
+    local valid_users = {}
+
+    for _, user in ipairs(users) do
+      if not utils.is_blank(user) then
+        table.insert(valid_users, qualifier .. ":" .. user)
+      end
+    end
+    return valid_users
+  end
+end
 
 local complete_repo = function(argLead, cmdLine)
   local repoWithName = string.match(cmdLine, "repo:([%w%-%./_]+)")
@@ -272,12 +286,12 @@ local qualifiers = {
   ["in"] = { "title", "body", "comments" },
   no = { "label", "milestone", "assignee", "project" },
   --- User related
-  "author",
-  "assignee",
-  "reviewer",
-  "commenter",
-  "reviewed-by",
-  "involves",
+  author = create_complete_user "author",
+  assignee = create_complete_user "assignee",
+  reviewer = create_complete_user "reviewer",
+  commenter = create_complete_user "commenter",
+  ["reviewed-by"] = create_complete_user "reviewed-by",
+  involves = create_complete_user "involves",
   "language",
   "mentions",
   "team",
