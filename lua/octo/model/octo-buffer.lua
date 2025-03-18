@@ -104,7 +104,9 @@ function OctoBuffer:render_discussion()
   self:clear()
 
   local obj = self.node
+  local state = obj.closed and "CLOSED" or "OPEN"
   writers.write_title(self.bufnr, tostring(obj.title), 1)
+  writers.write_state(self.bufnr, state, self.number)
   writers.write_discussion_details(self.bufnr, obj)
   writers.write_body(self.bufnr, obj, 12)
 
