@@ -138,7 +138,7 @@ function M.get_default_values()
     resolved_icon = " ",
     timeline_marker = " ",
     timeline_indent = "2",
-    use_timeline_icons = false,
+    use_timeline_icons = true,
     timeline_icons = {
       commit = "  ",
       label = "  ",
