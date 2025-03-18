@@ -132,9 +132,19 @@ local get_closest_valid = function(name, valid, argLead)
   end
   return valid_types
 end
+
+local remove_through_colon = function(qualifier, value)
+  local pattern = ":"
+  local start_index = string.find(value, pattern)
+  if start_index then
+    return string.sub(value, start_index + #pattern)
+  end
+  return value
+end
+
 local create_complete_user = function(qualifier)
   return function(argLead, cmdLine)
-    local partial_user = string.gsub(argLead, qualifier .. ":", "")
+    local partial_user = remove_through_colon(qualifier, argLead)
     local users = get_users(partial_user)
     local valid_users = {}
 
@@ -292,8 +302,8 @@ local qualifiers = {
   commenter = create_complete_user "commenter",
   ["reviewed-by"] = create_complete_user "reviewed-by",
   involves = create_complete_user "involves",
+  mentions = create_complete_user "mentions",
   "language",
-  "mentions",
   "team",
   "comments",
   "interactions",
@@ -311,7 +321,7 @@ local qualifiers = {
   linked = { "pr", "issue" },
   "org",
   --- Discussions
-  "answered-by",
+  ["answered-by"] = create_complete_user "answered-by",
   category = complete_category,
 }
 
@@ -331,6 +341,8 @@ M.complete = function(argLead, cmdLine)
     return valid
   end
 
+  local expected_qualifier = string.match(argLead, "([^:]+):")
+
   for first, second in pairs(qualifiers) do
     local qualifier, action
     if type(first) == "number" then
@@ -348,7 +360,7 @@ M.complete = function(argLead, cmdLine)
       end
     end
 
-    if vim.startswith(argLead, qualifier) then
+    if qualifier == expected_qualifier then
       return action(argLead, cmdLine)
     end
   end
