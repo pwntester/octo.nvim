@@ -95,6 +95,31 @@ local get_milestones = function(repoWithOwner)
   return milestones
 end
 
+local get_languages = function()
+  local output = gh.api.get {
+    "/languages",
+    jq = "map(.name)",
+    opts = { mode = "sync" },
+  }
+  return vim.json.decode(output)
+end
+
+local complete_language = function(argLead, cmdLine)
+  local desired_language = string.gsub(argLead, "language:", "")
+  local languages = get_languages()
+  local valid_languages = {}
+  for _, language in ipairs(languages) do
+    if string.match(language, " ") then
+      language = '"' .. language .. '"'
+    end
+
+    if string.match(language, desired_language) then
+      table.insert(valid_languages, "language:" .. language)
+    end
+  end
+  return valid_languages
+end
+
 local get_categories = function(repoWithOwner)
   if utils.is_blank(repoWithOwner) then
     repoWithOwner = utils.get_remote_name()
@@ -133,6 +158,35 @@ local get_closest_valid = function(name, valid, argLead)
   return valid_types
 end
 
+local remove_through_colon = function(qualifier, value)
+  local pattern = ":"
+  local start_index = string.find(value, pattern)
+  if start_index then
+    return string.sub(value, start_index + #pattern)
+  end
+  return value
+end
+
+local create_complete_user = function(qualifier)
+  return function(argLead, cmdLine)
+    local partial_user = remove_through_colon(qualifier, argLead)
+    local valid_users = { qualifier .. ":@me" }
+
+    if utils.is_blank(partial_user) then
+      return valid_users
+    end
+
+    local users = get_users(partial_user)
+
+    for _, user in ipairs(users) do
+      if not utils.is_blank(user) then
+        table.insert(valid_users, qualifier .. ":" .. user)
+      end
+    end
+    return valid_users
+  end
+end
+
 local complete_repo = function(argLead, cmdLine)
   local repoWithName = string.match(cmdLine, "repo:([%w%-%./_]+)")
   if utils.is_blank(repoWithName) then
@@ -167,68 +221,8 @@ local complete_repo = function(argLead, cmdLine)
   return valid_repos
 end
 
---- Complete function for search commands. This includes
---- Octo search and Octo pr/issue/discussion search
---- @param argLead string: The argument lead
---- @param cmdLine string: The command line
-M.complete = function(argLead, cmdLine)
-  if not string.match(argLead, ":") then
-    local qualifiers = {
-      "repo",
-      "is",
-      "state",
-      "reason",
-      "type",
-      "label",
-      "milestone",
-      "project",
-      "head",
-      "status",
-      "base",
-      "in",
-      "no",
-      "author",
-      "assignee",
-      "reviewer",
-      "language",
-      "mentions",
-      "team",
-      "commenter",
-      "comments",
-      "interactions",
-      "reactions",
-      "draft",
-      "review",
-      "reviewed-by",
-      "review-requested",
-      "user-review-requested",
-      "team-review-requested",
-      "created",
-      "updated",
-      "closed",
-      "archived",
-      "involves",
-      "linked",
-      "org",
-      --- Discussions
-      "answered-by",
-      "category",
-    }
-
-    local valid = {}
-    for _, p in ipairs(qualifiers) do
-      if string.match(p, argLead) then
-        table.insert(valid, p .. ":")
-      end
-    end
-    return valid
-  end
-
-  local branch_related = {
-    "head",
-    "base",
-  }
-  for _, qualifier in ipairs(branch_related) do
+local create_complete_branch = function(qualifier)
+  return function(argLead, cmdLine)
     if vim.startswith(argLead, qualifier) then
       local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
@@ -247,153 +241,161 @@ M.complete = function(argLead, cmdLine)
       return valid_branches
     end
   end
+end
 
-  if vim.startswith(argLead, "state") then
-    local states = {
-      "open",
-      "closed",
-    }
-    return get_closest_valid("state", states, argLead)
+local complete_milestone = function(argLead, cmdLine)
+  local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
+
+  local desired_milestone = string.gsub(argLead, "milestone:", "")
+  local milestones = get_milestones(repo)
+  local valid_milestones = {}
+  for _, milestone in ipairs(milestones) do
+    if string.match(milestone, " ") then
+      milestone = '"' .. milestone .. '"'
+    end
+
+    if string.match(milestone, desired_milestone) then
+      table.insert(valid_milestones, "milestone:" .. milestone)
+    end
   end
+  return valid_milestones
+end
 
-  if vim.startswith(argLead, "reason") then
-    local reasons = {
-      "completed",
-      "not planned",
-    }
-    return get_closest_valid("reason", reasons, argLead)
+local complete_category = function(argLead, cmdLine)
+  local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
+
+  local desired_category = string.gsub(argLead, "category:", "")
+  local categories = get_categories(repo)
+  local valid_categories = {}
+  for _, category in ipairs(categories) do
+    if string.match(category, " ") then
+      category = '"' .. category .. '"'
+    end
+
+    if string.match(category, desired_category) then
+      table.insert(valid_categories, "category:" .. category)
+    end
   end
+  return valid_categories
+end
 
-  if vim.startswith(argLead, "milestone") then
-    local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
+local complete_label = function(argLead, cmdLine)
+  local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
-    local desired_milestone = string.gsub(argLead, "milestone:", "")
-    local milestones = get_milestones(repo)
-    local valid_milestones = {}
-    for _, milestone in ipairs(milestones) do
-      if string.match(milestone, " ") then
-        milestone = '"' .. milestone .. '"'
+  local desired_label = string.gsub(argLead, "label:", "")
+  local labels = get_labels(desired_label, repo)
+  local valid_labels = {}
+  for _, label in ipairs(labels) do
+    if string.match(label, " ") then
+      label = '"' .. label .. '"'
+    end
+
+    table.insert(valid_labels, "label:" .. label)
+  end
+  return valid_labels
+end
+
+local qualifiers = {
+  repo = complete_repo,
+  is = {
+    "pr",
+    "issue",
+    "discussion",
+    "open",
+    "closed",
+    "merged",
+    "unmerged",
+    "draft",
+    "public",
+    "private",
+    "locked",
+    "unlocked",
+    "archived",
+    "unarchived",
+    "queued",
+    "answered",
+    "unanswered",
+  },
+  state = { "open", "closed" },
+  reason = { "completed", "not planned" },
+  type = { "Bug", "Task", "Feature", "issue", "pr" },
+  label = complete_label,
+  milestone = complete_milestone,
+  "project",
+  head = create_complete_branch "head",
+  base = create_complete_branch "base",
+  status = { "pending", "success", "failure" },
+  ["in"] = { "title", "body", "comments" },
+  no = { "label", "milestone", "assignee", "project" },
+  --- User related
+  author = create_complete_user "author",
+  assignee = create_complete_user "assignee",
+  reviewer = create_complete_user "reviewer",
+  commenter = create_complete_user "commenter",
+  ["reviewed-by"] = create_complete_user "reviewed-by",
+  involves = create_complete_user "involves",
+  mentions = create_complete_user "mentions",
+  ["user-review-requested"] = create_complete_user "user-review-requested",
+  ["review-requested"] = create_complete_user "review-requested",
+  draft = { "true", "false" },
+  review = { "none", "required", "approved", "changes_requested", "dismissed" },
+  language = complete_language,
+  "team",
+  -- Numbers
+  "comments",
+  "interactions",
+  "reactions",
+  "team-review-requested",
+  --- Dates
+  "created",
+  "updated",
+  "closed",
+  archived = { "true", "false" },
+  linked = { "pr", "issue" },
+  "org",
+  --- Discussions
+  ["answered-by"] = create_complete_user "answered-by",
+  category = complete_category,
+}
+
+--- Complete function for search commands. This includes
+--- Octo search and Octo pr/issue/discussion search
+--- @param argLead string: The argument lead
+--- @param cmdLine string: The command line
+M.complete = function(argLead, cmdLine)
+  if not string.match(argLead, ":") then
+    local valid = {}
+    for first, second in pairs(qualifiers) do
+      local qualifier = type(first) == "number" and second or first
+      if string.match(qualifier, argLead) then
+        table.insert(valid, qualifier .. ":")
       end
+    end
+    return valid
+  end
 
-      if string.match(milestone, desired_milestone) then
-        table.insert(valid_milestones, "milestone:" .. milestone)
+  local expected_qualifier = string.match(argLead, "([^:]+):")
+
+  for first, second in pairs(qualifiers) do
+    local qualifier, action
+    if type(first) == "number" then
+      qualifier = second
+      action = function()
+        return {}
+      end
+    else
+      qualifier = first
+      action = second
+      if type(action) == "table" then
+        action = function()
+          return get_closest_valid(qualifier, second, argLead)
+        end
       end
     end
-    return valid_milestones
-  end
 
-  if vim.startswith(argLead, "category") then
-    local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
-
-    local desired_category = string.gsub(argLead, "category:", "")
-    local categories = get_categories(repo)
-    local valid_categories = {}
-    for _, category in ipairs(categories) do
-      if string.match(category, " ") then
-        category = '"' .. category .. '"'
-      end
-
-      if string.match(category, desired_category) then
-        table.insert(valid_categories, "category:" .. category)
-      end
+    if qualifier == expected_qualifier then
+      return action(argLead, cmdLine)
     end
-    return valid_categories
-  end
-
-  if vim.startswith(argLead, "type") then
-    local types = {
-      "Bug",
-      "Task",
-      "Feature",
-      "issue",
-      "pr",
-    }
-    return get_closest_valid("type", types, argLead)
-  end
-
-  if vim.startswith(argLead, "label") then
-    local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
-
-    local desired_label = string.gsub(argLead, "label:", "")
-    local labels = get_labels(desired_label, repo)
-    local valid_labels = {}
-    for _, label in ipairs(labels) do
-      if string.match(label, " ") then
-        label = '"' .. label .. '"'
-      end
-
-      table.insert(valid_labels, "label:" .. label)
-    end
-    return valid_labels
-  end
-
-  if vim.startswith(argLead, "in") then
-    local types = {
-      "title",
-      "body",
-      "comments",
-    }
-    return get_closest_valid("in", types, argLead)
-  end
-
-  if vim.startswith(argLead, "no") then
-    return get_closest_valid("no", {
-      "label",
-      "milestone",
-      "assignee",
-      "project",
-    }, argLead)
-  end
-
-  local user_related = {
-    "author",
-    "assignee",
-    "reviewer",
-    "commenter",
-    "reviewed-by",
-    "answered-by",
-  }
-  for _, qualifier in ipairs(user_related) do
-    if vim.startswith(argLead, qualifier) then
-      return get_closest_valid(qualifier, { "@me" }, argLead)
-    end
-  end
-
-  if vim.startswith(argLead, "repo") then
-    return complete_repo(argLead, cmdLine)
-  end
-
-  if vim.startswith(argLead, "is") then
-    local types = {
-      "pr",
-      "issue",
-      "discussion",
-    }
-    local states = {
-      "merged",
-      "open",
-      "closed",
-      "draft",
-      "public",
-      "private",
-      "locked",
-      "unlocked",
-      "archived",
-      "unarchived",
-      "queued",
-      -- Discussions
-      "answered",
-      "unanswered",
-    }
-    local combined = {}
-    for _, type in ipairs(types) do
-      table.insert(combined, type)
-    end
-    for _, state in ipairs(states) do
-      table.insert(combined, state)
-    end
-
-    return get_closest_valid("is", combined, argLead)
   end
 
   return {}
