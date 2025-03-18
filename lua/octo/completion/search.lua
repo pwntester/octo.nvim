@@ -248,6 +248,7 @@ local complete_category = function(argLead, cmdLine)
   end
   return valid_categories
 end
+
 local complete_label = function(argLead, cmdLine)
   local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
@@ -292,7 +293,7 @@ local qualifiers = {
   "project",
   head = create_complete_branch "head",
   base = create_complete_branch "base",
-  "status",
+  status = { "pending", "success", "failure" },
   ["in"] = { "title", "body", "comments" },
   no = { "label", "milestone", "assignee", "project" },
   --- User related
@@ -317,7 +318,7 @@ local qualifiers = {
   "created",
   "updated",
   "closed",
-  "archived",
+  archived = { "true", "false" },
   linked = { "pr", "issue" },
   "org",
   --- Discussions
