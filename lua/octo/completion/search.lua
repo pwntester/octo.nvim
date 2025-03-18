@@ -337,7 +337,7 @@ local qualifiers = {
   "interactions",
   "reactions",
   draft = { "true", "false" },
-  review = { "approved", "changes_requested", "dismissed" },
+  review = { "none", "required", "approved", "changes_requested", "dismissed" },
   "user-review-requested",
   "team-review-requested",
   --- Dates
