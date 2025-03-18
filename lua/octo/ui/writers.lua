@@ -126,6 +126,7 @@ function M.write_discussion_details(bufnr, discussion)
   table.insert(details, answered_vt)
 
   add_details_line(details, "Comments", discussion.comments.totalCount)
+  add_details_line(details, "Replies", utils.count_discussion_replies(discussion))
 
   M.write_detail_table { bufnr = bufnr, details = details, offset = 3 }
 end
