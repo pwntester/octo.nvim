@@ -1318,8 +1318,12 @@ function M.write_assigned_event(bufnr, item)
   -- )
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.assigned, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   if item.actor.login == item.assignee.login then
@@ -1346,8 +1350,12 @@ end
 function M.write_commit_event(bufnr, item)
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.commit, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   if item.commit.committer.user ~= vim.NIL then
     -- local committer_bubble = bubbles.make_user_bubble(
     --   item.commit.committer.user.login,
@@ -1374,7 +1382,8 @@ function M.write_commit_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
-local function write_issue_or_pr(bufnr, item)
+local function write_issue_or_pr(bufnr, item, spaces)
+  spaces = spaces or 10
   local vt = {}
   local state = utils.get_displayed_state(item.__typename == "Issue", item.state, item.stateReason, item.isDraft)
   local entry = {
@@ -1382,7 +1391,7 @@ local function write_issue_or_pr(bufnr, item)
     obj = item,
   }
   local icon = utils.get_icon(entry)
-  table.insert(vt, { "          ", "OctoTimelineItemHeading" })
+  table.insert(vt, { string.rep(" ", spaces), "OctoTimelineItemHeading" })
   table.insert(vt, { item.title, "OctoDetailsLabel" })
   table.insert(vt, { " #" .. tostring(item.number) .. " ", "OctoDetailsValue" })
   table.insert(vt, icon)
@@ -1423,17 +1432,22 @@ end
 
 function M.write_subissue_events(bufnr, items, action)
   local previous_actor = ""
-  for _, item in ipairs(items) do
+  for i, item in ipairs(items) do
     local vt = {}
     local conf = config.values
+    local spaces = conf.use_timeline_icons and 3 or 10
     if item.actor.login ~= previous_actor then
-      table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-      table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+      if conf.use_timeline_icons then
+        table.insert(vt, { conf.timeline_icons.subissue, "OctoTimelineMarker" })
+      else
+        table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+        table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+      end
       table.insert(vt, {
         item.actor.login,
         item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
       })
-      local next_actor = items[_ + 1] and items[_ + 1].actor and items[_ + 1].actor.login or ""
+      local next_actor = items[i + 1] and items[i + 1].actor and items[i + 1].actor.login or ""
       if next_actor == item.actor.login then
         table.insert(vt, { " " .. action .. " sub-issues ", "OctoTimelineItemHeading" })
       else
@@ -1444,7 +1458,7 @@ function M.write_subissue_events(bufnr, items, action)
     end
     local subIssue = item.subIssue
     subIssue.__typename = "Issue"
-    write_issue_or_pr(bufnr, subIssue)
+    write_issue_or_pr(bufnr, subIssue, spaces)
 
     previous_actor = item.actor.login
   end
@@ -1453,8 +1467,16 @@ end
 function M.write_cross_referenced_event(bufnr, item)
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  local spaces
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.cross_reference, "OctoTimelineMarker" })
+    spaces = 3
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+    spaces = 10
+  end
+
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -1480,15 +1502,22 @@ function M.write_cross_referenced_event(bufnr, item)
   end
 
   write_event(bufnr, vt)
-  write_issue_or_pr(bufnr, item.source)
+  write_issue_or_pr(bufnr, item.source, spaces)
 end
 
 local write_parent_issue_event = function(bufnr, item, add)
   local verb = add and "added" or "removed"
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  local spaces
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.parent_issue, "OctoTimelineMarker" })
+    spaces = 3
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+    spaces = 10
+  end
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -1498,7 +1527,7 @@ local write_parent_issue_event = function(bufnr, item, add)
   write_event(bufnr, vt)
   local parent = item.parent
   parent.__typename = "Issue"
-  write_issue_or_pr(bufnr, parent)
+  write_issue_or_pr(bufnr, parent, spaces)
 end
 
 M.write_parent_issue_added_event = function(bufnr, item)
@@ -1518,8 +1547,12 @@ local write_pinned_event = function(bufnr, item, add)
   end
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.pinned, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -1549,8 +1582,12 @@ local write_milestone_event = function(bufnr, item, add)
 
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.milestone, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -1573,8 +1610,15 @@ end
 function M.write_connected_event(bufnr, item)
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  local spaces
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.connected, "OctoTimelineMarker" })
+    spaces = 3
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+    spaces = 10
+  end
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -1593,14 +1637,18 @@ function M.write_connected_event(bufnr, item)
   end
 
   write_event(bufnr, vt)
-  write_issue_or_pr(bufnr, item.subject)
+  write_issue_or_pr(bufnr, item.subject, spaces)
 end
 
 function M.write_renamed_title_event(bufnr, item)
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.renamed, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   if utils.is_blank(item.actor) then
     table.insert(vt, { "Title renamed", "OctoTimelineItemHeading" })
     write_event(bufnr, vt)
@@ -1626,8 +1674,12 @@ function M.write_merged_event(bufnr, item)
   -- )
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, conf.timeline_icons.merged)
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   table.insert(vt, { " merged commit ", "OctoTimelineItemHeading" })
@@ -1643,13 +1695,32 @@ function M.write_closed_event(bufnr, item)
   --   item.actor.login,
   --   item.actor.login == vim.g.octo_viewer
   -- )
+  local state = item.closable.state
+  --- MERGED PRs have a MergedEvent already displayed
+  if state == "MERGED" then
+    return
+  end
+  local stateReason = item.closable and item.closable.stateReason or item.stateReason
+  stateReason = stateReason
+
+  local lookup_value = item.closable and item.closable.__typename == "Issue" and stateReason or state
+  lookup_value = string.lower(lookup_value)
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, conf.timeline_icons.closed[lookup_value])
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-  table.insert(vt, { " closed this ", "OctoTimelineItemHeading" })
+  if item.closable and item.closable.__typename == "Issue" then
+    table.insert(vt, { " closed this as ", "OctoTimelineItemHeading" })
+    table.insert(vt, { string.gsub(string.lower(stateReason), "_", " "), "OctoUnderline" })
+  else
+    table.insert(vt, { " closed this", "OctoTimelineItemHeading" })
+  end
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
 end
@@ -1670,8 +1741,12 @@ function M.write_labeled_events(bufnr, items, action)
   for _, actor in ipairs(vim.tbl_keys(labels_by_actor)) do
     local vt = {}
     local conf = config.values
-    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+    if conf.use_timeline_icons then
+      table.insert(vt, { conf.timeline_icons.label, "OctoTimelineMarker" })
+    else
+      table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+      table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+    end
     --vim.list_extend(vt, actor_bubble)
     if actor ~= vim.NIL then
       table.insert(vt, { actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
@@ -1696,12 +1771,16 @@ function M.write_reopened_event(bufnr, item)
   -- )
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, conf.timeline_icons.reopened)
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   table.insert(vt, { " reopened this ", "OctoTimelineItemHeading" })
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
 end
 
@@ -1713,8 +1792,12 @@ function M.write_review_requested_event(bufnr, item)
 
   local vt = {}
   local conf = config.values
-  table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-  table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.review_requested, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   --vim.list_extend(vt, actor_bubble)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   if item.requestedReviewer == vim.NIL then
