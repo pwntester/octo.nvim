@@ -61,10 +61,11 @@ local function get_hl_groups()
 
     FilePanelTitle = { fg = get_fg "Directory" or colors.blue, gui = "bold" },
     FilePanelCounter = { fg = get_fg "Identifier" or colors.purple, gui = "bold" },
-    NormalFront = { fg = get_fg "Normal" or colors.white },
+    NormalFloat = { fg = get_fg "Normal" or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
     Editable = { bg = float_bg },
     Strikethrough = { fg = colors.grey, gui = "strikethrough" },
+    Underline = { fg = colors.white, gui = "underline" },
   }
 end
 
@@ -72,13 +73,13 @@ local function get_hl_links()
   return {
     Normal = "Normal",
     CursorLine = "CursorLine",
-    VertSplit = "VertSplit",
+    WinSeparator = "WinSeparator",
     SignColumn = "Normal",
     StatusColumn = "SignColumn",
     StatusLine = "StatusLine",
     StatusLineNC = "StatusLineNC",
     EndOfBuffer = "EndOfBuffer",
-    FilePanelFileName = "NormalFront",
+    FilePanelFileName = "NormalFloat",
     FilePanelSelectedFile = "Type",
     FilePanelPath = "Comment",
     StatusAdded = "OctoGreen",
@@ -110,6 +111,8 @@ local function get_hl_links()
     ReactionViewer = "OctoViewer",
     PassingTest = "OctoGreen",
     FailingTest = "OctoRed",
+    PullAdditions = "OctoGreen",
+    PullDeletions = "OctoRed",
     DiffstatAdditions = "OctoGreen ",
     DiffstatDeletions = "OctoRed ",
     DiffstatNeutral = "OctoGrey",
@@ -224,6 +227,64 @@ function M.create_highlight(rgb_hex, options)
     HIGHLIGHT_CACHE[cache_key] = highlight_name
   end
   return highlight_name
+end
+
+local function display_highlight_groups(groups, example_text)
+  -- Check if input is a table
+  if type(groups) ~= "table" then
+    print "Please provide a table of highlight group names"
+    return
+  end
+
+  example_text = example_text or "Sample Text"
+
+  local format_str = "%-30s %-10s %-10s %-10s %-10s %-10s %s"
+  -- print(string.format(format_str, "Group", "fg", "bg", "bold", "italic", "underline", "Example"))
+  -- print(string.rep("-", 86 + #example_text))
+  vim.api.nvim_echo({
+    { string.format(format_str, "Group", "fg", "bg", "bold", "italic", "underline", "Example"), "None" },
+  }, false, {})
+  vim.api.nvim_echo({
+    { string.rep("-", 86 + #example_text), "None" },
+  }, false, {})
+
+  for _, group_name in ipairs(groups) do
+    local hl = vim.api.nvim_get_hl(0, { name = group_name, link = false })
+    if hl then
+      local fg = hl.fg and string.format("#%06x", hl.fg) or "none"
+      local bg = hl.bg and string.format("#%06x", hl.bg) or "none"
+      local bold = hl.bold and "yes" or "no"
+      local italic = hl.italic and "yes" or "no"
+      local underline = hl.underline and "yes" or "no"
+
+      -- Create a sample text with the highlight applied
+      local output = string.format(format_str, group_name, fg, bg, bold, italic, underline, "")
+
+      -- Output the sample with syntax highlighting in a separate line
+      vim.api.nvim_echo({
+        { output, "None" },
+        { example_text, group_name },
+      }, false, {})
+    else
+      vim.api.nvim_echo(
+        { { string.format(format_str, group_name, "not found", "", "", "", "", ""), "None" } },
+        false,
+        {}
+      )
+    end
+  end
+end
+
+function M.octo_highlight_groups(example_text)
+  local groups = {}
+  for v, _ in pairs(get_hl_groups()) do
+    table.insert(groups, "Octo" .. v)
+  end
+  for v, _ in pairs(get_hl_links()) do
+    table.insert(groups, "Octo" .. v)
+  end
+
+  display_highlight_groups(groups, example_text)
 end
 
 return M

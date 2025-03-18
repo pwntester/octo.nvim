@@ -6,7 +6,7 @@ local vim = vim
 
 local M = {}
 
-function M.gen_from_discussions(max_number)
+function M.gen_from_discussion(max_number)
   local make_display = function(entry)
     if not entry then
       return nil
@@ -161,14 +161,16 @@ function M.gen_from_git_commits()
   end
 end
 
-function M.gen_from_git_changed_files()
+function M.gen_from_git_changed_files(opts)
+  opts = opts or {}
+
   local displayer = entry_display.create {
     separator = " ",
     items = {
-      { width = 8 },
+      { width = 7 },
       { width = string.len "modified" },
-      { width = 5 },
-      { width = 5 },
+      { width = #tostring(opts.max_additions) + 1 },
+      { width = #tostring(opts.max_deletions) + 1 },
       { remaining = true },
     },
   }
@@ -712,6 +714,8 @@ function M.gen_from_notification(opts)
         return "issue"
       elseif type == "PullRequest" then
         return "pull_request"
+      elseif type == "Discussion" then
+        return "discussion"
       end
       return "unknown"
     end)(notification.subject.type)

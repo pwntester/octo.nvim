@@ -919,6 +919,8 @@ function M.parse_url(url)
     return repo, number, "issue"
   elseif repo and number and kind == "pull" then
     return repo, number, kind
+  elseif repo and number and kind == "discussions" then
+    return repo, number, "discussion"
   end
 end
 
@@ -1733,6 +1735,10 @@ M.icons = {
       unread = { " ", "OctoBlue" },
       read = { " ", "OctoGrey" },
     },
+    discussion = {
+      unread = { " ", "OctoBlue" },
+      read = { " ", "OctoGrey" },
+    },
   },
   unknown = { " " },
 }
@@ -1801,6 +1807,15 @@ end
 M.get_current_buffer = function()
   local bufnr = vim.api.nvim_get_current_buf()
   return octo_buffers[bufnr]
+end
+
+M.count_discussion_replies = function(discussion)
+  local total_replies = 0
+  for _, comment in ipairs(discussion.comments.nodes) do
+    total_replies = total_replies + comment.replies.totalCount
+  end
+
+  return total_replies
 end
 
 return M

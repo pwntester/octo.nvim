@@ -237,6 +237,11 @@ M.insert_args = function(args, options, replace)
               table.insert(args, flag)
               table.insert(args, k .. "[]=" .. vv)
             end
+          elseif type(v) == "boolean" then
+            if v then
+              table.insert(args, flag)
+              table.insert(args, k .. "=" .. tostring(v))
+            end
           else
             table.insert(args, flag)
             table.insert(args, k .. "=" .. v)
@@ -368,7 +373,7 @@ local rest = function(method, opts)
     return
   end
 
-  run {
+  return run {
     args = args,
     mode = run_opts.mode,
     cb = run_opts.cb,

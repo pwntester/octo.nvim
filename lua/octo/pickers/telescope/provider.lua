@@ -1,5 +1,6 @@
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local navigation = require "octo.navigation"
 local previewers = require "octo.pickers.telescope.previewers"
 local entry_maker = require "octo.pickers.telescope.entry_maker"
@@ -473,6 +474,18 @@ function M.changed_files()
         utils.error(stderr)
       elseif output then
         local results = vim.json.decode(output)
+
+        local max_additions = -1
+        local max_deletions = -1
+        for _, result in ipairs(results) do
+          if result.additions > max_additions then
+            max_additions = result.additions
+          end
+          if result.deletions > max_deletions then
+            max_deletions = result.deletions
+          end
+        end
+
         pickers
           .new({}, {
             prompt_title = false,
@@ -480,7 +493,10 @@ function M.changed_files()
             preview_title = false,
             finder = finders.new_table {
               results = results,
-              entry_maker = entry_maker.gen_from_git_changed_files(),
+              entry_maker = entry_maker.gen_from_git_changed_files {
+                max_additions = max_additions,
+                max_deletions = max_deletions,
+              },
             },
             sorter = conf.generic_sorter {},
             previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
@@ -519,9 +535,9 @@ local function get_search_query(prompt)
 end
 
 local function get_search_size(prompt)
-  local query = graphql("search_count_query", prompt)
   return gh.api.graphql {
-    query = query,
+    query = queries.search_count,
+    fields = { prompt = prompt },
     jq = ".data.search.issueCount",
     opts = {
       mode = "sync",
@@ -531,6 +547,21 @@ end
 
 function M.search(opts)
   opts = opts or {}
+  opts.type = opts.type or "ISSUE"
+
+  local settings = opts.type == "ISSUE"
+      and {
+        previewer = previewers.issue,
+        entry_maker = entry_maker.gen_from_issue,
+        entry_maker_static = function(width)
+          return entry_maker.gen_from_issue(width, true)
+        end,
+      }
+    or {
+      previewer = previewers.discussion,
+      entry_maker = entry_maker.gen_from_discussion,
+    }
+
   local cfg = octo_config.values
   if type(opts.prompt) == "string" then
     opts.prompt = { opts.prompt }
@@ -556,30 +587,27 @@ function M.search(opts)
         if val then
           _prompt = string.format("%s %s", val, _prompt)
         end
-        local query = graphql("search_query", _prompt)
-        local output = gh.run {
-          args = { "api", "graphql", "-f", string.format("query=%s", query) },
-          mode = "sync",
+
+        local output = gh.api.graphql {
+          query = queries.search,
+          fields = { prompt = _prompt, type = opts.type },
+          jq = ".data.search.nodes",
+          opts = { mode = "sync" },
         }
-        if output then
-          local resp = vim.json.decode(output)
-          for _, issue in ipairs(resp.data.search.nodes) do
-            table.insert(results, issue)
-          end
-        end
+        vim.list_extend(results, vim.json.decode(output))
       end
       return results
     end
   end
   local finder = finders.new_dynamic {
     fn = requester(),
-    entry_maker = entry_maker.gen_from_issue(width),
+    entry_maker = settings.entry_maker(width),
   }
   if opts.static then
     local results = requester() ""
     finder = finders.new_table {
       results = results,
-      entry_maker = entry_maker.gen_from_issue(width, true),
+      entry_maker = settings.entry_maker_static(width),
     }
   end
   opts.preview_title = opts.preview_title or ""
@@ -589,7 +617,7 @@ function M.search(opts)
     .new(opts, {
       finder = finder,
       sorter = conf.generic_sorter(opts),
-      previewer = previewers.issue.new(opts),
+      previewer = settings.previewer.new(opts),
       attach_mappings = function(_, map)
         action_set.select:replace(replace)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
@@ -860,6 +888,9 @@ function M.select_assigned_label(opts)
   elseif buffer:isPullRequest() then
     query = graphql("pull_request_labels_query", buffer.owner, buffer.name, buffer.number)
     key = "pullRequest"
+  elseif buffer:isDiscussion() then
+    query = graphql("discussion_labels_query", buffer.owner, buffer.name, buffer.number)
+    key = "discussion"
   end
 
   local create_picker = function(output)
@@ -963,39 +994,26 @@ end
 local function get_users(query_name, node_name)
   local repo = utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
-  local query = graphql(query_name, owner, name, { escape = true })
-  local output = gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-    mode = "sync",
+  local output = gh.api.graphql {
+    query = queries[query_name],
+    f = { owner = owner, name = name },
+    paginate = true,
+    jq = ".data.repository." .. node_name .. ".nodes",
+    opts = { mode = "sync" },
   }
-  if not output then
+  if utils.is_blank(output) then
     return {}
   end
 
-  local responses = utils.get_pages(output)
-
-  local users = {}
-
-  for _, resp in ipairs(responses) do
-    local nodes = resp.data.repository[node_name].nodes
-    for _, user in ipairs(nodes) do
-      table.insert(users, {
-        id = user.id,
-        login = user.login,
-        name = user.name,
-      })
-    end
-  end
-
-  return users
+  return utils.get_flatten_pages(output)
 end
 
 local function get_assignable_users()
-  return get_users("assignable_users_query", "assignableUsers")
+  return get_users("assignable_users", "assignableUsers")
 end
 
 local function get_mentionable_users()
-  return get_users("mentionable_users_query", "mentionableUsers")
+  return get_users("mentionable_users", "mentionableUsers")
 end
 
 local function create_user_finder()
@@ -1238,8 +1256,18 @@ local function mark_notification_read()
   end
 end
 
+---@class NotificationOpts
+---@field repo string
+---@field all boolean Whether to show all of the notifications including read ones
+---@field preview_title string
+---@field prompt_title string
+---@field results_title string
+
+---@param opts NotificationOpts
 function M.notifications(opts)
   opts = opts or {}
+
+  opts.all = opts.all or false
   local cfg = octo_config.values
 
   local endpoint = "/notifications"
@@ -1252,43 +1280,46 @@ function M.notifications(opts)
   opts.preview_title = ""
   opts.results_title = ""
 
-  gh.run {
-    args = { "api", "--paginate", endpoint },
-    headers = { "Accept: application/vnd.github.v3.diff" },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
+  local create_notification_picker = function(output)
+    local resp = vim.json.decode(output)
 
-        if #resp == 0 then
-          utils.info "There are no notifications"
-          return
-        end
+    if #resp == 0 then
+      utils.info "There are no notifications"
+      return
+    end
 
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = resp,
-              entry_maker = entry_maker.gen_from_notification {
-                show_repo_info = not opts.repo,
-              },
-            },
-            sorter = conf.generic_sorter(opts),
-            previewer = previewers.issue.new(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+    pickers
+      .new(opts, {
+        finder = finders.new_table {
+          results = resp,
+          entry_maker = entry_maker.gen_from_notification {
+            show_repo_info = not opts.repo,
+          },
+        },
+        sorter = conf.generic_sorter(opts),
+        previewer = previewers.notification.new(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(function(prompt_bufnr, type)
+            open(type)(prompt_bufnr)
+          end)
+          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
+          return true
+        end,
+      })
+      :find()
+  end
+
+  gh.api.get {
+    endpoint,
+    F = {
+      all = opts.all,
+    },
+    opts = {
+      headers = { "Accept: application/vnd.github.v3.diff" },
+      cb = gh.create_callback { success = create_notification_picker },
+    },
   }
 end
 
@@ -1329,16 +1360,9 @@ function M.discussions(opts)
     opts.repo = utils.get_remote_name()
   end
 
-  if opts.cb == nil then
-    opts.cb = function(selected, _)
-      local url = selected.obj.url
-      navigation.open_in_browser_raw(url)
-    end
-  end
-
   local cfg = octo_config.values
 
-  local replace = create_replace(opts.cb)
+  local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
   local create_discussion_picker = function(discussions)
     if #discussions == 0 then
@@ -1359,7 +1383,7 @@ function M.discussions(opts)
       .new(opts, {
         finder = finders.new_table {
           results = discussions,
-          entry_maker = entry_maker.gen_from_discussions(max_number),
+          entry_maker = entry_maker.gen_from_discussion(max_number),
         },
         sorter = conf.generic_sorter(opts),
         previewer = previewers.discussion.new(opts),

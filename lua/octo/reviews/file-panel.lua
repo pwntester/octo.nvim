@@ -29,6 +29,7 @@ FilePanel.winopts = {
   spell = false,
   wrap = false,
   cursorline = true,
+  cursorlineopt = "line",
   signcolumn = "yes",
   foldmethod = "manual",
   foldcolumn = "0",
@@ -38,7 +39,7 @@ FilePanel.winopts = {
   winhl = table.concat({
     "EndOfBuffer:OctoEndOfBuffer",
     "Normal:OctoNormal",
-    "VertSplit:OctoVertSplit",
+    "WinSeparator:OctoWinSeparator",
     "SignColumn:OctoNormal",
     "StatusLine:OctoStatusLine",
     "StatusLineNC:OctoStatuslineNC",

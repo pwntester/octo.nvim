@@ -2,6 +2,8 @@ local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
+local mutations = require "octo.gh.mutations"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local window = require "octo.ui.window"
@@ -86,6 +88,15 @@ function M.setup()
       M.search(...)
     end,
     discussion = {
+      reload = function()
+        M.reload { verbose = true }
+      end,
+      mark = function()
+        M.mark()
+      end,
+      unmark = function()
+        M.mark { undo = true }
+      end,
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
@@ -99,6 +110,81 @@ function M.setup()
         end
 
         require("octo.discussions").create(opts)
+      end,
+      reopen = function()
+        local buffer = utils.get_current_buffer()
+        if not buffer then
+          utils.error "No buffer found"
+          return
+        end
+
+        if not buffer:isDiscussion() then
+          utils.error "Not a discussion buffer"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.reopen_discussion,
+          fields = { discussion_id = buffer.node.id },
+          jq = ".data.reopenDiscussion.discussion.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function(response_id)
+                if response_id == buffer.node.id then
+                  utils.info "Discussion reopened"
+                end
+              end,
+            },
+          },
+        }
+      end,
+      search = function(...)
+        local args = table.pack(...)
+        local prompt = table.concat(args, " ")
+        local repo = utils.get_remote_name()
+        prompt = "repo:" .. repo .. " " .. prompt
+        picker.search { prompt = prompt, type = "DISCUSSION" }
+      end,
+      close = function()
+        local buffer = utils.get_current_buffer()
+        if not buffer then
+          utils.error "No buffer found"
+          return
+        end
+
+        if not buffer:isDiscussion() then
+          utils.error "Not a discussion buffer"
+          return
+        end
+
+        --https://docs.github.com/en/graphql/reference/enums#discussionclosereason
+        local reasons = {
+          "Duplicate",
+          "Outdated",
+          "Resolved",
+        }
+        vim.ui.select(reasons, {
+          prompt = "Select a reason for closing the discussion:",
+        }, function(reason)
+          if not reason then
+            return
+          end
+
+          gh.api.graphql {
+            query = mutations.close_discussion,
+            fields = { discussion_id = buffer.node.id, reason = string.upper(reason) },
+            jq = ".data.closeDiscussion.discussion.id",
+            opts = {
+              cb = gh.create_callback {
+                success = function(response_id)
+                  if response_id == buffer.node.id then
+                    utils.info("Discussion closed with reason: " .. reason)
+                  end
+                end,
+              },
+            },
+          }
+        end)
       end,
     },
     milestone = {
@@ -158,6 +244,69 @@ function M.setup()
         utils.create_milestone(milestoneTitle, description)
       end,
     },
+    parent = {
+      edit = M.within_issue(function(buffer)
+        local parent = buffer.node.parent
+
+        if utils.is_blank(parent) then
+          utils.error "No parent issue found"
+          return
+        end
+
+        local uri = string.format("octo://%s/issue/%s", buffer.repo, parent.number)
+        vim.cmd.edit(uri)
+      end),
+      remove = M.within_issue(function(buffer)
+        local parent = buffer.node.parent
+
+        if utils.is_blank(parent) then
+          utils.error "No parent issue found"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.remove_subissue,
+          fields = {
+            parent_id = parent.id,
+            child_id = buffer.node.id,
+          },
+          jq = ".data.removeSubIssue.subIssue.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function(response_id)
+                if response_id == buffer.node.id then
+                  utils.info "Issue removed as sub-issue"
+                end
+              end,
+            },
+          },
+        }
+      end),
+      add = M.within_issue(function(buffer)
+        local opts = {}
+        opts.cb = function(selected)
+          gh.api.graphql {
+            query = mutations.add_subissue,
+            fields = {
+              parent_id = selected.obj.id,
+              child_id = buffer.node.id,
+            },
+            jq = ".data.addSubIssue.subIssue.id",
+            opts = {
+              cb = gh.create_callback {
+                success = function(response_id)
+                  if response_id == buffer.node.id then
+                    utils.info "Issue added as sub-issue"
+                  end
+                end,
+              },
+            },
+          }
+        end
+
+        picker.issues(opts)
+      end),
+    },
     issue = {
       create = function(repo)
         M.create_issue(repo)
@@ -169,6 +318,12 @@ function M.setup()
         stateReason = stateReason or "CLOSED"
         M.change_state(stateReason)
       end,
+      unpin = M.within_issue(function(buffer)
+        M.pin_issue { obj = buffer.node, add = false }
+      end),
+      pin = M.within_issue(function(buffer)
+        M.pin_issue { obj = buffer.node, add = true }
+      end),
       develop = function(repo, ...)
         local buffer = utils.get_current_buffer()
 
@@ -325,6 +480,9 @@ function M.setup()
       end,
     },
     review = {
+      browse = function()
+        reviews.browse_review()
+      end,
       start = function()
         reviews.start_review()
       end,
@@ -389,6 +547,14 @@ function M.setup()
       add = function()
         local current_review = reviews.get_current_review()
         if current_review and utils.in_diff_window() then
+          -- if we have a current_review but no id, we are in browse mode.
+          -- for now, we cannot create comments.
+          -- TODO: implement 'non-review' commits here, which adds a diff commit
+          -- but outside of a review.
+          if current_review.id == -1 then
+            vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+            return
+          end
           current_review:add_comment(false)
         else
           M.add_pr_issue_or_review_thread_comment()
@@ -402,6 +568,26 @@ function M.setup()
         end
 
         current_review:add_comment(true)
+      end,
+      url = function()
+        local buffer = utils.get_current_buffer()
+
+        if not buffer then
+          return
+        end
+
+        local comment = buffer:get_comment_at_cursor()
+        if not comment then
+          utils.error "The cursor does not seem to be located at any comment"
+          return
+        end
+
+        gh.api.graphql {
+          query = queries.comment_url,
+          f = { id = comment.id },
+          jq = ".data.node.url",
+          opts = { cb = gh.create_callback { success = utils.copy_url } },
+        }
       end,
       delete = function()
         M.delete_comment()
@@ -698,6 +884,8 @@ function M.octo(object, action, ...)
       utils.get_issue(number, repo)
     elseif repo and number and kind == "pull" then
       utils.get_pull_request(number, repo)
+    elseif repo and number and kind == "discussion" then
+      utils.get_discussion(number, repo)
     else
       utils.error("Incorrect argument: " .. object)
       return
@@ -758,7 +946,15 @@ function M.add_pr_issue_or_review_thread_comment()
   local _thread = buffer:get_thread_at_cursor()
   if not utils.is_blank(_thread) and buffer:isReviewThread() then
     comment_kind = "PullRequestReviewComment"
-    comment.pullRequestReview = { id = reviews.get_current_review().id }
+
+    -- are we trying to add a review comment while in 'review browse' mode?
+    local current_review = reviews.get_current_review()
+    if current_review == nil or current_review.id == -1 then
+      vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+      return
+    end
+
+    comment.pullRequestReview = { id = current_review.id }
     comment.state = "PENDING"
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
@@ -768,7 +964,7 @@ function M.add_pr_issue_or_review_thread_comment()
     comment.replyTo = _thread.replyTo
     comment.replyToRest = _thread.replyToRest
   elseif utils.is_blank(_thread) and not buffer:isReviewThread() then
-    comment_kind = "IssueComment"
+    comment_kind = buffer:isDiscussion() and "DiscussionComment" or "IssueComment"
   elseif utils.is_blank(_thread) and buffer:isReviewThread() then
     utils.error "Error adding a comment to a review thread"
   end
@@ -777,6 +973,26 @@ function M.add_pr_issue_or_review_thread_comment()
     writers.write_comment(buffer.bufnr, comment, comment_kind)
     vim.cmd [[normal Gk]]
     vim.cmd [[startinsert]]
+  elseif comment_kind == "DiscussionComment" then
+    local comment_under_cursor = buffer:get_comment_at_cursor()
+    if not utils.is_blank(comment_under_cursor) and vim.fn.confirm("Reply to comment?", "&Yes\n&No", 2) == 1 then
+      comment.replyTo = not utils.is_blank(comment_under_cursor.replyTo) and comment_under_cursor.replyTo.id
+        or comment_under_cursor.id
+      vim.api.nvim_buf_set_lines(
+        buffer.bufnr,
+        comment_under_cursor.bufferEndLine,
+        comment_under_cursor.bufferEndLine,
+        false,
+        { "x", "x", "x", "x" }
+      )
+      writers.write_comment(buffer.bufnr, comment, comment_kind, comment_under_cursor.bufferEndLine + 1)
+      vim.fn.execute(":" .. comment_under_cursor.bufferEndLine + 3)
+      vim.cmd [[startinsert]]
+    else
+      writers.write_comment(buffer.bufnr, comment, comment_kind)
+      vim.cmd [[normal Gk]]
+      vim.cmd [[startinsert]]
+    end
   elseif comment_kind == "PullRequestReviewComment" or comment_kind == "PullRequestComment" then
     vim.api.nvim_buf_set_lines(
       buffer.bufnr,
@@ -807,6 +1023,7 @@ function M.delete_comment()
   end
   local start_line = comment.bufferStartLine
   local end_line = comment.bufferEndLine
+
   local query, threadId
   if comment.kind == "IssueComment" then
     query = graphql("delete_issue_comment_mutation", comment.id)
@@ -814,10 +1031,13 @@ function M.delete_comment()
     query = graphql("delete_pull_request_review_comment_mutation", comment.id)
     local _thread = buffer:get_thread_at_cursor()
     threadId = _thread.threadId
+  elseif comment.kind == "DiscussionComment" then
+    query = graphql("delete_discussion_comment_mutation", comment.id)
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
   end
+
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
     gh.run {
@@ -1512,7 +1732,7 @@ local function get_reaction_info(bufnr, buffer)
     if not comment.reactionLine then
       insert_line = true
     end
-  elseif buffer:isIssue() or buffer:isPullRequest() then
+  elseif buffer:isIssue() or buffer:isPullRequest() or buffer:isDiscussion() then
     -- using the issue body instead
     id = buffer.node.id
     reaction_groups = buffer.bodyMetadata.reactionGroups
@@ -1522,6 +1742,36 @@ local function get_reaction_info(bufnr, buffer)
     end
   end
   return reaction_line, reaction_groups, insert_line, id
+end
+
+function M.mark(opts)
+  opts = opts or {}
+
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isDiscussion() then
+    utils.error "Not a discussion buffer"
+    return
+  end
+
+  local comment = buffer:get_comment_at_cursor()
+
+  if not comment then
+    return
+  end
+
+  gh.api.graphql {
+    query = opts.undo and mutations.unmark_answer or mutations.mark_answer,
+    f = { id = comment.id },
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          -- TODO: Update the buffer to reflect the changes
+          local msg = opts.undo and "unmarked" or "marked"
+          utils.info("Comment " .. msg)
+        end,
+      },
+    },
+  }
 end
 
 function M.reaction_action(reaction)
@@ -1827,7 +2077,7 @@ local function label_action(opts)
 
   local iid = buffer.node.id
   if not iid then
-    utils.error "Cannot get issue/pr id"
+    utils.error "Cannot get issue/pr/discussion id"
   end
 
   local cb = function(labels)
@@ -1838,7 +2088,11 @@ local function label_action(opts)
 
     local refresh_details = function()
       require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-        writers.write_details(buffer.bufnr, obj, true)
+        if buffer:isDiscussion() then
+          writers.write_discussion_details(buffer.bufnr, obj)
+        else
+          writers.write_details(buffer.bufnr, obj, true)
+        end
       end)
     end
 
@@ -2008,8 +2262,65 @@ end
 
 function M.search(...)
   local args = table.pack(...)
-  picker.search {
-    prompt = table.concat(args, " "),
+  local prompt = table.concat(args, " ")
+
+  local type = "ISSUE"
+  if string.match(prompt, "is:discussion") then
+    type = "DISCUSSION"
+    prompt = string.gsub(prompt, "is:discussion", "")
+  end
+
+  picker.search { prompt = prompt, type = type }
+end
+
+M.within_issue = function(cb)
+  return function()
+    local buffer = utils.get_current_buffer()
+    if not buffer or not buffer:isIssue() then
+      utils.error "Not an issue buffer"
+      return
+    end
+
+    cb(buffer)
+  end
+end
+
+--- @class PinIssueOpts
+--- @field add boolean Whether to pin or unpin the issue
+--- @field obj table The issue object
+
+--- Pin or unpin an issue
+--- @param opts PinIssueOpts
+M.pin_issue = function(opts)
+  local query_info = opts.add
+      and {
+        query = mutations.pin_issue,
+        jq = ".data.pinIssue.issue.id",
+        error = "pin",
+        success = "Pinned",
+      }
+    or {
+      query = mutations.unpin_issue,
+      jq = ".data.unpinIssue.issue.id",
+      error = "unpin",
+      success = "Unpinned",
+    }
+  gh.api.graphql {
+    query = query_info.query,
+    F = { issue_id = opts.obj.id },
+    jq = query_info.jq,
+    opts = {
+      cb = gh.create_callback {
+        success = function(id)
+          if id ~= opts.obj.id then
+            utils.error("Failed to " .. query_info.error .. " issue")
+            return
+          end
+
+          utils.info(query_info.success .. " issue")
+        end,
+      },
+    },
   }
 end
 

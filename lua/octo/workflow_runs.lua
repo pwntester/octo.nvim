@@ -526,7 +526,7 @@ local function update_job_details(id)
           vim.api.nvim_err_writeln(stderr)
           utils.error("Failed to get workflow run for " .. id)
         elseif output then
-          job_details = vim.fn.json_decode(output)
+          job_details = vim.json.decode(output)
           M.wf_cache[id] = job_details
           M.current_wf = job_details
           M.tree = generate_workflow_tree(job_details)
@@ -661,7 +661,7 @@ local function get_workflow_runs_sync(opts)
     vim.api.nvim_err_writeln(stderr)
     utils.error "Failed to get workflow runs"
   elseif output then
-    local json = vim.fn.json_decode(output)
+    local json = vim.json.decode(output)
     for _, value in ipairs(json) do
       local status = value.status == "queued" and icons.pending
         or value.status == "in_progress" and icons.in_progress

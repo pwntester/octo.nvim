@@ -21,7 +21,7 @@
 
 # :octopus: Octo.nvim
 
-Edit and review GitHub issues and pull requests from the comfort of your favorite editor.
+Edit and review GitHub issues, pull requests, and discussions from the comfort of your favorite editor.
 
 [<img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="BuyMeACoffee" width="140">](https://www.buymeacoffee.com/pwntester)
 
@@ -122,6 +122,29 @@ require"octo".setup({
   ghost_icon = "󰊠 ",                       -- ghost icon
   timeline_marker = " ",                  -- timeline marker
   timeline_indent = "2",                   -- timeline indentation
+  use_timeline_icons = true,               -- toggle timeline icons
+  timeline_icons = {                       -- the default icons based on timelineItems
+    commit = "  ",
+    label = "  ",
+    reference = " ",
+    connected = "  ",
+    subissue = "  ",
+    cross_reference = "  ",
+    parent_issue = "  ",
+    pinned = "  ",
+    milestone = "  ",
+    renamed = "  ",
+    merged = { "  ", "OctoPurple" },
+    closed = {
+      closed = { "  ", "OctoRed" },
+      completed = { "  ", "OctoPurple" },
+      not_planned = { "  ", "OctoGrey" },
+      duplicate = { "  ", "OctoGrey" },
+    },
+    reopened = { "  ", "OctoGreen" },
+    assigned = "  ",
+    review_requested = "  ",
+  },
   right_bubble_delimiter = "",            -- bubble delimiter
   left_bubble_delimiter = "",             -- bubble delimiter
   github_hostname = "",                    -- GitHub Enterprise host
@@ -346,6 +369,8 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reload                                            | Reload issue. Same as doing `e!`                                                                                                                       |
 |          | browser                                           | Open current issue in the browser                                                                                                                      |
 |          | url                                               | Copies the URL of the current issue to the system clipboard                                                                                            |
+|          | pin                                               | Pin the current issue                                                                                                                                  |
+|          | unpin                                             | Unpin the current issue                                                                                                                                |
 | pr       | list [repo] [key=value] (2)                       | List all PRs satisfying given filter                                                                                                                   |
 |          | search                                            | Live issue search                                                                                                                                      |
 |          | edit [repo] <number>                              | Edit PR `<number>` in current or specified repo                                                                                                        |
@@ -373,6 +398,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | comment  | add                                               | Add a new comment                                                                                                                                      |
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
+|          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
 | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
@@ -406,11 +432,21 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | commit                                            | Pick a specific commit to review                                                                                                                       |
 |          | close                                             | Close the review window and return to the PR                                                                                                           |
 | actions  |                                                   | Lists all available Octo actions                                                                                                                       |
-| search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) |
+| search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) or Discussions with `is:discussion`|
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
 |    | create [repo]                                          | Create discussion for current or specified repo |
+|    | reload                                                 | Reload the current discussion buffer |
+|    | close                                                 | Close the discussion |
+|    | mark                                                 | Mark the discussion comment as answer |
+|    | unmark                                                 | Unmark the discussion comment as answer |
+|    | reopen                                                 | Reopen the current discussion |
+|    | search                                                 | Search discussions |
+| parent   | add                                           | Add a parent issue to current issue |  
+|          | remove                                           | Remove the parent issue to current issue |  
+|          | edit                                           | Edit the parent issue to current issue |
+
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
@@ -478,6 +514,7 @@ Octo issue edit 1
 Octo issue list createdBy=pwntester
 Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 Octo search assignee:pwntester is:pr
+Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
 ## 📋 PR reviews
@@ -510,13 +547,13 @@ Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-
 |-----------------------------------|--------------------|
 | _OctoNormal_                      | Normal             |
 | _OctoCursorLine_                  | CursorLine         |
-| _OctoVertSplit_                   | VertSplit          |
+| _OctoWinSeparator_                | WinSeparator       |
 | _OctoSignColumn_                  | Normal             |
 | _OctoStatusColumn_                | SignColumn         |
 | _OctoStatusLine_                  | StatusLine         |
 | _OctoStatusLineNC_                | StatusLineNC       |
 | _OctoEndOfBuffer_                 | EndOfBuffer        |
-| _OctoFilePanelFileName_           | NormalFront        |
+| _OctoFilePanelFileName_           | NormalFloat        |
 | _OctoFilePanelSelectedFile_       | Type               |
 | _OctoFilePanelPath_               | Comment            |
 | _OctoStatusAdded_                 | OctoGreen          |
@@ -568,7 +605,7 @@ Also,you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink-
 | _OctoStateMergedBubble_           | OctoBubblePurple   |
 | _OctoStatePendingBubble_          | OctoBubbleYellow   |
 | _OctoStateApprovedBubble_         | OctoBubbleGreen    |
-| _OctoStateChangesRequestedBubble_ | OctoBubbleRed    |
+| _OctoStateChangesRequestedBubble_ | OctoBubbleRed      |
 | _OctoStateDismissedBubble_        | OctoBubbleRed      |
 | _OctoStateCommentedBubble_        | OctoBubbleBlue     |
 | _OctoStateSubmittedBubble_        | OctoBubbleGreen    |

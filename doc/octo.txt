@@ -6,8 +6,8 @@ License: MIT License
 
 INTRODUCTION                                    *octo*
 
-Edit and review GitHub issues and pull requests from the comfort of your
-favorite editor.
+Edit and review GitHub issues, pull requests, and discussions from the comfort
+of your favorite editor.
 
 Use `gO` to access the contents of this helpfile.
 
@@ -47,6 +47,8 @@ See |octo-command-examples| for examples.
   browser               Open current issue in the browser.
   url                   Copies the URL of the currently opened issue to the
                         system clipboard.
+  pin                   Pin the current issue to the top of the list.
+  unpin                 Unpin the current issue from the top of the list.
 
 
 :Octo pr [action] {args}                        *octo-commands-pr*
@@ -88,6 +90,19 @@ See |octo-command-examples| for examples.
                         In-menu mappings: 
                           <C-y>   Copy URL to system clipboard.
   create [repo]         Creates a new discussion for the current or specified repo.
+  reload                Reload discussion. Same as doing `e!`.
+  close                 Close the discussion
+  mark                  Mark the discussion comment as answered
+  unmark                Mark the discussion comment as unanswered
+  reopen                Reopen the discussion
+  search                Live discussion search.
+
+
+:Octo parent [action] {args}                *octo-commands-parent*
+
+  add                   Add a parent to the current issue
+  remove                Remove the parent from the current issue
+  edit                  Edit the parent of the current issue
 
 
 :Octo repo [action]                             *octo-commands-repo*
@@ -113,6 +128,8 @@ See |octo-command-examples| for examples.
   add                   Add a new comment.
   suggest               Add a new suggestion.
   delete                Delete a comment.
+  url                   Copies the URL of the current comment to the system 
+                        clipboard.
 
 
 :Octo thread [action]                           *octo-commands-thread*
@@ -174,6 +191,7 @@ See |octo-command-examples| for examples.
   no review is in progress.
 
   start                 Start a new review.
+  browse                View the review without starting a review
   submit                Submit the review.
   resume                Edit a pending review for the current PR.
   discard               Deletes a pending review for the current PR, if any.
@@ -187,7 +205,9 @@ See |octo-command-examples| for examples.
   
 :Octo search [query]                            *octo-commands-search*
 
-  Search GitHub for issues and PRs matching the query (https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests)
+  Search GitHub for issues and PRs matching the query (https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) or Discussions 
+  by the query
+  (https://docs.github.com/en/search-github/searching-on-github/searching-discussions) and including `is:discussion`
 
 COMMAND EXAMPLES                                *octo-command-examples*
 >
