@@ -95,6 +95,31 @@ local get_milestones = function(repoWithOwner)
   return milestones
 end
 
+local get_languages = function()
+  local output = gh.api.get {
+    "/languages",
+    jq = "map(.name)",
+    opts = { mode = "sync" },
+  }
+  return vim.json.decode(output)
+end
+
+local complete_language = function(argLead, cmdLine)
+  local desired_language = string.gsub(argLead, "language:", "")
+  local languages = get_languages()
+  local valid_languages = {}
+  for _, language in ipairs(languages) do
+    if string.match(language, " ") then
+      language = '"' .. language .. '"'
+    end
+
+    if string.match(language, desired_language) then
+      table.insert(valid_languages, "language:" .. language)
+    end
+  end
+  return valid_languages
+end
+
 local get_categories = function(repoWithOwner)
   if utils.is_blank(repoWithOwner) then
     repoWithOwner = utils.get_remote_name()
@@ -304,7 +329,7 @@ local qualifiers = {
   ["reviewed-by"] = create_complete_user "reviewed-by",
   involves = create_complete_user "involves",
   mentions = create_complete_user "mentions",
-  "language",
+  language = complete_language,
   "team",
   "comments",
   "interactions",
