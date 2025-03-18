@@ -122,6 +122,29 @@ require"octo".setup({
   ghost_icon = "󰊠 ",                       -- ghost icon
   timeline_marker = " ",                  -- timeline marker
   timeline_indent = "2",                   -- timeline indentation
+  use_timeline_icons = true,               -- toggle timeline icons
+  timeline_icons = {                       -- the default icons based on timelineItems
+    commit = "  ",
+    label = "  ",
+    reference = " ",
+    connected = "  ",
+    subissue = "  ",
+    cross_reference = "  ",
+    parent_issue = "  ",
+    pinned = "  ",
+    milestone = "  ",
+    renamed = "  ",
+    merged = { "  ", "OctoPurple" },
+    closed = {
+      closed = { "  ", "OctoRed" },
+      completed = { "  ", "OctoPurple" },
+      not_planned = { "  ", "OctoGrey" },
+      duplicate = { "  ", "OctoGrey" },
+    },
+    reopened = { "  ", "OctoGreen" },
+    assigned = "  ",
+    review_requested = "  ",
+  },
   right_bubble_delimiter = "",            -- bubble delimiter
   left_bubble_delimiter = "",             -- bubble delimiter
   github_hostname = "",                    -- GitHub Enterprise host

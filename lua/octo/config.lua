@@ -85,6 +85,8 @@ local M = {}
 ---@field resolved_icon string
 ---@field timeline_marker string
 ---@field timeline_indent string
+---@field use_timeline_icons boolean
+---@field timeline_icons table
 ---@field right_bubble_delimiter string
 ---@field left_bubble_delimiter string
 ---@field github_hostname string
@@ -136,6 +138,29 @@ function M.get_default_values()
     resolved_icon = " ",
     timeline_marker = " ",
     timeline_indent = "2",
+    use_timeline_icons = true,
+    timeline_icons = {
+      commit = "  ",
+      label = "  ",
+      reference = " ",
+      connected = "  ",
+      subissue = "  ",
+      cross_reference = "  ",
+      parent_issue = "  ",
+      pinned = "  ",
+      milestone = "  ",
+      renamed = "  ",
+      merged = { "  ", "OctoPurple" },
+      closed = {
+        closed = { "  ", "OctoRed" },
+        completed = { "  ", "OctoPurple" },
+        not_planned = { "  ", "OctoGrey" },
+        duplicate = { "  ", "OctoGrey" },
+      },
+      reopened = { "  ", "OctoGreen" },
+      assigned = "  ",
+      review_requested = "  ",
+    },
     right_bubble_delimiter = "",
     left_bubble_delimiter = "",
     github_hostname = "",

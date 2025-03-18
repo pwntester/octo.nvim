@@ -1814,4 +1814,13 @@ M.get_current_buffer = function()
   return octo_buffers[bufnr]
 end
 
+M.count_discussion_replies = function(discussion)
+  local total_replies = 0
+  for _, comment in ipairs(discussion.comments.nodes) do
+    total_replies = total_replies + comment.replies.totalCount
+  end
+
+  return total_replies
+end
+
 return M
