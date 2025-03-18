@@ -43,7 +43,7 @@ local function get_hl_groups()
     PurpleFloat = { fg = colors.purple, bg = float_bg },
     YellowFloat = { fg = colors.yellow, bg = float_bg },
     BlueFloat = { fg = colors.blue, bg = float_bg },
-    GreyFloat = { bg = float_bg },
+    GreyFloat = { fg = colors.grey, bg = float_bg },
 
     BubbleGreen = { fg = colors.grey, bg = colors.dark_green },
     BubbleRed = { fg = colors.grey, bg = colors.dark_red },
