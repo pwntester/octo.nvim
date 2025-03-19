@@ -140,6 +140,7 @@ function M.get_default_values()
     timeline_indent = "2",
     use_timeline_icons = true,
     timeline_icons = {
+      commit_push = "  ",
       commit = "  ",
       label = "  ",
       reference = " ",

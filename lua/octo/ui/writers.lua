@@ -1357,7 +1357,13 @@ local write_commit_header = function(bufnr, commits)
 
   local first_item = commits[1]
   local vt = {}
-  table.insert(vt, { "  ", "OctoTimelineMarker" })
+  local conf = config.values
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.commit_push, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
   table.insert(vt, {
     first_item.commit.author.user.login,
     first_item.commit.author.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
