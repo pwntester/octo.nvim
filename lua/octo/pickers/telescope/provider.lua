@@ -1313,6 +1313,7 @@ function M.notifications(opts)
 
   gh.api.get {
     endpoint,
+    paginate = true,
     F = {
       all = opts.all,
     },
