@@ -12,6 +12,7 @@ local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local signs = require "octo.ui.signs"
 local window = require "octo.ui.window"
+local colors = require "octo.ui.colors"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local vim = vim
@@ -41,6 +42,7 @@ function M.setup(user_config)
   autocmds.setup()
   commands.setup()
   gh.setup()
+  colors.setup()
 end
 
 function M.update_layout_for_current_file()
