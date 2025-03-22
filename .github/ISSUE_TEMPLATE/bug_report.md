@@ -13,6 +13,8 @@ assignees: ''
 
 - nvim version:
 - octo.nvim commit hash: 
+- GitHub CLI version:
 - OS:
+
 
 ### Anything else we need to know?

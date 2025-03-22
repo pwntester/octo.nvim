@@ -23,6 +23,8 @@
 
 Edit and review GitHub issues, pull requests, and discussions from the comfort of your favorite editor.
 
+Just edit the title, body, or comments as a regular buffer and use `:w(rite)` to sync with GitHub.
+
 [<img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="BuyMeACoffee" width="140">](https://www.buymeacoffee.com/pwntester)
 
 ## 🌲 Table of Contents
@@ -32,12 +34,11 @@ Edit and review GitHub issues, pull requests, and discussions from the comfort o
 - [:octopus: Octo.nvim](#octopus-octonvim)
   - [🌲 Table of Contents](#-table-of-contents)
   - [💫 Features](#-features)
+  - [🔥 Examples](#-examples)
   - [🎯 Requirements](#-requirements)
   - [📦 Installation](#-installation)
   - [🔧 Configuration](#-configuration)
-  - [🚀 Usage](#-usage)
   - [🤖 Commands](#-commands)
-  - [🔥 Examples](#-examples)
   - [📋 PR reviews](#-pr-reviews)
   - [🍞 Completion](#-completion)
   - [🎨 Colors](#-colors)
@@ -51,10 +52,26 @@ Edit and review GitHub issues, pull requests, and discussions from the comfort o
 
 ## 💫 Features
 
-- Edit GitHub issues and PRs
+- Edit GitHub issues, PRs, and discussions
 - Add/Modify/Delete comments
 - Add/Remove label, reactions, assignees, project cards, reviewers, etc.
 - Add Review PRs
+
+## 🔥 Examples
+
+```vim
+Octo https://github.com/pwntester/octo.nvim/issues/12
+Octo issue create
+Octo issue create pwntester/octo.nvim
+Octo comment add
+Octo reaction add hooray
+Octo issue edit pwntester/octo.nvim 1
+Octo issue edit 1
+Octo issue list createdBy=pwntester
+Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
+Octo search assignee:pwntester is:pr
+Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
+```
 
 ## 🎯 Requirements
 
@@ -348,9 +365,6 @@ require"octo".setup({
 })
 ```
 
-## 🚀 Usage
-
-Just edit the issue title, body or comments as a regular buffer and use `:w(rite)` to sync the issue with GitHub.
 
 ## 🤖 Commands
 
@@ -501,21 +515,6 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
   `mentionable` are specific to the current repo. The `assignable` option is more
   restrictive than `mentionable`.
 
-## 🔥 Examples
-
-```vim
-Octo https://github.com/pwntester/octo.nvim/issues/12
-Octo issue create
-Octo issue create pwntester/octo.nvim
-Octo comment add
-Octo reaction add hooray
-Octo issue edit pwntester/octo.nvim 1
-Octo issue edit 1
-Octo issue list createdBy=pwntester
-Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
-Octo search assignee:pwntester is:pr
-Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
-```
 
 ## 📋 PR reviews
 

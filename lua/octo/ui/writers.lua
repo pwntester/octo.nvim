@@ -1731,7 +1731,7 @@ function M.write_closed_event(bufnr, item)
     return
   end
   local stateReason = item.closable and item.closable.stateReason or item.stateReason
-  stateReason = stateReason
+  stateReason = utils.is_blank(stateReason) and item.stateReason or stateReason
 
   local lookup_value = item.closable and item.closable.__typename == "Issue" and stateReason or state
   lookup_value = string.lower(lookup_value)
