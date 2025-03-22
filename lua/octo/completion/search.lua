@@ -43,7 +43,6 @@ local get_labels = function(search, repo)
 
   local output = gh.label.list(opts)
   if utils.is_blank(output) then
-    utils.error "No labels found"
     return {}
   end
 
@@ -279,11 +278,27 @@ local complete_category = function(argLead, cmdLine)
   return valid_categories
 end
 
+--- https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels#about-default-labels
+local default_labels = {
+  "bug",
+  "documentation",
+  "duplicate",
+  "enhancement",
+  "good first issue",
+  "help wanted",
+  "invalid",
+  "question",
+  "wontfix",
+}
+
 local complete_label = function(argLead, cmdLine)
   local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
   local desired_label = string.gsub(argLead, "label:", "")
   local labels = get_labels(desired_label, repo)
+  if #labels == 0 then
+    labels = default_labels
+  end
   local valid_labels = {}
   for _, label in ipairs(labels) do
     if string.match(label, " ") then
