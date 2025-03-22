@@ -108,8 +108,7 @@ M.issues = function(opts)
             end,
             copy_url = function(_picker, item)
               local url = item.url
-              vim.fn.setreg("+", url, "c")
-              utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+              utils.copy_url(url)
             end,
           },
         }
@@ -188,9 +187,7 @@ function M.pull_requests(opts)
               navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
             end,
             copy_url = function(_picker, item)
-              local url = item.url
-              vim.fn.setreg("+", url, "c")
-              utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+              utils.copy_url(item.url)
             end,
             check_out_pr = function(_picker, _item)
               M.not_implemented()
@@ -286,9 +283,7 @@ function M.notifications(opts)
               navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
             end,
             copy_url = function(_picker, item)
-              local url = item.url
-              vim.fn.setreg("+", url, "c")
-              utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+              utils.copy_url(item.url)
             end,
             mark_notification_read = function(picker, item)
               local url = string.format("/notifications/threads/%s", item.id)

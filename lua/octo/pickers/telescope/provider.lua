@@ -117,9 +117,7 @@ end
 local function copy_url()
   return function(prompt_bufnr)
     local entry = action_state.get_selected_entry(prompt_bufnr)
-    local url = entry.obj.url
-    vim.fn.setreg("+", url, "c")
-    utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+    copy_url(entry.obj.url)
   end
 end
 
@@ -1402,7 +1400,7 @@ function M.discussions(opts)
   utils.info "Fetching discussions (this may take a while) ..."
 
   gh.api.graphql {
-    query = graphql "discussions_query",
+    query = queries.discussions,
     fields = {
       owner = owner,
       name = name,
@@ -1431,10 +1429,9 @@ function M.milestones(opts)
 
   local repo = opts.repo or utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
-  local query = graphql "open_milestones_query"
 
   gh.api.graphql {
-    query = query,
+    query = queries.open_milestones,
     fields = {
       owner = owner,
       name = name,
