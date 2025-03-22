@@ -1400,7 +1400,7 @@ function M.discussions(opts)
   utils.info "Fetching discussions (this may take a while) ..."
 
   gh.api.graphql {
-    query = graphql "discussions_query",
+    query = queries.discussions,
     fields = {
       owner = owner,
       name = name,
@@ -1429,10 +1429,9 @@ function M.milestones(opts)
 
   local repo = opts.repo or utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
-  local query = graphql "open_milestones_query"
 
   gh.api.graphql {
-    query = query,
+    query = queries.open_milestones,
     fields = {
       owner = owner,
       name = name,
