@@ -91,8 +91,7 @@ return function(opts)
       ["ctrl-y"] = function(selected)
         local entry = formatted_gists[selected[1]]
         local url = string.format("https://gist.github.com/%s", entry.gist.name)
-        vim.fn.setreg("+", url, "c")
-        utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+        utils.copy_url(url)
       end,
     },
   })

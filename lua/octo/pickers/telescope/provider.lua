@@ -117,9 +117,7 @@ end
 local function copy_url()
   return function(prompt_bufnr)
     local entry = action_state.get_selected_entry(prompt_bufnr)
-    local url = entry.obj.url
-    vim.fn.setreg("+", url, "c")
-    utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+    copy_url(entry.obj.url)
   end
 end
 
