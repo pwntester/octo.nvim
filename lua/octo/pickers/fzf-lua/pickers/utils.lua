@@ -108,9 +108,7 @@ end
 ---
 ---@param entry table
 function M.copy_url(entry)
-  local url = entry.obj.url
-  vim.fn.setreg("+", url, "c")
-  utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+  utils.copy_url(entry.obj.url)
 end
 
 ---@param s string

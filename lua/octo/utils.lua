@@ -1798,7 +1798,8 @@ end
 M.copy_url = function(url, register)
   register = register or "+"
   vim.fn.setreg(register, url, "c")
-  M.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+  local message = register ~= "+" and "(" .. register .. " register)" or "to the system clipboard (+ register)"
+  M.info("Copied '" .. url .. "' " .. message)
 end
 
 M.input = function(opts)

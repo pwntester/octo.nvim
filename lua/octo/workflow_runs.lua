@@ -362,8 +362,7 @@ local keymaps = {
   end,
   [mappings.copy_url.lhs] = function(api)
     local url = api.current_wf.url
-    vim.fn.setreg("+", url, "c")
-    utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
+    utils.copy_url(url)
   end,
 }
 

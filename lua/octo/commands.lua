@@ -2236,8 +2236,7 @@ function M.copy_url()
     url = utils.get_remote_url()
   end
 
-  vim.fn.setreg("+", url, "c")
-  utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
+  utils.copy_url(url)
 end
 
 function M.actions()
