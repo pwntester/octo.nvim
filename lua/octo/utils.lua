@@ -2,6 +2,7 @@ local config = require "octo.config"
 local constants = require "octo.constants"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local _, Job = pcall(require, "plenary.job")
 local vim = vim
 
@@ -700,9 +701,8 @@ function M.get_repo_id(repo)
   end
 
   local owner, name = M.split_repo(repo)
-  local query = graphql "repository_id_query"
   local id = gh.api.graphql {
-    query = query,
+    query = queries.repository_id,
     fields = { owner = owner, name = name },
     jq = ".data.repository.id",
     opts = { mode = "sync" },
@@ -727,7 +727,7 @@ function M.get_repo_info(repo)
 
   local owner, name = M.split_repo(repo)
   local output = gh.api.graphql {
-    query = graphql "repository_query",
+    query = queries.repository,
     fields = { owner = owner, name = name },
     jq = ".data.repository",
     opts = { mode = "sync" },
@@ -744,9 +744,8 @@ function M.get_repo_templates(repo)
   end
 
   local owner, name = M.split_repo(repo)
-  local query = graphql "repository_templates_query"
   local output = gh.api.graphql {
-    query = query,
+    query = queries.repository_templates,
     fields = { owner = owner, name = name },
     jq = ".data.repository",
     opts = { mode = "sync" },
@@ -1522,10 +1521,8 @@ function M.close_preview_autocmd(events, winnr, bufnrs)
 end
 
 function M.get_user_id(login)
-  local query = graphql "user_query"
-
   local id = gh.api.graphql {
-    query = query,
+    query = queries.user,
     fields = { login = login },
     jq = ".data.user.id",
     opts = { mode = "sync" },
@@ -1546,14 +1543,13 @@ function M.get_label_id(label)
   end
 
   local owner, name = M.split_repo(buffer.repo)
-  local query = graphql "repo_labels_query"
   local jq = ([[
     .data.repository.labels.nodes
     | map(select(.name == "{label}"))
     | .[0].id
   ]]):gsub("{label}", label)
   local id = gh.api.graphql {
-    query = query,
+    query = queries.repo_labels,
     fields = { owner = owner, name = name },
     jq = jq,
     opts = { mode = "sync" },

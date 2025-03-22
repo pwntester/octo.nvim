@@ -1240,7 +1240,7 @@ function M.change_state(state)
     jq = ".data.updateIssue.issue"
     fields = {}
   elseif buffer:isIssue() and state == "OPEN" then
-    query = graphql "reopen_issue_mutation"
+    query = mutations.reopen_issue
     desired_state = "OPEN"
     jq = ".data.reopenIssue.issue"
     fields = { issueId = id }

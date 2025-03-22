@@ -141,7 +141,7 @@ function M.load(repo, kind, number, cb)
     key = "issue"
     fields = {}
   elseif kind == "repo" then
-    query = graphql "repository_query"
+    query = queries.repository
     fields = { owner = owner, name = name }
   elseif kind == "discussion" then
     query = queries.discussion
