@@ -56,6 +56,8 @@ local gh = require "octo.gh"
 ---@field wf_cache table<string,WorkflowRun>
 ---@field refresh function
 ---@field refetch function
+---@field cancel function
+---@field rerun function
 
 ---@class WorkflowNode
 ---@field id string
@@ -353,8 +355,16 @@ end
 local keymaps = {
   ---@param api Handler
   [mappings.refresh.lhs] = function(api)
-    utils.info "refreshing..."
+    utils.info "Refreshing..."
     api.refetch()
+  end,
+  [mappings.rerun.lhs] = function(api)
+    utils.info "Rerunning..."
+    api.rerun()
+  end,
+  [mappings.cancel.lhs] = function(api)
+    utils.info "Cancelling..."
+    api.cancel()
   end,
   [mappings.open_in_browser.lhs] = function(api)
     local id = api.current_wf.databaseId
@@ -721,6 +731,37 @@ M.refetch = function()
   M.wf_cache[id] = nil
   M.current_wf = nil
   populate_preview_buffer(id, M.buf)
+end
+
+M.cancel = function()
+  local id = M.current_wf.databaseId
+  local _, stderr = gh.run.cancel {
+    id,
+    opts = { mode = "sync" },
+  }
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to cancel workflow run"
+  else
+    utils.info "Cancelled"
+  end
+  M.refetch()
+end
+
+M.rerun = function()
+  local id = M.current_wf.databaseId
+  --TODO: handle --failed to only rerun failed jobs
+  local _, stderr = gh.run.rerun {
+    id,
+    opts = { mode = "sync" },
+  }
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to rerun workflow run"
+  else
+    utils.info "Rerun queued"
+  end
+  M.refetch()
 end
 
 return M
