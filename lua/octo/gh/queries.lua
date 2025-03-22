@@ -220,6 +220,21 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]]
 
+M.discussion_summary = [[
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    discussion(number: $number) {
+      ...DiscussionInfoFragment
+      createdAt
+      body
+      labels(first: 20) {
+        ...LabelConnectionFragment
+      }
+    }
+  }
+}
+]] .. fragments.discussion_info .. fragments.label_connection .. fragments.label
+
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_summary = [[
 query {
