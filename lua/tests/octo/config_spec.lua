@@ -86,6 +86,11 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
+      it("should return invalid when wrap isn't a boolean", function()
+        config.values.wrap = "not a boolean"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
       it("should return invalid when enable_builtin isn't a boolean", function()
         config.values.enable_builtin = "not a boolean"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
