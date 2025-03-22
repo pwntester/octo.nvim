@@ -1223,6 +1223,78 @@ function M.write_user_profile(bufnr, user, opts)
   return #chunks, max_length
 end
 
+function M.write_discussion_summary(bufnr, discussion, opts)
+  opts = opts or {}
+  local conf = config.values
+  local max_length = opts.max_length or 80
+  local chunks = {}
+
+  -- repo and date line
+  table.insert(chunks, {
+    { " " },
+    { discussion.repository.nameWithOwner, "OctoDetailsValue" },
+    { " " .. utils.format_date(discussion.createdAt), "OctoDetailsValue" },
+  })
+
+  -- discussion overview
+  local state = discussion.closed and "CLOSED" or "OPEN"
+  table.insert(chunks, {
+    { " " },
+    { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
+    { discussion.title .. " ", "OctoDetailsLabel" },
+    { "#" .. discussion.number .. " ", "OctoDetailsValue" },
+  })
+  if not utils.is_blank(discussion.isAnswered) and discussion.isAnswered then
+    table.insert(chunks, { { " " }, { "✓ Answered", "OctoStateApproved" } })
+  end
+  table.insert(chunks, { { "" } })
+
+  -- discussion body
+  local body = vim.split(discussion.body, "\n")
+  body = table.concat(body, " ")
+  body = body:gsub("[%c]", " ")
+  body = body:sub(1, max_length - 4 - 2) .. "…"
+  table.insert(chunks, {
+    { " " },
+    { body },
+  })
+  table.insert(chunks, { { "" } })
+
+  -- labels
+  if #discussion.labels.nodes > 0 then
+    local labels = {}
+    for _, label in ipairs(discussion.labels.nodes) do
+      local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
+      vim.list_extend(labels, label_bubble)
+    end
+    table.insert(chunks, labels)
+    table.insert(chunks, { { "" } })
+  end
+
+  -- author line
+  if utils.is_blank(discussion.author) then
+    table.insert(chunks, {
+      { " " },
+      { conf.ghost_icon or "󰊠 " },
+      { "ghost" },
+    })
+  else
+    table.insert(chunks, {
+      { " " },
+      { conf.user_icon or " " },
+      { discussion.author.login },
+    })
+  end
+
+  for i = 1, #chunks do
+    M.write_block(bufnr, { "" }, i)
+  end
+  for i = 1, #chunks do
+    M.write_virtual_text(bufnr, constants.OCTO_SUMMARY_VT_NS, i - 1, chunks[i])
+  end
+  return #chunks
+end
+
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
   local conf = config.values
