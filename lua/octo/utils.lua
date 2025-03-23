@@ -768,8 +768,10 @@ function M.callback_per_page(text, cb)
   local results = {}
   local page_output = vim.split(text, "\n")
   for _, page in ipairs(page_output) do
-    local decoded_page = vim.json.decode(page)
-    cb(results, decoded_page)
+    if not M.is_blank(page) then
+      local decoded_page = vim.json.decode(page)
+      cb(results, decoded_page)
+    end
   end
   return results
 end
