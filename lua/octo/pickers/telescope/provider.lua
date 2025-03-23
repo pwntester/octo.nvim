@@ -1286,6 +1286,20 @@ function M.notifications(opts)
       return
     end
 
+    local copy_notification_url = function(prompt_bufnr)
+      local entry = action_state.get_selected_entry(prompt_bufnr)
+      local subject = entry.obj.subject
+      local url = not utils.is_blank(subject.latest_comment_url) and subject.latest_comment_url or subject.url
+
+      gh.api.get {
+        url,
+        jq = ".html_url",
+        opts = {
+          cb = gh.create_callback { success = utils.copy_url },
+        },
+      }
+    end
+
     pickers
       .new(opts, {
         finder = finders.new_table {
@@ -1301,7 +1315,7 @@ function M.notifications(opts)
             open(type)(prompt_bufnr)
           end)
           map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
           map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
           return true
         end,
