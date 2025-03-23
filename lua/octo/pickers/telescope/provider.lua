@@ -117,7 +117,7 @@ end
 local function copy_url()
   return function(prompt_bufnr)
     local entry = action_state.get_selected_entry(prompt_bufnr)
-    copy_url(entry.obj.url)
+    utils.copy_url(entry.obj.url)
   end
 end
 
