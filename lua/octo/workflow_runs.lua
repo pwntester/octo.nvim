@@ -732,9 +732,9 @@ M.refetch = function()
   populate_preview_buffer(id, M.buf)
 end
 
----@param dbId number | nil
-M.cancel = function(dbId)
-  local id = dbId or M.current_wf.databaseId
+---@param db_id number | nil
+M.cancel = function(db_id)
+  local id = db_id or M.current_wf.databaseId
   local _, stderr = gh.run.cancel {
     id,
     opts = { mode = "sync" },
@@ -748,9 +748,9 @@ M.cancel = function(dbId)
   M.refetch()
 end
 
----@param dbId number | nil
-M.rerun = function(dbId)
-  local id = dbId or M.current_wf.databaseId
+---@param db_id number | nil
+M.rerun = function(db_id)
+  local id = db_id or M.current_wf.databaseId
   --TODO: handle --failed to only rerun failed jobs
   local _, stderr = gh.run.rerun {
     id,
