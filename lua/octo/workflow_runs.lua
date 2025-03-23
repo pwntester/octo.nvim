@@ -311,7 +311,6 @@ local function get_logs(id)
     local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
     local path = vim.fs.joinpath(sanitized_job_id, file_name)
-    print(path)
     local res = vim
       .system({
         "unzip",
@@ -733,8 +732,9 @@ M.refetch = function()
   populate_preview_buffer(id, M.buf)
 end
 
-M.cancel = function()
-  local id = M.current_wf.databaseId
+---@param dbId number | nil
+M.cancel = function(dbId)
+  local id = dbId or M.current_wf.databaseId
   local _, stderr = gh.run.cancel {
     id,
     opts = { mode = "sync" },
@@ -748,8 +748,9 @@ M.cancel = function()
   M.refetch()
 end
 
-M.rerun = function()
-  local id = M.current_wf.databaseId
+---@param dbId number | nil
+M.rerun = function(dbId)
+  local id = dbId or M.current_wf.databaseId
   --TODO: handle --failed to only rerun failed jobs
   local _, stderr = gh.run.rerun {
     id,

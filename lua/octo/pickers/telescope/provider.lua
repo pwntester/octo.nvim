@@ -674,11 +674,24 @@ function M.workflow_runs(workflow_runs, title, on_select_cb)
       },
       sorter = conf.generic_sorter {},
       previewer = previewers.workflow_runs.new {},
-      attach_mappings = function()
+      attach_mappings = function(_, map)
         actions.select_default:replace(function(prompt_bufnr)
           local selection = action_state.get_selected_entry(prompt_bufnr)
           actions.close(prompt_bufnr)
           on_select_cb(selection.value)
+        end)
+
+        map("n", "r", function(prompt_bufnr)
+          local selection = action_state.get_selected_entry(prompt_bufnr)
+          local id = selection.value.id
+          require("octo.workflow_runs").rerun(id)
+        end)
+
+        map("n", "c", function(prompt_bufnr)
+          local selection = action_state.get_selected_entry(prompt_bufnr)
+          local id = selection.value.id
+          require("octo.workflow_runs").cancel(id)
+          actions.close(prompt_bufnr)
         end)
         return true
       end,
