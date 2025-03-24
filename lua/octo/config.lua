@@ -258,7 +258,8 @@ function M.get_default_values()
         open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
         refresh = { lhs = "<C-r>", desc = "refresh workflow" },
         rerun = { lhs = "<C-o>", desc = "rerun workflow" },
-        cancel = { lhs = "<C-d>", desc = "cancel workflow" },
+        rerun_failed = { lhs = "<C-f>", desc = "rerun failed workflow" },
+        cancel = { lhs = "<C-x>", desc = "cancel workflow" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       },
       issue = {

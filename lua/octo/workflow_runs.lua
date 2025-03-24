@@ -361,6 +361,10 @@ local keymaps = {
     utils.info "Rerunning..."
     api.rerun()
   end,
+  [mappings.rerun_failed.lhs] = function(api)
+    utils.info "Rerunning failed jobs..."
+    api.rerun { failed = true }
+  end,
   [mappings.cancel.lhs] = function(api)
     utils.info "Cancelling..."
     api.cancel()
@@ -748,12 +752,14 @@ M.cancel = function(db_id)
   M.refetch()
 end
 
----@param db_id number | nil
-M.rerun = function(db_id)
-  local id = db_id or M.current_wf.databaseId
-  --TODO: handle --failed to only rerun failed jobs
+---@param opts { db_id: number | nil, failed: boolean | nil }
+M.rerun = function(opts)
+  opts = opts or {}
+  local failed_jobs = opts.failed == true
+  local id = opts.db_id or (M.current_wf and M.current_wf.databaseId)
   local _, stderr = gh.run.rerun {
     id,
+    failed_jobs and "--failed" or "",
     opts = { mode = "sync" },
   }
   if stderr and not utils.is_blank(stderr) then
