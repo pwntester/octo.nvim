@@ -212,22 +212,22 @@ local create_flag = function(key)
   end
 end
 
-M.insert_input = function(args, flag, k, kk, vv)
-  if type(vv) == "boolean" then
-    vv = tostring(vv)
+M.insert_input = function(args, flag, parameter, key, value)
+  if type(value) == "boolean" then
+    value = tostring(value)
   end
 
-  if type(vv) == "table" then
-    for key, value in pairs(vv) do
-      local new_k = type(kk) == "number" and k .. "[]" or k .. "[" .. kk .. "]"
-      M.insert_input(args, flag, new_k, key, value)
+  if type(value) == "table" then
+    for k, v in pairs(value) do
+      local new_parameter = type(key) == "number" and parameter .. "[]" or parameter .. "[" .. key .. "]"
+      M.insert_input(args, flag, new_parameter, k, v)
     end
-  elseif type(kk) == "number" then
+  elseif type(key) == "number" then
     table.insert(args, flag)
-    table.insert(args, k .. "[]=" .. vv)
+    table.insert(args, parameter .. "[]=" .. value)
   else
     table.insert(args, flag)
-    table.insert(args, k .. "[" .. kk .. "]=" .. vv)
+    table.insert(args, parameter .. "[" .. key .. "]=" .. value)
   end
 end
 
