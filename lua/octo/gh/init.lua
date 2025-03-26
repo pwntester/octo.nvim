@@ -233,9 +233,13 @@ M.insert_args = function(args, options, replace)
       if type(value) == "table" then
         for k, v in pairs(value) do
           if type(v) == "table" then
-            for _, vv in ipairs(v) do
-              table.insert(args, flag)
-              table.insert(args, k .. "[]=" .. vv)
+            table.insert(args, flag)
+            for kk, vv in pairs(v) do
+              if type(kk) == "number" then
+                table.insert(args, k .. "[]=" .. vv)
+              else
+                table.insert(args, k .. "[" .. kk .. "]=" .. vv)
+              end
             end
           elseif type(v) == "boolean" then
             if v then
