@@ -145,7 +145,7 @@ describe("insert_args:", function()
     }
     assert_tables_have_same_elements(args, expected)
   end)
-  it("gh api --help gist example", function()
+  it("gh api --help schema example", function()
     local args = {}
     local opts = {
       F = {
@@ -153,6 +153,7 @@ describe("insert_args:", function()
           {
             property_name = "environment",
             default_value = "production",
+            required = true,
             allowed_values = {
               "staging",
               "production",
@@ -166,6 +167,8 @@ describe("insert_args:", function()
       "-F",
       "properties[][property_name]=environment",
       "-F",
+      "properties[][required]=true",
+      "-F",
       "properties[][default_value]=production",
       "-F",
       "properties[][allowed_values][]=staging",
@@ -174,7 +177,7 @@ describe("insert_args:", function()
     }
     assert_tables_have_same_elements(args, expected)
   end)
-  it("gh api --help schema example", function()
+  it("gh api --help gist example", function()
     local args = {}
     local opts = {
       F = {

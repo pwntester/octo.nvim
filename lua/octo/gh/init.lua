@@ -213,6 +213,10 @@ local create_flag = function(key)
 end
 
 M.insert_input = function(args, flag, k, kk, vv)
+  if type(vv) == "boolean" then
+    vv = tostring(vv)
+  end
+
   if type(vv) == "table" then
     for key, value in pairs(vv) do
       local new_k = type(kk) == "number" and k .. "[]" or k .. "[" .. kk .. "]"
