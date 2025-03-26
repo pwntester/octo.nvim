@@ -213,13 +213,14 @@ local create_flag = function(key)
 end
 
 M.insert_input = function(args, flag, k, kk, vv)
-  if type(kk) == "number" then
+  if type(vv) == "table" then
+    for key, value in pairs(vv) do
+      local new_k = type(kk) == "number" and k .. "[]" or k .. "[" .. kk .. "]"
+      M.insert_input(args, flag, new_k, key, value)
+    end
+  elseif type(kk) == "number" then
     table.insert(args, flag)
     table.insert(args, k .. "[]=" .. vv)
-  elseif type(vv) == "table" then
-    for key, value in pairs(vv) do
-      M.insert_input(args, flag, k .. "[" .. kk .. "]", key, value)
-    end
   else
     table.insert(args, flag)
     table.insert(args, k .. "[" .. kk .. "]=" .. vv)
