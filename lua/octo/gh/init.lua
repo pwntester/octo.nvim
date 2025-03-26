@@ -212,6 +212,20 @@ local create_flag = function(key)
   end
 end
 
+M.insert_input = function(args, flag, k, kk, vv)
+  if type(kk) == "number" then
+    table.insert(args, flag)
+    table.insert(args, k .. "[]=" .. vv)
+  elseif type(vv) == "table" then
+    for key, value in pairs(vv) do
+      M.insert_input(args, flag, k .. "[" .. kk .. "]", key, value)
+    end
+  else
+    table.insert(args, flag)
+    table.insert(args, k .. "[" .. kk .. "]=" .. vv)
+  end
+end
+
 ---Insert the options into the args table
 ---@param args table the arguments table
 ---@param options table the options to insert
@@ -233,13 +247,8 @@ M.insert_args = function(args, options, replace)
       if type(value) == "table" then
         for k, v in pairs(value) do
           if type(v) == "table" then
-            table.insert(args, flag)
             for kk, vv in pairs(v) do
-              if type(kk) == "number" then
-                table.insert(args, k .. "[]=" .. vv)
-              else
-                table.insert(args, k .. "[" .. kk .. "]=" .. vv)
-              end
+              M.insert_input(args, flag, k, kk, vv)
             end
           elseif type(v) == "boolean" then
             if v then
