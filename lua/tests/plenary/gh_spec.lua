@@ -99,6 +99,20 @@ describe("insert_args:", function()
     }
     eq(args, expected)
   end)
+  it("integer values", function()
+    local args = {}
+    local opts = {
+      f = {
+        num_issues = 15,
+      },
+    }
+    gh.insert_args(args, opts)
+    local expected = {
+      "-f",
+      "num_issues=15",
+    }
+    eq(args, expected)
+  end)
   it("list of fields get brackets", function()
     local args = {}
     local opts = {
@@ -195,19 +209,26 @@ describe("insert_args:", function()
     }
     eq(args, expected)
   end)
-  it("integer values", function()
+  it("gh api common use case", function()
     local args = {}
     local opts = {
-      f = {
-        num_issues = 15,
-      },
+      f = { owner = "pwntester", repo = "octo.nvim", required = true },
+      F = { number = 1, total = 100 },
     }
     gh.insert_args(args, opts)
     local expected = {
       "-f",
-      "num_issues=15",
+      "owner=pwntester",
+      "-f",
+      "repo=octo.nvim",
+      "-f",
+      "required=true",
+      "-F",
+      "number=1",
+      "-F",
+      "total=100",
     }
-    eq(args, expected)
+    assert_tables_have_same_elements(args, expected)
   end)
 end)
 
