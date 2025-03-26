@@ -1,6 +1,30 @@
 local gh = require "octo.gh"
 local eq = assert.are.same
 
+local tables_have_same_elements = function(t1, t2)
+  if #t1 ~= #t2 then
+    return false
+  end
+  for _, v in ipairs(t1) do
+    if not vim.tbl_contains(t2, v) then
+      return false
+    end
+  end
+  for _, v in ipairs(t2) do
+    if not vim.tbl_contains(t1, v) then
+      return false
+    end
+  end
+  return true
+end
+
+local assert_tables_have_same_elements = function(t1, t2)
+  assert(
+    tables_have_same_elements(t1, t2),
+    string.format("Expected tables to have the same elements:\n%s\n%s", vim.inspect(t1), vim.inspect(t2))
+  )
+end
+
 describe("insert_args:", function()
   it("true booleans show up as flags", function()
     local args = {}
@@ -93,6 +117,34 @@ describe("insert_args:", function()
     }
     eq(args, expected)
   end)
+  it("table of fields gets used", function()
+    local args = {}
+    local opts = {
+      f = {
+        items = {
+          nested_list = { 1, 2, 3 },
+          nested_obj = { first = 1, second = 2 },
+          second = 2,
+        },
+      },
+    }
+    gh.insert_args(args, opts)
+    local expected = {
+      "-f",
+      "items[nested_list][]=1",
+      "-f",
+      "items[nested_list][]=2",
+      "-f",
+      "items[nested_list][]=3",
+      "-f",
+      "items[nested_obj][first]=1",
+      "-f",
+      "items[nested_obj][second]=2",
+      "-f",
+      "items[second]=2",
+    }
+    assert_tables_have_same_elements(args, expected)
+  end)
   it("integer values", function()
     local args = {}
     local opts = {
@@ -108,30 +160,6 @@ describe("insert_args:", function()
     eq(args, expected)
   end)
 end)
-
-local tables_have_same_elements = function(t1, t2)
-  if #t1 ~= #t2 then
-    return false
-  end
-  for _, v in ipairs(t1) do
-    if not vim.tbl_contains(t2, v) then
-      return false
-    end
-  end
-  for _, v in ipairs(t2) do
-    if not vim.tbl_contains(t1, v) then
-      return false
-    end
-  end
-  return true
-end
-
-local assert_tables_have_same_elements = function(t1, t2)
-  assert(
-    tables_have_same_elements(t1, t2),
-    string.format("Expected tables to have the same elements:\n%s\n%s", vim.inspect(t1), vim.inspect(t2))
-  )
-end
 
 describe("REST API args", function()
   it("no args", function()
