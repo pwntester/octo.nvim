@@ -117,7 +117,7 @@ describe("insert_args:", function()
     }
     eq(args, expected)
   end)
-  it("table of fields gets used", function()
+  it("table of fields parsed correctly", function()
     local args = {}
     local opts = {
       f = {
@@ -144,6 +144,53 @@ describe("insert_args:", function()
       "items[second]=2",
     }
     assert_tables_have_same_elements(args, expected)
+  end)
+  it("gh api --help gist example", function()
+    local args = {}
+    local opts = {
+      F = {
+        properties = {
+          {
+            property_name = "environment",
+            default_value = "production",
+            allowed_values = {
+              "staging",
+              "production",
+            },
+          },
+        },
+      },
+    }
+    gh.insert_args(args, opts)
+    local expected = {
+      "-F",
+      "properties[][property_name]=environment",
+      "-F",
+      "properties[][default_value]=production",
+      "-F",
+      "properties[][allowed_values][]=staging",
+      "-F",
+      "properties[][allowed_values][]=production",
+    }
+    assert_tables_have_same_elements(args, expected)
+  end)
+  it("gh api --help schema example", function()
+    local args = {}
+    local opts = {
+      F = {
+        files = {
+          ["myfile.txt"] = {
+            content = "@myfile.txt",
+          },
+        },
+      },
+    }
+    gh.insert_args(args, opts)
+    local expected = {
+      "-F",
+      "files[myfile.txt][content]=@myfile.txt",
+    }
+    eq(args, expected)
   end)
   it("integer values", function()
     local args = {}
