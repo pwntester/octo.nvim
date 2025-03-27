@@ -2,6 +2,7 @@ local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local builtin = require "fzf-lua.previewer.builtin"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
 local config = require "octo.config"
@@ -312,20 +313,23 @@ M.repo = function(formatted_repos)
     buffer:configure()
     local repo_name_owner = vim.split(entry_str, " ")[1]
     local owner, name = utils.split_repo(repo_name_owner)
-    local query = graphql("repository_query", owner, name)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-      cb = function(output, _)
-        -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
-        -- and `tmpbuf` within this context is already cleared and invalidated
-        if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
-          local resp = vim.json.decode(output)
-          buffer.node = resp.data.repository
-          buffer:render_repo()
-        end
-      end,
-    }
 
+    local cb = function(output, _)
+      -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
+      -- and `tmpbuf` within this context is already cleared and invalidated
+      if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
+        local resp = vim.json.decode(output)
+        buffer.node = resp.data.repository
+        buffer:render_repo()
+      end
+    end
+    gh.api.graphql {
+      query = queries.repository,
+      f = { owner = owner, name = name },
+      paginate = true,
+      jq = ".",
+      opts = { cb = cb },
+    }
     self:set_preview_buf(tmpbuf)
 
     local stargazer, fork
