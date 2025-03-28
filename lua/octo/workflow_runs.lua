@@ -759,7 +759,7 @@ M.rerun = function(opts)
   local id = opts.db_id or (M.current_wf and M.current_wf.databaseId)
   local _, stderr = gh.run.rerun {
     id,
-    failed_jobs and "--failed" or "",
+    failed = failed_jobs,
     opts = { mode = "sync" },
   }
   if stderr and not utils.is_blank(stderr) then
