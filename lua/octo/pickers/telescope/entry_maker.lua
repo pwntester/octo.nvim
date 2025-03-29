@@ -249,6 +249,40 @@ function M.gen_from_review_thread(linenr_length)
   end
 end
 
+function M.gen_from_project_v2()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      { entry.project.title },
+    }
+
+    local displayer = entry_display.create {
+      separator = " ",
+      items = {
+        { remaining = true },
+      },
+    }
+
+    return displayer(columns)
+  end
+
+  return function(project)
+    if not project or vim.tbl_isempty(project) then
+      return nil
+    end
+
+    return {
+      value = project.title,
+      ordinal = project.number .. " " .. project.title,
+      display = make_display,
+      project = project,
+    }
+  end
+end
+
 function M.gen_from_project()
   local make_display = function(entry)
     if not entry then
