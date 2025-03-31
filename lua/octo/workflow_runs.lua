@@ -4,6 +4,7 @@ local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
@@ -769,6 +770,82 @@ M.rerun = function(opts)
     utils.info "Rerun queued"
   end
   M.refetch()
+end
+
+local find_workflow_entry = function(entries, desired_workflow_name)
+  local workflow_name_regex = "name:%s*([^\n]+)"
+
+  for _, entry in ipairs(entries) do
+    local workflow_name = string.match(entry.content, workflow_name_regex)
+
+    if workflow_name == desired_workflow_name then
+      return entry
+    end
+  end
+  return nil
+end
+
+local edit_workflow = function(branch, workflow_name)
+  if workflow_name == "Dependabot Updates" then
+    vim.cmd.edit ".github/dependabot.yml"
+    return
+  end
+
+  local workflow_directory = ".github/workflows/"
+  local expression = branch .. ":" .. workflow_directory
+
+  local repo = utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
+
+  local jq = [[
+    .data.repository.object.entries
+    | map({name, content: .object.text})
+  ]]
+
+  gh.api.graphql {
+    query = queries.directory_file_content,
+    f = { owner = owner, name = name, expression = expression },
+    jq = jq,
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local data = vim.json.decode(output)
+          local entry = find_workflow_entry(data, workflow_name)
+
+          if not entry then
+            utils.error("Failed to find workflow file for " .. workflow_name)
+            return
+          end
+
+          vim.cmd.edit(workflow_directory .. entry.name)
+        end,
+      },
+    },
+  }
+end
+
+M.edit = function(opts)
+  opts = opts or {}
+
+  local current_wf = M.current_wf
+
+  if current_wf then
+    edit_workflow(current_wf.headBranch, current_wf.workflowName)
+    return
+  end
+
+  local names = gh.workflow.list {
+    json = "name",
+    jq = "map(.name)",
+    opts = { mode = "sync" },
+  }
+
+  local branch = opts.branch or "HEAD"
+  vim.ui.select(vim.json.decode(names), {
+    prompt = "Select a workflow: ",
+  }, function(selected)
+    edit_workflow(branch, selected)
+  end)
 end
 
 return M
