@@ -56,6 +56,8 @@ local gh = require "octo.gh"
 ---@field wf_cache table<string,WorkflowRun>
 ---@field refresh function
 ---@field refetch function
+---@field cancel function
+---@field rerun function
 
 ---@class WorkflowNode
 ---@field id string
@@ -309,7 +311,6 @@ local function get_logs(id)
     local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
     local path = vim.fs.joinpath(sanitized_job_id, file_name)
-    print(path)
     local res = vim
       .system({
         "unzip",
@@ -353,8 +354,20 @@ end
 local keymaps = {
   ---@param api Handler
   [mappings.refresh.lhs] = function(api)
-    utils.info "refreshing..."
+    utils.info "Refreshing..."
     api.refetch()
+  end,
+  [mappings.rerun.lhs] = function(api)
+    utils.info "Rerunning..."
+    api.rerun()
+  end,
+  [mappings.rerun_failed.lhs] = function(api)
+    utils.info "Rerunning failed jobs..."
+    api.rerun { failed = true }
+  end,
+  [mappings.cancel.lhs] = function(api)
+    utils.info "Cancelling..."
+    api.cancel()
   end,
   [mappings.open_in_browser.lhs] = function(api)
     local id = api.current_wf.databaseId
@@ -721,6 +734,41 @@ M.refetch = function()
   M.wf_cache[id] = nil
   M.current_wf = nil
   populate_preview_buffer(id, M.buf)
+end
+
+---@param db_id number | nil
+M.cancel = function(db_id)
+  local id = db_id or M.current_wf.databaseId
+  local _, stderr = gh.run.cancel {
+    id,
+    opts = { mode = "sync" },
+  }
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to cancel workflow run"
+  else
+    utils.info "Cancelled"
+  end
+  M.refetch()
+end
+
+---@param opts { db_id: number | nil, failed: boolean | nil }
+M.rerun = function(opts)
+  opts = opts or {}
+  local failed_jobs = opts.failed == true
+  local id = opts.db_id or (M.current_wf and M.current_wf.databaseId)
+  local _, stderr = gh.run.rerun {
+    id,
+    failed = failed_jobs,
+    opts = { mode = "sync" },
+  }
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to rerun workflow run"
+  else
+    utils.info "Rerun queued"
+  end
+  M.refetch()
 end
 
 return M
