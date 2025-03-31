@@ -772,56 +772,32 @@ M.rerun = function(opts)
   M.refetch()
 end
 
-local find_workflow_entry = function(entries, desired_workflow_name)
-  local workflow_name_regex = "name:%s*[\"']?([^\"'\n]+)[\"']?"
+local find_workflow_path_by_name = function(workflow_name)
+  local jq = ([[
+    map(select(.name == "{name}")) | .[0].path
+  ]]):gsub("{name}", workflow_name)
 
-  for _, entry in ipairs(entries) do
-    local workflow_name = string.match(entry.content, workflow_name_regex)
-
-    if workflow_name == desired_workflow_name then
-      return entry
-    end
-  end
-  return nil
+  return gh.workflow.list {
+    json = "name,path",
+    jq = jq,
+    opts = { mode = "sync" },
+  }
 end
 
-local edit_workflow = function(branch, workflow_name)
+local edit_workflow = function(workflow_name)
   if workflow_name == "Dependabot Updates" then
     vim.cmd.edit ".github/dependabot.yml"
     return
   end
 
-  local workflow_directory = ".github/workflows/"
-  local expression = branch .. ":" .. workflow_directory
+  local path = find_workflow_path_by_name(workflow_name)
 
-  local repo = utils.get_remote_name()
-  local owner, name = utils.split_repo(repo)
+  if string.match(path, "^dynamic") then
+    utils.error "Dynamic workflows are not supported"
+    return
+  end
 
-  local jq = [[
-    .data.repository.object.entries
-    | map({name, content: .object.text})
-  ]]
-
-  gh.api.graphql {
-    query = queries.directory_file_content,
-    f = { owner = owner, name = name, expression = expression },
-    jq = jq,
-    opts = {
-      cb = gh.create_callback {
-        success = function(output)
-          local data = vim.json.decode(output)
-          local entry = find_workflow_entry(data, workflow_name)
-
-          if not entry then
-            utils.error("Failed to find workflow file for " .. workflow_name)
-            return
-          end
-
-          vim.cmd.edit(workflow_directory .. entry.name)
-        end,
-      },
-    },
-  }
+  vim.cmd.edit(path)
 end
 
 M.edit = function(opts)
@@ -830,7 +806,7 @@ M.edit = function(opts)
   local current_wf = M.current_wf
 
   if current_wf then
-    edit_workflow(current_wf.headBranch, current_wf.workflowName)
+    edit_workflow(current_wf.workflowName)
     return
   end
 
@@ -840,11 +816,10 @@ M.edit = function(opts)
     opts = { mode = "sync" },
   }
 
-  local branch = opts.branch or "HEAD"
   vim.ui.select(vim.json.decode(names), {
     prompt = "Select a workflow: ",
   }, function(selected)
-    edit_workflow(branch, selected)
+    edit_workflow(selected)
   end)
 end
 
