@@ -90,7 +90,7 @@ function M.setup()
         end
 
         workflow.workflow_list {
-          cb = workflow.edit_workflow,
+          cb = workflow.edit,
         }
       end,
       list = function()
