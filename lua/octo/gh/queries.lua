@@ -752,6 +752,25 @@ query {
 }
 ]]
 
+M.directory_file_content = [[
+query($owner: String!, $name: String!, $expression: String!) {
+  repository(owner: $owner, name: $name) {
+    object(expression: $expression) {
+      ... on Tree {
+        entries {
+          name
+          object {
+            ... on Blob {
+              text
+            }
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
 M.reactions_for_object = [[
 query {
   node(id: "%s") {
