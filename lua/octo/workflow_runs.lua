@@ -784,7 +784,7 @@ local find_workflow_path_by_name = function(workflow_name)
   }
 end
 
-local edit_workflow = function(workflow_name)
+M.edit = function(workflow_name)
   if workflow_name == "Dependabot Updates" then
     vim.cmd.edit ".github/dependabot.yml"
     return
@@ -800,14 +800,11 @@ local edit_workflow = function(workflow_name)
   vim.cmd.edit(path)
 end
 
-M.edit = function(opts)
+M.workflow_list = function(opts)
   opts = opts or {}
 
-  local current_wf = M.current_wf
-
-  if current_wf then
-    edit_workflow(current_wf.workflowName)
-    return
+  if not opts.cb then
+    error "Callback is required"
   end
 
   local names = gh.workflow.list {
@@ -819,7 +816,7 @@ M.edit = function(opts)
   vim.ui.select(vim.json.decode(names), {
     prompt = "Select a workflow: ",
   }, function(selected)
-    edit_workflow(selected)
+    opts.cb(selected)
   end)
 end
 
