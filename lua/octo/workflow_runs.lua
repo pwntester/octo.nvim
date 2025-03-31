@@ -773,7 +773,7 @@ M.rerun = function(opts)
 end
 
 local find_workflow_entry = function(entries, desired_workflow_name)
-  local workflow_name_regex = "name:%s*([^\n]+)"
+  local workflow_name_regex = "name:%s*[\"']?([^\"'\n]+)[\"']?"
 
   for _, entry in ipairs(entries) do
     local workflow_name = string.match(entry.content, workflow_name_regex)
