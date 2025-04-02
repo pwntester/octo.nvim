@@ -1602,6 +1602,26 @@ M.project_columns_v2 = function(cb)
   }
 end
 
+M.project_cards_v2 = function(cb)
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
+
+  local cards = buffer.node.projectItems
+  if not cards or #cards.nodes == 0 then
+    utils.error "Can't find any project v2 cards"
+    return
+  end
+
+  if #cards.nodes == 1 then
+    local node = cards.nodes[1]
+    cb(node.project.id, node.id)
+  else
+    utils.error "Multiple project cards are not supported yet"
+  end
+end
+
 M.picker = {
   actions = M.actions,
   assigned_labels = M.select_assigned_label,
@@ -1617,7 +1637,7 @@ M.picker = {
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
   workflow_runs = M.workflow_runs,
-  project_cards_v2 = M.not_implemented,
+  project_cards_v2 = M.project_cards_v2,
   project_columns = M.select_target_project_column,
   project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
