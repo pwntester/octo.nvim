@@ -4,6 +4,7 @@ local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
@@ -769,6 +770,57 @@ M.rerun = function(opts)
     utils.info "Rerun queued"
   end
   M.refetch()
+end
+
+local find_workflow_path_by_name = function(workflow_name)
+  local jq = ([[
+    map(select(.name == "{name}")) | .[0].path
+  ]]):gsub("{name}", workflow_name)
+
+  return gh.workflow.list {
+    json = "name,path",
+    jq = jq,
+    opts = { mode = "sync" },
+  }
+end
+
+M.edit = function(workflow_name)
+  if workflow_name == "Dependabot Updates" then
+    vim.cmd.edit ".github/dependabot.yml"
+    return
+  end
+
+  local path = find_workflow_path_by_name(workflow_name)
+
+  if string.match(path, "^dynamic") then
+    utils.error "Dynamic workflows are not supported"
+    return
+  end
+
+  vim.cmd.edit(path)
+end
+
+M.workflow_list = function(opts)
+  opts = opts or {}
+
+  if not opts.cb then
+    error "Callback is required"
+  end
+
+  local names = gh.workflow.list {
+    json = "name",
+    jq = "map(.name)",
+    opts = { mode = "sync" },
+  }
+
+  vim.ui.select(vim.json.decode(names), {
+    prompt = "Select a workflow: ",
+  }, function(selected)
+    if not selected then
+      return
+    end
+    opts.cb(selected)
+  end)
 end
 
 return M
