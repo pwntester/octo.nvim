@@ -1528,6 +1528,100 @@ function M.milestones(opts)
   }
 end
 
+M.project_columns_v2 = function(cb)
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
+
+  local query = graphql("projects_v2_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
+  gh.api.graphql {
+    query = query,
+    paginate = true,
+    opts = {
+      cb = function(output)
+        if not output then
+          return
+        end
+
+        local resp = vim.json.decode(output)
+
+        local projects = {}
+        local sources = {
+          resp.data.user and resp.data.user.projects.nodes or {},
+          resp.data.repository and resp.data.repository.projects.nodes or {},
+          not resp.errors and resp.data.organization.projects.nodes or {},
+        }
+
+        -- Consolidate all projects into a map keyed by ID to remove duplicates
+        for _, source in ipairs(sources) do
+          for _, project in ipairs(source) do
+            projects[project.id] = project
+          end
+        end
+
+        -- Convert map to array for the picker
+        local results = vim.tbl_values(projects)
+
+        local opts = {}
+        pickers
+          .new(vim.deepcopy(dropdown_opts), {
+            finder = finders.new_table {
+              results = results,
+              entry_maker = entry_maker.gen_from_project_v2(),
+            },
+            sorter = conf.generic_sorter(opts),
+            attach_mappings = function(_, map)
+              actions.select_default:replace(function(prompt_bufnr)
+                select {
+                  bufnr = prompt_bufnr,
+                  single_cb = function(selected)
+                    selected = selected[1]
+
+                    vim.ui.select(selected.columns.options, {
+                      prompt = "Select a field value: ",
+                      format_item = function(item)
+                        return item.name
+                      end,
+                    }, function(value)
+                      cb(selected.id, selected.columns.id, value.id)
+                    end)
+                  end,
+                  multiple_cb = nil,
+                  get_item = function(selected)
+                    return selected.project
+                  end,
+                }
+              end)
+              return true
+            end,
+          })
+          :find()
+      end,
+    },
+  }
+end
+
+M.project_cards_v2 = function(cb)
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
+
+  local cards = buffer.node.projectItems
+  if not cards or #cards.nodes == 0 then
+    utils.error "Can't find any project v2 cards"
+    return
+  end
+
+  if #cards.nodes == 1 then
+    local node = cards.nodes[1]
+    cb(node.project.id, node.id)
+  else
+    utils.error "Multiple project cards are not supported yet"
+  end
+end
+
 M.picker = {
   actions = M.actions,
   assigned_labels = M.select_assigned_label,
@@ -1543,9 +1637,9 @@ M.picker = {
   pending_threads = M.pending_threads,
   project_cards = M.select_project_card,
   workflow_runs = M.workflow_runs,
-  project_cards_v2 = M.not_implemented,
+  project_cards_v2 = M.project_cards_v2,
   project_columns = M.select_target_project_column,
-  project_columns_v2 = M.not_implemented,
+  project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
   repos = M.repos,
   review_commits = M.review_commits,
