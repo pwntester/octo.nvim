@@ -1436,9 +1436,10 @@ local write_commit_header = function(bufnr, commits)
     table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
+  local first_user = get_author(first_item)
   table.insert(vt, {
-    first_item.commit.author.user.login,
-    first_item.commit.author.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+    first_user,
+    first_user == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
   })
   if n_authors > 1 then
     table.insert(
