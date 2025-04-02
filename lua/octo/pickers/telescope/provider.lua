@@ -1576,8 +1576,16 @@ M.project_columns_v2 = function(cb)
                 select {
                   bufnr = prompt_bufnr,
                   single_cb = function(selected)
-                    vim.notify(vim.inspect(selected))
-                    cb(selected[1])
+                    selected = selected[1]
+
+                    vim.ui.select(selected.columns.options, {
+                      prompt = "Select a field value: ",
+                      format_item = function(item)
+                        return item.name
+                      end,
+                    }, function(value)
+                      cb(selected.id, selected.columns.id, value.id)
+                    end)
                   end,
                   multiple_cb = nil,
                   get_item = function(selected)
