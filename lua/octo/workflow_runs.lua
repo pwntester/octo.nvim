@@ -816,6 +816,9 @@ M.workflow_list = function(opts)
   vim.ui.select(vim.json.decode(names), {
     prompt = "Select a workflow: ",
   }, function(selected)
+    if not selected then
+      return
+    end
     opts.cb(selected)
   end)
 end
