@@ -1,6 +1,8 @@
 --- Helpers for discussions
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
+local mutations = require "octo.gh.mutations"
 local utils = require "octo.utils"
 
 local M = {}
@@ -15,7 +17,7 @@ local M = {}
 ---@param opts DiscussionMutationOpts
 local create_discussion = function(opts)
   gh.api.graphql {
-    query = graphql "create_discussion_mutation",
+    query = mutations.create_discussion,
     fields = {
       repo_id = opts.repo_id,
       category_id = opts.category_id,
@@ -66,7 +68,7 @@ end
 ---@param cb fun(selected: Category)
 local get_categories = function(opts, cb)
   gh.api.graphql {
-    query = graphql "discussion_categories_query",
+    query = queries.discussion_categories,
     jq = ".data.repository.discussionCategories.nodes",
     fields = { owner = opts.owner, name = opts.name },
     opts = {

@@ -1,5 +1,6 @@
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 
 local vim = vim
@@ -118,7 +119,7 @@ function M.go_to_issue()
   local owner, name = utils.split_repo(repo)
 
   gh.api.graphql {
-    query = graphql "issue_kind_query",
+    query = queries.issue_kind,
     fields = { owner = owner, name = name, number = number },
     jq = ".data.repository.issueOrPullRequest.__typename",
     opts = {

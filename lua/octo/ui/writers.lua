@@ -1223,6 +1223,78 @@ function M.write_user_profile(bufnr, user, opts)
   return #chunks, max_length
 end
 
+function M.write_discussion_summary(bufnr, discussion, opts)
+  opts = opts or {}
+  local conf = config.values
+  local max_length = opts.max_length or 80
+  local chunks = {}
+
+  -- repo and date line
+  table.insert(chunks, {
+    { " " },
+    { discussion.repository.nameWithOwner, "OctoDetailsValue" },
+    { " " .. utils.format_date(discussion.createdAt), "OctoDetailsValue" },
+  })
+
+  -- discussion overview
+  local state = discussion.closed and "CLOSED" or "OPEN"
+  table.insert(chunks, {
+    { " " },
+    { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
+    { discussion.title .. " ", "OctoDetailsLabel" },
+    { "#" .. discussion.number .. " ", "OctoDetailsValue" },
+  })
+  if not utils.is_blank(discussion.isAnswered) and discussion.isAnswered then
+    table.insert(chunks, { { " " }, { "✓ Answered", "OctoStateApproved" } })
+  end
+  table.insert(chunks, { { "" } })
+
+  -- discussion body
+  local body = vim.split(discussion.body, "\n")
+  body = table.concat(body, " ")
+  body = body:gsub("[%c]", " ")
+  body = body:sub(1, max_length - 4 - 2) .. "…"
+  table.insert(chunks, {
+    { " " },
+    { body },
+  })
+  table.insert(chunks, { { "" } })
+
+  -- labels
+  if #discussion.labels.nodes > 0 then
+    local labels = {}
+    for _, label in ipairs(discussion.labels.nodes) do
+      local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
+      vim.list_extend(labels, label_bubble)
+    end
+    table.insert(chunks, labels)
+    table.insert(chunks, { { "" } })
+  end
+
+  -- author line
+  if utils.is_blank(discussion.author) then
+    table.insert(chunks, {
+      { " " },
+      { conf.ghost_icon or "󰊠 " },
+      { "ghost" },
+    })
+  else
+    table.insert(chunks, {
+      { " " },
+      { conf.user_icon or " " },
+      { discussion.author.login },
+    })
+  end
+
+  for i = 1, #chunks do
+    M.write_block(bufnr, { "" }, i)
+  end
+  for i = 1, #chunks do
+    M.write_virtual_text(bufnr, constants.OCTO_SUMMARY_VT_NS, i - 1, chunks[i])
+  end
+  return #chunks
+end
+
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
   local conf = config.values
@@ -1311,6 +1383,83 @@ local function write_event(bufnr, vt)
   M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line + 1, vt)
 end
 
+local get_status_check = function(statusCheckRollup)
+  if utils.is_blank(statusCheckRollup) then
+    return { "  " }
+  end
+
+  local state = statusCheckRollup.state
+  local state_info = utils.state_map[state]
+
+  return { state_info.symbol, state_info.hl }
+end
+
+local write_commit = function(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.commit, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+  table.insert(vt, get_status_check(item.commit.statusCheckRollup))
+  table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+local write_commit_header = function(bufnr, commits)
+  local get_author = function(item)
+    if item.commit.committer.user ~= vim.NIL then
+      return item.commit.committer.user.login
+    elseif item.commit.author ~= vim.NIL and item.commit.author.user ~= vim.NIL then
+      return item.commit.author.user.login
+    end
+    return "ghost"
+  end
+  local authors = {}
+  for _, item in ipairs(commits) do
+    authors[get_author(item)] = true
+  end
+  local n_authors = vim.tbl_count(authors)
+  local num_commits = #commits
+
+  local first_item = commits[1]
+  local vt = {}
+  local conf = config.values
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.commit_push, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+  local first_user = get_author(first_item)
+  table.insert(vt, {
+    first_user,
+    first_user == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  if n_authors > 1 then
+    table.insert(
+      vt,
+      { " and " .. n_authors - 1 .. " other" .. (n_authors > 2 and "s" or ""), "OctoTimelineItemHeading" }
+    )
+  end
+  table.insert(vt, { " added ", "OctoTimelineItemHeading" })
+  table.insert(vt, { num_commits .. " commit" .. (num_commits > 1 and "s" or ""), "OctoTimelineItemHeading" })
+  table.insert(vt, { " " .. utils.format_date(first_item.commit.committedDate), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+function M.write_commits(bufnr, commits)
+  write_commit_header(bufnr, commits)
+  for _, item in ipairs(commits) do
+    write_commit(bufnr, item)
+  end
+end
+
 function M.write_assigned_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1332,52 +1481,6 @@ function M.write_assigned_event(bufnr, item)
     table.insert(vt, { " assigned this to ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.assignee.login or item.assignee.name, "OctoDetailsLabel" })
   end
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
-  write_event(bufnr, vt)
-end
-
-local get_status_check = function(statusCheckRollup)
-  if utils.is_blank(statusCheckRollup) then
-    return { "  " }
-  end
-
-  local state = statusCheckRollup.state
-  local state_info = utils.state_map[state]
-
-  return { state_info.symbol, state_info.hl }
-end
-
-function M.write_commit_event(bufnr, item)
-  local vt = {}
-  local conf = config.values
-  if conf.use_timeline_icons then
-    table.insert(vt, { conf.timeline_icons.commit, "OctoTimelineMarker" })
-  else
-    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-  end
-  if item.commit.committer.user ~= vim.NIL then
-    -- local committer_bubble = bubbles.make_user_bubble(
-    --   item.commit.committer.user.login,
-    --   item.commit.committer.user.login == vim.g.octo_viewer
-    -- )
-    -- vim.list_extend(vt, committer_bubble)
-    table.insert(vt, {
-      item.commit.committer.user.login,
-      item.commit.committer.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
-    })
-  elseif item.commit.author ~= vim.NIL and item.commit.author.user ~= vim.NIL then
-    table.insert(vt, {
-      item.commit.author.user.login,
-      item.commit.author.user.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
-    })
-  end
-
-  table.insert(vt, { " added ", "OctoTimelineItemHeading" })
-  table.insert(vt, get_status_check(item.commit.statusCheckRollup))
-  table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
-  table.insert(vt, { " ", "OctoTimelineItemHeading" })
-  table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
   write_event(bufnr, vt)
 end
@@ -1701,7 +1804,7 @@ function M.write_closed_event(bufnr, item)
     return
   end
   local stateReason = item.closable and item.closable.stateReason or item.stateReason
-  stateReason = stateReason
+  stateReason = utils.is_blank(stateReason) and item.stateReason or stateReason
 
   local lookup_value = item.closable and item.closable.__typename == "Issue" and stateReason or state
   lookup_value = string.lower(lookup_value)

@@ -71,6 +71,27 @@ function M.setup()
 
   -- supported commands
   M.commands = {
+    workflow = {
+      edit = function()
+        local workflow = require "octo.workflow_runs"
+        local current_wf = workflow.current_wf
+
+        if current_wf then
+          workflow.edit(current_wf.workflowName)
+          return
+        end
+
+        workflow.workflow_list {
+          cb = workflow.edit,
+        }
+      end,
+      list = function()
+        local workflow = require "octo.workflow_runs"
+        workflow.workflow_list {
+          cb = workflow.edit,
+        }
+      end,
+    },
     run = {
       list = function()
         local function co_wrapper()
@@ -1240,7 +1261,7 @@ function M.change_state(state)
     jq = ".data.updateIssue.issue"
     fields = {}
   elseif buffer:isIssue() and state == "OPEN" then
-    query = graphql "reopen_issue_mutation"
+    query = mutations.reopen_issue
     desired_state = "OPEN"
     jq = ".data.reopenIssue.issue"
     fields = { issueId = id }
@@ -2236,8 +2257,7 @@ function M.copy_url()
     url = utils.get_remote_url()
   end
 
-  vim.fn.setreg("+", url, "c")
-  utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
+  utils.copy_url(url)
 end
 
 function M.actions()

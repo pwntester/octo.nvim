@@ -51,7 +51,7 @@ local discussion = defaulter(function(opts)
       local owner, name = utils.split_repo(entry.repo)
 
       gh.api.graphql {
-        query = graphql "discussion_query",
+        query = queries.discussion,
         fields = { owner = owner, name = name, number = number },
         jq = ".data.repository.discussion",
         opts = {

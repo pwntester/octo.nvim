@@ -4,6 +4,7 @@ local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
@@ -56,6 +57,8 @@ local gh = require "octo.gh"
 ---@field wf_cache table<string,WorkflowRun>
 ---@field refresh function
 ---@field refetch function
+---@field cancel function
+---@field rerun function
 
 ---@class WorkflowNode
 ---@field id string
@@ -309,7 +312,6 @@ local function get_logs(id)
     local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
     local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
     local path = vim.fs.joinpath(sanitized_job_id, file_name)
-    print(path)
     local res = vim
       .system({
         "unzip",
@@ -353,8 +355,20 @@ end
 local keymaps = {
   ---@param api Handler
   [mappings.refresh.lhs] = function(api)
-    utils.info "refreshing..."
+    utils.info "Refreshing..."
     api.refetch()
+  end,
+  [mappings.rerun.lhs] = function(api)
+    utils.info "Rerunning..."
+    api.rerun()
+  end,
+  [mappings.rerun_failed.lhs] = function(api)
+    utils.info "Rerunning failed jobs..."
+    api.rerun { failed = true }
+  end,
+  [mappings.cancel.lhs] = function(api)
+    utils.info "Cancelling..."
+    api.cancel()
   end,
   [mappings.open_in_browser.lhs] = function(api)
     local id = api.current_wf.databaseId
@@ -362,8 +376,7 @@ local keymaps = {
   end,
   [mappings.copy_url.lhs] = function(api)
     local url = api.current_wf.url
-    vim.fn.setreg("+", url, "c")
-    utils.info("Copied URL '" .. url .. "' to the system clipboard (+ register)")
+    utils.copy_url(url)
   end,
 }
 
@@ -722,6 +735,92 @@ M.refetch = function()
   M.wf_cache[id] = nil
   M.current_wf = nil
   populate_preview_buffer(id, M.buf)
+end
+
+---@param db_id number | nil
+M.cancel = function(db_id)
+  local id = db_id or M.current_wf.databaseId
+  local _, stderr = gh.run.cancel {
+    id,
+    opts = { mode = "sync" },
+  }
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to cancel workflow run"
+  else
+    utils.info "Cancelled"
+  end
+  M.refetch()
+end
+
+---@param opts { db_id: number | nil, failed: boolean | nil }
+M.rerun = function(opts)
+  opts = opts or {}
+  local failed_jobs = opts.failed == true
+  local id = opts.db_id or (M.current_wf and M.current_wf.databaseId)
+  local _, stderr = gh.run.rerun {
+    id,
+    failed = failed_jobs,
+    opts = { mode = "sync" },
+  }
+  if stderr and not utils.is_blank(stderr) then
+    vim.api.nvim_err_writeln(stderr)
+    utils.error "Failed to rerun workflow run"
+  else
+    utils.info "Rerun queued"
+  end
+  M.refetch()
+end
+
+local find_workflow_path_by_name = function(workflow_name)
+  local jq = ([[
+    map(select(.name == "{name}")) | .[0].path
+  ]]):gsub("{name}", workflow_name)
+
+  return gh.workflow.list {
+    json = "name,path",
+    jq = jq,
+    opts = { mode = "sync" },
+  }
+end
+
+M.edit = function(workflow_name)
+  if workflow_name == "Dependabot Updates" then
+    vim.cmd.edit ".github/dependabot.yml"
+    return
+  end
+
+  local path = find_workflow_path_by_name(workflow_name)
+
+  if string.match(path, "^dynamic") then
+    utils.error "Dynamic workflows are not supported"
+    return
+  end
+
+  vim.cmd.edit(path)
+end
+
+M.workflow_list = function(opts)
+  opts = opts or {}
+
+  if not opts.cb then
+    error "Callback is required"
+  end
+
+  local names = gh.workflow.list {
+    json = "name",
+    jq = "map(.name)",
+    opts = { mode = "sync" },
+  }
+
+  vim.ui.select(vim.json.decode(names), {
+    prompt = "Select a workflow: ",
+  }, function(selected)
+    if not selected then
+      return
+    end
+    opts.cb(selected)
+  end)
 end
 
 return M

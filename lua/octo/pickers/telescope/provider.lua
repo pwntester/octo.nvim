@@ -117,9 +117,7 @@ end
 local function copy_url()
   return function(prompt_bufnr)
     local entry = action_state.get_selected_entry(prompt_bufnr)
-    local url = entry.obj.url
-    vim.fn.setreg("+", url, "c")
-    utils.info("Copied '" .. url .. "' to the system clipboard (+ register)")
+    utils.copy_url(entry.obj.url)
   end
 end
 
@@ -676,11 +674,31 @@ function M.workflow_runs(workflow_runs, title, on_select_cb)
       },
       sorter = conf.generic_sorter {},
       previewer = previewers.workflow_runs.new {},
-      attach_mappings = function()
+      attach_mappings = function(_, map)
         actions.select_default:replace(function(prompt_bufnr)
           local selection = action_state.get_selected_entry(prompt_bufnr)
           actions.close(prompt_bufnr)
           on_select_cb(selection.value)
+        end)
+        local mappings = require("octo.config").values.mappings.runs
+
+        map("i", mappings.rerun.lhs, function(prompt_bufnr)
+          local selection = action_state.get_selected_entry(prompt_bufnr)
+          local id = selection.value.id
+          require("octo.workflow_runs").rerun { db_id = id }
+        end)
+
+        map("i", mappings.rerun_failed.lhs, function(prompt_bufnr)
+          local selection = action_state.get_selected_entry(prompt_bufnr)
+          local id = selection.value.id
+          require("octo.workflow_runs").rerun { db_id = id, failed = true }
+        end)
+
+        map("i", mappings.cancel.lhs, function(prompt_bufnr)
+          local selection = action_state.get_selected_entry(prompt_bufnr)
+          local id = selection.value.id
+          require("octo.workflow_runs").cancel(id)
+          actions.close(prompt_bufnr)
         end)
         return true
       end,
@@ -1288,6 +1306,20 @@ function M.notifications(opts)
       return
     end
 
+    local copy_notification_url = function(prompt_bufnr)
+      local entry = action_state.get_selected_entry(prompt_bufnr)
+      local subject = entry.obj.subject
+      local url = not utils.is_blank(subject.latest_comment_url) and subject.latest_comment_url or subject.url
+
+      gh.api.get {
+        url,
+        jq = ".html_url",
+        opts = {
+          cb = gh.create_callback { success = utils.copy_url },
+        },
+      }
+    end
+
     pickers
       .new(opts, {
         finder = finders.new_table {
@@ -1303,7 +1335,7 @@ function M.notifications(opts)
             open(type)(prompt_bufnr)
           end)
           map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
           map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
           return true
         end,
@@ -1313,6 +1345,7 @@ function M.notifications(opts)
 
   gh.api.get {
     endpoint,
+    paginate = true,
     F = {
       all = opts.all,
     },
@@ -1401,7 +1434,7 @@ function M.discussions(opts)
   utils.info "Fetching discussions (this may take a while) ..."
 
   gh.api.graphql {
-    query = graphql "discussions_query",
+    query = queries.discussions,
     fields = {
       owner = owner,
       name = name,
@@ -1430,10 +1463,9 @@ function M.milestones(opts)
 
   local repo = opts.repo or utils.get_remote_name()
   local owner, name = utils.split_repo(repo)
-  local query = graphql "open_milestones_query"
 
   gh.api.graphql {
-    query = query,
+    query = queries.open_milestones,
     fields = {
       owner = owner,
       name = name,
