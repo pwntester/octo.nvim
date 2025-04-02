@@ -150,6 +150,11 @@ function M.next_comment()
     if not lines or not current_line then
       return
     end
+
+    if #lines == 0 then
+      return
+    end
+
     local target
     if current_line < lines[1] + 1 then
       -- go to first comment
@@ -179,6 +184,11 @@ function M.prev_comment()
     if not lines or not current_line then
       return
     end
+
+    if #lines == 0 then
+      return
+    end
+
     local target
     if current_line > lines[#lines] + 2 then
       -- go to last comment
