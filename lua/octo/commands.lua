@@ -72,14 +72,6 @@ function M.setup()
   -- supported commands
   M.commands = {
     workflow = {
-      list = function()
-        local workflow = require "octo.workflow_runs"
-        workflow.workflow_list {
-          cb = workflow.edit,
-        }
-      end,
-    },
-    run = {
       edit = function()
         local workflow = require "octo.workflow_runs"
         local current_wf = workflow.current_wf
@@ -93,6 +85,14 @@ function M.setup()
           cb = workflow.edit,
         }
       end,
+      list = function()
+        local workflow = require "octo.workflow_runs"
+        workflow.workflow_list {
+          cb = workflow.edit,
+        }
+      end,
+    },
+    run = {
       list = function()
         local function co_wrapper()
           require("octo.workflow_runs").list()
