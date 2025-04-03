@@ -930,22 +930,21 @@ end
 ---@param cb function
 function M.get_file_contents(repo, commit, path, cb)
   local owner, name = M.split_repo(repo)
-  local query = graphql("file_content_query", owner, name, commit, path)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local blob = resp.data.repository.object
-        local lines = {}
-        if blob and blob ~= vim.NIL and type(blob.text) == "string" then
-          lines = vim.split(blob.text, "\n")
-        end
-        cb(lines)
-      end
-    end,
+  gh.api.graphql {
+    query = queries.file_content,
+    f = { owner = owner, name = name, expression = commit .. ":" .. path },
+    jq = ".data.repository.object.text",
+    opts = {
+      cb = gh.create_callback {
+        success = function(blob)
+          local lines = {}
+          if blob then
+            lines = vim.split(blob, "\n")
+          end
+          cb(lines)
+        end,
+      },
+    },
   }
 end
 

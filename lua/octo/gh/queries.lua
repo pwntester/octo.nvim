@@ -738,9 +738,9 @@ query($endCursor: String) {
 ]]
 
 M.file_content = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    object(expression: "%s:%s") {
+query($owner: String!, $name: String!, $expression: String!) {
+  repository(owner: $owner, name: $name) {
+    object(expression: $expression) {
       ... on Blob {
         text
       }
