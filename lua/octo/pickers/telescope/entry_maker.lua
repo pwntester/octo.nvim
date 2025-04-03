@@ -545,7 +545,9 @@ function M.gen_from_user()
   end
 end
 
-function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
+function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, include_fork)
+  include_fork = include_fork == nil and true or include_fork
+
   local make_display = function(entry)
     if not entry then
       return nil
@@ -568,22 +570,32 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
       { "f:", "TelescopeResultsNumber" },
       { entry.obj.forkCount },
       { access_str },
-      { fork_str },
-      { entry.obj.description },
     }
+
+    if include_fork then
+      table.insert(columns, { fork_str })
+    end
+
+    table.insert(columns, { entry.obj.description })
+
+    local widths = {
+      { width = math.min(max_nameWithOwner, 50) },
+      { width = 2 },
+      { width = max_stargazerCount },
+      { width = 2 },
+      { width = max_forkCount },
+      { width = vim.fn.len "private" },
+    }
+
+    if include_fork then
+      table.insert(widths, { width = vim.fn.len "fork" })
+    end
+
+    table.insert(widths, { remaining = true })
 
     local displayer = entry_display.create {
       separator = " ",
-      items = {
-        { width = math.min(max_nameWithOwner, 50) },
-        { width = 2 },
-        { width = max_stargazerCount },
-        { width = 2 },
-        { width = max_forkCount },
-        { width = vim.fn.len "private" },
-        { width = vim.fn.len "fork" },
-        { remaining = true },
-      },
+      items = widths,
     }
 
     return displayer(columns)

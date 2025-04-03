@@ -355,8 +355,8 @@ query($prompt: String!, $type: SearchType = ISSUE) {
 ]]
 
 M.search = [[
-query($prompt: String!, $type: SearchType = ISSUE) {
-  search(query: $prompt, type: $type, last: 100) {
+query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
+  search(query: $prompt, type: $type, last: $last) {
     nodes {
       ... on Issue {
         __typename
@@ -381,10 +381,7 @@ query($prompt: String!, $type: SearchType = ISSUE) {
       }
       ... on Repository {
         __typename
-        name
-        nameWithOwner
-        description
-        url
+        ...RepositoryFragment
       }
       ... on Organization {
         __typename
@@ -399,7 +396,7 @@ query($prompt: String!, $type: SearchType = ISSUE) {
     }
   }
 }
-]] .. fragments.discussion_info
+]] .. fragments.discussion_info .. fragments.repository
 
 M.discussions = [[
 query(
