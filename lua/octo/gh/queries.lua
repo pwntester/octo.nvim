@@ -381,10 +381,7 @@ query($prompt: String!, $type: SearchType = ISSUE) {
       }
       ... on Repository {
         __typename
-        name
-        nameWithOwner
-        description
-        url
+        ...RepositoryFragment
       }
       ... on Organization {
         __typename
@@ -399,7 +396,7 @@ query($prompt: String!, $type: SearchType = ISSUE) {
     }
   }
 }
-]] .. fragments.discussion_info
+]] .. fragments.discussion_info .. fragments.repository
 
 M.discussions = [[
 query(
