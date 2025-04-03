@@ -550,12 +550,12 @@ local create_repo_picker = function(repos, opts, max)
   if type(repos) == "function" then
     finder = finders.new_dynamic {
       fn = repos,
-      entry_maker = entry_maker.gen_from_repo(max.nameWithOwner, max.forkCount, max.stargazerCount),
+      entry_maker = entry_maker.gen_from_repo(max.nameWithOwner, max.forkCount, max.stargazerCount, false),
     }
   else
     finder = finders.new_table {
       results = repos,
-      entry_maker = entry_maker.gen_from_repo(max.nameWithOwner, max.forkCount, max.stargazerCount),
+      entry_maker = entry_maker.gen_from_repo(max.nameWithOwner, max.forkCount, max.stargazerCount, true),
     }
   end
 
