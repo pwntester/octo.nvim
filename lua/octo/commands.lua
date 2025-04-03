@@ -694,6 +694,7 @@ function M.setup()
 
         current_review:add_comment(true)
       end,
+      reply = M.add_pr_issue_or_review_thread_comment_reply,
       url = function()
         local buffer = utils.get_current_buffer()
 
@@ -1041,7 +1042,8 @@ function M.octo(object, action, ...)
 end
 
 --- Adds a new comment to an issue/PR or a review thread
-function M.add_pr_issue_or_review_thread_comment()
+function M.add_pr_issue_or_review_thread_comment(body)
+  body = body or " "
   local buffer = utils.get_current_buffer()
 
   if not buffer then
@@ -1053,7 +1055,7 @@ function M.add_pr_issue_or_review_thread_comment()
     id = -1,
     author = { login = vim.g.octo_viewer },
     createdAt = os.date "!%FT%TZ",
-    body = " ",
+    body = body,
     viewerCanUpdate = true,
     viewerCanDelete = true,
     viewerDidAuthor = true,
@@ -1134,6 +1136,33 @@ function M.add_pr_issue_or_review_thread_comment()
 
   -- drop undo history
   utils.clear_history()
+end
+
+local format_reply = function(body)
+  local lines = vim.split(body, "\n")
+  local reply = ""
+  for _, line in ipairs(lines) do
+    reply = reply .. "> " .. line .. "\n"
+  end
+  reply = reply .. "\n"
+
+  return reply
+end
+
+M.add_pr_issue_or_review_thread_comment_reply = function()
+  local buffer = utils.get_current_buffer()
+
+  if not buffer then
+    return
+  end
+
+  local comment = buffer:get_comment_at_cursor()
+  if not comment then
+    utils.error "The cursor does not seem to be located at any comment"
+    return
+  end
+
+  M.add_pr_issue_or_review_thread_comment(format_reply(comment.body))
 end
 
 function M.delete_comment()
