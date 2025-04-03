@@ -868,25 +868,7 @@ query($login: String!, $endCursor: String) {
   repositoryOwner(login: $login) {
     repositories(first: 10, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
       nodes {
-        createdAt
-        description
-        diskUsage
-        forkCount
-        isArchived
-        isDisabled
-        isEmpty
-        isFork
-        isInOrganization
-        isPrivate
-        isSecurityPolicyEnabled
-        name
-        nameWithOwner
-        parent {
-          nameWithOwner
-        }
-        stargazerCount
-        updatedAt
-        url
+        ...RepositoryFragment
       }
       pageInfo {
         hasNextPage
@@ -895,38 +877,20 @@ query($login: String!, $endCursor: String) {
     }
   }
 }
-]]
+]] .. fragments.repository
 
 M.repository = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
-    id
-    nameWithOwner
-    description
-    forkCount
-    stargazerCount
-    diskUsage
-    createdAt
-    updatedAt
+    ...RepositoryFragment
     pushedAt
-    isFork
     defaultBranchRef {
       name
     }
-    parent {
-      nameWithOwner
-    }
-    isArchived
-    isDisabled
-    isPrivate
-    isEmpty
-    isInOrganization
-    isSecurityPolicyEnabled
     securityPolicyUrl
     defaultBranchRef {
       name
     }
-    url
     isLocked
     lockReason
     isMirror
@@ -952,7 +916,7 @@ query($owner: String!, $name: String!) {
     }
   }
 }
-]]
+]] .. fragments.repository
 
 M.gists = [[
 query($endCursor: String) {

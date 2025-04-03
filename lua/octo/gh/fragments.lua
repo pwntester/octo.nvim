@@ -648,4 +648,29 @@ fragment DiscussionCommentFragment on DiscussionComment {
 }
 ]]
 
+M.repository = [[
+fragment RepositoryFragment on Repository {
+  id
+  createdAt
+  description
+  diskUsage
+  forkCount
+  isArchived
+  isDisabled
+  isEmpty
+  isFork
+  isInOrganization
+  isPrivate
+  isSecurityPolicyEnabled
+  name
+  nameWithOwner
+  parent {
+    nameWithOwner
+  }
+  stargazerCount
+  updatedAt
+  url
+}
+]]
+
 return M
