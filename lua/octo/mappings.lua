@@ -82,6 +82,9 @@ return {
   add_comment = function()
     require("octo.commands").add_pr_issue_or_review_thread_comment()
   end,
+  add_reply = function()
+    require("octo.commands").add_pr_issue_or_review_thread_comment_reply()
+  end,
   add_suggestion = function()
     require("octo.commands").add_suggestion()
   end,
