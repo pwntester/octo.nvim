@@ -10,13 +10,6 @@ local previewers = require "octo.pickers.fzf-lua.previewers"
 
 return function(opts)
   opts = opts or {}
-  if not opts.login then
-    if vim.g.octo_viewer then
-      opts.login = vim.g.octo_viewer
-    else
-      opts.login = require("octo.gh").get_user_name()
-    end
-  end
 
   local formatted_repos = {} ---@type table<string, table> entry.ordinal -> entry
 

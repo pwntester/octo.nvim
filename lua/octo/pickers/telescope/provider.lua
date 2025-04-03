@@ -1161,15 +1161,7 @@ end
 --
 function M.repos(opts)
   opts = opts or {}
-  local cfg = octo_config.values
-  if not opts.login then
-    if vim.g.octo_viewer then
-      opts.login = vim.g.octo_viewer
-    else
-      local remote_hostname = require("octo.utils").get_remote_host()
-      opts.login = require("octo.gh").get_user_name(remote_hostname)
-    end
-  end
+
   opts.preview_title = opts.preview_title or ""
   opts.prompt_title = opts.prompt_title or ""
   opts.results_title = opts.results_title or ""

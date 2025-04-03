@@ -478,7 +478,18 @@ function M.setup()
     },
     repo = {
       list = function(login)
-        picker.repos { login = login }
+        local opts = { login = login }
+
+        if not opts.login then
+          if vim.g.octo_viewer then
+            opts.login = vim.g.octo_viewer
+          else
+            local remote_hostname = utils.get_remote_host()
+            opts.login = gh.get_user_name(remote_hostname)
+          end
+        end
+
+        picker.repos(opts)
       end,
       view = function(repo)
         if repo == nil and utils.cwd_is_git() then
