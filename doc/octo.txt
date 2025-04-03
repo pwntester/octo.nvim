@@ -130,6 +130,7 @@ See |octo-command-examples| for examples.
   delete                Delete a comment.
   url                   Copies the URL of the current comment to the system 
                         clipboard.
+  reply                 Reply to a comment.
 
 
 :Octo thread [action]                           *octo-commands-thread*
