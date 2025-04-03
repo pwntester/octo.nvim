@@ -1170,50 +1170,57 @@ function M.repos(opts)
       opts.login = require("octo.gh").get_user_name(remote_hostname)
     end
   end
-  local query = graphql("repos_query", opts.login)
+  opts.preview_title = opts.preview_title or ""
+  opts.prompt_title = opts.prompt_title or ""
+  opts.results_title = opts.results_title or ""
+
+  local create_repo_picker = function(repos)
+    local max_nameWithOwner = -1
+    local max_forkCount = -1
+    local max_stargazerCount = -1
+    for _, repo in ipairs(repos) do
+      max_nameWithOwner = math.max(max_nameWithOwner, #repo.nameWithOwner)
+      max_forkCount = math.max(max_forkCount, #tostring(repo.forkCount))
+      max_stargazerCount = math.max(max_stargazerCount, #tostring(repo.stargazerCount))
+    end
+    pickers
+      .new(opts, {
+        finder = finders.new_table {
+          results = repos,
+          entry_maker = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount),
+        },
+        sorter = conf.generic_sorter(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(function(prompt_bufnr, type)
+            open(type)(prompt_bufnr)
+          end)
+          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          return true
+        end,
+      })
+      :find()
+  end
+
   utils.info "Fetching repositories (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
-        local repos = resp.data.repositoryOwner.repositories.nodes
-        if #repos == 0 then
-          utils.error(string.format("There are no matching repositories for %s.", opts.login))
-          return
-        end
-        local max_nameWithOwner = -1
-        local max_forkCount = -1
-        local max_stargazerCount = -1
-        for _, repo in ipairs(repos) do
-          max_nameWithOwner = math.max(max_nameWithOwner, #repo.nameWithOwner)
-          max_forkCount = math.max(max_forkCount, #tostring(repo.forkCount))
-          max_stargazerCount = math.max(max_stargazerCount, #tostring(repo.stargazerCount))
-        end
-        opts.preview_title = opts.preview_title or ""
-        opts.prompt_title = opts.prompt_title or ""
-        opts.results_title = opts.results_title or ""
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = repos,
-              entry_maker = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open(type)(prompt_bufnr)
-              end)
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+  gh.api.graphql {
+    query = queries.repos,
+    f = { login = opts.login },
+    paginate = true,
+    jq = ".data.repositoryOwner.repositories.nodes",
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local repos = utils.get_flatten_pages(output)
+          if #repos == 0 then
+            utils.error(string.format("There are no matching repositories for %s.", opts.login))
+            return
+          end
+
+          create_repo_picker(repos)
+        end,
+      },
+    },
   }
 end
 

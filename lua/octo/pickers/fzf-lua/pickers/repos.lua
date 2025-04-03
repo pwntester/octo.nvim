@@ -3,6 +3,7 @@ local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
@@ -20,34 +21,39 @@ return function(opts)
   local formatted_repos = {} ---@type table<string, table> entry.ordinal -> entry
 
   local get_contents = function(fzf_cb)
-    local query = graphql("repos_query", opts.login)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-      stream_cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
+    gh.api.graphql {
+      query = queries.repos,
+      f = { login = opts.login },
+      paginate = true,
+      jq = ".data.repositoryOwner.repositories.nodes",
+      opts = {
+        cb = function()
           fzf_cb()
-        elseif output then
-          local resp = utils.aggregate_pages(output, "data.repositoryOwner.repositories.nodes")
-          local repos = resp.data.repositoryOwner.repositories.nodes
-          if #repos == 0 then
-            utils.error(string.format("There are no matching repositories for %s.", opts.login))
-            return
-          end
+        end,
+        stream_cb = gh.create_callback {
+          failure = function(stderr)
+            utils.error(stderr)
+            fzf_cb()
+          end,
+          success = function(output)
+            local repos = utils.get_flatten_pages(output)
 
-          for _, repo in ipairs(repos) do
-            local entry, entry_str = entry_maker.gen_from_repo(repo)
-
-            if entry ~= nil and entry_str ~= nil then
-              formatted_repos[fzf.utils.strip_ansi_coloring(entry_str)] = entry
-              fzf_cb(entry_str)
+            if #repos == 0 then
+              utils.error(string.format("There are no matching repositories for %s.", opts.login))
+              return
             end
-          end
-        end
-      end,
-      cb = function()
-        fzf_cb()
-      end,
+
+            for _, repo in ipairs(repos) do
+              local entry, entry_str = entry_maker.gen_from_repo(repo)
+
+              if entry ~= nil and entry_str ~= nil then
+                formatted_repos[fzf.utils.strip_ansi_coloring(entry_str)] = entry
+                fzf_cb(entry_str)
+              end
+            end
+          end,
+        },
+      },
     }
   end
 
