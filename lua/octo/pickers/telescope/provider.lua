@@ -1166,6 +1166,8 @@ function M.repos(opts)
   opts.prompt_title = opts.prompt_title or ""
   opts.results_title = opts.results_title or ""
 
+  local cfg = octo_config.values
+
   local create_repo_picker = function(repos)
     local max_nameWithOwner = -1
     local max_forkCount = -1
