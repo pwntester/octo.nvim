@@ -477,6 +477,12 @@ function M.setup()
       end,
     },
     repo = {
+      search = function(prompt)
+        picker.search {
+          type = "REPOSITORY",
+          prompt = prompt,
+        }
+      end,
       list = function(login)
         local opts = { login = login }
 
@@ -2299,6 +2305,9 @@ function M.search(...)
   if string.match(prompt, "is:discussion") then
     type = "DISCUSSION"
     prompt = string.gsub(prompt, "is:discussion", "")
+  elseif string.match(prompt, "is:repository") then
+    type = "REPOSITORY"
+    prompt = string.gsub(prompt, "is:repository", "")
   end
 
   picker.search { prompt = prompt, type = type }
