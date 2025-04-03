@@ -247,6 +247,7 @@ require"octo".setup({
       remove_label = { lhs = "<localleader>ld", desc = "remove label" },
       goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+      add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
       prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -283,6 +284,7 @@ require"octo".setup({
       remove_label = { lhs = "<localleader>ld", desc = "remove label" },
       goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+      add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
       prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -302,6 +304,7 @@ require"octo".setup({
     review_thread = {
       goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+      add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       add_suggestion = { lhs = "<localleader>sa", desc = "add suggestion" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
@@ -416,7 +419,8 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
 |          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
-| thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
+|          | reply                                            | Add comment as a reply to the current comment | 
+ | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
 |          | remove [label]                                    | Remove a label                                                                                                                                         |
