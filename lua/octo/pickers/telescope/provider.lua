@@ -543,9 +543,71 @@ local function get_search_size(prompt)
   }
 end
 
+local create_repo_picker = function(repos, opts, max)
+  local cfg = octo_config.values
+
+  local finder
+  if type(repos) == "function" then
+    finder = finders.new_dynamic {
+      fn = repos,
+      entry_maker = entry_maker.gen_from_repo(max.nameWithOwner, max.forkCount, max.stargazerCount),
+    }
+  else
+    finder = finders.new_table {
+      results = repos,
+      entry_maker = entry_maker.gen_from_repo(max.nameWithOwner, max.forkCount, max.stargazerCount),
+    }
+  end
+
+  pickers
+    .new(opts, {
+      finder = finder,
+      sorter = conf.generic_sorter(opts),
+      attach_mappings = function(_, map)
+        action_set.select:replace(function(prompt_bufnr, type)
+          open(type)(prompt_bufnr)
+        end)
+        map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+        map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+        return true
+      end,
+    })
+    :find()
+end
+
+local repo_search = function(opts)
+  if utils.is_blank(opts.prompt) then
+    utils.error "No search term provided"
+    return
+  end
+
+  local repos = function(prompt)
+    local data = gh.api.graphql {
+      query = queries.search,
+      f = { prompt = opts.prompt .. " " .. prompt, type = "REPOSITORY" },
+      F = { last = 50 },
+      jq = ".data.search.nodes",
+      opts = { mode = "sync" },
+    }
+
+    return vim.json.decode(data)
+  end
+
+  create_repo_picker(repos, opts, {
+    nameWithOwner = 25,
+    forkCount = 5,
+    stargazerCount = 5,
+  })
+end
+
 function M.search(opts)
   opts = opts or {}
   opts.type = opts.type or "ISSUE"
+
+  if opts.type == "REPOSITORY" then
+    repo_search(opts)
+    return
+  end
 
   local settings = opts.type == "ISSUE"
       and {
@@ -1159,6 +1221,7 @@ end
 --
 -- REPOS
 --
+
 function M.repos(opts)
   opts = opts or {}
 
@@ -1167,34 +1230,6 @@ function M.repos(opts)
   opts.results_title = opts.results_title or ""
 
   local cfg = octo_config.values
-
-  local create_repo_picker = function(repos)
-    local max_nameWithOwner = -1
-    local max_forkCount = -1
-    local max_stargazerCount = -1
-    for _, repo in ipairs(repos) do
-      max_nameWithOwner = math.max(max_nameWithOwner, #repo.nameWithOwner)
-      max_forkCount = math.max(max_forkCount, #tostring(repo.forkCount))
-      max_stargazerCount = math.max(max_stargazerCount, #tostring(repo.stargazerCount))
-    end
-    pickers
-      .new(opts, {
-        finder = finders.new_table {
-          results = repos,
-          entry_maker = entry_maker.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount),
-        },
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(_, map)
-          action_set.select:replace(function(prompt_bufnr, type)
-            open(type)(prompt_bufnr)
-          end)
-          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-          return true
-        end,
-      })
-      :find()
-  end
 
   utils.info "Fetching repositories (this may take a while) ..."
   gh.api.graphql {
@@ -1211,7 +1246,20 @@ function M.repos(opts)
             return
           end
 
-          create_repo_picker(repos)
+          local max_nameWithOwner = -1
+          local max_forkCount = -1
+          local max_stargazerCount = -1
+          for _, repo in ipairs(repos) do
+            max_nameWithOwner = math.max(max_nameWithOwner, #repo.nameWithOwner)
+            max_forkCount = math.max(max_forkCount, #tostring(repo.forkCount))
+            max_stargazerCount = math.max(max_stargazerCount, #tostring(repo.stargazerCount))
+          end
+
+          create_repo_picker(repos, opts, {
+            nameWithOwner = max_nameWithOwner,
+            forkCount = max_forkCount,
+            stargazerCount = max_stargazerCount,
+          })
         end,
       },
     },
