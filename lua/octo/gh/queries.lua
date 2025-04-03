@@ -864,8 +864,8 @@ query($endCursor: String) {
 ]]
 
 M.repos = [[
-query($endCursor: String) {
-  repositoryOwner(login: "%s") {
+query($login: String!, $endCursor: String) {
+  repositoryOwner(login: $login) {
     repositories(first: 10, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
       nodes {
         createdAt
