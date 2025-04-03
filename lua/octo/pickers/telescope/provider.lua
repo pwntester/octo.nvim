@@ -576,15 +576,22 @@ local create_repo_picker = function(repos, opts, max)
 end
 
 local repo_search = function(opts)
-  if utils.is_blank(opts.prompt) then
-    utils.error "No search term provided"
-    return
-  end
+  opts.prompt = opts.prompt or ""
 
   local repos = function(prompt)
+    local full_prompt = opts.prompt
+
+    if prompt then
+      full_prompt = full_prompt .. " " .. prompt
+    end
+
+    if utils.is_blank(full_prompt) then
+      return {}
+    end
+
     local data = gh.api.graphql {
       query = queries.search,
-      f = { prompt = opts.prompt .. " " .. prompt, type = "REPOSITORY" },
+      f = { prompt = full_prompt, type = "REPOSITORY" },
       F = { last = 50 },
       jq = ".data.search.nodes",
       opts = { mode = "sync" },
