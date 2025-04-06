@@ -42,7 +42,6 @@ function M.setup(user_config)
   autocmds.setup()
   commands.setup()
   gh.setup()
-  colors.setup()
 end
 
 function M.update_layout_for_current_file()
@@ -50,6 +49,7 @@ function M.update_layout_for_current_file()
   local thisfile = vim.api.nvim_buf_get_name(bufnr)
   local relative_path = vim.fn.fnamemodify(thisfile, ":~:.")
   local review = reviews.get_current_review()
+  colors.setup()
   if review == nil then
     return
   end
