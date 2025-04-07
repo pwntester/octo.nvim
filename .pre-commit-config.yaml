@@ -1,9 +1,9 @@
 ---
 ci: 
-  autofix_prs: false
+  autofix_prs: true
 
 repos:
   - repo: https://github.com/JohnnyMorganz/StyLua
-    rev: v0.20.0
+    rev: v2.0.2
     hooks:
       - id: stylua
