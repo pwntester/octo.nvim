@@ -3,6 +3,7 @@ local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local octo_config = require "octo.config"
 local navigation = require "octo.navigation"
+local Snacks = require "snacks"
 
 local M = {}
 
@@ -308,6 +309,68 @@ function M.notifications(opts)
   }
 end
 
+function M.issue_templates(templates, cb)
+  if not templates or #templates == 0 then
+    utils.error("No templates found")
+    return
+  end
+
+  local formatted_templates = {}
+  for _, template in ipairs(templates) do
+    if template and not vim.tbl_isempty(template) then
+      local item = {
+        value = template.name,
+        display = template.name .. (template.about and (" - " .. template.about) or ""),
+        ordinal = template.name .. " " .. (template.about or ""),
+        template = template,
+      }
+      table.insert(formatted_templates, item)
+    end
+  end
+
+  local preview_fn = function(ctx)
+    ctx.preview:reset()
+
+    local item = ctx.item
+    if not item or not item.template or not item.template.body then
+      ctx.preview:set_lines({ "No template body available" })
+      return
+    end
+
+    local lines = vim.split(item.template.body, "\n")
+    ctx.preview:set_lines(lines)
+    ctx.preview:highlight({ ft = "markdown" })
+  end
+
+  Snacks.picker.pick {
+    title = "Issue templates",
+    items = formatted_templates,
+    format = function(item)
+      if type(item) ~= "table" then
+        return { { "Invalid item", "Error" } }
+      end
+
+      local ret = {}
+      ret[#ret + 1] = { item.value or "", "Function" }
+
+      if item.template and item.template.about and item.template.about ~= "" then
+        ret[#ret + 1] = { " - ", "Comment" }
+        ret[#ret + 1] = { item.template.about, "Normal" }
+      end
+
+      return ret
+    end,
+    preview = preview_fn, -- Use our custom preview function
+    actions = {
+      confirm = function(_, item)
+        if type(cb) == "function" then
+          cb(item.template)
+        end
+      end
+    }
+  }
+end
+
 M.picker = {
   actions = M.not_implemented,
   assigned_labels = M.not_implemented,
@@ -316,7 +379,7 @@ M.picker = {
   commits = M.not_implemented,
   discussions = M.not_implemented,
   gists = M.not_implemented,
-  issue_templates = M.not_implemented,
+  issue_templates = M.issue_templates,
   issues = M.issues,
   labels = M.not_implemented,
   notifications = M.notifications,
