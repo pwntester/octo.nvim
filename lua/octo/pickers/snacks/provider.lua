@@ -311,7 +311,7 @@ end
 
 function M.issue_templates(templates, cb)
   if not templates or #templates == 0 then
-    utils.error("No templates found")
+    utils.error "No templates found"
     return
   end
 
@@ -333,13 +333,13 @@ function M.issue_templates(templates, cb)
 
     local item = ctx.item
     if not item or not item.template or not item.template.body then
-      ctx.preview:set_lines({ "No template body available" })
+      ctx.preview:set_lines { "No template body available" }
       return
     end
 
     local lines = vim.split(item.template.body, "\n")
     ctx.preview:set_lines(lines)
-    ctx.preview:highlight({ ft = "markdown" })
+    ctx.preview:highlight { ft = "markdown" }
   end
 
   Snacks.picker.pick {
@@ -366,8 +366,8 @@ function M.issue_templates(templates, cb)
         if type(cb) == "function" then
           cb(item.template)
         end
-      end
-    }
+      end,
+    },
   }
 end
 
