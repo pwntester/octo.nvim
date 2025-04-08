@@ -1,5 +1,6 @@
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 
 local vim = vim
@@ -33,8 +34,7 @@ function M.open_in_browser(kind, repo, number)
   end
 
   if not kind and not repo then
-    local bufnr = vim.api.nvim_get_current_buf()
-    local buffer = octo_buffers[bufnr]
+    local buffer = utils.get_current_buffer()
     if not buffer then
       local owner_repo = utils.get_remote_name()
       if not owner_repo then
@@ -62,6 +62,8 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh gist view --web %s", number)
     elseif kind == "project" then
       cmd = string.format("gh project view --owner %s --web %s", repo, number)
+    elseif kind == "workflow_run" then
+      cmd = string.format("gh run view %s --web", number)
     end
   end
   pcall(vim.cmd, "silent !" .. cmd)
@@ -106,8 +108,7 @@ function M.go_to_file()
 end
 
 function M.go_to_issue()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -116,32 +117,32 @@ function M.go_to_issue()
     return
   end
   local owner, name = utils.split_repo(repo)
-  local query = graphql("issue_kind_query", owner, name, number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local kind = resp.data.repository.issueOrPullRequest.__typename
-        if kind == "Issue" then
-          utils.get_issue(repo, number)
-        elseif kind == "PullRequest" then
-          utils.get_pull_request(repo, number)
-        end
-      end
-    end,
+
+  gh.api.graphql {
+    query = queries.issue_kind,
+    fields = { owner = owner, name = name, number = number },
+    jq = ".data.repository.issueOrPullRequest.__typename",
+    opts = {
+      cb = gh.create_callback {
+        failure = vim.api.nvim_err_writeln,
+        success = function(kind)
+          if kind == "Issue" then
+            utils.get_issue(number, repo)
+          elseif kind == "PullRequest" then
+            utils.get_pull_request(number, repo)
+          end
+        end,
+      },
+    },
   }
 end
 
 function M.next_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = utils.get_sorted_comment_lines(bufnr)
+    local lines = utils.get_sorted_comment_lines(buffer.bufnr)
     if not buffer:isReviewThread() then
       -- skil title and body
       lines = utils.tbl_slice(lines, 3, #lines)
@@ -149,6 +150,11 @@ function M.next_comment()
     if not lines or not current_line then
       return
     end
+
+    if #lines == 0 then
+      return
+    end
+
     local target
     if current_line < lines[1] + 1 then
       -- go to first comment
@@ -169,16 +175,20 @@ function M.next_comment()
 end
 
 function M.prev_comment()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
-    local lines = utils.get_sorted_comment_lines(bufnr)
+    local lines = utils.get_sorted_comment_lines(buffer.bufnr)
     lines = utils.tbl_slice(lines, 3, #lines)
     if not lines or not current_line then
       return
     end
+
+    if #lines == 0 then
+      return
+    end
+
     local target
     if current_line > lines[#lines] + 2 then
       -- go to last comment

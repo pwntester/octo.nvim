@@ -7,13 +7,12 @@ local utils = require "octo.utils"
 local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 
 return function(cb)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
 
-  local formatted_projects = {}
+  local formatted_projects = {} ---@type table<string, table> entry.ordinal -> entry
   local common_fzf_opts = vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
     fzf_opts = {
       ["--delimiter"] = "' '",
@@ -22,12 +21,12 @@ return function(cb)
   })
 
   local get_projects = function(fzf_cb)
-    local query = graphql("projects_query_v2", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
+    local query = graphql("projects_v2_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output)
         if output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
 
           local unsorted_projects = {}
           local user_projects = resp.data.user and resp.data.user.projects.nodes or {}

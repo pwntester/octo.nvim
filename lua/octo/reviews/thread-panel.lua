@@ -4,8 +4,9 @@ local vim = vim
 
 local M = {}
 
-function M.show_review_threads(params)
-  local params = params or {}
+---Show review threads under cursor if there are any
+---@param jump_to_buffer boolean
+function M.show_review_threads(jump_to_buffer)
   -- This function is called from a very broad CursorHold event
   -- Check if we are in a diff buffer and otherwise return early
   local bufnr = vim.api.nvim_get_current_buf()
@@ -77,7 +78,7 @@ function M.show_review_threads(params)
           end
         end, { buffer = thread_buffer.bufnr })
 
-        if params.jump_to_buffer then
+        if jump_to_buffer then
           vim.api.nvim_set_current_win(alt_win)
         end
         vim.api.nvim_buf_call(thread_buffer.bufnr, function()
@@ -98,7 +99,7 @@ function M.hide_thread_buffer(split, file)
   if vim.api.nvim_win_is_valid(alt_win) and vim.api.nvim_buf_is_valid(alt_buf) then
     local current_alt_bufnr = vim.api.nvim_win_get_buf(alt_win)
     if current_alt_bufnr ~= alt_buf then
-      -- if we are not showing the corresponging alternative diff buffer, do so
+      -- if we are not showing the corresponding alternative diff buffer, do so
       vim.api.nvim_win_set_buf(alt_win, alt_buf)
 
       -- show the diff
@@ -108,7 +109,7 @@ function M.hide_thread_buffer(split, file)
 end
 
 ---Create a thread buffer
----@param threads any
+---@param threads ReviewThread[]
 ---@param repo any
 ---@param number any
 ---@param side any

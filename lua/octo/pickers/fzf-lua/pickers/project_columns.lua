@@ -6,8 +6,7 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
 return function(cb)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -26,7 +25,7 @@ return function(cb)
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output)
         if output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
 
           local projects = {}
           local user_projects = resp.data.user and resp.data.user.projects.nodes or {}

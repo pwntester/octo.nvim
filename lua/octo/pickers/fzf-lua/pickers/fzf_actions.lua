@@ -3,6 +3,8 @@ local octo_config = require "octo.config"
 local utils = require "octo.utils"
 local M = {}
 
+---@param formatted_items table<string, table> entry.ordinal -> entry
+---@return table<string, function>
 M.common_buffer_actions = function(formatted_items)
   return {
     ["default"] = function(selected)
@@ -20,6 +22,8 @@ M.common_buffer_actions = function(formatted_items)
   }
 end
 
+---@param formatted_items table<string, table> entry.ordinal -> entry
+---@return table<string, function>
 M.common_open_actions = function(formatted_items)
   local cfg = octo_config.values
   return vim.tbl_extend("force", M.common_buffer_actions(formatted_items), {

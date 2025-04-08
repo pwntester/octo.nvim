@@ -32,12 +32,12 @@ M._null_buffer = {}
 ---@field right_binary boolean|nil
 ---@field left_bufid integer
 ---@field right_bufid integer
---- If this table is empty, the buffer is not ready to be displayed
---- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field left_lines string[]
---- If this table is empty, the buffer is not ready to be displayed
---- If the file is actually empty for the revision, table will be filled with a single empty line
 ---@field right_lines string[]
+--- If either left_fetched or right_fetched is false,
+--- the buffer is not ready to be displayed.
+---@field left_fetched boolean
+---@field right_fetched boolean
 ---@field left_winid number
 ---@field right_winid number
 ---@field left_comment_ranges table
@@ -51,6 +51,7 @@ FileEntry.__index = FileEntry
 FileEntry.winopts = {
   foldmethod = "diff",
   foldlevel = 0,
+  cursorlineopt = "number", -- disable cursorline due to Neovim bug https://github.com/neovim/neovim/issues/9800
 }
 
 ---FileEntry constructor
@@ -78,6 +79,8 @@ function FileEntry:new(opt)
     right_binary = opt.right_binary,
     left_lines = {},
     right_lines = {},
+    left_fetched = false,
+    right_fetched = false,
     diffhunks = diffhunks,
     associated_bufs = {},
     viewed_state = pr.files[opt.path],
@@ -142,7 +145,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_win(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.right_winid
   end
 
@@ -153,7 +156,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_alternative_buf(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.right_bufid
   end
 
@@ -164,7 +167,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_win(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.left_winid
   end
 
@@ -175,7 +178,7 @@ end
 ---@param split OctoSplit
 ---@return integer
 function FileEntry:get_buf(split)
-  if split == "left" then
+  if split:lower() == "left" then
     return self.left_bufid
   end
 
@@ -205,10 +208,12 @@ function FileEntry:fetch()
   if self.pull_request.local_right then
     utils.get_file_at_commit(right_path, right_sha, function(lines)
       self.right_lines = lines
+      self.right_fetched = true
     end)
   else
     utils.get_file_contents(self.pull_request.repo, right_abbrev, right_path, function(lines)
       self.right_lines = lines
+      self.right_fetched = true
     end)
   end
 
@@ -216,10 +221,12 @@ function FileEntry:fetch()
   if self.pull_request.local_left then
     utils.get_file_at_commit(left_path, left_sha, function(lines)
       self.left_lines = lines
+      self.left_fetched = true
     end)
   else
     utils.get_file_contents(self.pull_request.repo, left_abbrev, left_path, function(lines)
       self.left_lines = lines
+      self.left_fetched = true
     end)
   end
 
@@ -232,7 +239,7 @@ end
 ---Determines whether the file content has been loaded and the file is ready to render
 ---@return boolean
 function FileEntry:is_ready_to_render()
-  return #self.left_lines > 0 and #self.right_lines > 0
+  return self.left_fetched and self.right_fetched
 end
 
 ---Load the buffers.
@@ -445,9 +452,15 @@ function M._create_buffer(opts)
     -- vim.fn.bufadd creates the buffer as unlisted by default
     vim.api.nvim_buf_set_option(bufnr, "buflisted", true)
   else
-    bufnr = vim.api.nvim_create_buf(false, false)
     local bufname =
       string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
+    local existing_bufnr = utils.find_named_buffer(bufname)
+    if existing_bufnr then
+      -- Buffer already exists, most likely because review is already opened
+      return existing_bufnr
+    end
+
+    bufnr = vim.api.nvim_create_buf(false, false)
     vim.api.nvim_buf_set_name(bufnr, bufname)
     if opts.binary then
       vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
@@ -485,19 +498,28 @@ end
 function M._get_null_buffer()
   local msg = "Loading ..."
   local bn = M._null_buffer[msg]
-  if not bn or vim.api.nvim_buf_is_loaded(bn) then
-    local nbn = vim.api.nvim_create_buf(false, false)
-    vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
-    local bufname = utils.path_join { "octo", "null" }
-    vim.api.nvim_buf_set_option(nbn, "modified", false)
-    vim.api.nvim_buf_set_option(nbn, "modifiable", false)
-    local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
-    if not ok then
-      utils.wipe_named_buffer(bufname)
-      vim.api.nvim_buf_set_name(nbn, bufname)
-    end
-    M._null_buffer[msg] = nbn
+
+  if bn and vim.api.nvim_buf_is_valid(bn) then
+    -- Null buffer already exists and is loaded
+    return bn
   end
+
+  -- Create the null buffer
+  local nbn = vim.api.nvim_create_buf(false, false)
+
+  vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
+  local bufname = utils.path_join { "octo", "null" }
+  vim.api.nvim_buf_set_option(nbn, "modified", false)
+  vim.api.nvim_buf_set_option(nbn, "modifiable", false)
+
+  local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
+  if not ok then
+    utils.wipe_named_buffer(bufname)
+    vim.api.nvim_buf_set_name(nbn, bufname)
+  end
+
+  M._null_buffer[msg] = nbn
+
   return M._null_buffer[msg]
 end
 

@@ -6,11 +6,13 @@ local commands = require "octo.commands"
 local completion = require "octo.completion"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local picker = require "octo.picker"
 local reviews = require "octo.reviews"
 local signs = require "octo.ui.signs"
 local window = require "octo.ui.window"
+local colors = require "octo.ui.colors"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local vim = vim
@@ -47,6 +49,7 @@ function M.update_layout_for_current_file()
   local thisfile = vim.api.nvim_buf_get_name(bufnr)
   local relative_path = vim.fn.fnamemodify(thisfile, ":~:.")
   local review = reviews.get_current_review()
+  colors.setup()
   if review == nil then
     return
   end
@@ -76,8 +79,7 @@ function M.configure_octo_buffer(bufnr)
 end
 
 function M.save_buffer()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   buffer:save()
 end
 
@@ -130,46 +132,58 @@ end
 
 function M.load(repo, kind, number, cb)
   local owner, name = utils.split_repo(repo)
-  local query, key
 
+  local query, key, fields
   if kind == "pull" then
     query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
     key = "pullRequest"
+    fields = {}
   elseif kind == "issue" then
     query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
     key = "issue"
+    fields = {}
   elseif kind == "repo" then
-    query = graphql("repository_query", owner, name)
+    query = queries.repository
+    fields = { owner = owner, name = name }
+  elseif kind == "discussion" then
+    query = queries.discussion
+    fields = { owner = owner, name = name, number = number }
   end
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        if kind == "pull" or kind == "issue" then
-          local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
-          local obj = resp.data.repository[key]
-          cb(obj)
-        elseif kind == "repo" then
-          local resp = vim.fn.json_decode(output)
-          local obj = resp.data.repository
-          cb(obj)
-        end
-      end
-    end,
+
+  local load_buffer = function(output)
+    if kind == "pull" or kind == "issue" then
+      local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+      local obj = resp.data.repository[key]
+      cb(obj)
+    elseif kind == "repo" then
+      local resp = vim.json.decode(output)
+      local obj = resp.data.repository
+      cb(obj)
+    elseif kind == "discussion" then
+      local resp = utils.aggregate_pages(output, "data.repository.discussion.comments.nodes")
+      local obj = resp.data.repository.discussion
+      cb(obj)
+    end
+  end
+
+  gh.api.graphql {
+    query = query,
+    fields = fields,
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = gh.create_callback { failure = vim.api.nvim_err_writeln, success = load_buffer },
+    },
   }
 end
 
 function M.render_signs()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   buffer:render_signs()
 end
 
 function M.on_cursor_hold()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
   if not buffer then
     return
   end
@@ -184,7 +198,7 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local reactions = {}
           local reactionGroups = resp.data.node.reactionGroups
           for _, reactionGroup in ipairs(reactionGroups) do
@@ -220,7 +234,7 @@ function M.on_cursor_hold()
         if stderr and not utils.is_blank(stderr) then
           vim.api.nvim_err_writeln(stderr)
         elseif output then
-          local resp = vim.fn.json_decode(output)
+          local resp = vim.json.decode(output)
           local user = resp.data.user
           local popup_bufnr = vim.api.nvim_create_buf(false, true)
           local lines, max_length = writers.write_user_profile(popup_bufnr, user)
@@ -240,26 +254,45 @@ function M.on_cursor_hold()
   if not repo or not number then
     return
   end
+  local write_popup = function(data, write_summary)
+    local popup_bufnr = vim.api.nvim_create_buf(false, true)
+    local max_length = 80
+    local lines = write_summary(popup_bufnr, data, { max_length = max_length })
+    window.create_popup {
+      bufnr = popup_bufnr,
+      width = 80,
+      height = 2 + lines,
+    }
+  end
   local owner, name = utils.split_repo(repo)
   local query = graphql("issue_summary_query", owner, name, number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
-      elseif output then
-        local resp = vim.fn.json_decode(output)
-        local issue = resp.data.repository.issueOrPullRequest
-        local popup_bufnr = vim.api.nvim_create_buf(false, true)
-        local max_length = 80
-        local lines = writers.write_issue_summary(popup_bufnr, issue, { max_length = max_length })
-        window.create_popup {
-          bufnr = popup_bufnr,
-          width = max_length,
-          height = 2 + lines,
-        }
-      end
-    end,
+  gh.api.graphql {
+    query = query,
+    jq = ".data.repository.issueOrPullRequest",
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local issue = vim.json.decode(output)
+          write_popup(issue, writers.write_issue_summary)
+        end,
+        failure = function(_)
+          gh.api.graphql {
+            query = queries.discussion_summary,
+            F = { owner = owner, name = name, number = number },
+            jq = ".data.repository.discussion",
+            opts = {
+              cb = gh.create_callback {
+                failure = vim.api.nvim_err_writeln,
+                success = function(output)
+                  local discussion = vim.json.decode(output)
+                  write_popup(discussion, writers.write_discussion_summary)
+                end,
+              },
+            },
+          }
+        end,
+      },
+    },
   }
 end
 
@@ -283,11 +316,14 @@ function M.create_buffer(kind, obj, repo, create)
     number = obj.number,
     repo = repo,
     node = obj,
+    kind = kind,
   }
 
   octo_buffer:configure()
   if kind == "repo" then
     octo_buffer:render_repo()
+  elseif kind == "discussion" then
+    octo_buffer:render_discussion()
   else
     octo_buffer:render_issue()
     octo_buffer:async_fetch_taggable_users()

@@ -1,9 +1,9 @@
 local vim = vim
 local M = {}
 
----@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "notification"
+---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "notification" | "runs"
 ---@alias OctoMappingsList { [string]: table}
----@alias OctoPickers "telescope" | "fzf-lua"
+---@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
 ---@alias OctoSplit "right" | "left"
 
 ---@class OctoPickerConfig
@@ -43,6 +43,20 @@ local M = {}
 ---@class OctoConfigDiscussions
 ---@field order_by OctoConfigOrderBy
 
+---@class OctoConfigWorkflowIcons
+---@field pending string
+---@field skipped string
+---@field in_progress string
+---@field failed string
+---@field succeeded string
+---@field cancelled string
+
+---@class OctoConfigRuns
+---@field icons OctoConfigWorkflowIcons
+
+---@class OctoConfigNotifications
+---@field current_repo_only boolean
+
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
@@ -71,6 +85,8 @@ local M = {}
 ---@field resolved_icon string
 ---@field timeline_marker string
 ---@field timeline_indent string
+---@field use_timeline_icons boolean
+---@field timeline_icons table
 ---@field right_bubble_delimiter string
 ---@field left_bubble_delimiter string
 ---@field github_hostname string
@@ -85,12 +101,14 @@ local M = {}
 ---@field ui OctoConfigUi
 ---@field issues OctoConfigIssues
 ---@field reviews OctoConfigReviews
+---@field runs OctoConfigRuns
 ---@field pull_requests OctoConfigPR
 ---@field file_panel OctoConfigFilePanel
 ---@field colors OctoConfigColors
 ---@field mappings { [OctoMappingsWindow]: OctoMappingsList}
 ---@field mappings_disable_default boolean
 ---@field discussions OctoConfigDiscussions
+---@field notifications OctoConfigNotifications
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -120,6 +138,30 @@ function M.get_default_values()
     resolved_icon = " ",
     timeline_marker = " ",
     timeline_indent = "2",
+    use_timeline_icons = true,
+    timeline_icons = {
+      commit_push = "  ",
+      commit = "  ",
+      label = "  ",
+      reference = " ",
+      connected = "  ",
+      subissue = "  ",
+      cross_reference = "  ",
+      parent_issue = "  ",
+      pinned = "  ",
+      milestone = "  ",
+      renamed = "  ",
+      merged = { "  ", "OctoPurple" },
+      closed = {
+        closed = { "  ", "OctoRed" },
+        completed = { "  ", "OctoPurple" },
+        not_planned = { "  ", "OctoGrey" },
+        duplicate = { "  ", "OctoGrey" },
+      },
+      reopened = { "  ", "OctoGreen" },
+      assigned = "  ",
+      review_requested = "  ",
+    },
     right_bubble_delimiter = "",
     left_bubble_delimiter = "",
     github_hostname = "",
@@ -150,9 +192,22 @@ function M.get_default_values()
         direction = "DESC",
       },
     },
+    notifications = {
+      current_repo_only = false,
+    },
     reviews = {
       auto_show_threads = true,
       focus = "right",
+    },
+    runs = {
+      icons = {
+        pending = "🕖",
+        in_progress = "🔄",
+        failed = "❌",
+        succeeded = "",
+        skipped = "⏩",
+        cancelled = "✖",
+      },
     },
     pull_requests = {
       order_by = {
@@ -181,6 +236,32 @@ function M.get_default_values()
     },
     mappings_disable_default = false,
     mappings = {
+      discussion = {
+        copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+        add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
+        add_label = { lhs = "<localleader>la", desc = "add label" },
+        remove_label = { lhs = "<localleader>ld", desc = "remove label" },
+        next_comment = { lhs = "]c", desc = "go to next comment" },
+        prev_comment = { lhs = "[c", desc = "go to previous comment" },
+        react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
+        react_heart = { lhs = "<localleader>rh", desc = "add/remove ❤️ reaction" },
+        react_eyes = { lhs = "<localleader>re", desc = "add/remove 👀 reaction" },
+        react_thumbs_up = { lhs = "<localleader>r+", desc = "add/remove 👍 reaction" },
+        react_thumbs_down = { lhs = "<localleader>r-", desc = "add/remove 👎 reaction" },
+        react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
+        react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
+        react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+      },
+      runs = {
+        expand_step = { lhs = "o", desc = "expand workflow step" },
+        open_in_browser = { lhs = "<C-b>", desc = "open workflow run in browser" },
+        refresh = { lhs = "<C-r>", desc = "refresh workflow" },
+        rerun = { lhs = "<C-o>", desc = "rerun workflow" },
+        rerun_failed = { lhs = "<C-f>", desc = "rerun failed workflow" },
+        cancel = { lhs = "<C-x>", desc = "cancel workflow" },
+        copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+      },
       issue = {
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },
         reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
@@ -271,16 +352,16 @@ function M.get_default_values()
         unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
       },
       submit_win = {
-        approve_review = { lhs = "<C-a>", desc = "approve review" },
-        comment_review = { lhs = "<C-m>", desc = "comment review" },
-        request_changes = { lhs = "<C-r>", desc = "request changes review" },
-        close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
+        approve_review = { lhs = "<C-a>", desc = "approve review", mode = { "n", "i" } },
+        comment_review = { lhs = "<C-m>", desc = "comment review", mode = { "n", "i" } },
+        request_changes = { lhs = "<C-r>", desc = "request changes review", mode = { "n", "i" } },
+        close_review_tab = { lhs = "<C-c>", desc = "close review tab", mode = { "n", "i" } },
       },
       review_diff = {
         submit_review = { lhs = "<localleader>vs", desc = "submit review" },
         discard_review = { lhs = "<localleader>vd", desc = "discard review" },
-        add_review_comment = { lhs = "<localleader>ca", desc = "add a new review comment" },
-        add_review_suggestion = { lhs = "<localleader>sa", desc = "add a new review suggestion" },
+        add_review_comment = { lhs = "<localleader>ca", desc = "add a new review comment", mode = { "n", "x" } },
+        add_review_suggestion = { lhs = "<localleader>sa", desc = "add a new review suggestion", mode = { "n", "x" } },
         focus_files = { lhs = "<localleader>e", desc = "move focus to changed file panel" },
         toggle_files = { lhs = "<localleader>b", desc = "hide/show changed files panel" },
         next_thread = { lhs = "]t", desc = "move to next thread" },
@@ -380,7 +461,7 @@ function M.validate_config()
   end
 
   local function validate_pickers()
-    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua" })
+    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks" })
 
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
@@ -429,6 +510,14 @@ function M.validate_config()
     validate_type(config.pull_requests.always_select_remote_on_create, "always_select_remote_on_create", "boolean")
   end
 
+  local function validate_notifications()
+    if not validate_type(config.notifications, "notifications", "table") then
+      err("notifications", "Expected notifications to be a table")
+      return
+    end
+    validate_type(config.notifications.current_repo_only, "notifications.current_repo_only", "boolean")
+  end
+
   local function validate_mappings()
     -- TODO(jarviliam): Validate each keymap
     if not validate_type(config.mappings, "mappings", "table") then
@@ -442,8 +531,8 @@ function M.validate_config()
     validate_type(config.snippet_context_lines, "snippet_context_lines", "number")
     validate_type(config.timeout, "timeout", "number")
     validate_type(config.default_to_projects_v2, "default_to_projects_v2", "boolean")
-    if validate_type(config.suppress_missing_scope, "supress_missing_scope", "table") then
-      validate_type(config.suppress_missing_scope.projects_v2, "supress_missing_scope.projects_v2", "boolean")
+    if validate_type(config.suppress_missing_scope, "suppress_missing_scope", "table") then
+      validate_type(config.suppress_missing_scope.projects_v2, "suppress_missing_scope.projects_v2", "boolean")
     end
     validate_type(config.gh_cmd, "gh_cmd", "string")
     validate_type(config.gh_env, "gh_env", { "table", "function" })
@@ -479,6 +568,7 @@ function M.validate_config()
     validate_issues()
     validate_reviews()
     validate_pull_requests()
+    validate_notifications()
     if validate_type(config.file_panel, "file_panel", "table") then
       validate_type(config.file_panel.size, "file_panel.size", "number")
       validate_type(config.file_panel.use_icons, "file_panel.use_icons", "boolean")
@@ -497,6 +587,7 @@ function M.setup(opts)
       -- clear default mappings before merging user mappings
       M.values.mappings = {
         issue = {},
+        discussion = {},
         pull_request = {},
         review_thread = {},
         submit_win = {},

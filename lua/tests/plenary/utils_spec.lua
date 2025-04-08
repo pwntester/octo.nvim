@@ -67,3 +67,126 @@ describe("Utils escape_char(): ", function()
     eq(expected, this.escape_char(input))
   end)
 end)
+
+describe("Utils parse_remote_url(): ", function()
+  it("Should replace remote url with alias", function()
+    local ssh_aliases = {
+      ["github.com-work"] = "github.com",
+    }
+    local url = "git@github.com-work:pwntester/octo.nvim.git"
+
+    local expected = {
+      host = "github.com",
+      repo = "pwntester/octo.nvim",
+    }
+
+    eq(expected, this.parse_remote_url(url, ssh_aliases))
+  end)
+
+  it("Should replace multiple hyphens in remote url with alias", function()
+    local ssh_aliases = {
+      ["github.com-octo-work"] = "github.com",
+    }
+    local url = "git@github.com-octo-work:pwntester/octo.nvim.git"
+
+    local expected = {
+      host = "github.com",
+      repo = "pwntester/octo.nvim",
+    }
+
+    eq(expected, this.parse_remote_url(url, ssh_aliases))
+  end)
+
+  it("Should not replace remote url with alias", function()
+    local url = "git@github.com-work:pwntester/octo.nvim.git"
+    local expected = {
+      host = "github.com-work",
+      repo = "pwntester/octo.nvim",
+    }
+
+    eq(expected, this.parse_remote_url(url, {}))
+  end)
+
+  it("Should keep the original url", function()
+    local ssh_aliases = {
+      ["github.com-work"] = "github.com",
+    }
+    local url = "git@github.com:pwntester/octo.nvim.git"
+    local expected = {
+      host = "github.com",
+      repo = "pwntester/octo.nvim",
+    }
+    eq(expected, this.parse_remote_url(url, ssh_aliases))
+  end)
+end)
+describe("get_pages", function()
+  it("handles empty single page", function()
+    local text = "[]"
+    local actual = this.get_pages(text)
+
+    eq(actual, { {} })
+  end)
+  it("handles multiple pages", function()
+    local text = vim.trim [[
+      [1,2,3]
+      [4,5,6]
+      [7,8,9]
+    ]]
+
+    local actual = this.get_pages(text)
+    eq(actual, { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } })
+  end)
+end)
+describe("get_flatten_pages", function()
+  it("handles empty single page", function()
+    local text = "[]"
+    local actual = this.get_flatten_pages(text)
+
+    eq(actual, {})
+  end)
+  it("handles multiple list pages", function()
+    local text = vim.trim [[
+      [1,2,3]
+      [4,5,6]
+      [7,8,9]
+    ]]
+    local actual = this.get_flatten_pages(text)
+
+    eq(actual, { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
+  end)
+  it("handles multiple json pages", function()
+    local text = vim.trim [[
+      [{"a": 1},{"b": 2, "name": "foo"}]
+      [{"c": 3}]
+      [{"d": 4}]
+    ]]
+    local actual = this.get_flatten_pages(text)
+    eq(actual, { { a = 1 }, { b = 2, name = "foo" }, { c = 3 }, { d = 4 } })
+  end)
+end)
+describe("parse_url", function()
+  it("issues", function()
+    local url = "https://github.com/pwntester/octo.nvim/issues/1"
+    local repo, number, kind = this.parse_url(url)
+
+    eq(repo, "pwntester/octo.nvim")
+    eq(number, "1")
+    eq(kind, "issue")
+  end)
+  it("pull", function()
+    local url = "https://github.com/pwntester/octo.nvim/pull/1"
+    local repo, number, kind = this.parse_url(url)
+
+    eq(repo, "pwntester/octo.nvim")
+    eq(number, "1")
+    eq(kind, "pull")
+  end)
+  it("discussion", function()
+    local url = "https://github.com/pwntester/octo.nvim/discussions/1"
+    local repo, number, kind = this.parse_url(url)
+
+    eq(repo, "pwntester/octo.nvim")
+    eq(number, "1")
+    eq(kind, "discussion")
+  end)
+end)

@@ -60,7 +60,7 @@ end
 local function mod(n, d)
   return n - d * floor(n / d)
 end
--- is `str` in string list `tbl`, `ml` is the minimun len
+-- is `str` in string list `tbl`, `ml` is the minimum len
 local function inlist(str, tbl, ml, tn)
   local sl = len(str)
   if sl < (ml or 0) then
@@ -373,20 +373,25 @@ end
 function strwalker:aimchr()
   return "\n" .. self.s .. "\n" .. rep(".", self.e - 1) .. "^"
 end
+
 function strwalker:finish()
   return self.i > self.c
 end
+
 function strwalker:back()
   self.i = self.e
   return self
 end
+
 function strwalker:restart()
   self.i, self.e = 1, 1
   return self
 end
+
 function strwalker:match(s)
   return (find(self.s, s, self.i))
 end
+
 function strwalker:__call(s, f) -- print("strwalker:__call "..s..self:aimchr())
   local is, ie
   is, ie, self[1], self[2], self[3], self[4], self[5] = find(self.s, s, self.i)
@@ -398,6 +403,7 @@ function strwalker:__call(s, f) -- print("strwalker:__call "..s..self:aimchr())
     return self
   end
 end
+
 local function date_parse(str)
   local y, m, d, h, r, s, z, w, u, j, e, x, c, dn, df
   local sw = newstrwalker(gsub(gsub(str, "(%b())", ""), "^(%s*)", "")) -- remove comment, trim leading space
@@ -597,6 +603,7 @@ function dobj:getdate()
   local y, m, d = breakdaynum(self.daynum)
   return y, m + 1, d
 end
+
 function dobj:gettime()
   return breakdayfrc(self.dayfrc)
 end
@@ -609,6 +616,7 @@ end
 function dobj:getyearday()
   return yearday(self.daynum) + 1
 end
+
 function dobj:getweekday()
   return weekday(self.daynum) + 1
 end -- in lua weekday is sunday = 1, monday = 2 ...
@@ -617,26 +625,33 @@ function dobj:getyear()
   local r, _, _ = breakdaynum(self.daynum)
   return r
 end
+
 function dobj:getmonth()
   local _, r, _ = breakdaynum(self.daynum)
   return r + 1
 end -- in lua month is 1 base
+
 function dobj:getday()
   local _, _, r = breakdaynum(self.daynum)
   return r
 end
+
 function dobj:gethours()
   return mod(floor(self.dayfrc / TICKSPERHOUR), HOURPERDAY)
 end
+
 function dobj:getminutes()
   return mod(floor(self.dayfrc / TICKSPERMIN), MINPERHOUR)
 end
+
 function dobj:getseconds()
   return mod(floor(self.dayfrc / TICKSPERSEC), SECPERMIN)
 end
+
 function dobj:getfracsec()
   return mod(floor(self.dayfrc / TICKSPERSEC), SECPERMIN) + (mod(self.dayfrc, TICKSPERSEC) / TICKSPERSEC)
 end
+
 function dobj:getticks(u)
   local x = mod(self.dayfrc, TICKSPERSEC)
   return u and ((x * u) / TICKSPERSEC) or x
@@ -658,16 +673,20 @@ end
 function dobj:getisoweekday()
   return mod(weekday(self.daynum) - 1, 7) + 1
 end -- sunday = 7, monday = 1 ...
+
 function dobj:getisoweeknumber()
   return (isowy(self.daynum))
 end
+
 function dobj:getisoyear()
   return isoy(self.daynum)
 end
+
 function dobj:getisodate()
   local w, y = isowy(self.daynum)
   return y, w, self:getisoweekday()
 end
+
 function dobj:setisoyear(y, w, d)
   local cy, cw, cd = self:getisodate()
   if y then
@@ -690,6 +709,7 @@ end
 function dobj:setisoweekday(d)
   return self:setisoyear(nil, nil, d)
 end
+
 function dobj:setisoweeknumber(w, d)
   return self:setisoyear(nil, w, d)
 end
@@ -716,6 +736,7 @@ end
 function dobj:setmonth(m, d)
   return self:setyear(nil, m, d)
 end
+
 function dobj:setday(d)
   return self:setyear(nil, nil, d)
 end
@@ -734,9 +755,11 @@ end
 function dobj:setminutes(m, s, t)
   return self:sethours(nil, m, s, t)
 end
+
 function dobj:setseconds(s, t)
   return self:sethours(nil, nil, s, t)
 end
+
 function dobj:setticks(t)
   return self:sethours(nil, nil, nil, t)
 end
@@ -744,15 +767,19 @@ end
 function dobj:spanticks()
   return (self.daynum * TICKSPERDAY + self.dayfrc)
 end
+
 function dobj:spanseconds()
   return (self.daynum * TICKSPERDAY + self.dayfrc) / TICKSPERSEC
 end
+
 function dobj:spanminutes()
   return (self.daynum * TICKSPERDAY + self.dayfrc) / TICKSPERMIN
 end
+
 function dobj:spanhours()
   return (self.daynum * TICKSPERDAY + self.dayfrc) / TICKSPERHOUR
 end
+
 function dobj:spandays()
   return (self.daynum * TICKSPERDAY + self.dayfrc) / TICKSPERDAY
 end
@@ -800,18 +827,23 @@ end
 function dobj:adddays(n)
   return dobj_adddayfrc(self, n, TICKSPERDAY, 1)
 end
+
 function dobj:addhours(n)
   return dobj_adddayfrc(self, n, TICKSPERHOUR, HOURPERDAY)
 end
+
 function dobj:addminutes(n)
   return dobj_adddayfrc(self, n, TICKSPERMIN, MINPERDAY)
 end
+
 function dobj:addseconds(n)
   return dobj_adddayfrc(self, n, TICKSPERSEC, SECPERDAY)
 end
+
 function dobj:addticks(n)
   return dobj_adddayfrc(self, n, 1, TICKSPERDAY)
 end
+
 local tvspec = {
   -- Abbreviated weekday name (Sun)
   ["%a"] = function(self)
@@ -995,6 +1027,7 @@ function dobj:fmt0(str)
     return (f and f(self)) or x
   end))
 end
+
 function dobj:fmt(str)
   str = str or self.fmtstr or fmtstr
   return self:fmt0((gmatch(str, "${%w+}")) and (gsub(str, "${%w+}", function(x)
@@ -1010,6 +1043,7 @@ function dobj.__lt(a, b)
     return (a.daynum < b.daynum)
   end
 end
+
 function dobj.__le(a, b)
   if a.daynum == b.daynum then
     return (a.dayfrc <= b.dayfrc)
@@ -1017,22 +1051,27 @@ function dobj.__le(a, b)
     return (a.daynum <= b.daynum)
   end
 end
+
 function dobj.__eq(a, b)
   return (a.daynum == b.daynum) and (a.dayfrc == b.dayfrc)
 end
+
 function dobj.__sub(a, b)
   local d1, d2 = date_getdobj(a), date_getdobj(b)
   local d0 = d1 and d2 and date_new(d1.daynum - d2.daynum, d1.dayfrc - d2.dayfrc)
   return d0 and d0:normalize()
 end
+
 function dobj.__add(a, b)
   local d1, d2 = date_getdobj(a), date_getdobj(b)
   local d0 = d1 and d2 and date_new(d1.daynum + d2.daynum, d1.dayfrc + d2.dayfrc)
   return d0 and d0:normalize()
 end
+
 function dobj.__concat(a, b)
   return tostring(a) .. tostring(b)
 end
+
 function dobj:__tostring()
   return self:fmt()
 end
@@ -1126,20 +1165,24 @@ function date.fmt(str)
   end
   return fmtstr
 end
+
 function date.daynummin(n)
   DAYNUM_MIN = (n and n < DAYNUM_MAX) and n or DAYNUM_MIN
   return n and DAYNUM_MIN or date_new(DAYNUM_MIN, 0):normalize()
 end
+
 function date.daynummax(n)
   DAYNUM_MAX = (n and n > DAYNUM_MIN) and n or DAYNUM_MAX
   return n and DAYNUM_MAX or date_new(DAYNUM_MAX, 0):normalize()
 end
+
 function date.ticks(t)
   if t then
     setticks(t)
   end
   return TICKSPERSEC
 end
+
 --#end -- not DATE_OBJECT_AFX
 
 local tm = osdate("!*t", 0)

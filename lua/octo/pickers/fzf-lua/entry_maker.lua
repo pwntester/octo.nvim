@@ -3,16 +3,18 @@ local fzf = require "fzf-lua"
 
 local M = {}
 
+---@param issue_table table
+---@return table|nil
 function M.gen_from_issue(issue_table)
   if not issue_table or vim.tbl_isempty(issue_table) then
     return nil
   end
   local kind = issue_table.__typename == "Issue" and "issue" or "pull_request"
-  local filename
+  local filename ---@type string
   if kind == "issue" then
-    filename = utils.get_issue_uri(issue_table.repository.nameWithOwner, issue_table.number)
+    filename = utils.get_issue_uri(issue_table.number, issue_table.repository.nameWithOwner)
   else
-    filename = utils.get_pull_request_uri(issue_table.repository.nameWithOwner, issue_table.number)
+    filename = utils.get_pull_request_uri(issue_table.number, issue_table.repository.nameWithOwner)
   end
   return {
     filename = filename,

@@ -6,6 +6,7 @@ local graphql = require "octo.gh.graphql"
 local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
+local ReviewThread = require("octo.reviews.thread").ReviewThread
 
 ---@alias ReviewLevel "COMMIT" | "PR"
 
@@ -44,11 +45,38 @@ function Review:create(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         callback(resp)
       end
     end,
   }
+end
+
+-- Get review threads without start a review.
+function Review:populate_threads(callback)
+  local query =
+    graphql("review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
+  gh.api.graphql {
+    query = query,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = vim.json.decode(output)
+          callback(resp)
+        end
+      end,
+    },
+  }
+end
+
+function Review:browse()
+  self:populate_threads(function(resp)
+    local threads = resp.data.repository.pullRequest.reviewThreads.nodes
+    self:update_threads(threads)
+    self:initiate()
+  end)
 end
 
 -- Starts a new review
@@ -71,7 +99,7 @@ function Review:retrieve(callback)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         callback(resp)
       end
     end,
@@ -177,7 +205,7 @@ function Review:initiate(opts)
   if conf.use_local_fs and not utils.in_pr_branch(pr) then
     local choice = vim.fn.confirm("Currently not in PR branch, would you like to checkout?", "&Yes\n&No", 2)
     if choice == 1 then
-      utils.checkout_pr_sync { pr_number = pr.number, timeout = conf.timeout }
+      utils.checkout_pr_sync { repo = pr.repo, pr_number = pr.number }
     end
   end
 
@@ -203,7 +231,7 @@ function Review:discard()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
-        local resp = vim.fn.json_decode(output)
+        local resp = vim.json.decode(output)
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
           utils.error "No pending reviews found"
           return
@@ -329,8 +357,15 @@ function Review:add_comment(isSuggestion)
     return
   end
 
-  -- get visual selected line range
+  -- get visual selected line range, used if coming from a keymap where current
+  -- mode can be evaluated.
   local line1, line2 = utils.get_lines_from_context "visual"
+  -- if we came from the command line the command options will provide line
+  -- range
+  if OctoLastCmdOpts ~= nil then
+    line1 = OctoLastCmdOpts.line1
+    line2 = OctoLastCmdOpts.line2
+  end
 
   local comment_ranges, current_bufnr
   if split == "RIGHT" then
@@ -382,49 +417,22 @@ function Review:add_comment(isSuggestion)
       commit_abbrev = self.layout.right:abbrev()
     end
     local threads = {
-      {
-        originalStartLine = line1,
-        originalLine = line2,
-        path = file.path,
-        isOutdated = false,
-        isResolved = false,
-        diffSide = split,
-        isCollapsed = false,
-        id = default_id,
-        comments = {
-          nodes = {
-            {
-              id = default_id,
-              author = { login = vim.g.octo_viewer },
-              state = "PENDING",
-              replyTo = vim.NIL,
-              url = vim.NIL,
-              diffHunk = diff_hunk,
-              createdAt = os.date "!%FT%TZ",
-              originalCommit = { oid = commit, abbreviatedOid = commit_abbrev },
-              body = " ",
-              viewerCanUpdate = true,
-              viewerCanDelete = true,
-              viewerDidAuthor = true,
-              pullRequestReview = { id = self.id },
-              reactionGroups = {
-                { content = "THUMBS_UP", users = { totalCount = 0 } },
-                { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-                { content = "LAUGH", users = { totalCount = 0 } },
-                { content = "HOORAY", users = { totalCount = 0 } },
-                { content = "CONFUSED", users = { totalCount = 0 } },
-                { content = "HEART", users = { totalCount = 0 } },
-                { content = "ROCKET", users = { totalCount = 0 } },
-                { content = "EYES", users = { totalCount = 0 } },
-              },
-            },
-          },
-        },
+      ReviewThread:stub {
+        line1 = line1,
+        line2 = line2,
+        file_path = file.path,
+        split = split,
+        diff_hunk = diff_hunk,
+        commit = commit,
+        commit_abbrev = commit_abbrev,
+        review_id = self.id,
       },
     }
 
-    -- TODO: if there are threads for that line, there should be a buffer already showing them
-    -- or maybe not if the user is very quick
+    -- Make sure review thread panel is visible if not already
+    -- The thread panel could be hidden if user has `reviews.auto_show_threads` set to false in their config
+    -- or, less likely, if the add comment command is invoked before the autocmd has concluded,
+    thread_panel.show_review_threads(false)
     local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path)
     if thread_buffer then
       table.insert(file.associated_bufs, thread_buffer.bufnr)
@@ -476,9 +484,17 @@ M.Review = Review
 
 function M.add_review_comment(isSuggestion)
   local review = M.get_current_review()
+
   if not review then
     error "Could not find review"
   end
+
+  -- we maybe in browse mode, where no review has been started.
+  if review.id == -1 then
+    vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+    return
+  end
+
   review:add_comment(isSuggestion)
 end
 
@@ -559,8 +575,7 @@ end
 --- Fall back to pull request associated with the current branch if not in an Octo buffer.
 --- @param cb function
 local function get_pr_from_buffer_or_current_branch(cb)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = octo_buffers[bufnr]
+  local buffer = utils.get_current_buffer()
 
   if not buffer then
     -- We are not in an octo buffer, try and fallback to the current branch's pr
@@ -573,12 +588,34 @@ local function get_pr_from_buffer_or_current_branch(cb)
     cb(pull_request)
   else
     pull_request = utils.get_pull_request_for_current_branch(cb)
+    cb(pull_request)
   end
 end
 
-function M.start_review()
+function M.browse_review()
+  local current_review = M.get_current_review()
+
+  if current_review and current_review.id ~= -1 then
+    vim.notify("Cannot browse when a review has been started", vim.log.levels.ERROR)
+    return
+  end
+
   get_pr_from_buffer_or_current_branch(function(pull_request)
-    local current_review = Review:new(pull_request)
+    current_review = Review:new(pull_request)
+    current_review:browse()
+  end)
+end
+
+function M.start_review()
+  -- its possible we are already browsing a review with 'Octo review browse'
+  local current_review = M.get_current_review()
+  if current_review then
+    current_review:start()
+    return
+  end
+
+  get_pr_from_buffer_or_current_branch(function(pull_request)
+    current_review = Review:new(pull_request)
     current_review:start()
   end)
 end
@@ -599,7 +636,7 @@ end
 
 function M.discard_review()
   local current_review = M.get_current_review()
-  if current_review then
+  if current_review and current_review.id ~= -1 then
     current_review:discard()
   else
     utils.error "Please start or resume a review first"
@@ -608,7 +645,7 @@ end
 
 function M.submit_review()
   local current_review = M.get_current_review()
-  if current_review then
+  if current_review and current_review.id ~= -1 then
     current_review:collect_submit_info()
   else
     utils.error "Please start or resume a review first"

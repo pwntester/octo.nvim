@@ -12,11 +12,21 @@ local function checkout_pull_request(entry)
   utils.checkout_pr(entry.obj.number)
 end
 
+local function not_implemented()
+  utils.error "Not implemented yet"
+end
+
 return function(opts)
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
   end
+
+  if opts.cb ~= nil then
+    not_implemented()
+    return
+  end
+
   local filter = picker_utils.get_filter(opts, "pull_request")
   if utils.is_blank(opts.repo) then
     opts.repo = utils.get_remote_name()
@@ -33,7 +43,7 @@ return function(opts)
   local query =
     graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
 
-  local formatted_pulls = {}
+  local formatted_pulls = {} ---@type table<string, table> entry.ordinal -> entry
 
   local get_contents = function(fzf_cb)
     gh.run {

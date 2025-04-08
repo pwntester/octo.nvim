@@ -62,6 +62,9 @@ function M.create_content_float(opts)
   return winid, bufnr
 end
 
+---@param opts table
+---@return integer winid
+---@return integer bufnr
 function M.create_centered_float(opts)
   opts = opts or {}
   opts.x_percent = opts.x_percent or 0.6

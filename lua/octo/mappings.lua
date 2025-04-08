@@ -1,5 +1,6 @@
 local reviews = require "octo.reviews"
 local config = require "octo.config"
+local utils = require "octo.utils"
 
 return {
   close_issue = function()
@@ -9,8 +10,7 @@ return {
     require("octo.commands").change_state "OPEN"
   end,
   list_issues = function()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local buffer = octo_buffers[bufnr]
+    local buffer = utils.get_current_buffer()
     local repo = buffer.repo
     if repo then
       require("octo.picker").issues { repo = repo }
@@ -80,7 +80,7 @@ return {
     require("octo.navigation").prev_comment()
   end,
   add_comment = function()
-    require("octo.commands").add_comment()
+    require("octo.commands").add_pr_issue_or_review_thread_comment()
   end,
   add_suggestion = function()
     require("octo.commands").add_suggestion()

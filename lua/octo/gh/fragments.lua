@@ -27,6 +27,7 @@ M.projects_v2 = [[
 
 M.issue = [[
 fragment IssueFields on Issue {
+  id
   number
   title
   state
@@ -215,6 +216,17 @@ fragment ClosedEventFragment on ClosedEvent {
     login
   }
   createdAt
+  stateReason
+  closable {
+    __typename
+    ... on Issue {
+      state
+      stateReason
+    }
+    ... on PullRequest {
+      state
+    }
+  }
 }
 ]]
 
@@ -377,6 +389,72 @@ fragment ReviewDismissedEventFragment on ReviewDismissedEvent {
 }
 ]]
 
+M.pinned_event = [[
+fragment PinnedEventFragment on PinnedEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
+M.unpinned_event = [[
+fragment UnpinnedEventFragment on UnpinnedEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
+M.subissue_added_event = [[
+fragment SubIssueAddedEventFragment on SubIssueAddedEvent {
+  actor {
+    login
+  }
+  createdAt
+  subIssue {
+    ...IssueFields
+  }
+}
+]]
+
+M.subissue_removed_event = [[
+fragment SubIssueRemovedEventFragment on SubIssueRemovedEvent {
+  actor {
+    login
+  }
+  createdAt
+  subIssue {
+    ...IssueFields
+  }
+}
+]]
+
+M.parent_issue_added_event = [[
+fragment ParentIssueAddedEventFragment on ParentIssueAddedEvent {
+  actor {
+    login
+  }
+  createdAt
+  parent {
+    ...IssueFields
+  }
+}
+]]
+
+M.parent_issue_removed_event = [[
+fragment ParentIssueRemovedEventFragment on ParentIssueRemovedEvent {
+  actor {
+    login
+  }
+  createdAt
+  parent {
+    ...IssueFields
+  }
+}
+]]
+
 M.issue_timeline_items_connection = [[
 fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   nodes {
@@ -393,6 +471,12 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...RenamedTitleEventFragment
     ...ReopenedEventFragment
     ...UnlabeledEventFragment
+    ...PinnedEventFragment
+    ...UnpinnedEventFragment
+    ...SubIssueAddedEventFragment
+    ...SubIssueRemovedEventFragment
+    ...ParentIssueAddedEventFragment
+    ...ParentIssueRemovedEventFragment
   }
 }
 ]]
@@ -507,6 +591,7 @@ fragment DiscussionInfoFragment on Discussion {
   url
   closed
   isAnswered
+  viewerDidAuthor
   repository {
     nameWithOwner
   }
@@ -537,23 +622,54 @@ fragment DiscussionDetailsFragment on Discussion {
   updatedAt
   upvoteCount
   viewerHasUpvoted
+  viewerDidAuthor
   ...ReactionGroupsFragment
 }
 ]]
 
 M.discussion_comment = [[
 fragment DiscussionCommentFragment on DiscussionComment {
+  __typename
   id
   body
+  url
   createdAt
   lastEditedAt
   ...ReactionGroupsFragment
   author {
     login
   }
+  replyTo {
+    id
+  }
   viewerDidAuthor
   viewerCanUpdate
   viewerCanDelete
+}
+]]
+
+M.repository = [[
+fragment RepositoryFragment on Repository {
+  id
+  createdAt
+  description
+  diskUsage
+  forkCount
+  isArchived
+  isDisabled
+  isEmpty
+  isFork
+  isInOrganization
+  isPrivate
+  isSecurityPolicyEnabled
+  name
+  nameWithOwner
+  parent {
+    nameWithOwner
+  }
+  stargazerCount
+  updatedAt
+  url
 }
 ]]
 

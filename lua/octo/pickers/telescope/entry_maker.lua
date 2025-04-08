@@ -6,7 +6,7 @@ local vim = vim
 
 local M = {}
 
-function M.gen_from_discussions(max_number)
+function M.gen_from_discussion(max_number)
   local make_display = function(entry)
     if not entry then
       return nil
@@ -36,7 +36,7 @@ function M.gen_from_discussions(max_number)
     end
 
     local kind = "discussion"
-    local filename = utils.get_discussion_uri(obj.repository.nameWithOwner, obj.number)
+    local filename = utils.get_discussion_uri(obj.number, obj.repository.nameWithOwner)
 
     return {
       filename = filename,
@@ -109,11 +109,11 @@ function M.gen_from_issue(max_number, print_repo)
 
     local filename
     if kind == "issue" then
-      filename = utils.get_issue_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_issue_uri(obj.number, obj.repository.nameWithOwner)
     elseif kind == "pull_request" then
-      filename = utils.get_pull_request_uri(obj.repository.nameWithOwner, obj.number)
+      filename = utils.get_pull_request_uri(obj.number, obj.repository.nameWithOwner)
     else
-      filename = utils.get_discussion_uri(obj.respository.nameWithOwner, obj.number)
+      filename = utils.get_discussion_uri(obj.number, obj.repository.nameWithOwner)
     end
 
     return {
@@ -161,14 +161,16 @@ function M.gen_from_git_commits()
   end
 end
 
-function M.gen_from_git_changed_files()
+function M.gen_from_git_changed_files(opts)
+  opts = opts or {}
+
   local displayer = entry_display.create {
     separator = " ",
     items = {
-      { width = 8 },
+      { width = 7 },
       { width = string.len "modified" },
-      { width = 5 },
-      { width = 5 },
+      { width = #tostring(opts.max_additions) + 1 },
+      { width = #tostring(opts.max_deletions) + 1 },
       { remaining = true },
     },
   }
@@ -194,6 +196,16 @@ function M.gen_from_git_changed_files()
       msg = entry.filename,
       display = make_display,
       change = entry,
+    }
+  end
+end
+
+function M.gen_from_workflow_run()
+  return function(workflow_run)
+    return {
+      display = workflow_run.display,
+      value = workflow_run,
+      ordinal = workflow_run.display,
     }
   end
 end
@@ -233,6 +245,40 @@ function M.gen_from_review_thread(linenr_length)
       ordinal = thread.path .. ":" .. thread.startLine .. ":" .. thread.line,
       display = make_display,
       thread = thread,
+    }
+  end
+end
+
+function M.gen_from_project_v2()
+  local make_display = function(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      { entry.project.title },
+    }
+
+    local displayer = entry_display.create {
+      separator = " ",
+      items = {
+        { remaining = true },
+      },
+    }
+
+    return displayer(columns)
+  end
+
+  return function(project)
+    if not project or vim.tbl_isempty(project) then
+      return nil
+    end
+
+    return {
+      value = project.title,
+      ordinal = project.number .. " " .. project.title,
+      display = make_display,
+      project = project,
     }
   end
 end
@@ -499,45 +545,57 @@ function M.gen_from_user()
   end
 end
 
-function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
+function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, include_fork)
+  include_fork = include_fork == nil and true or include_fork
+
   local make_display = function(entry)
     if not entry then
       return nil
     end
 
     local fork_str = ""
-    if entry.repo.isFork then
+    if entry.obj.isFork then
       fork_str = "fork"
     end
 
     local access_str = "public"
-    if entry.repo.isPrivate then
+    if entry.obj.isPrivate then
       access_str = "private"
     end
 
     local columns = {
-      { string.sub(entry.repo.nameWithOwner, 1, 50), "TelescopeResultsNumber" },
+      { string.sub(entry.obj.nameWithOwner, 1, 50), "TelescopeResultsNumber" },
       { "s:", "TelescopeResultsNumber" },
-      { entry.repo.stargazerCount },
+      { entry.obj.stargazerCount },
       { "f:", "TelescopeResultsNumber" },
-      { entry.repo.forkCount },
+      { entry.obj.forkCount },
       { access_str },
-      { fork_str },
-      { entry.repo.description },
     }
+
+    if include_fork then
+      table.insert(columns, { fork_str })
+    end
+
+    table.insert(columns, { entry.obj.description })
+
+    local widths = {
+      { width = math.min(max_nameWithOwner, 50) },
+      { width = 2 },
+      { width = max_stargazerCount },
+      { width = 2 },
+      { width = max_forkCount },
+      { width = vim.fn.len "private" },
+    }
+
+    if include_fork then
+      table.insert(widths, { width = vim.fn.len "fork" })
+    end
+
+    table.insert(widths, { remaining = true })
 
     local displayer = entry_display.create {
       separator = " ",
-      items = {
-        { width = math.min(max_nameWithOwner, 50) },
-        { width = 2 },
-        { width = max_stargazerCount },
-        { width = 2 },
-        { width = max_forkCount },
-        { width = vim.fn.len "private" },
-        { width = vim.fn.len "fork" },
-        { remaining = true },
-      },
+      items = widths,
     }
 
     return displayer(columns)
@@ -558,7 +616,8 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount)
       value = repo.nameWithOwner,
       ordinal = repo.nameWithOwner .. " " .. repo.description,
       display = make_display,
-      repo = repo,
+      obj = repo,
+      repo = repo.nameWithOwner,
     }
   end
 end
@@ -656,7 +715,8 @@ function M.gen_from_octo_actions(width)
   end
 end
 
-function M.gen_from_notification()
+function M.gen_from_notification(opts)
+  opts = opts or { show_repo_info = false }
   local make_display = function(entry)
     if not entry then
       return nil
@@ -670,15 +730,21 @@ function M.gen_from_notification()
       { string.sub(entry.obj.repository.full_name, 1, 50), "TelescopeResultsNumber" },
       { string.sub(entry.obj.subject.title, 1, 100) },
     }
+    local items = {
+      { width = 2 },
+      { width = 6 },
+      { width = math.min(#entry.obj.repository.full_name, 50) },
+      { width = math.min(#entry.obj.subject.title, 100) },
+    }
+
+    if not opts.show_repo_info then
+      table.remove(columns, 3)
+      table.remove(items, 3)
+    end
 
     local displayer = entry_display.create {
       separator = " ",
-      items = {
-        { width = 2 },
-        { width = 6 },
-        { width = math.min(#entry.obj.repository.full_name, 50) },
-        { width = math.min(#entry.obj.subject.title, 100) },
-      },
+      items = items,
     }
 
     return displayer(columns)
@@ -694,6 +760,8 @@ function M.gen_from_notification()
         return "issue"
       elseif type == "PullRequest" then
         return "pull_request"
+      elseif type == "Discussion" then
+        return "discussion"
       end
       return "unknown"
     end)(notification.subject.type)
