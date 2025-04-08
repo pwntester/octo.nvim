@@ -66,6 +66,13 @@ function M.setup()
       require("octo.reviews").close(tonumber(vim.fn.expand "<afile>"))
     end,
   })
+  define({ "TabEnter" }, {
+    group = "octo_autocmds",
+    pattern = { "*" },
+    callback = function()
+      require("octo.reviews").on_tab_enter()
+    end,
+  })
   define({ "TabLeave" }, {
     group = "octo_autocmds",
     pattern = { "*" },
