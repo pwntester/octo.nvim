@@ -358,6 +358,23 @@ function M.write_reactions(bufnr, reaction_groups, line)
   return line
 end
 
+local function title_case(str)
+  str = string.lower(str)
+  return str:gsub("^%l", string.upper)
+end
+
+local remove_underscore = function(str)
+  return str:gsub("_", " ")
+end
+
+local format_author_association = function(association)
+  if association == "FIRST_TIME_CONTRIBUTOR" then
+    return "First-time contributor"
+  else
+    return title_case(remove_underscore(association))
+  end
+end
+
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
@@ -381,6 +398,9 @@ function M.write_details(bufnr, issue, update)
   local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
+  if not utils.is_blank(issue.authorAssociation) then
+    table.insert(author_vt, { " (" .. format_author_association(issue.authorAssociation) .. ")", "OctoDetailsLabel" })
+  end
   table.insert(details, author_vt)
 
   add_details_line(details, "Created", issue.createdAt, "date")
