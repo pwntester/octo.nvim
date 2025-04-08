@@ -110,6 +110,7 @@ query($endCursor: String) {
       author {
         login
       }
+      authorAssociation
       viewerDidAuthor
       viewerCanUpdate
       ...ReactionGroupsFragment
