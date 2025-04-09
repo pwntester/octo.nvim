@@ -378,6 +378,7 @@ query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
         repository { nameWithOwner }
       }
       ... on Discussion {
+        __typename
         ...DiscussionInfoFragment
       }
       ... on Repository {
