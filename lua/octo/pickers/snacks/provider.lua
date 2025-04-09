@@ -1,5 +1,6 @@
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 local octo_config = require "octo.config"
 local navigation = require "octo.navigation"
@@ -371,6 +372,123 @@ function M.issue_templates(templates, cb)
   }
 end
 
+function M.search(opts)
+  opts = opts or {}
+  opts.type = opts.type or "ISSUE"
+
+  if opts.type == "REPOSITORY" then
+    M.not_implemented()
+    return
+  end
+
+  local cfg = octo_config.values
+  if type(opts.prompt) == "string" then
+    opts.prompt = { opts.prompt }
+  end
+
+  local search_results = {}
+
+  local process_results = function(results)
+    if #results == 0 then
+      return
+    end
+
+    for _, item in ipairs(results) do
+      if item.__typename == "Issue" then
+        item.kind = "issue"
+        item.file = utils.get_issue_uri(item.number, item.repository.nameWithOwner)
+      elseif item.__typename == "PullRequest" then
+        item.kind = "pull_request"
+        item.file = utils.get_pull_request_uri(item.number, item.repository.nameWithOwner)
+      elseif item.__typename == "Discussion" then
+        item.kind = "discussion"
+        item.file = utils.get_discussion_uri(item.number, item.repository.nameWithOwner)
+      end
+
+      item.text = item.title .. " #" .. item.number .. (item.category and (" " .. item.category.name) or "")
+      table.insert(search_results, item)
+    end
+  end
+
+  for _, val in ipairs(opts.prompt) do
+    local output = gh.api.graphql {
+      query = queries.search,
+      fields = { prompt = val, type = opts.type },
+      jq = ".data.search.nodes",
+      opts = { mode = "sync" },
+    }
+
+    if not utils.is_blank(output) then
+      local results = vim.json.decode(output)
+      process_results(results)
+
+      if #results == 0 then
+        utils.info(string.format("No results found for query: %s", val))
+      end
+    end
+  end
+
+  if #search_results > 0 then
+    local max_number = -1
+    for _, item in ipairs(search_results) do
+      if item.number and item.number > max_number then
+        max_number = item.number
+      end
+    end
+
+    Snacks.picker.pick {
+      title = opts.preview_title or "GitHub Search Results",
+      items = search_results,
+      format = function(item, _)
+        local a = Snacks.picker.util.align
+        local ret = {} ---@type snacks.picker.Highlight[]
+
+        ---@diagnostic disable-next-line: assign-type-mismatch
+        ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
+
+        ret[#ret + 1] = { " " }
+
+        local issue_id = string.format("#%d", item.number)
+        local issue_id_width = #tostring(max_number) + 1
+
+        ret[#ret + 1] = { a(issue_id, issue_id_width), "SnacksPickerGitIssue" }
+
+        ret[#ret + 1] = { " " }
+
+        ret[#ret + 1] = { item.title }
+
+        if item.kind == "discussion" and item.category then
+          ret[#ret + 1] = { " [" .. item.category.name .. "]", "SnacksPickerSpecial" }
+        end
+
+        return ret
+      end,
+      win = {
+        preview = {
+          title = "",
+          minimal = true,
+        },
+        input = {
+          keys = {
+            [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
+            [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
+          },
+        },
+      },
+      actions = {
+        open_in_browser = function(_, item)
+          navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+        end,
+        copy_url = function(_, item)
+          utils.copy_url(item.url)
+        end,
+      },
+    }
+  else
+    utils.info "No search results found"
+  end
+end
+
 M.picker = {
   actions = M.not_implemented,
   assigned_labels = M.not_implemented,
@@ -392,7 +510,7 @@ M.picker = {
   repos = M.not_implemented,
   workflow_runs = M.not_implemented,
   review_commits = M.not_implemented,
-  search = M.not_implemented,
+  search = M.search,
   users = M.not_implemented,
   milestones = M.not_implemented,
 }

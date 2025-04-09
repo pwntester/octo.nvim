@@ -379,6 +379,9 @@ query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
       }
       ... on Discussion {
         __typename
+        category {
+          name
+        }
         ...DiscussionInfoFragment
       }
       ... on Repository {
