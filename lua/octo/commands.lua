@@ -10,7 +10,6 @@ local window = require "octo.ui.window"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local config = require "octo.config"
-local colors = require "octo.ui.colors"
 local vim = vim
 
 -- a global variable where command handlers can access the details of the last
@@ -902,11 +901,6 @@ function M.process_varargs(repo, ...)
 end
 
 function M.octo(object, action, ...)
-  if not _G.octo_colors_loaded then
-    colors.setup()
-    _G.octo_colors_loaded = true
-  end
-
   if not object then
     if config.values.enable_builtin then
       M.commands.actions()
