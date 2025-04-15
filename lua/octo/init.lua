@@ -19,7 +19,6 @@ local vim = vim
 
 _G.octo_repo_issues = {}
 _G.octo_buffers = {}
-_G.octo_colors_loaded = false
 
 local M = {}
 
@@ -35,6 +34,7 @@ function M.setup(user_config)
     return
   end
 
+  colors.setup()
   signs.setup()
   picker.setup()
   completion.setup()
@@ -49,7 +49,6 @@ function M.update_layout_for_current_file()
   local thisfile = vim.api.nvim_buf_get_name(bufnr)
   local relative_path = vim.fn.fnamemodify(thisfile, ":~:.")
   local review = reviews.get_current_review()
-  colors.setup()
   if review == nil then
     return
   end
