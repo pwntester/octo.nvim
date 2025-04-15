@@ -3,22 +3,8 @@ local vim = vim
 
 local M = {}
 
-local function get_hl_attr(hl_group_name, attr)
-  local id = vim.api.nvim_get_hl_id_by_name(hl_group_name)
-  if not id then
-    return
-  end
-
-  local value = vim.fn.synIDattr(id, attr)
-  if not value or value == "" then
-    return
-  end
-
-  return value
-end
-
 local function get_fg(hl_group_name)
-  return get_hl_attr(hl_group_name, "fg")
+  return vim.api.nvim_get_hl(0, { name = hl_group_name }).fg
 end
 
 local function get_colors()
