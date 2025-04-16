@@ -239,6 +239,7 @@ function M.get_default_values()
       discussion = {
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         add_label = { lhs = "<localleader>la", desc = "add label" },
         remove_label = { lhs = "<localleader>ld", desc = "remove label" },
@@ -276,6 +277,7 @@ function M.get_default_values()
         remove_label = { lhs = "<localleader>ld", desc = "remove label" },
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
         prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -312,6 +314,7 @@ function M.get_default_values()
         remove_label = { lhs = "<localleader>ld", desc = "remove label" },
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
         prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -331,6 +334,7 @@ function M.get_default_values()
       review_thread = {
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         add_suggestion = { lhs = "<localleader>sa", desc = "add suggestion" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
