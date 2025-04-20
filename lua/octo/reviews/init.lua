@@ -540,6 +540,13 @@ function M.get_current_layout()
   end
 end
 
+function M.on_tab_enter()
+  local current_review = M.get_current_review()
+  if current_review and current_review.layout then
+    current_review.layout:on_enter()
+  end
+end
+
 function M.on_tab_leave()
   local current_review = M.get_current_review()
   if current_review and current_review.layout then
