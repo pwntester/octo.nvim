@@ -6,8 +6,6 @@ local octo_config = require "octo.config"
 local navigation = require "octo.navigation"
 local Snacks = require "snacks"
 
-local Snacks = require "snacks"
-
 local M = {}
 
 local function get_filter(opts, kind)
@@ -97,7 +95,7 @@ M.issues = function(opts)
         actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.issues or {})
 
         Snacks.picker.pick {
-          title = opts.preview_title or "Issues",
+          title = opts.preview_title or "",
           items = issues,
           format = function(item, _)
             ---@type snacks.picker.Highlight[]
