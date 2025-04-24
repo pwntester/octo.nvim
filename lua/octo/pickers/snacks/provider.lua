@@ -191,11 +191,11 @@ function M.pull_requests(opts)
             copy_url = function(_picker, item)
               utils.copy_url(item.url)
             end,
-            check_out_pr = function(_picker, _item)
-              M.not_implemented()
+            check_out_pr = function(_picker, item)
+              utils.checkout_pr(item.number)
             end,
-            merge_pr = function(_picker, _item)
-              M.not_implemented()
+            merge_pr = function(_picker, item)
+              utils.merge_pr(item.number)
             end,
           },
         }
