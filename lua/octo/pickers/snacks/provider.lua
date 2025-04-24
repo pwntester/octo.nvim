@@ -183,7 +183,7 @@ function M.pull_requests(opts)
         actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.pull_requests or {})
 
         Snacks.picker.pick {
-          title = opts.preview_title or "Pull Requests",
+          title = opts.preview_title or "",
           items = pull_requests,
           format = function(item, _)
             ---@type snacks.picker.Highlight[]
@@ -291,7 +291,7 @@ function M.notifications(opts)
         actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.notifications or {})
 
         Snacks.picker.pick {
-          title = opts.preview_title or "Notifications",
+          title = opts.preview_title or "",
           items = safe_notifications,
           format = function(item, _)
             ---@type snacks.picker.Highlight[]
@@ -365,7 +365,7 @@ function M.issue_templates(templates, cb)
   actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.issue_templates or {})
 
   Snacks.picker.pick {
-    title = "Issue Templates",
+    title = "Issue templates",
     items = formatted_templates,
     format = function(item)
       if type(item) ~= "table" then
@@ -462,7 +462,7 @@ function M.search(opts)
     actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.search or {})
 
     Snacks.picker.pick {
-      title = opts.preview_title or "Search Results",
+      title = opts.preview_title or "GitHub Search Results",
       items = search_results,
       format = function(item, _)
         local a = Snacks.picker.util.align
