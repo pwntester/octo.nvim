@@ -24,6 +24,16 @@ local M = {}
 ---@field mappings OctoPickerMappings
 ---@field snacks OctoPickerConfigSnacks -- Snacks specific config
 
+---@class OctoSnacksActions
+---@field issues table<string, function>
+---@field pull_requests table<string, function>
+---@field notifications table<string, function>
+---@field issue_templates table<string, function>
+---@field search table<string, function>
+
+---@class OctoPickerConfigSnacks
+---@field actions OctoSnacksActions
+
 ---@class OctoConfigColors
 ---@field white string
 ---@field grey string
@@ -138,7 +148,13 @@ function M.get_default_values()
         merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
       },
       snacks = {
-        actions = {},
+        actions = {
+          issues = {},
+          pull_requests = {},
+          notifications = {},
+          issue_templates = {},
+          search = {},
+        },
       },
     },
     default_remote = { "upstream", "origin" },
@@ -497,8 +513,16 @@ function M.validate_config()
     -- Snacks specific validation
     if validate_type(config.picker_config.snacks, "picker_config.snacks", "table") then
       if validate_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table") then
-        for key, action in pairs(config.picker_config.snacks.actions) do
-          validate_type(action, string.format("picker_config.snacks.actions['%s']", key), "function")
+        for picker_type, actions in pairs(config.picker_config.snacks.actions) do
+          if validate_type(actions, string.format("picker_config.snacks.actions.%s", picker_type), "table") then
+            for key, action in pairs(actions) do
+              validate_type(
+                action,
+                string.format("picker_config.snacks.actions.%s['%s']", picker_type, key),
+                "function"
+              )
+            end
+          end
         end
       end
     end

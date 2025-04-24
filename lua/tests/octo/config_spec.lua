@@ -57,8 +57,15 @@ describe("Octo config", function()
       end)
 
       it("should return invalid when picker_config.snacks.actions contains non-function", function()
-        config.values.picker_config.snacks.actions = { ["<C-a>"] = "not a function" }
+        config.values.picker_config.snacks.actions = { issues = { ["<C-a>"] = "not a function" } }
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when picker_config.snacks.actions contains invalid picker type", function()
+        config.values.picker_config.snacks.actions = { invalid_picker = { ["<C-a>"] = function() end } }
+        -- This currently passes validation as we don't restrict keys, but the actions won't be used.
+        -- If strict validation is added later, this test should fail.
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
       end)
 
       it("should return invalid when user_icon isn't a string", function()

@@ -128,9 +128,18 @@ require"octo".setup({
       checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
       merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
     },
-    snacks = {                             -- snacks specific config
-      actions = {                          -- custom actions for the snacks picker
-        -- ["<leader>a"] = function(picker, item) print(vim.inspect(item)) end,
+    snacks = {                                -- snacks specific config
+      actions = {                             -- custom actions for specific snacks pickers
+        issues = {                            -- actions for the issues picker
+          -- ["<leader>a"] = function(picker, item) print("Issue action:", vim.inspect(item)) end,
+        },
+        pull_requests = {                     -- actions for the pull requests picker
+          -- ["<leader>b"] = function(picker, item) print("PR action:", vim.inspect(item)) end,
+        },
+        notifications = {},                   -- actions for the notifications picker
+        issue_templates = {},                 -- actions for the issue templates picker
+        search = {},                          -- actions for the search picker
+        -- ... add actions for other pickers as needed
       },
     },
   },
