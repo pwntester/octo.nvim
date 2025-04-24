@@ -6,9 +6,23 @@ local M = {}
 ---@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
 ---@alias OctoSplit "right" | "left"
 
+---@class OctoPickerMapping
+---@field lhs string
+---@field desc string
+
+---@class OctoPickerMappings
+---@field open_in_browser OctoPickerMapping
+---@field copy_url OctoPickerMapping
+---@field checkout_pr OctoPickerMapping
+---@field merge_pr OctoPickerMapping
+
+---@class OctoPickerConfigSnacks
+---@field actions table<string, function>
+
 ---@class OctoPickerConfig
----@field use_emojis boolean
----@field mappings table
+---@field use_emojis boolean -- Used by fzf-lua
+---@field mappings OctoPickerMappings
+---@field snacks OctoPickerConfigSnacks -- Snacks specific config
 
 ---@class OctoConfigColors
 ---@field white string
@@ -122,6 +136,9 @@ function M.get_default_values()
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
         merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
+      },
+      snacks = {
+        actions = {},
       },
     },
     default_remote = { "upstream", "origin" },
@@ -468,7 +485,23 @@ function M.validate_config()
     end
 
     validate_type(config.picker_config.use_emojis, "picker_config.use_emojis", "boolean")
-    validate_type(config.picker_config.mappings, "picker_config.mappings", "table")
+    if validate_type(config.picker_config.mappings, "picker_config.mappings", "table") then
+      for action, map in pairs(config.picker_config.mappings) do
+        if validate_type(map, string.format("picker_config.mappings.%s", action), "table") then
+          validate_type(map.lhs, string.format("picker_config.mappings.%s.lhs", action), "string")
+          validate_type(map.desc, string.format("picker_config.mappings.%s.desc", action), "string")
+        end
+      end
+    end
+
+    -- Snacks specific validation
+    if validate_type(config.picker_config.snacks, "picker_config.snacks", "table") then
+      if validate_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table") then
+        for key, action in pairs(config.picker_config.snacks.actions) do
+          validate_type(action, string.format("picker_config.snacks.actions['%s']", key), "function")
+        end
+      end
+    end
   end
 
   local function validate_aliases()

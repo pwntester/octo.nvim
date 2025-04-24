@@ -6,6 +6,8 @@ local octo_config = require "octo.config"
 local navigation = require "octo.navigation"
 local Snacks = require "snacks"
 
+local Snacks = require "snacks"
+
 local M = {}
 
 local function get_filter(opts, kind)
@@ -83,6 +85,17 @@ M.issues = function(opts)
           issue.kind = issue.__typename:lower()
         end
 
+        local actions = {
+          open_in_browser = function(_picker, item)
+            navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+          end,
+          copy_url = function(_picker, item)
+            local url = item.url
+            utils.copy_url(url)
+          end,
+        }
+        actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions or {})
+
         Snacks.picker.pick {
           title = opts.preview_title or "",
           items = issues,
@@ -104,15 +117,7 @@ M.issues = function(opts)
               },
             },
           },
-          actions = {
-            open_in_browser = function(_picker, item)
-              navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
-            end,
-            copy_url = function(_picker, item)
-              local url = item.url
-              utils.copy_url(url)
-            end,
-          },
+          actions = actions,
         }
       end
     end,
@@ -161,6 +166,22 @@ function M.pull_requests(opts)
           pull.kind = pull.__typename:lower() == "pullrequest" and "pull_request" or "unknown"
         end
 
+        local actions = {
+          open_in_browser = function(_picker, item)
+            navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+          end,
+          copy_url = function(_picker, item)
+            utils.copy_url(item.url)
+          end,
+          check_out_pr = function(_picker, item)
+            utils.checkout_pr(item.number)
+          end,
+          merge_pr = function(_picker, item)
+            utils.merge_pr(item.number)
+          end,
+        }
+        actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions or {})
+
         Snacks.picker.pick {
           title = opts.preview_title or "",
           items = pull_requests,
@@ -184,20 +205,7 @@ function M.pull_requests(opts)
               },
             },
           },
-          actions = {
-            open_in_browser = function(_picker, item)
-              navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
-            end,
-            copy_url = function(_picker, item)
-              utils.copy_url(item.url)
-            end,
-            check_out_pr = function(_picker, item)
-              utils.checkout_pr(item.number)
-            end,
-            merge_pr = function(_picker, item)
-              utils.merge_pr(item.number)
-            end,
-          },
+          actions = actions,
         }
       end
     end,
@@ -256,6 +264,32 @@ function M.notifications(opts)
           end
         end
 
+        local actions = {
+          open_in_browser = function(_picker, item)
+            navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
+          end,
+          copy_url = function(_picker, item)
+            utils.copy_url(item.url)
+          end,
+          mark_notification_read = function(picker, item)
+            local url = string.format("/notifications/threads/%s", item.id)
+            gh.run {
+              args = { "api", "--method", "PATCH", url },
+              headers = { "Accept: application/vnd.github.v3.diff" },
+              cb = function(_, stderr)
+                if stderr and not utils.is_blank(stderr) then
+                  utils.error(stderr)
+                  return
+                end
+              end,
+            }
+            -- TODO: No current way to redraw the list/remove just this item
+            picker:close()
+            M.notifications(opts)
+          end,
+        }
+        actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions or {})
+
         Snacks.picker.pick {
           title = opts.preview_title or "",
           items = safe_notifications,
@@ -280,30 +314,7 @@ function M.notifications(opts)
               },
             },
           },
-          actions = {
-            open_in_browser = function(_picker, item)
-              navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
-            end,
-            copy_url = function(_picker, item)
-              utils.copy_url(item.url)
-            end,
-            mark_notification_read = function(picker, item)
-              local url = string.format("/notifications/threads/%s", item.id)
-              gh.run {
-                args = { "api", "--method", "PATCH", url },
-                headers = { "Accept: application/vnd.github.v3.diff" },
-                cb = function(_, stderr)
-                  if stderr and not utils.is_blank(stderr) then
-                    utils.error(stderr)
-                    return
-                  end
-                end,
-              }
-              -- TODO: No current way to redraw the list/remove just this item
-              picker:close()
-              M.notifications(opts)
-            end,
-          },
+          actions = actions,
         }
       end
     end,
@@ -343,6 +354,16 @@ function M.issue_templates(templates, cb)
     ctx.preview:highlight { ft = "markdown" }
   end
 
+  local cfg = octo_config.values
+  local actions = {
+    confirm = function(_, item)
+      if type(cb) == "function" then
+        cb(item.template)
+      end
+    end,
+  }
+  actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions or {})
+
   Snacks.picker.pick {
     title = "Issue templates",
     items = formatted_templates,
@@ -362,13 +383,7 @@ function M.issue_templates(templates, cb)
       return ret
     end,
     preview = preview_fn, -- Use our custom preview function
-    actions = {
-      confirm = function(_, item)
-        if type(cb) == "function" then
-          cb(item.template)
-        end
-      end,
-    },
+    actions = actions,
   }
 end
 
@@ -436,6 +451,16 @@ function M.search(opts)
       end
     end
 
+    local actions = {
+      open_in_browser = function(_, item)
+        navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+      end,
+      copy_url = function(_, item)
+        utils.copy_url(item.url)
+      end,
+    }
+    actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions or {})
+
     Snacks.picker.pick {
       title = opts.preview_title or "GitHub Search Results",
       items = search_results,
@@ -475,14 +500,7 @@ function M.search(opts)
           },
         },
       },
-      actions = {
-        open_in_browser = function(_, item)
-          navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
-        end,
-        copy_url = function(_, item)
-          utils.copy_url(item.url)
-        end,
-      },
+      actions = actions,
     }
   else
     utils.info "No search results found"
