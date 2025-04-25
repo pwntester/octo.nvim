@@ -16,23 +16,30 @@ local M = {}
 ---@field checkout_pr OctoPickerMapping
 ---@field merge_pr OctoPickerMapping
 
+-- Type for a single action definition within the array
+---@class OctoSnacksActionItem
+---@field name string -- Mandatory identifier for the action
+---@field fn function -- The function to execute
+---@field lhs? string -- Optional keybinding
+---@field desc? string -- Optional description
+---@field mode? string[] -- Optional modes (e.g., {"n", "i"})
+
+-- Type for the array of actions for a specific picker
+---@alias OctoSnacksActionList OctoSnacksActionItem[]
+
 ---@class OctoPickerConfigSnacks
----@field actions table<string, function>
+---@field actions { -- Actions are now arrays of tables
+---    issues?: OctoSnacksActionList,
+---    pull_requests?: OctoSnacksActionList,
+---    notifications?: OctoSnacksActionList,
+---    issue_templates?: OctoSnacksActionList,
+---    search?: OctoSnacksActionList,
+---  }
 
 ---@class OctoPickerConfig
 ---@field use_emojis boolean -- Used by fzf-lua
 ---@field mappings OctoPickerMappings
 ---@field snacks OctoPickerConfigSnacks -- Snacks specific config
-
----@class OctoSnacksActions
----@field issues table<string, function>
----@field pull_requests table<string, function>
----@field notifications table<string, function>
----@field issue_templates table<string, function>
----@field search table<string, function>
-
----@class OctoPickerConfigSnacks
----@field actions OctoSnacksActions
 
 ---@class OctoConfigColors
 ---@field white string
@@ -148,6 +155,7 @@ function M.get_default_values()
         merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
       },
       snacks = {
+        -- Initialize actions as empty arrays
         actions = {
           issues = {},
           pull_requests = {},
@@ -512,15 +520,26 @@ function M.validate_config()
 
     -- Snacks specific validation
     if validate_type(config.picker_config.snacks, "picker_config.snacks", "table") then
-      if validate_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table") then
-        for picker_type, actions in pairs(config.picker_config.snacks.actions) do
-          if validate_type(actions, string.format("picker_config.snacks.actions.%s", picker_type), "table") then
-            for key, action in pairs(actions) do
-              validate_type(
-                action,
-                string.format("picker_config.snacks.actions.%s['%s']", picker_type, key),
-                "function"
-              )
+      -- Validate actions (new array structure)
+      if validate_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table", true) then -- Optional table
+        for picker_type, actions_array in pairs(config.picker_config.snacks.actions) do
+          local base_name = string.format("picker_config.snacks.actions.%s", picker_type)
+          if validate_type(actions_array, base_name, "table") then -- Should be an array (table)
+            for i, action_item in ipairs(actions_array) do
+              local item_name = string.format("%s[%d]", base_name, i)
+              if validate_type(action_item, item_name, "table") then
+                -- Validate mandatory fields
+                validate_type(action_item.name, item_name .. ".name", "string")
+                validate_type(action_item.fn, item_name .. ".fn", "function")
+                -- Validate optional fields
+                validate_type(action_item.lhs, item_name .. ".lhs", "string", true)
+                validate_type(action_item.desc, item_name .. ".desc", "string", true)
+                if validate_type(action_item.mode, item_name .. ".mode", "table", true) then -- Optional mode table
+                  for j, mode_val in ipairs(action_item.mode) do
+                    validate_type(mode_val, string.format("%s.mode[%d]", item_name, j), "string")
+                  end
+                end
+              end
             end
           end
         end
@@ -653,7 +672,9 @@ function M.setup(opts)
         repo = {},
       }
     end
-    M.values = vim.tbl_deep_extend("force", M.values, opts)
+    -- Use deep extend. For arrays ('actions' here), 'force' mode usually replaces the whole array,
+    -- which is the desired behavior - users define the full list of actions they want.
+    M.values = vim.tbl_deep_extend("force", M.values, opts or {})
   end
   local config_errs = M.validate_config()
   if vim.tbl_count(config_errs) > 0 then

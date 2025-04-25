@@ -83,19 +83,46 @@ M.issues = function(opts)
           issue.kind = issue.__typename:lower()
         end
 
-        local actions = {
-          open_in_browser = function(_picker, item)
+        -- Prepare actions and keys for Snacks
+        local final_actions = {}
+        local final_keys = {}
+        local default_mode = { "n", "i" }
+
+        -- Process custom actions from config array
+        local custom_actions_defined = {} -- Keep track of names defined by user
+        if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.issues then
+          for _, action_item in ipairs(cfg.picker_config.snacks.actions.issues) do
+            if action_item.name and action_item.fn then
+              final_actions[action_item.name] = action_item.fn
+              custom_actions_defined[action_item.name] = true
+              if action_item.lhs then
+                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+              end
+            end
+          end
+        end
+
+        -- Add default actions/keys if not overridden by name or lhs
+        if not custom_actions_defined["open_in_browser"] then
+          final_actions["open_in_browser"] = function(_picker, item)
             navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
-          end,
-          copy_url = function(_picker, item)
-            local url = item.url
-            utils.copy_url(url)
-          end,
-        }
-        actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.issues or {})
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+           final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+        end
+
+        if not custom_actions_defined["copy_url"] then
+          final_actions["copy_url"] = function(_picker, item)
+            utils.copy_url(item.url)
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+        end
 
         Snacks.picker.pick {
-          title = opts.preview_title or "",
+          title = opts.preview_title or "Issues",
           items = issues,
           format = function(item, _)
             ---@type snacks.picker.Highlight[]
@@ -109,13 +136,10 @@ M.issues = function(opts)
           end,
           win = {
             input = {
-              keys = {
-                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
-                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
-              },
+              keys = final_keys, -- Use the constructed keys map
             },
           },
-          actions = actions,
+          actions = final_actions, -- Use the constructed actions map
         }
       end
     end,
@@ -164,24 +188,61 @@ function M.pull_requests(opts)
           pull.kind = pull.__typename:lower() == "pullrequest" and "pull_request" or "unknown"
         end
 
-        local actions = {
-          open_in_browser = function(_picker, item)
+        -- Prepare actions and keys for Snacks
+        local final_actions = {}
+        local final_keys = {}
+        local default_mode = { "n", "i" }
+
+        -- Process custom actions from config array
+        local custom_actions_defined = {}
+        if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.pull_requests then
+          for _, action_item in ipairs(cfg.picker_config.snacks.actions.pull_requests) do
+            if action_item.name and action_item.fn then
+              final_actions[action_item.name] = action_item.fn
+              custom_actions_defined[action_item.name] = true
+              if action_item.lhs then
+                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+              end
+            end
+          end
+        end
+
+        -- Add default actions/keys if not overridden
+        if not custom_actions_defined["open_in_browser"] then
+          final_actions["open_in_browser"] = function(_picker, item)
             navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
-          end,
-          copy_url = function(_picker, item)
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+           final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+        end
+
+        if not custom_actions_defined["copy_url"] then
+          final_actions["copy_url"] = function(_picker, item)
             utils.copy_url(item.url)
-          end,
-          check_out_pr = function(_picker, item)
-            utils.checkout_pr(item.number)
-          end,
-          merge_pr = function(_picker, item)
-            utils.merge_pr(item.number)
-          end,
-        }
-        actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.pull_requests or {})
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+        end
+
+        if not custom_actions_defined["check_out_pr"] then
+           final_actions["check_out_pr"] = function(_picker, item) utils.checkout_pr(item.number) end
+        end
+        if not final_keys[cfg.picker_config.mappings.checkout_pr.lhs] then
+           final_keys[cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = default_mode }
+        end
+
+        if not custom_actions_defined["merge_pr"] then
+           final_actions["merge_pr"] = function(_picker, item) utils.merge_pr(item.number) end
+        end
+        if not final_keys[cfg.picker_config.mappings.merge_pr.lhs] then
+           final_keys[cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = default_mode }
+        end
+
 
         Snacks.picker.pick {
-          title = opts.preview_title or "",
+          title = opts.preview_title or "Pull Requests",
           items = pull_requests,
           format = function(item, _)
             ---@type snacks.picker.Highlight[]
@@ -195,15 +256,10 @@ function M.pull_requests(opts)
           end,
           win = {
             input = {
-              keys = {
-                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
-                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
-                [cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = { "n", "i" } },
-                [cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = { "n", "i" } },
-              },
+              keys = final_keys, -- Use the constructed keys map
             },
           },
-          actions = actions,
+          actions = final_actions, -- Use the constructed actions map
         }
       end
     end,
@@ -262,14 +318,48 @@ function M.notifications(opts)
           end
         end
 
-        local actions = {
-          open_in_browser = function(_picker, item)
+        -- Prepare actions and keys for Snacks
+        local final_actions = {}
+        local final_keys = {}
+        local default_mode = { "n", "i" }
+
+        -- Process custom actions from config array
+        local custom_actions_defined = {}
+        if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.notifications then
+          for _, action_item in ipairs(cfg.picker_config.snacks.actions.notifications) do
+            if action_item.name and action_item.fn then
+              final_actions[action_item.name] = action_item.fn
+              custom_actions_defined[action_item.name] = true
+              if action_item.lhs then
+                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+              end
+            end
+          end
+        end
+
+        -- Add default actions/keys if not overridden
+        if not custom_actions_defined["open_in_browser"] then
+          final_actions["open_in_browser"] = function(_picker, item)
             navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
-          end,
-          copy_url = function(_picker, item)
-            utils.copy_url(item.url)
-          end,
-          mark_notification_read = function(picker, item)
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+           final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+        end
+
+        if not custom_actions_defined["copy_url"] then
+          final_actions["copy_url"] = function(_picker, item)
+            -- Note: notification item doesn't have a direct .url, need to construct or use subject URL?
+            -- Using subject URL for now, might need adjustment depending on desired behavior.
+            utils.copy_url(item.subject.url or "")
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+        end
+
+        if not custom_actions_defined["mark_notification_read"] then
+          final_actions["mark_notification_read"] = function(picker, item)
             local url = string.format("/notifications/threads/%s", item.id)
             gh.run {
               args = { "api", "--method", "PATCH", url },
@@ -284,12 +374,15 @@ function M.notifications(opts)
             -- TODO: No current way to redraw the list/remove just this item
             picker:close()
             M.notifications(opts)
-          end,
-        }
-        actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.notifications or {})
+          end
+        end
+        -- Use the default mapping from the main config section for 'read'
+        if cfg.mappings.notification and cfg.mappings.notification.read and not final_keys[cfg.mappings.notification.read.lhs] then
+           final_keys[cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = default_mode }
+        end
 
         Snacks.picker.pick {
-          title = opts.preview_title or "",
+          title = opts.preview_title or "Notifications",
           items = safe_notifications,
           format = function(item, _)
             ---@type snacks.picker.Highlight[]
@@ -305,14 +398,10 @@ function M.notifications(opts)
           end,
           win = {
             input = {
-              keys = {
-                [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
-                [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
-                [cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = { "n", "i" } },
-              },
+              keys = final_keys, -- Use the constructed keys map
             },
           },
-          actions = actions,
+          actions = final_actions, -- Use the constructed actions map
         }
       end
     end,
@@ -353,17 +442,39 @@ function M.issue_templates(templates, cb)
   end
 
   local cfg = octo_config.values
-  local actions = {
-    confirm = function(_, item)
+
+  -- Prepare actions and keys for Snacks
+  local final_actions = {}
+  local final_keys = {}
+  local default_mode = { "n", "i" }
+
+  -- Process custom actions from config array
+  local custom_actions_defined = {}
+  if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.issue_templates then
+    for _, action_item in ipairs(cfg.picker_config.snacks.actions.issue_templates) do
+      if action_item.name and action_item.fn then
+        final_actions[action_item.name] = action_item.fn
+        custom_actions_defined[action_item.name] = true
+        if action_item.lhs then
+          final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+        end
+      end
+    end
+  end
+
+  -- Add default confirm action if not overridden
+  if not custom_actions_defined["confirm"] then
+    final_actions["confirm"] = function(_, item)
       if type(cb) == "function" then
         cb(item.template)
       end
-    end,
-  }
-  actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.issue_templates or {})
+    end
+  end
+  -- Default key for confirm is usually <CR> handled by Snacks itself, but allow override
+  -- No explicit default key mapping added here unless specified in config
 
   Snacks.picker.pick {
-    title = "Issue templates",
+    title = "Issue Templates",
     items = formatted_templates,
     format = function(item)
       if type(item) ~= "table" then
@@ -381,7 +492,12 @@ function M.issue_templates(templates, cb)
       return ret
     end,
     preview = preview_fn, -- Use our custom preview function
-    actions = actions,
+    win = {
+      input = {
+        keys = final_keys, -- Use the constructed keys map
+      },
+    },
+    actions = final_actions, -- Use the constructed actions map
   }
 end
 
@@ -449,15 +565,43 @@ function M.search(opts)
       end
     end
 
-    local actions = {
-      open_in_browser = function(_, item)
+    -- Prepare actions and keys for Snacks
+    local final_actions = {}
+    local final_keys = {}
+    local default_mode = { "n", "i" }
+
+    -- Process custom actions from config array
+    local custom_actions_defined = {}
+    if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.search then
+      for _, action_item in ipairs(cfg.picker_config.snacks.actions.search) do
+        if action_item.name and action_item.fn then
+          final_actions[action_item.name] = action_item.fn
+          custom_actions_defined[action_item.name] = true
+          if action_item.lhs then
+            final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+          end
+        end
+      end
+    end
+
+    -- Add default actions/keys if not overridden
+    if not custom_actions_defined["open_in_browser"] then
+      final_actions["open_in_browser"] = function(_picker, item)
         navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
-      end,
-      copy_url = function(_, item)
+      end
+    end
+    if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+       final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+    end
+
+    if not custom_actions_defined["copy_url"] then
+      final_actions["copy_url"] = function(_picker, item)
         utils.copy_url(item.url)
-      end,
-    }
-    actions = vim.tbl_deep_extend("force", actions, cfg.picker_config.snacks.actions.search or {})
+      end
+    end
+    if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+       final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+    end
 
     Snacks.picker.pick {
       title = opts.preview_title or "GitHub Search Results",
@@ -492,13 +636,10 @@ function M.search(opts)
           minimal = true,
         },
         input = {
-          keys = {
-            [cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = { "n", "i" } },
-            [cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = { "n", "i" } },
-          },
+          keys = final_keys, -- Use the constructed keys map
         },
       },
-      actions = actions,
+      actions = final_actions, -- Use the constructed actions map
     }
   else
     utils.info "No search results found"
