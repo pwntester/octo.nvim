@@ -90,7 +90,11 @@ M.issues = function(opts)
 
         -- Process custom actions from config array
         local custom_actions_defined = {} -- Keep track of names defined by user
-        if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.issues then
+        if
+          cfg.picker_config.snacks
+          and cfg.picker_config.snacks.actions
+          and cfg.picker_config.snacks.actions.issues
+        then
           for _, action_item in ipairs(cfg.picker_config.snacks.actions.issues) do
             if action_item.name and action_item.fn then
               final_actions[action_item.name] = action_item.fn
@@ -109,7 +113,7 @@ M.issues = function(opts)
           end
         end
         if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-           final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
         end
 
         if not custom_actions_defined["copy_url"] then
@@ -118,7 +122,7 @@ M.issues = function(opts)
           end
         end
         if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
-           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
         end
 
         Snacks.picker.pick {
@@ -195,7 +199,11 @@ function M.pull_requests(opts)
 
         -- Process custom actions from config array
         local custom_actions_defined = {}
-        if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.pull_requests then
+        if
+          cfg.picker_config.snacks
+          and cfg.picker_config.snacks.actions
+          and cfg.picker_config.snacks.actions.pull_requests
+        then
           for _, action_item in ipairs(cfg.picker_config.snacks.actions.pull_requests) do
             if action_item.name and action_item.fn then
               final_actions[action_item.name] = action_item.fn
@@ -214,7 +222,7 @@ function M.pull_requests(opts)
           end
         end
         if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-           final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
         end
 
         if not custom_actions_defined["copy_url"] then
@@ -223,23 +231,26 @@ function M.pull_requests(opts)
           end
         end
         if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
-           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
         end
 
         if not custom_actions_defined["check_out_pr"] then
-           final_actions["check_out_pr"] = function(_picker, item) utils.checkout_pr(item.number) end
+          final_actions["check_out_pr"] = function(_picker, item)
+            utils.checkout_pr(item.number)
+          end
         end
         if not final_keys[cfg.picker_config.mappings.checkout_pr.lhs] then
-           final_keys[cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = default_mode }
         end
 
         if not custom_actions_defined["merge_pr"] then
-           final_actions["merge_pr"] = function(_picker, item) utils.merge_pr(item.number) end
+          final_actions["merge_pr"] = function(_picker, item)
+            utils.merge_pr(item.number)
+          end
         end
         if not final_keys[cfg.picker_config.mappings.merge_pr.lhs] then
-           final_keys[cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = default_mode }
         end
-
 
         Snacks.picker.pick {
           title = opts.preview_title or "Pull Requests",
@@ -325,7 +336,11 @@ function M.notifications(opts)
 
         -- Process custom actions from config array
         local custom_actions_defined = {}
-        if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.notifications then
+        if
+          cfg.picker_config.snacks
+          and cfg.picker_config.snacks.actions
+          and cfg.picker_config.snacks.actions.notifications
+        then
           for _, action_item in ipairs(cfg.picker_config.snacks.actions.notifications) do
             if action_item.name and action_item.fn then
               final_actions[action_item.name] = action_item.fn
@@ -344,7 +359,7 @@ function M.notifications(opts)
           end
         end
         if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-           final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
         end
 
         if not custom_actions_defined["copy_url"] then
@@ -355,7 +370,7 @@ function M.notifications(opts)
           end
         end
         if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
-           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
         end
 
         if not custom_actions_defined["mark_notification_read"] then
@@ -377,8 +392,12 @@ function M.notifications(opts)
           end
         end
         -- Use the default mapping from the main config section for 'read'
-        if cfg.mappings.notification and cfg.mappings.notification.read and not final_keys[cfg.mappings.notification.read.lhs] then
-           final_keys[cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = default_mode }
+        if
+          cfg.mappings.notification
+          and cfg.mappings.notification.read
+          and not final_keys[cfg.mappings.notification.read.lhs]
+        then
+          final_keys[cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = default_mode }
         end
 
         Snacks.picker.pick {
@@ -450,7 +469,11 @@ function M.issue_templates(templates, cb)
 
   -- Process custom actions from config array
   local custom_actions_defined = {}
-  if cfg.picker_config.snacks and cfg.picker_config.snacks.actions and cfg.picker_config.snacks.actions.issue_templates then
+  if
+    cfg.picker_config.snacks
+    and cfg.picker_config.snacks.actions
+    and cfg.picker_config.snacks.actions.issue_templates
+  then
     for _, action_item in ipairs(cfg.picker_config.snacks.actions.issue_templates) do
       if action_item.name and action_item.fn then
         final_actions[action_item.name] = action_item.fn
@@ -591,7 +614,7 @@ function M.search(opts)
       end
     end
     if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-       final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+      final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
     end
 
     if not custom_actions_defined["copy_url"] then
@@ -600,7 +623,7 @@ function M.search(opts)
       end
     end
     if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
-       final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+      final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
     end
 
     Snacks.picker.pick {
