@@ -119,7 +119,7 @@ require"octo".setup({
   default_merge_method = "commit",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `commit`, `rebase` or `squash`
   default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
-  picker = "telescope",                    -- or "fzf-lua"
+  picker = "telescope",                    -- or "fzf-lua" or "snacks"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
     mappings = {                           -- mappings for the pickers
@@ -127,6 +127,20 @@ require"octo".setup({
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
       merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
+    },
+    snacks = {                                -- snacks specific config
+      actions = {                             -- custom actions for specific snacks pickers (array of tables)
+        issues = {                            -- actions for the issues picker
+          -- { name = "my_issue_action", fn = function(picker, item) print("Issue action:", vim.inspect(item)) end, lhs = "<leader>a", desc = "My custom issue action" },
+        },
+        pull_requests = {                     -- actions for the pull requests picker
+          -- { name = "my_pr_action", fn = function(picker, item) print("PR action:", vim.inspect(item)) end, lhs = "<leader>b", desc = "My custom PR action" },
+        },
+        notifications = {},                   -- actions for the notifications picker
+        issue_templates = {},                 -- actions for the issue templates picker
+        search = {},                          -- actions for the search picker
+        -- ... add actions for other pickers as needed
+      },
     },
   },
   comment_icon = "▎",                      -- comment marker
