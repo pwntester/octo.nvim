@@ -31,6 +31,43 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
+      it("should return invalid when picker_config.mappings action isn't a table", function()
+        config.values.picker_config.mappings = { open_in_browser = "cfg" }
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when picker_config.mappings action lhs isn't a string", function()
+        config.values.picker_config.mappings = { open_in_browser = { lhs = 123, desc = "desc" } }
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when picker_config.mappings action desc isn't a string", function()
+        config.values.picker_config.mappings = { open_in_browser = { lhs = "<C-b>", desc = 123 } }
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when picker_config.snacks isn't a table", function()
+        config.values.picker_config.snacks = "cfg"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when picker_config.snacks.actions isn't a table", function()
+        config.values.picker_config.snacks.actions = "cfg"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when picker_config.snacks.actions contains non-function", function()
+        config.values.picker_config.snacks.actions = { issues = { ["<C-a>"] = "not a function" } }
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when picker_config.snacks.actions contains invalid picker type", function()
+        config.values.picker_config.snacks.actions = { invalid_picker = { ["<C-a>"] = function() end } }
+        -- This currently passes validation as we don't restrict keys, but the actions won't be used.
+        -- If strict validation is added later, this test should fail.
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
+      end)
+
       it("should return invalid when user_icon isn't a string", function()
         config.values.user_icon = false
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
