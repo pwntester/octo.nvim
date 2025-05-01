@@ -87,13 +87,24 @@ M.issues = function(opts)
           title = opts.preview_title or "",
           items = issues,
           format = function(item, _)
+            local a = Snacks.picker.util.align
             ---@type snacks.picker.Highlight[]
             local ret = {}
+
             ---@diagnostic disable-next-line: assign-type-mismatch
             ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
-            ret[#ret + 1] = { string.format("#%d", item.number), "Comment" }
-            ret[#ret + 1] = { (" "):rep(#tostring(max_number) - #tostring(item.number) + 1) }
-            ret[#ret + 1] = { item.title, "Normal" }
+
+            ret[#ret + 1] = { " " }
+
+            local issue_id = string.format("#%d", item.number)
+            local issue_id_width = #tostring(max_number) + 1
+
+            ret[#ret + 1] = { a(issue_id, issue_id_width), "SnacksPickerGitIssue" }
+
+            ret[#ret + 1] = { " " }
+
+            ret[#ret + 1] = { item.title }
+
             return ret
           end,
           win = {
