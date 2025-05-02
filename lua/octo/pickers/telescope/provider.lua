@@ -1331,7 +1331,10 @@ local function mark_notification_read()
 end
 
 local function mark_notification_done()
-  local opts = { cb = gh.create_callback(), headers = { "Accept: application/vnd.github.v3.diff" } }
+  local opts = {
+    cb = gh.create_callback { success = function() end },
+    headers = { "Accept: application/vnd.github.v3.diff" },
+  }
 
   return function(prompt_bufnr)
     local current_picker = action_state.get_current_picker(prompt_bufnr)
