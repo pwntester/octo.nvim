@@ -1331,19 +1331,15 @@ local function mark_notification_read()
 end
 
 local function mark_notification_done()
+  local opts = { cb = gh.create_callback(), headers = { "Accept: application/vnd.github.v3.diff" } }
+
   return function(prompt_bufnr)
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      local url = string.format("/notifications/threads/%s", selection.thread_id)
-      gh.run {
-        args = { "api", "--method", "DELETE", url },
-        headers = { "Accept: application/vnd.github.v3.diff" },
-        cb = function(_, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            utils.error(stderr)
-            return
-          end
-        end,
+      gh.api.delete {
+        "/notifications/threads/{id}",
+        format = { id = selection.thread_id },
+        opts = opts,
       }
     end)
   end
