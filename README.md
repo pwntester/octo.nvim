@@ -376,7 +376,7 @@ require"octo".setup({
       toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
     },
     notification = {
-      read = { lhs = "<localleader>rn", desc = "mark notification as read" },
+      read = { lhs = "<localleader>nr", desc = "mark notification as read" },
       done = { lhs = "<localleader>nd", desc = "mark notification as done" },
     },
   },
