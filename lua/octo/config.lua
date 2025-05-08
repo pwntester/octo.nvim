@@ -433,6 +433,7 @@ function M.get_default_values()
       },
       notification = {
         read = { lhs = "<localleader>nr", desc = "mark notification as read" },
+        done = { lhs = "<localleader>nd", desc = "mark notification as done" },
       },
       repo = {},
     },

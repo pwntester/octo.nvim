@@ -377,6 +377,7 @@ require"octo".setup({
     },
     notification = {
       read = { lhs = "<localleader>rn", desc = "mark notification as read" },
+      done = { lhs = "<localleader>nd", desc = "mark notification as done" },
     },
   },
 })

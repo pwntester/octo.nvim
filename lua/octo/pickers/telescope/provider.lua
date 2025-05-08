@@ -1330,6 +1330,24 @@ local function mark_notification_read()
   end
 end
 
+local function mark_notification_done()
+  local opts = {
+    cb = gh.create_callback { success = function() end },
+    headers = { "Accept: application/vnd.github.v3.diff" },
+  }
+
+  return function(prompt_bufnr)
+    local current_picker = action_state.get_current_picker(prompt_bufnr)
+    current_picker:delete_selection(function(selection)
+      gh.api.delete {
+        "/notifications/threads/{id}",
+        format = { id = selection.thread_id },
+        opts = opts,
+      }
+    end)
+  end
+end
+
 ---@class NotificationOpts
 ---@field repo string
 ---@field all boolean Whether to show all of the notifications including read ones
@@ -1393,6 +1411,7 @@ function M.notifications(opts)
           map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
           map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
           map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
+          map("i", cfg.mappings.notification.done.lhs, mark_notification_done())
           return true
         end,
       })
