@@ -66,8 +66,19 @@ M.PullRequest = PullRequest
 local function merge_pages(data)
   local out = {}
   for _, page in ipairs(data) do
-    for _, item in ipairs(page) do
-      table.insert(out, item)
+    if type(page) == "table" then
+      -- Check if page is array-like or object-like
+      if #page > 0 then
+        -- Array-like, use ipairs
+        for _, item in ipairs(page) do
+          table.insert(out, item)
+        end
+      else
+        -- Object-like: merge its key/value pairs directly into out
+        for k, v in pairs(page) do
+          out[k] = v
+        end
+      end
     end
   end
   return out
