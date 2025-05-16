@@ -26,6 +26,6 @@ M.SHORT_ISSUE_PATTERN = "[^%w%d]+#(%d+)"
 M.SHORT_ISSUE_LINE_BEGINNING_PATTERN = "^#(%d+)"
 M.URL_ISSUE_PATTERN = "[htps]+://[^/]+/([^/]+/[^/]+)/([pulisedcton]+)/(%d+)"
 
-M.USER_PATTERN = "@([%w-]+)"
+M.USER_PATTERN = "@([%w-_]+)"
 
 return M
