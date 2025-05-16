@@ -774,11 +774,8 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         local diffhunks = {}
         local diffhunk = ""
         local left_comment_ranges, right_comment_ranges = {}, {}
-        if not utils.is_blank(pr.diff) then
-          local diffhunks_map = utils.extract_diffhunks_from_diff(pr.diff)
-          local file_diffhunks = diffhunks_map[comment_metadata.path]
-          diffhunks, left_comment_ranges, right_comment_ranges = utils.process_patch(file_diffhunks)
-        end
+        diffhunks, left_comment_ranges, right_comment_ranges =
+          file.diffhunks, file.left_comment_ranges, file.right_comment_ranges
         local comment_ranges
         if comment_metadata.diffSide == "RIGHT" then
           comment_ranges = right_comment_ranges
