@@ -108,6 +108,9 @@ function M.setup()
       M.search(...)
     end,
     discussion = {
+      browser = function()
+        navigation.open_in_browser()
+      end,
       reload = function()
         M.reload { verbose = true }
       end,
