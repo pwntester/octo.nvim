@@ -469,6 +469,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
+|    | browser | Open the current discussion in the browser |
 |    | create [repo]                                          | Create discussion for current or specified repo |
 |    | reload                                                 | Reload the current discussion buffer |
 |    | close                                                 | Close the discussion |
