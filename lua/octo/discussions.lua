@@ -1,6 +1,5 @@
 --- Helpers for discussions
 local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
 local utils = require "octo.utils"

@@ -4,7 +4,6 @@ local icons = require("octo.config").values.runs.icons
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local gh = require "octo.gh"
-local queries = require "octo.gh.queries"
 
 ---@alias LineType "job" | "step" | "step_log" |  nil
 
