@@ -100,6 +100,14 @@ function OctoBuffer:render_repo()
   self.ready = true
 end
 
+function OctoBuffer:render_release()
+  self:clear()
+  local obj = self.node
+  writers.write_release(self.bufnr, obj)
+  vim.bo[self.bufnr].modified = false
+  self.ready = true
+end
+
 function OctoBuffer:render_discussion()
   self:clear()
 

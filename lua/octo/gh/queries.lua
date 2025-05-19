@@ -476,6 +476,59 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
 }
 ]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
 
+---@class octo.Release : octo.ReactionGroupsFragment
+--- @field id string
+--- @field name string
+--- @field tagName string
+--- @field tagCommit { abbreviatedOid: string }
+--- @field url string
+--- @field isPrerelease boolean
+--- @field isLatest boolean
+--- @field publishedAt string
+--- @field description string
+--- @field author { login: string }
+--- @field releaseAssets {
+---   nodes: {
+---     name: string,
+---     downloadUrl: string,
+---     downloadCount: number,
+---     size: number,
+---     updatedAt: string,
+---   }[] }
+
+M.release = [[
+query($owner: String!, $name: String!, $tag: String!) {
+  repository(owner: $owner, name: $name) {
+    release(tagName: $tag) {
+      id
+      name
+      tagName
+      tagCommit {
+        abbreviatedOid
+      }
+      url
+      isPrerelease
+      isLatest
+      publishedAt
+      description
+      releaseAssets(first: 100) {
+        nodes {
+          name
+          downloadUrl
+          downloadCount
+          size
+          updatedAt
+        }
+      }
+      author {
+        login
+      }
+      ...ReactionGroupsFragment
+    }
+  }
+}
+]] .. fragments.reaction_groups
+
 -- https://docs.github.com/en/graphql/reference/objects#project
 M.projects = [[
 query {

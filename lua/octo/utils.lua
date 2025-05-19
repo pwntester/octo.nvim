@@ -623,7 +623,26 @@ function M.merge_pr(pr_number)
   }):start()
 end
 
+--- Formats a integer a large integer by taking the most significant digits with a suffix.
+--- e.g. 123456789 -> 12.3m
+---@param n integer
+---@param is_capitalized boolean
+function M.format_large_int(n, is_capitalized)
+  if n < 1000 then
+    return tostring(n)
+  end
+  local suffixes = is_capitalized and { "K", "M", "B", "T" } or { "k", "m", "b", "t" }
+  local i = 0
+  while n >= 1000 do
+    i = i + 1
+    n = n / 1000
+  end
+  return string.format("%.1f%s", n, suffixes[i])
+end
+
 ---Formats a string as a date
+---@param date_string string
+---@return string
 function M.format_date(date_string)
   if date_string == nil then
     return ""
@@ -920,6 +939,11 @@ function M.parse_url(url)
     return repo, number, kind
   elseif repo and number and kind == "discussions" then
     return repo, number, "discussion"
+  elseif not repo then
+    repo, kind, number = string.match(url, constants.URL_RELEASE_PATTERN)
+    if repo and number and kind == "releases" then
+      return repo, number, "release"
+    end
   end
 end
 
