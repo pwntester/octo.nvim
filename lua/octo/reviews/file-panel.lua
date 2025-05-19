@@ -236,7 +236,7 @@ function FilePanel:render()
   self.render_data:clear()
   local line_idx = 0
   local lines = self.render_data.lines
-  local add_hl = function(...)
+  local function add_hl(...)
     self.render_data:add_hl(...)
   end
 

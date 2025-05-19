@@ -187,7 +187,7 @@ end
 ---Traverses a tree from the given node, giving a callback for every item
 ---@param tree WorkflowNode | nil
 ---@param cb function
-M.traverse = function(tree, cb)
+function M.traverse(tree, cb)
   if not tree then
     tree = M.tree
   end
@@ -652,7 +652,7 @@ local function print_lines()
   end
 end
 
-M.refresh = function()
+function M.refresh()
   print_lines()
 end
 
@@ -717,20 +717,20 @@ local function render(selected)
   vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
 end
 
-M.previewer = function(self, entry)
+function M.previewer(self, entry)
   local id = entry.value.id
   M.buf = self.state.bufnr
   populate_preview_buffer(id, self.state.bufnr)
 end
 
-M.list = function(opts)
+function M.list(opts)
   utils.info "Fetching workflow runs (this may take a while) ..."
   local wf_runs = get_workflow_runs_sync(opts)
 
   require("octo.picker").workflow_runs(wf_runs, "Workflow runs", render)
 end
 
-M.refetch = function()
+function M.refetch()
   local id = M.current_wf.databaseId
   M.wf_cache[id] = nil
   M.current_wf = nil
@@ -738,7 +738,7 @@ M.refetch = function()
 end
 
 ---@param db_id number | nil
-M.cancel = function(db_id)
+function M.cancel(db_id)
   local id = db_id or M.current_wf.databaseId
   local _, stderr = gh.run.cancel {
     id,
@@ -754,7 +754,7 @@ M.cancel = function(db_id)
 end
 
 ---@param opts { db_id: number | nil, failed: boolean | nil }
-M.rerun = function(opts)
+function M.rerun(opts)
   opts = opts or {}
   local failed_jobs = opts.failed == true
   local id = opts.db_id or (M.current_wf and M.current_wf.databaseId)
@@ -772,7 +772,7 @@ M.rerun = function(opts)
   M.refetch()
 end
 
-local find_workflow_path_by_name = function(workflow_name)
+local function find_workflow_path_by_name(workflow_name)
   local jq = ([[
     map(select(.name == "{name}")) | .[0].path
   ]]):gsub("{name}", workflow_name)
@@ -784,7 +784,7 @@ local find_workflow_path_by_name = function(workflow_name)
   }
 end
 
-M.edit = function(workflow_name)
+function M.edit(workflow_name)
   if workflow_name == "Dependabot Updates" then
     vim.cmd.edit ".github/dependabot.yml"
     return
@@ -800,7 +800,7 @@ M.edit = function(workflow_name)
   vim.cmd.edit(path)
 end
 
-M.workflow_list = function(opts)
+function M.workflow_list(opts)
   opts = opts or {}
 
   if not opts.cb then

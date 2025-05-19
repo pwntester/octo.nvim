@@ -7,7 +7,7 @@ local vim = vim
 local M = {}
 
 function M.gen_from_discussion(max_number)
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -51,7 +51,7 @@ function M.gen_from_discussion(max_number)
 end
 
 function M.gen_from_issue(max_number, print_repo)
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -137,7 +137,7 @@ function M.gen_from_git_commits()
     },
   }
 
-  local make_display = function(entry)
+  local function make_display(entry)
     return displayer {
       { entry.value:sub(1, 7), "TelescopeResultsNumber" },
       vim.split(entry.msg, "\n")[1],
@@ -175,7 +175,7 @@ function M.gen_from_git_changed_files(opts)
     },
   }
 
-  local make_display = function(entry)
+  local function make_display(entry)
     return displayer {
       { entry.value:sub(1, 7), "TelescopeResultsNumber" },
       { entry.change.status, "OctoDetailsLabel" },
@@ -211,7 +211,7 @@ function M.gen_from_workflow_run()
 end
 
 function M.gen_from_review_thread(linenr_length)
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -250,7 +250,7 @@ function M.gen_from_review_thread(linenr_length)
 end
 
 function M.gen_from_project_v2()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -284,7 +284,7 @@ function M.gen_from_project_v2()
 end
 
 function M.gen_from_project()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -318,7 +318,7 @@ function M.gen_from_project()
 end
 
 function M.gen_from_project_column()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -351,7 +351,7 @@ function M.gen_from_project_column()
 end
 
 function M.gen_from_project_card()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -389,7 +389,7 @@ end
 function M.gen_from_milestone(title_width, show_description)
   title_width = title_width or 10
 
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -432,7 +432,7 @@ function M.gen_from_milestone(title_width, show_description)
 end
 
 function M.gen_from_label()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -466,7 +466,7 @@ function M.gen_from_label()
 end
 
 function M.gen_from_team()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -512,7 +512,7 @@ function M.gen_from_user()
     return user.login .. user.name
   end
 
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -548,7 +548,7 @@ end
 function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, include_fork)
   include_fork = include_fork == nil and true or include_fork
 
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -623,7 +623,7 @@ function M.gen_from_repo(max_nameWithOwner, max_forkCount, max_stargazerCount, i
 end
 
 function M.gen_from_gist()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return
     end
@@ -680,7 +680,7 @@ function M.gen_from_gist()
 end
 
 function M.gen_from_octo_actions(width)
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -717,7 +717,7 @@ end
 
 function M.gen_from_notification(opts)
   opts = opts or { show_repo_info = false }
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end
@@ -785,7 +785,7 @@ function M.gen_from_notification(opts)
 end
 
 function M.gen_from_issue_templates()
-  local make_display = function(entry)
+  local function make_display(entry)
     if not entry then
       return nil
     end

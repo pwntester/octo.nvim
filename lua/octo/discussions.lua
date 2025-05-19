@@ -15,7 +15,7 @@ local M = {}
 
 --- Discussion mutation
 ---@param opts DiscussionMutationOpts
-local create_discussion = function(opts)
+local function create_discussion(opts)
   gh.api.graphql {
     query = mutations.create_discussion,
     fields = {
@@ -45,7 +45,7 @@ end
 ---Select a category
 ---@param categories Category[]
 ---@param cb fun(selected: Category)
-local select_a_category = function(categories, cb)
+local function select_a_category(categories, cb)
   vim.ui.select(categories, {
     prompt = "Pick a category: ",
     format_item = function(item)
@@ -66,7 +66,7 @@ end
 ---Get categories for a repository
 ---@param opts GetCategoriesOpts
 ---@param cb fun(selected: Category)
-local get_categories = function(opts, cb)
+local function get_categories(opts, cb)
   gh.api.graphql {
     query = queries.discussion_categories,
     jq = ".data.repository.discussionCategories.nodes",
@@ -90,7 +90,7 @@ end
 ---Create a discussion for a repository
 ---@param opts DiscussionOpts
 ---@return nil
-M.create = function(opts)
+function M.create(opts)
   opts = opts or {}
 
   opts.owner, opts.name = utils.split_repo(opts.repo)
@@ -110,7 +110,7 @@ M.create = function(opts)
     opts.body = utils.input { prompt = "Discussion body" }
   end
 
-  local cb = function(selected)
+  local function cb(selected)
     opts.category_id = selected.id
 
     create_discussion(opts)

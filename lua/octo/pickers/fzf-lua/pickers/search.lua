@@ -12,7 +12,7 @@ local previewers = require "octo.pickers.fzf-lua.previewers"
 ---@param max_id_length integer
 ---@param formatted_issues table<string, table> entry.ordinal -> entry
 ---@param co thread
-local handle_entry = function(fzf_cb, issue, max_id_length, formatted_issues, co)
+local function handle_entry(fzf_cb, issue, max_id_length, formatted_issues, co)
   local entry = entry_maker.gen_from_issue(issue)
   if entry ~= nil then
     local owner, name = utils.split_repo(entry.repo)
@@ -32,7 +32,7 @@ return function(opts)
 
   local formatted_items = {} ---@type table<string, table> entry.ordinal -> entry
 
-  local contents = function(query)
+  local function contents(query)
     return function(fzf_cb)
       coroutine.wrap(function()
         local co = coroutine.running()

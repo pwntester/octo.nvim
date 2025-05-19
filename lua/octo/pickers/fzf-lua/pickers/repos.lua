@@ -13,7 +13,7 @@ return function(opts)
 
   local formatted_repos = {} ---@type table<string, table> entry.ordinal -> entry
 
-  local get_contents = function(fzf_cb)
+  local function get_contents(fzf_cb)
     gh.api.graphql {
       query = queries.repos,
       f = { login = opts.login },

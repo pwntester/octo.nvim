@@ -12,7 +12,7 @@ local workflow_runs_previewer = require("octo.workflow_runs").previewer
 
 local vim = vim
 
-local discussion_preview = function(obj, bufnr)
+local function discussion_preview(obj, bufnr)
   -- clear the buffer
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
@@ -72,7 +72,7 @@ local discussion = defaulter(function(opts)
   }
 end)
 
-local issue_preview = function(obj, bufnr)
+local function issue_preview(obj, bufnr)
   local state = utils.get_displayed_state(obj.__typename == "Issue", obj.state, obj.stateReason)
   writers.write_title(bufnr, obj.title, 1)
   writers.write_details(bufnr, obj)

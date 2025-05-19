@@ -187,7 +187,7 @@ function Review:focus_commit(right, left)
     files = {},
   }
   self.layout:open(self)
-  local cb = function(files)
+  local function cb(files)
     self:set_files_and_select_first(files)
   end
   if right == self.pull_request.right.commit and left == self.pull_request.left.commit then

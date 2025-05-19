@@ -42,7 +42,7 @@ function M.not_implemented()
   utils.error "Not implemented yet"
 end
 
-M.issues = function(opts)
+function M.issues(opts)
   opts = opts or {}
   if not opts.states then
     opts.states = "OPEN"
@@ -457,7 +457,7 @@ function M.issue_templates(templates, cb)
     end
   end
 
-  local preview_fn = function(ctx)
+  local function preview_fn(ctx)
     ctx.preview:reset()
 
     local item = ctx.item
@@ -551,7 +551,7 @@ function M.search(opts)
 
   local search_results = {}
 
-  local process_results = function(results)
+  local function process_results(results)
     if #results == 0 then
       return
     end

@@ -14,7 +14,7 @@ return function(opts)
 
   local query = graphql("labels_query", owner, name)
 
-  local get_contents = function(fzf_cb)
+  local function get_contents(fzf_cb)
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)

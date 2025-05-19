@@ -57,7 +57,7 @@ _G.Test_filter = function(data)
   return run_data
 end
 
-local compare_text = function(linenr, text_after, name, cursor_add, end_cursor)
+local function compare_text(linenr, text_after, name, cursor_add, end_cursor)
   cursor_add = cursor_add or 0
   local new_text = vim.api.nvim_buf_get_lines(0, linenr - 1, linenr + #text_after - 1, true)
   for i = 1, #text_after, 1 do
