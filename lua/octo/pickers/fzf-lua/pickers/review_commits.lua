@@ -5,7 +5,7 @@ local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
 
 -- add a fake entry to represent the entire pull request
-local make_full_pr = function(current_review)
+local function make_full_pr(current_review)
   return {
     sha = current_review.pull_request.right.commit,
     commit = {
@@ -36,7 +36,7 @@ return function(thread_cb)
   local url =
     string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
 
-  local get_contents = function(fzf_cb)
+  local function get_contents(fzf_cb)
     gh.run {
       args = { "api", "--paginate", url },
       cb = function(output, err)

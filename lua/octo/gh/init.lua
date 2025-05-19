@@ -204,7 +204,7 @@ local function run(opts)
   end
 end
 
-local create_flag = function(key)
+local function create_flag(key)
   if #key == 1 then
     return "-" .. key
   else
@@ -212,7 +212,7 @@ local create_flag = function(key)
   end
 end
 
-M.insert_input = function(args, flag, parameter, key, value)
+function M.insert_input(args, flag, parameter, key, value)
   if type(value) == "boolean" then
     value = tostring(value)
   end
@@ -236,7 +236,7 @@ end
 ---@param options table the options to insert
 ---@param replace table|nil key value pairs to replace in the key of the options
 ---@return table the updated args table
-M.insert_args = function(args, options, replace)
+function M.insert_args(args, options, replace)
   replace = replace or {}
 
   for key, value in pairs(options) do
@@ -291,7 +291,7 @@ end
 ---Create the arguments for the graphql query
 ---@param opts GraphQLOpts
 ---@return table|nil
-M.create_graphql_opts = function(opts)
+function M.create_graphql_opts(opts)
   -- add query to the existing raw-field
   local f = opts.f or {}
   local query = opts.query or f.query
@@ -349,7 +349,7 @@ end
 ---Format the endpoint with the format table
 ---@param endpoint string the endpoint to format
 ---@param format table<key, value> the format table
-local format_endpoint = function(endpoint, format)
+local function format_endpoint(endpoint, format)
   for key, value in pairs(format) do
     endpoint = endpoint:gsub("{" .. key .. "}", value)
   end
@@ -359,7 +359,7 @@ end
 ---@param method string the rest method
 ---@param opts table the options for the rest command
 ---@return table|nil
-M.create_rest_args = function(method, opts)
+function M.create_rest_args(method, opts)
   local format = opts.format or {}
 
   local endpoint = opts[1]
@@ -381,7 +381,7 @@ M.create_rest_args = function(method, opts)
 end
 
 ---Run a rest command
-local rest = function(method, opts)
+local function rest(method, opts)
   local run_opts = opts.opts or {}
 
   local args = M.create_rest_args(method, opts)
@@ -401,23 +401,23 @@ local rest = function(method, opts)
   }
 end
 
-M.api.get = function(opts)
+function M.api.get(opts)
   return rest("GET", opts)
 end
 
-M.api.post = function(opts)
+function M.api.post(opts)
   return rest("POST", opts)
 end
 
-M.api.patch = function(opts)
+function M.api.patch(opts)
   return rest("PATCH", opts)
 end
 
-M.api.delete = function(opts)
+function M.api.delete(opts)
   return rest("DELETE", opts)
 end
 
-M.api.put = function(opts)
+function M.api.put(opts)
   return rest("PUT", opts)
 end
 
@@ -428,7 +428,7 @@ setmetatable(M.api, {
   end,
 })
 
-local create_subcommand = function(command)
+local function create_subcommand(command)
   local subcommand = {}
   subcommand.command = command
 

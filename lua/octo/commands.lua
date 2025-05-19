@@ -644,7 +644,7 @@ function M.setup()
         --- Get the description of a label
         --- @param search string
         --- @return table label_info
-        local get_label_info = function(opts)
+        local function get_label_info(opts)
           local item = gh.label.list {
             json = "name,description",
             search = opts.search,
@@ -664,7 +664,7 @@ function M.setup()
         --- @param label string
         --- @param kind string
         --- @param current_value string
-        local change_label_info = function(label, kind, current_value)
+        local function change_label_info(label, kind, current_value)
           vim.ui.input({
             prompt = "New " .. kind .. " for " .. label .. ": ",
             default = current_value,
@@ -688,7 +688,7 @@ function M.setup()
           end)
         end
 
-        local cb = function(name)
+        local function cb(name)
           local info = get_label_info {
             search = name,
           }
@@ -727,7 +727,7 @@ function M.setup()
         end
       end,
       delete = function(label)
-        local delete_labels = function(labels)
+        local function delete_labels(labels)
           for _, label in ipairs(labels) do
             if vim.fn.confirm("Delete label: " .. label.name .. "?", "&Yes\n&No", 2) == 1 then
               gh.label.delete {
@@ -747,7 +747,7 @@ function M.setup()
           end
         end
 
-        local delete_labels_callback = function(labels)
+        local function delete_labels_callback(labels)
           if #labels == 0 then
             utils.info "Nothing to delete"
             return
@@ -1288,7 +1288,7 @@ function M.change_state(state)
     fields = {}
   end
 
-  local update_state = function(output)
+  local function update_state(output)
     local obj = vim.json.decode(output)
     local new_state = obj.state
 
@@ -1609,7 +1609,7 @@ end
 
 --- Change PR state to ready for review or draft
 --- @param opts PRReadyOpts
-M.gh_pr_ready = function(opts)
+function M.gh_pr_ready(opts)
   local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     utils.error "Not a PR buffer"
@@ -1639,7 +1639,7 @@ function M.pr_checks()
     return
   end
 
-  local show_checks = function(output)
+  local function show_checks(output)
     local max_lengths = {}
     local parts = {}
     for _, l in pairs(vim.split(output, "\n")) do
@@ -2112,13 +2112,13 @@ local function label_action(opts)
     utils.error "Cannot get issue/pr/discussion id"
   end
 
-  local cb = function(labels)
+  local function cb(labels)
     local label_ids = {}
     for _, lbl in ipairs(labels) do
       table.insert(label_ids, lbl.id)
     end
 
-    local refresh_details = function()
+    local function refresh_details()
       require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
         if buffer:isDiscussion() then
           writers.write_discussion_details(buffer.bufnr, obj)
@@ -2182,7 +2182,7 @@ function M.add_user(subject, login)
     utils.error "Cannot get issue/pr id"
   end
 
-  local cb = function(user_id)
+  local function cb(user_id)
     local query
     if subject == "assignee" then
       query = graphql("add_assignees_mutation", iid, user_id)
@@ -2230,7 +2230,7 @@ function M.remove_assignee(login)
     utils.error "Cannot get issue/pr id"
   end
 
-  local cb = function(user_id)
+  local function cb(user_id)
     local query = graphql("remove_assignees_mutation", iid, user_id)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
@@ -2307,7 +2307,7 @@ function M.search(...)
   picker.search { prompt = prompt, type = type }
 end
 
-M.within_issue = function(cb)
+function M.within_issue(cb)
   return function()
     local buffer = utils.get_current_buffer()
     if not buffer or not buffer:isIssue() then
@@ -2325,7 +2325,7 @@ end
 
 --- Pin or unpin an issue
 --- @param opts PinIssueOpts
-M.pin_issue = function(opts)
+function M.pin_issue(opts)
   local query_info = opts.add
       and {
         query = mutations.pin_issue,

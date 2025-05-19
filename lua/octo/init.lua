@@ -149,7 +149,7 @@ function M.load(repo, kind, number, cb)
     fields = { owner = owner, name = name, number = number }
   end
 
-  local load_buffer = function(output)
+  local function load_buffer(output)
     if kind == "pull" or kind == "issue" then
       local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
       local obj = resp.data.repository[key]
@@ -253,7 +253,7 @@ function M.on_cursor_hold()
   if not repo or not number then
     return
   end
-  local write_popup = function(data, write_summary)
+  local function write_popup(data, write_summary)
     local popup_bufnr = vim.api.nvim_create_buf(false, true)
     local max_length = 80
     local lines = write_summary(popup_bufnr, data, { max_length = max_length })
