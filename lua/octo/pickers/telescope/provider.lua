@@ -1311,21 +1311,24 @@ end
 --
 -- NOTIFICATIONS
 --
+---@param thread_id string
+local function request_read_notification(thread_id)
+  gh.api.patch {
+    "/notifications/threads/{id}",
+    format = { id = thread_id },
+    opts = {
+      cb = gh.create_callback { success = function() end },
+      headers = { "Accept: application/vnd.github+json" },
+    },
+  }
+end
+
 local function mark_notification_read()
   return function(prompt_bufnr)
+    ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      local url = string.format("/notifications/threads/%s", selection.thread_id)
-      gh.run {
-        args = { "api", "--method", "PATCH", url },
-        headers = { "Accept: application/vnd.github.v3.diff" },
-        cb = function(_, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            utils.error(stderr)
-            return
-          end
-        end,
-      }
+      request_read_notification(selection.thread_id)
     end)
   end
 end
@@ -1337,12 +1340,38 @@ local function mark_notification_done()
   }
 
   return function(prompt_bufnr)
+    ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
+      ---@type string
+      local thread_id = selection.thread_id
       gh.api.delete {
         "/notifications/threads/{id}",
-        format = { id = selection.thread_id },
+        format = { id = thread_id },
         opts = opts,
+      }
+    end)
+  end
+end
+
+local function unsubscribe_notification()
+  return function(prompt_bufnr)
+    ---@type Picker
+    local current_picker = action_state.get_current_picker(prompt_bufnr)
+    current_picker:delete_selection(function(selection)
+      ---@type string
+      local thread_id = selection.thread_id
+      gh.api.delete {
+        "/notifications/threads/{id}/subscription",
+        format = { id = thread_id },
+        opts = {
+          cb = gh.create_callback {
+            success = function()
+              request_read_notification(thread_id)
+            end,
+          },
+          headers = { "Accept: application/vnd.github+json" },
+        },
       }
     end)
   end
@@ -1412,6 +1441,7 @@ function M.notifications(opts)
           map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
           map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
           map("i", cfg.mappings.notification.done.lhs, mark_notification_done())
+          map("i", cfg.mappings.notification.unsubscribe.lhs, unsubscribe_notification())
           return true
         end,
       })
