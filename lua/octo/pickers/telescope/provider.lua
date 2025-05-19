@@ -132,7 +132,7 @@ end
 --- Create a replace function for the picker
 --- @param cb function Callback function to call with the selected entry
 --- @return function Replace function that takes a prompt_bufnr and calls the callback with the selected entry
-local create_replace = function(cb)
+local function create_replace(cb)
   return function(prompt_bufnr, _)
     local selected = action_state.get_selected_entry()
     actions.close(prompt_bufnr)
@@ -543,7 +543,7 @@ local function get_search_size(prompt)
   }
 end
 
-local create_repo_picker = function(repos, opts, max)
+local function create_repo_picker(repos, opts, max)
   local cfg = octo_config.values
 
   local finder
@@ -575,10 +575,10 @@ local create_repo_picker = function(repos, opts, max)
     :find()
 end
 
-local repo_search = function(opts)
+local function repo_search(opts)
   opts.prompt = opts.prompt or ""
 
-  local repos = function(prompt)
+  local function repos(prompt)
     local full_prompt = opts.prompt
 
     if prompt then
@@ -643,7 +643,7 @@ function M.search(opts)
 
   local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
-  local requester = function()
+  local function requester()
     return function(prompt)
       if utils.is_blank(opts.prompt) and utils.is_blank(prompt) then
         return {}
@@ -919,7 +919,7 @@ function M.select_label(opts)
 
   opts = vim.tbl_deep_extend("force", dropdown_opts, opts)
 
-  local create_picker = function(output)
+  local function create_picker(output)
     local labels = vim.json.decode(output)
 
     pickers
@@ -980,7 +980,7 @@ function M.select_assigned_label(opts)
     key = "discussion"
   end
 
-  local create_picker = function(output)
+  local function create_picker(output)
     local labels = vim.json.decode(output)
 
     pickers
@@ -1311,20 +1311,67 @@ end
 --
 -- NOTIFICATIONS
 --
+---@param thread_id string
+local function request_read_notification(thread_id)
+  gh.api.patch {
+    "/notifications/threads/{id}",
+    format = { id = thread_id },
+    opts = {
+      cb = gh.create_callback { success = function() end },
+      headers = { "Accept: application/vnd.github+json" },
+    },
+  }
+end
+
 local function mark_notification_read()
   return function(prompt_bufnr)
+    ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      local url = string.format("/notifications/threads/%s", selection.thread_id)
-      gh.run {
-        args = { "api", "--method", "PATCH", url },
-        headers = { "Accept: application/vnd.github.v3.diff" },
-        cb = function(_, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            utils.error(stderr)
-            return
-          end
-        end,
+      request_read_notification(selection.thread_id)
+    end)
+  end
+end
+
+local function mark_notification_done()
+  local opts = {
+    cb = gh.create_callback { success = function() end },
+    headers = { "Accept: application/vnd.github.v3.diff" },
+  }
+
+  return function(prompt_bufnr)
+    ---@type Picker
+    local current_picker = action_state.get_current_picker(prompt_bufnr)
+    current_picker:delete_selection(function(selection)
+      ---@type string
+      local thread_id = selection.thread_id
+      gh.api.delete {
+        "/notifications/threads/{id}",
+        format = { id = thread_id },
+        opts = opts,
+      }
+    end)
+  end
+end
+
+local function unsubscribe_notification()
+  return function(prompt_bufnr)
+    ---@type Picker
+    local current_picker = action_state.get_current_picker(prompt_bufnr)
+    current_picker:delete_selection(function(selection)
+      ---@type string
+      local thread_id = selection.thread_id
+      gh.api.delete {
+        "/notifications/threads/{id}/subscription",
+        format = { id = thread_id },
+        opts = {
+          cb = gh.create_callback {
+            success = function()
+              request_read_notification(thread_id)
+            end,
+          },
+          headers = { "Accept: application/vnd.github+json" },
+        },
       }
     end)
   end
@@ -1354,7 +1401,7 @@ function M.notifications(opts)
   opts.preview_title = ""
   opts.results_title = ""
 
-  local create_notification_picker = function(output)
+  local function create_notification_picker(output)
     local resp = vim.json.decode(output)
 
     if #resp == 0 then
@@ -1362,7 +1409,7 @@ function M.notifications(opts)
       return
     end
 
-    local copy_notification_url = function(prompt_bufnr)
+    local function copy_notification_url(prompt_bufnr)
       local entry = action_state.get_selected_entry(prompt_bufnr)
       local subject = entry.obj.subject
       local url = not utils.is_blank(subject.latest_comment_url) and subject.latest_comment_url or subject.url
@@ -1393,6 +1440,8 @@ function M.notifications(opts)
           map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
           map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
           map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
+          map("i", cfg.mappings.notification.done.lhs, mark_notification_done())
+          map("i", cfg.mappings.notification.unsubscribe.lhs, unsubscribe_notification())
           return true
         end,
       })
@@ -1453,7 +1502,7 @@ function M.discussions(opts)
 
   local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
-  local create_discussion_picker = function(discussions)
+  local function create_discussion_picker(discussions)
     if #discussions == 0 then
       utils.error(string.format("There are no matching discussions in %s.", opts.repo))
       return
@@ -1584,7 +1633,7 @@ function M.milestones(opts)
   }
 end
 
-M.project_columns_v2 = function(cb)
+function M.project_columns_v2(cb)
   local buffer = utils.get_current_buffer()
   if not buffer then
     return
@@ -1658,7 +1707,7 @@ M.project_columns_v2 = function(cb)
   }
 end
 
-M.project_cards_v2 = function(cb)
+function M.project_cards_v2(cb)
   local buffer = utils.get_current_buffer()
   if not buffer then
     return

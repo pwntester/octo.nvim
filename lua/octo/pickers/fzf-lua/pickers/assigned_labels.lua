@@ -23,7 +23,7 @@ return function(opts)
     key = "pullRequest"
   end
 
-  local get_contents = function(fzf_cb)
+  local function get_contents(fzf_cb)
     gh.run {
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)

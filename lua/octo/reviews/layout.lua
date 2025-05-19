@@ -256,14 +256,14 @@ function Layout:on_enter()
   end
 
   local file = self:get_current_file()
-  if file then
+  if file and config.values.use_local_fs then
     file:attach_buffers()
   end
 end
 
 function Layout:on_leave()
   local file = self:get_current_file()
-  if file then
+  if file and config.values.use_local_fs then
     file:detach_buffers()
   end
 end

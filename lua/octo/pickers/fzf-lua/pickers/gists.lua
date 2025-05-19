@@ -7,7 +7,7 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
 
-local open_gist = function(gist)
+local function open_gist(gist)
   for _, file in ipairs(gist.files) do
     local bufnr = vim.api.nvim_create_buf(true, true)
     if file.text then
@@ -41,7 +41,7 @@ return function(opts)
 
   local formatted_gists = {}
 
-  local get_contents = function(fzf_cb)
+  local function get_contents(fzf_cb)
     local query = graphql("gists_query", privacy)
 
     gh.run {

@@ -1,5 +1,4 @@
 local reviews = require "octo.reviews"
-local config = require "octo.config"
 local utils = require "octo.utils"
 
 return {

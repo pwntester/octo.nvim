@@ -2,7 +2,6 @@ local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
@@ -13,7 +12,7 @@ return function(opts)
 
   local formatted_repos = {} ---@type table<string, table> entry.ordinal -> entry
 
-  local get_contents = function(fzf_cb)
+  local function get_contents(fzf_cb)
     gh.api.graphql {
       query = queries.repos,
       f = { login = opts.login },

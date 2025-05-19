@@ -409,7 +409,11 @@ function FileEntry:place_signs()
         end
         if
           (review_level == "PR" and utils.is_thread_placed_in_buffer(thread, split.bufnr))
-          or (review_level == "COMMIT" and split.commit == comment.originalCommit.abbreviatedOid)
+          or (
+            review_level == "COMMIT"
+            and current_review.layout.right:abbrev() == comment.originalCommit.abbreviatedOid
+            and utils.is_thread_placed_in_buffer(thread, split.bufnr)
+          )
         then
           -- for lines between startLine and endLine, place the sign
           for line = startLine, endLine do

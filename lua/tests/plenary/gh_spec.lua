@@ -1,7 +1,7 @@
 local gh = require "octo.gh"
 local eq = assert.are.same
 
-local tables_have_same_elements = function(t1, t2)
+local function tables_have_same_elements(t1, t2)
   if #t1 ~= #t2 then
     return false
   end
@@ -18,7 +18,7 @@ local tables_have_same_elements = function(t1, t2)
   return true
 end
 
-local assert_tables_have_same_elements = function(t1, t2)
+local function assert_tables_have_same_elements(t1, t2)
   assert(
     tables_have_same_elements(t1, t2),
     string.format("Expected tables to have the same elements:\n%s\n%s", vim.inspect(t1), vim.inspect(t2))

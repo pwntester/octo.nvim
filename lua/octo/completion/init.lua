@@ -10,7 +10,7 @@ function M.octo_command_complete(argLead, cmdLine)
   local command_keys = vim.tbl_keys(octo_commands.commands)
   local parts = vim.split(vim.trim(cmdLine), " ")
 
-  local get_options = function(options)
+  local function get_options(options)
     local valid_options = {}
     for _, option in pairs(options) do
       if string.sub(option, 1, #argLead) == argLead then

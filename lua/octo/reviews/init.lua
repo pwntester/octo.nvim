@@ -187,7 +187,7 @@ function Review:focus_commit(right, left)
     files = {},
   }
   self.layout:open(self)
-  local cb = function(files)
+  local function cb(files)
     self:set_files_and_select_first(files)
   end
   if right == self.pull_request.right.commit and left == self.pull_request.left.commit then
@@ -537,6 +537,13 @@ function M.get_current_layout()
   local current_review = M.get_current_review()
   if current_review then
     return M.get_current_review().layout
+  end
+end
+
+function M.on_tab_enter()
+  local current_review = M.get_current_review()
+  if current_review and current_review.layout then
+    current_review.layout:on_enter()
   end
 end
 

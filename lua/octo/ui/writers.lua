@@ -358,6 +358,23 @@ function M.write_reactions(bufnr, reaction_groups, line)
   return line
 end
 
+local function title_case(str)
+  str = string.lower(str)
+  return str:gsub("^%l", string.upper)
+end
+
+local function remove_underscore(str)
+  return str:gsub("_", " ")
+end
+
+local function format_author_association(association)
+  if association == "FIRST_TIME_CONTRIBUTOR" then
+    return "First-time contributor"
+  else
+    return title_case(remove_underscore(association))
+  end
+end
+
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
@@ -381,6 +398,9 @@ function M.write_details(bufnr, issue, update)
   local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
+  if not utils.is_blank(issue.authorAssociation) then
+    table.insert(author_vt, { " (" .. format_author_association(issue.authorAssociation) .. ")", "OctoDetailsLabel" })
+  end
   table.insert(details, author_vt)
 
   add_details_line(details, "Created", issue.createdAt, "date")
@@ -490,7 +510,7 @@ function M.write_details(bufnr, issue, update)
   if issue.commits then
     -- reviewers
     local reviewers = {}
-    local collect_reviewer = function(name, state)
+    local function collect_reviewer(name, state)
       if not reviewers[name] then
         reviewers[name] = { state }
       else
@@ -1383,7 +1403,7 @@ local function write_event(bufnr, vt)
   M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line + 1, vt)
 end
 
-local get_status_check = function(statusCheckRollup)
+local function get_status_check(statusCheckRollup)
   if utils.is_blank(statusCheckRollup) then
     return { "  " }
   end
@@ -1394,7 +1414,7 @@ local get_status_check = function(statusCheckRollup)
   return { state_info.symbol, state_info.hl }
 end
 
-local write_commit = function(bufnr, item)
+local function write_commit(bufnr, item)
   local vt = {}
   local conf = config.values
   if conf.use_timeline_icons then
@@ -1411,8 +1431,8 @@ local write_commit = function(bufnr, item)
   write_event(bufnr, vt)
 end
 
-local write_commit_header = function(bufnr, commits)
-  local get_author = function(item)
+local function write_commit_header(bufnr, commits)
+  local function get_author(item)
     if item.commit.committer.user ~= vim.NIL then
       return item.commit.committer.user.login
     elseif item.commit.author ~= vim.NIL and item.commit.author.user ~= vim.NIL then
@@ -1503,7 +1523,7 @@ local function write_issue_or_pr(bufnr, item, spaces)
   write_event(bufnr, vt)
 end
 
-local write_reference_commit = function(bufnr, commit)
+local function write_reference_commit(bufnr, commit)
   local vt = {}
   table.insert(vt, { "          ", "OctoTimelineItemHeading" })
   table.insert(vt, { commit.message, "OctoTimelineItemHeading" })
@@ -1608,7 +1628,7 @@ function M.write_cross_referenced_event(bufnr, item)
   write_issue_or_pr(bufnr, item.source, spaces)
 end
 
-local write_parent_issue_event = function(bufnr, item, add)
+local function write_parent_issue_event(bufnr, item, add)
   local verb = add and "added" or "removed"
   local vt = {}
   local conf = config.values
@@ -1633,15 +1653,15 @@ local write_parent_issue_event = function(bufnr, item, add)
   write_issue_or_pr(bufnr, parent, spaces)
 end
 
-M.write_parent_issue_added_event = function(bufnr, item)
+function M.write_parent_issue_added_event(bufnr, item)
   write_parent_issue_event(bufnr, item, true)
 end
 
-M.write_parent_issue_removed_event = function(bufnr, item)
+function M.write_parent_issue_removed_event(bufnr, item)
   write_parent_issue_event(bufnr, item, false)
 end
 
-local write_pinned_event = function(bufnr, item, add)
+local function write_pinned_event(bufnr, item, add)
   local verb
   if add then
     verb = "pinned"
@@ -1665,15 +1685,15 @@ local write_pinned_event = function(bufnr, item, add)
   write_event(bufnr, vt)
 end
 
-M.write_pinned_event = function(bufnr, item)
+function M.write_pinned_event(bufnr, item)
   write_pinned_event(bufnr, item, true)
 end
 
-M.write_unpinned_event = function(bufnr, item)
+function M.write_unpinned_event(bufnr, item)
   write_pinned_event(bufnr, item, false)
 end
 
-local write_milestone_event = function(bufnr, item, add)
+local function write_milestone_event(bufnr, item, add)
   local verb, preposition
   if add then
     verb = "added"

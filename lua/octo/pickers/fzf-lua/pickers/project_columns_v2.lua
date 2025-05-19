@@ -20,7 +20,7 @@ return function(cb)
     },
   })
 
-  local get_projects = function(fzf_cb)
+  local function get_projects(fzf_cb)
     local query = graphql("projects_v2_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
@@ -65,7 +65,7 @@ return function(cb)
     }
   end
 
-  local default_action = function(selected_project)
+  local function default_action(selected_project)
     local entry_project = formatted_projects[selected_project[1]]
 
     local formatted_project_columns = {}

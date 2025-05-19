@@ -89,6 +89,7 @@ See |octo-command-examples| for examples.
   list [repo]           Lists all open discussions for the current or specified repo.
                         In-menu mappings: 
                           <C-y>   Copy URL to system clipboard.
+  browser               Open current discussion in the browser.
   create [repo]         Creates a new discussion for the current or specified repo.
   reload                Reload discussion. Same as doing `e!`.
   close                 Close the discussion

@@ -155,7 +155,7 @@ end
 M.reaction_map = {
   ["THUMBS_UP"] = "👍 ",
   ["THUMBS_DOWN"] = "👎 ",
-  ["LAUGH"] = "😀 ",
+  ["LAUGH"] = "😄 ",
   ["HOORAY"] = "🎉 ",
   ["CONFUSED"] = "😕 ",
   ["HEART"] = "❤️ ",
@@ -393,7 +393,7 @@ function M.create_milestone(title, description)
   }
 end
 
-local branch_switch_message = function()
+local function branch_switch_message()
   local output = vim.fn.system "git branch --show-current"
   M.info("Switched to " .. vim.fn.trim(output))
 end
@@ -930,22 +930,21 @@ end
 ---@param cb function
 function M.get_file_contents(repo, commit, path, cb)
   local owner, name = M.split_repo(repo)
-  local query = graphql("file_content_query", owner, name, commit, path)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not M.is_blank(stderr) then
-        M.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local blob = resp.data.repository.object
-        local lines = {}
-        if blob and blob ~= vim.NIL and type(blob.text) == "string" then
-          lines = vim.split(blob.text, "\n")
-        end
-        cb(lines)
-      end
-    end,
+  gh.api.graphql {
+    query = queries.file_content,
+    f = { owner = owner, name = name, expression = commit .. ":" .. path },
+    jq = ".data.repository.object.text",
+    opts = {
+      cb = gh.create_callback {
+        success = function(blob)
+          local lines = {}
+          if blob then
+            lines = vim.split(blob, "\n")
+          end
+          cb(lines)
+        end,
+      },
+    },
   }
 end
 
@@ -1786,14 +1785,14 @@ function M.get_icon(entry)
 end
 
 --
-M.copy_url = function(url, register)
+function M.copy_url(url, register)
   register = register or "+"
   vim.fn.setreg(register, url, "c")
   local message = register ~= "+" and "(" .. register .. " register)" or "to the system clipboard (+ register)"
   M.info("Copied '" .. url .. "' " .. message)
 end
 
-M.input = function(opts)
+function M.input(opts)
   vim.fn.inputsave()
   local value = vim.fn.input(opts)
   vim.fn.inputrestore()
@@ -1801,12 +1800,12 @@ M.input = function(opts)
   return value
 end
 
-M.get_current_buffer = function()
+function M.get_current_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   return octo_buffers[bufnr]
 end
 
-M.count_discussion_replies = function(discussion)
+function M.count_discussion_replies(discussion)
   local total_replies = 0
   for _, comment in ipairs(discussion.comments.nodes) do
     total_replies = total_replies + comment.replies.totalCount

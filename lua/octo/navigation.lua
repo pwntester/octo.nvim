@@ -1,5 +1,4 @@
 local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 
@@ -50,6 +49,11 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh issue view --web -R %s/%s %d", remote, buffer.repo, buffer.number)
     elseif buffer:isRepo() then
       cmd = string.format("gh repo view --web %s/%s", remote, buffer.repo)
+    elseif buffer:isDiscussion() then
+      ---@type string
+      local url = buffer.node.url
+      M.open_in_browser_raw(url)
+      return
     end
   else
     if kind == "pr" or kind == "pull_request" then

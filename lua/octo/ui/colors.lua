@@ -3,22 +3,8 @@ local vim = vim
 
 local M = {}
 
-local function get_hl_attr(hl_group_name, attr)
-  local id = vim.api.nvim_get_hl_id_by_name(hl_group_name)
-  if not id then
-    return
-  end
-
-  local value = vim.fn.synIDattr(id, attr)
-  if not value or value == "" then
-    return
-  end
-
-  return value
-end
-
 local function get_fg(hl_group_name)
-  return get_hl_attr(hl_group_name, "fg")
+  return vim.api.nvim_get_hl(0, { name = hl_group_name }).fg
 end
 
 local function get_colors()
@@ -59,13 +45,13 @@ local function get_hl_groups()
     BubbleDelimiterBlue = { fg = colors.dark_blue },
     BubbleDelimiterGrey = { fg = colors.grey },
 
-    FilePanelTitle = { fg = get_fg "Directory" or colors.blue, gui = "bold" },
-    FilePanelCounter = { fg = get_fg "Identifier" or colors.purple, gui = "bold" },
+    FilePanelTitle = { fg = get_fg "Directory" or colors.blue, bold = true },
+    FilePanelCounter = { fg = get_fg "Identifier" or colors.purple, bold = true },
     NormalFloat = { fg = get_fg "Normal" or colors.white },
     Viewer = { fg = colors.black, bg = colors.blue },
     Editable = { bg = float_bg },
-    Strikethrough = { fg = colors.grey, gui = "strikethrough" },
-    Underline = { fg = colors.white, gui = "underline" },
+    Strikethrough = { fg = colors.grey, strikethrough = true },
+    Underline = { fg = colors.white, underline = true },
   }
 end
 
@@ -113,8 +99,8 @@ local function get_hl_links()
     FailingTest = "OctoRed",
     PullAdditions = "OctoGreen",
     PullDeletions = "OctoRed",
-    DiffstatAdditions = "OctoGreen ",
-    DiffstatDeletions = "OctoRed ",
+    DiffstatAdditions = "OctoGreen",
+    DiffstatDeletions = "OctoRed",
     DiffstatNeutral = "OctoGrey",
 
     StateOpen = "OctoGreen",
@@ -148,17 +134,15 @@ local function get_hl_links()
 end
 
 function M.setup()
-  for name, v in pairs(get_hl_groups()) do
-    local fg = v.fg and " guifg=" .. v.fg or ""
-    local bg = v.bg and " guibg=" .. v.bg or ""
-    local gui = v.gui and " gui=" .. v.gui or ""
-    local cmd = "hi def Octo" .. name .. fg .. bg .. gui
-    vim.cmd(cmd)
+  for name, hl in pairs(get_hl_groups()) do
+    if vim.fn.hlexists("Octo" .. name) == 0 then
+      vim.api.nvim_set_hl(0, "Octo" .. name, hl)
+    end
   end
 
   for from, to in pairs(get_hl_links()) do
     if vim.fn.hlexists("Octo" .. from) == 0 then
-      vim.cmd("hi def link Octo" .. from .. " " .. to)
+      vim.api.nvim_set_hl(0, "Octo" .. from, { link = to })
     end
   end
 end
@@ -212,7 +196,7 @@ function M.create_highlight(rgb_hex, options)
     -- Create the highlight
     highlight_name = make_highlight_name(rgb_hex, mode)
     if mode == "foreground" then
-      vim.cmd(string.format("highlight %s guifg=#%s", highlight_name, rgb_hex))
+      vim.api.nvim_set_hl(0, highlight_name, { fg = "#" .. rgb_hex })
     else
       local r, g, b = rgb_hex:sub(1, 2), rgb_hex:sub(3, 4), rgb_hex:sub(5, 6)
       r, g, b = tonumber(r, 16), tonumber(g, 16), tonumber(b, 16)
@@ -222,7 +206,7 @@ function M.create_highlight(rgb_hex, options)
       else
         fg_color = "ffffff"
       end
-      vim.cmd(string.format("highlight %s guifg=#%s guibg=#%s", highlight_name, fg_color, rgb_hex))
+      vim.api.nvim_set_hl(0, highlight_name, { fg = "#" .. fg_color, bg = "#" .. rgb_hex })
     end
     HIGHLIGHT_CACHE[cache_key] = highlight_name
   end

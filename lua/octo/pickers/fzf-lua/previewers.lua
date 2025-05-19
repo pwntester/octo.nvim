@@ -43,7 +43,7 @@ function M.bufferPreviewer:update_border(title)
   self.win:update_preview_scrollbar()
 end
 
-M.issue = function(formatted_issues)
+function M.issue(formatted_issues)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -100,7 +100,7 @@ M.issue = function(formatted_issues)
   return previewer
 end
 
-M.search = function()
+function M.search()
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -160,7 +160,7 @@ M.search = function()
   return previewer
 end
 
-M.commit = function(formatted_commits, repo)
+function M.commit(formatted_commits, repo)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -207,7 +207,7 @@ M.commit = function(formatted_commits, repo)
   return previewer
 end
 
-M.changed_files = function(formatted_files)
+function M.changed_files(formatted_files)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -233,7 +233,7 @@ M.changed_files = function(formatted_files)
   return previewer
 end
 
-M.review_thread = function(formatted_threads)
+function M.review_thread(formatted_threads)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -263,7 +263,7 @@ M.review_thread = function(formatted_threads)
   return previewer
 end
 
-M.gist = function(formatted_gists)
+function M.gist(formatted_gists)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -294,7 +294,7 @@ M.gist = function(formatted_gists)
   return previewer
 end
 
-M.repo = function(formatted_repos)
+function M.repo(formatted_repos)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -314,7 +314,7 @@ M.repo = function(formatted_repos)
     local repo_name_owner = vim.split(entry_str, " ")[1]
     local owner, name = utils.split_repo(repo_name_owner)
 
-    local cb = function(output, _)
+    local function cb(output, _)
       -- when the entry changes `preview_bufnr` will also change (due to `set_preview_buf`)
       -- and `tmpbuf` within this context is already cleared and invalidated
       if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
@@ -346,7 +346,7 @@ M.repo = function(formatted_repos)
   return previewer
 end
 
-M.issue_template = function(formatted_templates)
+function M.issue_template(formatted_templates)
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)

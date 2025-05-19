@@ -48,7 +48,7 @@ return function(cb)
       end
 
       -- TODO highlight orgs?
-      local format_display = function(thing)
+      local function format_display(thing)
         return thing.id .. " " .. thing.login
       end
 

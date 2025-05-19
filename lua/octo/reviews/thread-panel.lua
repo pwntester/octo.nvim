@@ -44,14 +44,12 @@ function M.show_review_threads(jump_to_buffer)
     then
       table.insert(threads_at_cursor, thread)
     elseif review_level == "COMMIT" then
-      local commit
-      if split == "LEFT" then
-        commit = review.layout.left.commit
-      else
-        commit = review.layout.right.commit
-      end
       for _, comment in ipairs(thread.comments.nodes) do
-        if commit == comment.originalCommit.oid and thread.originalLine == line then
+        if
+          review.layout.right.commit == comment.originalCommit.oid
+          and utils.is_thread_placed_in_buffer(thread, bufnr)
+          and thread.originalLine == line
+        then
           table.insert(threads_at_cursor, thread)
           break
         end

@@ -7,7 +7,7 @@ local utils = require "octo.utils"
 
 local M = {}
 
-local get_branches = function(repoWithOwner)
+local function get_branches(repoWithOwner)
   local opts = {
     "/repos/{owner}/{repo}/branches",
     jq = "map(.name)",
@@ -27,7 +27,7 @@ local get_branches = function(repoWithOwner)
   return vim.json.decode(output)
 end
 
-local get_labels = function(search, repo)
+local function get_labels(search, repo)
   local opts = {
     json = "name",
     jq = "map(.name)",
@@ -49,7 +49,7 @@ local get_labels = function(search, repo)
   return vim.json.decode(output)
 end
 
-local get_repos = function(owner, name)
+local function get_repos(owner, name)
   local query = name .. " owner:" .. owner
 
   local output = gh.api.graphql {
@@ -61,7 +61,7 @@ local get_repos = function(owner, name)
   return vim.json.decode(output)
 end
 
-local get_users = function(prompt)
+local function get_users(prompt)
   local output = gh.api.graphql {
     query = queries.search,
     f = { prompt = prompt, type = "USER" },
@@ -71,7 +71,7 @@ local get_users = function(prompt)
   return vim.json.decode(output)
 end
 
-local get_milestones = function(repoWithOwner)
+local function get_milestones(repoWithOwner)
   if utils.is_blank(repoWithOwner) then
     repoWithOwner = utils.get_remote_name()
   end
@@ -94,7 +94,7 @@ local get_milestones = function(repoWithOwner)
   return milestones
 end
 
-local get_languages = function()
+local function get_languages()
   local output = gh.api.get {
     "/languages",
     jq = "map(.name)",
@@ -103,7 +103,7 @@ local get_languages = function()
   return vim.json.decode(output)
 end
 
-local complete_language = function(argLead, cmdLine)
+local function complete_language(argLead, cmdLine)
   local desired_language = string.gsub(argLead, "language:", "")
   local languages = get_languages()
   local valid_languages = {}
@@ -119,7 +119,7 @@ local complete_language = function(argLead, cmdLine)
   return valid_languages
 end
 
-local get_categories = function(repoWithOwner)
+local function get_categories(repoWithOwner)
   if utils.is_blank(repoWithOwner) then
     repoWithOwner = utils.get_remote_name()
   end
@@ -142,7 +142,7 @@ local get_categories = function(repoWithOwner)
   return categories
 end
 
-local get_closest_valid = function(name, valid, argLead)
+local function get_closest_valid(name, valid, argLead)
   local desired = string.gsub(argLead, name .. ":", "")
   local valid_types = {}
   for _, type in ipairs(valid) do
@@ -157,7 +157,7 @@ local get_closest_valid = function(name, valid, argLead)
   return valid_types
 end
 
-local remove_through_colon = function(qualifier, value)
+local function remove_through_colon(qualifier, value)
   local pattern = ":"
   local start_index = string.find(value, pattern)
   if start_index then
@@ -166,7 +166,7 @@ local remove_through_colon = function(qualifier, value)
   return value
 end
 
-local create_complete_user = function(qualifier)
+local function create_complete_user(qualifier)
   return function(argLead, cmdLine)
     local partial_user = remove_through_colon(qualifier, argLead)
     local valid_users = { qualifier .. ":@me" }
@@ -186,7 +186,7 @@ local create_complete_user = function(qualifier)
   end
 end
 
-local complete_repo = function(argLead, cmdLine)
+local function complete_repo(argLead, cmdLine)
   local repoWithName = string.match(cmdLine, "repo:([%w%-%./_]+)")
   if utils.is_blank(repoWithName) then
     return {}
@@ -220,7 +220,7 @@ local complete_repo = function(argLead, cmdLine)
   return valid_repos
 end
 
-local create_complete_branch = function(qualifier)
+local function create_complete_branch(qualifier)
   return function(argLead, cmdLine)
     if vim.startswith(argLead, qualifier) then
       local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
@@ -242,7 +242,7 @@ local create_complete_branch = function(qualifier)
   end
 end
 
-local complete_milestone = function(argLead, cmdLine)
+local function complete_milestone(argLead, cmdLine)
   local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
   local desired_milestone = string.gsub(argLead, "milestone:", "")
@@ -260,7 +260,7 @@ local complete_milestone = function(argLead, cmdLine)
   return valid_milestones
 end
 
-local complete_category = function(argLead, cmdLine)
+local function complete_category(argLead, cmdLine)
   local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
   local desired_category = string.gsub(argLead, "category:", "")
@@ -291,7 +291,7 @@ local default_labels = {
   "wontfix",
 }
 
-local complete_label = function(argLead, cmdLine)
+local function complete_label(argLead, cmdLine)
   local repo = string.match(cmdLine, "repo:([%w%-%./_]+)")
 
   local desired_label = string.gsub(argLead, "label:", "")
@@ -405,7 +405,7 @@ local qualifiers = {
 --- Octo search and Octo pr/issue/discussion search
 --- @param argLead string: The argument lead
 --- @param cmdLine string: The command line
-M.complete = function(argLead, cmdLine)
+function M.complete(argLead, cmdLine)
   if not string.match(argLead, ":") then
     local valid = {}
     for first, second in pairs(qualifiers) do
