@@ -317,6 +317,9 @@ function FileEntry:load_buffers(left_winid, right_winid)
     vim.api.nvim_win_set_buf(split.winid, split.bufid)
   end
 
+  -- Set this to disable LSPs from attempting to attach to this buffer
+  vim.api.nvim_set_option_value("buftype", "nofile", { buf = self.left_bufid })
+
   -- show thread signs and virtual text
   self:place_signs()
 
