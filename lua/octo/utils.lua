@@ -842,24 +842,24 @@ function M.escape_char(string)
   })
 end
 
---- Extracts repo and number from Octo command varargs
----@param ... string|number
+--- Gets the repo and id from args.
+---@param args { n: integer }|string[]
+---@param is_number boolean
 ---@return string? repo
----@return integer? number
-function M.get_repo_number_from_varargs(...)
-  local repo, number ---@type string|nil, integer|nil
-  local args = table.pack(...)
+---@return integer|string? id
+local function get_repo_id_from_args(args, is_number)
+  local repo, id ---@type string|nil, string|integer|nil
   if args.n == 0 then
     M.error "Missing arguments"
     return
   elseif args.n == 1 then
     -- eg: Octo issue 1
     repo = M.get_remote_name()
-    number = tonumber(args[1])
+    id = tonumber(args[1])
   elseif args.n == 2 then
     -- eg: Octo issue 1 pwntester/octo.nvim
-    repo = args[2]
-    number = tonumber(args[1])
+    repo = args[2] ---@type string
+    id = is_number and tonumber(args[1]) or args[1]
   else
     M.error "Unexpected arguments"
     return
@@ -872,10 +872,21 @@ function M.get_repo_number_from_varargs(...)
     M.error(("Expected repo name, received %s"):format(args[2]))
     return
   end
-  if not number or type(number) ~= "number" then
+  if not id or (is_number and type(id) ~= "number") then
     M.error(("Expected issue/PR number, received %s"):format(args[1]))
     return
   end
+  return repo, id
+end
+
+--- Extracts repo and number from Octo command varargs
+---@param ... string|number
+---@return string? repo
+---@return integer? number
+function M.get_repo_number_from_varargs(...)
+  local args = table.pack(...)
+  local repo, number = get_repo_id_from_args(args, true)
+  number = number --[[@as integer?]]
   return repo, number
 end
 
@@ -902,6 +913,13 @@ function M.get_discussion_uri(...)
   return string.format("octo://%s/discussion/%s", repo, number)
 end
 
+function M.get_release_uri(...)
+  local args = table.pack(...)
+  local repo, tag_name = get_repo_id_from_args(args, false)
+
+  return string.format("octo://%s/release/%s", repo, tag_name)
+end
+
 ---Helper method opening octo buffers
 function M.get(kind, ...)
   if kind == "issue" then
@@ -912,6 +930,8 @@ function M.get(kind, ...)
     M.get_discussion(...)
   elseif kind == "repo" then
     M.get_repo(...)
+  elseif kind == "release" then
+    M.get_release(...)
   end
 end
 
@@ -929,6 +949,10 @@ end
 
 function M.get_discussion(...)
   vim.cmd("edit " .. M.get_discussion_uri(...))
+end
+
+function M.get_release(...)
+  vim.cmd("edit " .. M.get_release_uri(...))
 end
 
 function M.parse_url(url)
@@ -1757,6 +1781,10 @@ M.icons = {
     discussion = {
       unread = { " ", "OctoBlue" },
       read = { " ", "OctoGrey" },
+    },
+    release = {
+      unread = { " ", "OctoBlue" },
+      read = { " ", "OctoGrey" },
     },
   },
   unknown = { " " },
