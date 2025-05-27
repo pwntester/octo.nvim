@@ -209,11 +209,12 @@ require"octo".setup({
     },
   },
   pull_requests = {
-    order_by = {                           -- criteria to sort the results of `Octo pr list`
-      field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
-      direction = "DESC"                   -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
+    order_by = {                            -- criteria to sort the results of `Octo pr list`
+      field = "CREATED_AT",                 -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
+      direction = "DESC"                    -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
     },
-    always_select_remote_on_create = false -- always give prompt to select base remote repo when creating PRs
+    always_select_remote_on_create = false, -- always give prompt to select base remote repo when creating PRs
+    use_branch_name_as_title = false        -- sets branch name to be the name for the PR
   },
   notifications = {
     current_repo_only = false,             -- show notifications for current repo only

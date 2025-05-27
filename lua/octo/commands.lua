@@ -967,14 +967,14 @@ function M.add_pr_issue_or_review_thread_comment()
     viewerCanDelete = true,
     viewerDidAuthor = true,
     reactionGroups = {
-      { content = "THUMBS_UP", users = { totalCount = 0 } },
+      { content = "THUMBS_UP",   users = { totalCount = 0 } },
       { content = "THUMBS_DOWN", users = { totalCount = 0 } },
-      { content = "LAUGH", users = { totalCount = 0 } },
-      { content = "HOORAY", users = { totalCount = 0 } },
-      { content = "CONFUSED", users = { totalCount = 0 } },
-      { content = "HEART", users = { totalCount = 0 } },
-      { content = "ROCKET", users = { totalCount = 0 } },
-      { content = "EYES", users = { totalCount = 0 } },
+      { content = "LAUGH",       users = { totalCount = 0 } },
+      { content = "HOORAY",      users = { totalCount = 0 } },
+      { content = "CONFUSED",    users = { totalCount = 0 } },
+      { content = "HEART",       users = { totalCount = 0 } },
+      { content = "ROCKET",      users = { totalCount = 0 } },
+      { content = "EYES",        users = { totalCount = 0 } },
     },
   }
 
@@ -1012,7 +1012,7 @@ function M.add_pr_issue_or_review_thread_comment()
     local comment_under_cursor = buffer:get_comment_at_cursor()
     if not utils.is_blank(comment_under_cursor) and vim.fn.confirm("Reply to comment?", "&Yes\n&No", 2) == 1 then
       comment.replyTo = not utils.is_blank(comment_under_cursor.replyTo) and comment_under_cursor.replyTo.id
-        or comment_under_cursor.id
+          or comment_under_cursor.id
       vim.api.nvim_buf_set_lines(
         buffer.bufnr,
         comment_under_cursor.bufferEndLine,
@@ -1441,12 +1441,12 @@ function M.create_pr(is_draft)
 
   -- get remote branches
   if
-    info == nil
-    or info.refs == nil
-    or info.refs.nodes == nil
-    or info == vim.NIL
-    or info.refs == vim.NIL
-    or info.refs.nodes == vim.NIL
+      info == nil
+      or info.refs == nil
+      or info.refs.nodes == nil
+      or info == vim.NIL
+      or info.refs == vim.NIL
+      or info.refs.nodes == vim.NIL
   then
     utils.error "Cannot grab remote branches"
     return
@@ -1462,7 +1462,7 @@ function M.create_pr(is_draft)
   local remote_branch = local_branch
   if not remote_branch_exists then
     local choice =
-      vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
+        vim.fn.confirm("Remote branch '" .. local_branch .. "' does not exist. Push local one?", "&Yes\n&No\n&Cancel", 2)
     if choice == 1 then
       local remote = "origin"
       remote_branch = vim.fn.input {
@@ -1520,12 +1520,17 @@ function M.save_pr(opts)
     repo_idx = vim.fn.inputlist(opts.candidate_entries)
   end
 
+  local conf = config.values
+  local use_branch_name_as_title = conf.pull_requests.use_branch_name_as_title or false
   -- title and body
   local title, body
   local last_commit = string.gsub(vim.fn.system "git log -1 --pretty=%B", "%s+$", "")
   local last_commit_lines = vim.split(last_commit, "\n")
   if #last_commit_lines >= 1 then
     title = last_commit_lines[1]
+  end
+  if use_branch_name_as_title then
+    title = opts.remote_branch
   end
   if #last_commit_lines > 1 then
     if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then
@@ -2336,12 +2341,12 @@ function M.pin_issue(opts)
         error = "pin",
         success = "Pinned",
       }
-    or {
-      query = mutations.unpin_issue,
-      jq = ".data.unpinIssue.issue.id",
-      error = "unpin",
-      success = "Unpinned",
-    }
+      or {
+        query = mutations.unpin_issue,
+        jq = ".data.unpinIssue.issue.id",
+        error = "unpin",
+        success = "Unpinned",
+      }
   gh.api.graphql {
     query = query_info.query,
     F = { issue_id = opts.obj.id },
