@@ -11,6 +11,11 @@ local vim = vim
 
 local M = {}
 
+---@param bufnr integer?
+---@param lines string[] | string
+---@param line? integer
+---@param mark? boolean
+---@return integer
 function M.write_block(bufnr, lines, line, mark)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   line = line or vim.api.nvim_buf_line_count(bufnr) + 1
@@ -76,6 +81,68 @@ local function add_details_line(details, label, value, kind)
   end
 end
 
+---@param bufnr integer
+---@param release octo.Release
+local function write_release_details(bufnr, release)
+  local details = {}
+  -- clear namespace and set vt
+  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, 0, -1)
+
+  table.insert(details, {
+    { "Repo: ", "OctoDetailsLabel" },
+    { " " .. utils.parse_url(release.url), "OctoDetailsValue" },
+  })
+  local author_vt = { { "Publisher", "OctoDetailsLabel" } }
+  local author_bubble = bubbles.make_user_bubble(release.author.login)
+  vim.list_extend(author_vt, author_bubble)
+  table.insert(details, author_vt)
+  add_details_line(details, "Published", release.publishedAt, "date")
+  add_details_line(details, "Tag", release.tagName)
+  add_details_line(details, "Commit", release.tagCommit.abbreviatedOid)
+
+  M.write_detail_table { bufnr = bufnr, details = details, offset = 3 }
+end
+
+---@param bufnr integer
+---@param release octo.Release
+function M.write_release(bufnr, release)
+  M.write_title(bufnr, release.name, 1)
+  if release.isPrerelease then
+    vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, 0, {
+      virt_text = { { "[Pre-release]", "OctoStatePending" } },
+    })
+  end
+  if release.isLatest then
+    vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, 0, {
+      virt_text = { { "[Latest]", "OctoStateOpen" } },
+    })
+  end
+  write_release_details(bufnr, release)
+  M.write_body_agnostic(bufnr, release.description)
+  table.sort(release.releaseAssets.nodes, function(a, b)
+    return vim.stricmp(a.name, b.name) < 0
+  end)
+  for _, asset in ipairs(release.releaseAssets.nodes) do
+    M.write_block(bufnr, {
+      "[" .. asset.name .. "]" .. "(" .. asset.downloadUrl .. ")",
+    })
+    local parts = {
+      utils.format_large_int(asset.downloadCount, false) .. " ",
+      utils.format_large_int(asset.size, true) .. "B",
+      utils.format_date(asset.updatedAt),
+    }
+    local line = vim.api.nvim_buf_line_count(bufnr)
+    vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, 0, {
+      virt_text = { { table.concat(parts, " | ") } },
+      virt_text_pos = "eol_right_align",
+    })
+  end
+  M.write_block(bufnr, { "" })
+  M.write_block(bufnr, { "" })
+  local line = vim.api.nvim_buf_line_count(bufnr)
+  M.write_reactions(bufnr, release.reactionGroups, line)
+end
+
 function M.write_discussion_details(bufnr, discussion)
   local details = {}
 
@@ -131,6 +198,11 @@ function M.write_discussion_details(bufnr, discussion)
   M.write_detail_table { bufnr = bufnr, details = details, offset = 3 }
 end
 
+---@param opts {
+---  bufnr: integer,
+---  details: [string, string][][],
+---  offset: integer,
+---}
 function M.write_detail_table(opts)
   local bufnr = opts.bufnr
   local details = opts.details
@@ -315,8 +387,12 @@ function M.write_state(bufnr, state, number)
   vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
 end
 
-function M.write_body(bufnr, issue, line)
-  local body = utils.trim(issue.body)
+---@param bufnr integer
+---@param body string
+---@param line? integer
+---@param viewer_can_update? boolean
+function M.write_body_agnostic(bufnr, body, line, viewer_can_update)
+  body = utils.trim(body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
     body = " "
   end
@@ -331,11 +407,19 @@ function M.write_body(bufnr, issue, line)
       body = description,
       dirty = false,
       extmark = desc_mark,
-      viewerCanUpdate = issue.viewerCanUpdate,
+      viewerCanUpdate = viewer_can_update,
     }
   end
 end
 
+function M.write_body(bufnr, issue, line)
+  M.write_body_agnostic(bufnr, issue.body, line, issue.viewerCanUpdate)
+end
+
+---@param bufnr integer
+---@param reaction_groups table[]
+---@param line integer
+---@return nil
 function M.write_reactions(bufnr, reaction_groups, line)
   local reactions_count = utils.count_reactions(reaction_groups)
   if reactions_count <= 0 then

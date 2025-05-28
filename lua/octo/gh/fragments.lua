@@ -106,6 +106,12 @@ fragment DemilestonedEventFragment on DemilestonedEvent {
   milestoneTitle
 }
 ]]
+---@class octo.ReactionGroupsFragment
+--- @field reactionGroups {
+---   content: string,
+---   viewerHasReacted: boolean,
+---   users: { totalCount: number } }[]
+
 M.reaction_groups = [[
 fragment ReactionGroupsFragment on Reactable {
   reactionGroups {
