@@ -188,6 +188,11 @@ describe("Octo config", function()
       it("should return valid for the default config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
       end)
+
+      it("should return valid when picker is mini_picker", function()
+        config.values.picker = "mini_picker"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
+      end)
     end)
   end)
 end)

@@ -87,6 +87,7 @@ Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
   - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
   - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
   - [snacks.nvim](https://github.com/folke/snacks.nvim)
+  - [mini.pick](https://github.com/echasnovski/mini.pick) -- For mini_picker
 - Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 
 ## 📦 Installation
@@ -119,7 +120,7 @@ require"octo".setup({
   default_merge_method = "commit",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `commit`, `rebase` or `squash`
   default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
-  picker = "telescope",                    -- or "fzf-lua" or "snacks"
+  picker = "telescope",                    -- or "fzf-lua", "snacks", or "mini_picker"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
     mappings = {                           -- mappings for the pickers

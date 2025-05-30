@@ -506,7 +506,7 @@ function M.validate_config()
   end
 
   local function validate_pickers()
-    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks" })
+    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks", "mini_picker" })
 
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
