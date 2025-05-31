@@ -12,7 +12,8 @@ local function get_filter(filter_opts, kind)
   if kind == "issue" then
     allowed_values = { "since", "createdBy", "assignee", "mentioned", "labels", "milestone", "states" }
   elseif kind == "pull_request" then
-    allowed_values = { "baseRefName", "headRefName", "labels", "states", "author", "mentions", "review-requested", "review-concluded" }
+    allowed_values =
+      { "baseRefName", "headRefName", "labels", "states", "author", "mentions", "review-requested", "review-concluded" }
   end
 
   for _, value in pairs(allowed_values) do
@@ -62,7 +63,8 @@ M.picker = {
     local owner, name = utils.split_repo(opts.repo)
     local cfg = octo_config.values
     local order_by = cfg.issues.order_by
-    local query = graphql("issues_query", owner, name, filter_str, order_by.field, order_by.direction, { escape = false })
+    local query =
+      graphql("issues_query", owner, name, filter_str, order_by.field, order_by.direction, { escape = false })
 
     utils.info "Fetching issues (this may take a while) ..."
     gh.run {
@@ -83,7 +85,7 @@ M.picker = {
             table.insert(items_for_picker, {
               text = string.format("#%d %s", issue_item.number, issue_item.title),
               data = issue_item,
-              repo = opts.repo
+              repo = opts.repo,
             })
           end
 
@@ -96,20 +98,23 @@ M.picker = {
 
           local MiniPick = _G.MiniPick
           if not MiniPick then
-            utils.error("MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup.")
+            utils.error "MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup."
             return
           end
 
-          MiniPick.start({
+          MiniPick.start {
             source = {
               items = items_for_picker,
               name = "Issues (" .. opts.repo .. ")",
               choose = choose_issue,
             },
             options = {
-                content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-            }
-          })
+              content_from_bottom = cfg.picker_config
+                  and cfg.picker_config.mini_picker
+                  and cfg.picker_config.mini_picker.content_from_bottom
+                or false,
+            },
+          }
         end
       end,
     }
@@ -134,7 +139,8 @@ M.picker = {
     local owner, name = utils.split_repo(opts.repo)
     local cfg = octo_config.values
     local order_by = cfg.pull_requests and cfg.pull_requests.order_by or cfg.issues.order_by
-    local query = graphql("pull_requests_query", owner, name, filter_str, order_by.field, order_by.direction, { escape = false })
+    local query =
+      graphql("pull_requests_query", owner, name, filter_str, order_by.field, order_by.direction, { escape = false })
 
     utils.info "Fetching pull requests (this may take a while) ..."
     gh.run {
@@ -155,7 +161,7 @@ M.picker = {
             table.insert(items_for_picker, {
               text = string.format("#%d %s", pr_item.number, pr_item.title),
               data = pr_item,
-              repo = opts.repo
+              repo = opts.repo,
             })
           end
 
@@ -168,20 +174,23 @@ M.picker = {
 
           local MiniPick = _G.MiniPick
           if not MiniPick then
-            utils.error("MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup.")
+            utils.error "MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup."
             return
           end
 
-          MiniPick.start({
+          MiniPick.start {
             source = {
               items = items_for_picker,
               name = "Pull Requests (" .. opts.repo .. ")",
               choose = choose_pr,
             },
-             options = {
-                content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-            }
-          })
+            options = {
+              content_from_bottom = cfg.picker_config
+                  and cfg.picker_config.mini_picker
+                  and cfg.picker_config.mini_picker.content_from_bottom
+                or false,
+            },
+          }
         end
       end,
     }
@@ -192,7 +201,7 @@ M.picker = {
     opts = opts or {}
     local buffer = utils.get_current_buffer()
     if not buffer or not buffer:isPullRequest() then
-      utils.error("Not in a Pull Request buffer. Cannot determine changed files.")
+      utils.error "Not in a Pull Request buffer. Cannot determine changed files."
       return
     end
 
@@ -201,8 +210,8 @@ M.picker = {
     local pr_number = buffer.number
 
     if not repo_owner or not repo_name or not pr_number then
-        utils.error("Could not determine repository or PR number from current buffer.")
-        return
+      utils.error "Could not determine repository or PR number from current buffer."
+      return
     end
 
     local url = string.format("repos/%s/%s/pulls/%d/files", repo_owner, repo_name, pr_number)
@@ -223,16 +232,26 @@ M.picker = {
           local items_for_picker = {}
           for _, file_item in ipairs(files_data) do
             local status_char = ""
-            if file_item.status == "added" then status_char = "A"
-            elseif file_item.status == "modified" then status_char = "M"
-            elseif file_item.status == "removed" then status_char = "D"
-            elseif file_item.status == "renamed" then status_char = "R"
+            if file_item.status == "added" then
+              status_char = "A"
+            elseif file_item.status == "modified" then
+              status_char = "M"
+            elseif file_item.status == "removed" then
+              status_char = "D"
+            elseif file_item.status == "renamed" then
+              status_char = "R"
             end
             table.insert(items_for_picker, {
-              text = string.format("[%s] %s (+%d/-%d)", status_char, file_item.filename, file_item.additions, file_item.deletions),
+              text = string.format(
+                "[%s] %s (+%d/-%d)",
+                status_char,
+                file_item.filename,
+                file_item.additions,
+                file_item.deletions
+              ),
               data = file_item,
               repo_full_name = repo_owner .. "/" .. repo_name,
-              pr_number = pr_number
+              pr_number = pr_number,
             })
           end
 
@@ -246,21 +265,24 @@ M.picker = {
 
           local MiniPick = _G.MiniPick
           if not MiniPick then
-            utils.error("MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup.")
+            utils.error "MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup."
             return
           end
 
           local cfg = octo_config.values
-          MiniPick.start({
+          MiniPick.start {
             source = {
               items = items_for_picker,
               name = string.format("Changed Files (PR #%d)", pr_number),
               choose = choose_file,
             },
             options = {
-                content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-            }
-          })
+              content_from_bottom = cfg.picker_config
+                  and cfg.picker_config.mini_picker
+                  and cfg.picker_config.mini_picker.content_from_bottom
+                or false,
+            },
+          }
         end
       end,
     }
@@ -272,7 +294,7 @@ M.picker = {
     opts.type = opts.type or "ISSUE"
 
     if utils.is_blank(opts.prompt) then
-      utils.error("Search prompt cannot be empty.")
+      utils.error "Search prompt cannot be empty."
       return
     end
 
@@ -295,16 +317,26 @@ M.picker = {
           for _, item_data in ipairs(results) do
             local text_display = ""
             if opts.type == "ISSUE" or opts.type == "PULL_REQUEST" then
-              text_display = string.format("#%s %s (%s)", item_data.number or "N/A", item_data.title or "No Title", item_data.repository and item_data.repository.nameWithOwner or "Unknown Repo")
+              text_display = string.format(
+                "#%s %s (%s)",
+                item_data.number or "N/A",
+                item_data.title or "No Title",
+                item_data.repository and item_data.repository.nameWithOwner or "Unknown Repo"
+              )
             elseif opts.type == "REPOSITORY" then
-              text_display = string.format("%s (⭐%d, 🍴%d)", item_data.nameWithOwner or "Unknown Repo", item_data.stargazerCount or 0, item_data.forkCount or 0)
+              text_display = string.format(
+                "%s (⭐%d, 🍴%d)",
+                item_data.nameWithOwner or "Unknown Repo",
+                item_data.stargazerCount or 0,
+                item_data.forkCount or 0
+              )
             else
               text_display = item_data.title or item_data.name or item_data.login or "Unknown item"
             end
             table.insert(items_for_picker, {
               text = text_display,
               data = item_data,
-              type = opts.type
+              type = opts.type,
             })
           end
 
@@ -315,7 +347,7 @@ M.picker = {
               if item_type == "ISSUE" then
                 utils.get("issue", item_data.number, item_data.repository.nameWithOwner)
               elseif item_type == "PULL_REQUEST" then
-                 utils.get("pr", item_data.number, item_data.repository.nameWithOwner)
+                utils.get("pr", item_data.number, item_data.repository.nameWithOwner)
               elseif item_type == "REPOSITORY" then
                 utils.open_in_browser("repo", item_data.nameWithOwner)
               else
@@ -326,21 +358,29 @@ M.picker = {
           end
 
           local MiniPick = _G.MiniPick
-          if not MiniPick then utils.error("MiniPick is not loaded."); return end
+          if not MiniPick then
+            utils.error "MiniPick is not loaded."
+            return
+          end
           local cfg = octo_config.values
-          MiniPick.start({
+          MiniPick.start {
             source = {
               items = items_for_picker,
               name = string.format("Search Results (%s)", opts.type),
               choose = choose_search_item,
             },
             options = {
-                content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-            }
-          })
+              content_from_bottom = cfg.picker_config
+                  and cfg.picker_config.mini_picker
+                  and cfg.picker_config.mini_picker.content_from_bottom
+                or false,
+            },
+          }
         end,
-        error = function(err_output) utils.error("Error during search: " .. err_output) end
-      }
+        error = function(err_output)
+          utils.error("Error during search: " .. err_output)
+        end,
+      },
     }
   end,
 
@@ -368,8 +408,13 @@ M.picker = {
             local items_for_picker = {}
             for _, repo_item in ipairs(repos_data) do
               table.insert(items_for_picker, {
-                text = string.format("%s (⭐%d, 🍴%d)", repo_item.nameWithOwner, repo_item.forkCount or 0, repo_item.stargazerCount or 0),
-                data = repo_item
+                text = string.format(
+                  "%s (⭐%d, 🍴%d)",
+                  repo_item.nameWithOwner,
+                  repo_item.forkCount or 0,
+                  repo_item.stargazerCount or 0
+                ),
+                data = repo_item,
               })
             end
 
@@ -381,22 +426,30 @@ M.picker = {
             end
 
             local MiniPick = _G.MiniPick
-            if not MiniPick then utils.error("MiniPick is not loaded."); return end
+            if not MiniPick then
+              utils.error "MiniPick is not loaded."
+              return
+            end
             local cfg = octo_config.values
-            MiniPick.start({
+            MiniPick.start {
               source = {
                 items = items_for_picker,
                 name = string.format("Repositories%s", login and (" (" .. login .. ")") or ""),
                 choose = choose_repo,
               },
               options = {
-                  content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg.picker_config
+                    and cfg.picker_config.mini_picker
+                    and cfg.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err_output) utils.error("Error fetching repositories: " .. err_output) end
-        }
-      }
+          error = function(err_output)
+            utils.error("Error fetching repositories: " .. err_output)
+          end,
+        },
+      },
     }
   end,
 
@@ -405,7 +458,7 @@ M.picker = {
     opts = opts or {}
     local repo = opts.repo or utils.get_remote_name()
     if not repo then
-      utils.error("Cannot determine repository for labels.")
+      utils.error "Cannot determine repository for labels."
       return
     end
     local owner, name = utils.split_repo(repo)
@@ -428,7 +481,7 @@ M.picker = {
             for _, label_item in ipairs(labels_data) do
               table.insert(items_for_picker, {
                 text = label_item.name,
-                data = label_item
+                data = label_item,
               })
             end
 
@@ -444,22 +497,30 @@ M.picker = {
             end
 
             local MiniPick = _G.MiniPick
-            if not MiniPick then utils.error("MiniPick is not loaded."); return end
+            if not MiniPick then
+              utils.error "MiniPick is not loaded."
+              return
+            end
             local cfg = octo_config.values
-            MiniPick.start({
+            MiniPick.start {
               source = {
                 items = items_for_picker,
                 name = "Labels (" .. repo .. ")",
                 choose = choose_label,
               },
               options = {
-                  content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg.picker_config
+                    and cfg.picker_config.mini_picker
+                    and cfg.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err_output) utils.error("Error fetching labels: " .. err_output) end
-        }
-      }
+          error = function(err_output)
+            utils.error("Error fetching labels: " .. err_output)
+          end,
+        },
+      },
     }
   end,
 
@@ -467,12 +528,12 @@ M.picker = {
   milestones = function(opts)
     opts = opts or {}
     if not opts.cb then
-      utils.error("Callback action (opts.cb) for milestone selection is required.")
+      utils.error "Callback action (opts.cb) for milestone selection is required."
       return
     end
     local repo = opts.repo or utils.get_remote_name()
     if not repo then
-      utils.error("Cannot determine repository for milestones.")
+      utils.error "Cannot determine repository for milestones."
       return
     end
     local owner, name = utils.split_repo(repo)
@@ -495,7 +556,7 @@ M.picker = {
             for _, milestone_item in ipairs(milestones_data) do
               table.insert(items_for_picker, {
                 text = milestone_item.title,
-                data = milestone_item
+                data = milestone_item,
               })
             end
 
@@ -507,22 +568,30 @@ M.picker = {
             end
 
             local MiniPick = _G.MiniPick
-            if not MiniPick then utils.error("MiniPick is not loaded."); return end
+            if not MiniPick then
+              utils.error "MiniPick is not loaded."
+              return
+            end
             local cfg = octo_config.values
-            MiniPick.start({
+            MiniPick.start {
               source = {
                 items = items_for_picker,
                 name = "Milestones (" .. repo .. ")",
                 choose = choose_milestone,
               },
               options = {
-                  content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg.picker_config
+                    and cfg.picker_config.mini_picker
+                    and cfg.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err_output) utils.error("Error fetching milestones: " .. err_output) end
-        }
-      }
+          error = function(err_output)
+            utils.error("Error fetching milestones: " .. err_output)
+          end,
+        },
+      },
     }
   end,
 
@@ -540,60 +609,83 @@ M.picker = {
       items_producer = function(callback)
         local search_prompt = opts.prompt
         if not search_prompt or utils.is_blank(search_prompt) then
-          utils.warn("User search type is 'search' but no prompt was provided. Showing no users.")
-          callback({}) -- Return empty list if no prompt for search
+          utils.warn "User search type is 'search' but no prompt was provided. Showing no users."
+          callback {} -- Return empty list if no prompt for search
           return
         end
         utils.info("Searching users with prompt: " .. search_prompt)
-        gh.api.graphql({
+        gh.api.graphql {
           query = queries.users_query, -- expects a 'prompt' variable
           fields = { prompt = search_prompt },
           jq = ".data.search.nodes", -- Assuming this jq path
           opts = {
-            cb = gh.create_callback({
-              success = function(output) callback(vim.json.decode(output or "[]")) end,
-              error = function(err) utils.error("User search failed: " .. err); callback({}) end
-            })
-          }
-        })
+            cb = gh.create_callback {
+              success = function(output)
+                callback(vim.json.decode(output or "[]"))
+              end,
+              error = function(err)
+                utils.error("User search failed: " .. err)
+                callback {}
+              end,
+            },
+          },
+        }
       end
     elseif selection_type == "mentionable" then
       picker_name = "Mentionable Users"
       items_producer = function(callback)
-        if not repo_for_context then utils.error("Cannot determine repository for mentionable users."); callback({}); return end
+        if not repo_for_context then
+          utils.error "Cannot determine repository for mentionable users."
+          callback {}
+          return
+        end
         local owner, name = utils.split_repo(repo_for_context)
         utils.info("Fetching mentionable users for " .. repo_for_context)
-        gh.api.graphql({
+        gh.api.graphql {
           query = queries.mentionable_users,
           fields = { owner = owner, name = name },
           paginate = true,
           jq = ".data.repository.mentionableUsers.nodes",
           opts = {
-            cb = gh.create_callback({
-              success = function(output) callback(utils.get_flatten_pages(output)) end,
-              error = function(err) utils.error("Failed to fetch mentionable users: " .. err); callback({}) end
-            })
-          }
-        })
+            cb = gh.create_callback {
+              success = function(output)
+                callback(utils.get_flatten_pages(output))
+              end,
+              error = function(err)
+                utils.error("Failed to fetch mentionable users: " .. err)
+                callback {}
+              end,
+            },
+          },
+        }
       end
     elseif selection_type == "assignable" then
       picker_name = "Assignable Users"
       items_producer = function(callback)
-        if not repo_for_context then utils.error("Cannot determine repository for assignable users."); callback({}); return end
+        if not repo_for_context then
+          utils.error "Cannot determine repository for assignable users."
+          callback {}
+          return
+        end
         local owner, name = utils.split_repo(repo_for_context)
         utils.info("Fetching assignable users for " .. repo_for_context)
-        gh.api.graphql({
+        gh.api.graphql {
           query = queries.assignable_users,
           fields = { owner = owner, name = name },
           paginate = true,
           jq = ".data.repository.assignableUsers.nodes",
           opts = {
-            cb = gh.create_callback({
-              success = function(output) callback(utils.get_flatten_pages(output)) end,
-              error = function(err) utils.error("Failed to fetch assignable users: " .. err); callback({}) end
-            })
-          }
-        })
+            cb = gh.create_callback {
+              success = function(output)
+                callback(utils.get_flatten_pages(output))
+              end,
+              error = function(err)
+                utils.error("Failed to fetch assignable users: " .. err)
+                callback {}
+              end,
+            },
+          },
+        }
       end
     else
       utils.error("Invalid user selection type in config: " .. selection_type)
@@ -602,10 +694,14 @@ M.picker = {
 
     items_producer(function(users_data)
       if #users_data == 0 then
-        utils.info(string.format("No users found for type '%s'%s.",
+        utils.info(
+          string.format(
+            "No users found for type '%s'%s.",
             selection_type,
-            repo_for_context and (" in " .. repo_for_context) or (opts.prompt and (" with prompt '"..opts.prompt.."'") or "")
-        ))
+            repo_for_context and (" in " .. repo_for_context)
+              or (opts.prompt and (" with prompt '" .. opts.prompt .. "'") or "")
+          )
+        )
         return
       end
 
@@ -613,7 +709,7 @@ M.picker = {
       for _, user_item in ipairs(users_data) do
         table.insert(items_for_picker, {
           text = user_item.login .. (user_item.name and (" (" .. user_item.name .. ")") or ""),
-          data = user_item
+          data = user_item,
         })
       end
 
@@ -629,17 +725,23 @@ M.picker = {
       end
 
       local MiniPick = _G.MiniPick
-      if not MiniPick then utils.error("MiniPick is not loaded."); return end
-      MiniPick.start({
+      if not MiniPick then
+        utils.error "MiniPick is not loaded."
+        return
+      end
+      MiniPick.start {
         source = {
           items = items_for_picker,
           name = picker_name .. (repo_for_context and (" (" .. repo_for_context .. ")") or ""),
           choose = choose_user,
         },
         options = {
-            content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-        }
-      })
+          content_from_bottom = cfg.picker_config
+              and cfg.picker_config.mini_picker
+              and cfg.picker_config.mini_picker.content_from_bottom
+            or false,
+        },
+      }
     end)
   end,
 
@@ -647,7 +749,7 @@ M.picker = {
     opts = opts or {}
     local buffer = utils.get_current_buffer()
     if not buffer or not (buffer:isIssue() or buffer:isPullRequest()) then
-      utils.error("Not in an Issue or Pull Request buffer.")
+      utils.error "Not in an Issue or Pull Request buffer."
       return
     end
 
@@ -670,7 +772,7 @@ M.picker = {
           success = function(output)
             local assignees_data = vim.json.decode(output or "[]")
             if #assignees_data == 0 then
-              utils.info("No assignees found for the current item.")
+              utils.info "No assignees found for the current item."
               return
             end
 
@@ -678,7 +780,7 @@ M.picker = {
             for _, assignee_item in ipairs(assignees_data) do
               table.insert(items_for_picker, {
                 text = assignee_item.login .. (assignee_item.name and (" (" .. assignee_item.name .. ")") or ""),
-                data = assignee_item
+                data = assignee_item,
               })
             end
 
@@ -694,35 +796,53 @@ M.picker = {
             end
 
             local MiniPick = _G.MiniPick
-            if not MiniPick then utils.error("MiniPick is not loaded."); return end
+            if not MiniPick then
+              utils.error "MiniPick is not loaded."
+              return
+            end
             local cfg = octo_config.values
-            MiniPick.start({
+            MiniPick.start {
               source = {
                 items = items_for_picker,
                 name = "Assignees",
                 choose = choose_assignee,
               },
               options = {
-                  content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg.picker_config
+                    and cfg.picker_config.mini_picker
+                    and cfg.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err) utils.error("Failed to fetch assignees: " .. err) end
-        }
-      }
+          error = function(err)
+            utils.error("Failed to fetch assignees: " .. err)
+          end,
+        },
+      },
     }
   end,
 
   gists = function(opts)
     opts = opts or {}
     local privacy = "ALL"
-    if opts.public then privacy = "PUBLIC"
-    elseif opts.secret then privacy = "SECRET"
+    if opts.public then
+      privacy = "PUBLIC"
+    elseif opts.secret then
+      privacy = "SECRET"
     end
 
     utils.info("Fetching gists (" .. privacy .. ")...")
     gh.run {
-      args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", graphql("gists_query", privacy)) },
+      args = {
+        "api",
+        "graphql",
+        "--paginate",
+        "--jq",
+        ".",
+        "-f",
+        string.format("query=%s", graphql("gists_query", privacy)),
+      },
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
           utils.error("Error fetching gists: " .. stderr)
@@ -736,10 +856,11 @@ M.picker = {
 
           local items_for_picker = {}
           for _, gist_item in ipairs(gists_data) do
-            local description = gist_item.description or (gist_item.files and #gist_item.files > 0 and gist_item.files[1].name or "No description")
+            local description = gist_item.description
+              or (gist_item.files and #gist_item.files > 0 and gist_item.files[1].name or "No description")
             table.insert(items_for_picker, {
               text = description,
-              data = gist_item
+              data = gist_item,
             })
           end
 
@@ -747,15 +868,18 @@ M.picker = {
             if selected_item and selected_item.data and selected_item.data.url then
               utils.open_in_browser_from_url(selected_item.data.url) -- Assuming gist URL is directly usable
             elseif selected_item and selected_item.data then
-                 utils.warn("Selected gist does not have a direct URL: " .. (selected_item.data.id or selected_item.text))
+              utils.warn("Selected gist does not have a direct URL: " .. (selected_item.data.id or selected_item.text))
             end
             return false
           end
 
           local MiniPick = _G.MiniPick
-          if not MiniPick then utils.error("MiniPick is not loaded."); return end
+          if not MiniPick then
+            utils.error "MiniPick is not loaded."
+            return
+          end
           local cfg = octo_config.values
-          MiniPick.start({
+          MiniPick.start {
             source = {
               items = items_for_picker,
               name = "Gists (" .. privacy .. ")",
@@ -763,9 +887,12 @@ M.picker = {
               -- preview = function(buf_id, item_to_preview) ... end -- could show files in gist
             },
             options = {
-                content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-            }
-          })
+              content_from_bottom = cfg.picker_config
+                  and cfg.picker_config.mini_picker
+                  and cfg.picker_config.mini_picker.content_from_bottom
+                or false,
+            },
+          }
         end
       end,
     }
@@ -784,7 +911,12 @@ M.picker = {
       picker_title = string.format("%s Notifications", opts.repo)
     end
 
-    utils.info("Fetching notifications" .. (opts.repo and (" for " .. opts.repo) or "") .. (opts.all and " (all)" or " (unread)").."...")
+    utils.info(
+      "Fetching notifications"
+        .. (opts.repo and (" for " .. opts.repo) or "")
+        .. (opts.all and " (all)" or " (unread)")
+        .. "..."
+    )
 
     gh.api.get {
       endpoint,
@@ -796,60 +928,79 @@ M.picker = {
           success = function(output)
             local notifications_data = vim.json.decode(output or "[]")
             if #notifications_data == 0 then
-              utils.info("There are no notifications.")
+              utils.info "There are no notifications."
               return
             end
 
             local items_for_picker = {}
             for _, notif_item in ipairs(notifications_data) do
               table.insert(items_for_picker, {
-                text = string.format("[%s] %s", notif_item.repository and notif_item.repository.name or "Global", notif_item.subject.title),
-                data = notif_item
+                text = string.format(
+                  "[%s] %s",
+                  notif_item.repository and notif_item.repository.name or "Global",
+                  notif_item.subject.title
+                ),
+                data = notif_item,
               })
             end
 
             local function choose_notification(selected_item)
-              if selected_item and selected_item.data and selected_item.data.subject and selected_item.data.subject.url then
+              if
+                selected_item
+                and selected_item.data
+                and selected_item.data.subject
+                and selected_item.data.subject.url
+              then
                 utils.info("Fetching HTML URL for notification: " .. selected_item.data.subject.title)
-                gh.api.get{
-                    selected_item.data.subject.url,
-                    opts = {
-                        headers = { "Accept: application/vnd.github.v3+json" },
-                        cb = gh.create_callback {
-                            success = function(subject_details_output)
-                                local subject_details = vim.json.decode(subject_details_output)
-                                if subject_details and subject_details.html_url then
-                                    utils.open_in_browser_from_url(subject_details.html_url)
-                                else
-                                    utils.error("Could not determine HTML URL for the notification.")
-                                end
-                            end,
-                            error = function(err) utils.error("Failed to fetch notification details: " .. err) end
-                        }
-                    }
+                gh.api.get {
+                  selected_item.data.subject.url,
+                  opts = {
+                    headers = { "Accept: application/vnd.github.v3+json" },
+                    cb = gh.create_callback {
+                      success = function(subject_details_output)
+                        local subject_details = vim.json.decode(subject_details_output)
+                        if subject_details and subject_details.html_url then
+                          utils.open_in_browser_from_url(subject_details.html_url)
+                        else
+                          utils.error "Could not determine HTML URL for the notification."
+                        end
+                      end,
+                      error = function(err)
+                        utils.error("Failed to fetch notification details: " .. err)
+                      end,
+                    },
+                  },
                 }
               else
-                utils.warn("Selected notification does not have a subject URL.")
+                utils.warn "Selected notification does not have a subject URL."
               end
               return false
             end
 
             local MiniPick = _G.MiniPick
-            if not MiniPick then utils.error("MiniPick is not loaded."); return end
-            MiniPick.start({
+            if not MiniPick then
+              utils.error "MiniPick is not loaded."
+              return
+            end
+            MiniPick.start {
               source = {
                 items = items_for_picker,
                 name = picker_title,
                 choose = choose_notification,
               },
               options = {
-                  content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg.picker_config
+                    and cfg.picker_config.mini_picker
+                    and cfg.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err) utils.error("Error fetching notifications: " .. err) end
-        }
-      }
+          error = function(err)
+            utils.error("Error fetching notifications: " .. err)
+          end,
+        },
+      },
     }
   end,
 
@@ -859,11 +1010,11 @@ M.picker = {
     local cb = opts.cb
 
     if not templates or #templates == 0 then
-      utils.info("No issue templates provided.")
+      utils.info "No issue templates provided."
       return
     end
     if not cb then
-      utils.error("Callback (opts.cb) for issue template selection is required.")
+      utils.error "Callback (opts.cb) for issue template selection is required."
       return
     end
 
@@ -871,7 +1022,7 @@ M.picker = {
     for _, template_item in ipairs(templates) do
       table.insert(items_for_picker, {
         text = template_item.name,
-        data = template_item
+        data = template_item,
       })
     end
 
@@ -883,25 +1034,31 @@ M.picker = {
     end
 
     local MiniPick = _G.MiniPick
-    if not MiniPick then utils.error("MiniPick is not loaded."); return end
+    if not MiniPick then
+      utils.error "MiniPick is not loaded."
+      return
+    end
     local cfg = octo_config.values
-    MiniPick.start({
+    MiniPick.start {
       source = {
         items = items_for_picker,
         name = "Issue Templates",
         choose = choose_template,
       },
       options = {
-          content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-      }
-    })
+        content_from_bottom = cfg.picker_config
+            and cfg.picker_config.mini_picker
+            and cfg.picker_config.mini_picker.content_from_bottom
+          or false,
+      },
+    }
   end,
 
   commits = function(opts) -- For a PR
     opts = opts or {}
     local buffer = utils.get_current_buffer()
     if not buffer or not buffer:isPullRequest() then
-      utils.error("Not in a Pull Request buffer. Cannot list commits.")
+      utils.error "Not in a Pull Request buffer. Cannot list commits."
       return
     end
 
@@ -927,11 +1084,10 @@ M.picker = {
           local items_for_picker = {}
           for _, commit_item in ipairs(commits_data) do
             local short_sha = string.sub(commit_item.sha or "unknown_sha", 1, 7)
-            local first_line_message = (commit_item.commit and commit_item.commit.message or ""):match("^[^
-]*")
+            local first_line_message = (commit_item.commit and commit_item.commit.message or ""):match "^[^]*"
             table.insert(items_for_picker, {
               text = string.format("%s %s", short_sha, first_line_message),
-              data = commit_item
+              data = commit_item,
             })
           end
 
@@ -939,15 +1095,20 @@ M.picker = {
             if selected_item and selected_item.data and selected_item.data.html_url then
               utils.open_in_browser_from_url(selected_item.data.html_url)
             elseif selected_item and selected_item.data then
-              utils.warn("Selected commit does not have a direct html_url: " .. (selected_item.data.sha or selected_item.text))
+              utils.warn(
+                "Selected commit does not have a direct html_url: " .. (selected_item.data.sha or selected_item.text)
+              )
             end
             return false
           end
 
           local MiniPick = _G.MiniPick
-          if not MiniPick then utils.error("MiniPick is not loaded."); return end
+          if not MiniPick then
+            utils.error "MiniPick is not loaded."
+            return
+          end
           local cfg = octo_config.values
-          MiniPick.start({
+          MiniPick.start {
             source = {
               items = items_for_picker,
               name = "Commits (PR #" .. pr_number .. ")",
@@ -955,9 +1116,12 @@ M.picker = {
               -- preview = function(buf_id, item_to_preview) -- could show commit diffstat or full message
             },
             options = {
-                content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-            }
-          })
+              content_from_bottom = cfg.picker_config
+                  and cfg.picker_config.mini_picker
+                  and cfg.picker_config.mini_picker.content_from_bottom
+                or false,
+            },
+          }
         end
       end,
     }
@@ -967,13 +1131,13 @@ M.picker = {
     opts = opts or {}
     local callback = opts.cb
     if not callback then
-      utils.error("Callback (opts.cb) for review_commits selection is required.")
+      utils.error "Callback (opts.cb) for review_commits selection is required."
       return
     end
 
     local current_review = reviews.get_current_review()
     if not current_review then
-      utils.error("No review in progress.")
+      utils.error "No review in progress."
       return
     end
 
@@ -999,7 +1163,7 @@ M.picker = {
               author = { name = "", email = "", date = "" },
             },
             parents = { { sha = current_review.pull_request.left.commit } },
-            is_entire_pr_entry = true
+            is_entire_pr_entry = true,
           })
 
           if #commits_data == 0 then
@@ -1010,11 +1174,10 @@ M.picker = {
           local items_for_picker = {}
           for _, commit_item in ipairs(commits_data) do
             local short_sha = string.sub(commit_item.sha or "unknown_sha", 1, 7)
-            local first_line_message = (commit_item.commit and commit_item.commit.message or ""):match("^[^
-]*")
+            local first_line_message = (commit_item.commit and commit_item.commit.message or ""):match "^[^ ]*"
             table.insert(items_for_picker, {
               text = string.format("%s %s", short_sha, first_line_message),
-              data = commit_item
+              data = commit_item,
             })
           end
 
@@ -1035,18 +1198,24 @@ M.picker = {
           end
 
           local MiniPick = _G.MiniPick
-          if not MiniPick then utils.error("MiniPick is not loaded."); return end
+          if not MiniPick then
+            utils.error "MiniPick is not loaded."
+            return
+          end
           local cfg = octo_config.values
-          MiniPick.start({
+          MiniPick.start {
             source = {
               items = items_for_picker,
               name = "Select Commit for Review (PR #" .. pr_number .. ")",
               choose = choose_review_commit,
             },
             options = {
-                content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-            }
-          })
+              content_from_bottom = cfg.picker_config
+                  and cfg.picker_config.mini_picker
+                  and cfg.picker_config.mini_picker.content_from_bottom
+                or false,
+            },
+          }
         end
       end,
     }
@@ -1057,17 +1226,23 @@ M.picker = {
     local threads = opts.threads
 
     if not threads or #threads == 0 then
-      utils.info("No pending review threads.")
+      utils.info "No pending review threads."
       return
     end
 
     local items_for_picker = {}
     for _, thread_item in ipairs(threads) do
-      local first_comment_body = (thread_item.comments and #thread_item.comments > 0 and thread_item.comments[1].body or ""):match("^[^
-]*")
+      local first_comment_body = (
+        thread_item.comments and #thread_item.comments > 0 and thread_item.comments[1].body or ""
+      ):match "^[^ ]*"
       table.insert(items_for_picker, {
-        text = string.format("%s:%d %s", thread_item.path, thread_item.line or thread_item.startLine or "N/A", first_comment_body),
-        data = thread_item
+        text = string.format(
+          "%s:%d %s",
+          thread_item.path,
+          thread_item.line or thread_item.startLine or "N/A",
+          first_comment_body
+        ),
+        data = thread_item,
       })
     end
 
@@ -1079,31 +1254,36 @@ M.picker = {
     end
 
     local MiniPick = _G.MiniPick
-    if not MiniPick then utils.error("MiniPick is not loaded."); return end
+    if not MiniPick then
+      utils.error "MiniPick is not loaded."
+      return
+    end
     local cfg = octo_config.values
-    MiniPick.start({
+    MiniPick.start {
       source = {
         items = items_for_picker,
         name = "Pending Review Threads",
         choose = choose_thread,
       },
       options = {
-          content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-      }
-    })
+        content_from_bottom = cfg.picker_config
+            and cfg.picker_config.mini_picker
+            and cfg.picker_config.mini_picker.content_from_bottom
+          or false,
+      },
+    }
   end,
 
   discussions = function(opts)
     opts = opts or {}
     local repo = opts.repo or utils.get_remote_name()
     if not repo then
-      utils.error("Cannot determine repository for discussions.")
+      utils.error "Cannot determine repository for discussions."
       return
     end
     local owner, name = utils.split_repo(repo)
     local cfg = octo_config.values
     local order_by = cfg.discussions and cfg.discussions.order_by or { field = "UPDATED_AT", direction = "DESC" }
-
 
     utils.info("Fetching discussions for " .. repo .. "...")
     gh.api.graphql {
@@ -1131,7 +1311,7 @@ M.picker = {
               table.insert(items_for_picker, {
                 text = string.format("#%d %s", disc_item.number, disc_item.title),
                 data = disc_item,
-                repo_full_name = repo
+                repo_full_name = repo,
               })
             end
 
@@ -1143,21 +1323,29 @@ M.picker = {
             end
 
             local MiniPick = _G.MiniPick
-            if not MiniPick then utils.error("MiniPick is not loaded."); return end
-            MiniPick.start({
+            if not MiniPick then
+              utils.error "MiniPick is not loaded."
+              return
+            end
+            MiniPick.start {
               source = {
                 items = items_for_picker,
                 name = "Discussions (" .. repo .. ")",
                 choose = choose_discussion,
               },
               options = {
-                  content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg.picker_config
+                    and cfg.picker_config.mini_picker
+                    and cfg.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err) utils.error("Error fetching discussions: " .. err) end
-        }
-      }
+          error = function(err)
+            utils.error("Error fetching discussions: " .. err)
+          end,
+        },
+      },
     }
   end,
 
@@ -1168,11 +1356,11 @@ M.picker = {
     local on_select_cb = opts.on_select_cb
 
     if not workflow_runs_data or #workflow_runs_data == 0 then
-      utils.info("No workflow runs provided.")
+      utils.info "No workflow runs provided."
       return
     end
     if not on_select_cb then
-      utils.error("on_select_cb is required for workflow_runs picker.")
+      utils.error "on_select_cb is required for workflow_runs picker."
       return
     end
 
@@ -1188,13 +1376,15 @@ M.picker = {
       local actor_login = (run_item.actor and run_item.actor.login) or "unknown"
 
       table.insert(items_for_picker, {
-        text = string.format("[%s %s] %s by %s (%s)",
-                             conclusion_icon,
-                             run_item.conclusion or run_item.status,
-                             display_title,
-                             actor_login,
-                             run_item.headBranch or ""),
-        data = run_item
+        text = string.format(
+          "[%s %s] %s by %s (%s)",
+          conclusion_icon,
+          run_item.conclusion or run_item.status,
+          display_title,
+          actor_login,
+          run_item.headBranch or ""
+        ),
+        data = run_item,
       })
     end
 
@@ -1206,18 +1396,24 @@ M.picker = {
     end
 
     local MiniPick = _G.MiniPick
-    if not MiniPick then utils.error("MiniPick is not loaded."); return end
+    if not MiniPick then
+      utils.error "MiniPick is not loaded."
+      return
+    end
     local cfg = octo_config.values
-    MiniPick.start({
+    MiniPick.start {
       source = {
         items = items_for_picker,
         name = title,
         choose = choose_workflow_run,
       },
       options = {
-          content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-      }
-    })
+        content_from_bottom = cfg.picker_config
+            and cfg.picker_config.mini_picker
+            and cfg.picker_config.mini_picker.content_from_bottom
+          or false,
+      },
+    }
   end,
 
   actions = function(opts) -- Octo actions picker
@@ -1225,7 +1421,7 @@ M.picker = {
     local flattened_actions = opts.flattened_actions -- Expects actions to be passed in
 
     if not flattened_actions or #flattened_actions == 0 then
-      utils.info("No actions available.")
+      utils.info "No actions available."
       return
     end
 
@@ -1233,7 +1429,7 @@ M.picker = {
     for _, action_item in ipairs(flattened_actions) do
       table.insert(items_for_picker, {
         text = action_item.object, -- 'object' usually holds the description
-        data = action_item -- Store the whole action item, which includes 'fun'
+        data = action_item, -- Store the whole action item, which includes 'fun'
       })
     end
 
@@ -1245,31 +1441,37 @@ M.picker = {
     end
 
     local MiniPick = _G.MiniPick
-    if not MiniPick then utils.error("MiniPick is not loaded."); return end
+    if not MiniPick then
+      utils.error "MiniPick is not loaded."
+      return
+    end
     local cfg = octo_config.values
-    MiniPick.start({
+    MiniPick.start {
       source = {
         items = items_for_picker,
         name = "Octo Actions",
         choose = choose_action,
       },
       options = {
-          content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-      }
-    })
+        content_from_bottom = cfg.picker_config
+            and cfg.picker_config.mini_picker
+            and cfg.picker_config.mini_picker.content_from_bottom
+          or false,
+      },
+    }
   end,
 
   assigned_labels = function(opts)
     opts = opts or {}
     local cb = opts.cb
     if not cb then
-      utils.error("Callback (opts.cb) for assigned_labels selection is required.")
+      utils.error "Callback (opts.cb) for assigned_labels selection is required."
       return
     end
 
     local buffer = utils.get_current_buffer()
     if not buffer or not (buffer:isIssue() or buffer:isPullRequest() or buffer:isDiscussion()) then
-      utils.error("Not in an Issue, Pull Request, or Discussion buffer.")
+      utils.error "Not in an Issue, Pull Request, or Discussion buffer."
       return
     end
 
@@ -1290,7 +1492,7 @@ M.picker = {
       jq_path = ".data.repository.discussion.labels.nodes"
       entity_type = "Discussion"
     else
-      utils.error("Unsupported buffer type for assigned_labels.") -- Should be caught by earlier check
+      utils.error "Unsupported buffer type for assigned_labels." -- Should be caught by earlier check
       return
     end
 
@@ -1311,7 +1513,7 @@ M.picker = {
             for _, label_item in ipairs(labels_data) do
               table.insert(items_for_picker, {
                 text = label_item.name,
-                data = label_item
+                data = label_item,
               })
             end
 
@@ -1323,22 +1525,30 @@ M.picker = {
             end
 
             local MiniPick = _G.MiniPick
-            if not MiniPick then utils.error("MiniPick is not loaded."); return end
+            if not MiniPick then
+              utils.error "MiniPick is not loaded."
+              return
+            end
             local cfg = octo_config.values
-            MiniPick.start({
+            MiniPick.start {
               source = {
                 items = items_for_picker,
                 name = "Assigned Labels (" .. entity_type .. ")",
                 choose = choose_assigned_label,
               },
               options = {
-                  content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg.picker_config
+                    and cfg.picker_config.mini_picker
+                    and cfg.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err) utils.error("Error fetching assigned labels: " .. err) end
-        }
-      }
+          error = function(err)
+            utils.error("Error fetching assigned labels: " .. err)
+          end,
+        },
+      },
     }
   end,
 
@@ -1346,19 +1556,19 @@ M.picker = {
     opts = opts or {}
     local cb = opts.cb
     if not cb then
-      utils.error("Callback (opts.cb) for project_cards selection is required.")
+      utils.error "Callback (opts.cb) for project_cards selection is required."
       return
     end
 
     local buffer = utils.get_current_buffer()
     if not buffer or not buffer.node or not buffer.node.projectCards then
-      utils.error("Cannot find project cards in the current buffer context.")
+      utils.error "Cannot find project cards in the current buffer context."
       return
     end
 
     local cards = buffer.node.projectCards.nodes
     if not cards or #cards == 0 then
-      utils.info("No project cards found for the current item.")
+      utils.info "No project cards found for the current item."
       return
     end
 
@@ -1371,9 +1581,9 @@ M.picker = {
     for _, card_item in ipairs(cards) do
       table.insert(items_for_picker, {
         text = (card_item.note and string.sub(card_item.note, 1, 50) .. (#card_item.note > 50 and "..." or ""))
-               or (card_item.content and card_item.content.title and string.sub(card_item.content.title, 1, 50) .. (#card_item.content.title > 50 and "..." or ""))
-               or ("Card ID: " .. card_item.id),
-        data = card_item
+          or (card_item.content and card_item.content.title and string.sub(card_item.content.title, 1, 50) .. (#card_item.content.title > 50 and "..." or ""))
+          or ("Card ID: " .. card_item.id),
+        data = card_item,
       })
     end
 
@@ -1385,31 +1595,37 @@ M.picker = {
     end
 
     local MiniPick = _G.MiniPick
-    if not MiniPick then utils.error("MiniPick is not loaded."); return end
+    if not MiniPick then
+      utils.error "MiniPick is not loaded."
+      return
+    end
     local cfg = octo_config.values
-    MiniPick.start({
+    MiniPick.start {
       source = {
         items = items_for_picker,
         name = "Select Project Card",
         choose = choose_project_card,
       },
       options = {
-          content_from_bottom = cfg.picker_config and cfg.picker_config.mini_picker and cfg.picker_config.mini_picker.content_from_bottom or false
-      }
-    })
+        content_from_bottom = cfg.picker_config
+            and cfg.picker_config.mini_picker
+            and cfg.picker_config.mini_picker.content_from_bottom
+          or false,
+      },
+    }
   end,
 
   project_columns = function(opts) -- Legacy: select_target_project_column
     opts = opts or {}
     local cb = opts.cb
     if not cb then
-      utils.error("Callback (opts.cb) for project_columns selection is required.")
+      utils.error "Callback (opts.cb) for project_columns selection is required."
       return
     end
 
     local buffer = utils.get_current_buffer()
     if not buffer then
-      utils.error("Cannot determine current buffer for project context.")
+      utils.error "Cannot determine current buffer for project context."
       return
     end
 
@@ -1417,7 +1633,7 @@ M.picker = {
     local name = buffer.name
     local viewer_login = vim.g.octo_viewer or owner
 
-    utils.info("Fetching projects...")
+    utils.info "Fetching projects..."
     gh.api.graphql {
       query = queries.projects_query,
       fields = { owner = owner, name = name, viewerLogin = viewer_login, resourceOwnerLogin = owner },
@@ -1429,9 +1645,15 @@ M.picker = {
             local resp_projects = vim.json.decode(output_projects or "{}")
             local projects = {}
             if resp_projects.data then
-                if resp_projects.data.user and resp_projects.data.user.projects then vim.list_extend(projects, resp_projects.data.user.projects.nodes or {}) end
-                if resp_projects.data.repository and resp_projects.data.repository.projects then vim.list_extend(projects, resp_projects.data.repository.projects.nodes or {}) end
-                if resp_projects.data.organization and resp_projects.data.organization.projects then vim.list_extend(projects, resp_projects.data.organization.projects.nodes or {}) end
+              if resp_projects.data.user and resp_projects.data.user.projects then
+                vim.list_extend(projects, resp_projects.data.user.projects.nodes or {})
+              end
+              if resp_projects.data.repository and resp_projects.data.repository.projects then
+                vim.list_extend(projects, resp_projects.data.repository.projects.nodes or {})
+              end
+              if resp_projects.data.organization and resp_projects.data.organization.projects then
+                vim.list_extend(projects, resp_projects.data.organization.projects.nodes or {})
+              end
             end
 
             if #projects == 0 then
@@ -1445,8 +1667,15 @@ M.picker = {
             end
 
             local function choose_project_for_column_selection(selected_project_item)
-              if not (selected_project_item and selected_project_item.data and selected_project_item.data.columns and selected_project_item.data.columns.nodes) then
-                utils.info("Selected project has no columns or data is missing.")
+              if
+                not (
+                  selected_project_item
+                  and selected_project_item.data
+                  and selected_project_item.data.columns
+                  and selected_project_item.data.columns.nodes
+                )
+              then
+                utils.info "Selected project has no columns or data is missing."
                 return true
               end
 
@@ -1468,38 +1697,52 @@ M.picker = {
               end
 
               local MiniPick_Col = _G.MiniPick
-              if not MiniPick_Col then utils.error("MiniPick is not loaded for column selection."); return false end
+              if not MiniPick_Col then
+                utils.error "MiniPick is not loaded for column selection."
+                return false
+              end
               local cfg_col = octo_config.values
-              MiniPick_Col.start({
+              MiniPick_Col.start {
                 source = {
                   items = column_items_for_picker,
                   name = "Select Column in '" .. selected_project_item.data.name .. "'",
                   choose = choose_column,
                 },
                 options = {
-                    content_from_bottom = cfg_col.picker_config and cfg_col.picker_config.mini_picker and cfg_col.picker_config.mini_picker.content_from_bottom or false
-                }
-              })
+                  content_from_bottom = cfg_col.picker_config
+                      and cfg_col.picker_config.mini_picker
+                      and cfg_col.picker_config.mini_picker.content_from_bottom
+                    or false,
+                },
+              }
               return false
             end
 
             local MiniPick_Proj = _G.MiniPick
-            if not MiniPick_Proj then utils.error("MiniPick is not loaded for project selection."); return end
+            if not MiniPick_Proj then
+              utils.error "MiniPick is not loaded for project selection."
+              return
+            end
             local cfg_proj = octo_config.values
-            MiniPick_Proj.start({
+            MiniPick_Proj.start {
               source = {
                 items = project_items_for_picker,
                 name = "Select Project",
                 choose = choose_project_for_column_selection,
               },
               options = {
-                  content_from_bottom = cfg_proj.picker_config and cfg_proj.picker_config.mini_picker and cfg_proj.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg_proj.picker_config
+                    and cfg_proj.picker_config.mini_picker
+                    and cfg_proj.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err) utils.error("Error fetching projects: " .. err) end
-        }
-      }
+          error = function(err)
+            utils.error("Error fetching projects: " .. err)
+          end,
+        },
+      },
     }
   end,
 
@@ -1507,19 +1750,19 @@ M.picker = {
     opts = opts or {}
     local cb = opts.cb
     if not cb then
-      utils.error("Callback (opts.cb) for project_cards_v2 selection is required.")
+      utils.error "Callback (opts.cb) for project_cards_v2 selection is required."
       return
     end
 
     local buffer = utils.get_current_buffer()
     if not buffer or not buffer.node or not buffer.node.projectItems then
-      utils.error("Cannot find project v2 items (projectItems) in the current buffer context.")
+      utils.error "Cannot find project v2 items (projectItems) in the current buffer context."
       return
     end
 
     local cards_v2 = buffer.node.projectItems.nodes
     if not cards_v2 or #cards_v2 == 0 then
-      utils.info("No project v2 items found for the current item.")
+      utils.info "No project v2 items found for the current item."
       return
     end
 
@@ -1528,25 +1771,25 @@ M.picker = {
       if node.project and node.project.id and node.id then
         cb(node.project.id, node.id)
       else
-        utils.error("Single project v2 item found, but is missing project.id or item.id.")
+        utils.error "Single project v2 item found, but is missing project.id or item.id."
       end
       return
     end
 
-    utils.error("Multiple project v2 cards found. This picker currently supports only single card assignment directly or selection when only one card is present.")
+    utils.error "Multiple project v2 cards found. This picker currently supports only single card assignment directly or selection when only one card is present."
   end,
 
   project_columns_v2 = function(opts)
     opts = opts or {}
     local cb = opts.cb
     if not cb then
-      utils.error("Callback (opts.cb) for project_columns_v2 selection is required.")
+      utils.error "Callback (opts.cb) for project_columns_v2 selection is required."
       return
     end
 
     local buffer = utils.get_current_buffer()
     if not buffer then
-      utils.error("Cannot determine current buffer for project v2 context.")
+      utils.error "Cannot determine current buffer for project v2 context."
       return
     end
 
@@ -1554,7 +1797,7 @@ M.picker = {
     local name = buffer.name
     local viewer_login = vim.g.octo_viewer or owner
 
-    utils.info("Fetching projects (v2)...")
+    utils.info "Fetching projects (v2)..."
     gh.api.graphql {
       query = queries.projects_v2_query,
       fields = { owner = owner, name = name, viewerLogin = viewer_login, resourceOwnerLogin = owner },
@@ -1566,20 +1809,29 @@ M.picker = {
             local resp_projects_v2 = vim.json.decode(output_projects_v2 or "{}")
             local projects_v2_list = {}
             if resp_projects_v2.data then
-                local sources = {
-                    resp_projects_v2.data.user and resp_projects_v2.data.user.projectsV2 and resp_projects_v2.data.user.projectsV2.nodes or {},
-                    resp_projects_v2.data.repository and resp_projects_v2.data.repository.projectsV2 and resp_projects_v2.data.repository.projectsV2.nodes or {},
-                    resp_projects_v2.data.organization and resp_projects_v2.data.organization.projectsV2 and resp_projects_v2.data.organization.projectsV2.nodes or {}
-                }
-                local project_ids_seen = {}
-                for _, source_list in ipairs(sources) do
-                    for _, proj in ipairs(source_list) do
-                        if not project_ids_seen[proj.id] then
-                            table.insert(projects_v2_list, proj)
-                            project_ids_seen[proj.id] = true
-                        end
-                    end
+              local sources = {
+                resp_projects_v2.data.user
+                    and resp_projects_v2.data.user.projectsV2
+                    and resp_projects_v2.data.user.projectsV2.nodes
+                  or {},
+                resp_projects_v2.data.repository
+                    and resp_projects_v2.data.repository.projectsV2
+                    and resp_projects_v2.data.repository.projectsV2.nodes
+                  or {},
+                resp_projects_v2.data.organization
+                    and resp_projects_v2.data.organization.projectsV2
+                    and resp_projects_v2.data.organization.projectsV2.nodes
+                  or {},
+              }
+              local project_ids_seen = {}
+              for _, source_list in ipairs(sources) do
+                for _, proj in ipairs(source_list) do
+                  if not project_ids_seen[proj.id] then
+                    table.insert(projects_v2_list, proj)
+                    project_ids_seen[proj.id] = true
+                  end
                 end
+              end
             end
 
             if #projects_v2_list == 0 then
@@ -1594,27 +1846,31 @@ M.picker = {
 
             local function choose_project_v2_for_column(selected_project_item)
               if not (selected_project_item and selected_project_item.data) then
-                utils.info("No project v2 selected or data missing.")
+                utils.info "No project v2 selected or data missing."
                 return true
               end
 
               local project_data = selected_project_item.data
               local target_field_node = nil
               if project_data.fields and project_data.fields.nodes then
-                  for _, field_node in ipairs(project_data.fields.nodes) do
-                      if field_node.dataType == 'SINGLE_SELECT' and field_node.options then
-                          if field_node.name == "Status" then
-                            target_field_node = field_node
-                            break
-                          elseif not target_field_node then
-                            target_field_node = field_node
-                          end
-                      end
+                for _, field_node in ipairs(project_data.fields.nodes) do
+                  if field_node.dataType == "SINGLE_SELECT" and field_node.options then
+                    if field_node.name == "Status" then
+                      target_field_node = field_node
+                      break
+                    elseif not target_field_node then
+                      target_field_node = field_node
+                    end
                   end
+                end
               end
 
               if not target_field_node or not target_field_node.options or #target_field_node.options == 0 then
-                utils.error("Could not find a suitable 'Status' column or single-select field with options in project '" .. project_data.title .. "'.")
+                utils.error(
+                  "Could not find a suitable 'Status' column or single-select field with options in project '"
+                    .. project_data.title
+                    .. "'."
+                )
                 return true
               end
 
@@ -1625,7 +1881,9 @@ M.picker = {
 
               vim.ui.select(column_options_for_ui_select, {
                 prompt = "Select '" .. target_field_node.name .. "' value for project '" .. project_data.title .. "': ",
-                format_item = function(item_name) return item_name end,
+                format_item = function(item_name)
+                  return item_name
+                end,
               }, function(value_name)
                 if value_name then
                   local selected_option_id = nil
@@ -1646,26 +1904,32 @@ M.picker = {
             end
 
             local MiniPick_Proj_v2 = _G.MiniPick
-            if not MiniPick_Proj_v2 then utils.error("MiniPick is not loaded for project v2 selection."); return end
+            if not MiniPick_Proj_v2 then
+              utils.error "MiniPick is not loaded for project v2 selection."
+              return
+            end
             local cfg_proj_v2 = octo_config.values
-            MiniPick_Proj_v2.start({
+            MiniPick_Proj_v2.start {
               source = {
                 items = project_items_for_picker,
                 name = "Select Project (v2)",
                 choose = choose_project_v2_for_column,
               },
               options = {
-                  content_from_bottom = cfg_proj_v2.picker_config and cfg_proj_v2.picker_config.mini_picker and cfg_proj_v2.picker_config.mini_picker.content_from_bottom or false
-              }
-            })
+                content_from_bottom = cfg_proj_v2.picker_config
+                    and cfg_proj_v2.picker_config.mini_picker
+                    and cfg_proj_v2.picker_config.mini_picker.content_from_bottom
+                  or false,
+              },
+            }
           end,
-          error = function(err) utils.error("Error fetching projects (v2): " .. err) end
-        }
-      }
+          error = function(err)
+            utils.error("Error fetching projects (v2): " .. err)
+          end,
+        },
+      },
     }
-  end
+  end,
 }
 
 return M
-
-[end of lua/octo/pickers/mini_picker/provider.lua]
