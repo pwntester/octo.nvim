@@ -91,7 +91,9 @@ M.picker = {
 
           local function choose_issue(item)
             if item and item.data then
-              utils.get("issue", item.data.number, item.repo)
+              vim.defer_fn(function()
+                utils.get_issue(item.data.number, item.repo)
+              end, 0)
             end
             return false
           end
@@ -166,18 +168,10 @@ M.picker = {
           end
 
           local function choose_pr(item)
-            print "--- Debug choose_pr ---"
-            print(vim.inspect(item))
             if item and item.data then
-              print("PR Data Number: " .. tostring(item.data.number))
-              print("PR Repo: " .. tostring(item.repo))
-              -- Defer the execution
               vim.defer_fn(function()
-                print "--- INSIDE vim.defer_fn for choose_pr ---" -- Updated print
-                utils.get("pr", item.data.number, item.repo)
-              end, 0) -- 0 ms delay
-            else
-              print "Choose_pr: item or item.data is nil"
+                utils.get_pull_request(item.data.number, item.repo)
+              end, 0)
             end
             return false
           end
