@@ -18,6 +18,7 @@ local utils = require "octo.utils"
 local vim = vim
 
 _G.octo_repo_issues = {}
+---@type table<integer, OctoBuffer|nil>
 _G.octo_buffers = {}
 
 local M = {}
@@ -94,21 +95,21 @@ function M.load_buffer(opts)
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
-  local repo, kind, number = string.match(bufname, "octo://(.+)/(.+)/(%d+)")
+  local repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
   if not repo then
     repo = string.match(bufname, "octo://(.+)/repo")
     if repo then
       kind = "repo"
     end
   end
-  if (kind == "issue" or kind == "pull") and not repo and not number then
+  if (kind == "issue" or kind == "pull") and not repo and not id then
     vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   elseif kind == "repo" and not repo then
     vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
     return
   end
-  M.load(repo, kind, number, function(obj)
+  M.load(repo, kind, id, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
       M.create_buffer(kind, obj, repo, false)
 
@@ -123,22 +124,23 @@ function M.load_buffer(opts)
       vim.api.nvim_win_set_cursor(0, new_cursor_pos)
 
       if opts.verbose then
-        utils.info(string.format("Loaded %s/%s/%d", repo, kind, number))
+        utils.info(string.format("Loaded %s/%s/%d", repo, kind, id))
       end
     end)
   end)
 end
 
-function M.load(repo, kind, number, cb)
+---@param id integer|string pull request, issue, or discussion number or release tag
+function M.load(repo, kind, id, cb)
   local owner, name = utils.split_repo(repo)
 
   local query, key, fields
   if kind == "pull" then
-    query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
+    query = graphql("pull_request_query", owner, name, id, _G.octo_pv2_fragment)
     key = "pullRequest"
     fields = {}
   elseif kind == "issue" then
-    query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
+    query = graphql("issue_query", owner, name, id, _G.octo_pv2_fragment)
     key = "issue"
     fields = {}
   elseif kind == "repo" then
@@ -146,7 +148,10 @@ function M.load(repo, kind, number, cb)
     fields = { owner = owner, name = name }
   elseif kind == "discussion" then
     query = queries.discussion
-    fields = { owner = owner, name = name, number = number }
+    fields = { owner = owner, name = name, number = id }
+  elseif kind == "release" then
+    query = queries.release
+    fields = { owner = owner, name = name, tag = id }
   end
 
   local function load_buffer(output)
@@ -162,6 +167,12 @@ function M.load(repo, kind, number, cb)
       local resp = utils.aggregate_pages(output, "data.repository.discussion.comments.nodes")
       local obj = resp.data.repository.discussion
       cb(obj)
+    elseif kind == "release" then
+      local resp = vim.json.decode(output)
+      local obj = resp.data.repository.release
+      cb(obj)
+    else
+      utils.error("Unknown kind: " .. kind)
     end
   end
 
@@ -323,6 +334,8 @@ function M.create_buffer(kind, obj, repo, create)
     octo_buffer:render_repo()
   elseif kind == "discussion" then
     octo_buffer:render_discussion()
+  elseif kind == "release" then
+    octo_buffer:render_release()
   else
     octo_buffer:render_issue()
     octo_buffer:async_fetch_taggable_users()

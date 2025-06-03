@@ -91,6 +91,7 @@ local M = {}
 ---@class OctoConfigPR
 ---@field order_by OctoConfigOrderBy
 ---@field always_select_remote_on_create boolean
+---@field use_branch_name_as_title boolean
 
 ---@class OctoConfigOrderBy
 ---@field field string
@@ -256,6 +257,7 @@ function M.get_default_values()
         direction = "DESC",
       },
       always_select_remote_on_create = false,
+      use_branch_name_as_title = false,
     },
     file_panel = {
       size = 10,
@@ -590,6 +592,7 @@ function M.validate_config()
       validate_type(config.pull_requests.order_by.direction, "pull_requests.order_by.direction", "string")
     end
     validate_type(config.pull_requests.always_select_remote_on_create, "always_select_remote_on_create", "boolean")
+    validate_type(config.pull_requests.use_branch_name_as_title, "use_branch_name_as_title", "boolean")
   end
 
   local function validate_notifications()
