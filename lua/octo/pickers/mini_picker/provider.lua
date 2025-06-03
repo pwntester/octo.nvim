@@ -4,6 +4,7 @@ local utils = require "octo.utils"
 local octo_config = require "octo.config"
 local queries = require "octo.gh.queries"
 local reviews = require "octo.reviews"
+local MiniPick = require "mini.pick"
 
 -- get_filter function
 local function get_filter(filter_opts, kind)
@@ -98,7 +99,6 @@ M.picker = {
             return false
           end
 
-          local MiniPick = _G.MiniPick
           if not MiniPick then
             utils.error "MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup."
             return
@@ -161,7 +161,7 @@ M.picker = {
           local items_for_picker = {}
           for _, pr_item in ipairs(pr_data_list) do
             table.insert(items_for_picker, {
-              text = string.format("#%d %s", pr_item.number, pr_item.title),
+              text = string.format("  %s | #%d %s", opts.repo, pr_item.number, pr_item.title),
               data = pr_item,
               repo = opts.repo,
             })
@@ -176,7 +176,6 @@ M.picker = {
             return false
           end
 
-          local MiniPick = _G.MiniPick
           if not MiniPick then
             utils.error "MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup."
             return
@@ -267,7 +266,6 @@ M.picker = {
             return false
           end
 
-          local MiniPick = _G.MiniPick
           if not MiniPick then
             utils.error "MiniPick is not loaded. Please ensure 'mini.pick' is installed and setup."
             return
@@ -361,7 +359,6 @@ M.picker = {
             return false
           end
 
-          local MiniPick = _G.MiniPick
           if not MiniPick then
             utils.error "MiniPick is not loaded."
             return
@@ -429,7 +426,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick = _G.MiniPick
             if not MiniPick then
               utils.error "MiniPick is not loaded."
               return
@@ -500,7 +496,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick = _G.MiniPick
             if not MiniPick then
               utils.error "MiniPick is not loaded."
               return
@@ -571,7 +566,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick = _G.MiniPick
             if not MiniPick then
               utils.error "MiniPick is not loaded."
               return
@@ -728,7 +722,6 @@ M.picker = {
         return false
       end
 
-      local MiniPick = _G.MiniPick
       if not MiniPick then
         utils.error "MiniPick is not loaded."
         return
@@ -799,7 +792,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick = _G.MiniPick
             if not MiniPick then
               utils.error "MiniPick is not loaded."
               return
@@ -877,7 +869,6 @@ M.picker = {
             return false
           end
 
-          local MiniPick = _G.MiniPick
           if not MiniPick then
             utils.error "MiniPick is not loaded."
             return
@@ -981,7 +972,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick = _G.MiniPick
             if not MiniPick then
               utils.error "MiniPick is not loaded."
               return
@@ -1037,7 +1027,6 @@ M.picker = {
       return false
     end
 
-    local MiniPick = _G.MiniPick
     if not MiniPick then
       utils.error "MiniPick is not loaded."
       return
@@ -1106,7 +1095,6 @@ M.picker = {
             return false
           end
 
-          local MiniPick = _G.MiniPick
           if not MiniPick then
             utils.error "MiniPick is not loaded."
             return
@@ -1201,7 +1189,6 @@ M.picker = {
             return false
           end
 
-          local MiniPick = _G.MiniPick
           if not MiniPick then
             utils.error "MiniPick is not loaded."
             return
@@ -1257,7 +1244,6 @@ M.picker = {
       return false
     end
 
-    local MiniPick = _G.MiniPick
     if not MiniPick then
       utils.error "MiniPick is not loaded."
       return
@@ -1326,7 +1312,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick = _G.MiniPick
             if not MiniPick then
               utils.error "MiniPick is not loaded."
               return
@@ -1399,7 +1384,6 @@ M.picker = {
       return false
     end
 
-    local MiniPick = _G.MiniPick
     if not MiniPick then
       utils.error "MiniPick is not loaded."
       return
@@ -1444,7 +1428,6 @@ M.picker = {
       return false -- Stop picker after action
     end
 
-    local MiniPick = _G.MiniPick
     if not MiniPick then
       utils.error "MiniPick is not loaded."
       return
@@ -1528,7 +1511,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick = _G.MiniPick
             if not MiniPick then
               utils.error "MiniPick is not loaded."
               return
@@ -1598,7 +1580,6 @@ M.picker = {
       return false
     end
 
-    local MiniPick = _G.MiniPick
     if not MiniPick then
       utils.error "MiniPick is not loaded."
       return
@@ -1700,7 +1681,6 @@ M.picker = {
                 return false
               end
 
-              local MiniPick_Col = _G.MiniPick
               if not MiniPick_Col then
                 utils.error "MiniPick is not loaded for column selection."
                 return false
@@ -1722,7 +1702,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick_Proj = _G.MiniPick
             if not MiniPick_Proj then
               utils.error "MiniPick is not loaded for project selection."
               return
@@ -1907,7 +1886,6 @@ M.picker = {
               return false
             end
 
-            local MiniPick_Proj_v2 = _G.MiniPick
             if not MiniPick_Proj_v2 then
               utils.error "MiniPick is not loaded for project v2 selection."
               return
