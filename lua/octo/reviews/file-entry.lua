@@ -269,6 +269,7 @@ function FileEntry:load_buffers(left_winid, right_winid)
     if not split.bufid or not vim.api.nvim_buf_is_loaded(split.bufid) then
       local conf = config.values
       local use_local = conf.use_local_fs and split.pos == "right" and utils.in_pr_branch(self.pull_request)
+      local wrap = conf.wrap
 
       -- create buffer
       split.bufid = M._create_buffer {
@@ -280,6 +281,7 @@ function FileEntry:load_buffers(left_winid, right_winid)
         lines = split.lines,
         repo = self.pull_request.repo,
         use_local = use_local,
+        wrap = wrap,
       }
 
       -- register new buffer
@@ -483,6 +485,7 @@ function M._create_buffer(opts)
     path = opts.path,
     split = string.upper(opts.split),
   })
+  vim.api.nvim_buf_set_option(bufnr, "wrap", opts.wrap)
   return bufnr
 end
 
