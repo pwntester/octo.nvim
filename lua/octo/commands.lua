@@ -1520,12 +1520,17 @@ function M.save_pr(opts)
     repo_idx = vim.fn.inputlist(opts.candidate_entries)
   end
 
+  local conf = config.values
+  local use_branch_name_as_title = conf.pull_requests.use_branch_name_as_title or false
   -- title and body
   local title, body
   local last_commit = string.gsub(vim.fn.system "git log -1 --pretty=%B", "%s+$", "")
   local last_commit_lines = vim.split(last_commit, "\n")
   if #last_commit_lines >= 1 then
     title = last_commit_lines[1]
+  end
+  if use_branch_name_as_title then
+    title = opts.remote_branch
   end
   if #last_commit_lines > 1 then
     if utils.is_blank(last_commit_lines[2]) and #last_commit_lines > 2 then

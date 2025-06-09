@@ -138,6 +138,7 @@ end
 ---@field stream_cb fun(stdout: string, stderr: string)
 ---@field headers table
 ---@field hostname string
+---@field debug boolean|nil
 
 ---Run a gh command
 ---@param opts RunOpts
@@ -179,6 +180,11 @@ local function run(opts)
     end
   end
 
+  local env = get_env()
+  if opts.debug then
+    env.GH_DEBUG = "1"
+  end
+
   local job = Job:new {
     enable_recording = true,
     command = config.values.gh_cmd,
@@ -195,7 +201,7 @@ local function run(opts)
         opts.cb(output, stderr)
       end
     end),
-    env = get_env(),
+    env = env,
   }
   if mode == "sync" then
     job:sync(conf.timeout)
@@ -344,6 +350,7 @@ function M.api.graphql(opts)
     stream_cb = run_opts.stream_cb,
     headers = run_opts.headers,
     hostname = run_opts.hostname,
+    debug = run_opts.debug,
   }
 end
 
@@ -399,6 +406,7 @@ local function rest(method, opts)
     stream_cb = run_opts.stream_cb,
     headers = run_opts.headers,
     hostname = run_opts.hostname,
+    debug = run_opts.debug,
   }
 end
 
@@ -461,6 +469,7 @@ local function create_subcommand(command)
           stream_cb = run_opts.stream_cb,
           headers = run_opts.headers,
           hostname = run_opts.hostname,
+          debug = run_opts.debug,
         }
       end
     end,
