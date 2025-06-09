@@ -60,10 +60,19 @@ local function make_reaction_bubble(icon, includes_viewer, opts)
   return make_bubble(content, highlight, opts)
 end
 
+local color_lookup = {
+  BLUE = "4493f8",
+  YELLOW = "d19821",
+  RED = "f75149",
+}
+
 local function make_label_bubble(name, color, opts)
   -- provide a default highlight group incase color is nil.
   local highlight = "NormalFloat"
   if color ~= vim.NIL and color ~= nil then
+    if color_lookup[color] then
+      color = color_lookup[color]
+    end
     highlight = colors.create_highlight(color)
   end
   return make_bubble(name, highlight, opts)
