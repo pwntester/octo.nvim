@@ -1207,8 +1207,8 @@ end
 ---@param comment_start integer
 ---@param comment_end integer
 ---@param comment_side "RIGHT" | "LEFT"
----@return integer
----@return integer
+---@return integer thread_start_line
+---@return integer thread_end_line
 function M.write_thread_snippet(bufnr, diffhunk, diffhunk_lang, start_line, comment_start, comment_end, comment_side)
   -- this function will print a diff snippet from the diff hunk.
   -- we need to use the original positions for comment_start and comment_end
