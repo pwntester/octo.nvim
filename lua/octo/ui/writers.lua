@@ -1091,6 +1091,9 @@ local function highlight_content(content_lines, lang)
     if last_range_start.col <= boundary.col and last_range_start.row <= boundary.row then
       -- Collect current highlights.
       local captures = {} ---@type string[]
+      -- TODO: The highlighting ordering here matters, but sometimes is incorrect.
+      -- For example a function call highlight should override a variable highlight, but sometimes
+      -- this ends up being the other way around.
       for _, range in ipairs(active_ranges) do
         table.insert(captures, 1, range.capture)
       end
