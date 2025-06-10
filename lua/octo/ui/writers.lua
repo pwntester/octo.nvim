@@ -1092,7 +1092,7 @@ local function highlight_content(content_lines, lang)
       -- Collect current highlights.
       local captures = {} ---@type string[]
       for _, range in ipairs(active_ranges) do
-        table.insert(captures, range.capture)
+        table.insert(captures, 1, range.capture)
       end
       -- Collect the content from the previous row and column to the boundary row and column.
       local cur_row, cur_col = last_range_start.row, last_range_start.col
