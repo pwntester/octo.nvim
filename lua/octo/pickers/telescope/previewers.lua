@@ -151,10 +151,12 @@ local notification = defaulter(function(opts)
         local number = entry.value ---@type string
         local owner, name = utils.split_repo(entry.repo)
 
-        ---@type string, table<string, string>, string, fun(obj: any, bufnr: integer): nil
-        local query, fields, jq, preview
-
-        local function fetch_and_preview()
+        ---Fetches the data for the preview and then shows it with the given preview function
+        ---@param query string
+        ---@param fields table<string, string>
+        ---@param jq string
+        ---@param preview fun(obj: any, bufnr: integer): nil
+        local function fetch_and_preview(query, fields, jq, preview)
           gh.api.graphql {
             query = query,
             fields = fields,
@@ -179,6 +181,10 @@ local notification = defaulter(function(opts)
             },
           }
         end
+
+        ---@type string, table<string, string>, string, fun(obj: any, bufnr: integer): nil
+        local query, fields, jq, preview
+
         if entry.kind == "issue" then
           query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
           fields = {}
@@ -202,11 +208,11 @@ local notification = defaulter(function(opts)
             fields = { owner = owner, name = name, tag = tag_name }
             jq = ".data.repository.release"
             preview = release_preview
-            fetch_and_preview()
+            fetch_and_preview(query, fields, jq, preview)
           end)
           return
         end
-        fetch_and_preview()
+        fetch_and_preview(query, fields, jq, preview)
       end
     end,
   }
