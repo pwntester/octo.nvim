@@ -461,6 +461,53 @@ fragment ParentIssueRemovedEventFragment on ParentIssueRemovedEvent {
 }
 ]]
 
+M.issue_type_added_event = [[
+fragment IssueTypeAddedEventFragment on IssueTypeAddedEvent {
+  actor {
+    login
+  }
+  createdAt
+  issueType {
+    id
+    name
+    color
+  }
+}
+]]
+
+M.issue_type_removed_event = [[
+fragment IssueTypeRemovedEventFragment on IssueTypeRemovedEvent {
+  actor {
+    login
+  }
+  createdAt
+  issueType {
+    id
+    name
+    color
+  }
+}
+]]
+
+M.issue_type_changed_event = [[
+fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
+  actor {
+    login
+  }
+  createdAt
+  prevIssueType {
+    id
+    name
+    color
+  }
+  issueType {
+    id
+    name
+    color
+  }
+}
+]]
+
 M.issue_timeline_items_connection = [[
 fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   nodes {
@@ -483,6 +530,9 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...SubIssueRemovedEventFragment
     ...ParentIssueAddedEventFragment
     ...ParentIssueRemovedEventFragment
+    ...IssueTypeAddedEventFragment
+    ...IssueTypeRemovedEventFragment
+    ...IssueTypeChangedEventFragment
   }
 }
 ]]
@@ -518,6 +568,11 @@ fragment IssueInformationFragment on Issue {
   number
   state
   stateReason
+  issueType {
+    id
+    name
+    color
+  }
   title
   body
   createdAt

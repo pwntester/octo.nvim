@@ -459,9 +459,16 @@ local function format_author_association(association)
   end
 end
 
+local function detect_issue_from_url(url)
+  local keyword = "issues"
+  return url:find(keyword, 1, true) ~= nil
+end
+
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
+
+  local is_issue = detect_issue_from_url(issue.url)
 
   local details = {}
 
@@ -589,6 +596,22 @@ function M.write_details(bufnr, issue, update)
     table.insert(labels_vt, { "None yet", "OctoMissingDetails" })
   end
   table.insert(details, labels_vt)
+
+  -- issue type
+  local issue_type_vt = {
+    { "Type: ", "OctoDetailsLabel" },
+  }
+
+  if not utils.is_blank(issue.issueType) then
+    local issue_type = issue.issueType
+    local issue_type_bubble = bubbles.make_label_bubble(issue_type.name, issue_type.color)
+    vim.list_extend(issue_type_vt, issue_type_bubble)
+  else
+    table.insert(issue_type_vt, { "No type", "OctoMissingDetails" })
+  end
+  if is_issue then
+    table.insert(details, issue_type_vt)
+  end
 
   -- additional details for pull requests
   if issue.commits then
@@ -982,7 +1005,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   -- since the diff hunk always use the original positions.
 
   start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
-  if not diffhunk then
+  if not diffhunk or diffhunk == "" then
     return start_line, start_line
   end
 
@@ -1743,6 +1766,61 @@ end
 
 function M.write_parent_issue_removed_event(bufnr, item)
   write_parent_issue_event(bufnr, item, false)
+end
+
+local function write_issue_type_event(bufnr, item, add)
+  local verb = add and "added" or "removed"
+  local vt = {}
+  local conf = config.values
+
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.issue_type, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " " .. verb .. " the ", "OctoTimelineItemHeading" })
+  vim.list_extend(vt, bubbles.make_label_bubble(item.issueType.name, item.issueType.color))
+  table.insert(vt, { " issue type ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
+end
+
+function M.write_issue_type_added_event(bufnr, item)
+  write_issue_type_event(bufnr, item, true)
+end
+
+function M.write_issue_type_removed_event(bufnr, item)
+  write_issue_type_event(bufnr, item, false)
+end
+
+function M.write_issue_type_changed_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.issue_type, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " changed the issue type from ", "OctoTimelineItemHeading" })
+  vim.list_extend(vt, bubbles.make_label_bubble(item.prevIssueType.name, item.prevIssueType.color))
+  table.insert(vt, { " to ", "OctoTimelineItemHeading" })
+  vim.list_extend(vt, bubbles.make_label_bubble(item.issueType.name, item.issueType.color))
+  table.insert(vt, { " ", "OctoTimelineItemHeading" })
+  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+  write_event(bufnr, vt)
 end
 
 local function write_pinned_event(bufnr, item, add)
