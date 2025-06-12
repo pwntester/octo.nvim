@@ -1005,7 +1005,7 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   -- since the diff hunk always use the original positions.
 
   start_line = start_line or vim.api.nvim_buf_line_count(bufnr) + 1
-  if not diffhunk then
+  if not diffhunk or diffhunk == "" then
     return start_line, start_line
   end
 
