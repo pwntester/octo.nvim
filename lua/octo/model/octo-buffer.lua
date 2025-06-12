@@ -321,6 +321,15 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "ParentIssueRemovedEvent" then
       writers.write_parent_issue_removed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "IssueTypeAddedEvent" then
+      writers.write_issue_type_added_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "IssueTypeRemovedEvent" then
+      writers.write_issue_type_removed_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "IssueTypeChangedEvent" then
+      writers.write_issue_type_changed_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
 

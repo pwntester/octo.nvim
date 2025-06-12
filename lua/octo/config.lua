@@ -184,6 +184,7 @@ function M.get_default_values()
     timeline_icons = {
       commit_push = "  ",
       commit = "  ",
+      issue_type = "  ",
       label = "  ",
       reference = " ",
       connected = "  ",
