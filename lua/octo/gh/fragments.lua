@@ -106,11 +106,14 @@ fragment DemilestonedEventFragment on DemilestonedEvent {
   milestoneTitle
 }
 ]]
+
+---@class octo.ReactionGroupsFragment.reactionGroups
+--- @field content string
+--- @field viewerHasReacted boolean
+--- @field users { totalCount: number }
+
 ---@class octo.ReactionGroupsFragment
---- @field reactionGroups {
----   content: string,
----   viewerHasReacted: boolean,
----   users: { totalCount: number } }[]
+--- @field reactionGroups octo.ReactionGroupsFragment.reactionGroups[]
 
 M.reaction_groups = [[
 fragment ReactionGroupsFragment on Reactable {
@@ -591,6 +594,25 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
+---@class octo.ReviewThreadCommentFragment : octo.ReactionGroupsFragment
+--- @field id string
+--- @field body string
+--- @field diffHunk string
+--- @field createdAt string
+--- @field lastEditedAt string
+--- @field outdated boolean
+--- @field originalCommit { oid: string, abbreviatedOid: string }
+--- @field author { login: string }
+--- @field authorAssociation string
+--- @field viewerDidAuthor boolean
+--- @field viewerCanUpdate boolean
+--- @field viewerCanDelete boolean
+--- @field state string
+--- @field url string
+--- @field replyTo { id: string, url: string }
+--- @field pullRequestReview { id: string, state: string }
+--- @field path string
+
 M.review_thread_comment = [[
 fragment ReviewThreadCommentFragment on PullRequestReviewComment {
   id
@@ -624,6 +646,20 @@ fragment ReviewThreadCommentFragment on PullRequestReviewComment {
   ...ReactionGroupsFragment
 }
 ]]
+
+---@class octo.ReviewThreadInformationFragment
+--- @field id string
+--- @field path string
+--- @field diffSide string
+--- @field startDiffSide string
+--- @field line number
+--- @field originalLine number
+--- @field startLine number
+--- @field originalStartLine number
+--- @field resolvedBy { login: string }
+--- @field isResolved boolean
+--- @field isCollapsed boolean
+--- @field isOutdated boolean
 
 M.review_thread_information = [[
 fragment ReviewThreadInformationFragment on PullRequestReviewThread {

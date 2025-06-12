@@ -779,6 +779,10 @@ function M.write_details(bufnr, issue, update)
   end
 end
 
+---@param bufnr integer
+---@param comment octo.ReviewThreadCommentFragment
+---@param kind string
+---@param line? integer
 function M.write_comment(bufnr, comment, kind, line)
   -- possible kinds:
   ---- IssueComment
@@ -999,7 +1003,239 @@ local function get_lnum_chunks(opts)
   end
 end
 
-function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comment_end, comment_side)
+---Creates the highlight, content combinations for the given content lines according to the treesitter highlight captures.
+---The return value is list for each line, and within that a list of the highlight name + content tuples for that line.
+---@param content_lines string[] Content to highlight
+---@param lang string? Treesitter language name
+---@return [string, string[]][][] highlights
+local function highlight_content(content_lines, lang)
+  local function get_unhighlighted_ranges()
+    local unhighlighted_ranges = {} ---@type [string, string[]][][]
+    for i = 1, #content_lines do
+      unhighlighted_ranges[#unhighlighted_ranges + 1] = { { content_lines[i], {} } }
+    end
+    return unhighlighted_ranges
+  end
+  if not lang then
+    return get_unhighlighted_ranges()
+  end
+  local content = table.concat(content_lines, "\n")
+  local parser = vim.treesitter.get_string_parser(content, lang)
+  local parsers = parser:parse()
+  if not parsers then
+    return get_unhighlighted_ranges()
+  end
+  ---@class HighlightRange
+  ---@field start_row integer
+  ---@field start_col integer
+  ---@field end_row integer
+  ---@field end_col integer
+
+  local highlight_ranges = {} ---@type [string, HighlightRange][]
+  -- Get the highlight ranges from the treesitter highlights query.
+  for _, tree in pairs(parsers) do
+    local root = tree:root()
+
+    local query = vim.treesitter.query.get(lang, "highlights")
+    if not query then
+      goto continue
+    end
+
+    for id, node, _ in query:iter_captures(root, content, 0, -1) do
+      local capture = query.captures[id]
+      if capture then
+        local start_row, start_col, end_row, end_col = node:range()
+        highlight_ranges[#highlight_ranges + 1] = {
+          "@" .. capture .. "." .. query.lang,
+          {
+            -- HACK: Adding 1 somehow aligns the highlight ranges correctly.
+            start_row = start_row + 1,
+            start_col = start_col,
+            end_row = end_row + 1,
+            end_col = end_col,
+          },
+        }
+      end
+    end
+    ::continue::
+  end
+  if #highlight_ranges == 0 then
+    return get_unhighlighted_ranges()
+  end
+  -- Create a list of highlight boundaries (when they start and stop) from the ranges above.
+  local boundaries = {} ---@type {row: integer, col: integer, is_start: boolean, capture: string, range_idx: integer}[]
+
+  for i, range in ipairs(highlight_ranges) do
+    local capture, range_data = range[1], range[2]
+    -- Add start boundary
+    boundaries[#boundaries + 1] = {
+      row = range_data.start_row,
+      col = range_data.start_col,
+      is_start = true,
+      capture = capture,
+      range_idx = i,
+    }
+    -- Add end boundary
+    boundaries[#boundaries + 1] = {
+      row = range_data.end_row,
+      col = range_data.end_col,
+      is_start = false,
+      capture = capture,
+      range_idx = i,
+    }
+  end
+
+  -- Sort boundaries by position so that we can turn on highlights in the correct order as we iterate.
+  table.sort(boundaries, function(a, b)
+    if a.row ~= b.row then
+      return a.row < b.row
+    end
+    if a.col ~= b.col then
+      return a.col < b.col
+    end
+    -- Make sure start comes before end for single column highlights.
+    return a.is_start and not b.is_start
+  end)
+
+  ---@type {capture: string, range_idx: integer}[]
+  local active_ranges = {} -- Tracks which highlight ranges are currently active
+  local last_range_start = { row = 1, col = 1 }
+
+  local highlights = {} ---@type [string, string[]][][]
+  local content_line_idx = 1
+  -- Prefill the highlights to save some empty table checks.
+  while content_line_idx <= #content_lines do
+    highlights[#highlights + 1] = {}
+    content_line_idx = content_line_idx + 1
+  end
+  for _, boundary in ipairs(boundaries) do
+    -- Add the highlights for the content from the last_range_start to the current boundary
+    -- according to the active_ranges. The conditional here is to ensure we only add new content.
+    if last_range_start.col <= boundary.col and last_range_start.row <= boundary.row then
+      -- Collect current highlights.
+      local captures = {} ---@type string[]
+      -- TODO: The highlighting ordering here matters, but sometimes is incorrect.
+      -- For example a function call highlight should override a variable highlight, but sometimes
+      -- this ends up being the other way around.
+      for _, range in ipairs(active_ranges) do
+        table.insert(captures, 1, range.capture)
+      end
+      -- Collect the content from the previous row and column to the boundary row and column.
+      local cur_row, cur_col = last_range_start.row, last_range_start.col
+      while cur_row < boundary.row do
+        local cur_line = content_lines[cur_row]:sub(cur_col)
+        highlights[cur_row][#highlights[cur_row] + 1] = { cur_line, captures }
+        cur_col = 1
+        cur_row = cur_row + 1
+      end
+      local cur_line = content_lines[cur_row]:sub(cur_col, boundary.col)
+      highlights[cur_row][#highlights[cur_row] + 1] = { cur_line, captures }
+      -- Step the last_range_start forward to ensure we only add new content.
+      if boundary.col == content_lines[boundary.row]:len() then
+        last_range_start = { row = boundary.row + 1, col = 1 }
+      else
+        last_range_start = { row = boundary.row, col = boundary.col + 1 }
+      end
+    end
+
+    -- Update active ranges.
+    if boundary.is_start then
+      -- Add range to active list
+      active_ranges[#active_ranges + 1] = {
+        capture = boundary.capture,
+        range_idx = boundary.range_idx,
+      }
+    else
+      -- Remove range from active list
+      for i, active in ipairs(active_ranges) do
+        if active.range_idx == boundary.range_idx then
+          table.remove(active_ranges, i)
+          break
+        end
+      end
+    end
+  end
+  -- Just in case, we add additional unhighlighted content that was not captured to make sure the highlights array match the content_lines array.
+  while last_range_start.row < #content_lines do
+    local cur_line = content_lines[last_range_start.row]:sub(last_range_start.col)
+    highlights[last_range_start.row][#highlights[last_range_start.row] + 1] = { cur_line, {} }
+    last_range_start.col = 1
+    last_range_start.row = last_range_start.row + 1
+  end
+  if last_range_start.row == #content_lines and last_range_start.col <= content_lines[last_range_start.row]:len() then
+    local cur_line = content_lines[last_range_start.row]:sub(last_range_start.col)
+    highlights[last_range_start.row][#highlights[last_range_start.row] + 1] = { cur_line, {} }
+  end
+
+  return highlights
+end
+
+---Highlights a git diffhunk with the given treesitter language.
+---@param diffhunk_lines string[]
+---@param lang string?
+local function highlight_diff_lines(diffhunk_lines, lang)
+  -- Separate the diffhunk into header, addition, and deletion lines.
+  local header_content_lines = {} ---@type string[]
+  local header_content_line_map = {} ---@type table<integer, integer>
+  local addition_content_lines = {} ---@type string[]
+  local addition_content_line_map = {} ---@type table<integer, integer>
+  local deletion_content_lines = {} ---@type string[]
+  local deletion_content_line_map = {} ---@type table<integer, integer>
+  for line_idx, line in ipairs(diffhunk_lines) do
+    if vim.startswith(line, "@@") then
+      local index = string.find(line, "@[^@]*$")
+      local content = string.sub(line, index + 1)
+      header_content_lines[#header_content_lines + 1] = content
+      header_content_line_map[line_idx] = #header_content_lines
+    elseif vim.startswith(line, "+") then
+      local content = line:gsub("^.", " ")
+      addition_content_lines[#addition_content_lines + 1] = content
+      addition_content_line_map[line_idx] = #addition_content_lines
+    elseif vim.startswith(line, "-") then
+      local content = line:gsub("^.", " ")
+      deletion_content_lines[#deletion_content_lines + 1] = content
+      deletion_content_line_map[line_idx] = #deletion_content_lines
+    else
+      addition_content_lines[#addition_content_lines + 1] = line
+      addition_content_line_map[line_idx] = #addition_content_lines
+      deletion_content_lines[#deletion_content_lines + 1] = line
+      deletion_content_line_map[line_idx] = #deletion_content_lines
+    end
+  end
+  -- Highlight the content separately to attempt to make the code being highlighted as correct as possible.
+  -- NOTE: This could potentially be non-performant, in which case we may want to disregard separating the highlight calculations.
+  local header_highlights = highlight_content(header_content_lines, lang)
+  local addition_highlights = highlight_content(addition_content_lines, lang)
+  local deletion_highlights = highlight_content(deletion_content_lines, lang)
+  local highlights = {} ---@type [string, string[]][][]
+  for line_idx = 1, #diffhunk_lines do
+    if header_content_line_map[line_idx] ~= nil then
+      local header_highlight = header_highlights[header_content_line_map[line_idx]]
+      highlights[#highlights + 1] = header_highlight
+      -- NOTE: Preferring addition over deletion for the unedited lines. Unsure how to determine which is better.
+    elseif addition_content_line_map[line_idx] ~= nil then
+      local addition_highlight = addition_highlights[addition_content_line_map[line_idx]]
+      highlights[#highlights + 1] = addition_highlight
+    elseif deletion_content_line_map[line_idx] ~= nil then
+      local deletion_highlight = deletion_highlights[deletion_content_line_map[line_idx]]
+      highlights[#highlights + 1] = deletion_highlight
+    else
+      utils.error "Could not find line in diff"
+    end
+  end
+  return highlights
+end
+
+---@param bufnr integer
+---@param diffhunk string
+---@param diffhunk_lang string?
+---@param start_line integer?
+---@param comment_start integer
+---@param comment_end integer
+---@param comment_side "RIGHT" | "LEFT"
+---@return integer thread_start_line
+---@return integer thread_end_line
+function M.write_thread_snippet(bufnr, diffhunk, diffhunk_lang, start_line, comment_start, comment_end, comment_side)
   -- this function will print a diff snippet from the diff hunk.
   -- we need to use the original positions for comment_start and comment_end
   -- since the diff hunk always use the original positions.
@@ -1023,12 +1259,13 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   )
 
   -- calculate diffhunk subrange to show
-  local side_lines
+  local side_lines ---@type table<integer, integer>
   if comment_side == "RIGHT" then
     side_lines = map.right_side_lines
   elseif comment_side == "LEFT" then
     side_lines = map.left_side_lines
   end
+  ---@type integer, integer
   local snippet_start, snippet_end
   if comment_side and comment_start ~= comment_end then
     -- multiline comment: write just those lines
@@ -1077,8 +1314,25 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   M.write_block(bufnr, empty_lines, start_line)
 
   -- prepare vt chunks
-  local vt_lines = {}
+  local vt_lines = {} ---@type [string, string[]][]
   table.insert(vt_lines, { { string.format("┌%s┐", string.rep("─", max_length + 2)) } })
+  local highlights = highlight_diff_lines(diffhunk_lines, diffhunk_lang)
+  ---Get the diff highlights for a particular line with an additional highlight.
+  ---NOTE: this could also be hardcoded inside highlight_diff_lines to abstract this away.
+  ---@param stacked_highlight string?
+  ---@param line_idx integer
+  local function get_content_highlight(stacked_highlight, line_idx)
+    local highlight_ranges = highlights[line_idx]
+    local stacked_highlight_ranges = {} ---@type [string, string[]][]
+    for _, range in ipairs(highlight_ranges) do
+      local highlight_range = vim.deepcopy(range[2])
+      if stacked_highlight then
+        highlight_range[#highlight_range + 1] = stacked_highlight
+      end
+      stacked_highlight_ranges[#stacked_highlight_ranges + 1] = { range[1], highlight_range }
+    end
+    return stacked_highlight_ranges
+  end
   for i = snippet_start, snippet_end do
     local line = diffhunk_lines[i]
     if not line then
@@ -1087,19 +1341,23 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
 
     if vim.startswith(line, "@@ ") then
       local index = string.find(line, "@[^@]*$")
-      table.insert(vt_lines, {
+      local content_highlight = get_content_highlight("DiffLine", i)
+      local vt_line = {
         { "│" },
         { string.rep(" ", 2 * max_lnum + 1), "DiffLine" },
         { string.sub(line, 0, index), "DiffLine" },
-        { string.sub(line, index + 1), "DiffLine" },
+      }
+      vim.list_extend(vt_line, content_highlight)
+      vim.list_extend(vt_line, {
         { string.rep(" ", 1 + max_length - vim.fn.strdisplaywidth(line) - 2 * max_lnum), "DiffLine" },
         { "│" },
       })
+      table.insert(vt_lines, vt_line)
     elseif vim.startswith(line, "+") then
       local vt_line = { { "│" } }
       vim.list_extend(vt_line, get_lnum_chunks { right_line = map.right_side_lines[i], max_lnum = max_lnum })
+      vim.list_extend(vt_line, get_content_highlight("DiffAdd", i))
       vim.list_extend(vt_line, {
-        { line:gsub("^.", " "), "DiffAdd" },
         { string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2 * max_lnum), "DiffAdd" },
         { "│" },
       })
@@ -1107,8 +1365,8 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
     elseif vim.startswith(line, "-") then
       local vt_line = { { "│" } }
       vim.list_extend(vt_line, get_lnum_chunks { left_line = map.left_side_lines[i], max_lnum = max_lnum })
+      vim.list_extend(vt_line, get_content_highlight("DiffDelete", i))
       vim.list_extend(vt_line, {
-        { line:gsub("^.", " "), "DiffDelete" },
         { string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2 * max_lnum), "DiffDelete" },
         { "│" },
       })
@@ -1123,8 +1381,8 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
           max_lnum = max_lnum,
         }
       )
+      vim.list_extend(vt_line, get_content_highlight(nil, i))
       vim.list_extend(vt_line, {
-        { line },
         { string.rep(" ", max_length - vim.fn.strdisplaywidth(line) - 2 * max_lnum) },
         { "│" },
       })
@@ -2137,12 +2395,14 @@ function M.write_review_dismissed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param threads octo.ReviewThread[]
 function M.write_threads(bufnr, threads)
-  local comment_start, comment_end
+  local comment_start, comment_end ---@type integer, integer
 
   -- print each of the threads
   for _, thread in ipairs(threads) do
-    local thread_start, thread_end
+    local thread_start, thread_end ---@type integer, integer
     for _, comment in ipairs(thread.comments.nodes) do
       -- augment comment details
       comment.path = thread.path
@@ -2169,10 +2429,17 @@ function M.write_threads(bufnr, threads)
 
         -- write empty line
         M.write_block(bufnr, { "" })
+        local diffhunk_lang ---@type string|nil
+        -- Filetype detection doesn't quite work sometimes: https://github.com/neovim/neovim/issues/27265
+        local temp_bufnr = vim.api.nvim_create_buf(false, true)
+        local filetype = vim.filetype.match { filename = comment.path, buf = temp_bufnr }
+        if filetype ~= nil then
+          diffhunk_lang = vim.treesitter.language.get_lang(filetype)
+        end
 
         -- write snippet
         thread_start, thread_end =
-          M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+          M.write_thread_snippet(bufnr, comment.diffHunk, diffhunk_lang, nil, start_line, end_line, thread.diffSide)
       end
 
       comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")
