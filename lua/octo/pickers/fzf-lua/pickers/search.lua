@@ -87,6 +87,7 @@ return function(opts)
   -- TODO this is still not as fast as I would like.
   fzf.fzf_live(contents, {
     prompt = picker_utils.get_prompt(opts.prompt_title),
+    exec_empty_query = true,
     func_async_callback = false,
     previewer = previewers.search(),
     query_delay = 500,
