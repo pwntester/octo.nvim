@@ -60,10 +60,17 @@ local function make_reaction_bubble(icon, includes_viewer, opts)
   return make_bubble(content, highlight, opts)
 end
 
+--- Enum values found here:
+--- https://docs.github.com/en/graphql/reference/enums#issuetypecolor
 local color_lookup = {
-  BLUE = "4493f8",
-  YELLOW = "d19821",
-  RED = "f75149",
+  GRAY = "3C444D",
+  BLUE = "4493F8",
+  GREEN = "3FB950",
+  YELLOW = "D19821",
+  ORANGE = "DB6D28",
+  RED = "F75149",
+  PINK = "DB61A2",
+  PURPLE = "AB7DF8",
 }
 
 local function make_label_bubble(name, color, opts)
