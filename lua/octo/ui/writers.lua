@@ -1032,11 +1032,18 @@ function M.write_thread_snippet(bufnr, diffhunk, start_line, comment_start, comm
   local snippet_start, snippet_end
   if comment_side and comment_start ~= comment_end then
     -- multiline comment: write just those lines
-    for pos, l in pairs(side_lines) do
+    for pos, l in pairs(map.left_side_lines) do
       if tonumber(l) == tonumber(comment_start) then
         snippet_start = pos
       elseif tonumber(l) == tonumber(comment_end) then
         snippet_end = pos
+      end
+    end
+    for pos, l in pairs(map.right_side_lines) do
+      if tonumber(l) == tonumber(comment_start) then
+        snippet_start = math.min(snippet_start, pos)
+      elseif tonumber(l) == tonumber(comment_end) then
+        snippet_end = math.max(snippet_end, pos)
       end
     end
   else
@@ -2169,10 +2176,56 @@ function M.write_threads(bufnr, threads)
 
         -- write empty line
         M.write_block(bufnr, { "" })
+        local parser = vim.treesitter.get_string_parser(comment.body, "markdown")
+        local tree_maps = parser:parse()
+        local suggestion_text ---@type string|nil
+        if tree_maps then
+          for _, tree in pairs(tree_maps) do
+            local root = tree:root()
+            local query = vim.treesitter.query.get("markdown", "octo")
+            if query then
+              for id, node, _ in query:iter_captures(root, comment.body, 0, -1) do
+                local capture = query.captures[id]
+                if capture == "octo.suggestion" then
+                  suggestion_text = vim.treesitter.get_node_text(node, comment.body)
+                  goto continue
+                end
+              end
+            end
+          end
+          ::continue::
+        end
+        local diffHunk = comment.diffHunk
+        if suggestion_text then
+          local suggestion_lines = vim.split(suggestion_text, "\n")
+          suggestion_lines[#suggestion_lines] = nil
+          suggestion_lines[#suggestion_lines] =
+            suggestion_lines[#suggestion_lines]:sub(1, suggestion_lines[#suggestion_lines]:len() - 1)
+          for line_idx = 1, #suggestion_lines do
+            suggestion_lines[line_idx] = "+" .. suggestion_lines[line_idx]
+          end
+          local diffhunk_lines = vim.split(diffHunk, "\n")
+          local map = utils.generate_position2line_map(diffHunk)
+          local new_diffhunk_lines = { diffhunk_lines[1] } ---@type string[]
+          for line_idx = 2, #diffhunk_lines do
+            local line_number = tonumber(map.right_side_lines[line_idx])
+            local diffhunk_line = diffhunk_lines[line_idx]:sub(2)
+            if line_number >= comment.start_line and line_number <= comment.end_line then
+              new_diffhunk_lines[#new_diffhunk_lines + 1] = "-" .. diffhunk_line
+            else
+              new_diffhunk_lines[#new_diffhunk_lines + 1] = diffhunk_line
+            end
+            if line_number == comment.end_line then
+              for _, suggestion_line in ipairs(suggestion_lines) do
+                new_diffhunk_lines[#new_diffhunk_lines + 1] = suggestion_line
+              end
+            end
+          end
+          diffHunk = table.concat(new_diffhunk_lines, "\n")
+        end
 
         -- write snippet
-        thread_start, thread_end =
-          M.write_thread_snippet(bufnr, comment.diffHunk, nil, start_line, end_line, thread.diffSide)
+        thread_start, thread_end = M.write_thread_snippet(bufnr, diffHunk, nil, start_line, end_line, thread.diffSide)
       end
 
       comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")
