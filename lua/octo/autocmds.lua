@@ -18,16 +18,18 @@ function M.setup()
     end,
   })
 
-  define({ "BufEnter" }, {
-    group = "octo_autocmds",
-    pattern = { "*" },
-    callback = function()
-      local current_buffer = vim.api.nvim_buf_get_name(0)
-      if not current_buffer:match "^octo://" then
-        require("octo").update_layout_for_current_file()
-      end
-    end,
-  })
+  if config.values.use_local_fs then
+    define({ "BufEnter" }, {
+      group = "octo_autocmds",
+      pattern = { "*" },
+      callback = function()
+        local current_buffer = vim.api.nvim_buf_get_name(0)
+        if not current_buffer:match "^octo://" then
+          require("octo").update_layout_for_current_file()
+        end
+      end,
+    })
+  end
 
   define({ "BufReadCmd" }, {
     group = "octo_autocmds",
