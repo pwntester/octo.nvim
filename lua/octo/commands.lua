@@ -1682,8 +1682,6 @@ function M.save_pr(opts)
           local pr = resp.data.createPullRequest.pullRequest
           utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
           require("octo").create_buffer("pull", pr, opts.repo, true)
-          vim.fn.execute "normal! Gk"
-          vim.fn.execute "startinsert"
         end
       end,
     }
