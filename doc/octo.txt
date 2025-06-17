@@ -155,6 +155,11 @@ See |octo-command-examples| for examples.
   delete [label]        Delete the specified label or from the available label menu.
   edit [label]          Edit name or description of a specified label or from the available label menu.
 
+:Octo type [action]                            *octo-commands-type*
+
+  add                   Add issueType from the available issueType menu.
+  remove                Remove the current issueType from current Issue.
+
 
 :Octo assignee [action]                         *octo-commands-assignee*
 
