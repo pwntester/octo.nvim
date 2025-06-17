@@ -649,7 +649,7 @@ function M.format_date(date_string, round_under_one_minute)
     return ""
   end
 
-  round_under_one_minute = round_under_one_minute or true
+  round_under_one_minute = round_under_one_minute == nil and true or round_under_one_minute
 
   -- Parse the input date string (assumed to be in UTC)
   local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
