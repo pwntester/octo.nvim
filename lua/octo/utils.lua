@@ -1609,12 +1609,15 @@ function M.get_label_id(label)
 end
 
 --- Generate maps from diffhunk line to code line:
+---@param diffhunk string
+---@return { left_side_lines: table<integer, integer>, right_side_lines: table<integer, integer>, right_offset: integer, left_offset: integer }
 function M.generate_position2line_map(diffhunk)
   local diffhunk_lines = vim.split(diffhunk, "\n")
   local diff_directive = diffhunk_lines[1]
+  ---@type integer, integer
   local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
-  local right_side_lines = {}
-  local left_side_lines = {}
+  local right_side_lines = {} ---@type table<integer, integer>
+  local left_side_lines = {} ---@type table<integer, integer>
   local right_side_line = right_offset
   local left_side_line = left_offset
   for i = 2, #diffhunk_lines do
