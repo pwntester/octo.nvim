@@ -1055,4 +1055,19 @@ query($id: ID!) {
 }
 ]]
 
+M.issue_types = [[
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    issueTypes(first: 100) {
+      nodes {
+        id
+        name
+        description
+        color
+      }
+    }
+  }
+}
+]]
+
 return M

@@ -1115,4 +1115,18 @@ mutation($parent_id: ID!, $child_id: ID!) {
 }
 ]]
 
+M.update_issue_issue_type = [[
+mutation($issue_id: ID!, $issue_type_id: ID) {
+  updateIssueIssueType(input: {issueId: $issue_id, issueTypeId: $issue_type_id}) {
+    issue {
+      id
+      issueType {
+        id
+        name
+      }
+    }
+  }
+}
+]]
+
 return M
