@@ -224,9 +224,14 @@ function M.setup()
           opts = {
             cb = gh.create_callback {
               success = function(response)
+                if utils.is_blank(response) then
+                  utils.error("No issue types found for " .. buffer.repo)
+                  return
+                end
+
                 local types = vim.json.decode(response)
-                if not types or #types == 0 then
-                  utils.error "No issue types found"
+                if #types == 0 then
+                  utils.error("No issue types found for " .. buffer.repo)
                   return
                 end
 
