@@ -642,11 +642,14 @@ end
 
 ---Formats a string as a date
 ---@param date_string string
+---@param round_under_one_minute boolean
 ---@return string
-function M.format_date(date_string)
+function M.format_date(date_string, round_under_one_minute)
   if date_string == nil then
     return ""
   end
+
+  round_under_one_minute = round_under_one_minute or true
 
   -- Parse the input date string (assumed to be in UTC)
   local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
@@ -703,6 +706,8 @@ function M.format_date(date_string)
     return hours .. " hour" .. (hours ~= 1 and "s" or "") .. suffix
   elseif minutes > 0 then
     return minutes .. " minute" .. (minutes ~= 1 and "s" or "") .. suffix
+  elseif round_under_one_minute then
+    return "now"
   else
     return seconds .. " second" .. (seconds ~= 1 and "s" or "") .. suffix
   end
