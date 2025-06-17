@@ -440,6 +440,8 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | create [label]                                    | Create a new label                                                                                                                                     |
 |          | delete [label]                                    | Delete an existing label from repo                                                                                                                     |
 |          | edit [label]                                       | Edit name or description of an existing label from repo                                                                                               |
+| type | add | Add a issueType from available issueType menu |
+|  | remove | Remove an issueType |
 | milestone | add [milestone]                                   | Add a milestone to current Issue or PR                                                                                                                |
 |          | remove                                           | Remove a milestone from current Issue or PR                                                                                                             |
 |          | create [milestone]                                | Create a new milestone                                                                                                                                 |
