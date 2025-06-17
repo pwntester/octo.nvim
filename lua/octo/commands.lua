@@ -210,6 +210,79 @@ function M.setup()
         end)
       end,
     },
+    type = {
+      add = M.within_issue(function(buffer)
+        local owner, repo = utils.split_repo(buffer.repo)
+
+        gh.api.graphql {
+          query = queries.issue_types,
+          jq = ".data.repository.issueTypes.nodes",
+          F = {
+            owner = owner,
+            name = repo,
+          },
+          opts = {
+            cb = gh.create_callback {
+              success = function(response)
+                local types = vim.json.decode(response)
+                if not types or #types == 0 then
+                  utils.error "No issue types found"
+                  return
+                end
+
+                vim.ui.select(types, {
+                  prompt = "Select an issue type to add:",
+                  format_item = function(item)
+                    return item.name
+                  end,
+                }, function(selected_type)
+                  if not selected_type then
+                    return
+                  end
+
+                  gh.api.graphql {
+                    query = mutations.update_issue_issue_type,
+                    F = {
+                      issue_id = buffer.node.id,
+                      issue_type_id = selected_type.id,
+                    },
+                    opts = {
+                      cb = gh.create_callback {
+                        success = function(_)
+                          utils.info("Issue type added: " .. selected_type.name)
+                        end,
+                      },
+                    },
+                  }
+                end)
+              end,
+            },
+          },
+        }
+      end),
+      remove = M.within_issue(function(buffer)
+        local current_type = buffer.node.issueType
+
+        if not current_type or utils.is_blank(current_type) then
+          utils.error "No issue type to remove"
+          return
+        end
+
+        gh.api.graphql {
+          query = mutations.update_issue_issue_type,
+          F = {
+            issue_id = buffer.node.id,
+          },
+          opts = {
+            cb = gh.create_callback {
+              success = function(_)
+                utils.info("Issue type removed: " .. current_type.name)
+              end,
+            },
+          },
+        }
+      end),
+    },
     milestone = {
       list = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
