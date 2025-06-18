@@ -17,7 +17,12 @@ local fzf_opts = {
 }
 
 local function format_display(thing, type)
-  local str = thing.id .. delimiter .. type .. delimiter .. thing.login
+  local str = thing.id .. delimiter .. type .. delimiter
+  if type == "org" then
+    str = str .. require("fzf-lua").utils.ansi_codes.magenta(thing.login)
+  else
+    str = str .. thing.login
+  end
   if thing.name and thing.name ~= vim.NIL then
     str = string.format("%s (%s)", str, thing.name)
   end
