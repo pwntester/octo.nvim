@@ -1,3 +1,4 @@
+local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local octo_config = require "octo.config"
 local queries = require "octo.gh.queries"
 local fzf = require "fzf-lua"
