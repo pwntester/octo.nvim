@@ -74,6 +74,7 @@ local function get_user_requester(prompt)
       end
     end
   end
+  vim.print("orgs: " .. vim.inspect(orgs))
 
   local results = {}
   -- process orgs with teams
@@ -86,7 +87,6 @@ local function get_user_requester(prompt)
     org.ordinal = format_display(org)
     table.insert(results, org.ordinal)
   end
-  vim.print("results: " .. vim.inspect(results))
   return results
 end
 
