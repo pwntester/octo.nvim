@@ -7,7 +7,7 @@ local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
-local M = { orgs = {} }
+local orgs = {}
 
 local delimiter = "\t"
 
@@ -68,14 +68,14 @@ local function get_user_requester(prompt)
           end
         elseif user.teams and user.teams.totalCount > 0 then
           -- organization, collect orgs
-          if not vim.tbl_contains(vim.tbl_keys(M.orgs), user.login) then
-            M.orgs[user.id] = {
+          if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
+            orgs[user.id] = {
               id = user.id,
               login = user.login,
               teams = user.teams.nodes,
             }
           else
-            vim.list_extend(M.orgs[user.login].teams, user.teams.nodes)
+            vim.list_extend(orgs[user.login].teams, user.teams.nodes)
           end
         end
       end
@@ -88,7 +88,7 @@ local function get_user_requester(prompt)
     user.ordinal = format_display(user, "user")
     table.insert(results, user.ordinal)
   end
-  for _, org in pairs(M.orgs) do
+  for _, org in pairs(orgs) do
     org.login = string.format("%s (%d)", org.login, #org.teams)
     org.ordinal = format_display(org, "org")
     table.insert(results, org.ordinal)
@@ -150,7 +150,7 @@ return function(cb)
                 local formatted_teams = {}
                 local team_titles = {}
 
-                for _, team in ipairs(M.orgs[user_id].teams) do
+                for _, team in ipairs(orgs[user_id].teams) do
                   local team_entry = entry_maker.gen_from_team(team)
 
                   if team_entry ~= nil then
