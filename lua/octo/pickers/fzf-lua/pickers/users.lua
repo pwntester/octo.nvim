@@ -160,7 +160,10 @@ return function(cb)
                     actions = {
                       ["default"] = function(team_selected)
                         local team_entry = formatted_teams[team_selected[1]]
-                        cb(team_entry.team.id)
+                        if false then
+                          cb(team_entry.team.id)
+                        end
+                        utils.error "Not implemented yet"
                       end,
                     },
                   })
