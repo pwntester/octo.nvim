@@ -1,3 +1,4 @@
+local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local octo_config = require "octo.config"
 local queries = require "octo.gh.queries"
 local fzf = require "fzf-lua"
@@ -6,15 +7,17 @@ local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 
+local M = { orgs = {} }
+
 local delimiter = "\t"
 
 local fzf_opts = {
   ["--delimiter"] = delimiter,
-  ["--with-nth"] = "2..",
+  ["--with-nth"] = "3..",
 }
 
-local function format_display(thing)
-  local str = thing.id .. delimiter .. thing.login
+local function format_display(thing, type)
+  local str = thing.id .. delimiter .. type .. delimiter .. thing.login
   if thing.name and thing.name ~= vim.NIL then
     str = string.format("%s (%s)", str, thing.name)
   end
@@ -35,7 +38,6 @@ local function get_user_requester(prompt)
     return {}
   end
   local users = {}
-  local orgs = {}
   -- check if the output has }{ and if so, split it and parse each part
   local end_idx = output:find "}{"
   -- add a newline after }{ if it exists
@@ -60,31 +62,30 @@ local function get_user_requester(prompt)
             end
           end
         elseif user.teams and user.teams.totalCount > 0 then
-          -- organization, collect all teams
-          if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
-            orgs[user.login] = {
+          -- organization, collect orgs
+          if not vim.tbl_contains(vim.tbl_keys(M.orgs), user.login) then
+            M.orgs[user.id] = {
               id = user.id,
               login = user.login,
               teams = user.teams.nodes,
             }
           else
-            vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+            vim.list_extend(M.orgs[user.login].teams, user.teams.nodes)
           end
         end
       end
     end
   end
-  vim.print("orgs: " .. vim.inspect(orgs))
 
   local results = {}
   -- process orgs with teams
   for _, user in pairs(users) do
-    user.ordinal = format_display(user)
+    user.ordinal = format_display(user, "user")
     table.insert(results, user.ordinal)
   end
-  for _, org in pairs(orgs) do
+  for _, org in pairs(M.orgs) do
     org.login = string.format("%s (%d)", org.login, #org.teams)
-    org.ordinal = format_display(org)
+    org.ordinal = format_display(org, "org")
     table.insert(results, org.ordinal)
   end
   return results
@@ -107,7 +108,7 @@ local function get_users(query_name, node_name)
   local results = {}
   local flattened = utils.get_flatten_pages(output)
   for _, user in ipairs(flattened) do
-    user.ordinal = format_display(user)
+    user.ordinal = format_display(user, "user")
     table.insert(results, user.ordinal)
   end
   return results
@@ -121,8 +122,9 @@ local function get_mentionable_users()
   return get_users("mentionable_users", "mentionableUsers")
 end
 
-local function get_user_id(selection)
-  return vim.split(selection[1], delimiter)[1]
+local function get_user_id_type(selection)
+  local spl = vim.split(selection[1], delimiter)
+  return spl[1], spl[2]
 end
 
 return function(cb)
@@ -135,7 +137,35 @@ return function(cb)
         actions = {
           ["default"] = {
             function(user_selected)
-              cb(get_user_id(user_selected))
+              local user_id, user_type = get_user_id_type(user_selected)
+              if user_type == "user" then
+                cb(user_id)
+              else
+                -- handle org
+                local formatted_teams = {}
+                local team_titles = {}
+
+                for _, team in ipairs(M.orgs[user_id].teams) do
+                  local team_entry = entry_maker.gen_from_team(team)
+
+                  if team_entry ~= nil then
+                    formatted_teams[team_entry.ordinal] = team_entry
+                    table.insert(team_titles, team_entry.ordinal)
+                  end
+                end
+
+                fzf.fzf_exec(
+                  team_titles,
+                  vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
+                    actions = {
+                      ["default"] = function(team_selected)
+                        local team_entry = formatted_teams[team_selected[1]]
+                        cb(team_entry.team.id)
+                      end,
+                    },
+                  })
+                )
+              end
             end,
           },
         },
@@ -161,7 +191,8 @@ return function(cb)
         fzf_opts = fzf_opts,
         actions = {
           ["default"] = function(user_selected)
-            cb(get_user_id(user_selected))
+            local user_id, _ = get_user_id_type(user_selected)
+            cb(user_id)
           end,
         },
       })
