@@ -1,4 +1,3 @@
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local octo_config = require "octo.config"
 local queries = require "octo.gh.queries"
 local fzf = require "fzf-lua"
@@ -16,22 +15,21 @@ local fzf_opts = {
   ["--with-nth"] = "3..",
 }
 
-local function format_display(thing, type)
-  local str = thing.id .. delimiter .. type .. delimiter
-  if type == "org" then
-    str = str .. require("fzf-lua").utils.ansi_codes.magenta(thing.login)
-  else
-    str = str .. thing.login
-  end
+local function format_display(thing, entity_type)
+  local str = thing.id .. delimiter .. entity_type .. delimiter
+  local display_login = entity_type == "org" and require("fzf-lua").utils.ansi_codes.magenta(thing.login) or thing.login
+  str = str .. display_login
+
   if thing.name and thing.name ~= vim.NIL then
     str = string.format("%s (%s)", str, thing.name)
   end
+
   return str
 end
 
 local function get_user_requester(prompt)
   -- skip empty queries
-  if not prompt or prompt == "" or utils.is_blank(prompt) then
+  if utils.is_blank(prompt) then
     return {}
   end
   local query = graphql("users_query", prompt)
@@ -43,7 +41,6 @@ local function get_user_requester(prompt)
     return {}
   end
   local users = {}
-  -- check if the output has }{ and if so, split it and parse each part
   local end_idx = output:find "}{"
   -- add a newline after }{ if it exists
   if end_idx then
@@ -119,14 +116,6 @@ local function get_users(query_name, node_name)
   return results
 end
 
-local function get_assignable_users()
-  return get_users("assignable_users", "assignableUsers")
-end
-
-local function get_mentionable_users()
-  return get_users("mentionable_users", "mentionableUsers")
-end
-
 local function get_user_id_type(selection)
   local spl = vim.split(selection[1], delimiter)
   return spl[1], spl[2]
@@ -182,9 +171,9 @@ return function(cb)
   else
     local users = {}
     if cfg.users == "assignable" then
-      users = get_assignable_users()
+      users = get_users("assignable_users", "assignableUsers")
     elseif cfg.users == "mentionable" then
-      users = get_mentionable_users()
+      users = get_users("mentionable_users", "mentionableUsers")
     else
       utils.error("Invalid user selection mode: " .. cfg.users)
       return
