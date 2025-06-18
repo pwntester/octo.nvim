@@ -28,6 +28,15 @@ query {
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
+---@class octo.ReviewThread : octo.ReviewThreadInformationFragment
+--- @field comments {
+---   nodes: octo.ReviewThreadCommentFragment[],
+---   pageInfo: {
+---     hasNextPage: boolean,
+---     endCursor: string,
+---   },
+--- }
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads = [[
 query($endCursor: String) {
@@ -1051,6 +1060,21 @@ query($id: ID!) {
     }
     ... on DiscussionComment {
       url
+    }
+  }
+}
+]]
+
+M.issue_types = [[
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    issueTypes(first: 100) {
+      nodes {
+        id
+        name
+        description
+        color
+      }
     }
   }
 }

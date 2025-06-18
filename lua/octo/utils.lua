@@ -642,11 +642,14 @@ end
 
 ---Formats a string as a date
 ---@param date_string string
+---@param round_under_one_minute boolean
 ---@return string
-function M.format_date(date_string)
+function M.format_date(date_string, round_under_one_minute)
   if date_string == nil then
     return ""
   end
+
+  round_under_one_minute = round_under_one_minute == nil and true or round_under_one_minute
 
   -- Parse the input date string (assumed to be in UTC)
   local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
@@ -703,6 +706,8 @@ function M.format_date(date_string)
     return hours .. " hour" .. (hours ~= 1 and "s" or "") .. suffix
   elseif minutes > 0 then
     return minutes .. " minute" .. (minutes ~= 1 and "s" or "") .. suffix
+  elseif round_under_one_minute then
+    return "now"
   else
     return seconds .. " second" .. (seconds ~= 1 and "s" or "") .. suffix
   end
@@ -1604,12 +1609,15 @@ function M.get_label_id(label)
 end
 
 --- Generate maps from diffhunk line to code line:
+---@param diffhunk string
+---@return { left_side_lines: table<integer, integer>, right_side_lines: table<integer, integer>, right_offset: integer, left_offset: integer }
 function M.generate_position2line_map(diffhunk)
   local diffhunk_lines = vim.split(diffhunk, "\n")
   local diff_directive = diffhunk_lines[1]
+  ---@type integer, integer
   local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
-  local right_side_lines = {}
-  local left_side_lines = {}
+  local right_side_lines = {} ---@type table<integer, integer>
+  local left_side_lines = {} ---@type table<integer, integer>
   local right_side_line = right_offset
   local left_side_line = left_offset
   for i = 2, #diffhunk_lines do
