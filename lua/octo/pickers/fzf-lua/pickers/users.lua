@@ -1,4 +1,3 @@
-local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local octo_config = require "octo.config"
 local queries = require "octo.gh.queries"
 local fzf = require "fzf-lua"
@@ -6,8 +5,6 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
-
-local M = { formatted_users = {} }
 
 local delimiter = "\t"
 
@@ -25,7 +22,6 @@ local function format_display(thing)
 end
 
 local function get_user_requester(prompt)
-  M.formatted_users = {} -- reset formatted users
   -- skip empty queries
   if not prompt or prompt == "" or utils.is_blank(prompt) then
     return {}
@@ -40,30 +36,40 @@ local function get_user_requester(prompt)
   end
   local users = {}
   local orgs = {}
-  local responses = utils.get_pages(output)
-  for _, resp in ipairs(responses) do
-    for _, user in ipairs(resp.data.search.nodes) do
-      if not user.teams then
-        -- regular user
-        if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
-          users[user.login] = {
-            id = user.id,
-            login = user.login,
-          }
-          if user.name then
-            users[user.login].name = user.name
+  -- check if the output has }{ and if so, split it and parse each part
+  local end_idx = output:find "}{"
+  -- add a newline after }{ if it exists
+  if end_idx then
+    output = output:sub(1, end_idx) .. "\n" .. output:sub(end_idx + 1)
+  end
+  local jsons = vim.split(output, "\n", { plain = true })
+  -- parse each JSON object
+  for _, json_raw in ipairs(jsons) do
+    local responses = utils.get_pages(json_raw)
+    for _, resp in ipairs(responses) do
+      for _, user in ipairs(resp.data.search.nodes) do
+        if not user.teams then
+          -- regular user
+          if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
+            users[user.login] = {
+              id = user.id,
+              login = user.login,
+            }
+            if user.name then
+              users[user.login].name = user.name
+            end
           end
-        end
-      elseif user.teams and user.teams.totalCount > 0 then
-        -- organization, collect all teams
-        if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
-          orgs[user.login] = {
-            id = user.id,
-            login = user.login,
-            teams = user.teams.nodes,
-          }
-        else
-          vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+        elseif user.teams and user.teams.totalCount > 0 then
+          -- organization, collect all teams
+          if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
+            orgs[user.login] = {
+              id = user.id,
+              login = user.login,
+              teams = user.teams.nodes,
+            }
+          else
+            vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+          end
         end
       end
     end
@@ -73,15 +79,14 @@ local function get_user_requester(prompt)
   -- process orgs with teams
   for _, user in pairs(users) do
     user.ordinal = format_display(user)
-    M.formatted_users[user.ordinal] = user
     table.insert(results, user.ordinal)
   end
   for _, org in pairs(orgs) do
     org.login = string.format("%s (%d)", org.login, #org.teams)
     org.ordinal = format_display(org)
-    M.formatted_users[org.ordinal] = org
     table.insert(results, org.ordinal)
   end
+  vim.print("results: " .. vim.inspect(results))
   return results
 end
 
@@ -116,7 +121,9 @@ local function get_mentionable_users()
   return get_users("mentionable_users", "mentionableUsers")
 end
 
--- return M
+local function get_user_id(selection)
+  return vim.split(selection[1], delimiter)[1]
+end
 
 return function(cb)
   local cfg = octo_config.values
@@ -128,35 +135,7 @@ return function(cb)
         actions = {
           ["default"] = {
             function(user_selected)
-              local user_entry = M.formatted_users[user_selected[1]]
-              if not user_entry.teams then
-                -- user
-                cb(user_entry.id)
-              else
-                local formatted_teams = {}
-                local team_titles = {}
-
-                for _, team in ipairs(user_entry.teams) do
-                  local team_entry = entry_maker.gen_from_team(team)
-
-                  if team_entry ~= nil then
-                    formatted_teams[team_entry.ordinal] = team_entry
-                    table.insert(team_titles, team_entry.ordinal)
-                  end
-                end
-
-                fzf.fzf_exec(
-                  team_titles,
-                  vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
-                    actions = {
-                      ["default"] = function(team_selected)
-                        local team_entry = formatted_teams[team_selected[1]]
-                        cb(team_entry.team.id)
-                      end,
-                    },
-                  })
-                )
-              end
+              cb(get_user_id(user_selected))
             end,
           },
         },
@@ -182,8 +161,7 @@ return function(cb)
         fzf_opts = fzf_opts,
         actions = {
           ["default"] = function(user_selected)
-            local user_id = vim.split(user_selected[1], delimiter)[1]
-            cb(user_id)
+            cb(get_user_id(user_selected))
           end,
         },
       })

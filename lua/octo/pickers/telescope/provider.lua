@@ -1047,7 +1047,7 @@ local function get_user_requester()
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    if output then
+    if not output then
       return {}
     end
 
