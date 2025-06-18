@@ -887,19 +887,6 @@ query($owner: String!, $name: String! $endCursor: String) {
       }
     }
   }
-  organization(login: $owner) {
-    teams(first: 100, after: $endCursor) {
-      totalCount
-      nodes {
-        id
-        name
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
 }
 ]]
 
