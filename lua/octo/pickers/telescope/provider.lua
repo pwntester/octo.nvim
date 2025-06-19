@@ -7,6 +7,7 @@ local entry_maker = require "octo.pickers.telescope.entry_maker"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
 local octo_config = require "octo.config"
+local notifications = require "octo.notifications"
 
 local actions = require "telescope.actions"
 local action_set = require "telescope.actions.set"
@@ -1326,45 +1327,23 @@ end
 --
 -- NOTIFICATIONS
 --
----@param thread_id string
-local function request_read_notification(thread_id)
-  gh.api.patch {
-    "/notifications/threads/{id}",
-    format = { id = thread_id },
-    opts = {
-      cb = gh.create_callback { success = function() end },
-      headers = { "Accept: application/vnd.github+json" },
-    },
-  }
-end
 
 local function mark_notification_read()
   return function(prompt_bufnr)
     ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      request_read_notification(selection.thread_id)
+      notifications.request_read_notification(selection.thread_id)
     end)
   end
 end
 
 local function mark_notification_done()
-  local opts = {
-    cb = gh.create_callback { success = function() end },
-    headers = { "Accept: application/vnd.github.v3.diff" },
-  }
-
   return function(prompt_bufnr)
     ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      ---@type string
-      local thread_id = selection.thread_id
-      gh.api.delete {
-        "/notifications/threads/{id}",
-        format = { id = thread_id },
-        opts = opts,
-      }
+      notifications.delete_notification(selection.thread_id)
     end)
   end
 end
@@ -1374,20 +1353,7 @@ local function unsubscribe_notification()
     ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      ---@type string
-      local thread_id = selection.thread_id
-      gh.api.delete {
-        "/notifications/threads/{id}/subscription",
-        format = { id = thread_id },
-        opts = {
-          cb = gh.create_callback {
-            success = function()
-              request_read_notification(thread_id)
-            end,
-          },
-          headers = { "Accept: application/vnd.github+json" },
-        },
-      }
+      notifications.unsubscribe_notification(selection.thread_id)
     end)
   end
 end
@@ -1426,16 +1392,7 @@ function M.notifications(opts)
 
     local function copy_notification_url(prompt_bufnr)
       local entry = action_state.get_selected_entry(prompt_bufnr)
-      local subject = entry.obj.subject
-      local url = not utils.is_blank(subject.latest_comment_url) and subject.latest_comment_url or subject.url
-
-      gh.api.get {
-        url,
-        jq = ".html_url",
-        opts = {
-          cb = gh.create_callback { success = utils.copy_url },
-        },
-      }
+      notifications.copy_notification_url(entry.obj)
     end
 
     pickers
