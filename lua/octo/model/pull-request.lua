@@ -172,8 +172,6 @@ function PullRequest:get_commit_changed_files(rev, callback)
   }
 end
 
-M.PullRequest = PullRequest
-
 ---Helper function to create a PullRequest with merge base
 ---@param opts table Options for PullRequest creation
 ---@param obj table PR object from GraphQL response
