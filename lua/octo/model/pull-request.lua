@@ -172,4 +172,33 @@ function PullRequest:get_commit_changed_files(rev, callback)
   }
 end
 
+M.PullRequest = PullRequest
+
+---Helper function to create a PullRequest with merge base
+---@param opts table Options for PullRequest creation
+---@param obj table PR object from GraphQL response
+---@param cb function Callback function(pull_request)
+function M.create_with_merge_base(opts, obj, cb)
+  local Rev = require("octo.reviews.rev").Rev
+  local owner, name = utils.split_repo(opts.repo)
+
+  -- Fetch merge base for accurate diff
+  gh.fetch_merge_base(owner, name, obj.baseRefName, obj.headRefName, function(merge_base_sha, stderr)
+    if stderr and not utils.is_blank(stderr) then
+      utils.error("Failed to fetch merge base: " .. stderr)
+      -- Fall back to using baseRefOid
+      opts.left = Rev:new(obj.baseRefOid)
+    else
+      -- Use merge base if available, otherwise fall back to baseRefOid
+      opts.left = merge_base_sha and Rev:new(merge_base_sha) or Rev:new(obj.baseRefOid)
+    end
+
+    opts.right = Rev:new(obj.headRefOid)
+    opts.files = obj.files.nodes
+
+    local pr = PullRequest:new(opts)
+    cb(pr)
+  end)
+end
+
 return M
