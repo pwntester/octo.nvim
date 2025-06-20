@@ -4,6 +4,7 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local _, Job = pcall(require, "plenary.job")
+local release = require "octo.release"
 local vim = vim
 
 local M = {}
@@ -848,10 +849,7 @@ function M.escape_char(string)
 end
 
 --- Gets the repo and id from args.
----@param args { n: integer }|string[]
----@param is_number boolean
----@return string? repo
----@return integer|string? id
+---@type (fun(args: {n: integer}|string[], is_number: true): string?, integer?)|(fun(args: {n: integer}|string[], is_number: false): string?, string?)
 local function get_repo_id_from_args(args, is_number)
   local repo, id ---@type string|nil, string|integer|nil
   if args.n == 0 then
@@ -890,9 +888,7 @@ end
 ---@return integer? number
 function M.get_repo_number_from_varargs(...)
   local args = table.pack(...)
-  local repo, number = get_repo_id_from_args(args, true)
-  number = number --[[@as integer?]]
-  return repo, number
+  return get_repo_id_from_args(args, true)
 end
 
 --- Get the URI for a repository
@@ -920,8 +916,13 @@ end
 
 function M.get_release_uri(...)
   local args = table.pack(...)
-  local repo, tag_name = get_repo_id_from_args(args, false)
-
+  local repo, tag_name_or_id = get_repo_id_from_args(args, false)
+  local release_id = tonumber(tag_name_or_id)
+  if not release_id then
+    return string.format("octo://%s/release/%s", repo, tag_name_or_id)
+  end
+  local owner, name = M.split_repo(repo)
+  local tag_name = release.get_tag_from_release_id { owner = owner, repo = name, release_id = tostring(release_id) }
   return string.format("octo://%s/release/%s", repo, tag_name)
 end
 

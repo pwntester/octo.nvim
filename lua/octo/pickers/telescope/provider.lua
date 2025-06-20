@@ -79,22 +79,7 @@ local function open(command)
       vim.cmd [[:tab sb %]]
     end
     if selection then
-      if selection.kind ~= "release" then
-        utils.get(selection.kind, selection.value, selection.repo)
-      else
-        if selection.tag_name then
-          utils.get("release", selection.tag_name, selection.repo)
-        else
-          ---@type string, string
-          local owner, repo = selection.repo:match "(.*)/(.*)"
-          require("octo.release").get_tag_from_release_id(
-            { owner = owner, repo = repo, release_id = selection.value },
-            function(tag_name)
-              utils.get("release", tag_name, selection.repo)
-            end
-          )
-        end
-      end
+      utils.get(selection.kind, selection.value, selection.repo)
     end
   end
 end
