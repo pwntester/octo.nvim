@@ -1089,33 +1089,23 @@ function OctoBuffer:isRepo()
 end
 
 ---Gets the PR object for the current octo buffer with correct merge base
+---@param callback function Callback function(pr) called with the PullRequest object
 function OctoBuffer:get_pr(callback)
   if not self:isPullRequest() then
     utils.error "Not in a PR buffer"
     return
   end
 
+  if not callback then
+    utils.error "get_pr requires a callback function"
+    return
+  end
+
   local Rev = require("octo.reviews.rev").Rev
   local PullRequest = require("octo.model.pull-request").PullRequest
-  local gh = require "octo.gh"
 
   local bufnr = vim.api.nvim_get_current_buf()
   local owner, name = utils.split_repo(self.repo)
-
-  -- If no callback provided, return synchronously with baseRefOid (backward compatibility)
-  if not callback then
-    return PullRequest:new {
-      bufnr = bufnr,
-      repo = self.repo,
-      head_repo = self.node.headRepository.nameWithOwner,
-      head_ref_name = self.node.headRefName,
-      number = self.number,
-      id = self.node.id,
-      left = Rev:new(self.node.baseRefOid),
-      right = Rev:new(self.node.headRefOid),
-      files = self.node.files.nodes,
-    }
-  end
 
   -- Fetch merge base using GitHub API
   gh.fetch_merge_base(owner, name, self.node.baseRefName, self.node.headRefName, function(merge_base_sha, stderr)
