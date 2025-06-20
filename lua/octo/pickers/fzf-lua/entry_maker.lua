@@ -26,6 +26,59 @@ function M.gen_from_issue(issue_table)
   }
 end
 
+---@class octo.NotificationFromREST
+---@field subject { type: "Issue" | "PullRequest" | "Discussion" | "Release", url: string, title: string, latest_comment_url?: string }
+---@field repository { full_name: string }
+---@field id string
+---@field unread boolean
+
+---@class octo.NotificationEntry
+---@field value string
+---@field ordinal string
+---@field obj octo.NotificationFromREST
+---@field repo string
+---@field kind "issue" | "pull_request" | "discussion" | "release"
+---@field thread_id string
+---@field url string
+---@field tag_name? string
+
+---@param notification octo.NotificationFromREST
+---@return octo.NotificationEntry?
+function M.gen_from_notification(notification)
+  if not notification or vim.tbl_isempty(notification) then
+    return nil
+  end
+
+  local notification_kind = (function(type)
+    if type == "Issue" then
+      return "issue"
+    elseif type == "PullRequest" then
+      return "pull_request"
+    elseif type == "Discussion" then
+      return "discussion"
+    elseif type == "Release" then
+      return "release"
+    end
+    return "unknown"
+  end)(notification.subject.type)
+
+  if notification_kind == "unknown" then
+    return nil
+  end
+  ---@type string
+  local ref = notification.subject.url:match "/(%d+)$"
+
+  return {
+    value = ref,
+    ordinal = notification.subject.title .. " " .. notification.repository.full_name .. " " .. ref,
+    obj = notification,
+    repo = notification.repository.full_name,
+    kind = notification_kind,
+    thread_id = notification.id,
+    url = notification.subject.url,
+  }
+end
+
 function M.gen_from_git_commits(entry)
   if not entry then
     return nil
