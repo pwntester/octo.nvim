@@ -1505,17 +1505,47 @@ function M.get_pull_request_for_current_branch(cb)
               local obj = resp.data.repository.pullRequest
               local Rev = require("octo.reviews.rev").Rev
               local PullRequest = require("octo.model.pull-request").PullRequest
-              local pull_request = PullRequest:new {
-                repo = base_owner .. "/" .. base_name,
-                head_repo = obj.headRepository.nameWithOwner,
-                number = number,
-                id = id,
-                head_ref_name = obj.headRefName,
-                left = Rev:new(obj.baseRefOid),
-                right = Rev:new(obj.headRefOid),
-                files = obj.files.nodes,
-              }
-              cb(pull_request)
+
+              -- Fetch merge base for accurate diff
+              gh.fetch_merge_base(
+                base_owner,
+                base_name,
+                obj.baseRefName,
+                obj.headRefName,
+                function(merge_base_sha, merge_base_stderr)
+                  if merge_base_stderr and not M.is_blank(merge_base_stderr) then
+                    M.error("Failed to fetch merge base: " .. merge_base_stderr)
+                    -- Fall back to using baseRefOid
+                    local pull_request = PullRequest:new {
+                      repo = base_owner .. "/" .. base_name,
+                      head_repo = obj.headRepository.nameWithOwner,
+                      number = number,
+                      id = id,
+                      head_ref_name = obj.headRefName,
+                      left = Rev:new(obj.baseRefOid),
+                      right = Rev:new(obj.headRefOid),
+                      files = obj.files.nodes,
+                    }
+                    cb(pull_request)
+                    return
+                  end
+
+                  -- Use merge base if available, otherwise fall back to baseRefOid
+                  local left_rev = merge_base_sha and Rev:new(merge_base_sha) or Rev:new(obj.baseRefOid)
+
+                  local pull_request = PullRequest:new {
+                    repo = base_owner .. "/" .. base_name,
+                    head_repo = obj.headRepository.nameWithOwner,
+                    number = number,
+                    id = id,
+                    head_ref_name = obj.headRefName,
+                    left = left_rev,
+                    right = Rev:new(obj.headRefOid),
+                    files = obj.files.nodes,
+                  }
+                  cb(pull_request)
+                end
+              )
             end
           end,
         }
