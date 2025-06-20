@@ -1088,8 +1088,8 @@ function OctoBuffer:isRepo()
   return self.kind == "repo"
 end
 
----Gets the PR object for the current octo buffer
-function OctoBuffer:get_pr()
+---Gets the PR object for the current octo buffer with correct merge base
+function OctoBuffer:get_pr(callback)
   if not self:isPullRequest() then
     utils.error "Not in a PR buffer"
     return
@@ -1097,18 +1097,62 @@ function OctoBuffer:get_pr()
 
   local Rev = require("octo.reviews.rev").Rev
   local PullRequest = require("octo.model.pull-request").PullRequest
+  local gh = require "octo.gh"
+
   local bufnr = vim.api.nvim_get_current_buf()
-  return PullRequest:new {
-    bufnr = bufnr,
-    repo = self.repo,
-    head_repo = self.node.headRepository.nameWithOwner,
-    head_ref_name = self.node.headRefName,
-    number = self.number,
-    id = self.node.id,
-    left = Rev:new(self.node.baseRefOid),
-    right = Rev:new(self.node.headRefOid),
-    files = self.node.files.nodes,
-  }
+  local owner, name = utils.split_repo(self.repo)
+
+  -- If no callback provided, return synchronously with baseRefOid (backward compatibility)
+  if not callback then
+    return PullRequest:new {
+      bufnr = bufnr,
+      repo = self.repo,
+      head_repo = self.node.headRepository.nameWithOwner,
+      head_ref_name = self.node.headRefName,
+      number = self.number,
+      id = self.node.id,
+      left = Rev:new(self.node.baseRefOid),
+      right = Rev:new(self.node.headRefOid),
+      files = self.node.files.nodes,
+    }
+  end
+
+  -- Fetch merge base using GitHub API
+  gh.fetch_merge_base(owner, name, self.node.baseRefName, self.node.headRefName, function(merge_base_sha, stderr)
+    if stderr and not utils.is_blank(stderr) then
+      utils.error("Failed to fetch merge base: " .. stderr)
+      -- Fall back to using baseRefOid
+      local pr = PullRequest:new {
+        bufnr = bufnr,
+        repo = self.repo,
+        head_repo = self.node.headRepository.nameWithOwner,
+        head_ref_name = self.node.headRefName,
+        number = self.number,
+        id = self.node.id,
+        left = Rev:new(self.node.baseRefOid),
+        right = Rev:new(self.node.headRefOid),
+        files = self.node.files.nodes,
+      }
+      callback(pr)
+      return
+    end
+
+    -- Use merge base if available, otherwise fall back to baseRefOid
+    local left_rev = merge_base_sha and Rev:new(merge_base_sha) or Rev:new(self.node.baseRefOid)
+
+    local pr = PullRequest:new {
+      bufnr = bufnr,
+      repo = self.repo,
+      head_repo = self.node.headRepository.nameWithOwner,
+      head_ref_name = self.node.headRefName,
+      number = self.number,
+      id = self.node.id,
+      left = left_rev,
+      right = Rev:new(self.node.headRefOid),
+      files = self.node.files.nodes,
+    }
+    callback(pr)
+  end)
 end
 
 --- Get a issue/PR comment at cursor (if any)
