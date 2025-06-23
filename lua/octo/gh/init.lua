@@ -114,6 +114,7 @@ function M.setup()
 end
 
 --- Create a callback function for the job
+---@param opts? { success?: fun(stdout: string), failure?: fun(stderr: string) }
 function M.create_callback(opts)
   opts = opts or {}
 

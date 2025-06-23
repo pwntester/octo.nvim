@@ -847,16 +847,16 @@ function M.setup()
       end,
     },
     assignee = {
-      add = function(login)
-        M.add_user("assignee", login)
+      add = function(...)
+        M.add_user("assignee", { ... })
       end,
       remove = function(login)
         M.remove_assignee(login)
       end,
     },
     reviewer = {
-      add = function(login)
-        M.add_user("reviewer", login)
+      add = function(...)
+        M.add_user("reviewer", { ... })
       end,
     },
     reaction = {
@@ -2254,7 +2254,9 @@ function M.remove_label(label)
   }
 end
 
-function M.add_user(subject, login)
+---@param subject "assignee"|"reviewer"
+---@param logins? string[]
+function M.add_user(subject, logins)
   local buffer = utils.get_current_buffer()
   if not buffer then
     utils.error "No Octo buffer"
@@ -2266,12 +2268,14 @@ function M.add_user(subject, login)
     utils.error "Cannot get issue/pr id"
   end
 
-  local function cb(user_id)
-    local query
+  ---@param user_ids string[]
+  local function cb(user_ids)
+    local query ---@type string
+    local user_ids_str = '["' .. table.concat(user_ids, '", "') .. '"]'
     if subject == "assignee" then
-      query = graphql("add_assignees_mutation", iid, user_id)
+      query = graphql("add_assignees_mutation", iid, user_ids_str)
     elseif subject == "reviewer" then
-      query = graphql("request_reviews_mutation", iid, user_id)
+      query = graphql("request_reviews_mutation", iid, user_ids_str)
     else
       utils.error "Invalid user type"
       return
@@ -2291,15 +2295,22 @@ function M.add_user(subject, login)
       end,
     }
   end
-  if login then
-    local user_id = utils.get_user_id(login)
-    if user_id then
-      cb(user_id)
-    else
-      utils.error "User not found"
+  if logins then
+    local user_ids = {} ---@type string[]
+    for _, user in ipairs(logins) do
+      local user_id = utils.get_user_id(user)
+      if user_id then
+        user_ids[#user_ids + 1] = user_id
+      else
+        utils.error("User " .. user .. " not found")
+        return
+      end
     end
+    cb(user_ids)
   else
-    picker.users(cb)
+    picker.users(function(user_id)
+      cb { user_id }
+    end)
   end
 end
 
