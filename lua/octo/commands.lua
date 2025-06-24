@@ -2263,7 +2263,7 @@ function M.add_user(subject, logins)
     return
   end
 
-  local iid = buffer.node.id
+  local iid = buffer.node.id ---@type string
   if not iid then
     utils.error "Cannot get issue/pr id"
   end
@@ -2271,28 +2271,32 @@ function M.add_user(subject, logins)
   ---@param user_ids string[]
   local function cb(user_ids)
     local query ---@type string
-    local user_ids_str = '["' .. table.concat(user_ids, '", "') .. '"]'
     if subject == "assignee" then
-      query = graphql("add_assignees_mutation", iid, user_ids_str)
+      query = mutations.add_assignees
     elseif subject == "reviewer" then
-      query = graphql("request_reviews_mutation", iid, user_ids_str)
+      query = mutations.request_reviews
     else
       utils.error "Invalid user type"
       return
     end
-    gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(buffer.bufnr, obj, true)
-            vim.cmd [[stopinsert]]
-          end)
-        end
-      end,
+    gh.api.graphql {
+      paginate = true,
+      query = query,
+      f = {
+        user_ids = user_ids,
+        object_id = iid,
+      },
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            -- refresh issue/pr details
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+              writers.write_details(buffer.bufnr, obj, true)
+              vim.cmd [[stopinsert]]
+            end)
+          end,
+        },
+      },
     }
   end
   if logins then

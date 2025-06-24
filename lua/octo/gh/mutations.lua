@@ -877,8 +877,8 @@ mutation {
 
 -- https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
 M.add_assignees = [[
-mutation {
-  addAssigneesToAssignable(input: {assignableId: "%s", assigneeIds: %s}) {
+mutation($object_id: ID!, $user_ids: [ID!]!) {
+  addAssigneesToAssignable(input: {assignableId: $object_id, assigneeIds: $user_ids}) {
     assignable {
       ... on Issue {
         id
@@ -910,8 +910,8 @@ mutation {
 -- https://docs.github.com/en/graphql/reference/mutations#requestreviews
 -- for teams use `teamIds`
 M.request_reviews = [[
-mutation {
-  requestReviews(input: {pullRequestId: "%s", union: true, userIds: %s}) {
+mutation($object_id: ID!, $user_ids: [ID!]!) {
+  requestReviews(input: {pullRequestId: $object_id, union: true, userIds: $user_ids}) {
     pullRequest {
       id
       reviewRequests(first: 100) {

@@ -325,8 +325,10 @@ end
 --- The gh.api commands
 M.api = {}
 
+---@class (partial) octo.PartialRunOpts: RunOpts
+
 ---Run a graphql query
----@param opts table the options for the graphql query
+---@param opts {opts?: octo.PartialRunOpts}|GraphQLOpts the options for the graphql query
 ---@return table|nil
 function M.api.graphql(opts)
   opts = opts or {}
