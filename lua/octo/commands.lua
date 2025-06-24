@@ -1755,6 +1755,7 @@ function M.pr_checks()
         vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoFailingTest", i - 1, 0, -1)
       end
     end
+    vim.bo[wbufnr].modifiable = false
   end
 
   gh.pr.checks {
