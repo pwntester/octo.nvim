@@ -929,6 +929,29 @@ function M.write_comment(bufnr, comment, kind, line)
   return start_line, line - 1
 end
 
+---@param bufnr integer
+---@param review any
+function M.write_review_decision(bufnr, review)
+  local line = vim.api.nvim_buf_line_count(bufnr) + 1
+  local conf = config.values
+  M.write_block(bufnr, { "", "" }, line)
+  local header_vt = {}
+  local state_bubble =
+    bubbles.make_bubble(utils.state_msg_map[review.state], utils.state_hl_map[review.state] .. "Bubble")
+  table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
+  table.insert(header_vt, {
+    review.author.login,
+    review.viewerDidAuthor and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(header_vt, { " ", "OctoTimelineItemHeading" })
+  vim.list_extend(header_vt, state_bubble)
+  table.insert(header_vt, { " " .. utils.format_date(review.createdAt), "OctoDate" })
+
+  local comment_vt_ns = vim.api.nvim_create_namespace ""
+  M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
+end
+
 local function find_snippet_range(diffhunk_lines)
   local conf = config.values
   local context_lines = conf.snippet_context_lines or 4
