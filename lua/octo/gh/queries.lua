@@ -906,6 +906,7 @@ query($endCursor: String) {
       ... on User {
         id
         login
+        name
       }
       ... on Organization {
         id
