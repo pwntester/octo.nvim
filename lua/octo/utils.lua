@@ -1579,7 +1579,7 @@ function M.get_user_id(login)
     return
   end
 
-  return id
+  return id --[[@as string]]
 end
 
 function M.get_label_id(label)
