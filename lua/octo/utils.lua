@@ -642,7 +642,7 @@ end
 
 ---Formats a string as a date
 ---@param date_string string
----@param round_under_one_minute boolean
+---@param round_under_one_minute? boolean defaults to true
 ---@return string
 function M.format_date(date_string, round_under_one_minute)
   if date_string == nil then

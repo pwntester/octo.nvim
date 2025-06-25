@@ -257,8 +257,10 @@ function OctoBuffer:render_issue()
           folds.create(self.bufnr, review_start + 1, review_end, true)
         end
         writers.write_block(self.bufnr, { "" })
-        prev_is_event = false
+      else
+        writers.write_review_decision(self.bufnr, item)
       end
+      prev_is_event = false
     elseif item.__typename == "AssignedEvent" then
       writers.write_assigned_event(self.bufnr, item)
       prev_is_event = true
