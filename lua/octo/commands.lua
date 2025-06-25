@@ -960,6 +960,10 @@ function M.process_varargs(repo, ...)
   local args = table.pack(...)
   if utils.is_blank(repo) then
     repo = utils.get_remote_name()
+  elseif string.find(repo, ":") or string.find(repo, "=") then
+    args.n = args.n + 1
+    table.insert(args, 1, repo)
+    repo = utils.get_remote_name()
   elseif #vim.split(repo, "/") ~= 2 then
     table.insert(args, repo)
     args.n = args.n + 1
@@ -977,7 +981,9 @@ function M.process_varargs(repo, ...)
       end
     end
   end
-  opts.repo = repo
+  if not opts.repo then
+    opts.repo = repo
+  end
   return opts
 end
 
