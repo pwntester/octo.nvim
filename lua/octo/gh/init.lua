@@ -3,6 +3,11 @@ local fragments = require "octo.gh.fragments"
 local _, Job = pcall(require, "plenary.job")
 local vim = vim
 
+---@class octo.GH
+---@field api octo.GH.api
+---@field [string] {
+---  [string]: (fun(opts?: { opts?: RunOpts, [string]: any }): string?, string?),
+---}
 local M = {}
 
 local headers = {
@@ -12,6 +17,7 @@ local headers = {
   "application/vnd.github.bane-preview+json",
 }
 
+---@type table<string, string|integer>
 local env_vars = {
   PATH = vim.env["PATH"],
   GH_CONFIG_DIR = vim.env["GH_CONFIG_DIR"],
@@ -39,18 +45,21 @@ local function get_env()
       env = vim.tbl_deep_extend("force", env, computed_env)
     end
   elseif type(gh_env) == "table" then
+    ---@diagnostic disable-next-line: no-unknown
     env = vim.tbl_deep_extend("force", env, gh_env)
   end
 
   return env
 end
 
--- uses GH to get the name of the authenticated user
+---uses GH to get the name of the authenticated user
+---@param remote_hostname string?
 function M.get_user_name(remote_hostname)
   if remote_hostname == nil then
     remote_hostname = require("octo.utils").get_remote_host()
   end
 
+  ---@diagnostic disable-next-line: missing-fields
   local job = Job:new {
     enable_recording = true,
     command = config.values.gh_cmd,
@@ -75,8 +84,9 @@ function M.get_user_name(remote_hostname)
   end
 end
 
-local scopes = {}
+local scopes = {} ---@type string[]
 
+---@param test_scopes string[]
 function M.has_scope(test_scopes)
   for _, test_scope in ipairs(test_scopes) do
     if vim.tbl_contains(scopes, test_scope) then
@@ -89,6 +99,7 @@ end
 
 function M.setup()
   _G.octo_pv2_fragment = ""
+  ---@diagnostic disable-next-line: missing-fields
   Job:new({
     enable_recording = true,
     command = config.values.gh_cmd,
@@ -113,8 +124,9 @@ function M.setup()
   }):start()
 end
 
---- Create a callback function for the job
----@param opts? { success?: fun(stdout: string), failure?: fun(stderr: string) }
+---Create a callback function for the job
+---@param opts? { success?: fun(output: string): nil; failure?: fun(stderr: string): nil }
+---@return fun(output: string, stderr: string): nil
 function M.create_callback(opts)
   opts = opts or {}
 
@@ -133,17 +145,18 @@ function M.create_callback(opts)
 end
 
 ---@class RunOpts
----@field args table
----@field mode string "async"|"sync"
----@field cb fun(stdout: string, stderr: string)
----@field stream_cb fun(stdout: string, stderr: string)
----@field headers table
----@field hostname string
----@field debug boolean|nil
+---@field args? table
+---@field mode? "sync" | "async"
+---@field cb? fun(stdout: string, stderr: string)
+---@field stream_cb? fun(stdout: string, stderr: string)
+---@field headers? string[]
+---@field hostname? string
+---@field debug? boolean
+---@field [string] any
 
 ---Run a gh command
 ---@param opts RunOpts
----@return string? stdout
+---@return string? output
 ---@return string? stderr
 local function run(opts)
   if not Job then
@@ -187,6 +200,7 @@ local function run(opts)
     env.GH_DEBUG = "1"
   end
 
+  ---@diagnostic disable-next-line: missing-fields
   local job = Job:new {
     enable_recording = true,
     command = config.values.gh_cmd,
@@ -213,6 +227,7 @@ local function run(opts)
   end
 end
 
+---@param key string
 local function create_flag(key)
   if #key == 1 then
     return "-" .. key
@@ -221,13 +236,20 @@ local function create_flag(key)
   end
 end
 
+---@param args string[]
+---@param flag string
+---@param parameter string
+---@param key string
+---@param value any
 function M.insert_input(args, flag, parameter, key, value)
   if type(value) == "boolean" then
     value = tostring(value)
   end
 
   if type(value) == "table" then
-    for k, v in pairs(value) do
+    for k, v in
+      pairs(value --[[@as table<any, any>]])
+    do
       local new_parameter = type(key) == "number" and parameter .. "[]" or parameter .. "[" .. key .. "]"
       M.insert_input(args, flag, new_parameter, k, v)
     end
@@ -241,10 +263,10 @@ function M.insert_input(args, flag, parameter, key, value)
 end
 
 ---Insert the options into the args table
----@param args table the arguments table
----@param options table the options to insert
----@param replace table|nil key value pairs to replace in the key of the options
----@return table the updated args table
+---@param args string[] the arguments table
+---@param options table<any, any> the options to insert
+---@param replace? table<string, string> key value pairs to replace in the key of the options
+---@return string[] new_args the updated args table
 function M.insert_args(args, options, replace)
   replace = replace or {}
 
@@ -259,9 +281,13 @@ function M.insert_args(args, options, replace)
       local flag = create_flag(key)
 
       if type(value) == "table" then
-        for k, v in pairs(value) do
+        for k, v in
+          pairs(value --[[@as table<any, any>]])
+        do
           if type(v) == "table" then
-            for kk, vv in pairs(v) do
+            for kk, vv in
+              pairs(v --[[@as table<any, any>]])
+            do
               M.insert_input(args, flag, k, kk, vv)
             end
           elseif type(v) == "boolean" then
@@ -289,13 +315,13 @@ function M.insert_args(args, options, replace)
 end
 
 ---@class GraphQLOpts
----@field query string|nil
----@field fields table|nil
----@field paginate boolean|nil
----@field slurp boolean|nil
----@field F table|nil field
----@field f table|nil raw-field
----@field jq string|nil
+---@field query? string
+---@field fields? table
+---@field paginate? boolean
+---@field slurp? boolean
+---@field F? table field
+---@field f? table<string, any> raw-field
+---@field jq? string
 
 ---Create the arguments for the graphql query
 ---@param opts GraphQLOpts
@@ -324,13 +350,16 @@ function M.create_graphql_opts(opts)
 end
 
 --- The gh.api commands
+---@class octo.GH.api
 M.api = {}
 
----@class (partial) octo.PartialRunOpts: RunOpts
+---@class ApiGraphqlOpts: GraphQLOpts
+---@field opts? RunOpts
 
 ---Run a graphql query
----@param opts {opts?: octo.PartialRunOpts}|GraphQLOpts the options for the graphql query
----@return table|nil
+---@param opts? ApiGraphqlOpts the options for the graphql query
+---@return string? output
+---@return string? stderr
 function M.api.graphql(opts)
   opts = opts or {}
   local run_opts = opts.opts or {}
@@ -360,7 +389,7 @@ end
 
 ---Format the endpoint with the format table
 ---@param endpoint string the endpoint to format
----@param format table<key, value> the format table
+---@param format table<string, string> the format table
 local function format_endpoint(endpoint, format)
   for key, value in pairs(format) do
     endpoint = endpoint:gsub("{" .. key .. "}", value)
@@ -368,9 +397,13 @@ local function format_endpoint(endpoint, format)
   return endpoint
 end
 
----@param method string the rest method
----@param opts table the options for the rest command
----@return table|nil
+---@class CreateRestArgsOpts
+---@field [1] string
+---@field format? table<string, string>
+
+---@param method string? the rest method
+---@param opts CreateRestArgsOpts the options for the rest command
+---@return string[]|nil
 function M.create_rest_args(method, opts)
   local format = opts.format or {}
 
@@ -388,16 +421,19 @@ function M.create_rest_args(method, opts)
   end
 
   opts.format = nil
-  opts.opts = nil
   return M.insert_args(args, opts)
 end
 
+---@class RestOpts : CreateRestArgsOpts
+---@field opts? RunOpts
+
 ---Run a rest command
 ---@param method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"
----@param opts {opts: octo.PartialRunOpts}
+---@param opts RestOpts
 local function rest(method, opts)
   local run_opts = opts.opts or {}
 
+  opts.opts = nil
   local args = M.create_rest_args(method, opts)
   if not args then
     local utils = require "octo.utils"
@@ -416,23 +452,27 @@ local function rest(method, opts)
   }
 end
 
----@param opts {opts: octo.PartialRunOpts}
+---@param opts RestOpts
 function M.api.get(opts)
   return rest("GET", opts)
 end
 
+---@param opts RestOpts
 function M.api.post(opts)
   return rest("POST", opts)
 end
 
+---@param opts RestOpts
 function M.api.patch(opts)
   return rest("PATCH", opts)
 end
 
+---@param opts RestOpts
 function M.api.delete(opts)
   return rest("DELETE", opts)
 end
 
+---@param opts RestOpts
 function M.api.put(opts)
   return rest("PUT", opts)
 end
@@ -456,7 +496,7 @@ local function create_subcommand(command)
       end
     end,
     __index = function(t, key)
-      return function(opts)
+      return function(opts) ---@param opts? { opts?: RunOpts }
         opts = opts or {}
 
         local run_opts = opts.opts or {}

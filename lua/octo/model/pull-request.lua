@@ -24,9 +24,22 @@ local M = {}
 local PullRequest = {}
 PullRequest.__index = PullRequest
 
+---@class PullRequestOpts
+---@field repo string
+---@field head_repo string
+---@field head_ref_name string
+---@field number integer
+---@field id string
+---@field left Rev
+---@field right Rev
+---@field bufnr? integer
+---@field files { path: string, viewerViewedState: ViewedState }[]
+
 ---PullRequest constructor.
+---@param opts PullRequestOpts
 ---@return PullRequest
 function PullRequest:new(opts)
+  ---@type PullRequest
   local this = {
     repo = opts.repo,
     head_repo = opts.head_repo,
@@ -41,8 +54,8 @@ function PullRequest:new(opts)
     local_left = false,
     bufnr = opts.bufnr,
     diff = "",
+    files = {},
   }
-  this.files = {}
   for _, file in ipairs(opts.files) do
     this.files[file.path] = file.viewerViewedState
   end
@@ -63,19 +76,24 @@ end
 
 M.PullRequest = PullRequest
 
+---@param data any[]
 local function merge_pages(data)
-  local out = {}
+  local out = {} ---@type table<any, any>
   for _, page in ipairs(data) do
     if type(page) == "table" then
       -- Check if page is array-like or object-like
       if #page > 0 then
         -- Array-like, use ipairs
-        for _, item in ipairs(page) do
+        for _, item in
+          ipairs(page --[[@as any[] ]])
+        do
           table.insert(out, item)
         end
       else
         -- Object-like: merge its key/value pairs directly into out
-        for k, v in pairs(page) do
+        for k, v in
+          pairs(page --[[@as table<any, any>]])
+        do
           out[k] = v
         end
       end
@@ -113,6 +131,15 @@ function PullRequest:get_changed_files(callback)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
         local results = vim.json.decode(output)
+        ---@type {
+        ---  filename: string,
+        ---  previous_filename: string,
+        ---  patch: string,
+        ---  status: string,
+        ---  additions: integer,
+        ---  deletions: integer,
+        ---  changes: integer,
+        ---}[]
         results = merge_pages(results)
         local files = {}
         for _, result in ipairs(results) do
@@ -137,6 +164,8 @@ function PullRequest:get_changed_files(callback)
 end
 
 ---Fetch the changed files at a given commit
+---@param rev Rev
+---@param callback fun(files: FileEntry[]): nil
 function PullRequest:get_commit_changed_files(rev, callback)
   local url = string.format("repos/%s/commits/%s", self.repo, rev.commit)
   gh.run {
@@ -147,6 +176,17 @@ function PullRequest:get_commit_changed_files(rev, callback)
       elseif output then
         local FileEntry = require("octo.reviews.file-entry").FileEntry
         local results = vim.json.decode(output)
+        ---@type {
+        ---  files: {
+        ---    filename: string,
+        ---    previous_filename: string,
+        ---    patch: string,
+        ---    status: string,
+        ---    additions: integer,
+        ---    deletions: integer,
+        ---    changes: integer,
+        ---  }[],
+        ---}
         results = merge_pages(results)
         local files = {}
         if results.files then

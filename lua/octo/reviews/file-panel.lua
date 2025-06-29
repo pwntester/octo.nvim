@@ -80,6 +80,7 @@ function FilePanel:is_focused()
   return self:is_open() and vim.api.nvim_get_current_win() == self.winid
 end
 
+---@param open_if_closed boolean
 function FilePanel:focus(open_if_closed)
   if self:is_open() then
     vim.api.nvim_set_current_win(self.winid)
@@ -107,7 +108,7 @@ function FilePanel:open()
   self.winid = vim.api.nvim_get_current_win()
 
   for k, v in pairs(FilePanel.winopts) do
-    vim.api.nvim_win_set_option(self.winid, k, v)
+    vim.api.nvim_set_option_value(k, v, { win = self.winid })
   end
 
   vim.cmd("buffer " .. self.bufid)
@@ -145,7 +146,7 @@ function FilePanel:init_buffer()
   local bn = vim.api.nvim_create_buf(false, false)
 
   for k, v in pairs(FilePanel.bufopts) do
-    vim.api.nvim_buf_set_option(bn, k, v)
+    vim.api.nvim_set_option_value(k, v, { buf = bn })
   end
 
   local bufname = "OctoChangedFiles-" .. name_counter
@@ -183,14 +184,11 @@ function FilePanel:highlight_file(file)
     if f == file then
       pcall(vim.api.nvim_win_set_cursor, self.winid, { i + header_size, 0 })
       vim.api.nvim_buf_clear_namespace(self.bufid, constants.OCTO_FILE_PANEL_NS, 0, -1)
-      vim.api.nvim_buf_add_highlight(
-        self.bufid,
-        constants.OCTO_FILE_PANEL_NS,
-        "OctoFilePanelSelectedFile",
-        i + header_size - 1,
-        0,
-        -1
-      )
+      local line = i + header_size - 1
+      vim.api.nvim_buf_set_extmark(self.bufid, constants.OCTO_FILE_PANEL_NS, line, 0, {
+        end_line = line + 1,
+        hl_group = "OctoFilePanelSelectedFile",
+      })
     end
   end
 end
@@ -266,7 +264,9 @@ function FilePanel:render()
   local max_path_length = 0
   for _, file in ipairs(self.files) do
     local diffstat = utils.diffstat(file.stats)
+    ---@type integer
     max_changes_length = math.max(max_changes_length, string.len(diffstat.total))
+    ---@type integer
     max_path_length = math.max(max_path_length, string.len(file.path))
   end
 
@@ -414,6 +414,8 @@ end
 
 M.FilePanel = FilePanel
 
+---@param path string
+---@return octo.ReviewThread[]
 function M.threads_for_path(path)
   local current_review = require("octo.reviews").get_current_review()
   if not current_review then

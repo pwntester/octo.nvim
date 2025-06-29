@@ -1,3 +1,4 @@
+---@diagnostic disable: undefined-field
 if _G.__is_log then
   return require("plenary.log").new {
     plugin = "octo.nvim",

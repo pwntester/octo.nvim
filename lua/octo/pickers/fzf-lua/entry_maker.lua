@@ -1,3 +1,4 @@
+---@diagnostic disable
 local utils = require "octo.utils"
 local fzf = require "fzf-lua"
 

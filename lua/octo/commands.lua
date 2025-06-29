@@ -1,3 +1,4 @@
+---@diagnostic disable
 local constants = require "octo.constants"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
@@ -19,6 +20,7 @@ local vim = vim
 -- understand the line range the comment should be created on.
 -- this is problematic without the command options as you exit visual mode when
 -- enterting the command line.
+---@type vim.api.keyset.create_user_command.command_args?
 OctoLastCmdOpts = nil
 
 local M = {}
@@ -229,6 +231,7 @@ function M.setup()
                   return
                 end
 
+                ---@type octo.IssueType[]
                 local types = vim.json.decode(response)
                 if #types == 0 then
                   utils.error("No issue types found for " .. buffer.repo)
@@ -237,6 +240,7 @@ function M.setup()
 
                 vim.ui.select(types, {
                   prompt = "Select an issue type to add:",
+                  ---@param item octo.IssueType
                   format_item = function(item)
                     return item.name
                   end,

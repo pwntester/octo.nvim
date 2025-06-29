@@ -2,7 +2,7 @@ local M = {}
 
 ---@class ReviewComment
 --- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewcomment
----@field id string
+---@field id string|-1
 ---@field author { login: string }
 ---@field state string
 ---@field replyTo any
@@ -14,19 +14,22 @@ local M = {}
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean
 ---@field viewerDidAuthor boolean
----@field pullRequestReview { id: string }
+---@field pullRequestReview { id: string|-1 }
 ---@field reactionGroups { content: string, users: { totalCount: number } }[]
 
 ---@class ReviewThread
 --- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
----@field originalStartLine number
----@field originalLine number
+---@field originalStartLine integer
+---@field originalLine integer
+---@field line? integer
+---@field startLine? integer
+---@field startDiffSide? string
 ---@field path string
 ---@field isOutdated boolean
 ---@field isResolved boolean
 ---@field diffSide string
 ---@field isCollapsed boolean
----@field id string
+---@field id string|-1
 ---@field comments { nodes: ReviewComment[] }
 
 local default_id = -1
@@ -35,8 +38,19 @@ local ReviewThread = {}
 ReviewThread.__index = ReviewThread
 
 ---ReviewThread stub representing a new comment thread.
+---@param opts {
+--- line1: integer|nil,
+--- line2: integer|nil,
+--- file_path: string,
+--- split: string,
+--- diff_hunk: string,
+--- commit: string,
+--- commit_abbrev: string,
+--- review_id: string|-1,
+---}
 ---@return ReviewThread
 function ReviewThread:stub(opts)
+  ---@type ReviewThread
   return {
     originalStartLine = opts.line1,
     originalLine = opts.line2,
@@ -55,7 +69,7 @@ function ReviewThread:stub(opts)
           replyTo = vim.NIL,
           url = vim.NIL,
           diffHunk = opts.diff_hunk,
-          createdAt = os.date "!%FT%TZ",
+          createdAt = os.date "!%FT%TZ" --[[@as string]],
           originalCommit = { oid = opts.commit, abbreviatedOid = opts.commit_abbrev },
           body = " ",
           viewerCanUpdate = true,

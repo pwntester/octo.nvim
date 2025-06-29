@@ -11,7 +11,7 @@ local vim = vim
 
 local M = {}
 
----@type table
+---@type table<string, integer>
 M._null_buffer = {}
 
 ---@class GitStats
@@ -40,8 +40,8 @@ M._null_buffer = {}
 ---@field right_fetched boolean
 ---@field left_winid number
 ---@field right_winid number
----@field left_comment_ranges table
----@field right_comment_ranges table
+---@field left_comment_ranges [integer, integer][]
+---@field right_comment_ranges [integer, integer][]
 ---@field associated_bufs integer[]
 ---@field diffhunks string[]
 ---@field viewed_state ViewedState
@@ -55,10 +55,31 @@ FileEntry.winopts = {
 }
 
 ---FileEntry constructor
----@param opt table
+---@param opt {
+---  path: string,
+---  previous_path: string,
+---  patch: string,
+---  pull_request: PullRequest,
+---  status: string,
+---  stats: { additions: integer, deletions: integer, changes: integer },
+---  left_binary: boolean,
+---  right_binary: boolean,
+---  left_lines: string[],
+---  right_lines: string[],
+---  left_fetched: boolean,
+---  right_fetched: boolean,
+---  left_winid: integer,
+---  right_winid: integer,
+---  left_comment_ranges: [integer, integer][],
+---  right_comment_ranges: [integer, integer][],
+---  associated_bufs: integer[],
+---  diffhunks: string[],
+---  viewed_state: string,
+---}
 ---@return FileEntry
 function FileEntry:new(opt)
   local pr = opt.pull_request
+  ---@type string[]?, [integer, integer][]?, [integer, integer][]?
   local diffhunks, left_ranges, right_ranges
   if opt.patch then
     diffhunks, left_ranges, right_ranges = utils.process_patch(opt.patch)
@@ -96,6 +117,7 @@ end
 
 ---FileEntry toggle_viewed
 function FileEntry:toggle_viewed()
+  ---@type string, string
   local query, next_state
   if self.viewed_state == "VIEWED" then
     query = graphql("unmark_file_as_viewed_mutation", self.path, self.pull_request.id)
@@ -111,7 +133,7 @@ function FileEntry:toggle_viewed()
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
-        vim.api.nvim_err_writeln(stderr)
+        utils.print_err(stderr)
       elseif output then
         self.viewed_state = next_state
         local current_review = require("octo.reviews").get_current_review()
@@ -134,7 +156,7 @@ function FileEntry:destroy()
         pcall(vim.api.nvim_buf_delete, bn, { force = true })
       else
         signs.unplace(bn)
-        vim.api.nvim_buf_set_option(bn, "modifiable", true)
+        vim.bo[bn].modifiable = true
         vim.api.nvim_buf_clear_namespace(bn, constants.OCTO_REVIEW_COMMENTS_NS, 0, -1)
       end
     end
@@ -284,7 +306,9 @@ function FileEntry:load_buffers(left_winid, right_winid)
 
       -- register new buffer
       table.insert(self.associated_bufs, split.bufid)
+      ---@diagnostic disable-next-line: no-unknown
       self[split.pos .. "_bufid"] = split.bufid
+      ---@diagnostic disable-next-line: no-unknown
       self[split.pos .. "_winid"] = split.winid
     end
 
@@ -388,6 +412,7 @@ function FileEntry:place_signs()
     end
 
     -- place thread comments signs and virtual text
+    ---@type octo.ReviewThread[]
     local threads = vim.tbl_values(current_review.threads)
     for _, thread in ipairs(threads) do
       local startLine, endLine = thread.startLine, thread.line
@@ -442,19 +467,29 @@ function FileEntry:place_signs()
   end
 end
 
+---@param opts {
+---  use_local: boolean,
+---  path: string,
+---  status: string,
+---  show_diff: boolean,
+---  binary: boolean,
+---  lines: string[],
+---  repo: string,
+---  split: string,
+---}
 function M._create_buffer(opts)
   local current_review = require("octo.reviews").get_current_review()
   if not current_review then
     return
   end
-  local bufnr
+  local bufnr ---@type integer
   if opts.use_local then
     -- Use the file from the file system
     -- Pros: LSP powered
     -- Cons: we need to change to the commit branch
     bufnr = vim.fn.bufadd(opts.path)
     -- vim.fn.bufadd creates the buffer as unlisted by default
-    vim.api.nvim_buf_set_option(bufnr, "buflisted", true)
+    vim.bo[bufnr].buflisted = true
   else
     local bufname =
       string.format("octo://%s/review/%s/file/%s/%s", opts.repo, current_review.id, string.upper(opts.split), opts.path)
@@ -467,18 +502,18 @@ function M._create_buffer(opts)
     bufnr = vim.api.nvim_create_buf(false, false)
     vim.api.nvim_buf_set_name(bufnr, bufname)
     if opts.binary then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.bo[bufnr].modifiable = true
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Binary file" })
     elseif opts.status == "R" and not opts.show_diff then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.bo[bufnr].modifiable = true
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Renamed" })
     elseif opts.lines then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.bo[bufnr].modifiable = true
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.lines)
     end
   end
-  vim.api.nvim_buf_set_option(bufnr, "modified", false)
-  vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
+  vim.bo[bufnr].modified = false
+  vim.bo[bufnr].modifiable = false
   vim.api.nvim_buf_set_var(bufnr, "octo_diff_props", {
     path = opts.path,
     split = string.upper(opts.split),
@@ -486,11 +521,14 @@ function M._create_buffer(opts)
   return bufnr
 end
 
+---@param left_winid integer
+---@param right_winid integer
 function M.load_null_buffers(left_winid, right_winid)
   M.load_null_buffer(left_winid)
   M.load_null_buffer(right_winid)
 end
 
+---@param winid integer
 function M.load_null_buffer(winid)
   local bn = M._get_null_buffer()
   if vim.api.nvim_win_is_valid(winid) then
@@ -513,8 +551,8 @@ function M._get_null_buffer()
 
   vim.api.nvim_buf_set_lines(nbn, 0, -1, false, { msg })
   local bufname = utils.path_join { "octo", "null" }
-  vim.api.nvim_buf_set_option(nbn, "modified", false)
-  vim.api.nvim_buf_set_option(nbn, "modifiable", false)
+  vim.bo[nbn].modified = false
+  vim.bo[nbn].modifiable = false
 
   local ok = pcall(vim.api.nvim_buf_set_name, nbn, bufname)
   if not ok then
@@ -530,7 +568,7 @@ end
 function M._configure_windows(left_winid, right_winid)
   for _, id in ipairs { left_winid, right_winid } do
     for k, v in pairs(FileEntry.winopts) do
-      vim.api.nvim_win_set_option(id, k, v)
+      vim.api.nvim_set_option_value(k, v, { win = id })
     end
   end
 end

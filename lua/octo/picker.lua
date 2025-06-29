@@ -1,3 +1,4 @@
+---@diagnostic disable
 local config = require "octo.config"
 local utils = require "octo.utils"
 

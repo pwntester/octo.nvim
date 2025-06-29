@@ -2,7 +2,7 @@
 -- https://github.com/sindrets/diffview.nvim/blob/main/lua/diffview/renderer.lua
 --
 local M = {}
-local web_devicons
+local web_devicons ---@module "nvim-web-devicons"
 local config = require "octo.config"
 local vim = vim
 
@@ -53,16 +53,19 @@ function M.render(bufid, data)
     return
   end
 
-  local was_modifiable = vim.api.nvim_buf_get_option(bufid, "modifiable")
-  vim.api.nvim_buf_set_option(bufid, "modifiable", true)
+  local was_modifiable = vim.bo[bufid].modifiable
+  vim.bo[bufid].modifiable = true
 
   vim.api.nvim_buf_set_lines(bufid, 0, -1, false, data.lines)
   vim.api.nvim_buf_clear_namespace(bufid, data.namespace, 0, -1)
   for _, hl in ipairs(data.hl) do
-    vim.api.nvim_buf_add_highlight(bufid, data.namespace, hl.group, hl.line_idx, hl.first, hl.last)
+    vim.api.nvim_buf_set_extmark(bufid, data.namespace, hl.line_idx, hl.first, {
+      end_col = hl.last,
+      hl_group = hl.group,
+    })
   end
 
-  vim.api.nvim_buf_set_option(bufid, "modifiable", was_modifiable)
+  vim.bo[bufid].modifiable = was_modifiable
 end
 
 local git_status_hl_map = {
@@ -79,10 +82,16 @@ local git_status_hl_map = {
   ["B"] = "OctoStatusBroken",
 }
 
+---@param status string
 function M.get_git_hl(status)
   return git_status_hl_map[status]
 end
 
+---@param name string
+---@param ext string
+---@param render_data any
+---@param line_idx integer
+---@param offset integer
 function M.get_file_icon(name, ext, render_data, line_idx, offset)
   local use_icons = config.values.file_panel.use_icons
   if not use_icons then

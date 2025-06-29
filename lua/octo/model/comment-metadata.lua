@@ -6,29 +6,33 @@ local M = {}
 ---@field savedBody string
 ---@field body string
 ---@field dirty boolean
----@field extmark integer
----@field startLine integer
----@field endLine integer
+---@field extmark? integer
+---@field startLine? integer
+---@field endLine? integer
 ---@field namespace integer
 ---@field reactionGroups table[]
----@field reactionLine integer
+---@field reactionLine? integer
 ---@field viewerCanUpdate boolean
 ---@field viewerCanDelete boolean
 ---@field viewerDidAuthor boolean
 ---@field kind string
----@field replyTo string
----@field replyToRest string
+---@field replyTo { id: string }
+---@field replyToRest? string
 ---@field reviewId string
 ---@field path string
 ---@field diffSide string
 ---@field snippetStartLine integer
 ---@field snippetEndLine integer
+---@field bufferStartLine? integer
+---@field bufferEndLine? integer
 local CommentMetadata = {}
 CommentMetadata.__index = CommentMetadata
 
 ---CommentMetadata constructor.
+---@param opts CommentMetadata
 ---@return CommentMetadata
 function CommentMetadata:new(opts)
+  ---@type CommentMetadata
   local this = {
     author = opts.author,
     id = opts.id,
