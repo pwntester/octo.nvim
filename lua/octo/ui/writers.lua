@@ -1020,6 +1020,9 @@ local function highlight_content(content_lines, lang)
     return get_unhighlighted_ranges()
   end
   local content = table.concat(content_lines, "\n")
+  if not vim.treesitter.language.add(lang) then
+    return get_unhighlighted_ranges()
+  end
   local parser = vim.treesitter.get_string_parser(content, lang)
   local parsers = parser:parse()
   if not parsers then
