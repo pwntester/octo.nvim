@@ -2510,4 +2510,45 @@ function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   end
 end
 
+---@param obj any
+---@param bufnr integer
+function M.discussion_preview(obj, bufnr)
+  -- clear the buffer
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+
+  local state = obj.closed and "CLOSED" or "OPEN"
+  M.write_title(bufnr, tostring(obj.title), 1)
+  M.write_state(bufnr, state, obj.number)
+  M.write_discussion_details(bufnr, obj)
+  M.write_body(bufnr, obj, 13)
+
+  if obj.answer ~= vim.NIL then
+    local line = vim.api.nvim_buf_line_count(bufnr) + 1
+    M.write_discussion_answer(bufnr, obj, line)
+  end
+
+  vim.bo[bufnr].filetype = "octo"
+end
+
+---@param obj any
+---@param bufnr integer
+function M.issue_preview(obj, bufnr)
+  local state = utils.get_displayed_state(obj.__typename == "Issue", obj.state, obj.stateReason)
+  M.write_title(bufnr, obj.title, 1)
+  M.write_details(bufnr, obj)
+  M.write_body(bufnr, obj)
+  M.write_state(bufnr, state:upper(), obj.number)
+  local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
+  M.write_block(bufnr, { "", "" }, reactions_line)
+  M.write_reactions(bufnr, obj.reactionGroups, reactions_line)
+  vim.bo[bufnr].filetype = "octo"
+end
+
+---@param obj octo.Release
+---@param bufnr integer
+function M.release_preview(obj, bufnr)
+  M.write_release(bufnr, obj)
+  vim.bo[bufnr].filetype = "octo"
+end
+
 return M
