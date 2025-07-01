@@ -7,7 +7,6 @@ if !exists('main_syntax')
   let main_syntax = 'octo'
 endif
 
-runtime! syntax/markdown.vim ftplugin/markdown.vim ftplugin/markdown_*.vim ftplugin/markdown/*.vim
 unlet! b:current_syntax
 
 call matchadd('Conceal', ':heart:', 10, -1, {'conceal':'❤️'})
@@ -26,6 +25,10 @@ call matchadd('Conceal', ':shrug:', 10, -1, {'conceal':'🤷'})
 call matchadd('Conceal', ':man_shrugging:', 10, -1, {'conceal':'🤷'})
 call matchadd('Conceal', ':face_palm:', 10, -1, {'conceal':'🤦'})
 call matchadd('Conceal', ':man_facepalmin:', 10, -1, {'conceal':'🤦'})
+call matchadd('Conceal', ':cowboy_hat_face:', 10, -1, {'conceal':'🤠'})
+call matchadd('Conceal', ':worried:', 10, -1, {'conceal':'😟'})
+call matchadd('Conceal', ':scream:', 10, -1, {'conceal':'😱'})
+call matchadd('Conceal', ':white_check_mark:', 10, -1, {'conceal':'✅'})
 
 let b:current_syntax = "octo"
 if main_syntax ==# 'octo'

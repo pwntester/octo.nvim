@@ -29,6 +29,14 @@ function M.setup()
     end,
   })
 
+  define({ "FileType" }, {
+    group = "octo_autocmds",
+    pattern = "octo",
+    callback = function()
+      vim.cmd "set syntax=octo"
+    end,
+  })
+
   define({ "BufReadCmd" }, {
     group = "octo_autocmds",
     pattern = { "octo://*" },
