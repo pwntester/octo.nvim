@@ -847,16 +847,16 @@ function M.setup()
       end,
     },
     assignee = {
-      add = function(login)
-        M.add_user("assignee", login)
+      add = function(...)
+        M.add_user("assignee", { ... })
       end,
       remove = function(login)
         M.remove_assignee(login)
       end,
     },
     reviewer = {
-      add = function(login)
-        M.add_user("reviewer", login)
+      add = function(...)
+        M.add_user("reviewer", { ... })
       end,
     },
     reaction = {
@@ -2261,52 +2261,67 @@ function M.remove_label(label)
   }
 end
 
-function M.add_user(subject, login)
+---@param subject "assignee"|"reviewer"
+---@param logins? string[]
+function M.add_user(subject, logins)
   local buffer = utils.get_current_buffer()
   if not buffer then
     utils.error "No Octo buffer"
     return
   end
 
-  local iid = buffer.node.id
+  local iid = buffer.node.id ---@type string
   if not iid then
     utils.error "Cannot get issue/pr id"
   end
 
-  local function cb(user_id)
-    local query
+  ---@param user_ids string[]
+  local function cb(user_ids)
+    local query ---@type string
     if subject == "assignee" then
-      query = graphql("add_assignees_mutation", iid, user_id)
+      query = mutations.add_assignees
     elseif subject == "reviewer" then
-      query = graphql("request_reviews_mutation", iid, user_id)
+      query = mutations.request_reviews
     else
       utils.error "Invalid user type"
       return
     end
-    gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(buffer.bufnr, obj, true)
-            vim.cmd [[stopinsert]]
-          end)
-        end
-      end,
+    gh.api.graphql {
+      paginate = true,
+      query = query,
+      f = {
+        user_ids = user_ids,
+        object_id = iid,
+      },
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            -- refresh issue/pr details
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+              writers.write_details(buffer.bufnr, obj, true)
+              vim.cmd [[stopinsert]]
+            end)
+          end,
+        },
+      },
     }
   end
-  if login then
-    local user_id = utils.get_user_id(login)
-    if user_id then
-      cb(user_id)
-    else
-      utils.error "User not found"
+  if logins then
+    local user_ids = {} ---@type string[]
+    for _, user in ipairs(logins) do
+      local user_id = utils.get_user_id(user)
+      if user_id then
+        user_ids[#user_ids + 1] = user_id
+      else
+        utils.error("User " .. user .. " not found")
+        return
+      end
     end
+    cb(user_ids)
   else
-    picker.users(cb)
+    picker.users(function(user_id)
+      cb { user_id }
+    end)
   end
 end
 

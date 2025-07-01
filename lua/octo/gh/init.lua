@@ -114,6 +114,7 @@ function M.setup()
 end
 
 --- Create a callback function for the job
+---@param opts? { success?: fun(stdout: string), failure?: fun(stderr: string) }
 function M.create_callback(opts)
   opts = opts or {}
 
@@ -328,7 +329,7 @@ M.api = {}
 ---@class (partial) octo.PartialRunOpts: RunOpts
 
 ---Run a graphql query
----@param opts {opts: octo.PartialRunOpts} the options for the graphql query
+---@param opts {opts?: octo.PartialRunOpts}|GraphQLOpts the options for the graphql query
 ---@return table|nil
 function M.api.graphql(opts)
   opts = opts or {}
