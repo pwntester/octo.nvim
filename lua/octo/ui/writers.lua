@@ -929,6 +929,29 @@ function M.write_comment(bufnr, comment, kind, line)
   return start_line, line - 1
 end
 
+---@param bufnr integer
+---@param review any
+function M.write_review_decision(bufnr, review)
+  local line = vim.api.nvim_buf_line_count(bufnr) + 1
+  local conf = config.values
+  M.write_block(bufnr, { "", "" }, line)
+  local header_vt = {}
+  local state_bubble =
+    bubbles.make_bubble(utils.state_msg_map[review.state], utils.state_hl_map[review.state] .. "Bubble")
+  table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+  table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
+  table.insert(header_vt, {
+    review.author.login,
+    review.viewerDidAuthor and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(header_vt, { " ", "OctoTimelineItemHeading" })
+  vim.list_extend(header_vt, state_bubble)
+  table.insert(header_vt, { " " .. utils.format_date(review.createdAt), "OctoDate" })
+
+  local comment_vt_ns = vim.api.nvim_create_namespace ""
+  M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
+end
+
 local function find_snippet_range(diffhunk_lines)
   local conf = config.values
   local context_lines = conf.snippet_context_lines or 4
@@ -1020,6 +1043,9 @@ local function highlight_content(content_lines, lang)
     return get_unhighlighted_ranges()
   end
   local content = table.concat(content_lines, "\n")
+  if not vim.treesitter.language.add(lang) then
+    return get_unhighlighted_ranges()
+  end
   local parser = vim.treesitter.get_string_parser(content, lang)
   local parsers = parser:parse()
   if not parsers then
@@ -2482,6 +2508,47 @@ function M.write_virtual_text(bufnr, ns, line, chunks, mode)
   elseif mode == "vt" then
     pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
   end
+end
+
+---@param obj any
+---@param bufnr integer
+function M.discussion_preview(obj, bufnr)
+  -- clear the buffer
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+
+  local state = obj.closed and "CLOSED" or "OPEN"
+  M.write_title(bufnr, tostring(obj.title), 1)
+  M.write_state(bufnr, state, obj.number)
+  M.write_discussion_details(bufnr, obj)
+  M.write_body(bufnr, obj, 13)
+
+  if obj.answer ~= vim.NIL then
+    local line = vim.api.nvim_buf_line_count(bufnr) + 1
+    M.write_discussion_answer(bufnr, obj, line)
+  end
+
+  vim.bo[bufnr].filetype = "octo"
+end
+
+---@param obj any
+---@param bufnr integer
+function M.issue_preview(obj, bufnr)
+  local state = utils.get_displayed_state(obj.__typename == "Issue", obj.state, obj.stateReason)
+  M.write_title(bufnr, obj.title, 1)
+  M.write_details(bufnr, obj)
+  M.write_body(bufnr, obj)
+  M.write_state(bufnr, state:upper(), obj.number)
+  local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
+  M.write_block(bufnr, { "", "" }, reactions_line)
+  M.write_reactions(bufnr, obj.reactionGroups, reactions_line)
+  vim.bo[bufnr].filetype = "octo"
+end
+
+---@param obj octo.Release
+---@param bufnr integer
+function M.release_preview(obj, bufnr)
+  M.write_release(bufnr, obj)
+  vim.bo[bufnr].filetype = "octo"
 end
 
 return M
