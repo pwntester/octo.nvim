@@ -114,6 +114,7 @@ function M.setup()
 end
 
 --- Create a callback function for the job
+---@param opts? { success?: fun(stdout: string), failure?: fun(stderr: string) }
 function M.create_callback(opts)
   opts = opts or {}
 
@@ -133,7 +134,7 @@ end
 
 ---@class RunOpts
 ---@field args table
----@field mode string
+---@field mode string "async"|"sync"
 ---@field cb fun(stdout: string, stderr: string)
 ---@field stream_cb fun(stdout: string, stderr: string)
 ---@field headers table
@@ -142,7 +143,8 @@ end
 
 ---Run a gh command
 ---@param opts RunOpts
----@return string[]|nil
+---@return string? stdout
+---@return string? stderr
 local function run(opts)
   if not Job then
     return
@@ -324,8 +326,10 @@ end
 --- The gh.api commands
 M.api = {}
 
+---@class (partial) octo.PartialRunOpts: RunOpts
+
 ---Run a graphql query
----@param opts table the options for the graphql query
+---@param opts {opts?: octo.PartialRunOpts}|GraphQLOpts the options for the graphql query
 ---@return table|nil
 function M.api.graphql(opts)
   opts = opts or {}
@@ -389,6 +393,8 @@ function M.create_rest_args(method, opts)
 end
 
 ---Run a rest command
+---@param method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"
+---@param opts {opts: octo.PartialRunOpts}
 local function rest(method, opts)
   local run_opts = opts.opts or {}
 
@@ -410,6 +416,7 @@ local function rest(method, opts)
   }
 end
 
+---@param opts {opts: octo.PartialRunOpts}
 function M.api.get(opts)
   return rest("GET", opts)
 end
