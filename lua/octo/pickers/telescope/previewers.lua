@@ -7,29 +7,11 @@ local utils = require "octo.utils"
 local previewers = require "telescope.previewers"
 local pv_utils = require "telescope.previewers.utils"
 local ts_utils = require "telescope.utils"
-local release = require "octo.release"
+local notifications = require "octo.notifications"
 local defaulter = ts_utils.make_default_callable
 local workflow_runs_previewer = require("octo.workflow_runs").previewer
 
 local vim = vim
-
-local function discussion_preview(obj, bufnr)
-  -- clear the buffer
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
-
-  local state = obj.closed and "CLOSED" or "OPEN"
-  writers.write_title(bufnr, tostring(obj.title), 1)
-  writers.write_state(bufnr, state, obj.number)
-  writers.write_discussion_details(bufnr, obj)
-  writers.write_body(bufnr, obj, 13)
-
-  if obj.answer ~= vim.NIL then
-    local line = vim.api.nvim_buf_line_count(bufnr) + 1
-    writers.write_discussion_answer(bufnr, obj, line)
-  end
-
-  vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
-end
 
 local discussion = defaulter(function(opts)
   return previewers.new_buffer_previewer {
@@ -64,7 +46,7 @@ local discussion = defaulter(function(opts)
               end
 
               local obj = vim.json.decode(output)
-              discussion_preview(obj, bufnr)
+              writers.discussion_preview(obj, bufnr)
             end,
           },
         },
@@ -72,18 +54,6 @@ local discussion = defaulter(function(opts)
     end,
   }
 end)
-
-local function issue_preview(obj, bufnr)
-  local state = utils.get_displayed_state(obj.__typename == "Issue", obj.state, obj.stateReason)
-  writers.write_title(bufnr, obj.title, 1)
-  writers.write_details(bufnr, obj)
-  writers.write_body(bufnr, obj)
-  writers.write_state(bufnr, state:upper(), obj.number)
-  local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
-  writers.write_block(bufnr, { "", "" }, reactions_line)
-  writers.write_reactions(bufnr, obj.reactionGroups, reactions_line)
-  vim.api.nvim_buf_set_option(bufnr, "filetype", "octo")
-end
 
 local issue = defaulter(function(opts)
   return previewers.new_buffer_previewer {
@@ -120,7 +90,7 @@ local issue = defaulter(function(opts)
                   return
                 end
 
-                issue_preview(obj, bufnr)
+                writers.issue_preview(obj, bufnr)
               end,
             },
           },
@@ -129,13 +99,6 @@ local issue = defaulter(function(opts)
     end,
   }
 end)
-
----@param obj octo.Release
----@param bufnr integer
-local function release_preview(obj, bufnr)
-  writers.write_release(bufnr, obj)
-  vim.bo[bufnr].filetype = "octo"
-end
 
 --- Supports Issues, Pull Requests, and Discussions
 local notification = defaulter(function(opts)
@@ -151,68 +114,7 @@ local notification = defaulter(function(opts)
         local number = entry.value ---@type string
         local owner, name = utils.split_repo(entry.repo)
 
-        ---Fetches the data for the preview and then shows it with the given preview function
-        ---@param query string
-        ---@param fields table<string, string>
-        ---@param jq string
-        ---@param preview fun(obj: any, bufnr: integer): nil
-        local function fetch_and_preview(query, fields, jq, preview)
-          gh.api.graphql {
-            query = query,
-            fields = fields,
-            jq = jq,
-            opts = {
-              cb = gh.create_callback {
-                failure = vim.api.nvim_err_writeln,
-                success = function(output)
-                  if not vim.api.nvim_buf_is_loaded(bufnr) then
-                    return
-                  end
-
-                  local ok, obj = pcall(vim.json.decode, output)
-                  if not ok then
-                    utils.error("Failed to parse preview data: " .. vim.inspect(output))
-                    return
-                  end
-
-                  preview(obj, bufnr)
-                end,
-              },
-            },
-          }
-        end
-
-        ---@type string, table<string, string>, string, fun(obj: any, bufnr: integer): nil
-        local query, fields, jq, preview
-
-        if entry.kind == "issue" then
-          query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
-          fields = {}
-          jq = ".data.repository.issue"
-          preview = issue_preview
-        elseif entry.kind == "pull_request" then
-          query = graphql("pull_request_query", owner, name, number, _G.octo_pv2_fragment)
-          fields = {}
-          jq = ".data.repository.pullRequest"
-          preview = issue_preview
-        elseif entry.kind == "discussion" then
-          query = queries.discussion
-          fields = { owner = owner, name = name, number = number }
-          jq = ".data.repository.discussion"
-          preview = discussion_preview
-        elseif entry.kind == "release" then
-          -- GraphQL only accepts tags and release notifications give back IDs
-          release.get_tag_from_release_id(entry, function(tag_name)
-            entry.tag_name = tag_name
-            query = queries.release
-            fields = { owner = owner, name = name, tag = tag_name }
-            jq = ".data.repository.release"
-            preview = release_preview
-            fetch_and_preview(query, fields, jq, preview)
-          end)
-          return
-        end
-        fetch_and_preview(query, fields, jq, preview)
+        notifications.populate_preview_buf(bufnr, owner, name, number, entry.kind)
       end
     end,
   }

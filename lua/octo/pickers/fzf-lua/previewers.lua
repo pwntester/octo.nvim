@@ -1,4 +1,5 @@
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
+local notifications = require "octo.notifications"
 local builtin = require "fzf-lua.previewer.builtin"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
@@ -365,6 +366,32 @@ function M.issue_template(formatted_templates)
       vim.api.nvim_buf_set_option(tmpbuf, "filetype", "markdown")
     end
 
+    self:set_preview_buf(tmpbuf)
+    self:update_border(entry.value)
+    self.win:update_preview_scrollbar()
+  end
+
+  return previewer
+end
+
+---@param formatted_notifications table<string, octo.NotificationEntry>
+---@return fzf-lua.previewer.BufferOrFile
+function M.notifications(formatted_notifications)
+  local previewer = M.bufferPreviewer:extend() ---@type fzf-lua.previewer.BufferOrFile
+
+  function previewer:new(o, opts, fzf_win)
+    M.bufferPreviewer.super.new(self, o, opts, fzf_win)
+    setmetatable(self, previewer)
+    return self
+  end
+
+  function previewer:populate_preview_buf(entry_str)
+    local tmpbuf = self:get_tmp_buffer() ---@type integer
+    local entry = formatted_notifications[entry_str]
+    local number = entry.value ---@type string
+    local owner, name = utils.split_repo(entry.repo)
+
+    notifications.populate_preview_buf(tmpbuf, owner, name, number, entry.kind)
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.value)
     self.win:update_preview_scrollbar()
