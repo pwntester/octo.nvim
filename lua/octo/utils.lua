@@ -964,6 +964,10 @@ function M.get_release_uri(...)
   if not release_id then
     return string.format("octo://%s/release/%s", repo, tag_name_or_id)
   end
+  if not repo then
+    M.error "Cannot find repo name"
+    return
+  end
   local owner, name = M.split_repo(repo)
   local tag_name = release.get_tag_from_release_id { owner = owner, repo = name, release_id = tostring(release_id) }
   return string.format("octo://%s/release/%s", repo, tag_name)

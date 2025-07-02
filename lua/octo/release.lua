@@ -13,7 +13,7 @@ function M.get_tag_from_release_id(info, on_success)
     format = { owner = owner, repo = name, release_id = number },
     jq = ".tag_name",
     opts = {
-      mode = mode,
+      mode = mode --[[@as "sync"]],
       cb = gh.create_callback {
         success = function(tag_name)
           assert(on_success, "on_success should be defined")

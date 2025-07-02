@@ -428,7 +428,7 @@ end
 ---@field opts? RunOpts
 
 ---Run a rest command
----@param method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"
+---@param method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"|nil
 ---@param opts RestOpts
 local function rest(method, opts)
   local run_opts = opts.opts or {}
