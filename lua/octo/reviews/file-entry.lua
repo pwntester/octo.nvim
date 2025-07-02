@@ -42,6 +42,8 @@ M._null_buffer = {}
 ---@field right_winid? integer
 ---@field left_comment_ranges? [integer, integer][]
 ---@field right_comment_ranges? [integer, integer][]
+---@field left_fetching boolean
+---@field right_fetching boolean
 ---@field associated_bufs integer[]
 ---@field diffhunks? string[]
 ---@field viewed_state ViewedState
@@ -103,6 +105,8 @@ function FileEntry:new(opt)
     right_lines = {},
     left_fetched = false,
     right_fetched = false,
+    left_fetching = false,
+    right_fetching = false,
     diffhunks = diffhunks,
     associated_bufs = {},
     viewed_state = pr.files[opt.path],
@@ -209,18 +213,29 @@ function FileEntry:get_buf(split)
 end
 
 ---Fetch file content locally or from GitHub.
-function FileEntry:fetch()
+---@param sync boolean
+function FileEntry:fetch(sync)
   local right_path = self.path
   local left_path = self.path
   local current_review = require("octo.reviews").get_current_review()
   if not current_review then
     return
   end
+  local conf = config.values
+  if self.left_fetching or self.right_fetching then
+    if sync then
+      vim.wait(conf.timeout, function()
+        return self:is_ready_to_render()
+      end)
+    end
+    return
+  end
+  self.left_fetching = true
+  self.right_fetching = true
   local right_sha = current_review.layout.right.commit
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
   local left_abbrev = current_review.layout.left:abbrev()
-  local conf = config.values
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
@@ -232,11 +247,13 @@ function FileEntry:fetch()
     utils.get_file_at_commit(right_path, right_sha, function(lines)
       self.right_lines = lines
       self.right_fetched = true
+      self.right_fetching = false
     end)
   else
     utils.get_file_contents(self.pull_request.repo, right_abbrev, right_path, function(lines)
       self.right_lines = lines
       self.right_fetched = true
+      self.right_fetching = false
     end)
   end
 
@@ -245,18 +262,22 @@ function FileEntry:fetch()
     utils.get_file_at_commit(left_path, left_sha, function(lines)
       self.left_lines = lines
       self.left_fetched = true
+      self.left_fetching = false
     end)
   else
     utils.get_file_contents(self.pull_request.repo, left_abbrev, left_path, function(lines)
       self.left_lines = lines
       self.left_fetched = true
+      self.left_fetching = false
     end)
   end
 
   -- wait until we have both versions
-  return vim.wait(conf.timeout, function()
-    return self:is_ready_to_render()
-  end)
+  if sync then
+    vim.wait(conf.timeout, function()
+      return self:is_ready_to_render()
+    end)
+  end
 end
 
 ---Determines whether the file content has been loaded and the file is ready to render
