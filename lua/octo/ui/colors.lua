@@ -3,6 +3,7 @@ local vim = vim
 
 local M = {}
 
+---@param hl_group_name string
 local function get_fg(hl_group_name)
   return vim.api.nvim_get_hl(0, { name = hl_group_name }).fg
 end
@@ -148,17 +149,22 @@ function M.setup()
 end
 
 local HIGHLIGHT_NAME_PREFIX = "octo"
-local HIGHLIGHT_CACHE = {}
+local HIGHLIGHT_CACHE = {} ---@type table<string, string>
 local HIGHLIGHT_MODE_NAMES = {
   background = "mb",
   foreground = "mf",
 }
 
--- from https://github.com/norcalli/nvim-colorizer.lua
+---from https://github.com/norcalli/nvim-colorizer.lua
+---@param rgb string
+---@param mode "background"|"foreground"
 local function make_highlight_name(rgb, mode)
   return table.concat({ HIGHLIGHT_NAME_PREFIX, HIGHLIGHT_MODE_NAMES[mode], rgb }, "_")
 end
 
+---@param r integer
+---@param g integer
+---@param b integer
 local function color_is_bright(r, g, b)
   -- Counting the perceptive luminance - human eye favors green color
   local luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
@@ -169,6 +175,7 @@ local function color_is_bright(r, g, b)
   end
 end
 
+---@param highlight_group_name string
 function M.get_background_color_of_highlight_group(highlight_group_name)
   local highlight_group = vim.api.nvim_get_hl(0, { name = highlight_group_name, link = false })
   local highlight_group_normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
@@ -178,6 +185,8 @@ function M.get_background_color_of_highlight_group(highlight_group_name)
   end
 end
 
+---@param rgb_hex string
+---@param options? {mode: "background"|"foreground"}
 function M.create_highlight(rgb_hex, options)
   options = options or {}
   local mode = options.mode or "background"
@@ -198,9 +207,9 @@ function M.create_highlight(rgb_hex, options)
     if mode == "foreground" then
       vim.api.nvim_set_hl(0, highlight_name, { fg = "#" .. rgb_hex })
     else
-      local r, g, b = rgb_hex:sub(1, 2), rgb_hex:sub(3, 4), rgb_hex:sub(5, 6)
-      r, g, b = tonumber(r, 16), tonumber(g, 16), tonumber(b, 16)
-      local fg_color
+      local r_str, g_str, b_str = rgb_hex:sub(1, 2), rgb_hex:sub(3, 4), rgb_hex:sub(5, 6)
+      local r, g, b = tonumber(r_str, 16), tonumber(g_str, 16), tonumber(b_str, 16)
+      local fg_color ---@type string
       if color_is_bright(r, g, b) then
         fg_color = "000000"
       else
@@ -213,6 +222,8 @@ function M.create_highlight(rgb_hex, options)
   return highlight_name
 end
 
+---@param groups string[]
+---@param example_text? string
 local function display_highlight_groups(groups, example_text)
   -- Check if input is a table
   if type(groups) ~= "table" then
@@ -259,6 +270,7 @@ local function display_highlight_groups(groups, example_text)
   end
 end
 
+---@param example_text? string
 function M.octo_highlight_groups(example_text)
   local groups = {}
   for v, _ in pairs(get_hl_groups()) do

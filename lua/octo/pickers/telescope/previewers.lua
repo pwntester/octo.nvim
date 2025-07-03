@@ -1,3 +1,4 @@
+---@diagnostic disable
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
@@ -39,7 +40,7 @@ local discussion = defaulter(function(opts)
         jq = ".data.repository.discussion",
         opts = {
           cb = gh.create_callback {
-            failure = vim.api.nvim_err_writeln,
+            failure = utils.print_err,
             success = function(output)
               if not vim.api.nvim_buf_is_valid(bufnr) then
                 return
@@ -82,7 +83,7 @@ local issue = defaulter(function(opts)
           jq = jq,
           opts = {
             cb = gh.create_callback {
-              failure = vim.api.nvim_err_writeln,
+              failure = utils.print_err,
               success = function(output)
                 local obj = vim.json.decode(output)
 

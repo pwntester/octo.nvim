@@ -1,3 +1,4 @@
+---@diagnostic disable
 --- Completions while using the search command
 --- https://docs.github.com/en/search-github/searching-on-github
 --- See https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests
@@ -405,6 +406,7 @@ local qualifiers = {
 --- Octo search and Octo pr/issue/discussion search
 --- @param argLead string: The argument lead
 --- @param cmdLine string: The command line
+--- @return string[]
 function M.complete(argLead, cmdLine)
   if not string.match(argLead, ":") then
     local valid = {}

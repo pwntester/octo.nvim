@@ -5,6 +5,7 @@ local mutations = require "octo.gh.mutations"
 ---@param ... string|table
 ---@return string
 return function(query, ...)
+  ---@type string, any
   local suffix, module
   if vim.endswith(query, "_mutation") then
     module = mutations

@@ -5,11 +5,11 @@ local M = {}
 ---@field body string
 ---@field dirty boolean
 ---@field extmark integer|nil
----@field startLine integer
----@field endLine integer
+---@field startLine? integer
+---@field endLine? integer
 ---@field viewerCanUpdate boolean
--- @field reactionGroups table[]
--- @field reactionLine integer
+---@field reactionGroups? octo.ReactionGroupsFragment.reactionGroups[]
+---@field reactionLine? integer
 local BodyMetadata = {}
 BodyMetadata.__index = BodyMetadata
 
@@ -17,13 +17,14 @@ BodyMetadata.__index = BodyMetadata
 ---@return BodyMetadata
 function BodyMetadata:new(opts)
   opts = opts or {}
+  ---@type BodyMetadata
   local this = {
     savedBody = opts.savedBody or "",
     body = opts.body or "",
     dirty = opts.dirty or false,
     extmark = opts.extmark or nil,
     viewerCanUpdate = opts.viewerCanUpdate or false,
-    reactionLine = opts.reactionLine or false,
+    reactionLine = opts.reactionLine or nil,
     reactionGroups = opts.reactionGroups or {},
   }
   setmetatable(this, self)

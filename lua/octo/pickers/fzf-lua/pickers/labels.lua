@@ -1,3 +1,4 @@
+---@diagnostic disable
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"

@@ -17,8 +17,9 @@ local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
 local vim = vim
 
+---@type table<string, { number: integer, title: string }[]>
 _G.octo_repo_issues = {}
----@type table<integer, OctoBuffer|nil>
+---@type table<integer, OctoBuffer>
 _G.octo_buffers = {}
 
 local M = {}
@@ -85,10 +86,10 @@ end
 
 ---@class ReloadOpts
 ---@field bufnr number
----@field verbose boolean
+---@field verbose? boolean
 
 --- Load issue/pr/repo buffer
----@param opts ReloadOpts
+---@param opts? ReloadOpts
 ---@return nil
 function M.load_buffer(opts)
   opts = opts or {}
@@ -103,10 +104,10 @@ function M.load_buffer(opts)
     end
   end
   if (kind == "issue" or kind == "pull") and not repo and not id then
-    vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
+    utils.print_err("Incorrect buffer: " .. bufname)
     return
   elseif kind == "repo" and not repo then
-    vim.api.nvim_err_writeln("Incorrect buffer: " .. bufname)
+    utils.print_err("Incorrect buffer: " .. bufname)
     return
   end
   M.load(repo, kind, id, function(obj)
@@ -130,10 +131,14 @@ function M.load_buffer(opts)
   end)
 end
 
+---@param repo string
+---@param kind "issue"|"pull"|"discussion"|"release"|"repo"
 ---@param id integer|string pull request, issue, or discussion number or release tag
+---@param cb fun(obj: octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository): nil
 function M.load(repo, kind, id, cb)
   local owner, name = utils.split_repo(repo)
 
+  ---@type string, string, table<string, string|integer>
   local query, key, fields
   if kind == "pull" then
     query = graphql("pull_request_query", owner, name, id, _G.octo_pv2_fragment)
@@ -157,18 +162,22 @@ function M.load(repo, kind, id, cb)
   local function load_buffer(output)
     if kind == "pull" or kind == "issue" then
       local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+      ---@type octo.Issue|octo.PullRequest
       local obj = resp.data.repository[key]
       cb(obj)
     elseif kind == "repo" then
       local resp = vim.json.decode(output)
+      ---@type octo.Repository
       local obj = resp.data.repository
       cb(obj)
     elseif kind == "discussion" then
       local resp = utils.aggregate_pages(output, "data.repository.discussion.comments.nodes")
+      ---@type octo.Discussion
       local obj = resp.data.repository.discussion
       cb(obj)
     elseif kind == "release" then
       local resp = vim.json.decode(output)
+      ---@type octo.Release
       local obj = resp.data.repository.release
       cb(obj)
     else
@@ -182,7 +191,7 @@ function M.load(repo, kind, id, cb)
     paginate = true,
     jq = ".",
     opts = {
-      cb = gh.create_callback { failure = vim.api.nvim_err_writeln, success = load_buffer },
+      cb = gh.create_callback { failure = utils.print_err, success = load_buffer },
     },
   }
 end
@@ -206,14 +215,15 @@ function M.on_cursor_hold()
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          utils.print_err(stderr)
         elseif output then
+          ---@type octo.queries.ReactionsForObject
           local resp = vim.json.decode(output)
-          local reactions = {}
+          local reactions = {} ---@type table<string, string[]>
           local reactionGroups = resp.data.node.reactionGroups
           for _, reactionGroup in ipairs(reactionGroups) do
             local users = reactionGroup.users.nodes
-            local logins = {}
+            local logins = {} ---@type string[]
             for _, user in ipairs(users) do
               table.insert(logins, user.login)
             end
@@ -242,8 +252,9 @@ function M.on_cursor_hold()
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          utils.print_err(stderr)
         elseif output then
+          ---@type octo.queries.UserProfile
           local resp = vim.json.decode(output)
           local user = resp.data.user
           local popup_bufnr = vim.api.nvim_create_buf(false, true)
@@ -264,6 +275,9 @@ function M.on_cursor_hold()
   if not repo or not number then
     return
   end
+  ---@generic TData
+  ---@param data TData
+  ---@param write_summary fun(bufnr: integer, data: TData, opts: { max_length: integer }): integer
   local function write_popup(data, write_summary)
     local popup_bufnr = vim.api.nvim_create_buf(false, true)
     local max_length = 80
@@ -282,6 +296,7 @@ function M.on_cursor_hold()
     opts = {
       cb = gh.create_callback {
         success = function(output)
+          ---@type octo.IssueOrPullRequestSummary
           local issue = vim.json.decode(output)
           write_popup(issue, writers.write_issue_summary)
         end,
@@ -292,8 +307,9 @@ function M.on_cursor_hold()
             jq = ".data.repository.discussion",
             opts = {
               cb = gh.create_callback {
-                failure = vim.api.nvim_err_writeln,
+                failure = utils.print_err,
                 success = function(output)
+                  ---@type octo.DiscussionSummary
                   local discussion = vim.json.decode(output)
                   write_popup(discussion, writers.write_discussion_summary)
                 end,
@@ -306,13 +322,17 @@ function M.on_cursor_hold()
   }
 end
 
+---@param kind "repo"|"discussion"|"release"|"issue"|"pull_request"
+---@param obj octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository
+---@param repo string
+---@param create boolean
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
     utils.error("Cannot find " .. repo)
     return
   end
 
-  local bufnr
+  local bufnr ---@type integer
   if create then
     bufnr = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_set_current_buf(bufnr)

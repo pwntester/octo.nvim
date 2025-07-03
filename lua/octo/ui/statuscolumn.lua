@@ -12,13 +12,18 @@ local corners = {
 
 ---@alias OctoSign {text: string, hl?: string}
 ---@alias OctoComment { from: number, to: number, dirty: boolean }
----@type table<number, OctoComment[]>
+---@type table<integer, OctoComment[]>
 local comments = {}
 
+---@param buf integer
 function M.reset(buf)
   comments[buf] = nil
 end
 
+---@param bufnr integer
+---@param start_line integer
+---@param end_line integer
+---@param is_dirty boolean
 function M.add(bufnr, start_line, end_line, is_dirty)
   comments[bufnr] = comments[bufnr] or {}
   table.insert(comments[bufnr], { from = start_line, to = end_line, dirty = is_dirty })
