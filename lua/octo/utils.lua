@@ -714,13 +714,11 @@ function M.format_date(date_string, round_under_one_minute)
   if days > 30 then
     local dateOutput = os.date("*t", parsedTimeLocal)
     if dateOutput.year == os.date("*t", localTime).year then
-      return os
-        .date("%B %d", parsedTimeLocal) --[[@as string]]
-        "Month Day"
+      -- "Month Day"
+      return os.date("%B %d", parsedTimeLocal) --[[@as string]]
     else
-      return os
-        .date("%Y %B %d", parsedTimeLocal) --[[@as string]]
-        "Year Month Day"
+      -- "Year Month Day"
+      return os.date("%Y %B %d", parsedTimeLocal) --[[@as string]]
     end
   end
 
@@ -884,11 +882,13 @@ function M.get_nested_prop(obj, prop)
 end
 
 ---Escapes a characters on a string to be used as a JSON string
+---@param s string
 ---@return string
-function M.escape_char(string)
-  return string.gsub(string, "[\\]", {
+function M.escape_char(s)
+  local escaped = string.gsub(s, "[\\]", {
     ["\\"] = "\\\\",
   })
+  return escaped
 end
 
 --- Gets the repo and id from args.

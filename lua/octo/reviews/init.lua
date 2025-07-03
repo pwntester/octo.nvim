@@ -397,6 +397,10 @@ function Review:add_comment(isSuggestion)
   else
     return
   end
+  if not current_bufnr or not comment_ranges then
+    utils.error "Failed to create comment"
+    return
+  end
 
   local diff_hunk ---@type string
   -- for non-added files, check we are in a valid comment range

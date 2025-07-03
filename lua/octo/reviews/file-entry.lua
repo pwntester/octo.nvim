@@ -23,27 +23,27 @@ M._null_buffer = {}
 ---@field path string
 ---@field previous_path string
 ---@field basename string
----@field extension string
+---@field extension? string
 ---@field pull_request PullRequest
 ---@field status string
 ---@field patch string
 ---@field stats GitStats
 ---@field left_binary boolean|nil
 ---@field right_binary boolean|nil
----@field left_bufid integer
----@field right_bufid integer
+---@field left_bufid? integer
+---@field right_bufid? integer
 ---@field left_lines string[]
 ---@field right_lines string[]
 --- If either left_fetched or right_fetched is false,
 --- the buffer is not ready to be displayed.
 ---@field left_fetched boolean
 ---@field right_fetched boolean
----@field left_winid number
----@field right_winid number
----@field left_comment_ranges [integer, integer][]
----@field right_comment_ranges [integer, integer][]
+---@field left_winid? integer
+---@field right_winid? integer
+---@field left_comment_ranges? [integer, integer][]
+---@field right_comment_ranges? [integer, integer][]
 ---@field associated_bufs integer[]
----@field diffhunks string[]
+---@field diffhunks? string[]
 ---@field viewed_state ViewedState
 local FileEntry = {}
 FileEntry.__index = FileEntry
@@ -85,6 +85,7 @@ function FileEntry:new(opt)
     diffhunks, left_ranges, right_ranges = utils.process_patch(opt.patch)
   end
 
+  ---@type FileEntry
   local this = {
     path = opt.path,
     previous_path = opt.previous_path,

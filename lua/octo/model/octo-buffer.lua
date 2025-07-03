@@ -823,9 +823,21 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         diffhunks, left_comment_ranges, right_comment_ranges =
           file.diffhunks, file.left_comment_ranges, file.right_comment_ranges
         local comment_ranges ---@type [integer, integer][]
+        if not diffhunks then
+          utils.error "Diff hunks not found"
+          return
+        end
         if comment_metadata.diffSide == "RIGHT" then
+          if not right_comment_ranges then
+            utils.error "Right comment ranges not found"
+            return
+          end
           comment_ranges = right_comment_ranges
         elseif comment_metadata.diffSide == "LEFT" then
+          if not left_comment_ranges then
+            utils.error "Left comment ranges not found"
+            return
+          end
           comment_ranges = left_comment_ranges
         end
         local idx, offset = 0, 0
