@@ -35,6 +35,7 @@ local M = {}
 ---    issue_templates?: OctoSnacksActionList,
 ---    search?: OctoSnacksActionList,
 ---    changed_files?: OctoSnacksActionList,
+---    commits?: OctoSnacksActionList,
 ---  }
 
 ---@class OctoPickerConfig
@@ -166,6 +167,7 @@ function M.get_default_values()
           issue_templates = {},
           search = {},
           changed_files = {},
+          commits = {},
         },
       },
     },
