@@ -1162,7 +1162,28 @@ M.add_pr_issue_or_review_thread_comment_reply = function()
     return
   end
 
-  M.add_pr_issue_or_review_thread_comment(format_reply(comment.body))
+  local reply_body = format_reply(comment.body)
+  M.add_pr_issue_or_review_thread_comment(reply_body)
+
+  -- Position cursor after the quoted content for replies
+  vim.schedule(function()
+    local current_line = vim.api.nvim_win_get_cursor(0)[1]
+    local lines = vim.api.nvim_buf_get_lines(buffer.bufnr, current_line - 10, current_line + 5, false)
+
+    -- Find the last line with quoted content and position cursor after it
+    for i = #lines, 1, -1 do
+      local line = lines[i]
+      if line and line:match "^>" then
+        -- Found last quoted line, position cursor at the end and create new line for response
+        local target_line = current_line - 10 + i
+        vim.api.nvim_win_set_cursor(0, { target_line, #line })
+        vim.cmd [[startinsert!]]
+        -- Add two newlines to create space for typing the response
+        vim.api.nvim_feedkeys("\n\n", "n", false)
+        return
+      end
+    end
+  end)
 end
 
 function M.delete_comment()
