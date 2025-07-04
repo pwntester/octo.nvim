@@ -51,6 +51,9 @@ return {
   copy_url = function()
     require("octo.commands").copy_url()
   end,
+  copy_sha = function()
+    require("octo.commands").copy_sha()
+  end,
   create_label = function()
     require("octo.commands").create_label()
   end,

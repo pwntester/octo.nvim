@@ -1971,6 +1971,15 @@ function M.copy_url(url, register)
   M.info("Copied '" .. url .. "' " .. message)
 end
 
+---@param sha string
+---@param register? string
+function M.copy_sha(sha, register)
+  register = register or "+"
+  vim.fn.setreg(register, sha, "c")
+  local message = register ~= "+" and "(" .. register .. " register)" or "to the system clipboard (+ register)"
+  M.info("Copied SHA '" .. sha:sub(1, 7) .. "' " .. message)
+end
+
 ---@param opts { prompt: string }
 function M.input(opts)
   vim.fn.inputsave()

@@ -264,6 +264,29 @@ function M.pull_requests(opts)
           final_keys[cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = default_mode }
         end
 
+        if not custom_actions_defined["copy_sha"] then
+          final_actions["copy_sha"] = function(_picker, item)
+            -- Fetch PR details to get the head SHA
+            utils.info "Fetching PR details for SHA..."
+            local owner, repo = utils.split_repo(item.repository.nameWithOwner)
+            gh.api.get {
+              "/repos/{owner}/{repo}/pulls/{pull_number}",
+              format = { owner = owner, repo = repo, pull_number = item.number },
+              opts = {
+                cb = gh.create_callback {
+                  success = function(output)
+                    local pr_data = vim.json.decode(output)
+                    utils.copy_sha(pr_data.head.sha)
+                  end,
+                },
+              },
+            }
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.copy_sha.lhs] then
+          final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
+        end
+
         Snacks.picker.pick {
           title = opts.preview_title or "Pull Requests",
           items = pull_requests,
@@ -383,6 +406,34 @@ function M.notifications(opts)
         end
         if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+        end
+
+        if not custom_actions_defined["copy_sha"] then
+          final_actions["copy_sha"] = function(_picker, item)
+            if item.kind == "pull_request" then
+              -- For PR notifications, we need to fetch the PR details to get the head SHA
+              -- This is a simplified approach - in a real implementation, you might want to cache this
+              utils.info "Fetching PR details for SHA..."
+              local owner, repo = item.repository.full_name:match "([^/]+)/(.+)"
+              gh.api.get {
+                "/repos/{owner}/{repo}/pulls/{pull_number}",
+                format = { owner = owner, repo = repo, pull_number = item.subject.number },
+                opts = {
+                  cb = gh.create_callback {
+                    success = function(output)
+                      local pr_data = vim.json.decode(output)
+                      utils.copy_sha(pr_data.head.sha)
+                    end,
+                  },
+                },
+              }
+            else
+              utils.info "Copy SHA not available for this notification type"
+            end
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.copy_sha.lhs] then
+          final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
         end
 
         if not custom_actions_defined["mark_notification_read"] then
@@ -636,6 +687,33 @@ function M.search(opts)
     end
     if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
       final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+    end
+
+    if not custom_actions_defined["copy_sha"] then
+      final_actions["copy_sha"] = function(_picker, item)
+        if item.kind == "pull_request" then
+          -- For PR search results, we need to fetch the PR details to get the head SHA
+          utils.info "Fetching PR details for SHA..."
+          local owner, repo = utils.split_repo(item.repository.nameWithOwner)
+          gh.api.get {
+            "/repos/{owner}/{repo}/pulls/{pull_number}",
+            format = { owner = owner, repo = repo, pull_number = item.number },
+            opts = {
+              cb = gh.create_callback {
+                success = function(output)
+                  local pr_data = vim.json.decode(output)
+                  utils.copy_sha(pr_data.head.sha)
+                end,
+              },
+            },
+          }
+        else
+          utils.info "Copy SHA not available for this item type"
+        end
+      end
+    end
+    if not final_keys[cfg.picker_config.mappings.copy_sha.lhs] then
+      final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
     end
 
     Snacks.picker.pick {

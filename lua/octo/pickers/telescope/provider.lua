@@ -132,6 +132,17 @@ local function copy_url()
   end
 end
 
+local function copy_sha()
+  ---@param prompt_bufnr integer
+  return function(prompt_bufnr)
+    ---@diagnostic disable-next-line: redundant-parameter
+    local entry = action_state.get_selected_entry(prompt_bufnr)
+    -- Handle different entry structures
+    local sha = entry.obj and entry.obj.sha or entry.value
+    utils.copy_sha(sha)
+  end
+end
+
 local function open_buffer(prompt_bufnr, type)
   open(type)(prompt_bufnr)
 end
@@ -206,6 +217,7 @@ function M.issues(opts)
               action_set.select:replace(replace)
               map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
               map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+              map("i", cfg.picker_config.mappings.copy_sha.lhs, copy_sha()())
               return true
             end,
           })
@@ -353,6 +365,24 @@ function M.pull_requests(opts)
               map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
               map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
               map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+              map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
+                local entry = action_state.get_selected_entry(prompt_bufnr)
+                -- Fetch PR details to get the head SHA
+                utils.info "Fetching PR details for SHA..."
+                local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
+                gh.api.get {
+                  "/repos/{owner}/{repo}/pulls/{pull_number}",
+                  format = { owner = owner, repo = repo, pull_number = entry.obj.number },
+                  opts = {
+                    cb = gh.create_callback {
+                      success = function(output)
+                        local pr_data = vim.json.decode(output)
+                        utils.copy_sha(pr_data.head.sha)
+                      end,
+                    },
+                  },
+                }
+              end)
               map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
               return true
             end,
@@ -391,10 +421,11 @@ function M.commits()
             },
             sorter = conf.generic_sorter {},
             previewer = previewers.commit.new { repo = buffer.repo },
-            attach_mappings = function()
+            attach_mappings = function(_, map)
               action_set.select:replace(function(prompt_bufnr, type)
                 open_preview_buffer(type)(prompt_bufnr)
               end)
+              map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
               return true
             end,
           })
@@ -450,7 +481,7 @@ function M.review_commits(callback)
             },
             sorter = conf.generic_sorter {},
             previewer = previewers.commit.new { repo = current_review.pull_request.repo },
-            attach_mappings = function()
+            attach_mappings = function(_, map)
               action_set.select:replace(function(prompt_bufnr)
                 local commit = action_state.get_selected_entry(prompt_bufnr)
                 local right = commit.value
@@ -458,6 +489,7 @@ function M.review_commits(callback)
                 actions.close(prompt_bufnr)
                 callback(right, left)
               end)
+              map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
               return true
             end,
           })
@@ -700,6 +732,28 @@ function M.search(opts)
         action_set.select:replace(replace)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
         map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+        map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
+          local entry = action_state.get_selected_entry(prompt_bufnr)
+          if entry.obj.__typename == "PullRequest" then
+            -- Fetch PR details to get the head SHA
+            utils.info "Fetching PR details for SHA..."
+            local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
+            gh.api.get {
+              "/repos/{owner}/{repo}/pulls/{pull_number}",
+              format = { owner = owner, repo = repo, pull_number = entry.obj.number },
+              opts = {
+                cb = gh.create_callback {
+                  success = function(output)
+                    local pr_data = vim.json.decode(output)
+                    utils.copy_sha(pr_data.head.sha)
+                  end,
+                },
+              },
+            }
+          else
+            utils.info "Copy SHA not available for this item type"
+          end
+        end)
         if opts.search_prs then
           map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
           map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
@@ -1406,6 +1460,29 @@ function M.notifications(opts)
           end)
           map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
           map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
+          map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
+            local entry = action_state.get_selected_entry(prompt_bufnr)
+            if entry.obj.subject.type == "PullRequest" then
+              -- Fetch PR details to get the head SHA
+              utils.info "Fetching PR details for SHA..."
+              local owner, repo = entry.obj.repository.full_name:match "([^/]+)/(.+)"
+              local number = entry.obj.subject.url:match "%d+$"
+              gh.api.get {
+                "/repos/{owner}/{repo}/pulls/{pull_number}",
+                format = { owner = owner, repo = repo, pull_number = number },
+                opts = {
+                  cb = gh.create_callback {
+                    success = function(output)
+                      local pr_data = vim.json.decode(output)
+                      utils.copy_sha(pr_data.head.sha)
+                    end,
+                  },
+                },
+              }
+            else
+              utils.info "Copy SHA not available for this notification type"
+            end
+          end)
           map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
           map("i", cfg.mappings.notification.done.lhs, mark_notification_done())
           map("i", cfg.mappings.notification.unsubscribe.lhs, unsubscribe_notification())
