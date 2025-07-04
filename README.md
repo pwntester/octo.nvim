@@ -125,6 +125,7 @@ require"octo".setup({
     mappings = {                           -- mappings for the pickers
       open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+      copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
       checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
       merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
     },
@@ -422,6 +423,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reload                                            | Reload PR. Same as doing `e!`                                                                                                                          |
 |          | browser                                           | Open current PR in the browser                                                                                                                         |
 |          | url                                               | Copies the URL of the current PR to the system clipboard                                                                                               |
+|          | sha                                               | Copies the head commit SHA of the current PR to the system clipboard                                                                                   |
 |          | runs                                              | List all workflow runs for the PR                                                                                                                      |
 | repo     | list (3)                                          | List repos user owns, contributes or belong to                                                                                                         |
 |          | fork                                              | Fork repo                                                                                                                                              |
@@ -492,6 +494,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `<CR>`: Edit Issue
 - `<C-b>`: Opens issue in the browser
 - `<C-y>`: Copies URL to system clipboard
+- `<C-e>`: Copies commit SHA to system clipboard (where applicable)
 
 [Available filter keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
@@ -509,6 +512,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `<C-b>`: Opens PR in the browser
 - `<C-o>`: Checkout PR
 - `<C-y>`: Copies URL to system clipboard
+- `<C-e>`: Copies commit SHA to system clipboard (for commits and PRs)
 
 [Available filter keys](https://github.com/pwntester/octo.nvim/blob/master/lua/octo/pickers/telescope/provider.lua#L34)
 
