@@ -79,7 +79,7 @@ function M.populate_preview_buf(bufnr, owner, name, number, kind)
       jq = jq,
       opts = {
         cb = gh.create_callback {
-          failure = vim.api.nvim_err_writeln,
+          failure = utils.print_err,
           success = function(output)
             if not vim.api.nvim_buf_is_loaded(bufnr) then
               return

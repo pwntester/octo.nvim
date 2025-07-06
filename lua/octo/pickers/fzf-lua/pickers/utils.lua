@@ -1,3 +1,4 @@
+---@diagnostic disable
 local navigation = require "octo.navigation"
 local utils = require "octo.utils"
 local fzf_utils = require "fzf-lua.utils"

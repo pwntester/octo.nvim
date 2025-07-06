@@ -1,3 +1,4 @@
+---@diagnostic disable
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"

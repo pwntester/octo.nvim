@@ -1,3 +1,4 @@
+---@diagnostic disable
 local entry_display = require "telescope.pickers.entry_display"
 local bubbles = require "octo.ui.bubbles"
 local utils = require "octo.utils"

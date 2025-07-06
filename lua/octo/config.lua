@@ -116,7 +116,7 @@ local M = {}
 ---@field outdated_icon string
 ---@field resolved_icon string
 ---@field timeline_marker string
----@field timeline_indent string
+---@field timeline_indent number
 ---@field use_timeline_icons boolean
 ---@field timeline_icons table
 ---@field right_bubble_delimiter string
@@ -126,7 +126,7 @@ local M = {}
 ---@field enable_builtin boolean
 ---@field snippet_context_lines number
 ---@field gh_cmd string
----@field gh_env table
+---@field gh_env (table<string, string|integer>)|(fun(): table<string, string|integer>)
 ---@field timeout number
 ---@field default_to_projects_v2 boolean
 ---@field suppress_missing_scope OctoMissingScopeConfig
@@ -179,7 +179,7 @@ function M.get_default_values()
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
     timeline_marker = " ",
-    timeline_indent = "2",
+    timeline_indent = 2,
     use_timeline_icons = true,
     timeline_icons = {
       commit_push = "  ",
@@ -515,6 +515,7 @@ function M.validate_config()
 
     validate_type(config.picker_config.use_emojis, "picker_config.use_emojis", "boolean")
     if validate_type(config.picker_config.mappings, "picker_config.mappings", "table") then
+      ---@diagnostic disable-next-line: no-unknown
       for action, map in pairs(config.picker_config.mappings) do
         if validate_type(map, string.format("picker_config.mappings.%s", action), "table") then
           validate_type(map.lhs, string.format("picker_config.mappings.%s.lhs", action), "string")
@@ -526,7 +527,8 @@ function M.validate_config()
     -- Snacks specific validation
     if validate_type(config.picker_config.snacks, "picker_config.snacks", "table") then
       -- Validate actions (new array structure)
-      if validate_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table", true) then -- Optional table
+      if validate_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table") then -- Optional table
+        ---@diagnostic disable-next-line: no-unknown
         for picker_type, actions_array in pairs(config.picker_config.snacks.actions) do
           local base_name = string.format("picker_config.snacks.actions.%s", picker_type)
           if validate_type(actions_array, base_name, "table") then -- Should be an array (table)
@@ -537,9 +539,9 @@ function M.validate_config()
                 validate_type(action_item.name, item_name .. ".name", "string")
                 validate_type(action_item.fn, item_name .. ".fn", "function")
                 -- Validate optional fields
-                validate_type(action_item.lhs, item_name .. ".lhs", "string", true)
-                validate_type(action_item.desc, item_name .. ".desc", "string", true)
-                if validate_type(action_item.mode, item_name .. ".mode", "table", true) then -- Optional mode table
+                validate_type(action_item.lhs, item_name .. ".lhs", "string")
+                validate_type(action_item.desc, item_name .. ".desc", "string")
+                if validate_type(action_item.mode, item_name .. ".mode", "table") then -- Optional mode table
                   for j, mode_val in ipairs(action_item.mode) do
                     validate_type(mode_val, string.format("%s.mode[%d]", item_name, j), "string")
                   end
@@ -626,11 +628,12 @@ function M.validate_config()
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")
     validate_type(config.timeline_marker, "timeline_marker", "string")
-    validate_type(config.timeline_indent, "timeline_indent", "string")
+    validate_type(config.timeline_indent, "timeline_indent", "number")
     validate_type(config.right_bubble_delimiter, "right_bubble_delimiter", "string")
     validate_type(config.left_bubble_delimiter, "left_bubble_delimiter", "string")
     validate_type(config.github_hostname, "github_hostname", "string")
     if validate_type(config.default_remote, "default_remote", "table") then
+      ---@diagnostic disable-next-line: no-unknown
       for _, v in ipairs(config.default_remote) do
         validate_type(v, "remote", "string")
       end
@@ -642,6 +645,7 @@ function M.validate_config()
       validate_type(config.ui.use_foldtext, "ui.use_foldtext", "boolean")
     end
     if validate_type(config.colors, "colors", "table") then
+      ---@diagnostic disable-next-line: no-unknown
       for k, v in pairs(config.colors) do
         validate_type(v, string.format("colors.%s", k), "string")
       end

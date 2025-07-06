@@ -30,6 +30,7 @@ function M.show_review_threads(jump_to_buffer)
 
   local pr = file.pull_request
   local review_level = review:get_level()
+  ---@type octo.ReviewThread[]
   local threads = vim.tbl_values(review.threads)
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
@@ -91,6 +92,8 @@ function M.show_review_threads(jump_to_buffer)
   end
 end
 
+---@param split OctoSplit
+---@param file FileEntry
 function M.hide_thread_buffer(split, file)
   local alt_buf = file:get_alternative_buf(split)
   local alt_win = file:get_alternative_win(split)
@@ -108,10 +111,10 @@ end
 
 ---Create a thread buffer
 ---@param threads ReviewThread[]
----@param repo any
----@param number any
----@param side any
----@param path any
+---@param repo string
+---@param number integer
+---@param side string
+---@param path string
 ---@return OctoBuffer | nil
 function M.create_thread_buffer(threads, repo, number, side, path)
   local current_review = require("octo.reviews").get_current_review()

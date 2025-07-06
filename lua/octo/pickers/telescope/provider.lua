@@ -1,3 +1,4 @@
+---@diagnostic disable
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
@@ -35,6 +36,8 @@ local dropdown_opts = require("telescope.themes").get_dropdown {
   previewer = false,
 }
 
+---@param opts {[string]: string}
+---@param kind "issue"|"pull_request"
 local function get_filter(opts, kind)
   local filter = ""
   local allowed_values = {}
@@ -46,7 +49,7 @@ local function get_filter(opts, kind)
 
   for _, value in pairs(allowed_values) do
     if opts[value] then
-      local val
+      local val ---@type string[]|string
       if #vim.split(opts[value], ",") > 1 then
         -- list
         val = vim.split(opts[value], ",")
@@ -66,7 +69,9 @@ local function get_filter(opts, kind)
 end
 
 local function open(command)
+  ---@param prompt_bufnr integer
   return function(prompt_bufnr)
+    ---@diagnostic disable-next-line: redundant-parameter
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
     if command == "default" then
@@ -87,6 +92,7 @@ end
 local function open_preview_buffer(command)
   return function(prompt_bufnr)
     actions.close(prompt_bufnr)
+    ---@type integer
     local preview_bufnr = require("telescope.state").get_global_key "last_preview_bufnr"
     if command == "default" then
       vim.cmd(string.format(":buffer %d", preview_bufnr))
@@ -103,7 +109,9 @@ local function open_preview_buffer(command)
 end
 
 local function open_in_browser()
+  ---@param prompt_bufnr integer
   return function(prompt_bufnr)
+    ---@diagnostic disable-next-line: redundant-parameter
     local entry = action_state.get_selected_entry(prompt_bufnr)
     local number
     local repo = entry.repo
@@ -116,7 +124,9 @@ local function open_in_browser()
 end
 
 local function copy_url()
+  ---@param prompt_bufnr integer
   return function(prompt_bufnr)
+    ---@diagnostic disable-next-line: redundant-parameter
     local entry = action_state.get_selected_entry(prompt_bufnr)
     utils.copy_url(entry.obj.url)
   end
@@ -1524,7 +1534,7 @@ function M.milestones(opts)
   end
 
   local repo = opts.repo or utils.get_remote_name()
-  local owner, name = utils.split_repo(repo)
+  local owner, name = utils.split_repo(repo --[[@as string]])
 
   gh.api.graphql {
     query = queries.open_milestones,
@@ -1568,7 +1578,7 @@ function M.milestones(opts)
               entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
             },
             sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
+            attach_mappings = function(_, _map)
               actions.select_default:replace(function(prompt_bufnr)
                 select {
                   bufnr = prompt_bufnr,
@@ -1633,7 +1643,7 @@ function M.project_columns_v2(cb)
               entry_maker = entry_maker.gen_from_project_v2(),
             },
             sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
+            attach_mappings = function(_, _map)
               actions.select_default:replace(function(prompt_bufnr)
                 select {
                   bufnr = prompt_bufnr,

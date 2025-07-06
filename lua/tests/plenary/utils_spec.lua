@@ -1,3 +1,4 @@
+---@diagnostic disable
 local this = require "octo.utils"
 local eq = assert.are.same
 

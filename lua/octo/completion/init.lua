@@ -1,10 +1,11 @@
+---@diagnostic disable
 local M = {}
 local vim = vim
 local utils = require "octo.utils"
 
 ---@param argLead string
 ---@param cmdLine string
----@return string[]
+---@return string[]?
 function M.octo_command_complete(argLead, cmdLine)
   -- ArgLead		the leading portion of the argument currently being completed on
   -- CmdLine		the entire command line

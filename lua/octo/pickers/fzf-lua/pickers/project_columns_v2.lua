@@ -1,3 +1,4 @@
+---@diagnostic disable
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"

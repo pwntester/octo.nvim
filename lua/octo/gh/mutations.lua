@@ -77,6 +77,20 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+---@class octo.mutations.StartReview
+---@field data {
+---  addPullRequestReview: {
+---    pullRequestReview: {
+---      id: string,
+---      state: string,
+---      pullRequest: {
+---        reviewThreads: {
+---          nodes: octo.ReviewThread[],
+---        },
+---      },
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
 M.start_review = [[
@@ -206,6 +220,51 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+---@class octo.mutations.AddPullRequestReviewThread
+---@field data {
+---  addPullRequestReviewThread: {
+---    thread: {
+---      id: string,
+---      comments: {
+---        nodes: {
+---          id: string,
+---          body: string,
+---          diffHunk: string,
+---          createdAt: string,
+---          lastEditedAt: string,
+---          commit: {
+---            oid: string,
+---            abbreviatedOid: string,
+---          },
+---          author: {
+---            login: string,
+---          },
+---          authorAssociation: string,
+---          viewerDidAuthor: boolean,
+---          viewerCanUpdate: boolean,
+---          viewerCanDelete: boolean,
+---          state: string,
+---          url: string,
+---          replyTo: {
+---            id: string,
+---            url: string,
+---          },
+---          pullRequest: {
+---            reviewThreads: {
+---              nodes: octo.ReviewThread[],
+---            },
+---          },
+---          path: string,
+---        }[],
+---      },
+---      pullRequest: {
+---        reviewThreads: {
+---          nodes: octo.ReviewThread[],
+---        },
+---      },
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
 M.add_pull_request_review_multiline_thread = [[
@@ -256,6 +315,17 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+---@class octo.mutations.AddIssueComment
+---@field data {
+---  addComment: {
+---    commentEdge: {
+---      node: {
+---        id: string,
+---        body: string,
+---      },
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addcomment
 M.add_issue_comment = [[
@@ -270,6 +340,15 @@ mutation {
   }
 }
 ]]
+---@class octo.mutations.UpdateIssueComment
+---@field data {
+---  updateIssueComment: {
+---    issueComment: {
+---      id: string,
+---      body: string,
+---    },
+---  },
+---}j
 
 -- https://docs.github.com/en/graphql/reference/mutations#updateissuecomment
 M.update_issue_comment = [[
@@ -282,6 +361,15 @@ mutation {
   }
 }
 ]]
+---@class octo.mutations.UpdateDiscussionComment
+---@field data {
+---  updateDiscussionComment: {
+---    comment: {
+---      id: string,
+---      body: string,
+---    },
+---  },
+---}
 
 --- https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#updatediscussioncomment
 M.update_discussion_comment = [[
@@ -294,6 +382,20 @@ mutation {
   }
 }
 ]]
+---@class octo.mutations.UpdatePullRequestReviewComment
+---@field data {
+---  updatePullRequestReviewComment: {
+---    pullRequestReviewComment: {
+---      id: string,
+---      body: string,
+---      pullRequest: {
+---        reviewThreads: {
+---          nodes: octo.ReviewThread[],
+---        },
+---      },
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreviewcomment
 M.update_pull_request_review_comment = [[
@@ -318,6 +420,16 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+---@class octo.mutations.UpdateDiscussion
+---@field data {
+---  updateDiscussion: {
+---    discussion: {
+---      id: string,
+---      title: string,
+---      body: string,
+---    },
+---  },
+---}
 
 M.update_discussion = [[
 mutation {
@@ -349,6 +461,16 @@ mutation($discussion_id: ID!, $body: String!, $reply_to_id: ID) {
   }
 }
 ]]
+---@class octo.mutations.UpdatePullRequestReview
+---@field data {
+---  updatePullRequestReview: {
+---    pullRequestReview: {
+---      id: string,
+---      state: string,
+---      body: string,
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
 M.update_pull_request_review = [[
@@ -362,6 +484,20 @@ mutation {
   }
 }
 ]]
+---@class octo.mutations.AddPullRequestReviewComment
+---@field data {
+---  addPullRequestReviewComment: {
+---    comment: {
+---      id: string,
+---      body: string,
+---      pullRequest: {
+---        reviewThreads: {
+---          nodes: octo.ReviewThread[],
+---        },
+---      },
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_comment = [[
@@ -386,6 +522,20 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+---@class octo.mutations.AddPullRequestReviewCommitThread
+---@field data {
+---  addPullRequestReviewComment: {
+---    comment: {
+---      id: string,
+---      body: string,
+---      pullRequest: {
+---        reviewThreads: {
+---          nodes: octo.ReviewThread[],
+---        },
+---      },
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
 M.add_pull_request_review_commit_thread = [[
@@ -462,6 +612,21 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+---@class octo.mutations.UpdateIssue
+---@field data {
+---  updateIssue: {
+---    issue: {
+---      id: string,
+---      number: integer,
+---      state: string,
+---      title: string,
+---      body: string,
+---      repository: {
+---        nameWithOwner: string,
+---      },
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue = [[
@@ -629,6 +794,18 @@ mutation($issueId: ID!) {
   }
 }
 ]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
+---@class octo.mutations.UpdatePullRequest
+---@field data {
+---  updatePullRequest: {
+---    pullRequest: {
+---      id: string,
+---      number: integer,
+---      state: string,
+---      title: string,
+---      body: string,
+---    },
+---  },
+---}
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request = [[

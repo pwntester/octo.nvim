@@ -1,3 +1,4 @@
+---@diagnostic disable
 local config = require "octo.config"
 
 describe("Octo config", function()

@@ -72,7 +72,7 @@ local gh = require "octo.gh"
 ---@field icon string
 ---@field status string
 ---@field conclusion string
----@field children table<string, WorkflowNode>
+---@field children WorkflowNode[]
 
 local M = {
   buf = nil,
@@ -80,6 +80,7 @@ local M = {
   filetype = "",
   tree = {},
   current_wf = nil,
+  ---@type table<string, WorkflowRun>
   wf_cache = {},
 }
 
@@ -175,6 +176,7 @@ local function generate_workflow_tree(data)
   return root
 end
 
+---@param logLine string?
 local function extract_after_timestamp(logLine)
   if logLine == nil then
     return ""
@@ -201,8 +203,9 @@ function M.traverse(tree, cb)
   end
 end
 
+---@param lines string[]
 local function collapse_groups(lines)
-  local collapsed = {}
+  local collapsed = {} ---@type string[]
   local current_group = nil
 
   for _, line in ipairs(lines) do
@@ -229,6 +232,8 @@ local function collapse_groups(lines)
   return collapsed
 end
 
+---@param value string
+---@param indent number
 local function create_log_child(value, indent)
   return {
     display = extract_after_timestamp(value)
@@ -324,7 +329,7 @@ local function get_logs(id)
       utils.error("Failed to extract logs for " .. node.id)
     end
 
-    local lines = vim.tbl_filter(function(i)
+    local lines = vim.tbl_filter(function(i) ---@param i string
       return i ~= nil and i ~= ""
     end, vim.split(res.stdout, "\n"))
 
@@ -351,8 +356,8 @@ local function get_logs(id)
   end
 end
 
+---@type table<string, fun(api: Handler): nil>
 local keymaps = {
-  ---@param api Handler
   [mappings.refresh.lhs] = function(api)
     utils.info "Refreshing..."
     api.refetch()
@@ -379,6 +384,8 @@ local keymaps = {
   end,
 }
 
+---@param tree WorkflowNode
+---@param target_id string
 local function find_parent(tree, target_id)
   if not tree or not tree.children then
     return nil
@@ -397,8 +404,8 @@ local function find_parent(tree, target_id)
   return nil
 end
 
+---@type table<string, fun(node: WorkflowNode): nil>
 local tree_keymaps = {
-  ---@param node WorkflowNode
   [mappings.expand_step.lhs] = function(node)
     if node.type == "step_log" and not next(node.children) then
       local parent = find_parent(M.tree, node.id)
@@ -522,8 +529,6 @@ local function get_workflow_header()
 end
 
 local function update_job_details(id)
-  ---@type WorkflowRun
-  local job_details = {}
   if M.wf_cache[id] ~= nil then
     M.refresh()
     return
@@ -535,10 +540,11 @@ local function update_job_details(id)
     opts = {
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          utils.print_err(stderr)
           utils.error("Failed to get workflow run for " .. id)
         elseif output then
-          job_details = vim.json.decode(output)
+          ---@type WorkflowRun
+          local job_details = vim.json.decode(output)
           M.wf_cache[id] = job_details
           M.current_wf = job_details
           M.tree = generate_workflow_tree(job_details)
@@ -549,6 +555,8 @@ local function update_job_details(id)
   }
 end
 
+---@param id string
+---@param buf integer
 local function populate_preview_buffer(id, buf)
   local cached = M.wf_cache[id]
   if cached and vim.api.nvim_buf_is_valid(buf) then
@@ -609,7 +617,7 @@ local function print_lines()
     return
   end
   vim.api.nvim_buf_clear_namespace(M.buf, namespace, 0, -1)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
+  vim.bo[M.buf].modifiable = true
   local lines = get_workflow_header()
 
   local stringified_tree = tree_to_string(M.tree, {})
@@ -617,7 +625,7 @@ local function print_lines()
     table.insert(lines, value)
   end
 
-  local highlights = {}
+  local highlights = {} ---@type { index: integer, highlight: string }[]
 
   local string_lines = {}
 
@@ -627,11 +635,14 @@ local function print_lines()
   end
 
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, string_lines)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", false)
+  vim.bo[M.buf].modifiable = false
 
   for _, vl in ipairs(highlights) do
     if vl.highlight then
-      vim.api.nvim_buf_add_highlight(M.buf, namespace, vl.highlight, vl.index, 0, -1)
+      vim.api.nvim_buf_set_extmark(M.buf, namespace, vl.index, 0, {
+        end_line = vl.index + 1,
+        hl_group = vl.highlight,
+      })
     end
   end
 
@@ -670,9 +681,20 @@ local function get_workflow_runs_sync(opts)
     opts = { mode = "sync" },
   }
   if stderr and not utils.is_blank(stderr) then
-    vim.api.nvim_err_writeln(stderr)
+    utils.print_err(stderr)
     utils.error "Failed to get workflow runs"
   elseif output then
+    ---@type {
+    ---  conclusion: string,
+    ---  displayTitle: string,
+    ---  event: string,
+    ---  headBranch: string,
+    ---  name: string,
+    ---  number: integer,
+    ---  status: string,
+    ---  updatedAt: string,
+    ---  databaseId: integer,
+    ---}[]
     local json = vim.json.decode(output)
     for _, value in ipairs(json) do
       local status = value.status == "queued" and icons.pending
@@ -684,7 +706,7 @@ local function get_workflow_runs_sync(opts)
         or value.conclusion == "failure" and icons.failed
         or ""
 
-      local display
+      local display ---@type string
       if opts.branch == nil then
         display = string.format("%s (%s)", value.name, value.headBranch)
       else
@@ -717,6 +739,7 @@ local function render(selected)
 end
 
 function M.previewer(self, entry)
+  ---@type string
   local id = entry.value.id
   M.buf = self.state.bufnr
   populate_preview_buffer(id, self.state.bufnr)
@@ -744,7 +767,7 @@ function M.cancel(db_id)
     opts = { mode = "sync" },
   }
   if stderr and not utils.is_blank(stderr) then
-    vim.api.nvim_err_writeln(stderr)
+    utils.print_err(stderr)
     utils.error "Failed to cancel workflow run"
   else
     utils.info "Cancelled"
@@ -763,7 +786,7 @@ function M.rerun(opts)
     opts = { mode = "sync" },
   }
   if stderr and not utils.is_blank(stderr) then
-    vim.api.nvim_err_writeln(stderr)
+    utils.print_err(stderr)
     utils.error "Failed to rerun workflow run"
   else
     utils.info "Rerun queued"
@@ -811,6 +834,10 @@ function M.workflow_list(opts)
     jq = "map(.name)",
     opts = { mode = "sync" },
   }
+  if not names then
+    utils.error "Failed to get workflow names"
+    return
+  end
 
   vim.ui.select(vim.json.decode(names), {
     prompt = "Select a workflow: ",

@@ -15,14 +15,14 @@ local M = {}
 ---@param lines string[] | string
 ---@param line? integer
 ---@param mark? boolean
----@return integer
+---@return integer?
 function M.write_block(bufnr, lines, line, mark)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   line = line or vim.api.nvim_buf_line_count(bufnr) + 1
   mark = mark or false
 
   if type(lines) == "string" then
-    lines = vim.split(lines, "\n", true)
+    lines = vim.split(lines, "\n", { plain = true })
   end
 
   -- write content lines
@@ -57,18 +57,33 @@ function M.write_block(bufnr, lines, line, mark)
   end
 end
 
+---@type (fun(
+--- details: [string, string][][], label: string, value: nil|string|integer|(fun(): nil|string|integer),
+---): nil)|(fun(
+--- details: [string, string][][], label: string, value: boolean|(fun(): boolean), kind: "boolean",
+--- ): nil)|(fun(
+---): nil)|(fun(
+--- details: [string, string][][], label: string, value: string|(fun(): string), kind: "date",
+--- ): nil)|(fun(
+--- details: [string, string][][], label: string, value: {name: string, color: string}|(fun(): {name: string, color: string}), kind: "label",
+--- ): nil)|(fun(
+--- details: [string, string][][], label: string, value: {name: string, color: string}[]|(fun(): {name: string, color: string}[]), kind: "labels",
+--- ): nil)
 local function add_details_line(details, label, value, kind)
   if type(value) == "function" then
+    ---@diagnostic disable-next-line: no-unknown
     value = value()
   end
   if value ~= vim.NIL and value ~= nil then
     if kind == "date" then
+      value = value --[[@as string]]
       value = utils.format_date(value)
     end
     local vt = { { label .. ": ", "OctoDetailsLabel" } }
     if kind == "label" then
       vim.list_extend(vt, bubbles.make_label_bubble(value.name, value.color, { right_margin_width = 1 }))
     elseif kind == "labels" then
+      value = value --[[@as {name: string, color: string}[] ]]
       for _, v in ipairs(value) do
         if v ~= vim.NIL and v ~= nil then
           vim.list_extend(vt, bubbles.make_label_bubble(v.name, v.color, { right_margin_width = 1 }))
@@ -143,6 +158,8 @@ function M.write_release(bufnr, release)
   M.write_reactions(bufnr, release.reactionGroups, line)
 end
 
+---@param bufnr integer
+---@param discussion octo.Discussion
 function M.write_discussion_details(bufnr, discussion)
   local details = {}
 
@@ -219,6 +236,8 @@ function M.write_detail_table(opts)
   end
 end
 
+---@param bufnr integer
+---@param obj octo.fragments.DiscussionDetails
 function M.write_upvotes(bufnr, obj, line)
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
@@ -226,7 +245,7 @@ function M.write_upvotes(bufnr, obj, line)
   local upvote_symbol = " "
 
   local upvotes = obj.upvoteCount
-  local viewer_did_upvote = obj.viewerHasUpvoted
+  -- local viewer_did_upvote = obj.viewerHasUpvoted
 
   local upvotes_vt = {
     { upvote_symbol, "OctoDetailsLabel" },
@@ -236,6 +255,9 @@ function M.write_upvotes(bufnr, obj, line)
   M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line, upvotes_vt)
 end
 
+---@param bufnr integer
+---@param obj octo.Discussion
+---@param line integer
 function M.write_discussion_answer(bufnr, obj, line)
   local answer = obj.answer
 
@@ -252,9 +274,12 @@ function M.write_discussion_answer(bufnr, obj, line)
   M.write_block(bufnr, answer.body:gsub("\r\n", "\n"), line)
 end
 
+---@param bufnr integer
+---@param repo octo.Repository
 function M.write_repo(bufnr, repo)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
 
+  ---@type [string, string][][]
   local details = {}
 
   -- clear virtual texts
@@ -262,7 +287,7 @@ function M.write_repo(bufnr, repo)
 
   add_details_line(details, "Name", repo.nameWithOwner)
   add_details_line(details, "Description", repo.description)
-  local defaultBranchRefName
+  local defaultBranchRefName ---@type string?
   if repo.defaultBranchRef == vim.NIL then
     defaultBranchRefName = nil
   else
@@ -342,15 +367,21 @@ function M.write_repo(bufnr, repo)
     utils.get_file_contents(repo.nameWithOwner, defaultBranchRefName, "README.md", function(lines)
       if vim.api.nvim_buf_is_valid(bufnr) then
         vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, lines)
-        vim.api.nvim_buf_set_option(bufnr, "modified", false)
+        vim.bo[bufnr].modified = false
       end
     end)
   end
 end
 
+---@param bufnr integer
+---@param title string
+---@param line integer
 function M.write_title(bufnr, title, line)
   local title_mark = M.write_block(bufnr, { title, "" }, line, true)
-  vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoIssueTitle", 0, 0, -1)
+  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_NS, 0, 0, {
+    end_line = 1,
+    hl_group = "OctoIssueTitle",
+  })
   local buffer = octo_buffers[bufnr]
 
   if buffer then
@@ -363,6 +394,9 @@ function M.write_title(bufnr, title, line)
   end
 end
 
+---@param bufnr? integer
+---@param state? string
+---@param number? integer
 function M.write_state(bufnr, state, number)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
@@ -384,7 +418,9 @@ function M.write_state(bufnr, state, number)
       table.insert(title_vt, { "[DRAFT]", "OctoStateDraftFloat" })
     end
   end
-  vim.api.nvim_buf_set_virtual_text(bufnr, constants.OCTO_TITLE_VT_NS, 0, title_vt, {})
+  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, 0, {
+    virt_text = title_vt,
+  })
 end
 
 ---@param bufnr integer
@@ -397,7 +433,7 @@ function M.write_body_agnostic(bufnr, body, line, viewer_can_update)
     body = " "
   end
   local description = body:gsub("\r\n", "\n")
-  local lines = vim.split(description, "\n", true)
+  local lines = vim.split(description, "\n", { plain = true })
   vim.list_extend(lines, { "" })
   local desc_mark = M.write_block(bufnr, lines, line, true)
   local buffer = octo_buffers[bufnr]
@@ -419,7 +455,7 @@ end
 ---@param bufnr integer
 ---@param reaction_groups table[]
 ---@param line integer
----@return nil
+---@return integer?
 function M.write_reactions(bufnr, reaction_groups, line)
   local reactions_count = utils.count_reactions(reaction_groups)
   if reactions_count <= 0 then
@@ -432,6 +468,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
   local reactions_vt = {}
   for _, group in ipairs(reaction_groups) do
     if group.users.totalCount > 0 then
+      ---@type string
       local icon = utils.reaction_map[group.content]
       local bubble = bubbles.make_reaction_bubble(icon, group.viewerHasReacted)
       vim.list_extend(reactions_vt, bubble)
@@ -464,12 +501,16 @@ local function detect_issue_from_url(url)
   return url:find(keyword, 1, true) ~= nil
 end
 
+---@param bufnr integer
+---@param issue octo.PullRequest|octo.Issue
+---@param update any
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
   local is_issue = detect_issue_from_url(issue.url)
 
+  ---@type [string, string][][]
   local details = {}
 
   -- repo
@@ -525,11 +566,6 @@ function M.write_details(bufnr, issue, update)
     for _, card in ipairs(issue.projectCards.nodes) do
       if card.column ~= vim.NIL then
         table.insert(projects_vt, { card.column.name })
-        if not utils.is_blank(card.project) then
-          table.insert(projects_vt, { " (", "OctoDetailsLabel" })
-          table.insert(projects_vt, { card.project.name })
-          table.insert(projects_vt, { ")", "OctoDetailsLabel" })
-        end
       end
     end
     table.insert(details, projects_vt)
@@ -616,7 +652,9 @@ function M.write_details(bufnr, issue, update)
   -- additional details for pull requests
   if issue.commits then
     -- reviewers
-    local reviewers = {}
+    local reviewers = {} ---@type table<string, string[]>
+    ---@param name string
+    ---@param state string
     local function collect_reviewer(name, state)
       if not reviewers[name] then
         reviewers[name] = { state }
@@ -628,6 +666,7 @@ function M.write_details(bufnr, issue, update)
         reviewers[name] = states
       end
     end
+    ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
     local timeline_nodes = {}
     for _, item in ipairs(issue.timelineItems.nodes) do
       if item ~= vim.NIL then
@@ -652,7 +691,9 @@ function M.write_details(bufnr, issue, update)
       { "Reviewers: ", "OctoDetailsLabel" },
     }
     if #vim.tbl_keys(reviewers) > 0 then
-      for _, name in ipairs(vim.tbl_keys(reviewers)) do
+      ---@type string[]
+      local reviewer_names = vim.tbl_keys(reviewers)
+      for _, name in ipairs(reviewer_names) do
         local strongest_review = utils.calculate_strongest_review_state(reviewers[name])
         local reviewer_vt = {
           { name, "OctoUser" },
@@ -780,7 +821,12 @@ function M.write_details(bufnr, issue, update)
 end
 
 ---@param bufnr integer
----@param comment octo.ReviewThreadCommentFragment
+---@param comment octo.ReviewThreadCommentFragment|octo.fragments.DiscussionComment|octo.fragments.PullRequestReview|octo.fragments.IssueComment|{
+---  replyToRest: string,
+---  start_line: integer,
+---  end_line: integer,
+---  diffSide: string,
+---}
 ---@param kind string
 ---@param line? integer
 function M.write_comment(bufnr, comment, kind, line)
@@ -884,14 +930,14 @@ function M.write_comment(bufnr, comment, kind, line)
   if vim.startswith(comment_body, constants.NO_BODY_MSG) or utils.is_blank(comment_body) then
     comment_body = " "
   end
-  local content = vim.split(comment_body, "\n", true)
+  local content = vim.split(comment_body, "\n", { plain = true })
   vim.list_extend(content, { "" })
   local comment_mark = M.write_block(bufnr, content, line, true)
 
   line = line + #content
 
   -- reactions
-  local reaction_line
+  local reaction_line ---@type integer?
   if utils.count_reactions(comment.reactionGroups) > 0 then
     M.write_block(bufnr, { "", "" }, line)
     reaction_line = M.write_reactions(bufnr, comment.reactionGroups, line)
@@ -903,7 +949,7 @@ function M.write_comment(bufnr, comment, kind, line)
   table.insert(
     comments_metadata,
     CommentMetadata:new {
-      author = comment.author ~= vim.NIL and comment.author.name or "",
+      author = "",
       id = comment.id,
       dirty = false,
       savedBody = comment_body,
@@ -930,7 +976,7 @@ function M.write_comment(bufnr, comment, kind, line)
 end
 
 ---@param bufnr integer
----@param review any
+---@param review octo.fragments.PullRequestReview
 function M.write_review_decision(bufnr, review)
   local line = vim.api.nvim_buf_line_count(bufnr) + 1
   local conf = config.values
@@ -952,10 +998,11 @@ function M.write_review_decision(bufnr, review)
   M.write_virtual_text(bufnr, comment_vt_ns, line - 1, header_vt)
 end
 
+---@param diffhunk_lines string[]
 local function find_snippet_range(diffhunk_lines)
   local conf = config.values
   local context_lines = conf.snippet_context_lines or 4
-  local snippet_start
+  local snippet_start ---@type integer?
   local count = 0
   for i = #diffhunk_lines, 1, -1 do
     local line = diffhunk_lines[i]
@@ -1475,8 +1522,10 @@ function M.write_review_thread_header(bufnr, opts, line)
   M.write_virtual_text(bufnr, constants.OCTO_THREAD_HEADER_VT_NS, line + 1, header_vt)
 end
 
+---@param bufnr integer
+---@param reactions table<string, string[]>
 function M.write_reactions_summary(bufnr, reactions)
-  local lines = {}
+  local lines = {} ---@type string[]
   local max_width = math.floor(vim.fn.winwidth(0) * 0.4)
   for reaction, users in pairs(reactions) do
     local user_str = table.concat(users, ", ")
@@ -1495,6 +1544,8 @@ function M.write_reactions_summary(bufnr, reactions)
   return #lines, max_length
 end
 
+---@param max_length integer
+---@param chunk [string, string][]
 local function chunk_length(max_length, chunk)
   local length = 0
   for _, c in ipairs(chunk) do
@@ -1503,6 +1554,9 @@ local function chunk_length(max_length, chunk)
   return math.max(max_length, length)
 end
 
+---@param bufnr integer
+---@param user octo.UserProfile
+---@param opts? { max_width?: integer }
 function M.write_user_profile(bufnr, user, opts)
   opts = opts or {}
   local max_width = opts.max_width or 80
@@ -1634,11 +1688,15 @@ function M.write_user_profile(bufnr, user, opts)
   return #chunks, max_length
 end
 
+---@param bufnr integer
+---@param discussion octo.DiscussionSummary
+---@param opts? { max_length?: integer }
+---@return integer
 function M.write_discussion_summary(bufnr, discussion, opts)
   opts = opts or {}
   local conf = config.values
   local max_length = opts.max_length or 80
-  local chunks = {}
+  local chunks = {} ---@type [string, string][][]
 
   -- repo and date line
   table.insert(chunks, {
@@ -1661,8 +1719,8 @@ function M.write_discussion_summary(bufnr, discussion, opts)
   table.insert(chunks, { { "" } })
 
   -- discussion body
-  local body = vim.split(discussion.body, "\n")
-  body = table.concat(body, " ")
+  local body_lines = vim.split(discussion.body, "\n")
+  local body = table.concat(body_lines, " ")
   body = body:gsub("[%c]", " ")
   body = body:sub(1, max_length - 4 - 2) .. "…"
   table.insert(chunks, {
@@ -1706,6 +1764,9 @@ function M.write_discussion_summary(bufnr, discussion, opts)
   return #chunks
 end
 
+---@param bufnr integer
+---@param issue octo.IssueOrPullRequestSummary
+---@param opts? { max_length?: integer }
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
   local conf = config.values
@@ -1730,8 +1791,8 @@ function M.write_issue_summary(bufnr, issue, opts)
   table.insert(chunks, { { "" } })
 
   -- issue body
-  local body = vim.split(issue.body, "\n")
-  body = table.concat(body, " ")
+  local body_lines = vim.split(issue.body, "\n")
+  local body = table.concat(body_lines, " ")
   body = body:gsub("[%c]", " ")
   body = body:sub(1, max_length - 4 - 2) .. "…"
   table.insert(chunks, {
@@ -1788,12 +1849,15 @@ function M.write_issue_summary(bufnr, issue, opts)
   return #chunks
 end
 
+---@param bufnr integer
+---@param vt [string, string][]
 local function write_event(bufnr, vt)
   local line = vim.api.nvim_buf_line_count(bufnr) - 1
   M.write_block(bufnr, { "" }, line + 2)
   M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line + 1, vt)
 end
 
+---@param statusCheckRollup { state: string }
 local function get_status_check(statusCheckRollup)
   if utils.is_blank(statusCheckRollup) then
     return { "  " }
@@ -1805,6 +1869,8 @@ local function get_status_check(statusCheckRollup)
   return { state_info.symbol, state_info.hl }
 end
 
+---@param bufnr integer
+---@param item octo.fragments.PullRequestCommit
 local function write_commit(bufnr, item)
   local vt = {}
   local conf = config.values
@@ -1818,11 +1884,14 @@ local function write_commit(bufnr, item)
   table.insert(vt, { item.commit.abbreviatedOid, "OctoDetailsLabel" })
   table.insert(vt, { " ", "OctoTimelineItemHeading" })
   table.insert(vt, { item.commit.messageHeadline, "OctoDetailsLabel" })
-  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+  table.insert(vt, { " " .. utils.format_date(item.commit.committedDate), "OctoDate" })
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param commits octo.fragments.PullRequestCommit[]
 local function write_commit_header(bufnr, commits)
+  ---@param item octo.fragments.PullRequestCommit
   local function get_author(item)
     if item.commit.committer.user ~= vim.NIL then
       return item.commit.committer.user.login
@@ -1831,7 +1900,7 @@ local function write_commit_header(bufnr, commits)
     end
     return "ghost"
   end
-  local authors = {}
+  local authors = {} ---@type table<string,boolean>
   for _, item in ipairs(commits) do
     authors[get_author(item)] = true
   end
@@ -1864,6 +1933,8 @@ local function write_commit_header(bufnr, commits)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param commits octo.fragments.PullRequestCommit[]
 function M.write_commits(bufnr, commits)
   write_commit_header(bufnr, commits)
   for _, item in ipairs(commits) do
@@ -1871,6 +1942,8 @@ function M.write_commits(bufnr, commits)
   end
 end
 
+---@param bufnr integer
+---@param item octo.fragments.AssignedEvent
 function M.write_assigned_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -1896,6 +1969,9 @@ function M.write_assigned_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.PullRequest|octo.fragments.Issue
+---@param spaces? integer
 local function write_issue_or_pr(bufnr, item, spaces)
   spaces = spaces or 10
   local vt = {}
@@ -1923,6 +1999,8 @@ local function write_reference_commit(bufnr, commit)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ReferencedEvent
 function M.write_referenced_event(bufnr, item)
   if utils.is_blank(item.actor) then
     return
@@ -1944,6 +2022,9 @@ function M.write_referenced_event(bufnr, item)
   write_reference_commit(bufnr, item.commit)
 end
 
+---@param bufnr integer
+---@param items (octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent)[]
+---@param action "added"|"removed"
 function M.write_subissue_events(bufnr, items, action)
   local previous_actor = ""
   for i, item in ipairs(items) do
@@ -1978,10 +2059,12 @@ function M.write_subissue_events(bufnr, items, action)
   end
 end
 
+---@param bufnr integer
+---@param item octo.fragments.CrossReferencedEvent
 function M.write_cross_referenced_event(bufnr, item)
   local vt = {}
   local conf = config.values
-  local spaces
+  local spaces ---@type integer
   if conf.use_timeline_icons then
     table.insert(vt, { conf.timeline_icons.cross_reference, "OctoTimelineMarker" })
     spaces = 3
@@ -2019,11 +2102,14 @@ function M.write_cross_referenced_event(bufnr, item)
   write_issue_or_pr(bufnr, item.source, spaces)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent
+---@param add boolean
 local function write_parent_issue_event(bufnr, item, add)
   local verb = add and "added" or "removed"
   local vt = {}
   local conf = config.values
-  local spaces
+  local spaces ---@type integer
   if conf.use_timeline_icons then
     table.insert(vt, { conf.timeline_icons.parent_issue, "OctoTimelineMarker" })
     spaces = 3
@@ -2044,14 +2130,21 @@ local function write_parent_issue_event(bufnr, item, add)
   write_issue_or_pr(bufnr, parent, spaces)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ParentIssueAddedEvent
 function M.write_parent_issue_added_event(bufnr, item)
   write_parent_issue_event(bufnr, item, true)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ParentIssueRemovedEvent
 function M.write_parent_issue_removed_event(bufnr, item)
   write_parent_issue_event(bufnr, item, false)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent
+---@param add boolean
 local function write_issue_type_event(bufnr, item, add)
   local verb = add and "added" or "removed"
   local vt = {}
@@ -2075,14 +2168,20 @@ local function write_issue_type_event(bufnr, item, add)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.IssueTypeAddedEvent
 function M.write_issue_type_added_event(bufnr, item)
   write_issue_type_event(bufnr, item, true)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.IssueTypeRemovedEvent
 function M.write_issue_type_removed_event(bufnr, item)
   write_issue_type_event(bufnr, item, false)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.IssueTypeChangedEvent
 function M.write_issue_type_changed_event(bufnr, item)
   local vt = {}
   local conf = config.values
@@ -2107,8 +2206,11 @@ function M.write_issue_type_changed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent
+---@param add boolean
 local function write_pinned_event(bufnr, item, add)
-  local verb
+  local verb ---@type string
   if add then
     verb = "pinned"
   else
@@ -2131,15 +2233,23 @@ local function write_pinned_event(bufnr, item, add)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.PinnedEvent
 function M.write_pinned_event(bufnr, item)
   write_pinned_event(bufnr, item, true)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.UnpinnedEvent
 function M.write_unpinned_event(bufnr, item)
   write_pinned_event(bufnr, item, false)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.MilestonedEvent|octo.fragments.DemilestonedEvent
+---@param add boolean
 local function write_milestone_event(bufnr, item, add)
+  ---@type string, string
   local verb, preposition
   if add then
     verb = "added"
@@ -2168,18 +2278,24 @@ local function write_milestone_event(bufnr, item, add)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.MilestonedEvent
 function M.write_milestoned_event(bufnr, item)
   write_milestone_event(bufnr, item, true)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.DemilestonedEvent
 function M.write_demilestoned_event(bufnr, item)
   write_milestone_event(bufnr, item, false)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ConnectedEvent
 function M.write_connected_event(bufnr, item)
   local vt = {}
   local conf = config.values
-  local spaces
+  local spaces ---@type integer
   if conf.use_timeline_icons then
     table.insert(vt, { conf.timeline_icons.connected, "OctoTimelineMarker" })
     spaces = 3
@@ -2209,6 +2325,8 @@ function M.write_connected_event(bufnr, item)
   write_issue_or_pr(bufnr, item.subject, spaces)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.RenamedTitleEvent
 function M.write_renamed_title_event(bufnr, item)
   local vt = {}
   local conf = config.values
@@ -2236,6 +2354,8 @@ function M.write_renamed_title_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.MergedEvent
 function M.write_merged_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -2259,6 +2379,8 @@ function M.write_merged_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ClosedEvent
 function M.write_closed_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -2294,20 +2416,24 @@ function M.write_closed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param items octo.fragments.LabeledEvent[]|octo.fragments.UnlabeledEvent[]
+---@param action "added"|"removed"
 function M.write_labeled_events(bufnr, items, action)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
   --   item.actor.login == vim.g.octo_viewer
   -- )
-  local labels_by_actor = {}
+  local labels_by_actor = {} ---@type table<string|vim.NIL, octo.fragments.Label[]>
   for _, item in ipairs(items) do
     local key = item.actor ~= vim.NIL and item.actor.login or vim.NIL
+    ---@type octo.fragments.Label[]
     local labels = labels_by_actor[key] or {}
     table.insert(labels, item.label)
     labels_by_actor[key] = labels
   end
 
-  for _, actor in ipairs(vim.tbl_keys(labels_by_actor)) do
+  for actor, _ in pairs(labels_by_actor) do
     local vt = {}
     local conf = config.values
     if conf.use_timeline_icons then
@@ -2333,6 +2459,8 @@ function M.write_labeled_events(bufnr, items, action)
   end
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ReopenedEvent
 function M.write_reopened_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -2353,6 +2481,8 @@ function M.write_reopened_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ReviewRequestedEvent
 function M.write_review_requested_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -2379,6 +2509,8 @@ function M.write_review_requested_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ReviewRequestRemovedEvent
 function M.write_review_request_removed_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -2400,6 +2532,8 @@ function M.write_review_request_removed_event(bufnr, item)
   write_event(bufnr, vt)
 end
 
+---@param bufnr integer
+---@param item octo.fragments.ReviewDismissedEvent
 function M.write_review_dismissed_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
   --   item.actor.login,
@@ -2430,6 +2564,11 @@ function M.write_threads(bufnr, threads)
   for _, thread in ipairs(threads) do
     local thread_start, thread_end ---@type integer, integer
     for _, comment in ipairs(thread.comments.nodes) do
+      ---@class octo.AugmentedReviewThreadComment : octo.ReviewThreadCommentFragment
+      ---@field diffSide string
+      ---@field start_line integer
+      ---@field end_line integer
+      comment = comment
       -- augment comment details
       comment.path = thread.path
       comment.diffSide = thread.diffSide
@@ -2494,20 +2633,19 @@ function M.write_threads(bufnr, threads)
   return comment_end
 end
 
-function M.write_virtual_text(bufnr, ns, line, chunks, mode)
-  mode = mode or "extmark"
-  if mode == "extmark" then
-    pcall(
-      vim.api.nvim_buf_set_extmark,
-      bufnr,
-      ns,
-      line,
-      0,
-      { virt_text = chunks, virt_text_pos = "overlay", hl_mode = "combine" }
-    )
-  elseif mode == "vt" then
-    pcall(vim.api.nvim_buf_set_virtual_text, bufnr, ns, line, chunks, {})
-  end
+---@param bufnr integer
+---@param ns integer
+---@param line integer
+---@param chunks [string, string][]
+function M.write_virtual_text(bufnr, ns, line, chunks)
+  pcall(
+    vim.api.nvim_buf_set_extmark,
+    bufnr,
+    ns,
+    line,
+    0,
+    { virt_text = chunks, virt_text_pos = "overlay", hl_mode = "combine" }
+  )
 end
 
 ---@param obj any
