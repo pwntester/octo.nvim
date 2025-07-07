@@ -594,6 +594,10 @@ function M.checkout_pr_sync(opts)
   branch_switch_message()
 end
 
+M.merge_queue_to_flag = {
+  queue = "--queue",
+}
+
 M.merge_method_to_flag = {
   squash = "--squash",
   rebase = "--rebase",
