@@ -9,7 +9,6 @@ endif
 
 unlet! b:current_syntax
 
-call matchadd('Conceal', ':heart:', 10, -1, {'conceal':'❤️'})
 call matchadd('Conceal', ':+1:', 10, -1, {'conceal':'👍'})
 call matchadd('Conceal', ':see_no_evil:', 10, -1, {'conceal':'🙈'})
 call matchadd('Conceal', ':laughing:', 10, -1, {'conceal':'😆'})
@@ -23,8 +22,6 @@ call matchadd('Conceal', ':blush:', 10, -1, {'conceal':'😊'})
 call matchadd('Conceal', ':tada:', 10, -1, {'conceal':'🎉'})
 call matchadd('Conceal', ':shrug:', 10, -1, {'conceal':'🤷'})
 call matchadd('Conceal', ':man_shrugging:', 10, -1, {'conceal':'🤷'})
-call matchadd('Conceal', ':face_palm:', 10, -1, {'conceal':'🤦'})
-call matchadd('Conceal', ':man_facepalmin:', 10, -1, {'conceal':'🤦'})
 call matchadd('Conceal', ':cowboy_hat_face:', 10, -1, {'conceal':'🤠'})
 call matchadd('Conceal', ':worried:', 10, -1, {'conceal':'😟'})
 call matchadd('Conceal', ':scream:', 10, -1, {'conceal':'😱'})
