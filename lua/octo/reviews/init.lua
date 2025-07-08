@@ -13,8 +13,8 @@ local ReviewThread = require("octo.reviews.thread").ReviewThread
 ---@class Review
 ---@field repo string
 ---@field number integer
----@field id integer
----@field threads table[]
+---@field id string|-1
+---@field threads octo.ReviewThread[]
 ---@field files FileEntry[]
 ---@field layout Layout
 ---@field pull_request PullRequest
@@ -24,6 +24,7 @@ Review.__index = Review
 local default_id = -1
 
 ---Review constructor.
+---@param pull_request PullRequest
 ---@return Review
 function Review:new(pull_request)
   local this = {
@@ -36,7 +37,8 @@ function Review:new(pull_request)
   return this
 end
 
--- Creates a new review
+---Creates a new review
+---@param callback fun(obj: octo.mutations.StartReview): nil
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
   gh.run {
@@ -52,7 +54,8 @@ function Review:create(callback)
   }
 end
 
--- Get review threads without start a review.
+---Get review threads without start a review.
+---@param callback fun(obj: octo.queries.ReviewThreads): nil
 function Review:populate_threads(callback)
   local query =
     graphql("review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
@@ -89,7 +92,8 @@ function Review:start()
   end)
 end
 
--- Retrieves existing review
+---Retrieves existing review
+---@param callback fun(obj: octo.queries.PendingReviewThreads): nil
 function Review:retrieve(callback)
   local query =
     graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
@@ -157,7 +161,7 @@ end
 ---Defaults to the first file if all files are VIEWED
 ---@param files FileEntry[]
 function Review:set_files_and_select_first(files)
-  local selected_file_idx
+  local selected_file_idx ---@type integer?
   for idx, file in ipairs(files) do
     if file.viewed_state ~= "VIEWED" then
       selected_file_idx = idx
@@ -177,7 +181,9 @@ function Review:set_files_and_select_first(files)
   self.layout:update_files()
 end
 
--- Updates layout to focus on a single commit
+---Updates layout to focus on a single commit
+---@param right string
+---@param left string
 function Review:focus_commit(right, left)
   local pr = self.pull_request
   self.layout:close()
@@ -198,6 +204,7 @@ function Review:focus_commit(right, left)
 end
 
 ---Initiates (starts/resumes) a review
+---@param opts? { left?: Rev, right?: Rev }
 function Review:initiate(opts)
   opts = opts or {}
   local pr = self.pull_request
@@ -231,6 +238,7 @@ function Review:discard()
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
       elseif output then
+        ---@type octo.queries.PendingReviewThreads
         local resp = vim.json.decode(output)
         if #resp.data.repository.pullRequest.reviews.nodes == 0 then
           utils.error "No pending reviews found"
@@ -240,7 +248,7 @@ function Review:discard()
 
         local choice = vim.fn.confirm("All pending comments will get deleted, are you sure?", "&Yes\n&No\n&Cancel", 2)
         if choice == 1 then
-          local delete_query = graphql("delete_pull_request_review_mutation", self.id)
+          local delete_query = graphql("delete_pull_request_review_mutation", self.id --[[@as string]])
           gh.run {
             args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
             cb = function(output_inner, stderr_inner)
@@ -261,6 +269,7 @@ function Review:discard()
   }
 end
 
+---@param threads octo.ReviewThread[]
 function Review:update_threads(threads)
   self.threads = {}
   for _, thread in ipairs(threads) do
@@ -302,17 +311,24 @@ function Review:collect_submit_info()
     ),
   }
   vim.api.nvim_set_current_win(winid)
-  vim.api.nvim_buf_set_option(bufnr, "syntax", "octo")
+  vim.bo[bufnr].syntax = "octo"
   utils.apply_mappings("submit_win", bufnr)
   vim.cmd [[normal G]]
 end
 
+---@param event "APPROVE" | "COMMENT" | "REQUEST_CHANGES"
 function Review:submit(event)
+  local review_id = self.id
+  if review_id == -1 then
+    utils.error "No review in progress"
+    return
+  end
+  review_id = review_id --[[@as string]]
   local bufnr = vim.api.nvim_get_current_buf()
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, default_id, false)
   local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
-  local query = graphql("submit_pull_request_review_mutation", self.id, event, body, { escape = false })
+  local query = graphql("submit_pull_request_review_mutation", review_id, event, body, { escape = false })
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", query) },
     cb = function(output, stderr)
@@ -329,7 +345,9 @@ end
 
 function Review:show_pending_comments()
   local pending_threads = {}
-  for _, thread in ipairs(vim.tbl_values(self.threads)) do
+  for _, thread in
+    ipairs(vim.tbl_values(self.threads)--[[@as octo.ReviewThread[] ]])
+  do
     for _, comment in ipairs(thread.comments.nodes) do
       if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(utils.trim(comment.body)) then
         table.insert(pending_threads, thread)
@@ -344,6 +362,7 @@ function Review:show_pending_comments()
   end
 end
 
+---@param isSuggestion boolean
 function Review:add_comment(isSuggestion)
   -- check if we are on the diff layout and return early if not
   local bufnr = vim.api.nvim_get_current_buf()
@@ -367,6 +386,7 @@ function Review:add_comment(isSuggestion)
     line2 = OctoLastCmdOpts.line2
   end
 
+  ---@type [integer, integer][], integer
   local comment_ranges, current_bufnr
   if split == "RIGHT" then
     comment_ranges = file.right_comment_ranges
@@ -377,8 +397,12 @@ function Review:add_comment(isSuggestion)
   else
     return
   end
+  if not current_bufnr or not comment_ranges then
+    utils.error "Failed to create comment"
+    return
+  end
 
-  local diff_hunk
+  local diff_hunk ---@type string
   -- for non-added files, check we are in a valid comment range
   if file.status ~= "A" then
     for i, range in ipairs(comment_ranges) do
@@ -408,6 +432,7 @@ function Review:add_comment(isSuggestion)
 
     -- create a thread stub representing the new comment
 
+    ---@type string, string
     local commit, commit_abbrev
     if split == "LEFT" then
       commit = self.layout.left.commit
@@ -439,12 +464,12 @@ function Review:add_comment(isSuggestion)
       vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
       vim.api.nvim_set_current_win(alt_win)
       if isSuggestion then
-        local lines = vim.api.nvim_buf_get_lines(current_bufnr, line1 - 1, line2, false)
+        local lines = vim.api.nvim_buf_get_lines(current_bufnr, line1 - 1, line2 --[[@as integer]], false)
         local suggestion = { "```suggestion" }
         vim.list_extend(suggestion, lines)
         table.insert(suggestion, "```")
         vim.api.nvim_buf_set_lines(thread_buffer.bufnr, -3, -2, false, suggestion)
-        vim.api.nvim_buf_set_option(thread_buffer.bufnr, "modified", false)
+        vim.bo[thread_buffer.bufnr].modified = false
       end
       thread_buffer:configure()
       vim.cmd [[diffoff!]]
@@ -478,10 +503,12 @@ end
 
 local M = {}
 
+---@type table<string, Review>
 M.reviews = {}
 
 M.Review = Review
 
+---@param isSuggestion boolean
 function M.add_review_comment(isSuggestion)
   local review = M.get_current_review()
 
@@ -498,6 +525,7 @@ function M.add_review_comment(isSuggestion)
   review:add_comment(isSuggestion)
 end
 
+---@param thread ReviewThread
 function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
   if not current_review then
@@ -573,7 +601,7 @@ end
 
 --- Get the pull request associated with current buffer.
 --- Fall back to pull request associated with the current branch if not in an Octo buffer.
---- @param cb function
+--- @param cb fun(pull_request: PullRequest?): nil
 local function get_pr_from_buffer_or_current_branch(cb)
   local buffer = utils.get_current_buffer()
 

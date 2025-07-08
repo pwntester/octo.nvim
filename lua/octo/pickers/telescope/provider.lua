@@ -1,3 +1,4 @@
+---@diagnostic disable
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
@@ -7,6 +8,7 @@ local entry_maker = require "octo.pickers.telescope.entry_maker"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
 local octo_config = require "octo.config"
+local notifications = require "octo.notifications"
 
 local actions = require "telescope.actions"
 local action_set = require "telescope.actions.set"
@@ -34,6 +36,8 @@ local dropdown_opts = require("telescope.themes").get_dropdown {
   previewer = false,
 }
 
+---@param opts {[string]: string}
+---@param kind "issue"|"pull_request"
 local function get_filter(opts, kind)
   local filter = ""
   local allowed_values = {}
@@ -45,7 +49,7 @@ local function get_filter(opts, kind)
 
   for _, value in pairs(allowed_values) do
     if opts[value] then
-      local val
+      local val ---@type string[]|string
       if #vim.split(opts[value], ",") > 1 then
         -- list
         val = vim.split(opts[value], ",")
@@ -65,7 +69,9 @@ local function get_filter(opts, kind)
 end
 
 local function open(command)
+  ---@param prompt_bufnr integer
   return function(prompt_bufnr)
+    ---@diagnostic disable-next-line: redundant-parameter
     local selection = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
     if command == "default" then
@@ -78,22 +84,7 @@ local function open(command)
       vim.cmd [[:tab sb %]]
     end
     if selection then
-      if selection.kind ~= "release" then
-        utils.get(selection.kind, selection.value, selection.repo)
-      else
-        if selection.tag_name then
-          utils.get("release", selection.tag_name, selection.repo)
-        else
-          ---@type string, string
-          local owner, repo = selection.repo:match "(.*)/(.*)"
-          require("octo.release").get_tag_from_release_id(
-            { owner = owner, repo = repo, release_id = selection.value },
-            function(tag_name)
-              utils.get("release", tag_name, selection.repo)
-            end
-          )
-        end
-      end
+      utils.get(selection.kind, selection.value, selection.repo)
     end
   end
 end
@@ -101,6 +92,7 @@ end
 local function open_preview_buffer(command)
   return function(prompt_bufnr)
     actions.close(prompt_bufnr)
+    ---@type integer
     local preview_bufnr = require("telescope.state").get_global_key "last_preview_bufnr"
     if command == "default" then
       vim.cmd(string.format(":buffer %d", preview_bufnr))
@@ -117,7 +109,9 @@ local function open_preview_buffer(command)
 end
 
 local function open_in_browser()
+  ---@param prompt_bufnr integer
   return function(prompt_bufnr)
+    ---@diagnostic disable-next-line: redundant-parameter
     local entry = action_state.get_selected_entry(prompt_bufnr)
     local number
     local repo = entry.repo
@@ -130,7 +124,9 @@ local function open_in_browser()
 end
 
 local function copy_url()
+  ---@param prompt_bufnr integer
   return function(prompt_bufnr)
+    ---@diagnostic disable-next-line: redundant-parameter
     local entry = action_state.get_selected_entry(prompt_bufnr)
     utils.copy_url(entry.obj.url)
   end
@@ -1326,45 +1322,23 @@ end
 --
 -- NOTIFICATIONS
 --
----@param thread_id string
-local function request_read_notification(thread_id)
-  gh.api.patch {
-    "/notifications/threads/{id}",
-    format = { id = thread_id },
-    opts = {
-      cb = gh.create_callback { success = function() end },
-      headers = { "Accept: application/vnd.github+json" },
-    },
-  }
-end
 
 local function mark_notification_read()
   return function(prompt_bufnr)
     ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      request_read_notification(selection.thread_id)
+      notifications.request_read_notification(selection.thread_id)
     end)
   end
 end
 
 local function mark_notification_done()
-  local opts = {
-    cb = gh.create_callback { success = function() end },
-    headers = { "Accept: application/vnd.github.v3.diff" },
-  }
-
   return function(prompt_bufnr)
     ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      ---@type string
-      local thread_id = selection.thread_id
-      gh.api.delete {
-        "/notifications/threads/{id}",
-        format = { id = thread_id },
-        opts = opts,
-      }
+      notifications.delete_notification(selection.thread_id)
     end)
   end
 end
@@ -1374,20 +1348,7 @@ local function unsubscribe_notification()
     ---@type Picker
     local current_picker = action_state.get_current_picker(prompt_bufnr)
     current_picker:delete_selection(function(selection)
-      ---@type string
-      local thread_id = selection.thread_id
-      gh.api.delete {
-        "/notifications/threads/{id}/subscription",
-        format = { id = thread_id },
-        opts = {
-          cb = gh.create_callback {
-            success = function()
-              request_read_notification(thread_id)
-            end,
-          },
-          headers = { "Accept: application/vnd.github+json" },
-        },
-      }
+      notifications.unsubscribe_notification(selection.thread_id)
     end)
   end
 end
@@ -1426,16 +1387,7 @@ function M.notifications(opts)
 
     local function copy_notification_url(prompt_bufnr)
       local entry = action_state.get_selected_entry(prompt_bufnr)
-      local subject = entry.obj.subject
-      local url = not utils.is_blank(subject.latest_comment_url) and subject.latest_comment_url or subject.url
-
-      gh.api.get {
-        url,
-        jq = ".html_url",
-        opts = {
-          cb = gh.create_callback { success = utils.copy_url },
-        },
-      }
+      notifications.copy_notification_url(entry.obj)
     end
 
     pickers
@@ -1582,7 +1534,7 @@ function M.milestones(opts)
   end
 
   local repo = opts.repo or utils.get_remote_name()
-  local owner, name = utils.split_repo(repo)
+  local owner, name = utils.split_repo(repo --[[@as string]])
 
   gh.api.graphql {
     query = queries.open_milestones,
@@ -1626,7 +1578,7 @@ function M.milestones(opts)
               entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
             },
             sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
+            attach_mappings = function(_, _map)
               actions.select_default:replace(function(prompt_bufnr)
                 select {
                   bufnr = prompt_bufnr,
@@ -1691,7 +1643,7 @@ function M.project_columns_v2(cb)
               entry_maker = entry_maker.gen_from_project_v2(),
             },
             sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
+            attach_mappings = function(_, _map)
               actions.select_default:replace(function(prompt_bufnr)
                 select {
                   bufnr = prompt_bufnr,

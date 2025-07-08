@@ -30,6 +30,11 @@ local Layout = {}
 Layout.__index = Layout
 
 ---Layout constructor
+---@param opt {
+---  left: Rev,
+---  right: Rev,
+---  files: FileEntry[],
+---}
 ---@return Layout
 function Layout:new(opt)
   local this = {
@@ -44,6 +49,7 @@ function Layout:new(opt)
   return this
 end
 
+---@param review Review
 function Layout:open(review)
   vim.cmd "tab split"
   self.tabpage = vim.api.nvim_get_current_tabpage()
@@ -110,7 +116,7 @@ function Layout:set_current_file(file, focus)
     if not file:is_ready_to_render() then
       local result = file:fetch()
       if not result then
-        vim.api.nvim_err_writeln("Timeout fetching " .. file.path)
+        utils.print_err("Timeout fetching " .. file.path)
         return
       end
     end
@@ -184,7 +190,7 @@ function Layout:select_last_file()
 end
 
 ---Checks the state of the view layout.
----@return table
+---@return { tabpage: boolean, left_win: boolean, right_win: boolean, valid: boolean }
 function Layout:validate_layout()
   local state = {
     tabpage = vim.api.nvim_tabpage_is_valid(self.tabpage),
@@ -196,7 +202,7 @@ function Layout:validate_layout()
 end
 
 ---Recover the layout after the user has messed it up.
----@param state table
+---@param state { tabpage: boolean, left_win: boolean, right_win: boolean }
 function Layout:recover_layout(state)
   self.ready = false
   if not state.tabpage then
@@ -280,7 +286,8 @@ function Layout:fix_foreign_windows()
   for _, id in ipairs(win_ids) do
     if not (id == self.file_panel.winid or id == self.left_winid or id == self.right_winid) then
       for k, v in pairs(win_reset_opts) do
-        vim.api.nvim_win_set_option(id, k, v)
+        ---@diagnostic disable-next-line: no-unknown
+        vim.wo[id][k] = v
       end
     end
   end

@@ -1,4 +1,6 @@
+---@diagnostic disable
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
+local notifications = require "octo.notifications"
 local builtin = require "fzf-lua.previewer.builtin"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
@@ -9,7 +11,8 @@ local config = require "octo.config"
 
 local M = {}
 
--- Inherit from the "buffer_or_file" previewer
+---Inherit from the "buffer_or_file" previewer
+---@class octo.fzf-lua.Previewer : fzf-lua.previewer.BufferOrFile
 M.bufferPreviewer = builtin.buffer_or_file:extend()
 
 function M.bufferPreviewer:new(o, opts, fzf_win)
@@ -44,6 +47,7 @@ function M.bufferPreviewer:update_border(title)
 end
 
 function M.issue(formatted_issues)
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -69,7 +73,7 @@ function M.issue(formatted_issues)
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          utils.print_err(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
           local result = vim.json.decode(output)
           local obj
@@ -88,7 +92,7 @@ function M.issue(formatted_issues)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
-          vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
+          vim.bo[tmpbuf].filetype = "octo"
         end
       end,
     }
@@ -101,6 +105,7 @@ function M.issue(formatted_issues)
 end
 
 function M.search()
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -118,7 +123,7 @@ function M.search()
     local name = match()
     local number = tonumber(match())
 
-    local query
+    local query ---@type string
     if kind == "issue" then
       query = graphql("issue_query", owner, name, number, _G.octo_pv2_fragment)
     elseif kind == "pull_request" then
@@ -128,7 +133,7 @@ function M.search()
       args = { "api", "graphql", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
-          vim.api.nvim_err_writeln(stderr)
+          utils.print_err(stderr)
         elseif output and self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
           local result = vim.json.decode(output)
           local obj
@@ -147,7 +152,7 @@ function M.search()
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
           writers.write_block(tmpbuf, { "", "" }, reactions_line)
           writers.write_reactions(tmpbuf, obj.reactionGroups, reactions_line)
-          vim.api.nvim_buf_set_option(tmpbuf, "filetype", "octo")
+          vim.bo[tmpbuf].filetype = "octo"
         end
       end,
     }
@@ -161,6 +166,7 @@ function M.search()
 end
 
 function M.commit(formatted_commits, repo)
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -182,7 +188,7 @@ function M.commit(formatted_commits, repo)
     vim.list_extend(lines, { "" })
 
     vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, lines)
-    vim.api.nvim_buf_set_option(tmpbuf, "filetype", "git")
+    vim.bo[tmpbuf].filetype = "git"
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
@@ -190,7 +196,7 @@ function M.commit(formatted_commits, repo)
     local url = string.format("/repos/%s/commits/%s", repo, entry.value)
     local cmd = table.concat({ "gh", "api", "--paginate", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, " ")
     local proc = io.popen(cmd, "r")
-    local output
+    local output ---@type string
     if proc ~= nil then
       output = proc:read "*a"
       proc:close()
@@ -208,6 +214,7 @@ function M.commit(formatted_commits, repo)
 end
 
 function M.changed_files(formatted_files)
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -223,7 +230,7 @@ function M.changed_files(formatted_files)
     local diff = entry.change.patch
     if diff then
       vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, vim.split(diff, "\n"))
-      vim.api.nvim_buf_set_option(tmpbuf, "filetype", "git")
+      vim.bo[tmpbuf].filetype = "git"
     end
 
     self:set_preview_buf(tmpbuf)
@@ -234,6 +241,7 @@ function M.changed_files(formatted_files)
 end
 
 function M.review_thread(formatted_threads)
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -264,6 +272,7 @@ function M.review_thread(formatted_threads)
 end
 
 function M.gist(formatted_gists)
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -295,6 +304,7 @@ function M.gist(formatted_gists)
 end
 
 function M.repo(formatted_repos)
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -332,6 +342,7 @@ function M.repo(formatted_repos)
     }
     self:set_preview_buf(tmpbuf)
 
+    ---@type string, string
     local stargazer, fork
     if config.values.picker_config.use_emojis then
       stargazer = string.format("💫: %s", entry.repo.stargazerCount)
@@ -347,6 +358,7 @@ function M.repo(formatted_repos)
 end
 
 function M.issue_template(formatted_templates)
+  ---@type octo.fzf-lua.Previewer
   local previewer = M.bufferPreviewer:extend()
 
   function previewer:new(o, opts, fzf_win)
@@ -362,9 +374,35 @@ function M.issue_template(formatted_templates)
 
     if template then
       vim.api.nvim_buf_set_lines(tmpbuf, 0, -1, false, vim.split(template, "\n"))
-      vim.api.nvim_buf_set_option(tmpbuf, "filetype", "markdown")
+      vim.bo[tmpbuf].filetype = "markdown"
     end
 
+    self:set_preview_buf(tmpbuf)
+    self:update_border(entry.value)
+    self.win:update_preview_scrollbar()
+  end
+
+  return previewer
+end
+
+---@param formatted_notifications table<string, octo.NotificationEntry>
+---@return fzf-lua.previewer.BufferOrFile
+function M.notifications(formatted_notifications)
+  local previewer = M.bufferPreviewer:extend() ---@type fzf-lua.previewer.BufferOrFile
+
+  function previewer:new(o, opts, fzf_win)
+    M.bufferPreviewer.super.new(self, o, opts, fzf_win)
+    setmetatable(self, previewer)
+    return self
+  end
+
+  function previewer:populate_preview_buf(entry_str)
+    local tmpbuf = self:get_tmp_buffer() ---@type integer
+    local entry = formatted_notifications[entry_str]
+    local number = entry.value ---@type string
+    local owner, name = utils.split_repo(entry.repo)
+
+    notifications.populate_preview_buf(tmpbuf, owner, name, number, entry.kind)
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.value)
     self.win:update_preview_scrollbar()

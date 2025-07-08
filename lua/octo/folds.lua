@@ -4,6 +4,10 @@ local M = {}
 
 function M.setup() end
 
+---@param bufnr integer
+---@param start_line integer
+---@param end_line integer
+---@param is_opened boolean
 function M.create(bufnr, start_line, end_line, is_opened)
   if config.values.ui.use_foldtext then
     start_line = start_line - 1

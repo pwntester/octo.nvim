@@ -87,13 +87,17 @@ end
 ---@field body string|nil
 
 ---Create a discussion for a repository
----@param opts DiscussionOpts
+---@param original_opts DiscussionOpts
 ---@return nil
-function M.create(opts)
-  opts = opts or {}
+function M.create(original_opts)
+  ---@class octo.DiscussionOptsCombined : DiscussionOpts, GetCategoriesOpts, DiscussionMutationOpts
+  local opts = original_opts or {}
 
   opts.owner, opts.name = utils.split_repo(opts.repo)
   local repo_info = utils.get_repo_info(opts.repo)
+  if not repo_info then
+    return
+  end
 
   if not repo_info.hasDiscussionsEnabled then
     utils.error(opts.repo .. " doesn't have discussions enabled")
@@ -109,7 +113,7 @@ function M.create(opts)
     opts.body = utils.input { prompt = "Discussion body" }
   end
 
-  local function cb(selected)
+  local function cb(selected) ---@param selected Category
     opts.category_id = selected.id
 
     create_discussion(opts)

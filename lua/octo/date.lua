@@ -1,3 +1,4 @@
+---@diagnostic disable
 ---------------------------------------------------------------------------------------
 -- Module for date and time calculations
 --
@@ -21,7 +22,6 @@ local TICKSPERMIN = 60000000
 local DAYNUM_MAX = 365242500 -- Sat Jan 01 1000000 00:00:00
 local DAYNUM_MIN = -365242500 -- Mon Jan 01 1000000 BCE 00:00:00
 local DAYNUM_DEF = 0 -- Mon Jan 01 0001 00:00:00
-local _
 --[[ LOCAL ARE FASTER ]]
 --
 local type = type

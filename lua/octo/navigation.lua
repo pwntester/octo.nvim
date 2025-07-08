@@ -11,6 +11,7 @@ Opens a url in your default browser, bypassing gh.
 
 @param url The url to open.
 ]]
+---@param url string
 function M.open_in_browser_raw(url)
   local os_name = vim.loop.os_uname().sysname
   local is_windows = vim.loop.os_uname().version:match "Windows"
@@ -24,8 +25,11 @@ function M.open_in_browser_raw(url)
   end
 end
 
+---@param kind? "issue"|"pull_request"|"discussion"|"repo"|"gist"|"project"|"workflow_run"
+---@param repo? string|{ url: string }
+---@param number? integer|string
 function M.open_in_browser(kind, repo, number)
-  local cmd
+  local cmd ---@type string
   local remote = utils.get_remote_host()
   if not remote then
     utils.error "Cannot find repo remote host"
@@ -41,6 +45,7 @@ function M.open_in_browser(kind, repo, number)
         return
       end
       cmd = string.format("gh repo view --web %s", owner_repo)
+      ---@diagnostic disable-next-line: param-type-mismatch
       return pcall(vim.cmd, "silent !" .. cmd)
     end
     if buffer:isPullRequest() then
@@ -61,6 +66,7 @@ function M.open_in_browser(kind, repo, number)
     elseif kind == "issue" then
       cmd = string.format("gh issue view --web -R %s/%s %d", remote, repo, number)
     elseif kind == "repo" then
+      assert(repo, "repo is required")
       cmd = string.format("gh repo view --web %s", repo.url)
     elseif kind == "gist" then
       cmd = string.format("gh gist view --web %s", number)
@@ -70,6 +76,7 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh run view %s --web", number)
     end
   end
+  ---@diagnostic disable-next-line: param-type-mismatch
   pcall(vim.cmd, "silent !" .. cmd)
 end
 
@@ -85,6 +92,7 @@ end
 
 function M.go_to_file()
   local bufnr = vim.api.nvim_get_current_buf()
+  ---@type string?
   local path = ""
   local line = vim.api.nvim_win_get_cursor(0)[1]
   if utils.in_diff_window(bufnr) then
@@ -128,7 +136,7 @@ function M.go_to_issue()
     jq = ".data.repository.issueOrPullRequest.__typename",
     opts = {
       cb = gh.create_callback {
-        failure = vim.api.nvim_err_writeln,
+        failure = utils.print_err,
         success = function(kind)
           if kind == "Issue" then
             utils.get_issue(number, repo)
@@ -159,6 +167,7 @@ function M.next_comment()
       return
     end
 
+    ---@type integer?
     local target
     if current_line < lines[1] + 1 then
       -- go to first comment
@@ -193,6 +202,7 @@ function M.prev_comment()
       return
     end
 
+    ---@type integer?
     local target
     if current_line > lines[#lines] + 2 then
       -- go to last comment

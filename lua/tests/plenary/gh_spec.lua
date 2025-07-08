@@ -1,3 +1,4 @@
+---@diagnostic disable
 local gh = require "octo.gh"
 local eq = assert.are.same
 

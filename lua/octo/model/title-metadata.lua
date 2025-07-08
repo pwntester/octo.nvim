@@ -5,12 +5,15 @@ local M = {}
 ---@field body string
 ---@field dirty boolean
 ---@field extmark integer|nil
----@field startLine integer
----@field endLine integer
+---@field startLine? integer
+---@field endLine? integer
 local TitleMetadata = {}
 TitleMetadata.__index = TitleMetadata
 
+---@class (partial) octo.model.TitleMetadata : TitleMetadata
+
 ---TitleMetadata constructor.
+---@param opts? octo.model.TitleMetadata
 ---@return TitleMetadata
 function TitleMetadata:new(opts)
   opts = opts or {}
