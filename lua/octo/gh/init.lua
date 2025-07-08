@@ -525,7 +525,6 @@ local function create_subcommand(command)
   return subcommand
 end
 
-
 setmetatable(M, {
   __index = function(_, key)
     return create_subcommand(key)
