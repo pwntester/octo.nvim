@@ -478,22 +478,6 @@ local function create_subcommand(command)
   return subcommand
 end
 
----Fetch the merge base between base and head refs
----@param owner string repository owner
----@param repo string repository name
----@param base string base ref (branch/sha)
----@param head string head ref (branch/sha)
----@param cb function callback function(merge_base_sha, stderr)
-function M.fetch_merge_base(owner, repo, base, head, cb)
-  local endpoint = string.format("repos/%s/%s/compare/%s...%s", owner, repo, base, head)
-  M.api.get {
-    endpoint,
-    jq = ".merge_base_commit.sha",
-    opts = {
-      cb = cb,
-    },
-  }
-end
 
 setmetatable(M, {
   __index = function(_, key)
