@@ -452,9 +452,6 @@ function OctoBuffer:render_issue()
     writers.write_block(self.bufnr, { "" })
   end
 
-  -- drop undo history
-  utils.clear_history()
-
   -- reset modified option
   vim.bo[self.bufnr].modified = false
 

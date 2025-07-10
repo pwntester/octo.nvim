@@ -385,6 +385,7 @@ function M.create_buffer(kind, obj, repo, create, hostname)
     octo_buffer:async_fetch_taggable_users()
     octo_buffer:async_fetch_issues()
   end
+  utils.clear_history()
 end
 
 return M
