@@ -278,8 +278,11 @@ require"octo".setup({
     pull_request = {
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
       merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
+      merge_pr_queue = { lhs = "<localleader>pq", desc = "merge commit PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
+      squash_and_merge_queue = { lhs = "<localleader>psq", desc = "squash and add to merge queue (Merge queue enabled is required)" },
       rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
+      rebase_and_merge_queue = { lhs = "<localleader>prq", desc = "rebase and add to merge queue (Merge queue enabled is required)" },
       list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
       list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
       show_pr_diff = { lhs = "<localleader>pd", desc = "show PR diff" },
@@ -386,7 +389,6 @@ require"octo".setup({
 })
 ```
 
-
 ## 🤖 Commands
 
 There is only an `Octo <object> <action> [arguments]` command:
@@ -482,10 +484,9 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |    | unmark                                                 | Unmark the discussion comment as answer |
 |    | reopen                                                 | Reopen the current discussion |
 |    | search                                                 | Search discussions |
-| parent   | add                                           | Add a parent issue to current issue |  
-|          | remove                                           | Remove the parent issue to current issue |  
+| parent   | add                                           | Add a parent issue to current issue |
+|          | remove                                           | Remove the parent issue to current issue |
 |          | edit                                           | Edit the parent issue to current issue |
-
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
@@ -541,7 +542,6 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
   Here, `search` is the default value and most broad. Both `assignable` and
   `mentionable` are specific to the current repo. The `assignable` option is more
   restrictive than `mentionable`.
-
 
 ## 📋 PR reviews
 

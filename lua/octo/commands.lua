@@ -1811,6 +1811,12 @@ function M.merge_pr(...)
   end
   utils.insert_delete_flag(args, delete_branch)
 
+  for _, param in ipairs(params) do
+    if utils.merge_queue_to_flag[param] then
+      utils.insert_merge_flag(args, param)
+    end
+  end
+
   gh.run {
     args = args,
     cb = function(output, stderr)
