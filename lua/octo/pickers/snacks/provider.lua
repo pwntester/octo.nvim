@@ -916,8 +916,39 @@ function M.changed_files(opts)
   }
 end
 
+function M.actions(flattened_actions)
+  local final_actions = {
+    confirm = function(_picker, action)
+      action.fun()
+    end,
+  }
+  local final_keys = {}
+
+  Snacks.picker.pick {
+    items = flattened_actions,
+    title = "",
+    format = function(item, _)
+      ---@type snacks.picker.Highlight[]
+      local ret = {}
+
+      ret[#ret + 1] = { item.object }
+      ret[#ret + 1] = { " " }
+      ret[#ret + 1] = { item.name }
+
+      return ret
+    end,
+    preview = false,
+    win = {
+      input = {
+        keys = final_keys, -- Use the constructed keys map
+      },
+    },
+    actions = final_actions, -- Use the constructed actions map
+  }
+end
+
 M.picker = {
-  actions = M.not_implemented,
+  actions = M.actions,
   assigned_labels = M.not_implemented,
   assignees = M.not_implemented,
   changed_files = M.changed_files,
