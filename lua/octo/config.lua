@@ -152,6 +152,7 @@ function M.get_default_values()
       mappings = {
         open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+        copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
         checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
         merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
       },
@@ -335,8 +336,17 @@ function M.get_default_values()
       pull_request = {
         checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
         merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
+        merge_pr_queue = { lhs = "<localleader>pq", desc = "add pull request to merge queue" },
         squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
+        squash_and_merge_queue = {
+          lhs = "<localleader>psq",
+          desc = "squash and add to merge queue (Merge queue enabled is required)",
+        },
         rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
+        rebase_and_merge_queue = {
+          lhs = "<localleader>prq",
+          desc = "rebase and add to merge queue (Merge queue enabled is required)",
+        },
         list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
         list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
         show_pr_diff = { lhs = "<localleader>pd", desc = "show PR diff" },
@@ -348,6 +358,7 @@ function M.get_default_values()
         reload = { lhs = "<C-r>", desc = "reload PR" },
         open_in_browser = { lhs = "<C-b>", desc = "open PR in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+        copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
         goto_file = { lhs = "gf", desc = "go to file" },
         add_assignee = { lhs = "<localleader>aa", desc = "add assignee" },
         remove_assignee = { lhs = "<localleader>ad", desc = "remove assignee" },
@@ -417,6 +428,7 @@ function M.get_default_values()
         close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
         toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
         goto_file = { lhs = "gf", desc = "go to file" },
+        copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
       },
       file_panel = {
         submit_review = { lhs = "<localleader>vs", desc = "submit review" },
