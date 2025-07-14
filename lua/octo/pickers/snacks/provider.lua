@@ -917,6 +917,11 @@ function M.changed_files(opts)
 end
 
 function M.actions(flattened_actions)
+  -- add searchable text field to each action
+  for _, action in ipairs(flattened_actions) do
+    action.text = action.object .. " " .. action.name
+  end
+
   local final_actions = {
     confirm = function(_picker, action)
       action.fun()
