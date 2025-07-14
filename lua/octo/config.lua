@@ -336,16 +336,19 @@ function M.get_default_values()
       pull_request = {
         checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
         merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
-        merge_pr_queue = { lhs = "<localleader>pq", desc = "add pull request to merge queue" },
         squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
+        rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
+        merge_pr_queue = {
+          lhs = "<localleader>pq",
+          desc = "merge commit PR and add to merge queue (Merge queue must be enabled in the repo)",
+        },
         squash_and_merge_queue = {
           lhs = "<localleader>psq",
-          desc = "squash and add to merge queue (Merge queue enabled is required)",
+          desc = "squash and add to merge queue (Merge queue must be enabled in the repo)",
         },
-        rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
         rebase_and_merge_queue = {
           lhs = "<localleader>prq",
-          desc = "rebase and add to merge queue (Merge queue enabled is required)",
+          desc = "rebase and add to merge queue (Merge queue must be enabled in the repo)",
         },
         list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
         list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
