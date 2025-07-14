@@ -559,6 +559,9 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
+      sha = function()
+        M.copy_sha()
+      end,
     },
     repo = {
       search = function(prompt)
@@ -1808,6 +1811,12 @@ function M.merge_pr(...)
   end
   utils.insert_delete_flag(args, delete_branch)
 
+  for _, param in ipairs(params) do
+    if utils.merge_queue_to_flag[param] then
+      utils.insert_merge_flag(args, param)
+    end
+  end
+
   gh.run {
     args = args,
     cb = function(output, stderr)
@@ -2379,6 +2388,33 @@ function M.copy_url()
   end
 
   utils.copy_url(url)
+end
+
+function M.copy_sha()
+  local buffer = utils.get_current_buffer()
+
+  if not buffer then
+    utils.error "No buffer found"
+    return
+  end
+
+  local sha
+  if buffer:isPullRequest() then
+    sha = buffer.node.headRefOid
+  elseif buffer:isIssue() then
+    utils.error "Issues don't have commit SHAs"
+    return
+  else
+    utils.error "Not in a supported buffer type"
+    return
+  end
+
+  if not sha then
+    utils.error "No SHA found"
+    return
+  end
+
+  utils.copy_sha(sha)
 end
 
 function M.actions()
