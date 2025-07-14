@@ -30,11 +30,20 @@ return {
   merge_pr = function()
     require("octo.commands").merge_pr "commit"
   end,
+  merge_pr_queue = function()
+    require("octo.commands").merge_pr("commit", "queue")
+  end,
   squash_and_merge_pr = function()
     require("octo.commands").merge_pr "squash"
   end,
+  squash_and_merge_queue = function()
+    require("octo.commands").merge_pr("squash", "queue")
+  end,
   rebase_and_merge_pr = function()
     require("octo.commands").merge_pr "rebase"
+  end,
+  rebase_and_merge_queue = function()
+    require("octo.commands").merge_pr("rebase", "queue")
   end,
   add_reviewer = function()
     require("octo.commands").add_user "reviewer"
