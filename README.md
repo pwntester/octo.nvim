@@ -125,6 +125,7 @@ require"octo".setup({
     mappings = {                           -- mappings for the pickers
       open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+      copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
       checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
       merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
     },
@@ -277,8 +278,11 @@ require"octo".setup({
     pull_request = {
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
       merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
+      merge_pr_queue = { lhs = "<localleader>pq", desc = "merge commit PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
+      squash_and_merge_queue = { lhs = "<localleader>psq", desc = "squash and add to merge queue (Merge queue enabled is required)" },
       rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
+      rebase_and_merge_queue = { lhs = "<localleader>prq", desc = "rebase and add to merge queue (Merge queue enabled is required)" },
       list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
       list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
       show_pr_diff = { lhs = "<localleader>pd", desc = "show PR diff" },
@@ -385,7 +389,6 @@ require"octo".setup({
 })
 ```
 
-
 ## 🤖 Commands
 
 There is only an `Octo <object> <action> [arguments]` command:
@@ -422,6 +425,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reload                                            | Reload PR. Same as doing `e!`                                                                                                                          |
 |          | browser                                           | Open current PR in the browser                                                                                                                         |
 |          | url                                               | Copies the URL of the current PR to the system clipboard                                                                                               |
+|          | sha                                               | Copies the head commit SHA of the current PR to the system clipboard                                                                                   |
 |          | runs                                              | List all workflow runs for the PR                                                                                                                      |
 | repo     | list (3)                                          | List repos user owns, contributes or belong to                                                                                                         |
 |          | fork                                              | Fork repo                                                                                                                                              |
@@ -480,10 +484,9 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |    | unmark                                                 | Unmark the discussion comment as answer |
 |    | reopen                                                 | Reopen the current discussion |
 |    | search                                                 | Search discussions |
-| parent   | add                                           | Add a parent issue to current issue |  
-|          | remove                                           | Remove the parent issue to current issue |  
+| parent   | add                                           | Add a parent issue to current issue |
+|          | remove                                           | Remove the parent issue to current issue |
 |          | edit                                           | Edit the parent issue to current issue |
-
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
@@ -492,6 +495,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `<CR>`: Edit Issue
 - `<C-b>`: Opens issue in the browser
 - `<C-y>`: Copies URL to system clipboard
+- `<C-e>`: Copies commit SHA to system clipboard (where applicable)
 
 [Available filter keys](https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters)
 
@@ -509,6 +513,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - `<C-b>`: Opens PR in the browser
 - `<C-o>`: Checkout PR
 - `<C-y>`: Copies URL to system clipboard
+- `<C-e>`: Copies commit SHA to system clipboard (for commits and PRs)
 
 [Available filter keys](https://github.com/pwntester/octo.nvim/blob/master/lua/octo/pickers/telescope/provider.lua#L34)
 
@@ -537,7 +542,6 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
   Here, `search` is the default value and most broad. Both `assignable` and
   `mentionable` are specific to the current repo. The `assignable` option is more
   restrictive than `mentionable`.
-
 
 ## 📋 PR reviews
 
