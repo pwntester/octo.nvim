@@ -2,14 +2,14 @@ local utils = require "octo.utils"
 local M = {}
 
 ---@class octo.BorderHeaderFloatOpts
----@field width number
----@field border_width number
----@field padding number
+---@field width integer
+---@field border_width integer
+---@field padding integer
 ---@field header string?
----@field header_height number
----@field height number
----@field y_offset number
----@field x_offset number
+---@field header_height integer
+---@field height integer
+---@field y_offset integer
+---@field x_offset integer
 
 ---@param opts octo.BorderHeaderFloatOpts
 function M.create_border_header_float(opts)
@@ -53,14 +53,14 @@ end
 
 ---@class octo.ContentFloatOpts
 ---@field content? string[]
----@field header string?
----@field header_height number
----@field x_offset number
----@field y_offset number
----@field width number
----@field height number
----@field border_width number
----@field padding number
+---@field header boolean
+---@field header_height integer
+---@field x_offset integer
+---@field y_offset integer
+---@field width integer
+---@field height integer
+---@field border_width integer
+---@field padding integer
 
 ---@param opts octo.ContentFloatOpts
 function M.create_content_float(opts)
@@ -154,14 +154,15 @@ function M.create_centered_float(opts)
 
   -- content win
   local winid, bufnr = M.create_content_float {
-    height = height,
-    width = width,
     content = opts.content,
-    x_offset = x_offset,
-    y_offset = y_offset,
+    width = width,
     border_width = border_width,
     padding = padding,
+    height = height,
+    header = opts.header and true or false,
     header_height = header_height,
+    y_offset = y_offset,
+    x_offset = x_offset,
   }
 
   -- window binding

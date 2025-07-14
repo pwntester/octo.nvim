@@ -41,6 +41,7 @@ See |octo-command-examples| for examples.
                           <CR>    Edit issue.
                           <C-b>   Open issue in browser.
                           <C-y>   Copy URL to system clipboard.
+                          <C-e>   Copy commit SHA to system clipboard (where applicable).
                         Available filter keys: see <https://docs.github.com/en/graphql/reference/input-objects#issuefilters>
   search                Live issue search.
   reload                Reload issue. Same as doing `e!`.
@@ -61,6 +62,7 @@ See |octo-command-examples| for examples.
                           <C-b>   Open PR in browser.
                           <C-o>   Checkout PR.
                           <C-y>   Copy URL to system clipboard.
+                          <C-e>   Copy commit SHA to system clipboard.
                         Available filter keys: see <https://docs.github.com/en/graphql/reference/input-objects#issuefilters>
   search                Live PR search.
   edit [number] {repo}  Edits issue/PR with the given number in the current or
@@ -81,6 +83,8 @@ See |octo-command-examples| for examples.
   browser               Open current PR in the browser.
   url                   Copies the URL of the currently opened PR to the
                         system clipboard.
+  sha                   Copies the head commit SHA of the currently opened PR
+                        to the system clipboard.
   runs                  Show all workflow runs for the PR.
 
 
