@@ -132,7 +132,7 @@ function M.load_buffer(opts)
 end
 
 ---@param repo string
----@param kind "issue"|"pull"|"discussion"|"release"|"repo"
+---@param kind octo.NodeKind
 ---@param id integer|string pull request, issue, or discussion number or release tag
 ---@param cb fun(obj: octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository): nil
 function M.load(repo, kind, id, cb)

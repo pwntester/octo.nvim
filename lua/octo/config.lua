@@ -454,6 +454,7 @@ function M.get_default_values()
         unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
       },
       repo = {},
+      release = {},
     },
   }
 end
@@ -694,6 +695,7 @@ function M.setup(opts)
         review_diff = {},
         file_panel = {},
         repo = {},
+        release = {},
       }
     end
     -- Use deep extend. For arrays ('actions' here), 'force' mode usually replaces the whole array,

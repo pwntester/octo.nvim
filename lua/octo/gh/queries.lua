@@ -104,7 +104,7 @@ query($endCursor: String) {
 ---@field updatedAt string
 ---@field url string
 ---@field headRepository { nameWithOwner: string }
----@field files { nodes: { path: string, viewerViewedState: string }[] }
+---@field files { nodes: { path: string, viewerViewedState: ViewedState }[] }
 ---@field merged boolean
 ---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }
 ---@field participants { nodes: { login: string }[] }
