@@ -177,7 +177,7 @@ function M.write_discussion_details(bufnr, discussion)
   table.insert(details, author_vt)
 
   local category_vt = {
-    { "Category: ",             "OctoDetailsLabel" },
+    { "Category: ", "OctoDetailsLabel" },
     { discussion.category.name, "OctoDetailsValue" },
   }
   table.insert(details, category_vt)
@@ -248,7 +248,7 @@ function M.write_upvotes(bufnr, obj, line)
   -- local viewer_did_upvote = obj.viewerHasUpvoted
 
   local upvotes_vt = {
-    { upvote_symbol,  "OctoDetailsLabel" },
+    { upvote_symbol, "OctoDetailsLabel" },
     { " " .. upvotes, "OctoDetailsValue" },
   }
   M.write_block(bufnr, { "" }, line)
@@ -408,7 +408,7 @@ function M.write_state(bufnr, state, number)
 
   -- title virtual text
   local title_vt = {
-    { tostring(number),                              "OctoIssueId" },
+    { tostring(number), "OctoIssueId" },
     { string.format(" [%s] ", state:gsub("_", " ")), utils.state_hl_map[state] },
   }
 
@@ -696,7 +696,7 @@ function M.write_details(bufnr, issue, update)
       for _, name in ipairs(reviewer_names) do
         local strongest_review = utils.calculate_strongest_review_state(reviewers[name])
         local reviewer_vt = {
-          { name,                                   "OctoUser" },
+          { name, "OctoUser" },
           { utils.state_icon_map[strongest_review], utils.state_hl_map[strongest_review] },
           { " " },
         }
@@ -719,9 +719,9 @@ function M.write_details(bufnr, issue, update)
 
     -- from/into branches
     local branches_vt = {
-      { "From: ",          "OctoDetailsLabel" },
+      { "From: ", "OctoDetailsLabel" },
       { issue.headRefName, "OctoDetailsValue" },
-      { " Into: ",         "OctoDetailsLabel" },
+      { " Into: ", "OctoDetailsLabel" },
       { issue.baseRefName, "OctoDetailsValue" },
     }
     table.insert(details, branches_vt)
@@ -729,7 +729,7 @@ function M.write_details(bufnr, issue, update)
     -- review decision
     if issue.reviewDecision and issue.reviewDecision ~= vim.NIL then
       local decision_vt = {
-        { "Review decision: ",                          "OctoDetailsLabel" },
+        { "Review decision: ", "OctoDetailsLabel" },
         { utils.state_message_map[issue.reviewDecision] },
       }
       table.insert(details, decision_vt)
@@ -742,7 +742,7 @@ function M.write_details(bufnr, issue, update)
       local message = state_info.symbol .. state
       local checks_vt = {
         { "Checks: ", "OctoDetailsLabel" },
-        { message,    state_info.hl },
+        { message, state_info.hl },
       }
       table.insert(details, checks_vt)
     end
@@ -770,10 +770,10 @@ function M.write_details(bufnr, issue, update)
 
     if not issue.merged and issue.autoMergeRequest and issue.autoMergeRequest ~= vim.NIL then
       local auto_merge_vt = {
-        { "Auto-merge: ",                                                                "OctoDetailsLabel" },
-        { "ENABLED",                                                                     "OctoStateApproved" },
+        { "Auto-merge: ", "OctoDetailsLabel" },
+        { "ENABLED", "OctoStateApproved" },
         { " by " },
-        { issue.autoMergeRequest.enabledBy.login,                                        "OctoUser" },
+        { issue.autoMergeRequest.enabledBy.login, "OctoUser" },
         { " (" .. utils.auto_merge_method_map[issue.autoMergeRequest.mergeMethod] .. ")" },
       }
       table.insert(details, auto_merge_vt)
@@ -781,11 +781,11 @@ function M.write_details(bufnr, issue, update)
 
     -- changes
     local changes_vt = {
-      { "Commits: ",                            "OctoDetailsLabel" },
-      { tostring(issue.commits.totalCount),     "OctoDetailsValue" },
-      { " Changed files: ",                     "OctoDetailsLabel" },
-      { tostring(issue.changedFiles),           "OctoDetailsValue" },
-      { " (",                                   "OctoDetailsLabel" },
+      { "Commits: ", "OctoDetailsLabel" },
+      { tostring(issue.commits.totalCount), "OctoDetailsValue" },
+      { " Changed files: ", "OctoDetailsLabel" },
+      { tostring(issue.changedFiles), "OctoDetailsValue" },
+      { " (", "OctoDetailsLabel" },
       { string.format("+%d ", issue.additions), "OctoDiffstatAdditions" },
       { string.format("-%d ", issue.deletions), "OctoDiffstatDeletions" },
     }
@@ -855,7 +855,7 @@ function M.write_comment(bufnr, comment, kind, line)
   if kind == "PullRequestReview" then
     -- Review top-level comments
     local state_bubble =
-        bubbles.make_bubble(utils.state_msg_map[comment.state], utils.state_hl_map[comment.state] .. "Bubble")
+      bubbles.make_bubble(utils.state_msg_map[comment.state], utils.state_hl_map[comment.state] .. "Bubble")
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
     --vim.list_extend(header_vt, author_bubble)
@@ -872,7 +872,7 @@ function M.write_comment(bufnr, comment, kind, line)
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
     local state_bubble =
-        bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
+      bubbles.make_bubble(comment.state:lower(), utils.state_hl_map[comment.state] .. "Bubble", { margin_width = 1 })
     table.insert(
       header_vt,
       { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker" }
@@ -983,7 +983,7 @@ function M.write_review_decision(bufnr, review)
   M.write_block(bufnr, { "", "" }, line)
   local header_vt = {}
   local state_bubble =
-      bubbles.make_bubble(utils.state_msg_map[review.state], utils.state_hl_map[review.state] .. "Bubble")
+    bubbles.make_bubble(utils.state_msg_map[review.state], utils.state_hl_map[review.state] .. "Bubble")
   table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
   table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
   table.insert(header_vt, {
@@ -1042,7 +1042,7 @@ local function get_lnum_chunks(opts)
   if not opts.left_line and opts.right_line then
     return {
       { string.rep(" ", opts.max_lnum), "DiffAdd" },
-      { " ",                            "DiffAdd" },
+      { " ", "DiffAdd" },
       {
         string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.right_line))) .. tostring(opts.right_line),
         "DiffAdd",
@@ -1055,9 +1055,9 @@ local function get_lnum_chunks(opts)
         string.rep(" ", opts.max_lnum - vim.fn.strdisplaywidth(tostring(opts.left_line))) .. tostring(opts.left_line),
         "DiffDelete",
       },
-      { " ",                            "DiffDelete" },
+      { " ", "DiffDelete" },
       { string.rep(" ", opts.max_lnum), "DiffDelete" },
-      { " ",                            "DiffDelete" },
+      { " ", "DiffDelete" },
     }
   elseif opts.right_line and opts.left_line then
     return {
@@ -1484,13 +1484,13 @@ function M.write_review_thread_header(bufnr, opts, line)
 
   local header_vt = {
     { string.rep(" ", conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker" },
-    { "THREAD: ",                                                           "OctoTimelineItemHeading" },
-    { "[",                                                                  "OctoSymbol" },
-    { opts.path .. " ",                                                     "OctoDetailsLabel" },
-    { tostring(opts.start_line) .. ":" .. tostring(opts.end_line),          "OctoDetailsValue" },
-    { "] [Commit: ",                                                        "OctoSymbol" },
-    { opts.commit,                                                          "OctoDetailsLabel" },
-    { "] ",                                                                 "OctoSymbol" },
+    { "THREAD: ", "OctoTimelineItemHeading" },
+    { "[", "OctoSymbol" },
+    { opts.path .. " ", "OctoDetailsLabel" },
+    { tostring(opts.start_line) .. ":" .. tostring(opts.end_line), "OctoDetailsValue" },
+    { "] [Commit: ", "OctoSymbol" },
+    { opts.commit, "OctoDetailsLabel" },
+    { "] ", "OctoSymbol" },
   }
   if opts.isOutdated then
     -- local outdated_bubble = bubbles.make_bubble(
@@ -1604,9 +1604,9 @@ function M.write_user_profile(bufnr, user, opts)
   -- followers/following
   local follow_chunk = {
     { " " },
-    { "Followers: ",                      "OctoDetailsValue" },
+    { "Followers: ", "OctoDetailsValue" },
     { tostring(user.followers.totalCount) },
-    { " Following: ",                     "OctoDetailsValue" },
+    { " Following: ", "OctoDetailsValue" },
     { tostring(user.following.totalCount) },
   }
   max_length = chunk_length(max_length, follow_chunk)
@@ -1701,7 +1701,7 @@ function M.write_discussion_summary(bufnr, discussion, opts)
   -- repo and date line
   table.insert(chunks, {
     { " " },
-    { discussion.repository.nameWithOwner,            "OctoDetailsValue" },
+    { discussion.repository.nameWithOwner, "OctoDetailsValue" },
     { " " .. utils.format_date(discussion.createdAt), "OctoDetailsValue" },
   })
 
@@ -1710,8 +1710,8 @@ function M.write_discussion_summary(bufnr, discussion, opts)
   table.insert(chunks, {
     { " " },
     { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
-    { discussion.title .. " ",             "OctoDetailsLabel" },
-    { "#" .. discussion.number .. " ",     "OctoDetailsValue" },
+    { discussion.title .. " ", "OctoDetailsLabel" },
+    { "#" .. discussion.number .. " ", "OctoDetailsValue" },
   })
   if not utils.is_blank(discussion.isAnswered) and discussion.isAnswered then
     table.insert(chunks, { { " " }, { "✓ Answered", "OctoStateApproved" } })
@@ -1776,7 +1776,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   -- repo and date line
   table.insert(chunks, {
     { " " },
-    { issue.repository.nameWithOwner,            "OctoDetailsValue" },
+    { issue.repository.nameWithOwner, "OctoDetailsValue" },
     { " " .. utils.format_date(issue.createdAt), "OctoDetailsValue" },
   })
 
@@ -1785,8 +1785,8 @@ function M.write_issue_summary(bufnr, issue, opts)
   table.insert(chunks, {
     { " " },
     { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
-    { issue.title .. " ",                  "OctoDetailsLabel" },
-    { "#" .. issue.number .. " ",          "OctoDetailsValue" },
+    { issue.title .. " ", "OctoDetailsLabel" },
+    { "#" .. issue.number .. " ", "OctoDetailsValue" },
   })
   table.insert(chunks, { { "" } })
 
@@ -2576,7 +2576,7 @@ function M.write_threads(bufnr, threads)
       -- review thread header
       if utils.is_blank(comment.replyTo) then
         local start_line = not utils.is_blank(thread.originalStartLine) and thread.originalStartLine
-            or thread.originalLine
+          or thread.originalLine
         local end_line = thread.originalLine
         comment.start_line = start_line
         comment.end_line = end_line
@@ -2604,7 +2604,7 @@ function M.write_threads(bufnr, threads)
 
         -- write snippet
         thread_start, thread_end =
-            M.write_thread_snippet(bufnr, comment.diffHunk, diffhunk_lang, nil, start_line, end_line, thread.diffSide)
+          M.write_thread_snippet(bufnr, comment.diffHunk, diffhunk_lang, nil, start_line, end_line, thread.diffSide)
       end
 
       comment_start, comment_end = M.write_comment(bufnr, comment, "PullRequestReviewComment")
