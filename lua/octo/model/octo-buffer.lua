@@ -1157,7 +1157,7 @@ function OctoBuffer:get_pr(callback)
     id = self.node.id,
   }
 
-  PullRequest.create_with_merge_base(opts, self.node, callback)
+  PullRequest.create_with_merge_base(opts, self.node --[[@as octo.PullRequest]], callback)
 end
 
 --- Get a issue/PR comment at cursor (if any)
