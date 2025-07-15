@@ -21,6 +21,9 @@ return {
   list_commits = function()
     require("octo.picker").commits()
   end,
+  review_commits = function()
+    require("octo.picker").review_commits()
+  end,
   list_changed_files = function()
     require("octo.picker").changed_files()
   end,
