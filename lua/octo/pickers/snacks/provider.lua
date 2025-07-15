@@ -759,11 +759,168 @@ function M.search(opts)
   end
 end
 
+function M.changed_files(opts)
+  opts = opts or {}
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isPullRequest() then
+    utils.error "Changed files picker only works in pull request buffers"
+    return
+  end
+
+  gh.api.get {
+    "/repos/{owner}/{repo}/pulls/{pull_number}/files",
+    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    opts = {
+      paginate = true,
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          if #results == 0 then
+            utils.error "No changed files found for this pull request"
+            return
+          end
+
+          -- Format files for snacks picker
+          for _, file in ipairs(results) do
+            file.text = file.filename
+            file.kind = "file"
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.changed_files
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.changed_files) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action (what happens when you press Enter)
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_picker, item)
+              utils.edit_file(item.filename)
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              local file_url =
+                string.format("https://github.com/%s/pull/%s/files#diff-%s", buffer.repo, buffer.number, item.sha)
+              navigation.open_in_browser_raw(file_url)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = opts.title or "Changed Files",
+            items = results,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              -- File status indicator (GitHub API can return: added, removed, modified, renamed, copied)
+              local status_icon = item.status == "added" and "A"
+                or item.status == "removed" and "D"
+                or item.status == "modified" and "M"
+                or item.status == "renamed" and "R"
+                or item.status == "copied" and "C"
+                or "?"
+              local status_highlight = item.status == "added" and "GitSignsAdd"
+                or item.status == "removed" and "GitSignsDelete"
+                or item.status == "modified" and "GitSignsChange"
+                or item.status == "renamed" and "GitSignsChange"
+                or item.status == "copied" and "GitSignsChange"
+                or "Normal"
+
+              ret[#ret + 1] = { status_icon, status_highlight }
+              ret[#ret + 1] = { " " }
+
+              -- Filename
+              ret[#ret + 1] = { item.filename, "Normal" }
+
+              -- Show additions/deletions if available
+              if item.additions and item.deletions then
+                ret[#ret + 1] = { " (", "Comment" }
+                ret[#ret + 1] = { string.format("+%d", item.additions), "GitSignsAdd" }
+                ret[#ret + 1] = { "/", "Comment" }
+                ret[#ret + 1] = { string.format("-%d", item.deletions), "GitSignsDelete" }
+                ret[#ret + 1] = { ")", "Comment" }
+              end
+
+              return ret
+            end,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+
+              -- Show file diff preview
+              local lines = {
+                string.format("File: %s", item.filename),
+                string.format("Status: %s", item.status),
+                "",
+              }
+
+              local line_count = #lines
+              if item.additions and item.deletions then
+                lines[#lines + 1] = string.format("Changes: +%d -%d", item.additions, item.deletions)
+                lines[#lines + 1] = ""
+              end
+
+              -- Add patch content if available
+              if item.patch then
+                lines[#lines + 1] = "Patch:"
+                lines[#lines + 1] = ""
+                local patch_lines = vim.split(item.patch, "\n")
+                vim.list_extend(lines, patch_lines)
+              end
+
+              ctx.preview:set_lines(lines)
+
+              -- Apply diff highlighting to the entire preview
+              if item.patch then
+                ctx.preview:highlight { ft = "diff" }
+              end
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end,
+      },
+    },
+  }
+end
+
 M.picker = {
   actions = M.not_implemented,
   assigned_labels = M.not_implemented,
   assignees = M.not_implemented,
-  changed_files = M.not_implemented,
+  changed_files = M.changed_files,
   commits = M.not_implemented,
   discussions = M.not_implemented,
   gists = M.not_implemented,
