@@ -212,4 +212,51 @@ function PullRequest:get_commit_changed_files(rev, callback)
   }
 end
 
+---Helper function to create a PullRequest with merge base
+---@param opts { repo: string, head_repo: string, head_ref_name: string, number: integer, id: string, bufnr?: integer }
+---@param obj octo.PullRequest
+---@param cb fun(pull_request: PullRequest)
+function M.create_with_merge_base(opts, obj, cb)
+  local Rev = require("octo.reviews.rev").Rev
+  local owner, name = utils.split_repo(opts.repo)
+
+  -- Fetch merge base for accurate diff using GitHub Compare API
+  local endpoint = string.format("repos/%s/%s/compare/%s...%s", owner, name, obj.baseRefName, obj.headRefName)
+  local callback = gh.create_callback {
+    success = function(merge_base_sha)
+      -- Use merge base if available, otherwise fall back to baseRefOid
+      ---@type PullRequestOpts
+      local pr_opts = vim.tbl_extend("force", opts, {
+        left = merge_base_sha and Rev:new(merge_base_sha) or Rev:new(obj.baseRefOid),
+        right = Rev:new(obj.headRefOid),
+        files = obj.files.nodes,
+      })
+
+      local pr = PullRequest:new(pr_opts)
+      cb(pr)
+    end,
+    failure = function(stderr)
+      utils.error("Failed to fetch merge base: " .. stderr)
+      -- Fall back to using baseRefOid
+      ---@type PullRequestOpts
+      local pr_opts = vim.tbl_extend("force", opts, {
+        left = Rev:new(obj.baseRefOid),
+        right = Rev:new(obj.headRefOid),
+        files = obj.files.nodes,
+      })
+
+      local pr = PullRequest:new(pr_opts)
+      cb(pr)
+    end,
+  }
+
+  gh.api.get {
+    endpoint,
+    jq = ".merge_base_commit.sha",
+    opts = {
+      cb = callback,
+    },
+  }
+end
+
 return M
