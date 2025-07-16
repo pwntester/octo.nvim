@@ -916,10 +916,338 @@ function M.changed_files(opts)
   }
 end
 
+function M.assignees(cb)
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    utils.error "No buffer found"
+    return
+  end
+
+  local query, key
+  if buffer:isIssue() then
+    query = graphql("issue_assignees_query", buffer.owner, buffer.name, buffer.number)
+    key = "issue"
+  elseif buffer:isPullRequest() then
+    query = graphql("pull_request_assignees_query", buffer.owner, buffer.name, buffer.number)
+    key = "pullRequest"
+  else
+    utils.error "Assignees picker only works in issue or pull request buffers"
+    return
+  end
+
+  utils.info "Fetching assignees..."
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.error(stderr)
+      elseif output then
+        local resp = vim.json.decode(output)
+        local assignees = resp.data.repository[key].assignees.nodes
+
+        if #assignees == 0 then
+          utils.info("No assignees found for this " .. key)
+          return
+        end
+
+        -- Format assignees for snacks picker
+        for _, assignee in ipairs(assignees) do
+          assignee.text = assignee.login
+          assignee.kind = "user"
+          assignee.display_text = assignee.login
+        end
+
+        local cfg = octo_config.values
+
+        -- Prepare actions and keys for Snacks
+        local final_actions = {}
+        local final_keys = {}
+        local default_mode = { "n", "i" }
+
+        -- Process custom actions from config array
+        local custom_actions_defined = {}
+        if
+          cfg.picker_config.snacks
+          and cfg.picker_config.snacks.actions
+          and cfg.picker_config.snacks.actions.assignees
+        then
+          for _, action_item in ipairs(cfg.picker_config.snacks.actions.assignees) do
+            if action_item.name and action_item.fn then
+              final_actions[action_item.name] = action_item.fn
+              custom_actions_defined[action_item.name] = true
+              if action_item.lhs then
+                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+              end
+            end
+          end
+        end
+
+        -- Add default confirm action if not overridden
+        if not custom_actions_defined["confirm"] then
+          final_actions["confirm"] = function(_, item)
+            if type(cb) == "function" then
+              cb(item.id)
+            end
+          end
+        end
+
+        -- Add default actions/keys if not overridden
+        if not custom_actions_defined["open_in_browser"] then
+          final_actions["open_in_browser"] = function(_picker, item)
+            navigation.open_in_browser_raw(string.format("https://github.com/%s", item.login))
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+        end
+
+        Snacks.picker.pick {
+          title = "Assignees",
+          items = assignees,
+          format = function(item, _)
+            local ret = {} ---@type snacks.picker.Highlight[]
+
+            ---@diagnostic disable-next-line: assign-type-mismatch
+            ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
+            ret[#ret + 1] = { " " }
+            ret[#ret + 1] = { item.login, "Normal" }
+
+            if item.isViewer then
+              ret[#ret + 1] = { " (you)", "Comment" }
+            end
+
+            return ret
+          end,
+          preview = function(ctx)
+            local item = ctx.item
+            if not item then
+              return
+            end
+
+            ctx.preview:reset()
+            local lines = {
+              "Assignee: " .. item.login,
+              "User ID: " .. item.id,
+              item.isViewer and "This is you" or "GitHub user",
+            }
+            ctx.preview:set_lines(lines)
+          end,
+          win = {
+            input = {
+              keys = final_keys,
+            },
+          },
+          actions = final_actions,
+        }
+      end
+    end,
+  }
+end
+
+function M.users(cb)
+  local formatted_users = {}
+
+  local function create_picker(prompt)
+    -- skip empty queries
+    if not prompt or prompt == "" or utils.is_blank(prompt) then
+      return {}
+    end
+
+    local query = graphql("users", prompt)
+    utils.info "Searching for users..."
+
+    gh.run {
+      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+          return
+        elseif output then
+          local users = {}
+          local orgs = {}
+          local responses = utils.get_pages(output)
+
+          for _, resp in ipairs(responses) do
+            for _, user in ipairs(resp.data.search.nodes) do
+              if not user.teams then
+                -- regular user
+                if not users[user.login] then
+                  users[user.login] = {
+                    id = user.id,
+                    login = user.login,
+                    kind = "user",
+                    text = user.login,
+                  }
+                end
+              elseif user.teams and user.teams.totalCount > 0 then
+                -- organization, collect all teams
+                if not orgs[user.login] then
+                  orgs[user.login] = {
+                    id = user.id,
+                    login = user.login,
+                    teams = user.teams.nodes,
+                    kind = "organization",
+                  }
+                else
+                  vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+                end
+              end
+            end
+          end
+
+          local all_items = {}
+
+          -- Add users
+          for _, user in pairs(users) do
+            table.insert(all_items, user)
+          end
+
+          -- Add organizations
+          for _, org in pairs(orgs) do
+            org.text = string.format("%s (%d teams)", org.login, #org.teams)
+            table.insert(all_items, org)
+          end
+
+          if #all_items == 0 then
+            utils.info("No users found for query: " .. prompt)
+            return
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.users
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.users) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action if not overridden
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_, item)
+              if item.kind == "user" then
+                -- Regular user - call callback with user ID
+                if type(cb) == "function" then
+                  cb(item.id)
+                end
+              elseif item.kind == "organization" then
+                -- Organization - show teams picker
+                local teams = {}
+                for _, team in ipairs(item.teams) do
+                  table.insert(teams, {
+                    id = team.id,
+                    name = team.name,
+                    text = team.name,
+                    kind = "team",
+                  })
+                end
+
+                -- Sub-picker for teams
+                Snacks.picker.pick {
+                  title = "Select Team from " .. item.login,
+                  items = teams,
+                  format = function(team_item, _)
+                    local ret = {} ---@type snacks.picker.Highlight[]
+                    ret[#ret + 1] = { "👥 ", "Special" }
+                    ret[#ret + 1] = { team_item.name, "Normal" }
+                    return ret
+                  end,
+                  actions = {
+                    confirm = function(_, team_item)
+                      if type(cb) == "function" then
+                        cb(team_item.id)
+                      end
+                    end,
+                  },
+                }
+              end
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              navigation.open_in_browser_raw(string.format("https://github.com/%s", item.login))
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = "Users",
+            items = all_items,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              if item.kind == "user" then
+                ret[#ret + 1] = { "👤 ", "Special" }
+                ret[#ret + 1] = { item.login, "Normal" }
+              elseif item.kind == "organization" then
+                ret[#ret + 1] = { "🏢 ", "Special" }
+                ret[#ret + 1] = { item.text, "Normal" }
+              end
+
+              return ret
+            end,
+            confirm = final_actions.confirm,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+              local lines = {
+                "User: " .. item.login,
+                "ID: " .. item.id,
+                "Type: " .. item.kind,
+              }
+              if item.kind == "organization" then
+                lines[#lines + 1] = "Teams: " .. #item.teams
+              end
+              ctx.preview:set_lines(lines)
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end
+      end,
+    }
+  end
+
+  -- For users picker, we need to prompt for search term
+  vim.ui.input({ prompt = "Search users: " }, function(input)
+    if input and input ~= "" then
+      create_picker(input)
+    end
+  end)
+end
+
 M.picker = {
   actions = M.not_implemented,
   assigned_labels = M.not_implemented,
-  assignees = M.not_implemented,
+  assignees = M.assignees,
   changed_files = M.changed_files,
   commits = M.not_implemented,
   discussions = M.not_implemented,
@@ -938,7 +1266,7 @@ M.picker = {
   workflow_runs = M.not_implemented,
   review_commits = M.not_implemented,
   search = M.search,
-  users = M.not_implemented,
+  users = M.users,
   milestones = M.not_implemented,
 }
 
