@@ -587,6 +587,338 @@ function M.issue_templates(templates, cb)
   }
 end
 
+function M.commits(opts)
+  opts = opts or {}
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isPullRequest() then
+    utils.error "Commits picker only works in pull request buffers"
+    return
+  end
+
+  gh.api.get {
+    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
+    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    opts = {
+      paginate = true,
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          if #results == 0 then
+            utils.error "No commits found for this pull request"
+            return
+          end
+
+          -- Format commits for snacks picker
+          for _, commit in ipairs(results) do
+            commit.text = string.format("%s %s", commit.sha:sub(1, 7), commit.commit.message:gsub("\n.*", ""))
+            commit.kind = "commit"
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.commits
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.commits) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action (what happens when you press Enter)
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_picker, item)
+              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              navigation.open_in_browser_raw(commit_url)
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              navigation.open_in_browser_raw(commit_url)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          if not custom_actions_defined["copy_url"] then
+            final_actions["copy_url"] = function(_picker, item)
+              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              utils.copy_url(commit_url)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = opts.title or "PR Commits",
+            items = results,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              -- SHA (short)
+              ret[#ret + 1] = { item.sha:sub(1, 7), "SnacksPickerGitHash" }
+              ret[#ret + 1] = { " " }
+
+              -- Commit message (first line only)
+              local message = item.commit.message:gsub("\n.*", "")
+              ret[#ret + 1] = { message, "Normal" }
+
+              return ret
+            end,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+
+              -- Show commit details
+              local lines = {
+                string.format("Commit: %s", item.sha),
+                string.format("Author: %s <%s>", item.commit.author.name, item.commit.author.email),
+                string.format("Date: %s", item.commit.author.date),
+                "",
+                "Message:",
+                item.commit.message,
+              }
+
+              ctx.preview:set_lines(lines)
+              ctx.preview:highlight { ft = "gitcommit" }
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end,
+      },
+    },
+  }
+end
+
+function M.review_commits(callback)
+  local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    utils.error "No review in progress"
+    return
+  end
+
+  gh.api.get {
+    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
+    format = {
+      owner = current_review.pull_request.repo:match "([^/]+)/",
+      repo = current_review.pull_request.repo:match "/(.+)",
+      pull_number = current_review.pull_request.number,
+    },
+    opts = {
+      paginate = true,
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          if #results == 0 then
+            utils.error "No commits found for this pull request"
+            return
+          end
+
+          -- Add a fake entry to represent the entire pull request (at the beginning)
+          table.insert(results, 1, {
+            sha = current_review.pull_request.right.commit,
+            commit = {
+              message = "[[ENTIRE PULL REQUEST]]",
+              author = {
+                name = "",
+                email = "",
+                date = "",
+              },
+            },
+            parents = {
+              {
+                sha = current_review.pull_request.left.commit,
+              },
+            },
+            is_full_pr = true, -- Special flag to identify this entry
+          })
+
+          -- Format commits for snacks picker
+          for _, commit in ipairs(results) do
+            if not commit.is_full_pr then
+              commit.text = string.format("%s %s", commit.sha:sub(1, 7), commit.commit.message:gsub("\n.*", ""))
+            else
+              commit.text = commit.commit.message
+            end
+            commit.kind = "commit"
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.review_commits
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.review_commits) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action (what happens when you press Enter)
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_picker, item)
+              local right = item.sha
+              local left = item.parents and item.parents[1] and item.parents[1].sha or nil
+              if type(callback) == "function" then
+                callback(right, left)
+              end
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              if not item.is_full_pr then
+                local commit_url =
+                  string.format("https://github.com/%s/commit/%s", current_review.pull_request.repo, item.sha)
+                navigation.open_in_browser_raw(commit_url)
+              else
+                -- For the full PR entry, open the PR in browser
+                navigation.open_in_browser(
+                  "pull_request",
+                  current_review.pull_request.repo,
+                  current_review.pull_request.number
+                )
+              end
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          if not custom_actions_defined["copy_url"] then
+            final_actions["copy_url"] = function(_picker, item)
+              if not item.is_full_pr then
+                local commit_url =
+                  string.format("https://github.com/%s/commit/%s", current_review.pull_request.repo, item.sha)
+                utils.copy_url(commit_url)
+              else
+                -- For the full PR entry, copy the PR URL
+                local pr_url = string.format(
+                  "https://github.com/%s/pull/%s",
+                  current_review.pull_request.repo,
+                  current_review.pull_request.number
+                )
+                utils.copy_url(pr_url)
+              end
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = "Review Commits",
+            items = results,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              if item.is_full_pr then
+                -- Special formatting for the "entire PR" entry
+                ret[#ret + 1] = { "󰊢 ", "SnacksPickerSpecial" }
+                ret[#ret + 1] = { item.commit.message, "SnacksPickerSpecial" }
+              else
+                -- SHA (short)
+                ret[#ret + 1] = { item.sha:sub(1, 7), "SnacksPickerGitHash" }
+                ret[#ret + 1] = { " " }
+
+                -- Commit message (first line only)
+                local message = item.commit.message:gsub("\n.*", "")
+                ret[#ret + 1] = { message, "Normal" }
+              end
+
+              return ret
+            end,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+
+              if item.is_full_pr then
+                -- Show PR info for the full PR entry
+                local lines = {
+                  "ENTIRE PULL REQUEST",
+                  "",
+                  string.format("Repository: %s", current_review.pull_request.repo),
+                  string.format("PR Number: %s", current_review.pull_request.number),
+                  string.format("Base: %s", current_review.pull_request.left.commit),
+                  string.format("Head: %s", current_review.pull_request.right.commit),
+                  "",
+                  "This option will include all commits in the review range.",
+                }
+                ctx.preview:set_lines(lines)
+              else
+                -- Show commit details
+                local lines = {
+                  string.format("Commit: %s", item.sha),
+                  string.format("Author: %s <%s>", item.commit.author.name, item.commit.author.email),
+                  string.format("Date: %s", item.commit.author.date),
+                  "",
+                  "Message:",
+                  item.commit.message,
+                }
+                ctx.preview:set_lines(lines)
+                ctx.preview:highlight { ft = "gitcommit" }
+              end
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end,
+      },
+    },
+  }
+end
+
 function M.search(opts)
   opts = opts or {}
   opts.type = opts.type or "ISSUE"
@@ -921,7 +1253,7 @@ M.picker = {
   assigned_labels = M.not_implemented,
   assignees = M.not_implemented,
   changed_files = M.changed_files,
-  commits = M.not_implemented,
+  commits = M.commits,
   discussions = M.not_implemented,
   gists = M.not_implemented,
   issue_templates = M.issue_templates,
@@ -936,7 +1268,7 @@ M.picker = {
   prs = M.pull_requests,
   repos = M.not_implemented,
   workflow_runs = M.not_implemented,
-  review_commits = M.not_implemented,
+  review_commits = M.review_commits,
   search = M.search,
   users = M.not_implemented,
   milestones = M.not_implemented,
