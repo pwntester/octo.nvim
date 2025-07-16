@@ -327,7 +327,8 @@ function M.setup()
           return
         end
 
-        local milestone = buffer.node.milestone
+        local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
+        local milestone = node.milestone
         if utils.is_blank(milestone) then
           utils.error "No milestone to remove"
           return

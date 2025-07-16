@@ -400,7 +400,8 @@ end
 function M.write_state(bufnr, state, number)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  state = state or buffer.node.state
+  local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
+  state = state or node.state
   number = number or buffer.number
 
   -- clear virtual texts

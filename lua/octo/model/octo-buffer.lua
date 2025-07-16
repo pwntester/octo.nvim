@@ -25,7 +25,7 @@ local M = {}
 ---@field bodyMetadata BodyMetadata
 ---@field commentsMetadata CommentMetadata[]
 ---@field threadsMetadata ThreadMetadata[]
----@field node octo.PullRequest|octo.Issue|octo.Release|octo.Discussion|octo.Repository
+---@field private node octo.PullRequest|octo.Issue|octo.Release|octo.Discussion|octo.Repository
 ---@field taggable_users? string[]
 ---@field owner? string
 ---@field name? string
@@ -600,7 +600,8 @@ end
 ---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_issue_comment(comment_metadata)
   -- create new issue comment
-  local id = self:issue().id
+  local obj = self:isIssue() and self:issue() or self:pullRequest()
+  local id = obj.id
   local add_query = graphql("add_issue_comment_mutation", id, comment_metadata.body)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", add_query) },
