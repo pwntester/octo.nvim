@@ -213,6 +213,7 @@ function OctoBuffer:render_issue()
   local unrendered_subissue_removed_events = {} ---@type octo.fragments.SubIssueRemovedEvent[]
   local unrendered_force_push_events = {} ---@type octo.fragments.HeadRefForcePushedEvent[]
   local commits = {} ---@type octo.fragments.PullRequestCommit[]
+  local unrendered_review_requested_events = {} ---@type octo.fragments.ReviewRequestedEvent[]
   local prev_is_event = false
 
   ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
@@ -257,6 +258,18 @@ function OctoBuffer:render_issue()
     if (not item or item.__typename ~= "HeadRefForcePushedEvent") and #unrendered_force_push_events > 0 then
       writers.write_head_ref_force_pushed_events(self.bufnr, unrendered_force_push_events)
       unrendered_force_push_events = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_review_requested_events > 0
+      and (
+        not item
+        or item.__typename ~= "ReviewRequestedEvent"
+        or unrendered_review_requested_events[1].createdAt ~= item.createdAt
+      )
+    then
+      writers.write_review_requested_events(self.bufnr, unrendered_review_requested_events)
+      unrendered_review_requested_events = {}
       prev_is_event = true
     end
   end
@@ -323,7 +336,7 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "UnlabeledEvent" then
       table.insert(unrendered_unlabeled_events, item)
     elseif item.__typename == "ReviewRequestedEvent" then
-      writers.write_review_requested_event(self.bufnr, item)
+      unrendered_review_requested_events[#unrendered_review_requested_events + 1] = item
       prev_is_event = true
     elseif item.__typename == "ReviewRequestRemovedEvent" then
       writers.write_review_request_removed_event(self.bufnr, item)
