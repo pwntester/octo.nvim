@@ -861,6 +861,35 @@ query {
 }
 ]] .. fragments.label_connection .. fragments.label
 
+M.pull_request_reviewers = [[
+query {
+  repository(owner: "%s", name: "%s") {
+    pullRequest(number: %d) {
+      reviewRequests(first: 100) {
+        totalCount
+        nodes {
+          requestedReviewer {
+            ... on User {
+              id
+              login
+              name
+            }
+            ... on Mannequin { 
+              id
+              login 
+            }
+            ... on Team { 
+              id
+              name 
+            }
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
 M.issue_assignees = [[
 query {
   repository(owner: "%s", name: "%s") {
