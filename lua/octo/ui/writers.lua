@@ -530,7 +530,7 @@ function M.write_details(bufnr, issue, update)
   local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
-  if not utils.is_blank(issue.authorAssociation) then
+  if not utils.is_blank(issue.authorAssociation) and issue.authorAssociation ~= "NONE" then
     table.insert(author_vt, { " (" .. format_author_association(issue.authorAssociation) .. ")", "OctoDetailsLabel" })
   end
   table.insert(details, author_vt)
