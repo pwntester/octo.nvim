@@ -77,6 +77,7 @@ M.file_status_map = {
   modified = "M",
   added = "A",
   deleted = "D",
+  removed = "D",
   renamed = "R",
 }
 
