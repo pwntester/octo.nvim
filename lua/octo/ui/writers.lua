@@ -2210,6 +2210,40 @@ function M.write_issue_type_changed_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.ConvertToDraftEvent
+function M.write_convert_to_draft_event(bufnr, item)
+  local vt = {} ---@type [string, string][]
+  local conf = config.values
+  if conf.use_timeline_icons then
+    vt[#vt + 1] = { conf.timeline_icons.draft, "OctoTimelineMarker" }
+  else
+    vt[#vt + 1] = { conf.timeline_marker .. " ", "OctoTimelineMarker" }
+    vt[#vt + 1] = { "EVENT: ", "OctoTimelineItemHeading" }
+  end
+  vt[#vt + 1] = { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" }
+  vt[#vt + 1] = { " marked this pull request as draft ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { utils.format_date(item.createdAt), "OctoDate" }
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.ReadyForReviewEvent
+function M.write_ready_for_review_event(bufnr, item)
+  local vt = {} ---@type [string, string][]
+  local conf = config.values
+  if conf.use_timeline_icons then
+    vt[#vt + 1] = { conf.timeline_icons.draft, "OctoTimelineMarker" }
+  else
+    vt[#vt + 1] = { conf.timeline_marker .. " ", "OctoTimelineMarker" }
+    vt[#vt + 1] = { "EVENT: ", "OctoTimelineItemHeading" }
+  end
+  vt[#vt + 1] = { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" }
+  vt[#vt + 1] = { " marked this pull request as ready for review ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { utils.format_date(item.createdAt), "OctoDate" }
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent
 ---@param add boolean
 local function write_pinned_event(bufnr, item, add)

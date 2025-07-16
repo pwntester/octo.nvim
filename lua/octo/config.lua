@@ -191,6 +191,8 @@ function M.get_default_values()
     use_timeline_icons = true,
     timeline_icons = {
       commit_push = "  ",
+      draft = "  ",
+      ready = " ",
       commit = "  ",
       issue_type = "  ",
       label = "  ",

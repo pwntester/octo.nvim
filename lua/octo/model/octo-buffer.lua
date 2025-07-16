@@ -349,6 +349,12 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "IssueTypeChangedEvent" then
       writers.write_issue_type_changed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "ConvertToDraftEvent" then
+      writers.write_convert_to_draft_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ReadyForReviewEvent" then
+      writers.write_ready_for_review_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
 
