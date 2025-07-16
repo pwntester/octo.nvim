@@ -2408,7 +2408,7 @@ function M.copy_sha()
 
   local sha
   if buffer:isPullRequest() then
-    sha = buffer.pullRequest().headRefOid
+    sha = buffer:pullRequest().headRefOid
   elseif buffer:isIssue() then
     utils.error "Issues don't have commit SHAs"
     return
