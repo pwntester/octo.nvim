@@ -403,6 +403,9 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "ProjectV2ItemStatusChangedEvent" then
       writers.write_project_v2_item_status_changed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "AutomaticBaseChangeSucceededEvent" then
+      writers.write_automatic_base_change_succeeded_event(self.bufnr, item)
+      prev_is_event = true
     elseif
       not utils.is_blank(item)
       and config.values.debug.notify_missing_timeline_items
