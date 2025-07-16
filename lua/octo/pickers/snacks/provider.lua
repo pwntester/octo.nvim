@@ -942,7 +942,9 @@ function M.actions(flattened_actions)
 
       return ret
     end,
-    preview = false,
+    preview = function(_)
+      return false
+    end,
     win = {
       input = {
         keys = final_keys, -- Use the constructed keys map
