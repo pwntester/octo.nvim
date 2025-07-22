@@ -6,7 +6,8 @@ local utils = require "octo.utils"
 
 return function(callback)
   local buffer = utils.get_current_buffer()
-  local cards = buffer.node.projectCards
+  local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
+  local cards = node.projectCards
   if not cards or #cards.nodes == 0 then
     utils.error "Can't find any project cards"
     return

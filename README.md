@@ -263,6 +263,7 @@ require"octo".setup({
       remove_label = { lhs = "<localleader>ld", desc = "remove label" },
       goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+      add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
       prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -278,11 +279,11 @@ require"octo".setup({
     pull_request = {
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
       merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
-      merge_pr_queue = { lhs = "<localleader>pq", desc = "merge commit PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
-      squash_and_merge_queue = { lhs = "<localleader>psq", desc = "squash and add to merge queue (Merge queue enabled is required)" },
       rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
-      rebase_and_merge_queue = { lhs = "<localleader>prq", desc = "rebase and add to merge queue (Merge queue enabled is required)" },
+      merge_pr_queue = { lhs = "<localleader>pq", desc = "merge commit PR and add to merge queue (Merge queue must be enabled in the repo)" },
+      squash_and_merge_queue = { lhs = "<localleader>psq", desc = "squash and add to merge queue (Merge queue must be enabled in the repo)" },
+      rebase_and_merge_queue = { lhs = "<localleader>prq", desc = "rebase and add to merge queue (Merge queue must be enabled in the repo)" },
       list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
       list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
       show_pr_diff = { lhs = "<localleader>pd", desc = "show PR diff" },
@@ -302,6 +303,7 @@ require"octo".setup({
       remove_label = { lhs = "<localleader>ld", desc = "remove label" },
       goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+      add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
       prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -321,6 +323,7 @@ require"octo".setup({
     review_thread = {
       goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+      add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       add_suggestion = { lhs = "<localleader>sa", desc = "add suggestion" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
@@ -437,7 +440,8 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
 |          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
-| thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
+|          | reply                                            | Add comment as a reply to the current comment | 
+ | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
 |          | remove [label]                                    | Remove a label                                                                                                                                         |

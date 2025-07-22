@@ -5,6 +5,7 @@ local M = {}
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
 ---@alias OctoSplit "right" | "left"
+---@alias OctoMergeMethod "squash" | "rebase" | "commit"
 
 ---@class OctoPickerMapping
 ---@field lhs string
@@ -107,7 +108,7 @@ local M = {}
 ---@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table
----@field default_merge_method string
+---@field default_merge_method OctoMergeMethod
 ---@field default_delete_branch boolean
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
@@ -290,6 +291,7 @@ function M.get_default_values()
       discussion = {
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         add_label = { lhs = "<localleader>la", desc = "add label" },
         remove_label = { lhs = "<localleader>ld", desc = "remove label" },
@@ -327,6 +329,7 @@ function M.get_default_values()
         remove_label = { lhs = "<localleader>ld", desc = "remove label" },
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
         prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -342,16 +345,19 @@ function M.get_default_values()
       pull_request = {
         checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
         merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
-        merge_pr_queue = { lhs = "<localleader>pq", desc = "add pull request to merge queue" },
         squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
+        rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
+        merge_pr_queue = {
+          lhs = "<localleader>pq",
+          desc = "merge commit PR and add to merge queue (Merge queue must be enabled in the repo)",
+        },
         squash_and_merge_queue = {
           lhs = "<localleader>psq",
-          desc = "squash and add to merge queue (Merge queue enabled is required)",
+          desc = "squash and add to merge queue (Merge queue must be enabled in the repo)",
         },
-        rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
         rebase_and_merge_queue = {
           lhs = "<localleader>prq",
-          desc = "rebase and add to merge queue (Merge queue enabled is required)",
+          desc = "rebase and add to merge queue (Merge queue must be enabled in the repo)",
         },
         list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
         list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
@@ -373,6 +379,7 @@ function M.get_default_values()
         remove_label = { lhs = "<localleader>ld", desc = "remove label" },
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
         prev_comment = { lhs = "[c", desc = "go to previous comment" },
@@ -392,6 +399,7 @@ function M.get_default_values()
       review_thread = {
         goto_issue = { lhs = "<localleader>gi", desc = "navigate to a local repo issue" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
+        add_reply = { lhs = "<localleader>cr", desc = "add reply" },
         add_suggestion = { lhs = "<localleader>sa", desc = "add suggestion" },
         delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
         next_comment = { lhs = "]c", desc = "go to next comment" },
@@ -458,6 +466,7 @@ function M.get_default_values()
         unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
       },
       repo = {},
+      release = {},
     },
   }
 end
@@ -698,6 +707,7 @@ function M.setup(opts)
         review_diff = {},
         file_panel = {},
         repo = {},
+        release = {},
       }
     end
     -- Use deep extend. For arrays ('actions' here), 'force' mode usually replaces the whole array,
