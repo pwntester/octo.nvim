@@ -5,7 +5,7 @@ local M = {}
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
 ---@alias OctoSplit "right" | "left"
----@alias MergeMethod "squash" | "rebase" | "commit"
+---@alias OctoMergeMethod "squash" | "rebase" | "commit"
 
 ---@class OctoPickerMapping
 ---@field lhs string
@@ -106,7 +106,7 @@ local M = {}
 ---@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table
----@field default_merge_method MergeMethod
+---@field default_merge_method OctoMergeMethod
 ---@field default_delete_branch boolean
 ---@field ssh_aliases {[string]:string}
 ---@field reaction_viewer_hint_icon string
