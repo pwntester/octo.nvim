@@ -866,6 +866,9 @@ function M.setup()
       add = function(...)
         M.add_user("reviewer", { ... })
       end,
+      remove = function(login)
+        M.remove_reviewer(login)
+      end,
     },
     reaction = {
       thumbs_up = function()
@@ -2346,6 +2349,16 @@ function M.add_user(subject, logins)
   end
 end
 
+function M.remove_user(subject, login)
+  if subject == "assignee" then
+    M.remove_assignee(login)
+  elseif subject == "reviewer" then
+    M.remove_reviewer(login)
+  else
+    utils.error("Remove user not implemented for: " .. subject)
+  end
+end
+
 function M.remove_assignee(login)
   local buffer = utils.get_current_buffer()
   if not buffer then
@@ -2382,6 +2395,42 @@ function M.remove_assignee(login)
     end
   else
     picker.assignees(cb)
+  end
+end
+
+function M.remove_reviewer(login)
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    utils.error "No buffer found"
+    return
+  end
+
+  if not buffer:isPullRequest() then
+    utils.error "Not a pull request buffer"
+    return
+  end
+
+  local function cb(reviewer_login)
+    gh.pr.edit {
+      buffer.number,
+      remove_reviewer = reviewer_login,
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+              writers.write_details(buffer.bufnr, obj, true)
+            end)
+          end,
+        },
+      },
+    }
+  end
+
+  if login then
+    cb(login)
+  else
+    -- TODO: Implement reviewer picker when available
+    utils.error "Reviewer picker not yet implemented. Please provide a login."
   end
 end
 
