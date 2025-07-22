@@ -443,6 +443,7 @@ function M.get_default_values()
         toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
         goto_file = { lhs = "gf", desc = "go to file" },
         copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
+        review_commits = { lhs = "<localleader>C", desc = "review PR commits" },
       },
       file_panel = {
         submit_review = { lhs = "<localleader>vs", desc = "submit review" },
@@ -459,6 +460,7 @@ function M.get_default_values()
         select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
         close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
         toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
+        review_commits = { lhs = "<localleader>C", desc = "review PR commits" },
       },
       notification = {
         read = { lhs = "<localleader>nr", desc = "mark notification as read" },
