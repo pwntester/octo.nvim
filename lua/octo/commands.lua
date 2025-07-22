@@ -1839,14 +1839,15 @@ function M.pr_checks()
 end
 
 function M.merge_pr(...)
+  local args = { "pr", "merge" }
+  local params = table.pack(...)
+  local conf = config.values
+  local pr_number = nil
+
   local buffer = utils.get_current_buffer()
   if not buffer or not buffer:isPullRequest() then
     return
   end
-
-  local args = { "pr", "merge", tostring(buffer.number) }
-  local params = table.pack(...)
-  local conf = config.values
 
   local merge_method = conf.default_merge_method
   for _, param in ipairs(params) do

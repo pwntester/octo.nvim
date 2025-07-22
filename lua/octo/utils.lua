@@ -2020,4 +2020,15 @@ function M.print_err(msg)
   vim.api.nvim_echo({ { msg } }, true, { err = true })
 end
 
+--- @param val string
+--- Check if a value is a number or numeric string (e.g. 123 or "456")
+function M.is_number_like(val)
+  if type(val) == "number" then return true end
+  if type(val) == "string" then
+    local n = tonumber(val)
+    return n ~= nil and tostring(n) == val
+  end
+  return false
+end
+
 return M
