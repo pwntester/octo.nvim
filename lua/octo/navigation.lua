@@ -55,8 +55,7 @@ function M.open_in_browser(kind, repo, number)
     elseif buffer:isRepo() then
       cmd = string.format("gh repo view --web %s/%s", remote, buffer.repo)
     elseif buffer:isDiscussion() then
-      ---@type string
-      local url = buffer.node.url
+      local url = buffer:discussion().url
       M.open_in_browser_raw(url)
       return
     end

@@ -14,16 +14,18 @@ local vim = vim
 
 local M = {}
 
+---@alias octo.NodeKind "issue" | "pull" | "discussion" | "repo" | "release"
+
 ---@class OctoBuffer
 ---@field bufnr integer
 ---@field number integer
 ---@field repo string
----@field kind string
+---@field kind octo.NodeKind|"reviewthread"
 ---@field titleMetadata TitleMetadata
 ---@field bodyMetadata BodyMetadata
 ---@field commentsMetadata CommentMetadata[]
 ---@field threadsMetadata ThreadMetadata[]
----@field node octo.PullRequest|octo.Issue|octo.Release|octo.Discussion|octo.Repository
+---@field private node octo.PullRequest|octo.Issue|octo.Release|octo.Discussion|octo.Repository
 ---@field taggable_users? string[]
 ---@field owner? string
 ---@field name? string
@@ -67,7 +69,7 @@ function OctoBuffer:new(opts)
       this.taggable_users = { this.node.author.login }
     end
   elseif this.node and not this.number then
-    this.kind = "repo"
+    this.kind = opts.kind or "repo"
   else
     this.kind = "reviewthread"
   end
@@ -81,6 +83,7 @@ M.OctoBuffer = OctoBuffer
 
 ---Apply the buffer mappings
 function OctoBuffer:apply_mappings()
+  ---@type string
   local kind = self.kind
   if self.kind == "pull" then
     kind = "pull_request"
@@ -105,7 +108,7 @@ end
 ---Writes a repo to the buffer
 function OctoBuffer:render_repo()
   self:clear()
-  writers.write_repo(self.bufnr, self.node --[[@as octo.Repository]])
+  writers.write_repo(self.bufnr, self:repository())
 
   -- reset modified option
   vim.bo[self.bufnr].modified = false
@@ -115,8 +118,7 @@ end
 
 function OctoBuffer:render_release()
   self:clear()
-  local obj = self.node
-  writers.write_release(self.bufnr, obj --[[@as octo.Release]])
+  writers.write_release(self.bufnr, self:release())
   vim.bo[self.bufnr].modified = false
   self.ready = true
 end
@@ -124,26 +126,26 @@ end
 function OctoBuffer:render_discussion()
   self:clear()
 
-  local obj = self.node
+  local obj = self:discussion()
   local state = obj.closed and "CLOSED" or "OPEN"
   writers.write_title(self.bufnr, tostring(obj.title), 1)
   writers.write_state(self.bufnr, state, self.number)
-  writers.write_discussion_details(self.bufnr, obj --[[@as octo.Discussion]])
+  writers.write_discussion_details(self.bufnr, obj)
   writers.write_body(self.bufnr, obj, 13)
 
   -- write body reactions
   local reaction_line ---@type integer?
-  if utils.count_reactions(self.node.reactionGroups) > 0 then
+  if utils.count_reactions(obj.reactionGroups) > 0 then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
     writers.write_block(self.bufnr, { "", "" }, line)
-    reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)
+    reaction_line = writers.write_reactions(self.bufnr, obj.reactionGroups, line)
   end
-  self.bodyMetadata.reactionGroups = self.node.reactionGroups
+  self.bodyMetadata.reactionGroups = obj.reactionGroups
   self.bodyMetadata.reactionLine = reaction_line
 
   if obj.answer ~= vim.NIL then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
-    writers.write_discussion_answer(self.bufnr, obj --[[@as octo.Discussion]], line)
+    writers.write_discussion_answer(self.bufnr, obj, line)
     writers.write_block(self.bufnr, { "" })
   end
 
@@ -164,28 +166,29 @@ end
 ---Writes an issue or pull request to the buffer.
 function OctoBuffer:render_issue()
   self:clear()
+  local obj = self:isPullRequest() and self:pullRequest() or self:issue()
 
   -- write title
-  writers.write_title(self.bufnr, self.node.title, 1)
+  writers.write_title(self.bufnr, obj.title, 1)
 
   -- write details in buffer
-  writers.write_details(self.bufnr, self.node --[[@as octo.PullRequest|octo.Issue]])
+  writers.write_details(self.bufnr, obj)
 
   -- write issue/pr status
-  local state = utils.get_displayed_state(self.kind == "issue", self.node.state, self.node.stateReason)
+  local state = utils.get_displayed_state(self.kind == "issue", obj.state, obj.stateReason)
   writers.write_state(self.bufnr, state:upper(), self.number)
 
   -- write body
-  writers.write_body(self.bufnr, self.node)
+  writers.write_body(self.bufnr, obj)
 
   -- write body reactions
   local reaction_line ---@type integer?
-  if utils.count_reactions(self.node.reactionGroups) > 0 then
+  if utils.count_reactions(obj.reactionGroups) > 0 then
     local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
     writers.write_block(self.bufnr, { "", "" }, line)
-    reaction_line = writers.write_reactions(self.bufnr, self.node.reactionGroups, line)
+    reaction_line = writers.write_reactions(self.bufnr, obj.reactionGroups, line)
   end
-  self.bodyMetadata.reactionGroups = self.node.reactionGroups
+  self.bodyMetadata.reactionGroups = obj.reactionGroups
   self.bodyMetadata.reactionLine = reaction_line
 
   -- write timeline items
@@ -198,7 +201,7 @@ function OctoBuffer:render_issue()
 
   ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
   local timeline_nodes = {}
-  for _, item in ipairs(self.node.timelineItems.nodes) do
+  for _, item in ipairs(obj.timelineItems.nodes) do
     if item ~= vim.NIL then
       table.insert(timeline_nodes, item)
     end
@@ -252,7 +255,7 @@ function OctoBuffer:render_issue()
       -- A review can have 0+ threads
       local threads = {}
       for _, comment in ipairs(item.comments.nodes) do
-        for _, reviewThread in ipairs(self.node.reviewThreads.nodes) do
+        for _, reviewThread in ipairs(self:pullRequest().reviewThreads.nodes) do
           if comment.id == reviewThread.comments.nodes[1].id then
             -- found a thread for the current review
             table.insert(threads, reviewThread)
@@ -492,11 +495,12 @@ function OctoBuffer:save()
   vim.bo[bufnr].modified = false
 end
 
----Sync issue/PR title and body with GitHub
+---Sync issue/PR/discussion title and body with GitHub
 function OctoBuffer:do_save_title_and_body()
   local title_metadata = self.titleMetadata
   local desc_metadata = self.bodyMetadata
-  local id = self.node.id
+  local node = self:isIssue() and self:issue() or self:isPullRequest() and self:pullRequest() or self:discussion()
+  local id = node.id
   if title_metadata.dirty or desc_metadata.dirty then
     -- trust but verify
     if string.find(title_metadata.body, "\n") then
@@ -556,7 +560,7 @@ end
 ---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_discussion_comment(comment_metadata)
   local f = {
-    discussion_id = self.node.id,
+    discussion_id = self:discussion().id,
     body = comment_metadata.body,
   }
   if comment_metadata.replyTo then
@@ -596,7 +600,8 @@ end
 ---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_issue_comment(comment_metadata)
   -- create new issue comment
-  local id = self.node.id
+  local obj = self:isIssue() and self:issue() or self:pullRequest()
+  local id = obj.id
   local add_query = graphql("add_issue_comment_mutation", id, comment_metadata.body)
   gh.run {
     args = { "api", "graphql", "-f", string.format("query=%s", add_query) },
@@ -1117,9 +1122,19 @@ function OctoBuffer:isDiscussion()
   return self.kind == "discussion"
 end
 
+function OctoBuffer:discussion()
+  assert(self:isDiscussion(), "Not a discussion buffer")
+  return self.node --[[@as octo.Discussion]]
+end
+
 --- Checks if the buffer represents a Pull Request
 function OctoBuffer:isPullRequest()
   return self.kind == "pull"
+end
+
+function OctoBuffer:pullRequest()
+  assert(self:isPullRequest(), "Not a pull request buffer")
+  return self.node --[[@as octo.PullRequest]]
 end
 
 --- Checks if the buffer represents an Issue
@@ -1127,9 +1142,28 @@ function OctoBuffer:isIssue()
   return self.kind == "issue"
 end
 
+function OctoBuffer:issue()
+  assert(self:isIssue(), "Not an issue buffer")
+  return self.node --[[@as octo.Issue]]
+end
+
 ---Checks if the buffer represents a GitHub repo
 function OctoBuffer:isRepo()
   return self.kind == "repo"
+end
+
+function OctoBuffer:repository()
+  assert(self:isRepo(), "Not a repo buffer")
+  return self.node --[[@as octo.Repository]]
+end
+
+function OctoBuffer:isRelease()
+  return self.kind == "release"
+end
+
+function OctoBuffer:release()
+  assert(self:isRelease(), "Not a release buffer")
+  return self.node --[[@as octo.Release]]
 end
 
 ---Gets the PR object for the current octo buffer
@@ -1145,13 +1179,13 @@ function OctoBuffer:get_pr()
   return PullRequest:new {
     bufnr = bufnr,
     repo = self.repo,
-    head_repo = self.node.headRepository.nameWithOwner,
-    head_ref_name = self.node.headRefName,
+    head_repo = self:pullRequest().headRepository.nameWithOwner,
+    head_ref_name = self:pullRequest().headRefName,
     number = self.number,
-    id = self.node.id,
-    left = Rev:new(self.node.baseRefOid),
-    right = Rev:new(self.node.headRefOid),
-    files = self.node.files.nodes,
+    id = self:pullRequest().id,
+    left = Rev:new(self:pullRequest().baseRefOid),
+    right = Rev:new(self:pullRequest().headRefOid),
+    files = self:pullRequest().files.nodes,
   }
 end
 

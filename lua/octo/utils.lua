@@ -77,6 +77,7 @@ M.file_status_map = {
   modified = "M",
   added = "A",
   deleted = "D",
+  removed = "D",
   renamed = "R",
 }
 
@@ -455,8 +456,14 @@ function M.in_pr_repo()
   end
 
   local local_repo = M.get_remote_name()
-  if buffer.node.baseRepository.nameWithOwner ~= local_repo then
-    M.error(string.format("Not in PR repo. Expected %s, got %s", buffer.node.baseRepository.nameWithOwner, local_repo))
+  if buffer:pullRequest().baseRepository.nameWithOwner ~= local_repo then
+    M.error(
+      string.format(
+        "Not in PR repo. Expected %s, got %s",
+        buffer:pullRequest().baseRepository.nameWithOwner,
+        local_repo
+      )
+    )
     return false
   else
     return true
