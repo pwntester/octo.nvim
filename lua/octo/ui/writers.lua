@@ -407,17 +407,24 @@ function M.write_state(bufnr, state, number)
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
 
   -- title virtual text
+  ---@type [string, string][]
   local title_vt = {
-    { tostring(number), "OctoIssueId" },
-    { string.format(" [%s] ", state:gsub("_", " ")), utils.state_hl_map[state] },
+    { tostring(number) .. " ", "OctoIssueId" },
   }
 
   -- PR virtual text
   if buffer and buffer:isPullRequest() then
-    if buffer:pullRequest().isDraft then
-      table.insert(title_vt, { "[DRAFT]", "OctoStateDraftFloat" })
+    if state ~= "OPEN" or not buffer:pullRequest().isDraft then
+      title_vt[#title_vt + 1] = { string.format("[%s]", state:gsub("_", " ")), utils.state_hl_map[state] }
+      title_vt[#title_vt + 1] = { " ", "OctoStateFloat" }
     end
+    if buffer:pullRequest().isDraft then
+      title_vt[#title_vt + 1] = { "[DRAFT]", "OctoStateDraftFloat" }
+    end
+  else
+    title_vt[#title_vt + 1] = { string.format("[%s]", state:gsub("_", " ")), utils.state_hl_map[state] }
   end
+
   vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, 0, {
     virt_text = title_vt,
   })
