@@ -252,7 +252,7 @@ function M.parse_git_remote()
   ---@type table<string, OctoRepo>
   local remotes = {}
   for _, line in
-    ipairs(job:result() --[[@as string[] ]])
+  ipairs(job:result() --[[@as string[] ]])
   do
     local name, url = line:match "^(%S+)%s+(%S+)"
     if name then
@@ -623,36 +623,6 @@ function M.insert_delete_flag(args, delete)
   if delete then
     table.insert(args, "--delete-branch")
   end
-end
-
----Merges a PR by number
-function M.merge_pr(pr_number)
-  if not Job then
-    M.error "Aborting PR merge"
-    return
-  end
-
-  local conf = config.values
-  local args = { "pr", "merge", pr_number }
-
-  M.insert_merge_flag(args, conf.default_merge_method)
-  M.insert_delete_flag(args, conf.default_delete_branch)
-
-  ---@diagnostic disable-next-line: missing-fields
-  Job:new({
-    command = "gh",
-    args = args,
-    on_exit = vim.schedule_wrap(function(job, code)
-      if code == 0 then
-        M.info("Merged PR " .. pr_number .. "!")
-      else
-        local stderr = table.concat(job:stderr_result(), "\n")
-        if not M.is_blank(stderr) then
-          M.error(stderr)
-        end
-      end
-    end),
-  }):start()
 end
 
 --- Formats a integer a large integer by taking the most significant digits with a suffix.
@@ -1465,7 +1435,7 @@ function M.process_patch(patch)
     local header = vim.split(hunk, "\n")[1]
     ---@type integer?, integer?, integer, integer, integer, integer
     local found, _, left_start, left_length, right_start, right_length =
-      string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
+        string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
     if found then
       table.insert(hunks, hunk)
       table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
@@ -1815,10 +1785,10 @@ function M.apply_mappings(kind, bufnr)
   local conf = config.values
   for action, value in pairs(conf.mappings[kind]) do
     if
-      not M.is_blank(value)
-      and not M.is_blank(action)
-      and not M.is_blank(value.lhs)
-      and not M.is_blank(mappings[action])
+        not M.is_blank(value)
+        and not M.is_blank(action)
+        and not M.is_blank(value.lhs)
+        and not M.is_blank(mappings[action])
     then
       if M.is_blank(value.desc) then
         value.desc = ""
@@ -2023,7 +1993,9 @@ end
 --- @param val string
 --- Check if a value is a number or numeric string (e.g. 123 or "456")
 function M.is_number_like(val)
-  if type(val) == "number" then return true end
+  if type(val) == "number" then
+    return true
+  end
   if type(val) == "string" then
     local n = tonumber(val)
     return n ~= nil and tostring(n) == val
