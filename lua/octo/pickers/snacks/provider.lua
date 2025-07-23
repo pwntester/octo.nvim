@@ -3,6 +3,7 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
+local commands = require "octo.commands"
 local octo_config = require "octo.config"
 local navigation = require "octo.navigation"
 local Snacks = require "snacks"
@@ -257,7 +258,7 @@ function M.pull_requests(opts)
 
         if not custom_actions_defined["merge_pr"] then
           final_actions["merge_pr"] = function(_picker, item)
-            utils.merge_pr(item.number)
+            commands.merge_pr(item.number)
           end
         end
         if not final_keys[cfg.picker_config.mappings.merge_pr.lhs] then
