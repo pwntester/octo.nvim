@@ -400,7 +400,7 @@ end
 function M.write_state(bufnr, state, number)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  state = state or buffer.node.state
+  state = state or (buffer:isIssue() and buffer:issue() or buffer:pullRequest()).state
   number = number or buffer.number
 
   -- clear virtual texts
@@ -414,7 +414,7 @@ function M.write_state(bufnr, state, number)
 
   -- PR virtual text
   if buffer and buffer:isPullRequest() then
-    if buffer.node.isDraft then
+    if buffer:pullRequest().isDraft then
       table.insert(title_vt, { "[DRAFT]", "OctoStateDraftFloat" })
     end
   end
@@ -448,6 +448,9 @@ function M.write_body_agnostic(bufnr, body, line, viewer_can_update)
   end
 end
 
+---@param bufnr integer
+---@param issue octo.Issue|octo.PullRequest|octo.Discussion
+---@param line? integer
 function M.write_body(bufnr, issue, line)
   M.write_body_agnostic(bufnr, issue.body, line, issue.viewerCanUpdate)
 end
@@ -530,7 +533,7 @@ function M.write_details(bufnr, issue, update)
   local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
-  if not utils.is_blank(issue.authorAssociation) then
+  if not utils.is_blank(issue.authorAssociation) and issue.authorAssociation ~= "NONE" then
     table.insert(author_vt, { " (" .. format_author_association(issue.authorAssociation) .. ")", "OctoDetailsLabel" })
   end
   table.insert(details, author_vt)

@@ -150,12 +150,12 @@ function M.setup()
 
         gh.api.graphql {
           query = mutations.reopen_discussion,
-          fields = { discussion_id = buffer.node.id },
+          fields = { discussion_id = buffer:discussion().id },
           jq = ".data.reopenDiscussion.discussion.id",
           opts = {
             cb = gh.create_callback {
               success = function(response_id)
-                if response_id == buffer.node.id then
+                if response_id == buffer:discussion().id then
                   utils.info "Discussion reopened"
                 end
               end,
@@ -197,12 +197,12 @@ function M.setup()
 
           gh.api.graphql {
             query = mutations.close_discussion,
-            fields = { discussion_id = buffer.node.id, reason = string.upper(reason) },
+            fields = { discussion_id = buffer:discussion().id, reason = string.upper(reason) },
             jq = ".data.closeDiscussion.discussion.id",
             opts = {
               cb = gh.create_callback {
                 success = function(response_id)
-                  if response_id == buffer.node.id then
+                  if response_id == buffer:discussion().id then
                     utils.info("Discussion closed with reason: " .. reason)
                   end
                 end,
@@ -252,7 +252,7 @@ function M.setup()
                   gh.api.graphql {
                     query = mutations.update_issue_issue_type,
                     F = {
-                      issue_id = buffer.node.id,
+                      issue_id = buffer:issue().id,
                       issue_type_id = selected_type.id,
                     },
                     opts = {
@@ -270,7 +270,7 @@ function M.setup()
         }
       end),
       remove = M.within_issue(function(buffer)
-        local current_type = buffer.node.issueType
+        local current_type = buffer:issue().issueType
 
         if not current_type or utils.is_blank(current_type) then
           utils.error "No issue type to remove"
@@ -280,7 +280,7 @@ function M.setup()
         gh.api.graphql {
           query = mutations.update_issue_issue_type,
           F = {
-            issue_id = buffer.node.id,
+            issue_id = buffer:issue().id,
           },
           opts = {
             cb = gh.create_callback {
@@ -327,7 +327,8 @@ function M.setup()
           return
         end
 
-        local milestone = buffer.node.milestone
+        local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
+        local milestone = node.milestone
         if utils.is_blank(milestone) then
           utils.error "No milestone to remove"
           return
@@ -351,7 +352,7 @@ function M.setup()
     },
     parent = {
       edit = M.within_issue(function(buffer)
-        local parent = buffer.node.parent
+        local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
           utils.error "No parent issue found"
@@ -362,7 +363,7 @@ function M.setup()
         vim.cmd.edit(uri)
       end),
       remove = M.within_issue(function(buffer)
-        local parent = buffer.node.parent
+        local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
           utils.error "No parent issue found"
@@ -373,13 +374,13 @@ function M.setup()
           query = mutations.remove_subissue,
           fields = {
             parent_id = parent.id,
-            child_id = buffer.node.id,
+            child_id = buffer.issue().id,
           },
           jq = ".data.removeSubIssue.subIssue.id",
           opts = {
             cb = gh.create_callback {
               success = function(response_id)
-                if response_id == buffer.node.id then
+                if response_id == buffer:issue().id then
                   utils.info "Issue removed as sub-issue"
                 end
               end,
@@ -394,13 +395,13 @@ function M.setup()
             query = mutations.add_subissue,
             fields = {
               parent_id = selected.obj.id,
-              child_id = buffer.node.id,
+              child_id = buffer:issue().id,
             },
             jq = ".data.addSubIssue.subIssue.id",
             opts = {
               cb = gh.create_callback {
                 success = function(response_id)
-                  if response_id == buffer.node.id then
+                  if response_id == buffer:issue().id then
                     utils.info "Issue added as sub-issue"
                   end
                 end,
@@ -424,16 +425,16 @@ function M.setup()
         M.change_state(stateReason)
       end,
       unpin = M.within_issue(function(buffer)
-        M.pin_issue { obj = buffer.node, add = false }
+        M.pin_issue { obj = buffer:issue(), add = false }
       end),
       pin = M.within_issue(function(buffer)
-        M.pin_issue { obj = buffer.node, add = true }
+        M.pin_issue { obj = buffer:issue(), add = true }
       end),
       develop = function(repo, ...)
         local buffer = utils.get_current_buffer()
 
-        if buffer and buffer.kind and buffer.kind == "issue" then
-          utils.develop_issue(buffer.repo, buffer.node.number, repo)
+        if buffer and buffer:isIssue() then
+          utils.develop_issue(buffer.repo, buffer:issue().number, repo)
         else
           local opts = M.process_varargs(repo, ...)
           opts.cb = function(selected)
@@ -482,7 +483,7 @@ function M.setup()
           utils.error "Not a pull request buffer"
           return
         end
-        local headRefName = buffer.node.headRefName
+        local headRefName = buffer:pullRequest().headRefName
 
         require("octo.workflow_runs").list { branch = headRefName }
       end,
@@ -510,7 +511,7 @@ function M.setup()
         if not utils.in_pr_repo() then
           return
         end
-        utils.checkout_pr(buffer.node.number)
+        utils.checkout_pr(buffer:pullRequest().number)
       end,
       create = function(...)
         M.create_pr(...)
@@ -694,6 +695,7 @@ function M.setup()
 
         current_review:add_comment(true)
       end,
+      reply = M.add_pr_issue_or_review_thread_comment_reply,
       url = function()
         local buffer = utils.get_current_buffer()
 
@@ -864,6 +866,9 @@ function M.setup()
     reviewer = {
       add = function(...)
         M.add_user("reviewer", { ... })
+      end,
+      remove = function(login)
+        M.remove_reviewer(login)
       end,
     },
     reaction = {
@@ -1041,7 +1046,8 @@ function M.octo(object, action, ...)
 end
 
 --- Adds a new comment to an issue/PR or a review thread
-function M.add_pr_issue_or_review_thread_comment()
+function M.add_pr_issue_or_review_thread_comment(body)
+  body = body or " "
   local buffer = utils.get_current_buffer()
 
   if not buffer then
@@ -1053,7 +1059,7 @@ function M.add_pr_issue_or_review_thread_comment()
     id = -1,
     author = { login = vim.g.octo_viewer },
     createdAt = os.date "!%FT%TZ",
-    body = " ",
+    body = body,
     viewerCanUpdate = true,
     viewerCanDelete = true,
     viewerDidAuthor = true,
@@ -1134,6 +1140,54 @@ function M.add_pr_issue_or_review_thread_comment()
 
   -- drop undo history
   utils.clear_history()
+end
+
+local format_reply = function(body)
+  local lines = vim.split(body, "\n")
+  local reply = ""
+  for _, line in ipairs(lines) do
+    reply = reply .. "> " .. line .. "\n"
+  end
+  reply = reply .. "\n"
+
+  return reply
+end
+
+M.add_pr_issue_or_review_thread_comment_reply = function()
+  local buffer = utils.get_current_buffer()
+
+  if not buffer then
+    return
+  end
+
+  local comment = buffer:get_comment_at_cursor()
+  if not comment then
+    utils.error "The cursor does not seem to be located at any comment"
+    return
+  end
+
+  local reply_body = format_reply(comment.body)
+  M.add_pr_issue_or_review_thread_comment(reply_body)
+
+  -- Position cursor after the quoted content for replies
+  vim.schedule(function()
+    local current_line = vim.api.nvim_win_get_cursor(0)[1]
+    local lines = vim.api.nvim_buf_get_lines(buffer.bufnr, current_line - 10, current_line + 5, false)
+
+    -- Find the last line with quoted content and position cursor after it
+    for i = #lines, 1, -1 do
+      local line = lines[i]
+      if line and line:match "^>" then
+        -- Found last quoted line, position cursor at the end and create new line for response
+        local target_line = current_line - 10 + i
+        vim.api.nvim_win_set_cursor(0, { target_line, #line })
+        vim.cmd [[startinsert!]]
+        -- Add two newlines to create space for typing the response
+        vim.api.nvim_feedkeys("\n\n", "n", false)
+        return
+      end
+    end
+  end)
 end
 
 function M.delete_comment()
@@ -1346,6 +1400,7 @@ function M.unresolve_thread()
   }
 end
 
+---@param state "OPEN"|"CLOSED"
 function M.change_state(state)
   local buffer = utils.get_current_buffer()
 
@@ -1358,7 +1413,8 @@ function M.change_state(state)
     return
   end
 
-  local id = buffer.node.id
+  local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
+  local id = node.id
   local query, jq, desired_state, fields
   if buffer:isIssue() and state == "CLOSED" then
     query = graphql("update_issue_state_mutation", id, state)
@@ -1390,7 +1446,7 @@ function M.change_state(state)
       return
     end
 
-    buffer.node.state = new_state
+    node.state = new_state
 
     local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
     writers.write_state(buffer.bufnr, updated_state:upper(), buffer.number)
@@ -1986,8 +2042,9 @@ function M.add_project_card()
 
   -- show column selection picker
   picker.project_columns(function(column_id)
+    local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- add new card
-    local query = graphql("add_project_card_mutation", buffer.node.id, column_id)
+    local query = graphql("add_project_card_mutation", node.id, column_id)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       cb = function(output, stderr)
@@ -1997,7 +2054,7 @@ function M.add_project_card()
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
             writers.write_details(buffer.bufnr, obj, true)
-            buffer.node.projectCards = obj.projectCards
+            node.projectCards = obj.projectCards
           end)
         end
       end,
@@ -2013,6 +2070,7 @@ function M.remove_project_card()
 
   -- show card selection picker
   picker.project_cards(function(card)
+    local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- delete card
     local query = graphql("delete_project_card_mutation", card)
     gh.run {
@@ -2023,7 +2081,7 @@ function M.remove_project_card()
         elseif output then
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            buffer.node.projectCards = obj.projectCards
+            node.projectCards = obj.projectCards
             writers.write_details(buffer.bufnr, obj, true)
           end)
         end
@@ -2041,6 +2099,7 @@ function M.move_project_card()
   picker.project_cards(function(source_card)
     -- show project column selection picker
     picker.project_columns(function(target_column)
+      local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
       -- move card to selected column
       local query = graphql("move_project_card_mutation", source_card, target_column)
       gh.run {
@@ -2051,7 +2110,7 @@ function M.move_project_card()
           elseif output then
             -- refresh issue/pr details
             require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-              buffer.node.projectCards = obj.projectCards
+              node.projectCards = obj.projectCards
               writers.write_details(buffer.bufnr, obj, true)
             end)
           end
@@ -2069,8 +2128,9 @@ function M.set_project_v2_card()
 
   -- show column selection picker
   picker.project_columns_v2(function(project_id, field_id, value)
+    local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- add new card
-    local add_query = graphql("add_project_v2_item_mutation", buffer.node.id, project_id)
+    local add_query = graphql("add_project_v2_item_mutation", node.id, project_id)
     gh.run {
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", add_query) },
       cb = function(add_output, add_stderr)
@@ -2095,7 +2155,7 @@ function M.set_project_v2_card()
                 -- refresh issue/pr details
                 require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
                   writers.write_details(buffer.bufnr, obj, true)
-                  buffer.node.projectCards = obj.projectCards
+                  node.projectCards = obj.projectCards
                 end)
               end
             end,
@@ -2114,6 +2174,7 @@ function M.remove_project_v2_card()
 
   -- show card selection picker
   picker.project_cards_v2(function(project_id, item_id)
+    local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- delete card
     local query = graphql("delete_project_v2_item_mutation", project_id, item_id)
     gh.run {
@@ -2124,7 +2185,7 @@ function M.remove_project_v2_card()
         elseif output then
           -- refresh issue/pr details
           require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            buffer.node.projectCards = obj.projectCards
+            node.projectCards = obj.projectCards
             writers.write_details(buffer.bufnr, obj, true)
           end)
         end
@@ -2283,7 +2344,7 @@ function M.add_user(subject, logins)
     return
   end
 
-  local iid = buffer.node.id ---@type string
+  local iid = buffer.node.id
   if not iid then
     utils.error "Cannot get issue/pr id"
   end
@@ -2338,6 +2399,16 @@ function M.add_user(subject, logins)
   end
 end
 
+function M.remove_user(subject, login)
+  if subject == "assignee" then
+    M.remove_assignee(login)
+  elseif subject == "reviewer" then
+    M.remove_reviewer(login)
+  else
+    utils.error("Remove user not implemented for: " .. subject)
+  end
+end
+
 function M.remove_assignee(login)
   local buffer = utils.get_current_buffer()
   if not buffer then
@@ -2377,6 +2448,42 @@ function M.remove_assignee(login)
   end
 end
 
+function M.remove_reviewer(login)
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    utils.error "No buffer found"
+    return
+  end
+
+  if not buffer:isPullRequest() then
+    utils.error "Not a pull request buffer"
+    return
+  end
+
+  local function cb(reviewer_login)
+    gh.pr.edit {
+      buffer.number,
+      remove_reviewer = reviewer_login,
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+              writers.write_details(buffer.bufnr, obj, true)
+            end)
+          end,
+        },
+      },
+    }
+  end
+
+  if login then
+    cb(login)
+  else
+    -- TODO: Implement reviewer picker when available
+    utils.error "Reviewer picker not yet implemented. Please provide a login."
+  end
+end
+
 function M.copy_url()
   local buffer = utils.get_current_buffer()
   local url
@@ -2400,7 +2507,7 @@ function M.copy_sha()
 
   local sha
   if buffer:isPullRequest() then
-    sha = buffer.node.headRefOid
+    sha = buffer:pullRequest().headRefOid
   elseif buffer:isIssue() then
     utils.error "Issues don't have commit SHAs"
     return
@@ -2453,6 +2560,7 @@ function M.search(...)
   picker.search { prompt = prompt, type = type }
 end
 
+---@param cb fun(buffer: OctoBuffer): nil
 function M.within_issue(cb)
   return function()
     local buffer = utils.get_current_buffer()

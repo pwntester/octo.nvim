@@ -587,6 +587,338 @@ function M.issue_templates(templates, cb)
   }
 end
 
+function M.commits(opts)
+  opts = opts or {}
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isPullRequest() then
+    utils.error "Commits picker only works in pull request buffers"
+    return
+  end
+
+  gh.api.get {
+    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
+    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    opts = {
+      paginate = true,
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          if #results == 0 then
+            utils.error "No commits found for this pull request"
+            return
+          end
+
+          -- Format commits for snacks picker
+          for _, commit in ipairs(results) do
+            commit.text = string.format("%s %s", commit.sha:sub(1, 7), commit.commit.message:gsub("\n.*", ""))
+            commit.kind = "commit"
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.commits
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.commits) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action (what happens when you press Enter)
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_picker, item)
+              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              navigation.open_in_browser_raw(commit_url)
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              navigation.open_in_browser_raw(commit_url)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          if not custom_actions_defined["copy_url"] then
+            final_actions["copy_url"] = function(_picker, item)
+              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              utils.copy_url(commit_url)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = opts.title or "PR Commits",
+            items = results,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              -- SHA (short)
+              ret[#ret + 1] = { item.sha:sub(1, 7), "SnacksPickerGitHash" }
+              ret[#ret + 1] = { " " }
+
+              -- Commit message (first line only)
+              local message = item.commit.message:gsub("\n.*", "")
+              ret[#ret + 1] = { message, "Normal" }
+
+              return ret
+            end,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+
+              -- Show commit details
+              local lines = {
+                string.format("Commit: %s", item.sha),
+                string.format("Author: %s <%s>", item.commit.author.name, item.commit.author.email),
+                string.format("Date: %s", item.commit.author.date),
+                "",
+                "Message:",
+                item.commit.message,
+              }
+
+              ctx.preview:set_lines(lines)
+              ctx.preview:highlight { ft = "gitcommit" }
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end,
+      },
+    },
+  }
+end
+
+function M.review_commits(callback)
+  local current_review = require("octo.reviews").get_current_review()
+  if not current_review then
+    utils.error "No review in progress"
+    return
+  end
+
+  gh.api.get {
+    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
+    format = {
+      owner = current_review.pull_request.repo:match "([^/]+)/",
+      repo = current_review.pull_request.repo:match "/(.+)",
+      pull_number = current_review.pull_request.number,
+    },
+    opts = {
+      paginate = true,
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          if #results == 0 then
+            utils.error "No commits found for this pull request"
+            return
+          end
+
+          -- Add a fake entry to represent the entire pull request (at the beginning)
+          table.insert(results, 1, {
+            sha = current_review.pull_request.right.commit,
+            commit = {
+              message = "[[ENTIRE PULL REQUEST]]",
+              author = {
+                name = "",
+                email = "",
+                date = "",
+              },
+            },
+            parents = {
+              {
+                sha = current_review.pull_request.left.commit,
+              },
+            },
+            is_full_pr = true, -- Special flag to identify this entry
+          })
+
+          -- Format commits for snacks picker
+          for _, commit in ipairs(results) do
+            if not commit.is_full_pr then
+              commit.text = string.format("%s %s", commit.sha:sub(1, 7), commit.commit.message:gsub("\n.*", ""))
+            else
+              commit.text = commit.commit.message
+            end
+            commit.kind = "commit"
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.review_commits
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.review_commits) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action (what happens when you press Enter)
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_picker, item)
+              local right = item.sha
+              local left = item.parents and item.parents[1] and item.parents[1].sha or nil
+              if type(callback) == "function" then
+                callback(right, left)
+              end
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              if not item.is_full_pr then
+                local commit_url =
+                  string.format("https://github.com/%s/commit/%s", current_review.pull_request.repo, item.sha)
+                navigation.open_in_browser_raw(commit_url)
+              else
+                -- For the full PR entry, open the PR in browser
+                navigation.open_in_browser(
+                  "pull_request",
+                  current_review.pull_request.repo,
+                  current_review.pull_request.number
+                )
+              end
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          if not custom_actions_defined["copy_url"] then
+            final_actions["copy_url"] = function(_picker, item)
+              if not item.is_full_pr then
+                local commit_url =
+                  string.format("https://github.com/%s/commit/%s", current_review.pull_request.repo, item.sha)
+                utils.copy_url(commit_url)
+              else
+                -- For the full PR entry, copy the PR URL
+                local pr_url = string.format(
+                  "https://github.com/%s/pull/%s",
+                  current_review.pull_request.repo,
+                  current_review.pull_request.number
+                )
+                utils.copy_url(pr_url)
+              end
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = "Review Commits",
+            items = results,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              if item.is_full_pr then
+                -- Special formatting for the "entire PR" entry
+                ret[#ret + 1] = { "󰊢 ", "SnacksPickerSpecial" }
+                ret[#ret + 1] = { item.commit.message, "SnacksPickerSpecial" }
+              else
+                -- SHA (short)
+                ret[#ret + 1] = { item.sha:sub(1, 7), "SnacksPickerGitHash" }
+                ret[#ret + 1] = { " " }
+
+                -- Commit message (first line only)
+                local message = item.commit.message:gsub("\n.*", "")
+                ret[#ret + 1] = { message, "Normal" }
+              end
+
+              return ret
+            end,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+
+              if item.is_full_pr then
+                -- Show PR info for the full PR entry
+                local lines = {
+                  "ENTIRE PULL REQUEST",
+                  "",
+                  string.format("Repository: %s", current_review.pull_request.repo),
+                  string.format("PR Number: %s", current_review.pull_request.number),
+                  string.format("Base: %s", current_review.pull_request.left.commit),
+                  string.format("Head: %s", current_review.pull_request.right.commit),
+                  "",
+                  "This option will include all commits in the review range.",
+                }
+                ctx.preview:set_lines(lines)
+              else
+                -- Show commit details
+                local lines = {
+                  string.format("Commit: %s", item.sha),
+                  string.format("Author: %s <%s>", item.commit.author.name, item.commit.author.email),
+                  string.format("Date: %s", item.commit.author.date),
+                  "",
+                  "Message:",
+                  item.commit.message,
+                }
+                ctx.preview:set_lines(lines)
+                ctx.preview:highlight { ft = "gitcommit" }
+              end
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end,
+      },
+    },
+  }
+end
+
 function M.search(opts)
   opts = opts or {}
   opts.type = opts.type or "ISSUE"
@@ -759,12 +1091,497 @@ function M.search(opts)
   end
 end
 
+function M.changed_files(opts)
+  opts = opts or {}
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isPullRequest() then
+    utils.error "Changed files picker only works in pull request buffers"
+    return
+  end
+
+  gh.api.get {
+    "/repos/{owner}/{repo}/pulls/{pull_number}/files",
+    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    opts = {
+      paginate = true,
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          if #results == 0 then
+            utils.error "No changed files found for this pull request"
+            return
+          end
+
+          -- Format files for snacks picker
+          for _, file in ipairs(results) do
+            file.text = file.filename
+            file.kind = "file"
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.changed_files
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.changed_files) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action (what happens when you press Enter)
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_picker, item)
+              utils.edit_file(item.filename)
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              local file_url =
+                string.format("https://github.com/%s/pull/%s/files#diff-%s", buffer.repo, buffer.number, item.sha)
+              navigation.open_in_browser_raw(file_url)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = opts.title or "Changed Files",
+            items = results,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              -- File status indicator (GitHub API can return: added, removed, modified, renamed, copied)
+              local status_icon = item.status == "added" and "A"
+                or item.status == "removed" and "D"
+                or item.status == "modified" and "M"
+                or item.status == "renamed" and "R"
+                or item.status == "copied" and "C"
+                or "?"
+              local status_highlight = item.status == "added" and "GitSignsAdd"
+                or item.status == "removed" and "GitSignsDelete"
+                or item.status == "modified" and "GitSignsChange"
+                or item.status == "renamed" and "GitSignsChange"
+                or item.status == "copied" and "GitSignsChange"
+                or "Normal"
+
+              ret[#ret + 1] = { status_icon, status_highlight }
+              ret[#ret + 1] = { " " }
+
+              -- Filename
+              ret[#ret + 1] = { item.filename, "Normal" }
+
+              -- Show additions/deletions if available
+              if item.additions and item.deletions then
+                ret[#ret + 1] = { " (", "Comment" }
+                ret[#ret + 1] = { string.format("+%d", item.additions), "GitSignsAdd" }
+                ret[#ret + 1] = { "/", "Comment" }
+                ret[#ret + 1] = { string.format("-%d", item.deletions), "GitSignsDelete" }
+                ret[#ret + 1] = { ")", "Comment" }
+              end
+
+              return ret
+            end,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+
+              -- Show file diff preview
+              local lines = {
+                string.format("File: %s", item.filename),
+                string.format("Status: %s", item.status),
+                "",
+              }
+
+              local line_count = #lines
+              if item.additions and item.deletions then
+                lines[#lines + 1] = string.format("Changes: +%d -%d", item.additions, item.deletions)
+                lines[#lines + 1] = ""
+              end
+
+              -- Add patch content if available
+              if item.patch then
+                lines[#lines + 1] = "Patch:"
+                lines[#lines + 1] = ""
+                local patch_lines = vim.split(item.patch, "\n")
+                vim.list_extend(lines, patch_lines)
+              end
+
+              ctx.preview:set_lines(lines)
+
+              -- Apply diff highlighting to the entire preview
+              if item.patch then
+                ctx.preview:highlight { ft = "diff" }
+              end
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end,
+      },
+    },
+  }
+end
+
+function M.assignees(cb)
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    utils.error "No buffer found"
+    return
+  end
+
+  local query, key
+  if buffer:isIssue() then
+    query = graphql("issue_assignees_query", buffer.owner, buffer.name, buffer.number)
+    key = "issue"
+  elseif buffer:isPullRequest() then
+    query = graphql("pull_request_assignees_query", buffer.owner, buffer.name, buffer.number)
+    key = "pullRequest"
+  else
+    utils.error "Assignees picker only works in issue or pull request buffers"
+    return
+  end
+
+  utils.info "Fetching assignees..."
+  gh.run {
+    args = { "api", "graphql", "-f", string.format("query=%s", query) },
+    cb = function(output, stderr)
+      if stderr and not utils.is_blank(stderr) then
+        utils.error(stderr)
+      elseif output then
+        local resp = vim.json.decode(output)
+        local assignees = resp.data.repository[key].assignees.nodes
+
+        if #assignees == 0 then
+          utils.info("No assignees found for this " .. key)
+          return
+        end
+
+        -- Format assignees for snacks picker
+        for _, assignee in ipairs(assignees) do
+          assignee.text = assignee.login
+          assignee.kind = "user"
+          assignee.display_text = assignee.login
+        end
+
+        local cfg = octo_config.values
+
+        -- Prepare actions and keys for Snacks
+        local final_actions = {}
+        local final_keys = {}
+        local default_mode = { "n", "i" }
+
+        -- Process custom actions from config array
+        local custom_actions_defined = {}
+        if
+          cfg.picker_config.snacks
+          and cfg.picker_config.snacks.actions
+          and cfg.picker_config.snacks.actions.assignees
+        then
+          for _, action_item in ipairs(cfg.picker_config.snacks.actions.assignees) do
+            if action_item.name and action_item.fn then
+              final_actions[action_item.name] = action_item.fn
+              custom_actions_defined[action_item.name] = true
+              if action_item.lhs then
+                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+              end
+            end
+          end
+        end
+
+        -- Add default confirm action if not overridden
+        if not custom_actions_defined["confirm"] then
+          final_actions["confirm"] = function(_, item)
+            if type(cb) == "function" then
+              cb(item.id)
+            end
+          end
+        end
+
+        -- Add default actions/keys if not overridden
+        if not custom_actions_defined["open_in_browser"] then
+          final_actions["open_in_browser"] = function(_picker, item)
+            navigation.open_in_browser_raw(string.format("https://github.com/%s", item.login))
+          end
+        end
+        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+        end
+
+        Snacks.picker.pick {
+          title = "Assignees",
+          items = assignees,
+          format = function(item, _)
+            local ret = {} ---@type snacks.picker.Highlight[]
+
+            ---@diagnostic disable-next-line: assign-type-mismatch
+            ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
+            ret[#ret + 1] = { " " }
+            ret[#ret + 1] = { item.login, "Normal" }
+
+            if item.isViewer then
+              ret[#ret + 1] = { " (you)", "Comment" }
+            end
+
+            return ret
+          end,
+          preview = function(ctx)
+            local item = ctx.item
+            if not item then
+              return
+            end
+
+            ctx.preview:reset()
+            local lines = {
+              "Assignee: " .. item.login,
+              "User ID: " .. item.id,
+              item.isViewer and "This is you" or "GitHub user",
+            }
+            ctx.preview:set_lines(lines)
+          end,
+          win = {
+            input = {
+              keys = final_keys,
+            },
+          },
+          actions = final_actions,
+        }
+      end
+    end,
+  }
+end
+
+function M.users(cb)
+  local formatted_users = {}
+
+  local function create_picker(prompt)
+    -- skip empty queries
+    if not prompt or prompt == "" or utils.is_blank(prompt) then
+      return {}
+    end
+
+    local query = graphql("users", prompt)
+    utils.info "Searching for users..."
+
+    gh.run {
+      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+          return
+        elseif output then
+          local users = {}
+          local orgs = {}
+          local responses = utils.get_pages(output)
+
+          for _, resp in ipairs(responses) do
+            for _, user in ipairs(resp.data.search.nodes) do
+              if not user.teams then
+                -- regular user
+                if not users[user.login] then
+                  users[user.login] = {
+                    id = user.id,
+                    login = user.login,
+                    kind = "user",
+                    text = user.login,
+                  }
+                end
+              elseif user.teams and user.teams.totalCount > 0 then
+                -- organization, collect all teams
+                if not orgs[user.login] then
+                  orgs[user.login] = {
+                    id = user.id,
+                    login = user.login,
+                    teams = user.teams.nodes,
+                    kind = "organization",
+                  }
+                else
+                  vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+                end
+              end
+            end
+          end
+
+          local all_items = {}
+
+          -- Add users
+          for _, user in pairs(users) do
+            table.insert(all_items, user)
+          end
+
+          -- Add organizations
+          for _, org in pairs(orgs) do
+            org.text = string.format("%s (%d teams)", org.login, #org.teams)
+            table.insert(all_items, org)
+          end
+
+          if #all_items == 0 then
+            utils.info("No users found for query: " .. prompt)
+            return
+          end
+
+          local cfg = octo_config.values
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.users
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.users) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          -- Add default confirm action if not overridden
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_, item)
+              if item.kind == "user" then
+                -- Regular user - call callback with user ID
+                if type(cb) == "function" then
+                  cb(item.id)
+                end
+              elseif item.kind == "organization" then
+                -- Organization - show teams picker
+                local teams = {}
+                for _, team in ipairs(item.teams) do
+                  table.insert(teams, {
+                    id = team.id,
+                    name = team.name,
+                    text = team.name,
+                    kind = "team",
+                  })
+                end
+
+                -- Sub-picker for teams
+                Snacks.picker.pick {
+                  title = "Select Team from " .. item.login,
+                  items = teams,
+                  format = function(team_item, _)
+                    local ret = {} ---@type snacks.picker.Highlight[]
+                    ret[#ret + 1] = { "👥 ", "Special" }
+                    ret[#ret + 1] = { team_item.name, "Normal" }
+                    return ret
+                  end,
+                  actions = {
+                    confirm = function(_, team_item)
+                      if type(cb) == "function" then
+                        cb(team_item.id)
+                      end
+                    end,
+                  },
+                }
+              end
+            end
+          end
+
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              navigation.open_in_browser_raw(string.format("https://github.com/%s", item.login))
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = "Users",
+            items = all_items,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
+
+              if item.kind == "user" then
+                ret[#ret + 1] = { "👤 ", "Special" }
+                ret[#ret + 1] = { item.login, "Normal" }
+              elseif item.kind == "organization" then
+                ret[#ret + 1] = { "🏢 ", "Special" }
+                ret[#ret + 1] = { item.text, "Normal" }
+              end
+
+              return ret
+            end,
+            confirm = final_actions.confirm,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
+
+              ctx.preview:reset()
+              local lines = {
+                "User: " .. item.login,
+                "ID: " .. item.id,
+                "Type: " .. item.kind,
+              }
+              if item.kind == "organization" then
+                lines[#lines + 1] = "Teams: " .. #item.teams
+              end
+              ctx.preview:set_lines(lines)
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end
+      end,
+    }
+  end
+
+  -- For users picker, we need to prompt for search term
+  vim.ui.input({ prompt = "Search users: " }, function(input)
+    if input and input ~= "" then
+      create_picker(input)
+    end
+  end)
+end
+
 M.picker = {
   actions = M.not_implemented,
   assigned_labels = M.not_implemented,
-  assignees = M.not_implemented,
-  changed_files = M.not_implemented,
-  commits = M.not_implemented,
+  assignees = M.assignees,
+  changed_files = M.changed_files,
+  commits = M.commits,
   discussions = M.not_implemented,
   gists = M.not_implemented,
   issue_templates = M.issue_templates,
@@ -779,9 +1596,9 @@ M.picker = {
   prs = M.pull_requests,
   repos = M.not_implemented,
   workflow_runs = M.not_implemented,
-  review_commits = M.not_implemented,
+  review_commits = M.review_commits,
   search = M.search,
-  users = M.not_implemented,
+  users = M.users,
   milestones = M.not_implemented,
 }
 

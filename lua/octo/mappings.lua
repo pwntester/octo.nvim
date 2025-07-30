@@ -21,6 +21,9 @@ return {
   list_commits = function()
     require("octo.picker").commits()
   end,
+  review_commits = function()
+    require("octo.picker").review_commits()
+  end,
   list_changed_files = function()
     require("octo.picker").changed_files()
   end,
@@ -92,6 +95,9 @@ return {
   end,
   add_comment = function()
     require("octo.commands").add_pr_issue_or_review_thread_comment()
+  end,
+  add_reply = function()
+    require("octo.commands").add_pr_issue_or_review_thread_comment_reply()
   end,
   add_suggestion = function()
     require("octo.commands").add_suggestion()

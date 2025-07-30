@@ -217,7 +217,7 @@ function M.issues(opts)
               action_set.select:replace(replace)
               map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
               map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              map("i", cfg.picker_config.mappings.copy_sha.lhs, copy_sha()())
+              map("i", cfg.picker_config.mappings.copy_sha.lhs, copy_sha())
               return true
             end,
           })
@@ -1757,7 +1757,8 @@ function M.project_cards_v2(cb)
     return
   end
 
-  local cards = buffer.node.projectItems
+  local obj = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
+  local cards = obj.projectItems
   if not cards or #cards.nodes == 0 then
     utils.error "Can't find any project v2 cards"
     return
