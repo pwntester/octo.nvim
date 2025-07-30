@@ -611,12 +611,10 @@ local function get_pr_from_buffer_or_current_branch(cb)
     return
   end
 
-  local pull_request = buffer:get_pr()
-  if pull_request then
-    cb(pull_request)
+  if buffer:isPullRequest() then
+    buffer:get_pr(cb)
   else
-    pull_request = utils.get_pull_request_for_current_branch(cb)
-    cb(pull_request)
+    utils.get_pull_request_for_current_branch(cb)
   end
 end
 

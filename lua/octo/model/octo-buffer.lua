@@ -1166,27 +1166,32 @@ function OctoBuffer:release()
   return self.node --[[@as octo.Release]]
 end
 
----Gets the PR object for the current octo buffer
-function OctoBuffer:get_pr()
+---Gets the PR object for the current octo buffer with correct merge base
+---@param callback function Callback function(pr) called with the PullRequest object
+function OctoBuffer:get_pr(callback)
   if not self:isPullRequest() then
     utils.error "Not in a PR buffer"
     return
   end
 
-  local Rev = require("octo.reviews.rev").Rev
-  local PullRequest = require("octo.model.pull-request").PullRequest
+  if not callback then
+    utils.error "get_pr requires a callback function"
+    return
+  end
+
+  local PullRequest = require "octo.model.pull-request"
   local bufnr = vim.api.nvim_get_current_buf()
-  return PullRequest:new {
+
+  local opts = {
     bufnr = bufnr,
     repo = self.repo,
     head_repo = self:pullRequest().headRepository.nameWithOwner,
     head_ref_name = self:pullRequest().headRefName,
     number = self.number,
     id = self:pullRequest().id,
-    left = Rev:new(self:pullRequest().baseRefOid),
-    right = Rev:new(self:pullRequest().headRefOid),
-    files = self:pullRequest().files.nodes,
   }
+
+  PullRequest.create_with_merge_base(opts, self:pullRequest(), callback)
 end
 
 --- Get a issue/PR comment at cursor (if any)

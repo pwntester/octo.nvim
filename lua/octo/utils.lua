@@ -1622,19 +1622,17 @@ function M.get_pull_request_for_current_branch(cb)
               local resp = M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
               ---@type octo.PullRequest
               local obj = resp.data.repository.pullRequest
-              local Rev = require("octo.reviews.rev").Rev
-              local PullRequest = require("octo.model.pull-request").PullRequest
-              local pull_request = PullRequest:new {
+              local PullRequest = require "octo.model.pull-request"
+
+              local opts = {
                 repo = base_owner .. "/" .. base_name,
                 head_repo = obj.headRepository.nameWithOwner,
                 number = number,
                 id = id,
                 head_ref_name = obj.headRefName,
-                left = Rev:new(obj.baseRefOid),
-                right = Rev:new(obj.headRefOid),
-                files = obj.files.nodes,
               }
-              cb(pull_request)
+
+              PullRequest.create_with_merge_base(opts, obj, cb)
             end
           end,
         }
