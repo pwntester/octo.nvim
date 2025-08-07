@@ -1854,7 +1854,10 @@ function M.get_lines_from_context(calling_context)
     and line_number_end > 0
     and line_number_start > line_number_end
   then
-    line_number_start, line_number_end = line_number_end, line_number_start
+    -- Swap with temp var to please typing.
+    local temp = line_number_start
+    line_number_start = line_number_end
+    line_number_end = temp
   end
   return line_number_start, line_number_end
 end
