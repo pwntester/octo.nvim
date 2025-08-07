@@ -1843,8 +1843,14 @@ function M.get_lines_from_context(calling_context)
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
   end
-  -- Ensure line_number_start is always <= line_number_end
-  if line_number_start and line_number_end and line_number_start > line_number_end then
+  -- Ensure line_number_start is always <= line_number_end (only for valid line numbers)
+  if
+    line_number_start
+    and line_number_end
+    and line_number_start > 0
+    and line_number_end > 0
+    and line_number_start > line_number_end
+  then
     line_number_start, line_number_end = line_number_end, line_number_start
   end
   return line_number_start, line_number_end
