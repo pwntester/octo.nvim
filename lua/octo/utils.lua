@@ -1830,8 +1830,11 @@ end
 
 ---Returns the starting and ending lines to be commented based on the calling context.
 ---@param calling_context "line" | "visual" | "motion"
+---@return integer|nil, integer|nil
 function M.get_lines_from_context(calling_context)
+  ---@type integer|nil
   local line_number_start = nil
+  ---@type integer|nil
   local line_number_end = nil
   if calling_context == "line" then
     line_number_start = vim.fn.line "."
@@ -1842,6 +1845,19 @@ function M.get_lines_from_context(calling_context)
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
+  end
+  -- Ensure line_number_start is always <= line_number_end (only for valid line numbers)
+  if
+    line_number_start
+    and line_number_end
+    and line_number_start > 0
+    and line_number_end > 0
+    and line_number_start > line_number_end
+  then
+    -- Swap with temp var to please typing.
+    local temp = line_number_start
+    line_number_start = line_number_end
+    line_number_end = temp
   end
   return line_number_start, line_number_end
 end
