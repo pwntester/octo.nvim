@@ -10,20 +10,38 @@ function M.gen_from_issue(issue_table)
   if not issue_table or vim.tbl_isempty(issue_table) then
     return nil
   end
-  local kind = issue_table.__typename == "Issue" and "issue" or "pull_request"
-  local filename ---@type string
-  if kind == "issue" then
+
+  local kind, filename, repo, ordinal
+
+  if issue_table.__typename == "Issue" then
+    kind = "issue"
     filename = utils.get_issue_uri(issue_table.number, issue_table.repository.nameWithOwner)
-  else
+    repo = issue_table.repository.nameWithOwner
+    ordinal = issue_table.number .. " " .. issue_table.title
+  elseif issue_table.__typename == "PullRequest" then
+    kind = "pull_request"
     filename = utils.get_pull_request_uri(issue_table.number, issue_table.repository.nameWithOwner)
+    repo = issue_table.repository.nameWithOwner
+    ordinal = issue_table.number .. " " .. issue_table.title
+  elseif issue_table.__typename == "Discussion" then
+    kind = "discussion"
+    filename = utils.get_discussion_uri(issue_table.number, issue_table.repository.nameWithOwner)
+    repo = issue_table.repository.nameWithOwner
+    ordinal = issue_table.number .. " " .. issue_table.title
+  elseif issue_table.__typename == "Repository" then
+    kind = "repo"
+    filename = utils.get_repo_uri(nil, issue_table.nameWithOwner)
+    repo = issue_table.nameWithOwner
+    ordinal = issue_table.number
   end
+
   return {
     filename = filename,
     kind = kind,
     value = issue_table.number,
-    ordinal = issue_table.number .. " " .. issue_table.title,
+    ordinal = ordinal,
     obj = issue_table,
-    repo = issue_table.repository.nameWithOwner,
+    repo = repo,
   }
 end
 

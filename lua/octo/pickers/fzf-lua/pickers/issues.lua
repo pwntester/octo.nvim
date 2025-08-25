@@ -52,12 +52,21 @@ return function(opts)
 
           for _, issue in ipairs(issues) do
             local entry = entry_maker.gen_from_issue(issue)
-
-            if entry ~= nil then
-              formatted_issues[entry.ordinal] = entry
-              local prefix = fzf.utils.ansi_from_hl("Comment", entry.value)
-              fzf_cb(prefix .. " " .. entry.obj.title)
+            if not entry or not entry.ordinal then
+              utils.error("Failed to process: entry is nil or missing ordinal for action: " .. vim.inspect(action))
+              return
             end
+
+            local icon_with_hl = utils.get_icon(entry)
+            local icon_str = fzf.utils.ansi_from_hl(icon_with_hl[2], icon_with_hl[1])
+
+            local prefix = fzf.utils.ansi_from_hl("Number", entry.value)
+            local new_formatted_entry = prefix .. " " .. icon_str .. " " .. entry.obj.title
+
+            entry.ordinal = fzf.utils.strip_ansi_coloring(new_formatted_entry)
+            formatted_issues[entry.ordinal] = entry
+
+            fzf_cb(new_formatted_entry)
           end
         end
       end,
