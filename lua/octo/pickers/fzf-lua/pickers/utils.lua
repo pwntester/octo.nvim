@@ -67,6 +67,18 @@ function M.open(command, entry)
   elseif command == "tab" then
     vim.cmd [[:tab sb %]]
   end
+
+  if entry.change and entry.change.patch then
+    local buf = vim.api.nvim_create_buf(false, true)
+    local diff = entry.change.patch
+    if diff then
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(diff, "\n"))
+      vim.api.nvim_buf_set_option(buf, "filetype", "diff")
+      vim.api.nvim_win_set_buf(0, buf)
+      return
+    end
+  end
+
   utils.get(entry.kind, entry.value, entry.repo)
 end
 
