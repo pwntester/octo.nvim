@@ -43,8 +43,7 @@ return function(opts)
   fzf.fzf_exec(get_contents, {
     prompt = opts.prompt_title or "",
     fzf_opts = {
-      ["--delimiter"] = "' '",
-      ["--info"] = "default",
+      ["--delimiter"] = " ",
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--with-nth"] = "2..",
     },

@@ -30,6 +30,7 @@ return function(opts)
 
             if entry ~= nil then
               formatted_commits[entry.ordinal] = entry
+              entry.repo = buffer.repo
               fzf_cb(entry.ordinal)
             end
           end
@@ -43,8 +44,7 @@ return function(opts)
   fzf.fzf_exec(get_contents, {
     prompt = opts.prompt_title or "",
     fzf_opts = {
-      ["--delimiter"] = "' '",
-      ["--info"] = "default",
+      ["--delimiter"] = " ",
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--with-nth"] = "2..",
     },
