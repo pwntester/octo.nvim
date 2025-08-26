@@ -23,13 +23,14 @@ local function handle_entry(fzf_cb, issue, max_id_length, formatted_issues, co)
 
   local owner, name = utils.split_repo(entry.repo)
   local icon_with_hl = utils.get_icon(entry)
-  local icon_str = fzf.utils.ansi_from_hl(icon_with_hl[2], icon_with_hl[1])
 
   local ordinal_entry, string_entry
 
   if entry.kind ~= "repo" then
-    local raw_number = picker_utils.pad_string(entry.obj.number, max_id_length)
+    local raw_number = picker_utils.pad_string(entry.obj.number, max_id_length + 1)
     local number = fzf.utils.ansi_from_hl("Comment", raw_number)
+
+    local icon_str = fzf.utils.ansi_from_hl(icon_with_hl[2], icon_with_hl[1])
 
     local str_format = string.format("%s %s %s %s %s %s", entry.kind, owner, name, number, icon_str, entry.obj.title)
     string_entry = str_format
@@ -39,7 +40,24 @@ local function handle_entry(fzf_cb, issue, max_id_length, formatted_issues, co)
   if entry.kind == "repo" then
     local raw_name_with_owner = picker_utils.pad_string(entry.obj.nameWithOwner, max_id_length)
     local name_with_owner = fzf.utils.ansi_from_hl("OctoGreen", raw_name_with_owner)
-    local description_repo = entry.obj.description and entry.obj.description or ""
+
+    local forkcount = entry.obj.forkCount
+    local len_forkcount = #tostring(forkcount)
+    local max_width = 7
+    local width = math.max(max_width, len_forkcount)
+
+    local raw_forkname = picker_utils.pad_string(entry.obj.forkCount, width)
+    local fork_name = fzf.utils.ansi_from_hl("OctoBlue", raw_forkname)
+
+    local raw_stargazer_count = picker_utils.pad_string(entry.obj.stargazerCount, width)
+    local stargazer_count = fzf.utils.ansi_from_hl("OctoYellow", raw_stargazer_count)
+
+    local get_private_or_public = not entry.obj.isPrivate and "Public" or "Private"
+    local raw_private_or_public = picker_utils.pad_string(get_private_or_public, width)
+    local private_or_public = fzf.utils.ansi_from_hl("Function", raw_private_or_public)
+
+    local get_description_repo = entry.obj.description and entry.obj.description or ""
+    local description_repo = fzf.utils.ansi_from_hl("Boolean", get_description_repo)
 
     local str_format = string.format(
       "%s %s %s %s",
@@ -47,11 +65,12 @@ local function handle_entry(fzf_cb, issue, max_id_length, formatted_issues, co)
       owner,
       name,
       string.format(
-        "%s %-" .. (#raw_name_with_owner - max_id_length) .. "s %-20s %-10s",
+        "%s %s %s %s %s",
         name_with_owner,
-        " f:" .. entry.obj.forkCount,
-        " s:" .. entry.obj.stargazerCount,
-        tostring(description_repo)
+        " f:" .. fork_name,
+        " s:" .. stargazer_count,
+        private_or_public,
+        description_repo
       )
     )
     string_entry = str_format
