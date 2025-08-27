@@ -340,8 +340,12 @@ function M.repo(formatted_repos)
 
     local buffer = OctoBuffer:new {
       bufnr = tmpbuf,
+      repo = entry.repo,
+      node = entry.obj,
+      kind = entry.kind,
     }
     buffer:configure()
+
     local repo_name_owner = vim.split(entry_str, " ")[1]
     local owner, name = utils.split_repo(repo_name_owner)
 
@@ -350,10 +354,13 @@ function M.repo(formatted_repos)
       -- and `tmpbuf` within this context is already cleared and invalidated
       if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
         local resp = vim.json.decode(output)
-        buffer.node = resp.data.repository
-        buffer:render_repo()
+        if resp.data and resp.data.repository then
+          buffer.node = resp.data.repository
+          buffer:render_repo()
+        end
       end
     end
+
     gh.api.graphql {
       query = queries.repository,
       f = { owner = owner, name = name },
@@ -366,11 +373,11 @@ function M.repo(formatted_repos)
     ---@type string, string
     local stargazer, fork
     if config.values.picker_config.use_emojis then
-      stargazer = string.format("💫: %s", entry.repo.stargazerCount)
-      fork = string.format("🔱: %s", entry.repo.forkCount)
+      stargazer = string.format("💫: %s", entry.obj.stargazerCount)
+      fork = string.format("🔱: %s", entry.obj.forkCount)
     else
-      stargazer = string.format("s: %s", entry.repo.stargazerCount)
-      fork = string.format("f: %s", entry.repo.forkCount)
+      stargazer = string.format("s: %s", entry.obj.stargazerCount)
+      fork = string.format("f: %s", entry.obj.forkCount)
     end
     self:update_border(string.format("%s (%s, %s)", repo_name_owner, stargazer, fork))
   end

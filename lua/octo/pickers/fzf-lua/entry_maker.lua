@@ -31,7 +31,7 @@ function M.gen_from_issue(issue_table)
   elseif issue_table.__typename == "Repository" then
     kind = "repo"
     filename = utils.get_repo_uri(nil, issue_table.nameWithOwner)
-    repo = issue_table.nameWithOwner
+    repo = issue_table.nameWithOwner .. "/repo"
     ordinal = issue_table.number
   end
 
@@ -263,26 +263,27 @@ function M.gen_from_repo(repo)
   end
 
   local entry = {
-    filename = utils.get_repo_uri(_, repo),
+    filename = utils.get_repo_uri(_, repo.nameWithOwner),
+    repo = repo.nameWithOwner .. "/repo",
     kind = "repo",
     value = repo.nameWithOwner,
     ordinal = repo.nameWithOwner .. " " .. repo.description,
-    repo = repo,
+    obj = repo,
   }
 
-  local name = fzf.utils.ansi_from_hl("Directory", entry.repo.nameWithOwner)
+  local name = fzf.utils.ansi_from_hl("Directory", entry.obj.nameWithOwner)
   local fork_str = ""
-  if entry.repo.isFork then
+  if entry.obj.isFork then
     fork_str = fzf.utils.ansi_from_hl("Comment", "fork")
   end
 
   local access_str = fzf.utils.ansi_from_hl("Directory", "public")
-  if entry.repo.isPrivate then
+  if entry.obj.isPrivate then
     access_str = fzf.utils.ansi_from_hl("WarningMsg", "private")
   end
 
   local metadata = string.format("(%s)", table.concat({ fork_str, access_str }, ", "))
-  local description = fzf.utils.ansi_from_hl("Comment", entry.repo.description)
+  local description = fzf.utils.ansi_from_hl("Comment", entry.obj.description)
   local entry_str = table.concat({
     name,
     metadata,
