@@ -5,6 +5,7 @@ local octo_config = require "octo.config"
 local queries = require "octo.gh.queries"
 local reviews = require "octo.reviews"
 local MiniPick = require "mini.pick"
+local previewers = require "octo.pickers.mini_picker.previewers"
 
 -- get_filter function
 local function get_filter(filter_opts, kind)
@@ -109,6 +110,8 @@ M.picker = {
               items = items_for_picker,
               name = "Issues (" .. opts.repo .. ")",
               choose = choose_issue,
+              -- Show a preview of the issue when an item is selected.
+              preview = previewers.issue,
             },
             options = {
               content_from_bottom = cfg.picker_config
@@ -186,6 +189,8 @@ M.picker = {
               items = items_for_picker,
               name = "Pull Requests (" .. opts.repo .. ")",
               choose = choose_pr,
+              -- Show a preview of the pull request when an item is selected.
+              preview = previewers.pr,
             },
             options = {
               content_from_bottom = cfg.picker_config
@@ -277,6 +282,8 @@ M.picker = {
               items = items_for_picker,
               name = string.format("Changed Files (PR #%d)", pr_number),
               choose = choose_file,
+              -- Show a preview of the file diff when an item is selected.
+              preview = previewers.changed_file,
             },
             options = {
               content_from_bottom = cfg.picker_config
@@ -369,6 +376,8 @@ M.picker = {
               items = items_for_picker,
               name = string.format("Search Results (%s)", opts.type),
               choose = choose_search_item,
+              -- Show a preview of the search result when an item is selected.
+              preview = previewers.search,
             },
             options = {
               content_from_bottom = cfg.picker_config
@@ -1321,6 +1330,8 @@ M.picker = {
                 items = items_for_picker,
                 name = "Discussions (" .. repo .. ")",
                 choose = choose_discussion,
+                -- Show a preview of the discussion when an item is selected.
+                preview = previewers.discussion,
               },
               options = {
                 content_from_bottom = cfg.picker_config
