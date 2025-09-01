@@ -130,6 +130,17 @@ require"octo".setup({
       merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
     },
     snacks = {                                -- snacks specific config
+      -- Snacks picker configuration (see https://github.com/folke/snacks.nvim/blob/main/docs/picker.md)
+      layout = {                              -- layout configuration for all pickers
+        preset = "sidebar",                   -- preset layout: "dropdown", "ivy", "sidebar", "telescope"
+        -- Additional layout options:
+        -- reverse = true,
+        -- width = 0.8,
+        -- height = 0.8,
+      },
+      -- Any other Snacks picker option can be configured here:
+      -- win = { height = 20 },                -- window configuration
+      -- jump = { autojump = true },           -- jump configuration
       actions = {                             -- custom actions for specific snacks pickers (array of tables)
         issues = {                            -- actions for the issues picker
           -- { name = "my_issue_action", fn = function(picker, item) print("Issue action:", vim.inspect(item)) end, lhs = "<leader>a", desc = "My custom issue action" },
