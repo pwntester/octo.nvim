@@ -694,7 +694,7 @@ GITHUB_TOKEN= gh auth login
 ALSO:
 
 It is possible that Octo is trying to authenticate against the origin listed in your repository's config (.git/config) which _could be_ an _ssh alias_ to _github.com_. To properly let octo.nvim know about the ssh alias, you need to list it in the config per above. Example:
-```
+```lua
 require('octo').setup({
   ssh_aliases = {["<THE ALIAS YOU HAVE LISTED IN ~/.ssh/config>"] = "github.com"}
 })
