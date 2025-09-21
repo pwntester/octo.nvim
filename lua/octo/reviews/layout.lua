@@ -121,7 +121,7 @@ function Layout:set_current_file(file, focus)
   end
   if found then
     if not file:is_ready_to_render() then
-      local result = file:fetch()
+      local result = file:fetch(true)
       if not result then
         utils.print_err("Timeout fetching " .. file.path)
         return

@@ -175,8 +175,11 @@ function Review:set_files_and_select_first(files)
 
   self.layout.files = files
   if selected_file_idx then
-    files[selected_file_idx]:fetch()
+    files[selected_file_idx]:fetch(true)
     self.layout.selected_file_idx = selected_file_idx
+  end
+  for _, file in ipairs(files) do
+    file:fetch(false)
   end
   self.layout:update_files()
 end
