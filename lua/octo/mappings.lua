@@ -22,7 +22,13 @@ return {
     require("octo.picker").commits()
   end,
   review_commits = function()
-    require("octo.picker").review_commits()
+    local current_review = reviews.get_current_review()
+    if not current_review then
+      return
+    end
+    require("octo.picker").review_commits(function(right, left)
+      current_review:focus_commit(right, left)
+    end)
   end,
   list_changed_files = function()
     require("octo.picker").changed_files()
