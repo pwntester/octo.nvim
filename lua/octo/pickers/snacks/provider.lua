@@ -9,6 +9,16 @@ local Snacks = require "snacks"
 
 local M = {}
 
+-- Helper function to merge user snacks config with picker options
+local function merge_snacks_config(picker_opts, user_config)
+  if not user_config then
+    return picker_opts
+  end
+
+  -- Deep merge: user config as base, picker options override
+  return vim.tbl_deep_extend("force", user_config, picker_opts)
+end
+
 local function get_filter(opts, kind)
   local filter = ""
   local allowed_values = {}
@@ -126,7 +136,7 @@ function M.issues(opts)
           final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
         end
 
-        Snacks.picker.pick {
+        local snacks_opts = merge_snacks_config({
           title = opts.preview_title or "Issues",
           items = issues,
           format = function(item, _)
@@ -156,7 +166,9 @@ function M.issues(opts)
             },
           },
           actions = final_actions, -- Use the constructed actions map
-        }
+        }, cfg.picker_config.snacks)
+
+        Snacks.picker.pick(snacks_opts)
       end
     end,
   }
@@ -287,7 +299,7 @@ function M.pull_requests(opts)
           final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
         end
 
-        Snacks.picker.pick {
+        local snacks_opts = merge_snacks_config({
           title = opts.preview_title or "Pull Requests",
           items = pull_requests,
           format = function(item, _)
@@ -306,7 +318,9 @@ function M.pull_requests(opts)
             },
           },
           actions = final_actions, -- Use the constructed actions map
-        }
+        }, cfg.picker_config.snacks)
+
+        Snacks.picker.pick(snacks_opts)
       end
     end,
   }
@@ -463,7 +477,8 @@ function M.notifications(opts)
           final_keys[cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = default_mode }
         end
 
-        Snacks.picker.pick {
+        local snacks_opts = merge_snacks_config({
+
           title = opts.preview_title or "Notifications",
           items = safe_notifications,
           format = function(item, _)
@@ -484,7 +499,9 @@ function M.notifications(opts)
             },
           },
           actions = final_actions, -- Use the constructed actions map
-        }
+        }, cfg.picker_config.snacks)
+
+        Snacks.picker.pick(snacks_opts)
       end
     end,
   }
@@ -559,7 +576,8 @@ function M.issue_templates(templates, cb)
   -- Default key for confirm is usually <CR> handled by Snacks itself, but allow override
   -- No explicit default key mapping added here unless specified in config
 
-  Snacks.picker.pick {
+  local snacks_opts = merge_snacks_config({
+
     title = "Issue Templates",
     items = formatted_templates,
     format = function(item)
@@ -584,7 +602,9 @@ function M.issue_templates(templates, cb)
       },
     },
     actions = final_actions, -- Use the constructed actions map
-  }
+  }, cfg.picker_config.snacks)
+
+  Snacks.picker.pick(snacks_opts)
 end
 
 function M.commits(opts)
@@ -668,7 +688,8 @@ function M.commits(opts)
             final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
           end
 
-          Snacks.picker.pick {
+          local snacks_opts = merge_snacks_config({
+
             title = opts.title or "PR Commits",
             items = results,
             format = function(item, _)
@@ -711,7 +732,9 @@ function M.commits(opts)
               },
             },
             actions = final_actions,
-          }
+          }, cfg.picker_config.snacks)
+
+          Snacks.picker.pick(snacks_opts)
         end,
       },
     },
@@ -849,7 +872,8 @@ function M.review_commits(callback)
             final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
           end
 
-          Snacks.picker.pick {
+          local snacks_opts = merge_snacks_config({
+
             title = "Review Commits",
             items = results,
             format = function(item, _)
@@ -912,7 +936,7 @@ function M.review_commits(callback)
               },
             },
             actions = final_actions,
-          }
+          }, cfg.picker_config.snacks)
         end,
       },
     },
@@ -1048,7 +1072,8 @@ function M.search(opts)
       final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
     end
 
-    Snacks.picker.pick {
+    local snacks_opts = merge_snacks_config({
+
       title = opts.preview_title or "GitHub Search Results",
       items = search_results,
       format = function(item, _)
@@ -1085,7 +1110,9 @@ function M.search(opts)
         },
       },
       actions = final_actions, -- Use the constructed actions map
-    }
+    }, cfg.picker_config.snacks)
+
+    Snacks.picker.pick(snacks_opts)
   else
     utils.info "No search results found"
   end
@@ -1162,7 +1189,8 @@ function M.changed_files(opts)
             final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
           end
 
-          Snacks.picker.pick {
+          local snacks_opts = merge_snacks_config({
+
             title = opts.title or "Changed Files",
             items = results,
             format = function(item, _)
@@ -1241,7 +1269,7 @@ function M.changed_files(opts)
               },
             },
             actions = final_actions,
-          }
+          }, cfg.picker_config.snacks)
         end,
       },
     },
@@ -1333,7 +1361,8 @@ function M.assignees(cb)
           final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
         end
 
-        Snacks.picker.pick {
+        local snacks_opts = merge_snacks_config({
+
           title = "Assignees",
           items = assignees,
           format = function(item, _)
@@ -1370,7 +1399,9 @@ function M.assignees(cb)
             },
           },
           actions = final_actions,
-        }
+         }, cfg.picker_config.snacks)
+
+        Snacks.picker.pick(snacks_opts)
       end
     end,
   }
@@ -1491,7 +1522,8 @@ function M.users(cb)
                 end
 
                 -- Sub-picker for teams
-                Snacks.picker.pick {
+                local snacks_opts = merge_snacks_config({
+
                   title = "Select Team from " .. item.login,
                   items = teams,
                   format = function(team_item, _)
@@ -1507,7 +1539,7 @@ function M.users(cb)
                       end
                     end,
                   },
-                }
+                }, cfg.picker_config.snacks)
               end
             end
           end
@@ -1522,7 +1554,8 @@ function M.users(cb)
             final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
           end
 
-          Snacks.picker.pick {
+          local snacks_opts = merge_snacks_config({
+
             title = "Users",
             items = all_items,
             format = function(item, _)
@@ -1562,7 +1595,7 @@ function M.users(cb)
               },
             },
             actions = final_actions,
-          }
+          }, cfg.picker_config.snacks)
         end
       end,
     }
