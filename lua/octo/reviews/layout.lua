@@ -188,7 +188,6 @@ function Layout:select_first_file()
   end
 end
 
---- Select the last file entry
 function Layout:select_last_file()
   if self.file_panel:is_open() then
     local file = self.files[#self.files]
@@ -196,8 +195,54 @@ function Layout:select_last_file()
   end
 end
 
----Checks the state of the view layout.
----@return { tabpage: boolean, left_win: boolean, right_win: boolean, valid: boolean }
+--- Select the next unviewed file entry
+--- Skips VIEWED files, loops around to first unviewed if at end
+function Layout:select_next_unviewed_file()
+  if not self.file_panel:is_open() then
+    return
+  end
+
+  local start_idx = self.selected_file_idx
+  local total_files = #self.files
+
+  for i = 1, total_files do
+    local next_idx = (start_idx + i - 1) % total_files + 1
+    local file = self.files[next_idx]
+
+    if next_idx ~= self.selected_file_idx and file.viewed_state ~= "VIEWED" then
+      self:set_current_file(file)
+      return
+    end
+  end
+
+  -- Fallback: if all files are viewed, just go to next file
+  self:select_next_file()
+end
+
+--- Select the previous unviewed file entry
+--- Skips VIEWED files, loops around to last unviewed if at beginning
+function Layout:select_prev_unviewed_file()
+  if not self.file_panel:is_open() then
+    return
+  end
+
+  local start_idx = self.selected_file_idx
+  local total_files = #self.files
+
+  for i = 1, total_files do
+    local prev_idx = (start_idx - i - 1) % total_files + 1
+    local file = self.files[prev_idx]
+
+    if prev_idx ~= self.selected_file_idx and file.viewed_state ~= "VIEWED" then
+      self:set_current_file(file)
+      return
+    end
+  end
+
+  -- Fallback: if all files are viewed, just go to previous file
+  self:select_prev_file()
+end
+
 function Layout:validate_layout()
   local state = {
     tabpage = vim.api.nvim_tabpage_is_valid(self.tabpage),

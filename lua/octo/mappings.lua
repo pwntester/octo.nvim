@@ -193,6 +193,18 @@ return {
       layout:select_last_file()
     end
   end,
+  select_next_unviewed_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout then
+      layout:select_next_unviewed_file()
+    end
+  end,
+  select_prev_unviewed_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout then
+      layout:select_prev_unviewed_file()
+    end
+  end,
   next_entry = function()
     local layout = reviews.get_current_layout()
     if layout and layout.file_panel:is_open() then
