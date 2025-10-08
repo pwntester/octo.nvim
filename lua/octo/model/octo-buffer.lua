@@ -214,6 +214,7 @@ function OctoBuffer:render_issue()
   local unrendered_force_push_events = {} ---@type octo.fragments.HeadRefForcePushedEvent[]
   local commits = {} ---@type octo.fragments.PullRequestCommit[]
   local unrendered_review_requested_events = {} ---@type octo.fragments.ReviewRequestedEvent[]
+  local unrendered_review_request_removed_events = {} ---@type octo.fragments.ReviewRequestRemovedEvent[]
   local prev_is_event = false
 
   ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
@@ -270,6 +271,18 @@ function OctoBuffer:render_issue()
     then
       writers.write_review_requested_events(self.bufnr, unrendered_review_requested_events)
       unrendered_review_requested_events = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_review_request_removed_events > 0
+      and (
+        not item
+        or item.__typename ~= "ReviewRequestRemovedEvent"
+        or unrendered_review_request_removed_events[1].createdAt ~= item.createdAt
+      )
+    then
+      writers.write_review_request_removed_events(self.bufnr, unrendered_review_request_removed_events)
+      unrendered_review_request_removed_events = {}
       prev_is_event = true
     end
   end
@@ -339,7 +352,7 @@ function OctoBuffer:render_issue()
       unrendered_review_requested_events[#unrendered_review_requested_events + 1] = item
       prev_is_event = true
     elseif item.__typename == "ReviewRequestRemovedEvent" then
-      writers.write_review_request_removed_event(self.bufnr, item)
+      unrendered_review_request_removed_events[#unrendered_review_request_removed_events + 1] = item
       prev_is_event = true
     elseif item.__typename == "ReviewDismissedEvent" then
       writers.write_review_dismissed_event(self.bufnr, item)
