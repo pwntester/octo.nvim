@@ -672,6 +672,28 @@ function M.format_large_int(n, is_capitalized)
   return string.format("%.1f%s", n, suffixes[i])
 end
 
+---Formats number of seconds as a duration string
+---@param seconds integer
+---@return string
+function M.format_seconds(seconds)
+  if seconds < 60 then
+    return seconds .. "s"
+  end
+  local minutes = math.floor(seconds / 60)
+  seconds = seconds % 60
+  if minutes < 60 then
+    return string.format("%dm%ds", minutes, seconds)
+  end
+  local hours = math.floor(minutes / 60)
+  minutes = minutes % 60
+  if hours < 24 then
+    return string.format("%dh%dm", hours, minutes)
+  end
+  local days = math.floor(hours / 24)
+  hours = hours % 24
+  return string.format("%dd%dh", days, hours)
+end
+
 ---Formats a string as a date
 ---@param date_string string
 ---@param round_under_one_minute? boolean defaults to true
