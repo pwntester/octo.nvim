@@ -1785,6 +1785,55 @@ function M.gh_pr_ready(opts)
   }
 end
 
+local parse_checks = function(data)
+  local checks = {}
+  for _, row in ipairs(data) do
+    checks[#checks + 1] = {
+      row.name,
+      row.bucket,
+      utils.format_seconds(row.seconds),
+      row.link,
+    }
+  end
+  return checks
+end
+
+local get_max_lengths = function(data)
+  local max_lengths = {}
+  if #data == 0 then
+    return max_lengths
+  end
+
+  -- Initialize max_lengths with zeros for each column
+  for col = 1, #data[1] do
+    max_lengths[col] = 0
+  end
+
+  for _, row in ipairs(data) do
+    for col, word in ipairs(row) do
+      local word_length = #word
+      if word_length > max_lengths[col] then
+        max_lengths[col] = word_length
+      end
+    end
+  end
+  return max_lengths
+end
+
+local format_checks = function(parts)
+  local max_lengths = get_max_lengths(parts)
+
+  local lines = {}
+  for _, p in pairs(parts) do
+    local line = {}
+    for i, pp in pairs(p) do
+      table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
+    end
+    table.insert(lines, table.concat(line, "  "))
+  end
+  return lines
+end
+
 function M.pr_checks()
   local buffer = utils.get_current_buffer()
 
@@ -1792,30 +1841,25 @@ function M.pr_checks()
     return
   end
 
-  local function show_checks(output)
-    local max_lengths = {}
-    local parts = {}
-    for _, l in pairs(vim.split(output, "\n")) do
-      local line_parts = vim.split(l, "\t")
-      for i, p in pairs(line_parts) do
-        if max_lengths[i] == nil or max_lengths[i] < #p then
-          max_lengths[i] = #p
-        end
-      end
-      table.insert(parts, line_parts)
-    end
-    local lines = {}
-    for _, p in pairs(parts) do
-      local line = {}
-      for i, pp in pairs(p) do
-        table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
-      end
-      table.insert(lines, table.concat(line, "  "))
-    end
+  local function show_checks(data)
+    data = vim.json.decode(data)
+    local parts = parse_checks(data)
+    local lines = format_checks(parts)
     local _, wbufnr = window.create_centered_float {
       header = "Checks",
       content = lines,
     }
+
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", "<C-b>", "", {
+      noremap = true,
+      silent = true,
+      callback = function()
+        local line_number = vim.api.nvim_win_get_cursor(0)[1]
+        local url = data[line_number].link
+        navigation.open_in_browser_raw(url)
+      end,
+    })
+
     local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
     for i, l in ipairs(buf_lines) do
       if #vim.split(l, "pass") > 1 then
@@ -1830,6 +1874,10 @@ function M.pr_checks()
   gh.pr.checks {
     buffer.number,
     repo = buffer.repo,
+    json = "name,bucket,startedAt,completedAt,link",
+    jq = [[
+      map(. += {"seconds": ((.completedAt | fromdateiso8601) - (.startedAt | fromdateiso8601))})
+    ]],
     opts = {
       cb = gh.create_callback {
         success = show_checks,
