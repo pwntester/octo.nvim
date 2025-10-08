@@ -1841,6 +1841,8 @@ function M.pr_checks()
     return
   end
 
+  local mappings = require("octo.mappings").values.mappings.runs
+
   local function show_checks(data)
     data = vim.json.decode(data)
     local parts = parse_checks(data)
@@ -1850,13 +1852,28 @@ function M.pr_checks()
       content = lines,
     }
 
-    vim.api.nvim_buf_set_keymap(wbufnr, "n", "<C-b>", "", {
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.open_in_browser.lhs, "", {
       noremap = true,
       silent = true,
       callback = function()
         local line_number = vim.api.nvim_win_get_cursor(0)[1]
         local url = data[line_number].link
         navigation.open_in_browser_raw(url)
+      end,
+    })
+
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.rerun.lhs, "", {
+      noremap = true,
+      silent = true,
+      callback = function()
+        local line_number = vim.api.nvim_win_get_cursor(0)[1]
+        local url = data[line_number].link
+        local job_id = string.match(url, "runs/(%d+)")
+        if not job_id then
+          utils.error "Cannot find check run id"
+          return
+        end
+        gh.run.rerun { job = job_id, opts { cb = gh.create_callback { success = utils.info } } }
       end,
     })
 
