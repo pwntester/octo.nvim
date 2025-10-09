@@ -696,6 +696,30 @@ end
 
 ---Formats a string as a date
 ---@param date_string string
+---@return integer time in seconds since epoch
+function M.parse_utc_date(date_string)
+  -- Parse the input date string (assumed to be in UTC)
+  local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
+  return os.time {
+    year = year,
+    month = month,
+    day = day,
+    hour = hour,
+    min = min,
+    sec = sec,
+    isdst = false, -- Input is in UTC
+  }
+end
+
+---@param start_date string
+---@param end_date string
+---@return integer number of seconds between the two dates
+function M.seconds_between(start_date, end_date)
+  return os.difftime(M.parse_utc_date(end_date), M.parse_utc_date(start_date))
+end
+
+---Formats a string as a date
+---@param date_string string
 ---@param round_under_one_minute? boolean defaults to true
 ---@return string
 function M.format_date(date_string, round_under_one_minute)
@@ -705,17 +729,7 @@ function M.format_date(date_string, round_under_one_minute)
 
   round_under_one_minute = round_under_one_minute == nil and true or round_under_one_minute
 
-  -- Parse the input date string (assumed to be in UTC)
-  local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
-  local parsedTimeUTC = os.time {
-    year = year,
-    month = month,
-    day = day,
-    hour = hour,
-    min = min,
-    sec = sec,
-    isdst = false, -- Input is in UTC
-  }
+  local parsedTimeUTC = M.parse_utc_date(date_string)
 
   -- Get the offset of your local time zone from UTC
   local localTime = os.time()

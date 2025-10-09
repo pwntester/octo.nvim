@@ -1791,7 +1791,7 @@ local parse_checks = function(data)
     checks[#checks + 1] = {
       row.name,
       row.bucket,
-      utils.format_seconds(row.seconds),
+      row.seconds ~= nil and utils.format_seconds(row.seconds) or "",
       row.link,
     }
   end
@@ -1841,10 +1841,19 @@ function M.pr_checks()
     return
   end
 
-  local mappings = require("octo.mappings").values.mappings.runs
+  local mappings = require("octo.config").values.mappings.runs
 
   local function show_checks(data)
     data = vim.json.decode(data)
+
+    for _, row in ipairs(data) do
+      if row.bucket == "pending" then
+        row.seconds = nil
+      else
+        row.seconds = utils.seconds_between(row.startedAt, row.completedAt)
+      end
+    end
+
     local parts = parse_checks(data)
     local lines = format_checks(parts)
     local _, wbufnr = window.create_centered_float {
@@ -1868,22 +1877,36 @@ function M.pr_checks()
       callback = function()
         local line_number = vim.api.nvim_win_get_cursor(0)[1]
         local url = data[line_number].link
-        local job_id = string.match(url, "runs/(%d+)")
+        local job_id = string.match(url, "job/(%d+)$")
         if not job_id then
           utils.error "Cannot find check run id"
           return
         end
-        gh.run.rerun { job = job_id, opts { cb = gh.create_callback { success = utils.info } } }
+        gh.run.rerun {
+          job = job_id,
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Rerunning job for " .. data[line_number].name)
+              end,
+            },
+          },
+        }
       end,
     })
 
     local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
     for i, l in ipairs(buf_lines) do
+      local color
       if #vim.split(l, "pass") > 1 then
-        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoPassingTest", i - 1, 0, -1)
+        color = "OctoPassingTest"
       elseif #vim.split(l, "fail") > 1 then
-        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoFailingTest", i - 1, 0, -1)
+        color = "OctoFailingTest"
+      else
+        color = "OctoPendingTest"
       end
+
+      vim.api.nvim_buf_add_highlight(wbufnr, -1, color, i - 1, 0, -1)
     end
     vim.bo[wbufnr].modifiable = false
   end
@@ -1892,9 +1915,6 @@ function M.pr_checks()
     buffer.number,
     repo = buffer.repo,
     json = "name,bucket,startedAt,completedAt,link",
-    jq = [[
-      map(. += {"seconds": ((.completedAt | fromdateiso8601) - (.startedAt | fromdateiso8601))})
-    ]],
     opts = {
       cb = gh.create_callback {
         success = show_checks,
