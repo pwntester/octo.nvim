@@ -1863,6 +1863,19 @@ function M.pr_checks()
       content = lines,
     }
 
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", "<CR>", "", {
+      noremap = true,
+      silent = true,
+      callback = function()
+        local line_number = vim.api.nvim_win_get_cursor(0)[1]
+        local url = data[line_number].link
+        local job_id = string.match(url, "job/(%d+)$")
+
+        local workflow = require "octo.workflow_runs"
+        workflow.render { id = job_id }
+      end,
+    })
+
     vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.open_in_browser.lhs, "", {
       noremap = true,
       silent = true,
