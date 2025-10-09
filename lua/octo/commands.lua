@@ -1871,6 +1871,13 @@ function M.pr_checks()
         local url = data[line_number].link
         local run_id = string.match(url, "runs/(%d+)")
 
+        if not run_id then
+          utils.error(
+            "Cannot find workflow run id. Consider opening in the browser with " .. mappings.open_in_browser.lhs
+          )
+          return
+        end
+
         local workflow = require "octo.workflow_runs"
         workflow.render { id = run_id }
       end,
