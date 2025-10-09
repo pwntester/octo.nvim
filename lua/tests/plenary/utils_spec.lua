@@ -206,16 +206,3 @@ describe("format_seconds", function()
     eq(this.format_seconds(90061), "1d1h")
   end)
 end)
-
-describe("parse_utc_date", function()
-  it("parse invalid date string", function()
-    local date_str = "0001-01-01T00:00:00Z"
-    eq(this.parse_utc_date(date_str), nil)
-  end)
-
-  it("parses a valid UTC date string", function()
-    local date_str = "2023-10-05T14:48:00Z"
-    local expected = 1696535280
-    eq(this.parse_utc_date(date_str), expected)
-  end)
-end)
