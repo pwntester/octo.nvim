@@ -103,6 +103,20 @@ fragment ConnectedEventFragment on ConnectedEvent {
 }
 ]]
 
+---@class octo.fragments.ConvertToDraftEvent
+---@field __typename "ConvertToDraftEvent"
+---@field actor { login: string }
+---@field createdAt string
+
+M.convert_to_draft_event = [[
+fragment ConvertToDraftEventFragment on ConvertToDraftEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
 ---@class octo.fragments.ReferencedEvent
 ---@field __typename "ReferencedEvent"
 ---@field createdAt string
@@ -591,6 +605,20 @@ fragment MergedEventFragment on MergedEvent {
 }
 ]]
 
+---@class octo.fragments.ReadyForReviewEvent
+---@field __typename "ReadyForReviewEvent"
+---@field actor { login: string }
+---@field createdAt string
+
+M.ready_for_review_event = [[
+fragment ReadyForReviewEventFragment on ReadyForReviewEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
 ---@class octo.fragments.RenamedTitleEvent
 ---@field __typename "RenamedTitleEvent"
 ---@field actor { login: string }
@@ -818,7 +846,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   }
 }
 ]]
----@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent
+---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent
 
 ---@class octo.fragments.PullRequestTimelineItemsConnection
 ---@field nodes octo.PullRequestTimelineItem[]
@@ -830,6 +858,7 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     ...AssignedEventFragment
     ...ClosedEventFragment
     ...ConnectedEventFragment
+    ...ConvertToDraftEventFragment
     ...CrossReferencedEventFragment
     ...DemilestonedEventFragment
     ...IssueCommentFragment
@@ -838,6 +867,7 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     ...MilestonedEventFragment
     ...PullRequestCommitFragment
     ...PullRequestReviewFragment
+    ...ReadyForReviewEventFragment
     ...RenamedTitleEventFragment
     ...ReopenedEventFragment
     ...ReviewDismissedEventFragment
