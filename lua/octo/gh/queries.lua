@@ -874,13 +874,13 @@ query {
               login
               name
             }
-            ... on Mannequin { 
+            ... on Mannequin {
               id
-              login 
+              login
             }
-            ... on Team { 
+            ... on Team {
               id
-              name 
+              name
             }
           }
         }
@@ -936,8 +936,8 @@ query {
 ---}
 
 M.user_profile = [[
-query {
-  user(login: "%s") {
+query($login: String!) {
+  user(login: $login) {
     login
     bio
     company
