@@ -1847,11 +1847,13 @@ function M.pr_checks()
     data = vim.json.decode(data)
 
     for _, row in ipairs(data) do
-      if row.bucket == "pending" then
+      if row.bucket == "pending" or row.bucket == "skipped" or row.completedAt == "0001-01-01T00:00:00Z" then
         row.seconds = nil
       else
         row.seconds = utils.seconds_between(row.startedAt, row.completedAt)
       end
+
+      row.name = string.gsub(row.name, "\n", " ")
     end
 
     local parts = parse_checks(data)
@@ -1895,19 +1897,20 @@ function M.pr_checks()
       end,
     })
 
-    local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
-    for i, l in ipairs(buf_lines) do
-      local color
-      if #vim.split(l, "pass") > 1 then
-        color = "OctoPassingTest"
-      elseif #vim.split(l, "fail") > 1 then
-        color = "OctoFailingTest"
-      else
-        color = "OctoPendingTest"
+    for i, l in ipairs(data) do
+      local color_line = function(color)
+        vim.api.nvim_buf_add_highlight(wbufnr, -1, color, i - 1, 0, -1)
       end
 
-      vim.api.nvim_buf_add_highlight(wbufnr, -1, color, i - 1, 0, -1)
+      if l.bucket == "pass" then
+        color_line "OctoPassingTest"
+      elseif l.bucket == "fail" then
+        color_line "OctoFailingTest"
+      elseif l.bucket == "pending" then
+        color_line "OctoPendingTest"
+      end
     end
+
     vim.bo[wbufnr].modifiable = false
   end
 
