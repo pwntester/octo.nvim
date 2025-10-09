@@ -1869,10 +1869,10 @@ function M.pr_checks()
       callback = function()
         local line_number = vim.api.nvim_win_get_cursor(0)[1]
         local url = data[line_number].link
-        local job_id = string.match(url, "job/(%d+)$")
+        local run_id = string.match(url, "runs/(%d+)")
 
         local workflow = require "octo.workflow_runs"
-        workflow.render { id = job_id }
+        workflow.render { id = run_id }
       end,
     })
 
