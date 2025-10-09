@@ -730,7 +730,7 @@ local function get_workflow_runs_sync(opts)
   return lines
 end
 
-local function render(selected)
+function M.render(selected)
   local new_buf = vim.api.nvim_create_buf(true, true)
   M.buf = new_buf
   vim.api.nvim_set_current_buf(new_buf)
@@ -749,7 +749,7 @@ function M.list(opts)
   utils.info "Fetching workflow runs (this may take a while) ..."
   local wf_runs = get_workflow_runs_sync(opts)
 
-  require("octo.picker").workflow_runs(wf_runs, "Workflow runs", render)
+  require("octo.picker").workflow_runs(wf_runs, "Workflow runs", M.render)
 end
 
 function M.refetch()
