@@ -211,33 +211,37 @@ function OctoBuffer:render_issue()
   --- labeled/unlabeled events or subissues events are rendered
   table.insert(timeline_nodes, {})
 
-  for _, item in ipairs(timeline_nodes) do
-    if item.__typename ~= "LabeledEvent" and #unrendered_labeled_events > 0 then
+  ---@param item? octo.PullRequestTimelineItem|octo.IssueTimelineItem
+  local function render_accumulated_events(item)
+    if (not item or item.__typename ~= "LabeledEvent") and #unrendered_labeled_events > 0 then
       writers.write_labeled_events(self.bufnr, unrendered_labeled_events, "added")
       unrendered_labeled_events = {}
       prev_is_event = true
     end
-    if item.__typename ~= "UnlabeledEvent" and #unrendered_unlabeled_events > 0 then
+    if (not item or item.__typename ~= "UnlabeledEvent") and #unrendered_unlabeled_events > 0 then
       writers.write_labeled_events(self.bufnr, unrendered_unlabeled_events, "removed")
       unrendered_unlabeled_events = {}
       prev_is_event = true
     end
-    if item.__typename ~= "SubIssueAddedEvent" and #unrendered_subissue_added_events > 0 then
+    if (not item or item.__typename ~= "SubIssueAddedEvent") and #unrendered_subissue_added_events > 0 then
       writers.write_subissue_events(self.bufnr, unrendered_subissue_added_events, "added")
       unrendered_subissue_added_events = {}
       prev_is_event = true
     end
-    if item.__typename ~= "SubIssueRemovedEvent" and #unrendered_subissue_removed_events > 0 then
+    if (not item or item.__typename ~= "SubIssueRemovedEvent") and #unrendered_subissue_removed_events > 0 then
       writers.write_subissue_events(self.bufnr, unrendered_subissue_removed_events, "removed")
       unrendered_subissue_removed_events = {}
       prev_is_event = true
     end
-    if item.__typename ~= "PullRequestCommit" and #commits > 0 then
+    if (not item or item.__typename ~= "PullRequestCommit") and #commits > 0 then
       writers.write_commits(self.bufnr, commits)
       commits = {}
       prev_is_event = true
     end
+  end
 
+  for _, item in ipairs(timeline_nodes) do
+    render_accumulated_events(item)
     if item.__typename == "IssueComment" then
       if prev_is_event then
         writers.write_block(self.bufnr, { "" })
@@ -349,8 +353,15 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "IssueTypeChangedEvent" then
       writers.write_issue_type_changed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "ConvertToDraftEvent" then
+      writers.write_convert_to_draft_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ReadyForReviewEvent" then
+      writers.write_ready_for_review_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
+  render_accumulated_events()
 
   if prev_is_event then
     writers.write_block(self.bufnr, { "" })
@@ -1166,27 +1177,32 @@ function OctoBuffer:release()
   return self.node --[[@as octo.Release]]
 end
 
----Gets the PR object for the current octo buffer
-function OctoBuffer:get_pr()
+---Gets the PR object for the current octo buffer with correct merge base
+---@param callback function Callback function(pr) called with the PullRequest object
+function OctoBuffer:get_pr(callback)
   if not self:isPullRequest() then
     utils.error "Not in a PR buffer"
     return
   end
 
-  local Rev = require("octo.reviews.rev").Rev
-  local PullRequest = require("octo.model.pull-request").PullRequest
+  if not callback then
+    utils.error "get_pr requires a callback function"
+    return
+  end
+
+  local PullRequest = require "octo.model.pull-request"
   local bufnr = vim.api.nvim_get_current_buf()
-  return PullRequest:new {
+
+  local opts = {
     bufnr = bufnr,
     repo = self.repo,
     head_repo = self:pullRequest().headRepository.nameWithOwner,
     head_ref_name = self:pullRequest().headRefName,
     number = self.number,
     id = self:pullRequest().id,
-    left = Rev:new(self:pullRequest().baseRefOid),
-    right = Rev:new(self:pullRequest().headRefOid),
-    files = self:pullRequest().files.nodes,
   }
+
+  PullRequest.create_with_merge_base(opts, self:pullRequest(), callback)
 end
 
 --- Get a issue/PR comment at cursor (if any)

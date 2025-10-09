@@ -22,7 +22,13 @@ return {
     require("octo.picker").commits()
   end,
   review_commits = function()
-    require("octo.picker").review_commits()
+    local current_review = reviews.get_current_review()
+    if not current_review then
+      return
+    end
+    require("octo.picker").review_commits(function(right, left)
+      current_review:focus_commit(right, left)
+    end)
   end,
   list_changed_files = function()
     require("octo.picker").changed_files()
@@ -185,6 +191,18 @@ return {
     local layout = reviews.get_current_layout()
     if layout then
       layout:select_last_file()
+    end
+  end,
+  select_next_unviewed_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout then
+      layout:select_next_unviewed_file()
+    end
+  end,
+  select_prev_unviewed_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout then
+      layout:select_prev_unviewed_file()
     end
   end,
   next_entry = function()

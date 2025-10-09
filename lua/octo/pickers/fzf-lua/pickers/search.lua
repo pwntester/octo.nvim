@@ -30,12 +30,15 @@ end
 
 return function(opts)
   opts = opts or {}
+  opts.type = opts.type or "ISSUE"
 
   local formatted_items = {} ---@type table<string, table> entry.ordinal -> entry
 
+  ---@param query string
+  ---@return fun(fzf_cb: fun(entry?: string, cb?: fun(): nil): nil): nil
   local function contents(query)
     return function(fzf_cb)
-      coroutine.wrap(function()
+      coroutine.wrap(function() ---@async
         local co = coroutine.running()
 
         if not opts.prompt and utils.is_blank(query) then
@@ -51,12 +54,25 @@ return function(opts)
           if val then
             _prompt = string.format("%s %s", val, _prompt)
           end
-          local output = gh.api.graphql {
+          local output ---@type string
+          gh.api.graphql {
             query = queries.search,
-            fields = { prompt = _prompt },
             jq = ".data.search.nodes",
-            opts = { mode = "sync" },
+            fields = { prompt = _prompt, type = opts.type },
+            opts = {
+              cb = gh.create_callback {
+                success = function(stdout)
+                  output = stdout
+                  coroutine.resume(co)
+                end,
+                failure = function(stderr)
+                  utils.error(stderr)
+                  coroutine.resume(co)
+                end,
+              },
+            },
           }
+          coroutine.yield()
 
           if utils.is_blank(output) then
             return {}

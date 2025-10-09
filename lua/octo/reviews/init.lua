@@ -175,8 +175,11 @@ function Review:set_files_and_select_first(files)
 
   self.layout.files = files
   if selected_file_idx then
-    files[selected_file_idx]:fetch()
+    files[selected_file_idx]:fetch(true)
     self.layout.selected_file_idx = selected_file_idx
+  end
+  for _, file in ipairs(files) do
+    file:fetch(false)
   end
   self.layout:update_files()
 end
@@ -611,12 +614,10 @@ local function get_pr_from_buffer_or_current_branch(cb)
     return
   end
 
-  local pull_request = buffer:get_pr()
-  if pull_request then
-    cb(pull_request)
+  if buffer:isPullRequest() then
+    buffer:get_pr(cb)
   else
-    pull_request = utils.get_pull_request_for_current_branch(cb)
-    cb(pull_request)
+    utils.get_pull_request_for_current_branch(cb)
   end
 end
 

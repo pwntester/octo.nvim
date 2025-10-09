@@ -642,6 +642,52 @@ function M.format_large_int(n, is_capitalized)
   return string.format("%.1f%s", n, suffixes[i])
 end
 
+---Formats number of seconds as a duration string
+---@param seconds integer
+---@return string
+function M.format_seconds(seconds)
+  if seconds < 60 then
+    return seconds .. "s"
+  end
+  local minutes = math.floor(seconds / 60)
+  seconds = seconds % 60
+  if minutes < 60 then
+    return string.format("%dm%ds", minutes, seconds)
+  end
+  local hours = math.floor(minutes / 60)
+  minutes = minutes % 60
+  if hours < 24 then
+    return string.format("%dh%dm", hours, minutes)
+  end
+  local days = math.floor(hours / 24)
+  hours = hours % 24
+  return string.format("%dd%dh", days, hours)
+end
+
+---Formats a string as a date
+---@param date_string string
+---@return integer time in seconds since epoch
+function M.parse_utc_date(date_string)
+  -- Parse the input date string (assumed to be in UTC)
+  local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
+  return os.time {
+    year = year,
+    month = month,
+    day = day,
+    hour = hour,
+    min = min,
+    sec = sec,
+    isdst = false, -- Input is in UTC
+  }
+end
+
+---@param start_date string
+---@param end_date string
+---@return integer number of seconds between the two dates
+function M.seconds_between(start_date, end_date)
+  return os.difftime(M.parse_utc_date(end_date), M.parse_utc_date(start_date))
+end
+
 ---Formats a string as a date
 ---@param date_string string
 ---@param round_under_one_minute? boolean defaults to true
@@ -653,17 +699,7 @@ function M.format_date(date_string, round_under_one_minute)
 
   round_under_one_minute = round_under_one_minute == nil and true or round_under_one_minute
 
-  -- Parse the input date string (assumed to be in UTC)
-  local year, month, day, hour, min, sec = date_string:match "(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z"
-  local parsedTimeUTC = os.time {
-    year = year,
-    month = month,
-    day = day,
-    hour = hour,
-    min = min,
-    sec = sec,
-    isdst = false, -- Input is in UTC
-  }
+  local parsedTimeUTC = M.parse_utc_date(date_string)
 
   -- Get the offset of your local time zone from UTC
   local localTime = os.time()
@@ -1592,19 +1628,17 @@ function M.get_pull_request_for_current_branch(cb)
               local resp = M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
               ---@type octo.PullRequest
               local obj = resp.data.repository.pullRequest
-              local Rev = require("octo.reviews.rev").Rev
-              local PullRequest = require("octo.model.pull-request").PullRequest
-              local pull_request = PullRequest:new {
+              local PullRequest = require "octo.model.pull-request"
+
+              local opts = {
                 repo = base_owner .. "/" .. base_name,
                 head_repo = obj.headRepository.nameWithOwner,
                 number = number,
                 id = id,
                 head_ref_name = obj.headRefName,
-                left = Rev:new(obj.baseRefOid),
-                right = Rev:new(obj.headRefOid),
-                files = obj.files.nodes,
               }
-              cb(pull_request)
+
+              PullRequest.create_with_merge_base(opts, obj, cb)
             end
           end,
         }
@@ -1802,8 +1836,11 @@ end
 
 ---Returns the starting and ending lines to be commented based on the calling context.
 ---@param calling_context "line" | "visual" | "motion"
+---@return integer|nil, integer|nil
 function M.get_lines_from_context(calling_context)
+  ---@type integer|nil
   local line_number_start = nil
+  ---@type integer|nil
   local line_number_end = nil
   if calling_context == "line" then
     line_number_start = vim.fn.line "."
@@ -1814,6 +1851,12 @@ function M.get_lines_from_context(calling_context)
   elseif calling_context == "motion" then
     line_number_start = vim.fn.getpos("'[")[2]
     line_number_end = vim.fn.getpos("']")[2]
+  end
+  -- Ensure line_number_start is always <= line_number_end
+  if line_number_start and line_number_end and line_number_start > line_number_end then
+    local temp = line_number_start
+    line_number_start = line_number_end
+    line_number_end = temp
   end
   return line_number_start, line_number_end
 end

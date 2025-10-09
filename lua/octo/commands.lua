@@ -1785,6 +1785,55 @@ function M.gh_pr_ready(opts)
   }
 end
 
+local parse_checks = function(data)
+  local checks = {}
+  for _, row in ipairs(data) do
+    checks[#checks + 1] = {
+      row.name,
+      row.bucket,
+      row.seconds ~= nil and utils.format_seconds(row.seconds) or "",
+      row.link,
+    }
+  end
+  return checks
+end
+
+local get_max_lengths = function(data)
+  local max_lengths = {}
+  if #data == 0 then
+    return max_lengths
+  end
+
+  -- Initialize max_lengths with zeros for each column
+  for col = 1, #data[1] do
+    max_lengths[col] = 0
+  end
+
+  for _, row in ipairs(data) do
+    for col, word in ipairs(row) do
+      local word_length = #word
+      if word_length > max_lengths[col] then
+        max_lengths[col] = word_length
+      end
+    end
+  end
+  return max_lengths
+end
+
+local format_checks = function(parts)
+  local max_lengths = get_max_lengths(parts)
+
+  local lines = {}
+  for _, p in pairs(parts) do
+    local line = {}
+    for i, pp in pairs(p) do
+      table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
+    end
+    table.insert(lines, table.concat(line, "  "))
+  end
+  return lines
+end
+
 function M.pr_checks()
   local buffer = utils.get_current_buffer()
 
@@ -1792,44 +1841,83 @@ function M.pr_checks()
     return
   end
 
-  local function show_checks(output)
-    local max_lengths = {}
-    local parts = {}
-    for _, l in pairs(vim.split(output, "\n")) do
-      local line_parts = vim.split(l, "\t")
-      for i, p in pairs(line_parts) do
-        if max_lengths[i] == nil or max_lengths[i] < #p then
-          max_lengths[i] = #p
-        end
+  local mappings = require("octo.config").values.mappings.runs
+
+  local function show_checks(data)
+    data = vim.json.decode(data)
+
+    for _, row in ipairs(data) do
+      if row.bucket == "pending" or row.bucket == "skipped" or row.completedAt == "0001-01-01T00:00:00Z" then
+        row.seconds = nil
+      else
+        row.seconds = utils.seconds_between(row.startedAt, row.completedAt)
       end
-      table.insert(parts, line_parts)
+
+      row.name = string.gsub(row.name, "\n", " ")
     end
-    local lines = {}
-    for _, p in pairs(parts) do
-      local line = {}
-      for i, pp in pairs(p) do
-        table.insert(line, pp .. (" "):rep(max_lengths[i] - #pp))
-      end
-      table.insert(lines, table.concat(line, "  "))
-    end
+
+    local parts = parse_checks(data)
+    local lines = format_checks(parts)
     local _, wbufnr = window.create_centered_float {
       header = "Checks",
       content = lines,
     }
-    local buf_lines = vim.api.nvim_buf_get_lines(wbufnr, 0, -1, false)
-    for i, l in ipairs(buf_lines) do
-      if #vim.split(l, "pass") > 1 then
-        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoPassingTest", i - 1, 0, -1)
-      elseif #vim.split(l, "fail") > 1 then
-        vim.api.nvim_buf_add_highlight(wbufnr, -1, "OctoFailingTest", i - 1, 0, -1)
+
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.open_in_browser.lhs, "", {
+      noremap = true,
+      silent = true,
+      callback = function()
+        local line_number = vim.api.nvim_win_get_cursor(0)[1]
+        local url = data[line_number].link
+        navigation.open_in_browser_raw(url)
+      end,
+    })
+
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.rerun.lhs, "", {
+      noremap = true,
+      silent = true,
+      callback = function()
+        local line_number = vim.api.nvim_win_get_cursor(0)[1]
+        local url = data[line_number].link
+        local job_id = string.match(url, "job/(%d+)$")
+        if not job_id then
+          utils.error "Cannot find check run id"
+          return
+        end
+        gh.run.rerun {
+          job = job_id,
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Rerunning job for " .. data[line_number].name)
+              end,
+            },
+          },
+        }
+      end,
+    })
+
+    for i, l in ipairs(data) do
+      local color_line = function(color)
+        vim.api.nvim_buf_add_highlight(wbufnr, -1, color, i - 1, 0, -1)
+      end
+
+      if l.bucket == "pass" then
+        color_line "OctoPassingTest"
+      elseif l.bucket == "fail" then
+        color_line "OctoFailingTest"
+      elseif l.bucket == "pending" then
+        color_line "OctoPendingTest"
       end
     end
+
     vim.bo[wbufnr].modifiable = false
   end
 
   gh.pr.checks {
     buffer.number,
     repo = buffer.repo,
+    json = "name,bucket,startedAt,completedAt,link",
     opts = {
       cb = gh.create_callback {
         success = show_checks,
