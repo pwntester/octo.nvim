@@ -247,25 +247,28 @@ function M.on_cursor_hold()
   -- user popup
   local login = utils.extract_pattern_at_cursor(constants.USER_PATTERN)
   if login then
-    local query = graphql("user_profile_query", login)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.print_err(stderr)
-        elseif output then
-          ---@type octo.queries.UserProfile
-          local resp = vim.json.decode(output)
-          local user = resp.data.user
-          local popup_bufnr = vim.api.nvim_create_buf(false, true)
-          local lines, max_length = writers.write_user_profile(popup_bufnr, user)
-          window.create_popup {
-            bufnr = popup_bufnr,
-            width = 4 + max_length,
-            height = 2 + lines,
-          }
-        end
-      end,
+    gh.api.graphql {
+      query = queries.user_profile,
+      jq = ".data.user",
+      F = {
+        login = login --[[@as string]],
+      },
+      opts = {
+        cb = gh.create_callback {
+          failure = utils.print_err,
+          success = function(data)
+            ---@type octo.UserProfile
+            local user = vim.json.decode(data)
+            local popup_bufnr = vim.api.nvim_create_buf(false, true)
+            local lines, max_length = writers.write_user_profile(popup_bufnr, user)
+            window.create_popup {
+              bufnr = popup_bufnr,
+              width = 4 + max_length,
+              height = 2 + lines,
+            }
+          end,
+        },
+      },
     }
     return
   end
