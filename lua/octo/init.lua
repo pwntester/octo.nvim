@@ -250,7 +250,9 @@ function M.on_cursor_hold()
     gh.api.graphql {
       query = queries.user_profile,
       jq = ".data.user",
-      F = { login = login },
+      F = {
+        login = login --[[@as string]],
+      },
       opts = {
         cb = gh.create_callback {
           failure = utils.print_err,
