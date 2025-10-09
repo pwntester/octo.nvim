@@ -1863,6 +1863,26 @@ function M.pr_checks()
       content = lines,
     }
 
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", "<CR>", "", {
+      noremap = true,
+      silent = true,
+      callback = function()
+        local line_number = vim.api.nvim_win_get_cursor(0)[1]
+        local url = data[line_number].link
+        local run_id = string.match(url, "runs/(%d+)")
+
+        if not run_id then
+          utils.error(
+            "Cannot find workflow run id. Consider opening in the browser with " .. mappings.open_in_browser.lhs
+          )
+          return
+        end
+
+        local workflow = require "octo.workflow_runs"
+        workflow.render { id = run_id }
+      end,
+    })
+
     vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.open_in_browser.lhs, "", {
       noremap = true,
       silent = true,
