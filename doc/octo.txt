@@ -240,6 +240,33 @@ CONFIGURATION                                   *octo-config*
 See the README (<https://github.com/pwntester/octo.nvim>) for an example
 configuration in Lua.
 
+                                                *octo-picker-config*
+When using the Snacks picker (`picker = "snacks"`), you can customize picker
+behavior via the `picker_config.snacks` table. This supports all options from
+the Snacks picker configuration:
+
+>lua
+  require"octo".setup({
+    picker = "snacks",
+    picker_config = {
+      snacks = {
+        layout = {
+          preset = "sidebar",  -- "dropdown", "ivy", "sidebar", "telescope"
+          reverse = true,      -- reverse layout
+          width = 0.8,         -- window width as fraction
+          height = 0.8,        -- window height as fraction
+        },
+        win = { height = 20 }, -- window configuration
+        jump = { autojump = true }, -- jump configuration
+        -- ... any other Snacks picker option
+      },
+    },
+  })
+<
+
+For complete Snacks picker options, see:
+<https://github.com/folke/snacks.nvim/blob/main/docs/picker.md>
+
 
 PR REVIEW                                       *octo-pr-review*
 
