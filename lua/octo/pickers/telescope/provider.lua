@@ -1097,7 +1097,7 @@ local function get_user_requester()
       args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
       mode = "sync",
     }
-    if output then
+    if utils.is_blank(output) then
       return {}
     end
 
@@ -1210,9 +1210,12 @@ function M.select_user(cb)
         actions.select_default:replace(function(prompt_bufnr)
           local selected_user = action_state.get_selected_entry(prompt_bufnr)
           actions._close(prompt_bufnr, true)
-          if not selected_user.teams then
+          if not selected_user or not selected_user.user then
+            return
+          end
+          if not selected_user.user.teams then
             -- user
-            cb(selected_user.value)
+            cb(selected_user.user.id)
           else
             -- organization, pick a team
             pickers
@@ -1221,7 +1224,7 @@ function M.select_user(cb)
                 results_title = false,
                 preview_title = false,
                 finder = finders.new_table {
-                  results = selected_user.teams,
+                  results = selected_user.user.teams,
                   entry_maker = entry_maker.gen_from_team(),
                 },
                 sorter = conf.generic_sorter(opts),
