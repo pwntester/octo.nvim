@@ -843,38 +843,6 @@ end
 ---
 -- PROJECTS
 ---
-function M.select_project_card(cb)
-  local buffer = utils.get_current_buffer()
-  local cards = buffer.node.projectCards
-  if not cards or #cards.nodes == 0 then
-    utils.error "Cant find any project cards"
-    return
-  end
-
-  if #cards.nodes == 1 then
-    cb(cards.nodes[1].id)
-  else
-    local opts = vim.deepcopy(dropdown_opts)
-    pickers
-      .new(opts, {
-        finder = finders.new_table {
-          results = cards.nodes,
-          entry_maker = entry_maker.gen_from_project_card(),
-        },
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(_, _)
-          actions.select_default:replace(function(prompt_bufnr)
-            local source_card = action_state.get_selected_entry(prompt_bufnr)
-            actions.close(prompt_bufnr)
-            cb(source_card.card.id)
-          end)
-          return true
-        end,
-      })
-      :find()
-  end
-end
-
 function M.select_target_project_column(cb)
   local buffer = utils.get_current_buffer()
   if not buffer then
