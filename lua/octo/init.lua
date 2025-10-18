@@ -211,7 +211,7 @@ function M.on_cursor_hold()
   local id = buffer:get_reactions_at_cursor()
   if id then
     gh.api.graphql {
-      queries.reactions_for_object,
+      query = queries.reactions_for_object,
       F = { id = id },
       opts = {
         cb = function(output, stderr)
