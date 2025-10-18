@@ -1487,7 +1487,9 @@ function M.users(cb)
 
   -- Add default confirm action if not overridden
   if not custom_actions_defined["confirm"] then
-    final_actions["confirm"] = function(_, item)
+    ---@type snacks.picker.Action.fn
+    final_actions["confirm"] = function(picker, item)
+      picker:close()
       cb(item.id)
     end
   end
@@ -1502,9 +1504,13 @@ function M.users(cb)
     final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
   end
 
+  local limit = nil
+  if cfg.users == "search" then
+    limit = 100
+  end
   Snacks.picker.pick {
     title = "Select users",
-    limit = 100,
+    limit = limit,
     live = cfg.users == "search",
     show_empty = true,
     format = "text",
