@@ -26,7 +26,6 @@ return function(cb)
     gh.api.graphql {
       query = queries.projects_v2,
       F = { owner = buffer.owner, name = buffer.name, viewer = vim.g.octo_viewer },
-      paginate = true,
       opts = {
         cb = function(output)
           if output then

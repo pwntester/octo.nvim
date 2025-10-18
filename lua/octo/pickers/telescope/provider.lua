@@ -1605,7 +1605,6 @@ function M.project_columns_v2(cb)
       name = buffer.name,
       viewer = vim.g.octo_viewer,
     },
-    paginate = true,
     opts = {
       cb = function(output)
         if not output then

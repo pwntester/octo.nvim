@@ -710,11 +710,7 @@ query($owner: String!, $name: String!, $tag: String!) {
 
 -- https://docs.github.com/en/graphql/reference/objects#projectv2
 M.projects_v2 = [[
-query(
-  $owner: String!,
-  $name: String!,
-  $viewer: String!,
-) {
+query($owner: String!, $name: String!, $viewer: String!) {
   repository(owner: $owner, name: $name) {
     projects: projectsV2(first: 100) {
       nodes {
