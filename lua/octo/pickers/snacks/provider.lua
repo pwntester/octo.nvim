@@ -1392,16 +1392,17 @@ function M.users(cb)
       return {}
     end
 
+    local queries = require "octo.gh.queries"
+
     local query = graphql("users_query", ctx.filter.search)
     if cfg.users == "assignable" then
-      query = graphql "assignable_users_query"
+      query = queries.assignable_users
     elseif cfg.users == "mentionable" then
-      query = graphql "mentionable_users_query"
+      query = queries.mentionable_users
     end
 
     return function(emit)
       vim.schedule(function()
-        local args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) }
         local F = {}
         if cfg.users ~= "search" then
           F = { owner = owner, name = name }
@@ -1418,7 +1419,7 @@ function M.users(cb)
                 return {}
               end
               if stderr ~= nil then
-                vim.notify("error" .. stderr, "error")
+                utils.error(stderr)
                 ctx.async:resume()
                 return {}
               end
