@@ -122,41 +122,6 @@ function M.gen_from_review_thread(linenr_length, thread)
   }
 end
 
-function M.gen_from_project(project)
-  if not project or vim.tbl_isempty(project) then
-    return nil
-  end
-
-  return {
-    value = project.id,
-    ordinal = project.id .. " " .. project.name,
-    project = project,
-  }
-end
-
-function M.gen_from_project_column(column)
-  if not column or vim.tbl_isempty(column) then
-    return nil
-  end
-  return {
-    value = column.id,
-    ordinal = column.id .. " " .. column.name,
-    column = column,
-  }
-end
-
-function M.gen_from_project_card(card)
-  if not card or vim.tbl_isempty(card) then
-    return nil
-  end
-
-  return {
-    value = card.id,
-    ordinal = card.project.name .. " " .. card.column.name,
-    card = card,
-  }
-end
-
 function M.gen_from_project_v2(project)
   if not project or vim.tbl_isempty(project) then
     return nil
