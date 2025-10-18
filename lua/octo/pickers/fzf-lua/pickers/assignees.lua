@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
@@ -10,32 +11,37 @@ return function(cb)
   if not buffer then
     return
   end
+
   local query, key
   if buffer:isIssue() then
-    query = graphql("issue_assignees_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.issue_assignees
     key = "issue"
   elseif buffer:isPullRequest() then
-    query = graphql("pull_request_assignees_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.pull_request_assignees
     key = "pullRequest"
   end
+  local F = { owner = buffer.owner, name = buffer.name, number = buffer.number }
 
   local function get_contents(fzf_cb)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          local resp = vim.json.decode(output)
-          local assignees = resp.data.repository[key].assignees.nodes
+    gh.api.graphql {
+      query = query,
+      F = F,
+      opts = {
+        cb = function(output, stderr)
+          if stderr and not utils.is_blank(stderr) then
+            utils.error(stderr)
+          elseif output then
+            local resp = vim.json.decode(output)
+            local assignees = resp.data.repository[key].assignees.nodes
 
-          for _, user in ipairs(assignees) do
-            fzf_cb(string.format("%s %s", user.id, user.login))
+            for _, user in ipairs(assignees) do
+              fzf_cb(string.format("%s %s", user.id, user.login))
+            end
           end
-        end
 
-        fzf_cb()
-      end,
+          fzf_cb()
+        end,
+      },
     }
   end
 
