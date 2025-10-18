@@ -658,11 +658,6 @@ mutation {
         }
       }
       ...ReactionGroupsFragment
-      projectCards(last: 20) {
-        nodes {
-          ...ProjectCardFragment
-        }
-      }
       repository {
         nameWithOwner
       }
@@ -678,7 +673,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.issue_timeline_items_connection .. fragments.renamed_title_event .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.renamed_title_event .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
 
 M.close_issue = [[
 mutation {
@@ -929,41 +924,6 @@ mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
 }
 ]]
 
--- https://docs.github.com/en/graphql/reference/mutations#addprojectcard
-M.add_project_card = [[
-mutation {
-  addProjectCard(input: {contentId: "%s", projectColumnId: "%s"}) {
-    cardEdge {
-      node {
-        id
-      }
-    }
-  }
-}
-]]
-
--- https://docs.github.com/en/graphql/reference/mutations#moveprojectcard
-M.move_project_card = [[
-mutation {
-  moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
-    cardEdge {
-      node {
-        id
-      }
-    }
-  }
-}
-]]
-
--- https://docs.github.com/en/graphql/reference/mutations#deleteprojectcard
-M.delete_project_card = [[
-mutation {
-  deleteProjectCard(input: {cardId: "%s"}) {
-    deletedCardId
-  }
-}
-]]
-
 -- https://docs.github.com/en/graphql/reference/mutations#addprojectv2itembyid
 M.add_project_v2_item = [[
 mutation {
@@ -1167,11 +1127,6 @@ mutation {
       viewerDidAuthor
       viewerCanUpdate
       ...ReactionGroupsFragment
-      projectCards(last: 20) {
-        nodes {
-          ...ProjectCardFragment
-        }
-      }
       timelineItems(first: 100) {
         ...PullRequestTimelineItemsConnectionFragment
       }
@@ -1208,7 +1163,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event
 
 M.mark_answer = [[
 mutation($id: ID!) {

@@ -122,7 +122,6 @@ query($endCursor: String) {
 ---@field authorAssociation string
 ---@field viewerDidAuthor boolean
 ---@field viewerCanUpdate boolean
----@field projectCards { nodes: octo.fragments.ProjectCard[] }
 ---@field projectItems? octo.fragments.ProjectsV2Connection
 ---@field timelineItems octo.PullRequestTimelineItemsConnection
 ---@field reviewDecision string
@@ -197,11 +196,6 @@ query($endCursor: String) {
       viewerDidAuthor
       viewerCanUpdate
       ...ReactionGroupsFragment
-      projectCards(last: 20) {
-        nodes {
-          ...ProjectCardFragment
-        }
-      }
       %s
       timelineItems(first: 100, after: $endCursor) {
         pageInfo {
@@ -252,14 +246,13 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.project_cards .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment
 ---@class octo.IssueTimelineItemConnection : octo.fragments.IssueTimelineItemsConnection
 --- @field pageInfo { hasNextPage: boolean, endCursor: string }
 
 ---@class octo.Issue : octo.fragments.IssueInformation, octo.ReactionGroupsFragment
 ---@field participants { nodes: { login: string }[] }
 ---@field parent octo.fragments.Issue
----@field projectCards { nodes: octo.fragments.ProjectCard[] }
 ---@field projectItems? octo.fragments.ProjectsV2Connection
 ---@field timelineItems octo.IssueTimelineItemConnection
 ---@field labels octo.fragments.LabelConnection
@@ -280,11 +273,6 @@ query($endCursor: String) {
         ...IssueFields
       }
       ...ReactionGroupsFragment
-      projectCards(last: 20) {
-        nodes {
-          ...ProjectCardFragment
-        }
-      }
       %s
       timelineItems(first: 100, after: $endCursor) {
         pageInfo {
@@ -302,7 +290,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.project_cards .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_kind = [[
@@ -675,54 +663,6 @@ query($owner: String!, $name: String!, $tag: String!) {
   }
 }
 ]] .. fragments.reaction_groups
-
--- https://docs.github.com/en/graphql/reference/objects#project
-M.projects = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    projects(first: 100) {
-      nodes {
-        id
-        name
-        columns(first:100) {
-          nodes {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-  user(login: "%s") {
-    projects(first: 100) {
-      nodes {
-        id
-        name
-        columns(first:100) {
-          nodes {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-  organization(login: "%s") {
-    projects(first: 100) {
-      nodes {
-        id
-        name
-        columns(first:100) {
-          nodes {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-}
-]]
 
 -- https://docs.github.com/en/graphql/reference/objects#projectv2
 M.projects_v2 = [[
