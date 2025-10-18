@@ -2,6 +2,7 @@
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
+local parser = require "octo.gh.parser"
 local navigation = require "octo.navigation"
 local previewers = require "octo.pickers.telescope.previewers"
 local entry_maker = require "octo.pickers.telescope.entry_maker"
@@ -1612,23 +1613,7 @@ function M.project_columns_v2(cb)
         end
 
         local resp = vim.json.decode(output)
-
-        local projects = {}
-        local sources = {
-          resp.data.user and resp.data.user.projects.nodes or {},
-          resp.data.repository and resp.data.repository.projects.nodes or {},
-          not resp.errors and resp.data.organization.projects.nodes or {},
-        }
-
-        -- Consolidate all projects into a map keyed by ID to remove duplicates
-        for _, source in ipairs(sources) do
-          for _, project in ipairs(source) do
-            projects[project.id] = project
-          end
-        end
-
-        -- Convert map to array for the picker
-        local results = vim.tbl_values(projects)
+        local results = parser.projects(resp)
 
         local opts = {}
         pickers
