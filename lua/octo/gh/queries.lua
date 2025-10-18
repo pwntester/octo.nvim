@@ -21,19 +21,19 @@ local M = {}
 
 -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
 M.pending_review_threads = [[
-query {
-  repository(owner:"%s", name:"%s") {
-    pullRequest (number: %d){
-      reviews(first:100, states:PENDING) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest (number: $number){
+      reviews(first: 100, states: PENDING) {
         nodes {
           id
           viewerDidAuthor
         }
       }
-      reviewThreads(last:100) {
+      reviewThreads(last: 100) {
         nodes {
           ...ReviewThreadInformationFragment
-          comments(first:100) {
+          comments(first: 100) {
             nodes {
               ...ReviewThreadCommentFragment
             }
@@ -67,9 +67,9 @@ query {
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
 M.review_threads = [[
-query($endCursor: String) {
-  repository(owner:"%s", name:"%s") {
-    pullRequest(number:%d) {
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
       reviewThreads(last:80) {
         nodes {
           ...ReviewThreadInformationFragment
@@ -353,9 +353,9 @@ query($owner: String!, $name: String!, $number: Int!) {
 
 -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
 M.issue_summary = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    issueOrPullRequest(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issueOrPullRequest(number: $number) {
       ... on PullRequest {
         __typename
         headRefName
@@ -710,8 +710,8 @@ query($owner: String!, $name: String!, $tag: String!) {
 
 -- https://docs.github.com/en/graphql/reference/objects#projectv2
 M.projects_v2 = [[
-query {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!, $viewer: String!) {
+  repository(owner: $owner, name: $name) {
     projects: projectsV2(first: 100) {
       nodes {
         id
@@ -739,7 +739,7 @@ query {
       }
     }
   }
-  user(login: "%s") {
+  user(login: $viewer) {
     projects: projectsV2(first: 100) {
       nodes {
         id
@@ -767,7 +767,7 @@ query {
       }
     }
   }
-  organization(login: "%s") {
+  organization(login: $owner) {
     projects: projectsV2(first: 100) {
       nodes {
         id
@@ -800,8 +800,8 @@ query {
 
 -- https://docs.github.com/en/graphql/reference/objects#label
 M.labels = [[
-query {
-  repository(owner: "%s", name: "%s") {
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
     labels(first: 100) {
       ...LabelConnectionFragment
     }
@@ -810,9 +810,9 @@ query {
 ]] .. fragments.label_connection .. fragments.label
 
 M.issue_labels = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    issue(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issue(number: $number) {
       labels(first: 100) {
         ...LabelConnectionFragment
       }
@@ -822,9 +822,9 @@ query {
 ]] .. fragments.label_connection .. fragments.label
 
 M.discussion_labels = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    discussion(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    discussion(number: $number) {
       labels(first: 100) {
         ...LabelConnectionFragment
       }
@@ -834,9 +834,9 @@ query {
 ]] .. fragments.label_connection .. fragments.label
 
 M.pull_request_labels = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    pullRequest(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
       labels(first: 100) {
         ...LabelConnectionFragment
       }
@@ -846,9 +846,9 @@ query {
 ]] .. fragments.label_connection .. fragments.label
 
 M.pull_request_reviewers = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    pullRequest(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
       reviewRequests(first: 100) {
         totalCount
         nodes {
@@ -875,9 +875,9 @@ query {
 ]]
 
 M.issue_assignees = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    issue(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issue(number: $number) {
       assignees(first: 100) {
         ...AssigneeConnectionFragment
       }
@@ -887,9 +887,9 @@ query {
 ]] .. fragments.assignee_connection
 
 M.pull_request_assignees = [[
-query {
-  repository(owner: "%s", name: "%s") {
-    pullRequest(number: %d) {
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
       assignees(first: 100) {
         ...AssigneeConnectionFragment
       }
@@ -957,10 +957,10 @@ query($login: String!) {
 ]]
 
 M.changed_files = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
-    pullRequest(number: %d) {
-      files(first:100, after: $endCursor) {
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      files(first: 100, after: $endCursor) {
         nodes {
           additions
           deletions
@@ -1013,8 +1013,8 @@ query($owner: String!, $name: String!, $expression: String!) {
 ---}
 
 M.reactions_for_object = [[
-query {
-  node(id: "%s") {
+query($id: ID!) {
+  node(id: $id) {
     ... on Issue {
       ...ReactionGroupsUsersFragment
     }
@@ -1077,8 +1077,8 @@ query($owner: String!, $name: String! $endCursor: String) {
 ]]
 
 M.users = [[
-query($endCursor: String) {
-  search(query: """%s""", type: USER, first: 100) {
+query($prompt: String!, $endCursor: String) {
+  search(query: $prompt, type: USER, first: 100) {
     nodes {
       ... on User {
         id
@@ -1172,9 +1172,9 @@ query($owner: String!, $name: String!) {
 ]] .. fragments.repository
 
 M.gists = [[
-query($endCursor: String) {
+query($privacy: GistPrivacy = ALL, $endCursor: String) {
   viewer {
-    gists(first: 100, privacy: %s, after: $endCursor) {
+    gists(first: 100, privacy: $privacy, after: $endCursor) {
       nodes {
         name
         isPublic

@@ -2,6 +2,7 @@ local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
 local config = require "octo.config"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
@@ -57,10 +58,9 @@ end
 ---Get review threads without start a review.
 ---@param callback fun(obj: octo.queries.ReviewThreads): nil
 function Review:populate_threads(callback)
-  local query =
-    graphql("review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
   gh.api.graphql {
-    query = query,
+    query = queries.review_threads,
+    F = { owner = self.pull_request.owner, name = self.pull_request.name, number = self.pull_request.number },
     opts = {
       cb = function(output, stderr)
         if stderr and not utils.is_blank(stderr) then
@@ -95,18 +95,17 @@ end
 ---Retrieves existing review
 ---@param callback fun(obj: octo.queries.PendingReviewThreads): nil
 function Review:retrieve(callback)
-  local query =
-    graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        callback(resp)
-      end
-    end,
+  gh.api.graphql {
+    query = queries.pending_review_threads,
+    F = { owner = self.pull_request.owner, name = self.pull_request.name, number = self.pull_request.number },
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local resp = vim.json.decode(output)
+          callback(resp)
+        end,
+      },
+    },
   }
 end
 
@@ -233,42 +232,43 @@ function Review:initiate(opts)
 end
 
 function Review:discard()
-  local query =
-    graphql("pending_review_threads_query", self.pull_request.owner, self.pull_request.name, self.pull_request.number)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        ---@type octo.queries.PendingReviewThreads
-        local resp = vim.json.decode(output)
-        if #resp.data.repository.pullRequest.reviews.nodes == 0 then
-          utils.error "No pending reviews found"
-          return
-        end
-        self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
+  gh.api.graphql {
+    query = queries.pending_review_threads,
+    F = { owner = self.pull_request.owner, name = self.pull_request.name, number = self.pull_request.number },
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          ---@type octo.queries.PendingReviewThreads
+          local resp = vim.json.decode(output)
+          if #resp.data.repository.pullRequest.reviews.nodes == 0 then
+            utils.error "No pending reviews found"
+            return
+          end
+          self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
 
-        local choice = vim.fn.confirm("All pending comments will get deleted, are you sure?", "&Yes\n&No\n&Cancel", 2)
-        if choice == 1 then
-          local delete_query = graphql("delete_pull_request_review_mutation", self.id --[[@as string]])
-          gh.run {
-            args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
-            cb = function(output_inner, stderr_inner)
-              if stderr_inner and not utils.is_blank(stderr_inner) then
-                utils.error(stderr_inner)
-              elseif output_inner then
-                self.id = default_id
-                self.threads = {}
-                self.files = {}
-                utils.info "Pending review discarded"
-                vim.cmd [[tabclose]]
-              end
-            end,
-          }
+          local choice = vim.fn.confirm("All pending comments will get deleted, are you sure?", "&Yes\n&No\n&Cancel", 2)
+          if choice == 1 then
+            local delete_query = graphql("delete_pull_request_review_mutation", self.id --[[@as string]])
+            gh.run {
+              args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
+              cb = function(output_inner, stderr_inner)
+                if stderr_inner and not utils.is_blank(stderr_inner) then
+                  utils.error(stderr_inner)
+                elseif output_inner then
+                  self.id = default_id
+                  self.threads = {}
+                  self.files = {}
+                  utils.info "Pending review discarded"
+                  vim.cmd [[tabclose]]
+                end
+              end,
+            }
+          end
         end
-      end
-    end,
+      end,
+    },
   }
 end
 
@@ -349,7 +349,7 @@ end
 function Review:show_pending_comments()
   local pending_threads = {}
   for _, thread in
-    ipairs(vim.tbl_values(self.threads)--[[@as octo.ReviewThread[] ]])
+    ipairs(vim.tbl_values(self.threads) --[[@as octo.ReviewThread[] ]])
   do
     for _, comment in ipairs(thread.comments.nodes) do
       if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(utils.trim(comment.body)) then
