@@ -843,69 +843,6 @@ end
 ---
 -- PROJECTS
 ---
-function M.select_target_project_column(cb)
-  local buffer = utils.get_current_buffer()
-  if not buffer then
-    return
-  end
-
-  local query = graphql("projects_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
-  gh.run {
-    args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-    cb = function(output)
-      if output then
-        local resp = vim.json.decode(output)
-        local projects = {}
-        local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
-        local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
-        local org_projects = not resp.errors and resp.data.organization.projects.nodes or {}
-        vim.list_extend(projects, repo_projects)
-        vim.list_extend(projects, user_projects)
-        vim.list_extend(projects, org_projects)
-        if #projects == 0 then
-          utils.error(string.format("There are no matching projects for %s.", buffer.repo))
-          return
-        end
-
-        local opts = vim.deepcopy(dropdown_opts)
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = projects,
-              entry_maker = entry_maker.gen_from_project(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function()
-              action_set.select:replace(function(prompt_bufnr)
-                local selected_project = action_state.get_selected_entry(prompt_bufnr)
-                actions._close(prompt_bufnr, true)
-                local opts2 = vim.deepcopy(dropdown_opts)
-                pickers
-                  .new(opts2, {
-                    finder = finders.new_table {
-                      results = selected_project.project.columns.nodes,
-                      entry_maker = entry_maker.gen_from_project_column(),
-                    },
-                    sorter = conf.generic_sorter(opts2),
-                    attach_mappings = function()
-                      action_set.select:replace(function(prompt_bufnr2)
-                        local selected_column = action_state.get_selected_entry(prompt_bufnr2)
-                        actions.close(prompt_bufnr2)
-                        cb(selected_column.column.id)
-                      end)
-                      return true
-                    end,
-                  })
-                  :find()
-              end)
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
-  }
-end
 
 --
 -- LABELS
@@ -1753,10 +1690,8 @@ M.picker = {
   labels = M.select_label,
   notifications = M.notifications,
   pending_threads = M.pending_threads,
-  project_cards = M.select_project_card,
   workflow_runs = M.workflow_runs,
   project_cards_v2 = M.project_cards_v2,
-  project_columns = M.select_target_project_column,
   project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
   repos = M.repos,
