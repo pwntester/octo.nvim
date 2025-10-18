@@ -566,21 +566,6 @@ function M.write_details(bufnr, issue, update)
   end
   table.insert(details, assignees_vt)
 
-  -- projects
-  if issue.projectCards and #issue.projectCards.nodes > 0 then
-    local projects_vt = {
-      { "Projects: ", "OctoDetailsLabel" },
-    }
-    --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
-    --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
-    for _, card in ipairs(issue.projectCards.nodes) do
-      if card.column ~= vim.NIL then
-        table.insert(projects_vt, { card.column.name })
-      end
-    end
-    table.insert(details, projects_vt)
-  end
-
   -- projects v2
   if issue.projectItems and #issue.projectItems.nodes > 0 then
     local projects_vt = {

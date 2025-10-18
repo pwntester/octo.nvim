@@ -46,7 +46,6 @@ function M.setup()
   local conf = config.values
 
   local card_commands
-
   if conf.default_to_projects_v2 then
     card_commands = {
       set = function()
@@ -54,18 +53,6 @@ function M.setup()
       end,
       remove = function()
         M.remove_project_v2_card()
-      end,
-    }
-  else
-    card_commands = {
-      add = function()
-        M.add_project_card()
-      end,
-      move = function()
-        M.move_project_card()
-      end,
-      remove = function()
-        M.remove_project_card()
       end,
     }
   end
@@ -916,17 +903,6 @@ function M.setup()
       end,
       remove = function()
         M.remove_project_v2_card()
-      end,
-    },
-    cardlegacy = {
-      add = function()
-        M.add_project_card()
-      end,
-      move = function()
-        M.move_project_card()
-      end,
-      remove = function()
-        M.remove_project_card()
       end,
     },
     notification = {
@@ -2140,92 +2116,6 @@ function M.reaction_action(reaction)
       end
     end,
   }
-end
-
-function M.add_project_card()
-  local buffer = utils.get_current_buffer()
-  if not buffer then
-    return
-  end
-
-  -- show column selection picker
-  picker.project_columns(function(column_id)
-    local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
-    -- add new card
-    local query = graphql("add_project_card_mutation", node.id, column_id)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            writers.write_details(buffer.bufnr, obj, true)
-            node.projectCards = obj.projectCards
-          end)
-        end
-      end,
-    }
-  end)
-end
-
-function M.remove_project_card()
-  local buffer = utils.get_current_buffer()
-  if not buffer then
-    return
-  end
-
-  -- show card selection picker
-  picker.project_cards(function(card)
-    local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
-    -- delete card
-    local query = graphql("delete_project_card_mutation", card)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-            node.projectCards = obj.projectCards
-            writers.write_details(buffer.bufnr, obj, true)
-          end)
-        end
-      end,
-    }
-  end)
-end
-
-function M.move_project_card()
-  local buffer = utils.get_current_buffer()
-  if not buffer then
-    return
-  end
-
-  picker.project_cards(function(source_card)
-    -- show project column selection picker
-    picker.project_columns(function(target_column)
-      local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
-      -- move card to selected column
-      local query = graphql("move_project_card_mutation", source_card, target_column)
-      gh.run {
-        args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-        cb = function(output, stderr)
-          if stderr and not utils.is_blank(stderr) then
-            utils.error(stderr)
-          elseif output then
-            -- refresh issue/pr details
-            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
-              node.projectCards = obj.projectCards
-              writers.write_details(buffer.bufnr, obj, true)
-            end)
-          end
-        end,
-      }
-    end)
-  end)
 end
 
 function M.set_project_v2_card()
