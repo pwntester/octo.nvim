@@ -1258,122 +1258,126 @@ function M.assignees(cb)
 
   local query, key
   if buffer:isIssue() then
-    query = graphql("issue_assignees_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.issue_assignees
     key = "issue"
   elseif buffer:isPullRequest() then
-    query = graphql("pull_request_assignees_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.pull_request_assignees
     key = "pullRequest"
   else
     utils.error "Assignees picker only works in issue or pull request buffers"
     return
   end
+  local F = { owner = buffer.owner, name = buffer.name, number = buffer.number }
 
   utils.info "Fetching assignees..."
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local assignees = resp.data.repository[key].assignees.nodes
+  gh.api.graphql {
+    query = query,
+    F = F,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = vim.json.decode(output)
+          local assignees = resp.data.repository[key].assignees.nodes
 
-        if #assignees == 0 then
-          utils.info("No assignees found for this " .. key)
-          return
-        end
+          if #assignees == 0 then
+            utils.info("No assignees found for this " .. key)
+            return
+          end
 
-        -- Format assignees for snacks picker
-        for _, assignee in ipairs(assignees) do
-          assignee.text = assignee.login
-          assignee.kind = "user"
-          assignee.display_text = assignee.login
-        end
+          -- Format assignees for snacks picker
+          for _, assignee in ipairs(assignees) do
+            assignee.text = assignee.login
+            assignee.kind = "user"
+            assignee.display_text = assignee.login
+          end
 
-        local cfg = octo_config.values
+          local cfg = octo_config.values
 
-        -- Prepare actions and keys for Snacks
-        local final_actions = {}
-        local final_keys = {}
-        local default_mode = { "n", "i" }
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
 
-        -- Process custom actions from config array
-        local custom_actions_defined = {}
-        if
-          cfg.picker_config.snacks
-          and cfg.picker_config.snacks.actions
-          and cfg.picker_config.snacks.actions.assignees
-        then
-          for _, action_item in ipairs(cfg.picker_config.snacks.actions.assignees) do
-            if action_item.name and action_item.fn then
-              final_actions[action_item.name] = action_item.fn
-              custom_actions_defined[action_item.name] = true
-              if action_item.lhs then
-                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.assignees
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.assignees) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
               end
             end
           end
-        end
 
-        -- Add default confirm action if not overridden
-        if not custom_actions_defined["confirm"] then
-          final_actions["confirm"] = function(_, item)
-            if type(cb) == "function" then
-              cb(item.id)
+          -- Add default confirm action if not overridden
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(_, item)
+              if type(cb) == "function" then
+                cb(item.id)
+              end
             end
           end
-        end
 
-        -- Add default actions/keys if not overridden
-        if not custom_actions_defined["open_in_browser"] then
-          final_actions["open_in_browser"] = function(_picker, item)
-            navigation.open_in_browser_raw(string.format("https://github.com/%s", item.login))
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              navigation.open_in_browser_raw(string.format("https://github.com/%s", item.login))
+            end
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
-        end
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
+          end
 
-        Snacks.picker.pick {
-          title = "Assignees",
-          items = assignees,
-          format = function(item, _)
-            local ret = {} ---@type snacks.picker.Highlight[]
+          Snacks.picker.pick {
+            title = "Assignees",
+            items = assignees,
+            format = function(item, _)
+              local ret = {} ---@type snacks.picker.Highlight[]
 
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
-            ret[#ret + 1] = { " " }
-            ret[#ret + 1] = { item.login, "Normal" }
+              ---@diagnostic disable-next-line: assign-type-mismatch
+              ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
+              ret[#ret + 1] = { " " }
+              ret[#ret + 1] = { item.login, "Normal" }
 
-            if item.isViewer then
-              ret[#ret + 1] = { " (you)", "Comment" }
-            end
+              if item.isViewer then
+                ret[#ret + 1] = { " (you)", "Comment" }
+              end
 
-            return ret
-          end,
-          preview = function(ctx)
-            local item = ctx.item
-            if not item then
-              return
-            end
+              return ret
+            end,
+            preview = function(ctx)
+              local item = ctx.item
+              if not item then
+                return
+              end
 
-            ctx.preview:reset()
-            local lines = {
-              "Assignee: " .. item.login,
-              "User ID: " .. item.id,
-              item.isViewer and "This is you" or "GitHub user",
-            }
-            ctx.preview:set_lines(lines)
-          end,
-          win = {
-            input = {
-              keys = final_keys,
+              ctx.preview:reset()
+              local lines = {
+                "Assignee: " .. item.login,
+                "User ID: " .. item.id,
+                item.isViewer and "This is you" or "GitHub user",
+              }
+              ctx.preview:set_lines(lines)
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
             },
-          },
-          actions = final_actions,
-        }
-      end
-    end,
+            actions = final_actions,
+          }
+        end
+      end,
+    },
   }
 end
 
@@ -1393,19 +1397,20 @@ function M.users(cb)
 
     local queries = require "octo.gh.queries"
 
-    local query = graphql("users_query", ctx.filter.search)
-    if cfg.users == "assignable" then
+    local query, F
+    if cfg.users == "search" then
+      query = queries.users
+      F = { prompt = ctx.filter.search }
+    elseif cfg.users == "assignable" then
       query = queries.assignable_users
+      F = { owner = owner, name = name }
     elseif cfg.users == "mentionable" then
       query = queries.mentionable_users
+      F = { owner = owner, name = name }
     end
 
     return function(emit)
       vim.schedule(function()
-        local F = {}
-        if cfg.users ~= "search" then
-          F = { owner = owner, name = name }
-        end
         gh.api.graphql {
           query = query,
           F = F,
