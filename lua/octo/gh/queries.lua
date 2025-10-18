@@ -417,14 +417,38 @@ query($owner: String!, $name: String!) {
 }
 ]]
 
+---https://docs.github.com/en/graphql/reference/input-objects#issuefilters
+---@class octo.queries.IssueFilters
+---@field assignee? string
+---@field createdBy? string
+---@field labels? string[]
+---@field mentioned? string
+---@field milestone string
+---@field milestoneNumber? string
+---@field since? string
+---@field states? string[]
+---@field type? string
+---@field viewerSubscribed? boolean
+
+--- https://docs.github.com/en/graphql/reference/input-objects#issueorder
+---@class octo.queries.IssueOrder
+---@field direction string
+---@field field string
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issueorder
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters
 -- filter eg: labels: ["help wanted", "bug"]
 M.issues = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
-    issues(first: 100, after: $endCursor, filterBy: {%s}, orderBy: {field: %s, direction: %s}) {
+query(
+  $owner: String!,
+  $name: String!,
+  $endCursor: String,
+  $filter_by: IssueFilters,
+  $order_by: IssueOrder,
+) {
+  repository(owner: $owner, name: $name) {
+    issues(first: 100, after: $endCursor, filterBy: $filter_by, orderBy: $order_by) {
       nodes {
         __typename
         id
@@ -443,10 +467,30 @@ query($endCursor: String) {
   }
 }
 ]]
+
+---
+
 M.pull_requests = [[
-query($endCursor: String) {
-  repository(owner: "%s", name: "%s") {
-    pullRequests(first: 100, after: $endCursor, %s, orderBy: {field: %s, direction: %s}) {
+query(
+  $owner: String!,
+  $name: String!,
+  $base_ref_name: String,
+  $head_ref_name: String,
+  $labels: [String!],
+  $states: [PullRequestState!],
+  $order_by: IssueOrder!,
+  $endCursor: String,
+) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(
+      first: 100,
+      after: $endCursor,
+      baseRefName: $base_ref_name,
+      headRefName: $head_ref_name,
+      labels: $labels,
+      states: $states,
+      orderBy: $order_by,
+    ) {
       nodes {
         __typename
         number

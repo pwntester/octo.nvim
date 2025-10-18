@@ -36,38 +36,6 @@ local dropdown_opts = require("telescope.themes").get_dropdown {
   previewer = false,
 }
 
----@param opts {[string]: string}
----@param kind "issue"|"pull_request"
-local function get_filter(opts, kind)
-  local filter = ""
-  local allowed_values = {}
-  if kind == "issue" then
-    allowed_values = { "since", "createdBy", "assignee", "mentioned", "labels", "milestone", "states" }
-  elseif kind == "pull_request" then
-    allowed_values = { "baseRefName", "headRefName", "labels", "states" }
-  end
-
-  for _, value in pairs(allowed_values) do
-    if opts[value] then
-      local val ---@type string[]|string
-      if #vim.split(opts[value], ",") > 1 then
-        -- list
-        val = vim.split(opts[value], ",")
-      else
-        -- string
-        val = opts[value]
-      end
-      val = vim.json.encode(val)
-      val = string.gsub(val, '"OPEN"', "OPEN")
-      val = string.gsub(val, '"CLOSED"', "CLOSED")
-      val = string.gsub(val, '"MERGED"', "MERGED")
-      filter = filter .. value .. ":" .. val .. ","
-    end
-  end
-
-  return filter
-end
-
 local function open(command)
   ---@param prompt_bufnr integer
   return function(prompt_bufnr)
@@ -164,66 +132,79 @@ end
 
 function M.issues(opts)
   opts = opts or {}
+
   if not opts.states then
-    opts.states = "OPEN"
+    opts.states = { "OPEN" }
   end
-  local filter = get_filter(opts, "issue")
-  if utils.is_blank(opts.repo) then
-    opts.repo = utils.get_remote_name()
+
+  local repo = utils.pop_key(opts, "repo")
+  if utils.is_blank(repo) then
+    repo = utils.get_remote_name()
   end
-  if not opts.repo then
+
+  if not repo then
     utils.error "Cannot find repo"
     return
   end
 
   local replace = opts.cb and create_replace(opts.cb) or open_buffer
+  utils.pop_key(opts, "cb")
 
-  local owner, name = utils.split_repo(opts.repo)
+  local owner, name = utils.split_repo(repo)
   local cfg = octo_config.values
-  local order_by = cfg.issues.order_by
-  local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
-  utils.info "Fetching issues (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
-        local issues = resp.data.repository.issues.nodes
-        if #issues == 0 then
-          utils.error(string.format("There are no matching issues in %s.", opts.repo))
-          return
-        end
-        local max_number = -1
-        for _, issue in ipairs(issues) do
-          if #tostring(issue.number) > max_number then
-            max_number = #tostring(issue.number)
-          end
-        end
-        opts.preview_title = opts.preview_title or ""
-        opts.prompt_title = opts.prompt_title or ""
-        opts.results_title = opts.results_title or ""
 
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = issues,
-              entry_maker = entry_maker.gen_from_issue(max_number),
-            },
-            sorter = conf.generic_sorter(opts),
-            previewer = previewers.issue.new(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(replace)
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              map("i", cfg.picker_config.mappings.copy_sha.lhs, copy_sha())
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+  utils.info "Fetching issues (this may take a while) ..."
+  gh.api.graphql {
+    query = queries.issues,
+    F = {
+      owner = owner,
+      name = name,
+      filter_by = opts,
+      order_by = cfg.issues.order_by,
+    },
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
+          local issues = resp.data.repository.issues.nodes
+          if #issues == 0 then
+            utils.error(string.format("There are no matching issues in %s.", repo))
+            return
+          end
+          local max_number = -1
+          for _, issue in ipairs(issues) do
+            if #tostring(issue.number) > max_number then
+              max_number = #tostring(issue.number)
+            end
+          end
+          opts.preview_title = opts.preview_title or ""
+          opts.prompt_title = opts.prompt_title or ""
+          opts.results_title = opts.results_title or ""
+
+          pickers
+            .new(opts, {
+              finder = finders.new_table {
+                results = issues,
+                entry_maker = entry_maker.gen_from_issue(max_number),
+              },
+              sorter = conf.generic_sorter(opts),
+              previewer = previewers.issue.new(opts),
+              attach_mappings = function(_, map)
+                action_set.select:replace(replace)
+                map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+                map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+                map("i", cfg.picker_config.mappings.copy_sha.lhs, copy_sha())
+                return true
+              end,
+            })
+            :find()
+        end
+      end,
+    },
   }
 end
 
@@ -312,84 +293,99 @@ end
 function M.pull_requests(opts)
   opts = opts or {}
   if not opts.states then
-    opts.states = "OPEN"
+    opts.states = { "OPEN" }
   end
-  local filter = get_filter(opts, "pull_request")
-  if utils.is_blank(opts.repo) then
-    opts.repo = utils.get_remote_name()
+
+  local repo = utils.pop_key(opts, "repo")
+  if utils.is_blank(repo) then
+    repo = utils.get_remote_name()
   end
-  if not opts.repo then
+
+  if not repo then
     utils.error "Cannot find repo"
     return
   end
 
   local replace = opts.cb and create_replace(opts.cb) or open_buffer
+  utils.pop_key(opts, "cb")
 
-  local owner, name = utils.split_repo(opts.repo)
+  local owner, name = utils.split_repo(repo)
+
   local cfg = octo_config.values
-  local order_by = cfg.pull_requests.order_by
-  local query =
-    graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
+
   utils.info "Fetching pull requests (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
-        local pull_requests = resp.data.repository.pullRequests.nodes
-        if #pull_requests == 0 then
-          utils.error(string.format("There are no matching pull requests in %s.", opts.repo))
-          return
-        end
-        local max_number = -1
-        for _, pull in ipairs(pull_requests) do
-          if #tostring(pull.number) > max_number then
-            max_number = #tostring(pull.number)
+  gh.api.graphql {
+    query = queries.pull_requests,
+    F = {
+      owner = owner,
+      name = name,
+      base_ref_name = opts.baseRefName,
+      head_ref_name = opts.headRefName,
+      labels = opts.labels,
+      states = opts.states,
+      order_by = cfg.pull_requests.order_by,
+    },
+    jq = ".",
+    paginate = true,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
+          local pull_requests = resp.data.repository.pullRequests.nodes
+          if #pull_requests == 0 then
+            utils.error(string.format("There are no matching pull requests in %s.", opts.repo))
+            return
           end
-        end
-        opts.preview_title = opts.preview_title or ""
-        opts.prompt_title = opts.prompt_title or ""
-        opts.results_title = opts.results_title or ""
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = pull_requests,
-              entry_maker = entry_maker.gen_from_issue(max_number),
-            },
-            sorter = conf.generic_sorter(opts),
-            previewer = previewers.issue.new(opts),
-            attach_mappings = function(_, map)
-              action_set.select:replace(replace)
-              map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
-              map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-              map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-              map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
-                local entry = action_state.get_selected_entry(prompt_bufnr)
-                -- Fetch PR details to get the head SHA
-                utils.info "Fetching PR details for SHA..."
-                local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
-                gh.api.get {
-                  "/repos/{owner}/{repo}/pulls/{pull_number}",
-                  format = { owner = owner, repo = repo, pull_number = entry.obj.number },
-                  opts = {
-                    cb = gh.create_callback {
-                      success = function(output)
-                        local pr_data = vim.json.decode(output)
-                        utils.copy_sha(pr_data.head.sha)
-                      end,
+          local max_number = -1
+          for _, pull in ipairs(pull_requests) do
+            if #tostring(pull.number) > max_number then
+              max_number = #tostring(pull.number)
+            end
+          end
+          opts.preview_title = opts.preview_title or ""
+          opts.prompt_title = opts.prompt_title or ""
+          opts.results_title = opts.results_title or ""
+          pickers
+            .new(opts, {
+              finder = finders.new_table {
+                results = pull_requests,
+                entry_maker = entry_maker.gen_from_issue(max_number),
+              },
+              sorter = conf.generic_sorter(opts),
+              previewer = previewers.issue.new(opts),
+              attach_mappings = function(_, map)
+                action_set.select:replace(replace)
+                map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+                map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+                map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+                map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
+                  local entry = action_state.get_selected_entry(prompt_bufnr)
+                  -- Fetch PR details to get the head SHA
+                  utils.info "Fetching PR details for SHA..."
+                  local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
+                  gh.api.get {
+                    "/repos/{owner}/{repo}/pulls/{pull_number}",
+                    format = { owner = owner, repo = repo, pull_number = entry.obj.number },
+                    opts = {
+                      cb = gh.create_callback {
+                        success = function(output)
+                          local pr_data = vim.json.decode(output)
+                          utils.copy_sha(pr_data.head.sha)
+                        end,
+                      },
                     },
-                  },
-                }
-              end)
-              map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+                  }
+                end)
+                map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
+                return true
+              end,
+            })
+            :find()
+        end
+      end,
+    },
   }
 end
 
