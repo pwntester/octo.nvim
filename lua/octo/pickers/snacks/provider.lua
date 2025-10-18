@@ -11,36 +11,6 @@ local notify = require "snacks.notify"
 
 local M = {}
 
-local function get_filter(opts, kind)
-  local filter = ""
-  local allowed_values = {}
-  if kind == "issue" then
-    allowed_values = { "since", "createdBy", "assignee", "mentioned", "labels", "milestone", "states" }
-  elseif kind == "pull_request" then
-    allowed_values = { "baseRefName", "headRefName", "labels", "states" }
-  end
-
-  for _, value in pairs(allowed_values) do
-    if opts[value] then
-      local val
-      if #vim.split(opts[value], ",") > 1 then
-        -- list
-        val = vim.split(opts[value], ",")
-      else
-        -- string
-        val = opts[value]
-      end
-      val = vim.json.encode(val)
-      val = string.gsub(val, '"OPEN"', "OPEN")
-      val = string.gsub(val, '"CLOSED"', "CLOSED")
-      val = string.gsub(val, '"MERGED"', "MERGED")
-      filter = filter .. value .. ":" .. val .. ","
-    end
-  end
-
-  return filter
-end
-
 function M.not_implemented()
   utils.error "Not implemented yet"
 end
@@ -48,269 +18,298 @@ end
 function M.issues(opts)
   opts = opts or {}
   if not opts.states then
-    opts.states = "OPEN"
+    opts.states = { "OPEN" }
   end
-  local filter = get_filter(opts, "issue")
-  if utils.is_blank(opts.repo) then
-    opts.repo = utils.get_remote_name()
+
+  local repo = utils.pop_key(opts, "repo")
+  if utils.is_blank(repo) then
+    repo = utils.get_remote_name()
   end
-  if not opts.repo then
+  if not repo then
     utils.error "Cannot find repo"
     return
   end
 
-  local owner, name = utils.split_repo(opts.repo)
+  local owner, name = utils.split_repo(repo)
+
   local cfg = octo_config.values
-  local order_by = cfg.issues.order_by
-  local query = graphql("issues_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
+
+  local preview_title = utils.pop_key(opts, "preview_title") or "Issues"
+
   utils.info "Fetching issues (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
-        local issues = resp.data.repository.issues.nodes
-        if #issues == 0 then
-          utils.error(string.format("There are no matching issues in %s.", opts.repo))
-          return
-        end
-        local max_number = -1
-        for _, issue in ipairs(issues) do
-          if issue.number > max_number then
-            max_number = issue.number
+  gh.api.graphql {
+    query = queries.issues,
+    F = {
+      owner = owner,
+      name = name,
+      filter_by = opts,
+      order_by = cfg.issues.order_by,
+    },
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = utils.aggregate_pages(output, "data.repository.issues.nodes")
+          local issues = resp.data.repository.issues.nodes
+          if #issues == 0 then
+            utils.error(string.format("There are no matching issues in %s.", repo))
+            return
           end
-          issue.text = string.format("#%d %s", issue.number, issue.title)
-          issue.file = utils.get_issue_uri(issue.number, issue.repository.nameWithOwner)
-          issue.kind = issue.__typename:lower()
-        end
+          local max_number = -1
+          for _, issue in ipairs(issues) do
+            if issue.number > max_number then
+              max_number = issue.number
+            end
+            issue.text = string.format("#%d %s", issue.number, issue.title)
+            issue.file = utils.get_issue_uri(issue.number, issue.repository.nameWithOwner)
+            issue.kind = issue.__typename:lower()
+          end
 
-        -- Prepare actions and keys for Snacks
-        local final_actions = {}
-        local final_keys = {}
-        local default_mode = { "n", "i" }
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
 
-        -- Process custom actions from config array
-        local custom_actions_defined = {} -- Keep track of names defined by user
-        if
-          cfg.picker_config.snacks
-          and cfg.picker_config.snacks.actions
-          and cfg.picker_config.snacks.actions.issues
-        then
-          for _, action_item in ipairs(cfg.picker_config.snacks.actions.issues) do
-            if action_item.name and action_item.fn then
-              final_actions[action_item.name] = action_item.fn
-              custom_actions_defined[action_item.name] = true
-              if action_item.lhs then
-                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+          -- Process custom actions from config array
+          local custom_actions_defined = {} -- Keep track of names defined by user
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.issues
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.issues) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
               end
             end
           end
-        end
 
-        -- Add default actions/keys if not overridden by name or lhs
-        if not custom_actions_defined["open_in_browser"] then
-          final_actions["open_in_browser"] = function(_picker, item)
-            navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+          -- Add default actions/keys if not overridden by name or lhs
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+            end
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
-        end
-
-        if not custom_actions_defined["copy_url"] then
-          final_actions["copy_url"] = function(_picker, item)
-            utils.copy_url(item.url)
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
-          final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
-        end
 
-        Snacks.picker.pick {
-          title = opts.preview_title or "Issues",
-          items = issues,
-          format = function(item, _)
-            local a = Snacks.picker.util.align
-            ---@type snacks.picker.Highlight[]
-            local ret = {}
+          if not custom_actions_defined["copy_url"] then
+            final_actions["copy_url"] = function(_picker, item)
+              utils.copy_url(item.url)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          end
 
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
+          Snacks.picker.pick {
+            title = preview_title,
+            items = issues,
+            format = function(item, _)
+              local a = Snacks.picker.util.align
+              ---@type snacks.picker.Highlight[]
+              local ret = {}
 
-            ret[#ret + 1] = { " " }
+              ---@diagnostic disable-next-line: assign-type-mismatch
+              ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
 
-            local issue_id = string.format("#%d", item.number)
-            local issue_id_width = #tostring(max_number) + 1
+              ret[#ret + 1] = { " " }
 
-            ret[#ret + 1] = { a(issue_id, issue_id_width), "SnacksPickerGitIssue" }
+              local issue_id = string.format("#%d", item.number)
+              local issue_id_width = #tostring(max_number) + 1
 
-            ret[#ret + 1] = { " " }
+              ret[#ret + 1] = { a(issue_id, issue_id_width), "SnacksPickerGitIssue" }
 
-            ret[#ret + 1] = { item.title }
+              ret[#ret + 1] = { " " }
 
-            return ret
-          end,
-          win = {
-            input = {
-              keys = final_keys, -- Use the constructed keys map
+              ret[#ret + 1] = { item.title }
+
+              return ret
+            end,
+            win = {
+              input = {
+                keys = final_keys, -- Use the constructed keys map
+              },
             },
-          },
-          actions = final_actions, -- Use the constructed actions map
-        }
-      end
-    end,
+            actions = final_actions, -- Use the constructed actions map
+          }
+        end
+      end,
+    },
   }
 end
 
 function M.pull_requests(opts)
   opts = opts or {}
   if not opts.states then
-    opts.states = "OPEN"
+    opts.states = { "OPEN" }
   end
-  local filter = get_filter(opts, "pull_request")
-  if utils.is_blank(opts.repo) then
-    opts.repo = utils.get_remote_name()
+
+  local repo = utils.pop_key(opts, "repo")
+  if utils.is_blank(repo) then
+    repo = utils.get_remote_name()
   end
-  if not opts.repo then
+
+  if not repo then
     utils.error "Cannot find repo"
     return
   end
 
-  local owner, name = utils.split_repo(opts.repo)
+  local owner, name = utils.split_repo(repo)
+
   local cfg = octo_config.values
-  local order_by = cfg.pull_requests.order_by
-  local query =
-    graphql("pull_requests_query", owner, name, filter, order_by.field, order_by.direction, { escape = false })
+
+  local preview_title = utils.pop_key(opts, "preview_title") or "Pull Requests"
+
   utils.info "Fetching pull requests (this may take a while) ..."
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
-        local pull_requests = resp.data.repository.pullRequests.nodes
-        if #pull_requests == 0 then
-          utils.error(string.format("There are no matching pull requests in %s.", opts.repo))
-          return
-        end
-        local max_number = -1
-        for _, pull in ipairs(pull_requests) do
-          if pull.number > max_number then
-            max_number = pull.number
+  gh.api.graphql {
+    query = queries.pull_requests,
+    F = {
+      owner = owner,
+      name = name,
+      base_ref_name = opts.baseRefName,
+      head_ref_name = opts.headRefName,
+      labels = opts.labels,
+      states = opts.states,
+      order_by = cfg.pull_requests.order_by,
+    },
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
+          local pull_requests = resp.data.repository.pullRequests.nodes
+          if #pull_requests == 0 then
+            utils.error(string.format("There are no matching pull requests in %s.", repo))
+            return
           end
-          pull.text = string.format("#%d %s", pull.number, pull.title)
-          pull.file = utils.get_pull_request_uri(pull.number, pull.repository.nameWithOwner)
-          pull.kind = pull.__typename:lower() == "pullrequest" and "pull_request" or "unknown"
-        end
+          local max_number = -1
+          for _, pull in ipairs(pull_requests) do
+            if pull.number > max_number then
+              max_number = pull.number
+            end
+            pull.text = string.format("#%d %s", pull.number, pull.title)
+            pull.file = utils.get_pull_request_uri(pull.number, pull.repository.nameWithOwner)
+            pull.kind = pull.__typename:lower() == "pullrequest" and "pull_request" or "unknown"
+          end
 
-        -- Prepare actions and keys for Snacks
-        local final_actions = {}
-        local final_keys = {}
-        local default_mode = { "n", "i" }
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
 
-        -- Process custom actions from config array
-        local custom_actions_defined = {}
-        if
-          cfg.picker_config.snacks
-          and cfg.picker_config.snacks.actions
-          and cfg.picker_config.snacks.actions.pull_requests
-        then
-          for _, action_item in ipairs(cfg.picker_config.snacks.actions.pull_requests) do
-            if action_item.name and action_item.fn then
-              final_actions[action_item.name] = action_item.fn
-              custom_actions_defined[action_item.name] = true
-              if action_item.lhs then
-                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.pull_requests
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.pull_requests) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
               end
             end
           end
-        end
 
-        -- Add default actions/keys if not overridden
-        if not custom_actions_defined["open_in_browser"] then
-          final_actions["open_in_browser"] = function(_picker, item)
-            navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              navigation.open_in_browser(item.kind, item.repository.nameWithOwner, item.number)
+            end
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
-        end
-
-        if not custom_actions_defined["copy_url"] then
-          final_actions["copy_url"] = function(_picker, item)
-            utils.copy_url(item.url)
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
-          final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
-        end
 
-        if not custom_actions_defined["check_out_pr"] then
-          final_actions["check_out_pr"] = function(_picker, item)
-            utils.checkout_pr(item.number)
+          if not custom_actions_defined["copy_url"] then
+            final_actions["copy_url"] = function(_picker, item)
+              utils.copy_url(item.url)
+            end
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.checkout_pr.lhs] then
-          final_keys[cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = default_mode }
-        end
-
-        if not custom_actions_defined["merge_pr"] then
-          final_actions["merge_pr"] = function(_picker, item)
-            utils.merge_pr(item.number)
+          if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.merge_pr.lhs] then
-          final_keys[cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = default_mode }
-        end
 
-        if not custom_actions_defined["copy_sha"] then
-          final_actions["copy_sha"] = function(_picker, item)
-            -- Fetch PR details to get the head SHA
-            utils.info "Fetching PR details for SHA..."
-            local owner, repo = utils.split_repo(item.repository.nameWithOwner)
-            gh.api.get {
-              "/repos/{owner}/{repo}/pulls/{pull_number}",
-              format = { owner = owner, repo = repo, pull_number = item.number },
-              opts = {
-                cb = gh.create_callback {
-                  success = function(output)
-                    local pr_data = vim.json.decode(output)
-                    utils.copy_sha(pr_data.head.sha)
-                  end,
+          if not custom_actions_defined["check_out_pr"] then
+            final_actions["check_out_pr"] = function(_picker, item)
+              utils.checkout_pr(item.number)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.checkout_pr.lhs] then
+            final_keys[cfg.picker_config.mappings.checkout_pr.lhs] = { "check_out_pr", mode = default_mode }
+          end
+
+          if not custom_actions_defined["merge_pr"] then
+            final_actions["merge_pr"] = function(_picker, item)
+              utils.merge_pr(item.number)
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.merge_pr.lhs] then
+            final_keys[cfg.picker_config.mappings.merge_pr.lhs] = { "merge_pr", mode = default_mode }
+          end
+
+          if not custom_actions_defined["copy_sha"] then
+            final_actions["copy_sha"] = function(_picker, item)
+              -- Fetch PR details to get the head SHA
+              utils.info "Fetching PR details for SHA..."
+              local owner, repo = utils.split_repo(item.repository.nameWithOwner)
+              gh.api.get {
+                "/repos/{owner}/{repo}/pulls/{pull_number}",
+                format = { owner = owner, repo = repo, pull_number = item.number },
+                opts = {
+                  cb = gh.create_callback {
+                    success = function(output)
+                      local pr_data = vim.json.decode(output)
+                      utils.copy_sha(pr_data.head.sha)
+                    end,
+                  },
                 },
-              },
-            }
+              }
+            end
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.copy_sha.lhs] then
-          final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
-        end
+          if not final_keys[cfg.picker_config.mappings.copy_sha.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
+          end
 
-        Snacks.picker.pick {
-          title = opts.preview_title or "Pull Requests",
-          items = pull_requests,
-          format = function(item, _)
-            ---@type snacks.picker.Highlight[]
-            local ret = {}
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
-            ret[#ret + 1] = { string.format("#%d", item.number), "Comment" }
-            ret[#ret + 1] = { (" "):rep(#tostring(max_number) - #tostring(item.number) + 1) }
-            ret[#ret + 1] = { item.title, "Normal" }
-            return ret
-          end,
-          win = {
-            input = {
-              keys = final_keys, -- Use the constructed keys map
+          Snacks.picker.pick {
+            title = preview_title,
+            items = pull_requests,
+            format = function(item, _)
+              ---@type snacks.picker.Highlight[]
+              local ret = {}
+              ---@diagnostic disable-next-line: assign-type-mismatch
+              ret[#ret + 1] = utils.get_icon { kind = item.kind, obj = item }
+              ret[#ret + 1] = { string.format("#%d", item.number), "Comment" }
+              ret[#ret + 1] = { (" "):rep(#tostring(max_number) - #tostring(item.number) + 1) }
+              ret[#ret + 1] = { item.title, "Normal" }
+              return ret
+            end,
+            win = {
+              input = {
+                keys = final_keys, -- Use the constructed keys map
+              },
             },
-          },
-          actions = final_actions, -- Use the constructed actions map
-        }
-      end
-    end,
+            actions = final_actions, -- Use the constructed actions map
+          }
+        end
+      end,
+    },
   }
 end
 
