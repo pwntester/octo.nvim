@@ -210,36 +210,38 @@ function M.on_cursor_hold()
   -- reactions popup
   local id = buffer:get_reactions_at_cursor()
   if id then
-    local query = graphql("reactions_for_object_query", id)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.print_err(stderr)
-        elseif output then
-          ---@type octo.queries.ReactionsForObject
-          local resp = vim.json.decode(output)
-          local reactions = {} ---@type table<string, string[]>
-          local reactionGroups = resp.data.node.reactionGroups
-          for _, reactionGroup in ipairs(reactionGroups) do
-            local users = reactionGroup.users.nodes
-            local logins = {} ---@type string[]
-            for _, user in ipairs(users) do
-              table.insert(logins, user.login)
+    gh.api.graphql {
+      queries.reactions_for_object,
+      F = { id = id },
+      opts = {
+        cb = function(output, stderr)
+          if stderr and not utils.is_blank(stderr) then
+            utils.print_err(stderr)
+          elseif output then
+            ---@type octo.queries.ReactionsForObject
+            local resp = vim.json.decode(output)
+            local reactions = {} ---@type table<string, string[]>
+            local reactionGroups = resp.data.node.reactionGroups
+            for _, reactionGroup in ipairs(reactionGroups) do
+              local users = reactionGroup.users.nodes
+              local logins = {} ---@type string[]
+              for _, user in ipairs(users) do
+                table.insert(logins, user.login)
+              end
+              if #logins > 0 then
+                reactions[reactionGroup.content] = logins
+              end
             end
-            if #logins > 0 then
-              reactions[reactionGroup.content] = logins
-            end
+            local popup_bufnr = vim.api.nvim_create_buf(false, true)
+            local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
+            window.create_popup {
+              bufnr = popup_bufnr,
+              width = 4 + max_length,
+              height = 2 + lines_count,
+            }
           end
-          local popup_bufnr = vim.api.nvim_create_buf(false, true)
-          local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
-          window.create_popup {
-            bufnr = popup_bufnr,
-            width = 4 + max_length,
-            height = 2 + lines_count,
-          }
-        end
-      end,
+        end,
+      },
     }
     return
   end
@@ -292,9 +294,9 @@ function M.on_cursor_hold()
     }
   end
   local owner, name = utils.split_repo(repo)
-  local query = graphql("issue_summary_query", owner, name, number)
   gh.api.graphql {
-    query = query,
+    query = queries.issue_summary,
+    F = { owner = owner, name = name, number = number },
     jq = ".data.repository.issueOrPullRequest",
     opts = {
       cb = gh.create_callback {
