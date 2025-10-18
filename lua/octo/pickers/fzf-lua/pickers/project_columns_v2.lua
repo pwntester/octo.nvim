@@ -23,7 +23,6 @@ return function(cb)
   })
 
   local function get_projects(fzf_cb)
-    local query = graphql("projects_v2_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
     gh.api.graphql {
       query = queries.projects_v2,
       F = { owner = buffer.owner, name = buffer.name, viewer = vim.g.octo_viewer },

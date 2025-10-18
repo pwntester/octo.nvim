@@ -272,9 +272,6 @@ function M.gists(opts)
       end,
     },
   }
-  gh.run {
-    args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-  }
 end
 
 --
