@@ -3,7 +3,7 @@ local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
-local graphql = require "octo.gh.graphql"
+local parser = require "octo.gh.parser"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local fzf_actions = require "octo.pickers.fzf-lua.pickers.fzf_actions"
@@ -30,23 +30,7 @@ return function(cb)
         cb = function(output)
           if output then
             local resp = vim.json.decode(output)
-
-            local unsorted_projects = {}
-            local user_projects = resp.data.user and resp.data.user.projects.nodes or {}
-            local repo_projects = resp.data.repository and resp.data.repository.projects.nodes or {}
-            local org_projects = not resp.errors and resp.data.organization.projects.nodes or {}
-            vim.list_extend(unsorted_projects, repo_projects)
-            vim.list_extend(unsorted_projects, user_projects)
-            vim.list_extend(unsorted_projects, org_projects)
-
-            local projects = {}
-            for _, project in ipairs(unsorted_projects) do
-              if project.closed then
-                table.insert(projects, #projects + 1, project)
-              else
-                table.insert(projects, 0, project)
-              end
-            end
+            local projects = parser.projects(resp, { sorted = true })
 
             if #projects == 0 then
               utils.error(string.format("There are no matching projects for %s.", buffer.repo))
