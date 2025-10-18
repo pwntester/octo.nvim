@@ -1922,15 +1922,31 @@ function M.pr_checks()
   }
 end
 
+--- Merges a PR by number or from the current buffer
 function M.merge_pr(...)
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-
-  local args = { "pr", "merge", tostring(buffer.number) }
+  local args = { "pr", "merge" }
   local params = table.pack(...)
   local conf = config.values
+  local pr_number = nil
+
+  -- Get PR number from argument if valid
+  if utils.is_number_like(params[1]) then
+    pr_number = tostring(params[1])
+    table.remove(params, 1)
+  end
+
+  if not pr_number then
+    local buffer = utils.get_current_buffer()
+
+    if not buffer or not buffer:isPullRequest() then
+      utils.error("No PR number provided and buffer is not a PR")
+      return
+    end
+
+    pr_number = tostring(buffer.number)
+  end
+
+  table.insert(args, pr_number)
 
   local merge_method = conf.default_merge_method
   for _, param in ipairs(params) do
@@ -1960,8 +1976,17 @@ function M.merge_pr(...)
   gh.run {
     args = args,
     cb = function(output, stderr)
-      utils.info(output .. " " .. stderr)
-      writers.write_state(buffer.bufnr)
+      if not utils.is_blank(strerr) then
+        utils.error(stderr)
+      else
+        utils.info(output)
+      end
+
+      local buffer = utils.get_current_buffer()
+
+      if buffer and buffer:isPullRequest() then
+        writers.write_state(buffer.bufnr)
+      end
     end,
   }
 end

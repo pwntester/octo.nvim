@@ -625,36 +625,6 @@ function M.insert_delete_flag(args, delete)
   end
 end
 
----Merges a PR by number
-function M.merge_pr(pr_number)
-  if not Job then
-    M.error "Aborting PR merge"
-    return
-  end
-
-  local conf = config.values
-  local args = { "pr", "merge", pr_number }
-
-  M.insert_merge_flag(args, conf.default_merge_method)
-  M.insert_delete_flag(args, conf.default_delete_branch)
-
-  ---@diagnostic disable-next-line: missing-fields
-  Job:new({
-    command = "gh",
-    args = args,
-    on_exit = vim.schedule_wrap(function(job, code)
-      if code == 0 then
-        M.info("Merged PR " .. pr_number .. "!")
-      else
-        local stderr = table.concat(job:stderr_result(), "\n")
-        if not M.is_blank(stderr) then
-          M.error(stderr)
-        end
-      end
-    end),
-  }):start()
-end
-
 --- Formats a integer a large integer by taking the most significant digits with a suffix.
 --- e.g. 123456789 -> 12.3m
 ---@param n integer
@@ -2061,6 +2031,19 @@ end
 ---@param msg string
 function M.print_err(msg)
   vim.api.nvim_echo({ { msg } }, true, { err = true })
+end
+
+--- @param val string
+--- Check if a value is a number or numeric string (e.g. 123 or "456")
+function M.is_number_like(val)
+  if type(val) == "number" then
+    return true
+  end
+  if type(val) == "string" then
+    local n = tonumber(val)
+    return n ~= nil and tostring(n) == val
+  end
+  return false
 end
 
 return M

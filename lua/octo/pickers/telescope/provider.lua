@@ -7,6 +7,7 @@ local previewers = require "octo.pickers.telescope.previewers"
 local entry_maker = require "octo.pickers.telescope.entry_maker"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
+local commands = require "octo.command"
 local octo_config = require "octo.config"
 local notifications = require "octo.notifications"
 
@@ -305,7 +306,7 @@ local function merge_pull_request()
   return function(prompt_bufnr)
     local sel = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    utils.merge_pr(sel.obj.number)
+    commands.merge_pr(sel.obj.number)
   end
 end
 
