@@ -239,34 +239,41 @@ function M.gists(opts)
   else
     privacy = "ALL"
   end
-  local query = graphql("gists_query", privacy)
+  gh.api.graphql {
+    query = queries.gists,
+    F = { privacy = privacy },
+    paginate = true,
+    jq = ".",
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
+          local gists = resp.data.viewer.gists.nodes
+          opts.preview_title = opts.preview_title or ""
+          opts.prompt_title = opts.prompt_title or ""
+          opts.results_title = opts.results_title or ""
+          pickers
+            .new(opts, {
+              finder = finders.new_table {
+                results = gists,
+                entry_maker = entry_maker.gen_from_gist(),
+              },
+              previewer = previewers.gist.new(opts),
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, map)
+                map("i", "<CR>", open_gist)
+                return true
+              end,
+            })
+            :find()
+        end
+      end,
+    },
+  }
   gh.run {
     args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = utils.aggregate_pages(output, "data.viewer.gists.nodes")
-        local gists = resp.data.viewer.gists.nodes
-        opts.preview_title = opts.preview_title or ""
-        opts.prompt_title = opts.prompt_title or ""
-        opts.results_title = opts.results_title or ""
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = gists,
-              entry_maker = entry_maker.gen_from_gist(),
-            },
-            previewer = previewers.gist.new(opts),
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, map)
-              map("i", "<CR>", open_gist)
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
   }
 end
 
@@ -912,9 +919,9 @@ function M.select_label(opts)
       :find()
   end
 
-  local query = graphql("labels_query", owner, name)
   gh.api.graphql {
-    query = query,
+    query = queries.labels,
+    F = { owner = owner, name = name },
     jq = ".data.repository.labels.nodes",
     opts = {
       cb = gh.create_callback {
@@ -936,15 +943,16 @@ function M.select_assigned_label(opts)
 
   local query, key
   if buffer:isIssue() then
-    query = graphql("issue_labels_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.issue_labels
     key = "issue"
   elseif buffer:isPullRequest() then
-    query = graphql("pull_request_labels_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.pull_request_labels
     key = "pullRequest"
   elseif buffer:isDiscussion() then
-    query = graphql("discussion_labels_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.discussion_labels
     key = "discussion"
   end
+  local F = { owner = buffer.owner, name = buffer.name, number = buffer.number }
 
   local function create_picker(output)
     local labels = vim.json.decode(output)
@@ -975,6 +983,7 @@ function M.select_assigned_label(opts)
 
   gh.api.graphql {
     query = query,
+    F = F,
     jq = ".data.repository." .. key .. ".labels.nodes",
     opts = {
       cb = gh.create_callback {
@@ -993,10 +1002,12 @@ local function get_user_requester()
     if not prompt or prompt == "" or utils.is_blank(prompt) then
       return {}
     end
-    local query = graphql("users_query", prompt)
-    local output = gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      mode = "sync",
+
+    local output = gh.api.graphql {
+      query = queries.users,
+      F = { prompt = prompt },
+      paginate = true,
+      opts = { mode = "sync" },
     }
     if output then
       return {}
@@ -1155,39 +1166,45 @@ function M.select_assignee(cb)
   end
   local query, key
   if buffer:isIssue() then
-    query = graphql("issue_assignees_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.issue_assignees
     key = "issue"
   elseif buffer:isPullRequest() then
-    query = graphql("pull_request_assignees_query", buffer.owner, buffer.name, buffer.number)
+    query = queries.pull_request_assignees
     key = "pullRequest"
   end
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local assignees = resp.data.repository[key].assignees.nodes
-        pickers
-          .new(opts, {
-            finder = finders.new_table {
-              results = assignees,
-              entry_maker = entry_maker.gen_from_user(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _)
-              actions.select_default:replace(function(prompt_bufnr)
-                local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
-                actions.close(prompt_bufnr)
-                cb(selected_assignee.user.id)
-              end)
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+  local F = { owner = buffer.owner, name = buffer.name, number = buffer.number }
+
+  gh.api.graphql {
+    query = query,
+    F = F,
+    paginate = true,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = vim.json.decode(output)
+          local assignees = resp.data.repository[key].assignees.nodes
+          pickers
+            .new(opts, {
+              finder = finders.new_table {
+                results = assignees,
+                entry_maker = entry_maker.gen_from_user(),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _)
+                actions.select_default:replace(function(prompt_bufnr)
+                  local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  cb(selected_assignee.user.id)
+                end)
+                return true
+              end,
+            })
+            :find()
+        end
+      end,
+    },
   }
 end
 
@@ -1584,9 +1601,13 @@ function M.project_columns_v2(cb)
     return
   end
 
-  local query = graphql("projects_v2_query", buffer.owner, buffer.name, vim.g.octo_viewer, buffer.owner)
   gh.api.graphql {
-    query = query,
+    query = queries.projects_v2,
+    F = {
+      owner = buffer.owner,
+      name = buffer.name,
+      viewer = vim.g.octo_viewer,
+    },
     paginate = true,
     opts = {
       cb = function(output)
