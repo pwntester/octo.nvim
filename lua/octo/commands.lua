@@ -1,5 +1,6 @@
 ---@diagnostic disable
 local constants = require "octo.constants"
+local context = require "octo.context"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
@@ -200,7 +201,7 @@ function M.setup()
       end,
     },
     type = {
-      add = M.within_issue(function(buffer)
+      add = context.within_issue(function(buffer)
         local owner, repo = utils.split_repo(buffer.repo)
 
         gh.api.graphql {
@@ -256,7 +257,7 @@ function M.setup()
           },
         }
       end),
-      remove = M.within_issue(function(buffer)
+      remove = context.within_issue(function(buffer)
         local current_type = buffer:issue().issueType
 
         if not current_type or utils.is_blank(current_type) then
@@ -338,7 +339,7 @@ function M.setup()
       end,
     },
     parent = {
-      edit = M.within_issue(function(buffer)
+      edit = context.within_issue(function(buffer)
         local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
@@ -349,7 +350,7 @@ function M.setup()
         local uri = string.format("octo://%s/issue/%s", buffer.repo, parent.number)
         vim.cmd.edit(uri)
       end),
-      remove = M.within_issue(function(buffer)
+      remove = context.within_issue(function(buffer)
         local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
@@ -375,7 +376,7 @@ function M.setup()
           },
         }
       end),
-      add = M.within_issue(function(buffer)
+      add = context.within_issue(function(buffer)
         local opts = {}
         opts.cb = function(selected)
           gh.api.graphql {
@@ -411,10 +412,10 @@ function M.setup()
         stateReason = stateReason or "CLOSED"
         M.change_state(stateReason)
       end,
-      unpin = M.within_issue(function(buffer)
+      unpin = context.within_issue(function(buffer)
         M.pin_issue { obj = buffer:issue(), add = false }
       end),
-      pin = M.within_issue(function(buffer)
+      pin = context.within_issue(function(buffer)
         M.pin_issue { obj = buffer:issue(), add = true }
       end),
       develop = function(repo, ...)
@@ -503,12 +504,12 @@ function M.setup()
       create = function(...)
         M.create_pr(...)
       end,
-      commits = function()
-        picker.commits()
-      end,
-      changes = function()
-        picker.changed_files()
-      end,
+      commits = context.within_pr(function(buffer)
+        picker.commits(buffer)
+      end),
+      changes = context.within_pr(function(buffer)
+        picker.changed_files(buffer)
+      end),
       diff = function()
         M.show_pr_diff()
       end,
@@ -602,14 +603,9 @@ function M.setup()
       resume = function()
         reviews.resume_review()
       end,
-      comments = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          current_review:show_pending_comments()
-        else
-          utils.error "Please start or resume a review first"
-        end
-      end,
+      comments = context.within_review(function(current_review)
+        current_review:show_pending_comments()
+      end),
       submit = function()
         reviews.submit_review()
       end,
@@ -623,16 +619,11 @@ function M.setup()
           utils.error "Please start or resume a review first"
         end
       end,
-      commit = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          picker.review_commits(function(right, left)
-            current_review:focus_commit(right, left)
-          end)
-        else
-          utils.error "Please start or resume a review first"
-        end
-      end,
+      commit = context.within_review(function(current_review)
+        picker.review_commits(current_review, function(left, right)
+          current_review:focus_commit(left, right)
+        end)
+      end),
       thread = function()
         require("octo.reviews.thread-panel").show_review_threads(true)
       end,
@@ -673,15 +664,9 @@ function M.setup()
           M.add_pr_issue_or_review_thread_comment()
         end
       end,
-      suggest = function()
-        local current_review = reviews.get_current_review()
-        if not current_review then
-          utils.error "Please start or resume a review first"
-          return
-        end
-
+      suggest = context.within_review(function(current_review)
         current_review:add_comment(true)
-      end,
+      end),
       reply = M.add_pr_issue_or_review_thread_comment_reply,
       url = function()
         local buffer = utils.get_current_buffer()
@@ -2556,19 +2541,6 @@ function M.search(...)
   end
 
   picker.search { prompt = prompt, type = type }
-end
-
----@param cb fun(buffer: OctoBuffer): nil
-function M.within_issue(cb)
-  return function()
-    local buffer = utils.get_current_buffer()
-    if not buffer or not buffer:isIssue() then
-      utils.error "Not an issue buffer"
-      return
-    end
-
-    cb(buffer)
-  end
 end
 
 --- @class PinIssueOpts
