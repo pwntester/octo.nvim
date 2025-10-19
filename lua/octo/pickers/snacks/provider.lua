@@ -1571,28 +1571,17 @@ function M.users(cb)
   }
 end
 
+---@type octo.PickerModule
 M.picker = {
-  actions = M.not_implemented,
-  assigned_labels = M.not_implemented,
   assignees = M.assignees,
   changed_files = M.changed_files,
   commits = M.commits,
-  discussions = M.not_implemented,
-  gists = M.not_implemented,
-  issue_templates = M.issue_templates,
   issues = M.issues,
-  labels = M.not_implemented,
   notifications = M.notifications,
-  pending_threads = M.not_implemented,
-  project_cards_v2 = M.not_implemented,
-  project_columns_v2 = M.not_implemented,
   prs = M.pull_requests,
-  repos = M.not_implemented,
-  workflow_runs = M.not_implemented,
   review_commits = M.review_commits,
   search = M.search,
   users = M.users,
-  milestones = M.not_implemented,
 }
 
 return M

@@ -1675,6 +1675,7 @@ function M.project_cards_v2(cb)
   end
 end
 
+---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
   assigned_labels = M.select_assigned_label,
@@ -1686,9 +1687,9 @@ M.picker = {
   issue_templates = M.issue_templates,
   issues = M.issues,
   labels = M.select_label,
+  milestones = M.milestones,
   notifications = M.notifications,
   pending_threads = M.pending_threads,
-  workflow_runs = M.workflow_runs,
   project_cards_v2 = M.project_cards_v2,
   project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
@@ -1696,7 +1697,7 @@ M.picker = {
   review_commits = M.review_commits,
   search = M.search,
   users = M.select_user,
-  milestones = M.milestones,
+  workflow_runs = M.workflow_runs,
 }
 
 return M
