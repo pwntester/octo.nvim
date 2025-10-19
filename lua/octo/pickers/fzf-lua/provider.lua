@@ -7,6 +7,7 @@ function M.not_implemented()
 end
 
 ---@type octo.PickerModule
+---@diagnostic disable-next-line: missing-fields
 M.picker = {
   actions = require "octo.pickers.fzf-lua.pickers.actions",
   assigned_labels = require "octo.pickers.fzf-lua.pickers.assigned_labels",
