@@ -2,7 +2,7 @@
 local config = require "octo.config"
 local utils = require "octo.utils"
 
----@class octo.PickerModule
+---@class octo.PickerModule The picker module provides various pickers for different GitHub entities.
 ---@field actions function The actions that can be performed in pickers
 ---@field assigned_labels function Get labels assigned to an issue or PR
 ---@field assignees function Get assignees for an issue or PR
