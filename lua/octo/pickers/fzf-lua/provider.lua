@@ -6,17 +6,19 @@ function M.not_implemented()
   utils.error "Not implemented yet"
 end
 
+---@type octo.PickerModule
+---@diagnostic disable-next-line: missing-fields
 M.picker = {
   actions = require "octo.pickers.fzf-lua.pickers.actions",
   assigned_labels = require "octo.pickers.fzf-lua.pickers.assigned_labels",
   assignees = require "octo.pickers.fzf-lua.pickers.assignees",
   changed_files = require "octo.pickers.fzf-lua.pickers.changed_files",
-  discussions = M.not_implemented,
   commits = require "octo.pickers.fzf-lua.pickers.commits",
   gists = require "octo.pickers.fzf-lua.pickers.gists",
   issue_templates = require "octo.pickers.fzf-lua.pickers.issue_templates",
   issues = require "octo.pickers.fzf-lua.pickers.issues",
   labels = require "octo.pickers.fzf-lua.pickers.labels",
+  notifications = require "octo.pickers.fzf-lua.pickers.notifications",
   pending_threads = require "octo.pickers.fzf-lua.pickers.pending_threads",
   project_cards_v2 = require "octo.pickers.fzf-lua.pickers.project_cards_v2",
   project_columns_v2 = require "octo.pickers.fzf-lua.pickers.project_columns_v2",
@@ -25,9 +27,6 @@ M.picker = {
   review_commits = require "octo.pickers.fzf-lua.pickers.review_commits",
   search = require "octo.pickers.fzf-lua.pickers.search",
   users = require "octo.pickers.fzf-lua.pickers.users",
-  notifications = require "octo.pickers.fzf-lua.pickers.notifications",
-  milestones = M.not_implemented,
-  workflow_runs = M.not_implemented,
 }
 
 return M
