@@ -405,7 +405,7 @@ function M.commits()
 
   -- TODO: graphql
   gh.api.get {
-    "repos/{repo}/pulls/{number}/commits",
+    "/repos/{repo}/pulls/{number}/commits",
     format = { repo = buffer.repo, number = buffer.number },
     paginate = true,
     opts = {
@@ -513,7 +513,7 @@ function M.changed_files()
   end
 
   gh.api.get {
-    "repos/{repo}/pulls/{number}/files",
+    "/repos/{repo}/pulls/{number}/files",
     format = { repo = buffer.repo, number = buffer.number },
     paginate = true,
     opts = {
