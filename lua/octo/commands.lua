@@ -124,18 +124,7 @@ function M.setup()
 
         require("octo.discussions").create(opts)
       end,
-      reopen = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
-        if not buffer:isDiscussion() then
-          utils.error "Not a discussion buffer"
-          return
-        end
-
+      reopen = context.within_discussion(function(buffer)
         gh.api.graphql {
           query = mutations.reopen_discussion,
           fields = { discussion_id = buffer:discussion().id },
@@ -150,7 +139,7 @@ function M.setup()
             },
           },
         }
-      end,
+      end),
       search = function(...)
         local args = table.pack(...)
         local prompt = table.concat(args, " ")
@@ -158,18 +147,7 @@ function M.setup()
         prompt = "repo:" .. repo .. " " .. prompt
         picker.search { prompt = prompt, type = "DISCUSSION" }
       end,
-      close = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
-        if not buffer:isDiscussion() then
-          utils.error "Not a discussion buffer"
-          return
-        end
-
+      close = context.within_dicussion(function(buffer)
         --https://docs.github.com/en/graphql/reference/enums#discussionclosereason
         local reasons = {
           "Duplicate",
@@ -198,7 +176,7 @@ function M.setup()
             },
           }
         end)
-      end,
+      end),
     },
     type = {
       add = context.within_issue(function(buffer)
@@ -308,13 +286,7 @@ function M.setup()
         end
         picker.milestones(opts)
       end,
-      remove = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
+      remove = context.within_issue_or_pr(function(buffer)
         local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
         local milestone = node.milestone
         if utils.is_blank(milestone) then
@@ -323,7 +295,7 @@ function M.setup()
         end
 
         utils.remove_milestone(buffer:isIssue(), buffer.number)
-      end,
+      end),
       create = function(milestoneTitle)
         if utils.is_blank(milestoneTitle) then
           vim.fn.inputsave()
@@ -465,16 +437,9 @@ function M.setup()
       edit = function(...)
         utils.get_pull_request(...)
       end,
-      runs = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer or not buffer:isPullRequest() then
-          utils.error "Not a pull request buffer"
-          return
-        end
-        local headRefName = buffer:pullRequest().headRefName
-
-        require("octo.workflow_runs").list { branch = headRefName }
-      end,
+      runs = context.within_pr(function(buffer)
+        require("octo.workflow_runs").list { branch = buffer:pullRequest().headRefName }
+      end),
       close = function()
         M.change_state "CLOSED"
       end,
