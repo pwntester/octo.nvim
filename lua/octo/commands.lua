@@ -481,15 +481,13 @@ function M.setup()
       merge = function(...)
         M.merge_pr(...)
       end,
-      checks = function()
-        M.pr_checks()
-      end,
-      ready = function()
-        M.gh_pr_ready { undo = false }
-      end,
-      draft = function()
-        M.gh_pr_ready { undo = true }
-      end,
+      checks = context.within_pr(M.pr_checks),
+      ready = context.within_pr(function(buffer)
+        M.gh_pr_ready { number = buffer.number, bufnr = buffer.bufnr, undo = false }
+      end),
+      draft = context.within_pr(function(buffer)
+        M.gh_pr_ready { number = buffer.number, bufnr = buffer.bufnr, undo = true }
+      end),
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         if utils.is_blank(opts.repo) then
@@ -1684,26 +1682,22 @@ function M.save_pr(opts)
 end
 
 --- @class PRReadyOpts
+--- @field number integer PR number
+--- @field bufnr integer Buffer number
 --- @field undo boolean Whether to undo from ready to draft
 
 --- Change PR state to ready for review or draft
 --- @param opts PRReadyOpts
 function M.gh_pr_ready(opts)
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    utils.error "Not a PR buffer"
-    return
-  end
-
   gh.pr.ready {
-    buffer.number,
+    opts.number,
     undo = opts.undo,
     opts = {
       cb = gh.create_callback {
         -- There seems to be something wrong with the CLI output. It comes back as stderr
         failure = function(output)
           utils.info(output)
-          writers.write_state(buffer.bufnr)
+          writers.write_state(opts.bufnr)
         end,
         success = utils.error,
       },
@@ -1760,13 +1754,8 @@ local format_checks = function(parts)
   return lines
 end
 
-function M.pr_checks()
-  local buffer = utils.get_current_buffer()
-
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-
+---@param buffer OctoBuffer
+function M.pr_checks(buffer)
   local mappings = require("octo.config").values.mappings.runs
 
   local function show_checks(data)
