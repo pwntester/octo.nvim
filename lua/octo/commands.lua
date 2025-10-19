@@ -147,7 +147,7 @@ function M.setup()
         prompt = "repo:" .. repo .. " " .. prompt
         picker.search { prompt = prompt, type = "DISCUSSION" }
       end,
-      close = context.within_dicussion(function(buffer)
+      close = context.within_discussion(function(buffer)
         --https://docs.github.com/en/graphql/reference/enums#discussionclosereason
         local reasons = {
           "Duplicate",
