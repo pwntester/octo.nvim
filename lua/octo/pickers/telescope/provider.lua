@@ -402,37 +402,39 @@ function M.commits()
   if not buffer or not buffer:isPullRequest() then
     return
   end
+
   -- TODO: graphql
-  local url = string.format("repos/%s/pulls/%d/commits", buffer.repo, buffer.number)
-  gh.run {
-    args = { "api", "--paginate", url },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local results = vim.json.decode(output)
-        pickers
-          .new({}, {
-            prompt_title = false,
-            results_title = false,
-            preview_title = false,
-            finder = finders.new_table {
-              results = results,
-              entry_maker = entry_maker.gen_from_git_commits(),
-            },
-            sorter = conf.generic_sorter {},
-            previewer = previewers.commit.new { repo = buffer.repo },
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr, type)
-                open_preview_buffer(type)(prompt_bufnr)
-              end)
-              map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+  gh.api.get {
+    "/repos/{repo}/pulls/{number}/commits",
+    format = { repo = buffer.repo, number = buffer.number },
+    paginate = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          pickers
+            .new({}, {
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_git_commits(),
+              },
+              sorter = conf.generic_sorter {},
+              previewer = previewers.commit.new { repo = buffer.repo },
+              attach_mappings = function(_, map)
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open_preview_buffer(type)(prompt_bufnr)
+                end)
+                map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
+                return true
+              end,
+            })
+            :find()
+        end,
+      },
+    },
   }
 end
 
@@ -442,61 +444,62 @@ function M.review_commits(callback)
     utils.error "No review in progress"
     return
   end
+
   -- TODO: graphql
-  local url =
-    string.format("repos/%s/pulls/%d/commits", current_review.pull_request.repo, current_review.pull_request.number)
-  gh.run {
-    args = { "api", "--paginate", url },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local results = vim.json.decode(output)
+  gh.api.get {
+    "/repos/{repo}/pulls/{number}/commits",
+    format = { repo = current_review.pull_request.repo, number = current_review.pull_request.number },
+    paginate = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
 
-        -- add a fake entry to represent the entire pull request
-        table.insert(results, {
-          sha = current_review.pull_request.right.commit,
-          commit = {
-            message = "[[ENTIRE PULL REQUEST]]",
-            author = {
-              name = "",
-              email = "",
-              date = "",
+          -- add a fake entry to represent the entire pull request
+          table.insert(results, {
+            sha = current_review.pull_request.right.commit,
+            commit = {
+              message = "[[ENTIRE PULL REQUEST]]",
+              author = {
+                name = "",
+                email = "",
+                date = "",
+              },
             },
-          },
-          parents = {
-            {
-              sha = current_review.pull_request.left.commit,
+            parents = {
+              {
+                sha = current_review.pull_request.left.commit,
+              },
             },
-          },
-        })
-
-        pickers
-          .new({}, {
-            prompt_title = false,
-            results_title = false,
-            preview_title = false,
-            finder = finders.new_table {
-              results = results,
-              entry_maker = entry_maker.gen_from_git_commits(),
-            },
-            sorter = conf.generic_sorter {},
-            previewer = previewers.commit.new { repo = current_review.pull_request.repo },
-            attach_mappings = function(_, map)
-              action_set.select:replace(function(prompt_bufnr)
-                local commit = action_state.get_selected_entry(prompt_bufnr)
-                local right = commit.value
-                local left = commit.parent
-                actions.close(prompt_bufnr)
-                callback(right, left)
-              end)
-              map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
-              return true
-            end,
           })
-          :find()
-      end
-    end,
+
+          pickers
+            .new({}, {
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_git_commits(),
+              },
+              sorter = conf.generic_sorter {},
+              previewer = previewers.commit.new { repo = current_review.pull_request.repo },
+              attach_mappings = function(_, map)
+                action_set.select:replace(function(prompt_bufnr)
+                  local commit = action_state.get_selected_entry(prompt_bufnr)
+                  local right = commit.value
+                  local left = commit.parent
+                  actions.close(prompt_bufnr)
+                  callback(right, left)
+                end)
+                map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
+                return true
+              end,
+            })
+            :find()
+        end,
+      },
+    },
   }
 end
 
@@ -508,57 +511,58 @@ function M.changed_files()
   if not buffer or not buffer:isPullRequest() then
     return
   end
-  local url = string.format("repos/%s/pulls/%d/files", buffer.repo, buffer.number)
-  gh.run {
-    args = { "api", "--paginate", url },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local results = vim.json.decode(output)
 
-        local max_additions = -1
-        local max_deletions = -1
-        for _, result in ipairs(results) do
-          if result.additions > max_additions then
-            max_additions = result.additions
-          end
-          if result.deletions > max_deletions then
-            max_deletions = result.deletions
-          end
-        end
+  gh.api.get {
+    "/repos/{repo}/pulls/{number}/files",
+    format = { repo = buffer.repo, number = buffer.number },
+    paginate = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
 
-        pickers
-          .new({}, {
-            prompt_title = false,
-            results_title = false,
-            preview_title = false,
-            finder = finders.new_table {
-              results = results,
-              entry_maker = entry_maker.gen_from_git_changed_files {
-                max_additions = max_additions,
-                max_deletions = max_deletions,
+          local max_additions = -1
+          local max_deletions = -1
+          for _, result in ipairs(results) do
+            if result.additions > max_additions then
+              max_additions = result.additions
+            end
+            if result.deletions > max_deletions then
+              max_deletions = result.deletions
+            end
+          end
+
+          pickers
+            .new({}, {
+              prompt_title = false,
+              results_title = false,
+              preview_title = false,
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_git_changed_files {
+                  max_additions = max_additions,
+                  max_deletions = max_deletions,
+                },
               },
-            },
-            sorter = conf.generic_sorter {},
-            previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
-            attach_mappings = function()
-              action_set.select:replace(function(prompt_bufnr, type)
-                open_preview_buffer(type)(prompt_bufnr)
-              end)
-              return true
-            end,
-          })
-          :find()
-      end
-    end,
+              sorter = conf.generic_sorter {},
+              previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
+              attach_mappings = function()
+                action_set.select:replace(function(prompt_bufnr, type)
+                  open_preview_buffer(type)(prompt_bufnr)
+                end)
+                return true
+              end,
+            })
+            :find()
+        end,
+      },
+    },
   }
 end
 
 ---
 -- SEARCH
 ---
-
 local function get_search_query(prompt)
   local full_prompt = prompt[1]
   local parts = vim.split(full_prompt, " ")
