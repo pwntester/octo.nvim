@@ -206,3 +206,20 @@ describe("format_seconds", function()
     eq(this.format_seconds(90061), "1d1h")
   end)
 end)
+
+describe("utils.pop_key", function()
+  it("pops existing key", function()
+    local tbl = { a = 1, b = 2, c = 3 }
+    local value = this.pop_key(tbl, "b")
+
+    eq(value, 2)
+    eq(tbl, { a = 1, c = 3 })
+  end)
+  it("returns nil for non-existing key", function()
+    local tbl = { a = 1, b = 2, c = 3 }
+    local value = this.pop_key(tbl, "d")
+
+    eq(value, nil)
+    eq(tbl, { a = 1, b = 2, c = 3 })
+  end)
+end)

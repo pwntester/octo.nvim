@@ -2063,4 +2063,13 @@ function M.print_err(msg)
   vim.api.nvim_echo({ { msg } }, true, { err = true })
 end
 
+---@param tbl table<any, any>
+---@param key any
+---@return any
+function M.pop_key(tbl, key)
+  local value = tbl[key]
+  tbl[key] = nil
+  return value
+end
+
 return M

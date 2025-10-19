@@ -2,6 +2,7 @@
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local fzf = require "fzf-lua"
 local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
@@ -14,10 +15,11 @@ return function(cb)
     if not prompt or prompt == "" or utils.is_blank(prompt) then
       return {}
     end
-    local query = graphql("users_query", prompt)
-    local output = gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      mode = "sync",
+    local output = gh.api.graphql {
+      query = queries.users,
+      F = { prompt = prompt },
+      paginate = true,
+      opts = { mode = "sync" },
     }
     if output then
       local users = {}
