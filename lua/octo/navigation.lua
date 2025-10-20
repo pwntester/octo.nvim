@@ -150,7 +150,7 @@ end
 
 function M.next_comment()
   local buffer = utils.get_current_buffer()
-  if buffer.kind then
+  if buffer and buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
     local lines = utils.get_sorted_comment_lines(buffer.bufnr)
@@ -188,7 +188,7 @@ end
 
 function M.prev_comment()
   local buffer = utils.get_current_buffer()
-  if buffer.kind then
+  if buffer and buffer.kind then
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
     local lines = utils.get_sorted_comment_lines(buffer.bufnr)
