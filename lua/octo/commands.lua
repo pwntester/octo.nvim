@@ -511,9 +511,7 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
-      sha = function()
-        M.copy_sha()
-      end,
+      sha = M.copy_sha,
     },
     repo = {
       search = function(prompt)
@@ -2434,32 +2432,15 @@ function M.copy_url()
   utils.copy_url(url)
 end
 
-function M.copy_sha()
-  local buffer = utils.get_current_buffer()
-
-  if not buffer then
-    utils.error "No buffer found"
-    return
-  end
-
-  local sha
-  if buffer:isPullRequest() then
-    sha = buffer:pullRequest().headRefOid
-  elseif buffer:isIssue() then
-    utils.error "Issues don't have commit SHAs"
-    return
-  else
-    utils.error "Not in a supported buffer type"
-    return
-  end
-
+M.copy_sha = context.within_pr(function(buffer)
+  local sha = buffer:pullRequest().headRefOid
   if not sha then
     utils.error "No SHA found"
     return
   end
 
   utils.copy_sha(sha)
-end
+end)
 
 function M.actions()
   local flattened_actions = {}
