@@ -4,6 +4,9 @@ local utils = require "octo.utils"
 
 return function(callback)
   local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
   local obj = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
   local cards = obj.projectItems
   if not cards or #cards.nodes == 0 then

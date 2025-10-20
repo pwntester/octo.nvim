@@ -2043,6 +2043,7 @@ function M.input(opts)
   return value
 end
 
+---@return OctoBuffer?
 function M.get_current_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   return octo_buffers[bufnr]

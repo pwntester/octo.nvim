@@ -1,3 +1,4 @@
+local context = require "octo.context"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
 
@@ -8,13 +9,9 @@ return {
   reopen_issue = function()
     require("octo.commands").change_state "OPEN"
   end,
-  list_issues = function()
-    local buffer = utils.get_current_buffer()
-    local repo = buffer.repo
-    if repo then
-      require("octo.picker").issues { repo = repo }
-    end
-  end,
+  list_issues = context.within_octo_buffer(function(buffer)
+    require("octo.picker").issues { repo = buffer.repo }
+  end),
   checkout_pr = function()
     require("octo.commands").commands.pr.checkout()
   end,

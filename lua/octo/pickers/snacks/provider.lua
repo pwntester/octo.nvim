@@ -588,17 +588,11 @@ function M.issue_templates(templates, cb)
   }
 end
 
+---@param opts {repo: string, number: integer, title: string?}
 function M.commits(opts)
-  opts = opts or {}
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    utils.error "Commits picker only works in pull request buffers"
-    return
-  end
-
   gh.api.get {
-    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
-    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    "/repos/{repo}/pulls/{number}/commits",
+    format = { repo = opts.repo, number = opts.number },
     opts = {
       paginate = true,
       cb = gh.create_callback {
@@ -1092,17 +1086,11 @@ function M.search(opts)
   end
 end
 
+---@param opts {repo: string, number: integer, title: string?}
 function M.changed_files(opts)
-  opts = opts or {}
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    utils.error "Changed files picker only works in pull request buffers"
-    return
-  end
-
   gh.api.get {
-    "/repos/{owner}/{repo}/pulls/{pull_number}/files",
-    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    "/repos/{repo}/pulls/{number}/files",
+    format = { repo = opts.repo, number = opts.number },
     opts = {
       paginate = true,
       cb = gh.create_callback {

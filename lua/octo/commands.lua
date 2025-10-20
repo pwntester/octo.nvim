@@ -1,5 +1,6 @@
 ---@diagnostic disable
 local constants = require "octo.constants"
+local context = require "octo.context"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
@@ -123,18 +124,7 @@ function M.setup()
 
         require("octo.discussions").create(opts)
       end,
-      reopen = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
-        if not buffer:isDiscussion() then
-          utils.error "Not a discussion buffer"
-          return
-        end
-
+      reopen = context.within_discussion(function(buffer)
         gh.api.graphql {
           query = mutations.reopen_discussion,
           fields = { discussion_id = buffer:discussion().id },
@@ -149,7 +139,7 @@ function M.setup()
             },
           },
         }
-      end,
+      end),
       search = function(...)
         local args = table.pack(...)
         local prompt = table.concat(args, " ")
@@ -157,18 +147,7 @@ function M.setup()
         prompt = "repo:" .. repo .. " " .. prompt
         picker.search { prompt = prompt, type = "DISCUSSION" }
       end,
-      close = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
-        if not buffer:isDiscussion() then
-          utils.error "Not a discussion buffer"
-          return
-        end
-
+      close = context.within_discussion(function(buffer)
         --https://docs.github.com/en/graphql/reference/enums#discussionclosereason
         local reasons = {
           "Duplicate",
@@ -197,10 +176,10 @@ function M.setup()
             },
           }
         end)
-      end,
+      end),
     },
     type = {
-      add = M.within_issue(function(buffer)
+      add = context.within_issue(function(buffer)
         local owner, repo = utils.split_repo(buffer.repo)
 
         gh.api.graphql {
@@ -256,7 +235,7 @@ function M.setup()
           },
         }
       end),
-      remove = M.within_issue(function(buffer)
+      remove = context.within_issue(function(buffer)
         local current_type = buffer:issue().issueType
 
         if not current_type or utils.is_blank(current_type) then
@@ -307,13 +286,7 @@ function M.setup()
         end
         picker.milestones(opts)
       end,
-      remove = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
+      remove = context.within_issue_or_pr(function(buffer)
         local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
         local milestone = node.milestone
         if utils.is_blank(milestone) then
@@ -322,7 +295,7 @@ function M.setup()
         end
 
         utils.remove_milestone(buffer:isIssue(), buffer.number)
-      end,
+      end),
       create = function(milestoneTitle)
         if utils.is_blank(milestoneTitle) then
           vim.fn.inputsave()
@@ -338,7 +311,7 @@ function M.setup()
       end,
     },
     parent = {
-      edit = M.within_issue(function(buffer)
+      edit = context.within_issue(function(buffer)
         local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
@@ -349,7 +322,7 @@ function M.setup()
         local uri = string.format("octo://%s/issue/%s", buffer.repo, parent.number)
         vim.cmd.edit(uri)
       end),
-      remove = M.within_issue(function(buffer)
+      remove = context.within_issue(function(buffer)
         local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
@@ -375,7 +348,7 @@ function M.setup()
           },
         }
       end),
-      add = M.within_issue(function(buffer)
+      add = context.within_issue(function(buffer)
         local opts = {}
         opts.cb = function(selected)
           gh.api.graphql {
@@ -411,10 +384,10 @@ function M.setup()
         stateReason = stateReason or "CLOSED"
         M.change_state(stateReason)
       end,
-      unpin = M.within_issue(function(buffer)
+      unpin = context.within_issue(function(buffer)
         M.pin_issue { obj = buffer:issue(), add = false }
       end),
-      pin = M.within_issue(function(buffer)
+      pin = context.within_issue(function(buffer)
         M.pin_issue { obj = buffer:issue(), add = true }
       end),
       develop = function(repo, ...)
@@ -464,16 +437,9 @@ function M.setup()
       edit = function(...)
         utils.get_pull_request(...)
       end,
-      runs = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer or not buffer:isPullRequest() then
-          utils.error "Not a pull request buffer"
-          return
-        end
-        local headRefName = buffer:pullRequest().headRefName
-
-        require("octo.workflow_runs").list { branch = headRefName }
-      end,
+      runs = context.within_pr(function(buffer)
+        require("octo.workflow_runs").list { branch = buffer:pullRequest().headRefName }
+      end),
       close = function()
         M.change_state "CLOSED"
       end,
@@ -503,27 +469,25 @@ function M.setup()
       create = function(...)
         M.create_pr(...)
       end,
-      commits = function()
-        picker.commits()
-      end,
-      changes = function()
-        picker.changed_files()
-      end,
+      commits = context.within_pr(function(buffer)
+        picker.commits(buffer)
+      end),
+      changes = context.within_pr(function(buffer)
+        picker.changed_files(buffer)
+      end),
       diff = function()
         M.show_pr_diff()
       end,
       merge = function(...)
         M.merge_pr(...)
       end,
-      checks = function()
-        M.pr_checks()
-      end,
-      ready = function()
-        M.gh_pr_ready { undo = false }
-      end,
-      draft = function()
-        M.gh_pr_ready { undo = true }
-      end,
+      checks = context.within_pr(M.pr_checks),
+      ready = context.within_pr(function(buffer)
+        M.gh_pr_ready { number = buffer.number, bufnr = buffer.bufnr, undo = false }
+      end),
+      draft = context.within_pr(function(buffer)
+        M.gh_pr_ready { number = buffer.number, bufnr = buffer.bufnr, undo = true }
+      end),
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         if utils.is_blank(opts.repo) then
@@ -547,9 +511,7 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
-      sha = function()
-        M.copy_sha()
-      end,
+      sha = M.copy_sha,
     },
     repo = {
       search = function(prompt)
@@ -602,14 +564,9 @@ function M.setup()
       resume = function()
         reviews.resume_review()
       end,
-      comments = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          current_review:show_pending_comments()
-        else
-          utils.error "Please start or resume a review first"
-        end
-      end,
+      comments = context.within_review(function(current_review)
+        current_review:show_pending_comments()
+      end),
       submit = function()
         reviews.submit_review()
       end,
@@ -623,16 +580,11 @@ function M.setup()
           utils.error "Please start or resume a review first"
         end
       end,
-      commit = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          picker.review_commits(function(right, left)
-            current_review:focus_commit(right, left)
-          end)
-        else
-          utils.error "Please start or resume a review first"
-        end
-      end,
+      commit = context.within_review(function(current_review)
+        picker.review_commits(current_review, function(left, right)
+          current_review:focus_commit(left, right)
+        end)
+      end),
       thread = function()
         require("octo.reviews.thread-panel").show_review_threads(true)
       end,
@@ -673,15 +625,9 @@ function M.setup()
           M.add_pr_issue_or_review_thread_comment()
         end
       end,
-      suggest = function()
-        local current_review = reviews.get_current_review()
-        if not current_review then
-          utils.error "Please start or resume a review first"
-          return
-        end
-
+      suggest = context.within_review(function(current_review)
         current_review:add_comment(true)
-      end,
+      end),
       reply = M.add_pr_issue_or_review_thread_comment_reply,
       url = function()
         local buffer = utils.get_current_buffer()
@@ -1734,26 +1680,22 @@ function M.save_pr(opts)
 end
 
 --- @class PRReadyOpts
+--- @field number integer PR number
+--- @field bufnr integer Buffer number
 --- @field undo boolean Whether to undo from ready to draft
 
 --- Change PR state to ready for review or draft
 --- @param opts PRReadyOpts
 function M.gh_pr_ready(opts)
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    utils.error "Not a PR buffer"
-    return
-  end
-
   gh.pr.ready {
-    buffer.number,
+    opts.number,
     undo = opts.undo,
     opts = {
       cb = gh.create_callback {
         -- There seems to be something wrong with the CLI output. It comes back as stderr
         failure = function(output)
           utils.info(output)
-          writers.write_state(buffer.bufnr)
+          writers.write_state(opts.bufnr)
         end,
         success = utils.error,
       },
@@ -1810,13 +1752,8 @@ local format_checks = function(parts)
   return lines
 end
 
-function M.pr_checks()
-  local buffer = utils.get_current_buffer()
-
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-
+---@param buffer OctoBuffer
+function M.pr_checks(buffer)
   local mappings = require("octo.config").values.mappings.runs
 
   local function show_checks(data)
@@ -2495,32 +2432,15 @@ function M.copy_url()
   utils.copy_url(url)
 end
 
-function M.copy_sha()
-  local buffer = utils.get_current_buffer()
-
-  if not buffer then
-    utils.error "No buffer found"
-    return
-  end
-
-  local sha
-  if buffer:isPullRequest() then
-    sha = buffer:pullRequest().headRefOid
-  elseif buffer:isIssue() then
-    utils.error "Issues don't have commit SHAs"
-    return
-  else
-    utils.error "Not in a supported buffer type"
-    return
-  end
-
+M.copy_sha = context.within_pr(function(buffer)
+  local sha = buffer:pullRequest().headRefOid
   if not sha then
     utils.error "No SHA found"
     return
   end
 
   utils.copy_sha(sha)
-end
+end)
 
 function M.actions()
   local flattened_actions = {}
@@ -2556,19 +2476,6 @@ function M.search(...)
   end
 
   picker.search { prompt = prompt, type = type }
-end
-
----@param cb fun(buffer: OctoBuffer): nil
-function M.within_issue(cb)
-  return function()
-    local buffer = utils.get_current_buffer()
-    if not buffer or not buffer:isIssue() then
-      utils.error "Not an issue buffer"
-      return
-    end
-
-    cb(buffer)
-  end
 end
 
 --- @class PinIssueOpts
