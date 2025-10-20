@@ -81,6 +81,9 @@ end
 
 function M.save_buffer()
   local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
   buffer:save()
 end
 
@@ -198,6 +201,9 @@ end
 
 function M.render_signs()
   local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
   buffer:render_signs()
 end
 
