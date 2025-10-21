@@ -14,7 +14,7 @@ function M.request_read_notification(thread_id)
     format = { id = thread_id },
     opts = {
       cb = gh.create_callback { success = function() end },
-      headers = { "Accept: application/vnd.github+json" },
+      headers = { gh.headers.json },
     },
   }
 end
@@ -23,7 +23,7 @@ end
 function M.delete_notification(thread_id)
   local opts = {
     cb = gh.create_callback { success = function() end },
-    headers = { "Accept: application/vnd.github.v3.diff" },
+    headers = { gh.headers.diff },
   }
   gh.api.delete {
     "/notifications/threads/{id}",
@@ -43,7 +43,7 @@ function M.unsubscribe_notification(thread_id)
           M.request_read_notification(thread_id)
         end,
       },
-      headers = { "Accept: application/vnd.github+json" },
+      headers = { gh.headers.json },
     },
   }
 end

@@ -53,7 +53,7 @@ return function(opts)
         all = opts.all,
       },
       opts = {
-        headers = { "Accept: application/vnd.github.v3.diff" },
+        headers = { gh.headers.diff },
         stream_cb = function(data, err)
           if err and not utils.is_blank(err) then
             utils.error(err)

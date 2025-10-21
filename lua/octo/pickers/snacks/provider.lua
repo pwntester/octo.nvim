@@ -331,7 +331,7 @@ function M.notifications(opts)
     endpoint,
     paginate = true,
     opts = {
-      headers = { "Accept: application/vnd.github.v3.diff" },
+      headers = { gh.headers.diff },
       cb = gh.create_callback {
         success = function(output)
           local notifications = vim.json.decode(output)
@@ -443,7 +443,7 @@ function M.notifications(opts)
                 "/notifications/threads/{id}",
                 format = { id = item.id },
                 opts = {
-                  headers = { "Accept: application/vnd.github.v3.diff" },
+                  headers = { gh.headers.diff },
                   cb = gh.create_callback { success = function() end },
                 },
               }

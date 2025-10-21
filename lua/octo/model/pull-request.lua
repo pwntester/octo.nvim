@@ -108,7 +108,7 @@ function PullRequest:get_diff(pr)
   local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
   gh.run {
     args = { "api", "--paginate", url },
-    headers = { "Accept: application/vnd.github.v3.diff" },
+    headers = { gh.headers.diff },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)

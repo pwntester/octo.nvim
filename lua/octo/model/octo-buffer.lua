@@ -941,7 +941,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
       "--jq",
       ".",
     },
-    headers = { "Accept: application/vnd.github.v3+json" },
+    headers = { gh.headers.json },
     cb = function(output, stderr)
       if not utils.is_blank(stderr) then
         utils.error(stderr)

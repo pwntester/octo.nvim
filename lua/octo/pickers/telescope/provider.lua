@@ -1409,7 +1409,7 @@ function M.notifications(opts)
       all = opts.all,
     },
     opts = {
-      headers = { "Accept: application/vnd.github.v3.diff" },
+      headers = { gh.headers.diff },
       cb = gh.create_callback { success = create_notification_picker },
     },
   }
