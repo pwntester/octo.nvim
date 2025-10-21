@@ -1350,10 +1350,9 @@ function M.change_state(state)
     fields = { issueId = id }
   elseif buffer:isIssue() then
     query = mutations.close_issue
-    fields = { issueId = id, stateReason = state }
     desired_state = "CLOSED"
     jq = ".data.closeIssue.issue"
-    fields = {}
+    fields = { issueId = id, stateReason = state }
   elseif buffer:isPullRequest() then
     query = mutations.update_pull_request_state
     desired_state = state
@@ -1374,12 +1373,7 @@ function M.change_state(state)
     local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
     writers.write_state(buffer.bufnr, updated_state:upper(), buffer.number)
     writers.write_details(buffer.bufnr, obj, true)
-    local kind
-    if buffer:isIssue() then
-      kind = "Issue"
-    else
-      kind = "Pull Request"
-    end
+    local kind = buffer:isIssue() and "Issue" or "Pull Request"
     utils.info(kind .. " state changed to: " .. updated_state)
   end
 
@@ -1420,7 +1414,7 @@ function M.create_issue(repo)
   end
 end
 
----@type SaveIssueOpts
+---@class SaveIssueOpts
 ---@field repo string
 ---@field base_title string
 ---@field base_body? string
@@ -1671,11 +1665,13 @@ function M.save_pr(opts)
       },
       jq = ".data.createPullRequest.pullRequest",
       opts = {
-        success = function(output)
-          local pr = vim.json.decode(output)
-          utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
-          require("octo").create_buffer("pull", pr, opts.repo, true)
-        end,
+        cb = gh.create_callback {
+          success = function(output)
+            local pr = vim.json.decode(output)
+            utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
+            require("octo").create_buffer("pull", pr, opts.repo, true)
+          end,
+        },
       },
     }
   end
