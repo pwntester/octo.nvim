@@ -435,9 +435,9 @@ function M.commits(opts)
   }
 end
 
----@param review Review
+---@param current_review Review
 ---@param callback fun(right: Rev, left: Rev): nil
-function M.review_commits(review, callback)
+function M.review_commits(current_review, callback)
   -- TODO: graphql
   gh.api.get {
     "/repos/{repo}/pulls/{number}/commits",

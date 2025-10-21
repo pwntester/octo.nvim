@@ -711,22 +711,17 @@ function M.commits(opts)
   }
 end
 
-function M.review_commits(callback)
-  local current_review = require("octo.reviews").get_current_review()
-  if not current_review then
-    utils.error "No review in progress"
-    return
-  end
-
+---@param current_review Review
+---@param callback fun(left: Rev, right: Rev): nil
+function M.review_commits(current_review, callback)
   gh.api.get {
-    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
+    "/repos/{repo}/pulls/{number}/commits",
     format = {
-      owner = current_review.pull_request.repo:match "([^/]+)/",
-      repo = current_review.pull_request.repo:match "/(.+)",
-      pull_number = current_review.pull_request.number,
+      repo = current_review.pull_request.repo,
+      number = current_review.pull_request.number,
     },
+    paginate = true,
     opts = {
-      paginate = true,
       cb = gh.create_callback {
         success = function(output)
           local results = vim.json.decode(output)
