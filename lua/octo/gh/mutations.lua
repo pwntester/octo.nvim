@@ -118,8 +118,8 @@ mutation {
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed = [[
-mutation {
-  markFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+mutation($path: String!, $pullRequestId: ID!) {
+  markFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
     pullRequest {
       files(first:100){
         nodes {
@@ -134,8 +134,8 @@ mutation {
 
 -- https://docs.github.com/en/graphql/reference/mutations#unmarkfileasviewed
 M.unmark_file_as_viewed = [[
-mutation {
-  unmarkFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+mutation($path: String!, $pullRequestId: ID!) {
+  unmarkFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
     pullRequest {
       files(first:100){
         nodes {
