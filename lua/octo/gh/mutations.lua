@@ -235,37 +235,37 @@ mutation($input: AddPullRequestReviewThreadInput!) {
 
 ---@class octo.mutations.AddPullRequestReviewThread
 ---@field thread {
----  id: string,
----  comments: {
----  nodes: {
----  id: string,
----  body: string,
----  diffHunk: string,
----  createdAt: string,
----  lastEditedAt: string,
----  commit: {
----    oid: string,
----    abbreviatedOid: string,
----  },
----  author: {
----    login: string,
----  },
----  authorAssociation: string,
----  viewerDidAuthor: boolean,
----  viewerCanUpdate: boolean,
----  viewerCanDelete: boolean,
----  state: string,
----  url: string,
----  replyTo: {
----    id: string,
----    url: string,
----  },
----  pullRequest: {
----    reviewThreads: {
----      nodes: octo.ReviewThread[],
----    },
----  },
----  path: string,
+---   id: string,
+---   comments: {
+---     nodes: {
+---       id: string,
+---       body: string,
+---       diffHunk: string,
+---       createdAt: string,
+---       lastEditedAt: string,
+---       commit: {
+---         oid: string,
+---         abbreviatedOid: string,
+---       },
+---       author: {
+---         login: string,
+---       },
+---       authorAssociation: string,
+---       viewerDidAuthor: boolean,
+---       viewerCanUpdate: boolean,
+---       viewerCanDelete: boolean,
+---       state: string,
+---       url: string,
+---       replyTo: {
+---         id: string,
+---         url: string,
+---       },
+---       pullRequest: {
+---         reviewThreads: {
+---           nodes: octo.ReviewThread[],
+---         },
+---       },
+---       path: string,
 ---     }[],
 ---   },
 ---   pullRequest: {
