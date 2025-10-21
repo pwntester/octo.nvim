@@ -766,6 +766,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         cb = gh.create_callback {
           failure = utils.print_err,
           success = function(output)
+            ---@type octo.mutations.AddPullRequestReviewThread
             local resp = vim.json.decode(output)
 
             if utils.is_blank(resp) then
