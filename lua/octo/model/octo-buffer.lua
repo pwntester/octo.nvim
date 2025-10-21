@@ -745,8 +745,6 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
 
   -- create new thread
   if review_level == "PR" then
-    local query = mutations.add_pull_request_review_thread
-
     local input = {
       pullRequestReviewId = comment_metadata.reviewId,
       body = comment_metadata.body,
