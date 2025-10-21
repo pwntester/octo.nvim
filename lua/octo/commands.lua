@@ -1339,25 +1339,26 @@ function M.change_state(state)
   local id = node.id
   local query, jq, desired_state, fields
   if buffer:isIssue() and state == "CLOSED" then
-    query = graphql("update_issue_state_mutation", id, state)
+    query = mutations.update_issue_state
     desired_state = state
     jq = ".data.updateIssue.issue"
-    fields = {}
+    fields = { id = id, state = state }
   elseif buffer:isIssue() and state == "OPEN" then
     query = mutations.reopen_issue
     desired_state = "OPEN"
     jq = ".data.reopenIssue.issue"
     fields = { issueId = id }
   elseif buffer:isIssue() then
-    query = graphql("close_issue_mutation", id, state)
+    query = mutations.close_issue
+    fields = { issueId = id, stateReason = state }
     desired_state = "CLOSED"
     jq = ".data.closeIssue.issue"
     fields = {}
   elseif buffer:isPullRequest() then
-    query = graphql("update_pull_request_state_mutation", id, state)
+    query = mutations.update_pull_request_state
     desired_state = state
     jq = ".data.updatePullRequest.pullRequest"
-    fields = {}
+    fields = { pullRequestId = id, state = state }
   end
 
   local function update_state(output)
@@ -1419,6 +1420,12 @@ function M.create_issue(repo)
   end
 end
 
+---@type SaveIssueOpts
+---@field repo string
+---@field base_title string
+---@field base_body? string
+
+---@param opts SaveIssueOpts
 function M.save_issue(opts)
   vim.fn.inputsave()
   local title = vim.fn.input(string.format("Creating issue in %s. Enter title: ", opts.repo), opts.base_title)
@@ -1442,20 +1449,19 @@ function M.save_issue(opts)
     -- TODO: let the user edit the template before submitting
   end
 
-  local repo_id = utils.get_repo_id(opts.repo)
-  local query = graphql("create_issue_mutation", repo_id, title, body)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        require("octo").create_buffer("issue", resp.data.createIssue.issue, opts.repo, true)
-        vim.fn.execute "normal! Gk"
-        vim.fn.execute "startinsert"
-      end
-    end,
+  gh.api.graphql {
+    query = mutations.create_issue,
+    jq = ".data.createIssue.issue",
+    F = { input = { repositoryId = utils.get_repo_id(opts.repo), title = title, body = body } },
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          require("octo").create_buffer("issue", vim.json.decode(output), opts.repo, true)
+          vim.fn.execute "normal! Gk"
+          vim.fn.execute "startinsert"
+        end,
+      },
+    },
   }
 end
 
@@ -1649,32 +1655,28 @@ function M.save_pr(opts)
   vim.fn.inputrestore()
 
   local repo_id = utils.get_repo_id(opts.candidates[repo_idx])
-  title = title and title or ""
-  body = body and body or ""
-  local query = graphql(
-    "create_pr_mutation",
-    base_ref_name,
-    head_ref_name,
-    repo_id,
-    utils.escape_char(title),
-    utils.escape_char(body),
-    opts.is_draft
-  )
-
   local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          local resp = vim.json.decode(output)
-          local pr = resp.data.createPullRequest.pullRequest
+    gh.api.graphql {
+      query = mutations.create_pr,
+      F = {
+        input = {
+          repositoryId = repo_id,
+          baseRefName = base_ref_name,
+          headRefName = head_ref_name,
+          title = title and title or "",
+          body = body and body or "",
+          draft = opts.is_draft,
+        },
+      },
+      jq = ".data.createPullRequest.pullRequest",
+      opts = {
+        success = function(output)
+          local pr = vim.json.decode(output)
           utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
           require("octo").create_buffer("pull", pr, opts.repo, true)
-        end
-      end,
+        end,
+      },
     }
   end
 end
