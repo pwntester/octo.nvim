@@ -387,9 +387,12 @@ function M.api.graphql(opts)
   }
 end
 
+---Mapping between format keys and their values
+---@alias FormatTable table<string, string | number>
+
 ---Format the endpoint with the format table
 ---@param endpoint string the endpoint to format
----@param format table<string, string> the format table
+---@param format FormatTable the format table
 local function format_endpoint(endpoint, format)
   for key, value in pairs(format) do
     endpoint = endpoint:gsub("{" .. key .. "}", value)
@@ -397,11 +400,13 @@ local function format_endpoint(endpoint, format)
   return endpoint
 end
 
----@class CreateRestArgsOpts
----@field [1] string
----@field format? table<string, string>
+---@alias Method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"
 
----@param method string? the rest method
+---@class CreateRestArgsOpts
+---@field [1] Method
+---@field format FormatTable?
+
+---@param method Method? the rest method
 ---@param opts CreateRestArgsOpts the options for the rest command
 ---@return string[]|nil
 function M.create_rest_args(method, opts)
@@ -428,7 +433,7 @@ end
 ---@field opts? RunOpts
 
 ---Run a rest command
----@param method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"|nil
+---@param method Method? the rest method
 ---@param opts RestOpts
 local function rest(method, opts)
   local run_opts = opts.opts or {}
