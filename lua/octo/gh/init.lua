@@ -403,7 +403,7 @@ end
 ---@alias Method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"
 
 ---@class CreateRestArgsOpts
----@field [1] Method
+---@field [1] string The endpoint to call
 ---@field format FormatTable?
 
 ---@param method Method? the rest method
