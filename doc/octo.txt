@@ -101,6 +101,7 @@ See |octo-command-examples| for examples.
   unmark                Mark the discussion comment as unanswered
   reopen                Reopen the discussion
   search                Live discussion search.
+  category              Change the category of the current discussion.
 
 
 :Octo parent [action] {args}                *octo-commands-parent*

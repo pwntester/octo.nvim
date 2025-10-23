@@ -396,6 +396,7 @@ mutation {
 ---@field discussionId string
 ---@field title string?
 ---@field body string?
+---@field categoryId string?
 
 M.update_discussion = [[
 mutation($input: UpdateDiscussionInput!) {

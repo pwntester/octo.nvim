@@ -114,6 +114,14 @@ function M.setup()
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
       end,
+      category = context.within_discussion(function(buffer)
+        local node = buffer:discussion()
+        require("octo.discussions").change_category {
+          repo = node.repository.nameWithOwner,
+          current_category = node.category.name,
+          discussion_id = node.id,
+        }
+      end),
       create = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
 
