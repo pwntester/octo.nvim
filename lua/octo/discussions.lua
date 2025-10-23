@@ -56,12 +56,7 @@ local function select_a_category(categories, callback, prompt, current)
       end
       return item.name
     end,
-  }, function(selected)
-    if selected == nil then
-      return
-    end
-    callback(selected)
-  end)
+  }, callback)
 end
 
 ---@class GetCategoriesOpts
@@ -146,7 +141,7 @@ M.change_category = function(opts)
       end
 
       if selected.name == opts.current_category then
-        utils.info("You are already in the " .. selected.name .. " category.")
+        utils.info("The category is kept as " .. selected.name .. ".")
         return
       end
 
