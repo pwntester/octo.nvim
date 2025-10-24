@@ -382,6 +382,21 @@ function M.setup()
       end),
     },
     issue = {
+      copilot = context.within_issue(function(buffer)
+        gh.issue.edit {
+          buffer:issue().number,
+          add_assignee = "@copilot",
+          opts = {
+            cb = function(_, _, exit_code)
+              if exit_code == 0 then
+                utils.info "GitHub Copilot assigned to the Issue"
+              else
+                utils.error "Failed to assign GitHub Copilot to the Issue"
+              end
+            end,
+          },
+        }
+      end),
       create = function(repo)
         M.create_issue(repo)
       end,
@@ -442,6 +457,21 @@ function M.setup()
       end,
     },
     pr = {
+      copilot = context.within_pr(function(buffer)
+        gh.pr.edit {
+          buffer:pullRequest().number,
+          add_assignee = "@copilot",
+          opts = {
+            cb = function(_, _, exit_code)
+              if exit_code == 0 then
+                utils.info "GitHub Copilot assigned to the Pull Request"
+              else
+                utils.error "Failed to assign GitHub Copilot to the Pull Request"
+              end
+            end,
+          },
+        }
+      end),
       edit = function(...)
         utils.get_pull_request(...)
       end,
