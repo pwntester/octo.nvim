@@ -426,7 +426,7 @@ function M.create_rest_args(method, opts)
   end
 
   opts.format = nil
-  return M.insert_args(args, opts)
+  return M.insert_args(args, opts, { ["_"] = "-" })
 end
 
 ---@class RestOpts : CreateRestArgsOpts
