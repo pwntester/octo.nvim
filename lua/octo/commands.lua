@@ -3,6 +3,7 @@ local constants = require "octo.constants"
 local context = require "octo.context"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
@@ -1910,7 +1911,7 @@ function M.show_pr_diff()
   local url = string.format("/repos/%s/pulls/%s", buffer.repo, buffer.number)
   gh.run {
     args = { "api", "--paginate", url },
-    headers = { gh.headers.diff },
+    headers = { headers.diff },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)

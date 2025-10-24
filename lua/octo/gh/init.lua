@@ -10,16 +10,6 @@ local vim = vim
 ---}
 local M = {}
 
----@class octo.Headers
----@field json string
----@field diff string
-
----@type octo.Headers
-M.headers = {
-  json = "Accept: application/vnd.github.v3+json",
-  diff = "Accept: application/vnd.github.v3.diff",
-}
-
 local headers = {
   "application/vnd.github.v3+json",
   "application/vnd.github.squirrel-girl-preview+json",

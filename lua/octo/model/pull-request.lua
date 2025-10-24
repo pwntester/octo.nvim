@@ -1,5 +1,6 @@
 local utils = require "octo.utils"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 
 local M = {}
 
@@ -108,7 +109,7 @@ function PullRequest:get_diff(pr)
   local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
   gh.run {
     args = { "api", "--paginate", url },
-    headers = { gh.headers.diff },
+    headers = { headers.diff },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
