@@ -194,6 +194,7 @@ function M.get_default_values()
       draft = "  ",
       ready = " ",
       commit = "  ",
+      deployed = "  ",
       issue_type = "  ",
       label = "  ",
       reference = " ",
