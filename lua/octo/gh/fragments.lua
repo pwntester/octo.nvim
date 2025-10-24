@@ -557,6 +557,26 @@ fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
 }
 ]]
 
+---https://docs.github.com/en/graphql/reference/enums#deploymentstatusstate
+---@alias DeploymentState "ABANDONED" | "ACTIVE" | "DESTROYED" | "ERROR" | "FAILURE" | "INACTIVE" | "IN_PROGRESS" | "PENDING" | "QUEUED" | "SUCCESS" | "WAITING"
+
+---@class octo.fragments.DeployedEvent
+---@field __typename "DeployedEvent"
+---@field createdAt string
+---@field actor { login: string }
+---@field deployment { environment: string, state: DeploymentState }
+
+M.deployed_event = [[
+fragment DeployedEventFragment on DeployedEvent {
+  actor { login }
+  createdAt
+  deployment {
+    environment
+    state
+  }
+}
+]]
+
 ---@class octo.fragments.ReviewRequestedEvent
 ---@field __typename "ReviewRequestedEvent"
 ---@field createdAt string
@@ -846,7 +866,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   }
 }
 ]]
----@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent
+---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent
 
 ---@class octo.fragments.PullRequestTimelineItemsConnection
 ---@field nodes octo.PullRequestTimelineItem[]
@@ -874,6 +894,7 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     ...ReviewRequestRemovedEventFragment
     ...ReviewRequestedEventFragment
     ...UnlabeledEventFragment
+    ...DeployedEventFragment
   }
 }
 ]]

@@ -4,7 +4,7 @@
 local config = require "octo.config"
 local constants = require "octo.constants"
 local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local mutations = require "octo.gh.mutations"
 local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
 local vim = vim
@@ -125,29 +125,32 @@ function FileEntry:toggle_viewed()
   ---@type string, string
   local query, next_state
   if self.viewed_state == "VIEWED" then
-    query = graphql("unmark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    query = mutations.unmark_file_as_viewed
     next_state = "UNVIEWED"
   elseif self.viewed_state == "UNVIEWED" then
-    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    query = mutations.mark_file_as_viewed
     next_state = "VIEWED"
   elseif self.viewed_state == "DISMISSED" then
-    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    query = mutations.mark_file_as_viewed
     next_state = "VIEWED"
   end
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.print_err(stderr)
-      elseif output then
-        self.viewed_state = next_state
-        local current_review = require("octo.reviews").get_current_review()
-        if current_review then
-          current_review.layout.file_panel:render()
-          current_review.layout.file_panel:redraw()
-        end
-      end
-    end,
+
+  gh.api.graphql {
+    query = query,
+    F = { path = self.path, pullRequestId = self.pull_request.id },
+    opts = {
+      cb = gh.create_callback {
+        failure = utils.print_err,
+        success = function()
+          self.viewed_state = next_state
+          local current_review = require("octo.reviews").get_current_review()
+          if current_review then
+            current_review.layout.file_panel:render()
+            current_review.layout.file_panel:redraw()
+          end
+        end,
+      },
+    },
   }
 end
 

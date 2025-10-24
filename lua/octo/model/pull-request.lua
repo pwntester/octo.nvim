@@ -1,6 +1,7 @@
-local utils = require "octo.utils"
+local FileEntry = require("octo.reviews.file-entry").FileEntry
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
+local utils = require "octo.utils"
 
 local M = {}
 
@@ -106,92 +107,45 @@ end
 --- Fetch the diff of the PR
 --- @param pr PullRequest
 function PullRequest:get_diff(pr)
-  local url = string.format("repos/%s/pulls/%d", pr.repo, pr.number)
-  gh.run {
-    args = { "api", "--paginate", url },
-    headers = { headers.diff },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        pr.diff = output
-      end
-    end,
+  gh.api.get {
+    "/repos/{repo}/pulls/{number}",
+    format = { repo = pr.repo, number = pr.number },
+    paginate = true,
+    opts = {
+      headers = { headers.diff },
+      cb = gh.create_callback {
+        success = function(diff)
+          pr.diff = diff
+        end,
+      },
+    },
   }
 end
 
 ---Fetch the changed files for a given PR
 ---@param callback fun(files: FileEntry[]): nil
 function PullRequest:get_changed_files(callback)
-  local url = string.format("repos/%s/pulls/%d/files", self.repo, self.number)
-  gh.run {
-    args = { "api", "--paginate", url, "--slurp" },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local FileEntry = require("octo.reviews.file-entry").FileEntry
-        local results = vim.json.decode(output)
-        ---@type {
-        ---  filename: string,
-        ---  previous_filename: string,
-        ---  patch: string,
-        ---  status: string,
-        ---  additions: integer,
-        ---  deletions: integer,
-        ---  changes: integer,
-        ---}[]
-        results = merge_pages(results)
-        local files = {}
-        for _, result in ipairs(results) do
-          local entry = FileEntry:new {
-            path = result.filename,
-            previous_path = result.previous_filename,
-            patch = result.patch,
-            pull_request = self,
-            status = utils.file_status_map[result.status],
-            stats = {
-              additions = result.additions,
-              deletions = result.deletions,
-              changes = result.changes,
-            },
-          }
-          table.insert(files, entry)
-        end
-        callback(files)
-      end
-    end,
-  }
-end
-
----Fetch the changed files at a given commit
----@param rev Rev
----@param callback fun(files: FileEntry[]): nil
-function PullRequest:get_commit_changed_files(rev, callback)
-  local url = string.format("repos/%s/commits/%s", self.repo, rev.commit)
-  gh.run {
-    args = { "api", "--paginate", url, "--slurp" },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local FileEntry = require("octo.reviews.file-entry").FileEntry
-        local results = vim.json.decode(output)
-        ---@type {
-        ---  files: {
-        ---    filename: string,
-        ---    previous_filename: string,
-        ---    patch: string,
-        ---    status: string,
-        ---    additions: integer,
-        ---    deletions: integer,
-        ---    changes: integer,
-        ---  }[],
-        ---}
-        results = merge_pages(results)
-        local files = {}
-        if results.files then
-          for _, result in ipairs(results.files) do
+  gh.api.get {
+    "/repos/{repo}/pulls/{number}/files",
+    format = { repo = self.repo, number = self.number },
+    paginate = true,
+    slurp = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          ---@type {
+          ---  filename: string,
+          ---  previous_filename: string,
+          ---  patch: string,
+          ---  status: string,
+          ---  additions: integer,
+          ---  deletions: integer,
+          ---  changes: integer,
+          ---}[]
+          results = merge_pages(results)
+          local files = {}
+          for _, result in ipairs(results) do
             local entry = FileEntry:new {
               path = result.filename,
               previous_path = result.previous_filename,
@@ -207,9 +161,59 @@ function PullRequest:get_commit_changed_files(rev, callback)
             table.insert(files, entry)
           end
           callback(files)
-        end
-      end
-    end,
+        end,
+      },
+    },
+  }
+end
+
+---Fetch the changed files at a given commit
+---@param rev Rev
+---@param callback fun(files: FileEntry[]): nil
+function PullRequest:get_commit_changed_files(rev, callback)
+  gh.api.get {
+    "/repos/{repo}/commits/{commit_sha}",
+    format = { repo = self.repo, commit_sha = rev.commit },
+    paginate = true,
+    slurp = true,
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+          ---@type {
+          ---  files: {
+          ---    filename: string,
+          ---    previous_filename: string,
+          ---    patch: string,
+          ---    status: string,
+          ---    additions: integer,
+          ---    deletions: integer,
+          ---    changes: integer,
+          ---  }[],
+          ---}
+          results = merge_pages(results)
+          local files = {}
+          if results.files then
+            for _, result in ipairs(results.files) do
+              local entry = FileEntry:new {
+                path = result.filename,
+                previous_path = result.previous_filename,
+                patch = result.patch,
+                pull_request = self,
+                status = utils.file_status_map[result.status],
+                stats = {
+                  additions = result.additions,
+                  deletions = result.deletions,
+                  changes = result.changes,
+                },
+              }
+              table.insert(files, entry)
+            end
+            callback(files)
+          end
+        end,
+      },
+    },
   }
 end
 
