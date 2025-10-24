@@ -114,6 +114,14 @@ function M.setup()
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
       end,
+      category = context.within_discussion(function(buffer)
+        local node = buffer:discussion()
+        require("octo.discussions").change_category {
+          repo = node.repository.nameWithOwner,
+          current_category = node.category.name,
+          discussion_id = node.id,
+        }
+      end),
       create = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
 
@@ -374,6 +382,21 @@ function M.setup()
       end),
     },
     issue = {
+      copilot = context.within_issue(function(buffer)
+        gh.issue.edit {
+          buffer:issue().number,
+          add_assignee = "@copilot",
+          opts = {
+            cb = function(_, _, exit_code)
+              if exit_code == 0 then
+                utils.info "GitHub Copilot assigned to the Issue"
+              else
+                utils.error "Failed to assign GitHub Copilot to the Issue"
+              end
+            end,
+          },
+        }
+      end),
       create = function(repo)
         M.create_issue(repo)
       end,
@@ -434,6 +457,21 @@ function M.setup()
       end,
     },
     pr = {
+      copilot = context.within_pr(function(buffer)
+        gh.pr.edit {
+          buffer:pullRequest().number,
+          add_assignee = "@copilot",
+          opts = {
+            cb = function(_, _, exit_code)
+              if exit_code == 0 then
+                utils.info "GitHub Copilot assigned to the Pull Request"
+              else
+                utils.error "Failed to assign GitHub Copilot to the Pull Request"
+              end
+            end,
+          },
+        }
+      end),
       edit = function(...)
         utils.get_pull_request(...)
       end,

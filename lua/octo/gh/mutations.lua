@@ -118,8 +118,8 @@ mutation {
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed = [[
-mutation {
-  markFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+mutation($path: String!, $pullRequestId: ID!) {
+  markFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
     pullRequest {
       files(first:100){
         nodes {
@@ -134,8 +134,8 @@ mutation {
 
 -- https://docs.github.com/en/graphql/reference/mutations#unmarkfileasviewed
 M.unmark_file_as_viewed = [[
-mutation {
-  unmarkFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+mutation($path: String!, $pullRequestId: ID!) {
+  unmarkFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
     pullRequest {
       files(first:100){
         nodes {
@@ -396,6 +396,7 @@ mutation {
 ---@field discussionId string
 ---@field title string?
 ---@field body string?
+---@field categoryId string?
 
 M.update_discussion = [[
 mutation($input: UpdateDiscussionInput!) {
@@ -886,7 +887,7 @@ mutation($pullRequestId: ID!, $state: PullRequestState!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.deployed_event
 
 M.create_discussion = [[
 mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
@@ -1152,7 +1153,7 @@ mutation($input: CreatePullRequestInput!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event .. fragments.deployed_event
 
 M.mark_answer = [[
 mutation($id: ID!) {

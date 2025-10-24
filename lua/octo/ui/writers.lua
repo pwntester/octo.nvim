@@ -1995,6 +1995,30 @@ local function write_reference_commit(bufnr, commit)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.DeployedEvent
+function M.write_deployed_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.deployed, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " deployed to ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.deployment.environment, "OctoDetailsLabel" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt) .. " ", "OctoDate" })
+  local bubble_info = utils.deployed_state_map[item.deployment.state]
+  local bubble = bubbles.make_bubble(bubble_info[1], bubble_info[2])
+  vim.list_extend(vt, bubble)
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.ReferencedEvent
 function M.write_referenced_event(bufnr, item)
   if utils.is_blank(item.actor) then

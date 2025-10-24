@@ -359,6 +359,9 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "ReadyForReviewEvent" then
       writers.write_ready_for_review_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "DeployedEvent" then
+      writers.write_deployed_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
   render_accumulated_events()
@@ -745,6 +748,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
 
   -- create new thread
   if review_level == "PR" then
+    ---@type octo.mutations.AddPullRequestReviewThreadInput
     local input = {
       pullRequestReviewId = comment_metadata.reviewId,
       body = comment_metadata.body,
@@ -755,19 +759,18 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
 
     if isMultiline then
       input["startLine"] = comment_metadata.snippetStartLine
-      input["endLine"] = comment_metadata.snippetEndLine
+      input["line"] = comment_metadata.snippetEndLine
     end
 
     gh.api.graphql {
       query = mutations.add_pull_request_review_thread,
       F = { input = input },
-      jq = ".data.addPullRequestReviewThread",
       opts = {
         cb = gh.create_callback {
           failure = utils.print_err,
           success = function(output)
             ---@type octo.mutations.AddPullRequestReviewThread
-            local resp = vim.json.decode(output)
+            local resp = vim.json.decode(output).data.addPullRequestReviewThread
 
             if utils.is_blank(resp) then
               utils.error "Failed to create thread"
