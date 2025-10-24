@@ -147,7 +147,7 @@ end
 ---@class RunOpts
 ---@field args? table
 ---@field mode? "sync" | "async"
----@field cb? fun(stdout: string, stderr: string)
+---@field cb? fun(stdout: string, stderr: string, status: integer)
 ---@field stream_cb? fun(stdout: string, stderr: string)
 ---@field headers? string[]
 ---@field hostname? string
@@ -210,11 +210,11 @@ local function run(opts)
         opts.stream_cb(data, err)
       end
     end),
-    on_exit = vim.schedule_wrap(function(j_self, _, _)
+    on_exit = vim.schedule_wrap(function(j_self, status, _)
       if mode == "async" and opts.cb then
         local output = table.concat(j_self:result(), "\n")
         local stderr = table.concat(j_self:stderr_result(), "\n")
-        opts.cb(output, stderr)
+        opts.cb(output, stderr, status)
       end
     end),
     env = env,
