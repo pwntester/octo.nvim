@@ -25,6 +25,21 @@ M.viewed_state_map = {
   UNVIEWED = { icon = "󰄰 ", hl = "OctoBlue" },
 }
 
+---@type table<DeploymentState, table<string, string>>
+M.deployed_state_map = {
+  ABANDONED = { "Abandoned", "OctoBubbleRed" },
+  ACTIVE = { "Active", "OctoBubbleGreen" },
+  DESTROYED = { "Destroyed", "OctoBubbleGray" },
+  ERROR = { "Error", "OctoBubbleRed" },
+  FAILURE = { "Failure", "OctoBubbleRed" },
+  INACTIVE = { "Inactive", "OctoBubbleGrey" },
+  IN_PROGRESS = { "In Progress", "OctoBubbleYellow" },
+  PENDING = { "Pending", "OctoBubbleYellow" },
+  QUEUED = { "Queued", "OctoBubbleYellow" },
+  SUCCESS = { "Success", "OctoBubbleGreen" },
+  WAITING = { "Waiting", "OctoBubbleYellow" },
+}
+
 M.state_msg_map = {
   APPROVED = "approved",
   CHANGES_REQUESTED = "requested changes",
