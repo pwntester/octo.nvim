@@ -713,6 +713,7 @@ fragment ReviewRequestedEventFragment on ReviewRequestedEvent {
     }
     ... on Mannequin { login }
     ... on Team { name }
+    ... on Bot { login }
   }
 }
 ]]
