@@ -380,6 +380,15 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "AutoSquashEnabledEvent" then
       writers.write_auto_squash_enabled_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "AddedToProjectV2Event" then
+      writers.write_added_to_project_v2_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "RemovedFromProjectV2Event" then
+      writers.write_removed_from_project_v2_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ProjectV2ItemStatusChangedEvent" then
+      writers.write_project_v2_item_status_changed_event(self.bufnr, item)
+      prev_is_event = true
     elseif not utils.is_blank(item) and config.values.debug.notify_missing_timeline_items then
       ---@diagnostic disable-next-line
       local info = item.__typename and item.__typename or vim.inspect(item)
