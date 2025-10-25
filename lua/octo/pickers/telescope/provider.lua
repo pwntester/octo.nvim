@@ -1321,6 +1321,7 @@ end
 ---@class NotificationOpts
 ---@field repo string
 ---@field all boolean Whether to show all of the notifications including read ones
+---@field since string ISO 8601 timestamp
 ---@field preview_title string
 ---@field prompt_title string
 ---@field results_title string
@@ -1408,6 +1409,7 @@ function M.notifications(opts)
     paginate = true,
     F = {
       all = opts.all,
+      since = opts.since,
     },
     opts = {
       headers = { headers.diff },
