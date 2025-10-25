@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local writers = require "octo.ui.writers"
@@ -163,7 +164,7 @@ local commit = defaulter(function(opts)
         vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
 
         local url = string.format("/repos/%s/commits/%s", opts.repo, entry.value)
-        local cmd = { "gh", "api", "--paginate", url, "-H", "Accept: application/vnd.github.v3.diff" }
+        local cmd = { "gh", "api", "--paginate", url, "-H", headers.diff }
         pv_utils.job_maker(cmd, self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,

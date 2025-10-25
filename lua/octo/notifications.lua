@@ -1,4 +1,5 @@
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local utils = require "octo.utils"
 local writers = require "octo.ui.writers"
@@ -14,7 +15,7 @@ function M.request_read_notification(thread_id)
     format = { id = thread_id },
     opts = {
       cb = gh.create_callback { success = function() end },
-      headers = { "Accept: application/vnd.github+json" },
+      headers = { headers.json },
     },
   }
 end
@@ -23,7 +24,7 @@ end
 function M.delete_notification(thread_id)
   local opts = {
     cb = gh.create_callback { success = function() end },
-    headers = { "Accept: application/vnd.github.v3.diff" },
+    headers = { headers.diff },
   }
   gh.api.delete {
     "/notifications/threads/{id}",
@@ -43,7 +44,7 @@ function M.unsubscribe_notification(thread_id)
           M.request_read_notification(thread_id)
         end,
       },
-      headers = { "Accept: application/vnd.github+json" },
+      headers = { headers.json },
     },
   }
 end

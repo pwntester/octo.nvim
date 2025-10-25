@@ -77,6 +77,119 @@ fragment PullRequestFields on PullRequest {
 }
 ]]
 
+---https://docs.github.com/en/graphql/reference/objects#projectv2itemstatuschangedevent
+---@class octo.fragments.ProjectV2ItemStatusChangedEvent
+---@field __typename "ProjectV2ItemStatusChangedEvent"
+---@field actor { login: string }
+---@field createdAt string
+---@field previousStatus string
+---@field status string
+---@field project { title: string }
+
+M.project_v2_item_status_changed_event = [[
+fragment ProjectV2ItemStatusChangedEventFragment on ProjectV2ItemStatusChangedEvent {
+  actor { login }
+  createdAt
+  previousStatus
+  status
+  project { title }
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#addedtoprojectv2event
+---@class octo.fragments.AddedToProjectV2Event
+---@field __typename "AddedToProjectV2Event"
+---@field actor { login: string }
+---@field createdAt string
+---@field project { title: string }
+
+M.added_to_project_v2_event = [[
+fragment AddedToProjectV2EventFragment on AddedToProjectV2Event {
+  actor { login }
+  createdAt
+  project { title }
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#removedfromprojectv2event
+---@class octo.fragments.RemovedFromProjectV2Event
+---@field __typename "RemovedFromProjectV2Event"
+---@field actor { login: string }
+---@field createdAt string
+---@field project { title: string }
+
+M.removed_from_project_v2_event = [[
+fragment RemovedFromProjectV2EventFragment on RemovedFromProjectV2Event {
+  actor { login }
+  createdAt
+  project { title }
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#autosquashenabledevent
+---@class octo.fragments.AutoSquashEnabledEvent
+---@field __typename "AutoSquashEnabledEvent"
+---@field actor { login: string }
+---@field createdAt string
+
+M.auto_squash_enabled_event = [[
+fragment AutoSquashEnabledEventFragment on AutoSquashEnabledEvent {
+  actor { login }
+  createdAt
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#headrefdeletedevent
+---@class octo.fragments.HeadRefDeletedEvent
+---@field __typename "HeadRefDeletedEvent"
+---@field actor { login: string }
+---@field createdAt string
+---@field headRefName string
+
+M.head_ref_deleted_event = [[
+fragment HeadRefDeletedEventFragment on HeadRefDeletedEvent {
+  actor {
+    login
+  }
+  createdAt
+  headRefName
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#headrefrestoredevent
+---@class octo.fragments.HeadRefRestoredEvent
+---@field __typename "HeadRefRestoredEvent"
+---@field actor { login: string }
+---@field createdAt string
+---@field pullRequest { headRefName: string }
+
+M.head_ref_restored_event = [[
+fragment HeadRefRestoredEventFragment on HeadRefRestoredEvent {
+  actor { login }
+  createdAt
+  pullRequest { headRefName }
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#headrefforcepushedevent
+---@class octo.fragments.HeadRefForcePushedEvent
+---@field __typename "HeadRefForcePushedEvent"
+---@field actor { login: string }
+---@field pullRequest { headRefName: string }
+---@field createdAt string
+---@field beforeCommit { abbreviatedOid: string }
+---@field afterCommit { abbreviatedOid: string }
+
+M.head_ref_force_pushed_event = [[
+fragment HeadRefForcePushedEventFragment on HeadRefForcePushedEvent {
+  actor { login }
+  createdAt
+  pullRequest { headRefName }
+  beforeCommit { abbreviatedOid }
+  afterCommit { abbreviatedOid }
+}
+]]
+
 ---@class octo.fragments.ConnectedEvent
 --- @field __typename "ConnectedEvent"
 --- @field actor { login: string }
@@ -100,6 +213,20 @@ fragment ConnectedEventFragment on ConnectedEvent {
     ...IssueFields
     ...PullRequestFields
   }
+}
+]]
+
+---@class octo.fragments.ConvertToDraftEvent
+---@field __typename "ConvertToDraftEvent"
+---@field actor { login: string }
+---@field createdAt string
+
+M.convert_to_draft_event = [[
+fragment ConvertToDraftEventFragment on ConvertToDraftEvent {
+  actor {
+    login
+  }
+  createdAt
 }
 ]]
 
@@ -543,6 +670,26 @@ fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
 }
 ]]
 
+---https://docs.github.com/en/graphql/reference/enums#deploymentstatusstate
+---@alias DeploymentState "ABANDONED" | "ACTIVE" | "DESTROYED" | "ERROR" | "FAILURE" | "INACTIVE" | "IN_PROGRESS" | "PENDING" | "QUEUED" | "SUCCESS" | "WAITING"
+
+---@class octo.fragments.DeployedEvent
+---@field __typename "DeployedEvent"
+---@field createdAt string
+---@field actor { login: string }
+---@field deployment { environment: string, state: DeploymentState }
+
+M.deployed_event = [[
+fragment DeployedEventFragment on DeployedEvent {
+  actor { login }
+  createdAt
+  deployment {
+    environment
+    state
+  }
+}
+]]
+
 ---@class octo.fragments.ReviewRequestedEvent
 ---@field __typename "ReviewRequestedEvent"
 ---@field createdAt string
@@ -566,6 +713,7 @@ fragment ReviewRequestedEventFragment on ReviewRequestedEvent {
     }
     ... on Mannequin { login }
     ... on Team { name }
+    ... on Bot { login }
   }
 }
 ]]
@@ -588,6 +736,20 @@ fragment MergedEventFragment on MergedEvent {
     abbreviatedOid
   }
   mergeRefName
+}
+]]
+
+---@class octo.fragments.ReadyForReviewEvent
+---@field __typename "ReadyForReviewEvent"
+---@field actor { login: string }
+---@field createdAt string
+
+M.ready_for_review_event = [[
+fragment ReadyForReviewEventFragment on ReadyForReviewEvent {
+  actor {
+    login
+  }
+  createdAt
 }
 ]]
 
@@ -785,7 +947,7 @@ fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
   }
 }
 ]]
----@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent
+---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event
 
 ---@class octo.fragments.IssueTimelineItemsConnection
 ---@field nodes octo.IssueTimelineItem[]
@@ -815,10 +977,13 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...IssueTypeAddedEventFragment
     ...IssueTypeRemovedEventFragment
     ...IssueTypeChangedEventFragment
+    ...AddedToProjectV2EventFragment
+    ...RemovedFromProjectV2EventFragment
+    ...ProjectV2ItemStatusChangedEventFragment
   }
 }
 ]]
----@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent
+---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
 
 ---@class octo.fragments.PullRequestTimelineItemsConnection
 ---@field nodes octo.PullRequestTimelineItem[]
@@ -830,6 +995,7 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     ...AssignedEventFragment
     ...ClosedEventFragment
     ...ConnectedEventFragment
+    ...ConvertToDraftEventFragment
     ...CrossReferencedEventFragment
     ...DemilestonedEventFragment
     ...IssueCommentFragment
@@ -838,15 +1004,25 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     ...MilestonedEventFragment
     ...PullRequestCommitFragment
     ...PullRequestReviewFragment
+    ...ReadyForReviewEventFragment
     ...RenamedTitleEventFragment
     ...ReopenedEventFragment
     ...ReviewDismissedEventFragment
     ...ReviewRequestRemovedEventFragment
     ...ReviewRequestedEventFragment
     ...UnlabeledEventFragment
+    ...DeployedEventFragment
+    ...HeadRefDeletedEventFragment
+    ...HeadRefRestoredEventFragment
+    ...HeadRefForcePushedEventFragment
+    ...AutoSquashEnabledEventFragment
+    ...AddedToProjectV2EventFragment
+    ...RemovedFromProjectV2EventFragment
+    ...ProjectV2ItemStatusChangedEventFragment
   }
 }
 ]]
+
 ---@class octo.fragments.IssueInformation
 ---@field id string
 ---@field number integer

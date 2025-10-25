@@ -3,6 +3,7 @@ local OctoBuffer = require("octo.model.octo-buffer").OctoBuffer
 local notifications = require "octo.notifications"
 local builtin = require "fzf-lua.previewer.builtin"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
@@ -194,7 +195,7 @@ function M.commit(formatted_commits, repo)
     vim.api.nvim_buf_add_highlight(tmpbuf, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
 
     local url = string.format("/repos/%s/commits/%s", repo, entry.value)
-    local cmd = table.concat({ "gh", "api", "--paginate", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, " ")
+    local cmd = table.concat({ "gh", "api", "--paginate", url, "-H", headers.diff }, " ")
     local proc = io.popen(cmd, "r")
     local output ---@type string
     if proc ~= nil then

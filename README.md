@@ -332,6 +332,8 @@ require"octo".setup({
       select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
       select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
       select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
+      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed changed file" },
+      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed changed file" },
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
       react_heart = { lhs = "<localleader>rh", desc = "add/remove ❤️ reaction" },
@@ -363,6 +365,8 @@ require"octo".setup({
       select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
       select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
       select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
+      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed changed file" },
+      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed changed file" },
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
       goto_file = { lhs = "gf", desc = "go to file" },
@@ -380,6 +384,8 @@ require"octo".setup({
       select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
       select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
       select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
+      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed changed file" },
+      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed changed file" },
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
     },
@@ -488,6 +494,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |    | unmark                                                 | Unmark the discussion comment as answer |
 |    | reopen                                                 | Reopen the current discussion |
 |    | search                                                 | Search discussions |
+|    | category                                                 | Change category of discussion |
 | parent   | add                                           | Add a parent issue to current issue |
 |          | remove                                           | Remove the parent issue to current issue |
 |          | edit                                           | Edit the parent issue to current issue |
@@ -690,6 +697,15 @@ GITHUB_TOKEN= gh auth login
 ... and choose a method to authorise access for `gh`.
 
 `gh` must store the credentials so it can work in a subshell.
+
+**Why am I getting authentication error from gh? Part 2**
+
+It is possible that Octo is trying to authenticate against the origin listed in your repository's config (.git/config) which _could be_ an _ssh alias_ to _github.com_. To properly let octo.nvim know about the ssh alias, you need to list it in the config per above. Example:
+```lua
+require('octo').setup({
+  ssh_aliases = {["<THE ALIAS YOU HAVE LISTED IN ~/.ssh/config>"] = "github.com"}
+})
+```
 
 **Can I use treesitter markdown parser with octo buffers?**
 

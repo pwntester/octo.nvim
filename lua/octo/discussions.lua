@@ -3,6 +3,7 @@ local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
 local utils = require "octo.utils"
+local octo = require "octo"
 
 local M = {}
 
@@ -28,8 +29,9 @@ local function create_discussion(opts)
       cb = gh.create_callback {
         success = function(output)
           utils.info("Successfully created discussion " .. opts.title)
+          ---@type octo.Discussion
           local resp = vim.json.decode(output)
-          utils.copy_url(resp.url)
+          octo.create_buffer("discussion", resp, resp.repository.nameWithOwner, true)
         end,
       },
     },
@@ -43,19 +45,20 @@ end
 
 ---Select a category
 ---@param categories Category[]
----@param cb fun(selected: Category)
-local function select_a_category(categories, cb)
+---@param callback fun(selected: Category)
+---@param prompt string?
+---@param current string?
+local function select_a_category(categories, callback, prompt, current)
+  prompt = prompt or "Pick a category: "
   vim.ui.select(categories, {
-    prompt = "Pick a category: ",
+    prompt = prompt,
     format_item = function(item)
+      if current and item.name == current then
+        return item.name .. " *"
+      end
       return item.name
     end,
-  }, function(selected)
-    if selected == nil then
-      return
-    end
-    cb(selected)
-  end)
+  }, callback)
 end
 
 ---@class GetCategoriesOpts
@@ -64,8 +67,8 @@ end
 
 ---Get categories for a repository
 ---@param opts GetCategoriesOpts
----@param cb fun(selected: Category)
-local function get_categories(opts, cb)
+---@param callback fun(selected: Category[])
+local function get_categories(opts, callback)
   gh.api.graphql {
     query = queries.discussion_categories,
     jq = ".data.repository.discussionCategories.nodes",
@@ -73,8 +76,7 @@ local function get_categories(opts, cb)
     opts = {
       cb = gh.create_callback {
         success = function(data)
-          local categories = vim.json.decode(data)
-          select_a_category(categories, cb)
+          callback(vim.json.decode(data))
         end,
       },
     },
@@ -118,7 +120,47 @@ function M.create(original_opts)
 
     create_discussion(opts)
   end
-  get_categories(opts, cb)
+  get_categories(opts, function(categories)
+    select_a_category(categories, cb, "Select discussion category for " .. opts.repo .. ": ")
+  end)
+end
+
+---@class ChangeCategoryOpts
+---@field repo string
+---@field current_category string
+---@field discussion_id string
+
+---@param opts ChangeCategoryOpts
+M.change_category = function(opts)
+  local owner, name = utils.split_repo(opts.repo)
+  get_categories({
+    owner = owner,
+    name = name,
+  }, function(categories)
+    select_a_category(categories, function(selected)
+      if not selected then
+        return
+      end
+
+      if selected.name == opts.current_category then
+        utils.info("The category is kept as " .. selected.name .. ".")
+        return
+      end
+
+      local input = { discussionId = opts.discussion_id, categoryId = selected.id } --[[@as octo.mutations.UpdateDiscussionInput]]
+      gh.api.graphql {
+        query = mutations.update_discussion,
+        F = { input = input },
+        opts = {
+          cb = gh.create_callback {
+            success = function()
+              utils.info("Successfully changed discussion category to " .. selected.name)
+            end,
+          },
+        },
+      }
+    end, "Select a new category: ", opts.current_category)
+  end)
 end
 
 return M

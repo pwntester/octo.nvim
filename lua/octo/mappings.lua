@@ -1,3 +1,4 @@
+local context = require "octo.context"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
 
@@ -8,13 +9,9 @@ return {
   reopen_issue = function()
     require("octo.commands").change_state "OPEN"
   end,
-  list_issues = function()
-    local buffer = utils.get_current_buffer()
-    local repo = buffer.repo
-    if repo then
-      require("octo.picker").issues { repo = repo }
-    end
-  end,
+  list_issues = context.within_octo_buffer(function(buffer)
+    require("octo.picker").issues { repo = buffer.repo }
+  end),
   checkout_pr = function()
     require("octo.commands").commands.pr.checkout()
   end,
@@ -22,7 +19,13 @@ return {
     require("octo.picker").commits()
   end,
   review_commits = function()
-    require("octo.picker").review_commits()
+    local current_review = reviews.get_current_review()
+    if not current_review then
+      return
+    end
+    require("octo.picker").review_commits(function(right, left)
+      current_review:focus_commit(right, left)
+    end)
   end,
   list_changed_files = function()
     require("octo.picker").changed_files()
@@ -185,6 +188,18 @@ return {
     local layout = reviews.get_current_layout()
     if layout then
       layout:select_last_file()
+    end
+  end,
+  select_next_unviewed_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout then
+      layout:select_next_unviewed_file()
+    end
+  end,
+  select_prev_unviewed_entry = function()
+    local layout = reviews.get_current_layout()
+    if layout then
+      layout:select_prev_unviewed_file()
     end
   end,
   next_entry = function()

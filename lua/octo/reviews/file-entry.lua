@@ -4,7 +4,7 @@
 local config = require "octo.config"
 local constants = require "octo.constants"
 local gh = require "octo.gh"
-local graphql = require "octo.gh.graphql"
+local mutations = require "octo.gh.mutations"
 local signs = require "octo.ui.signs"
 local utils = require "octo.utils"
 local vim = vim
@@ -42,6 +42,8 @@ M._null_buffer = {}
 ---@field right_winid? integer
 ---@field left_comment_ranges? [integer, integer][]
 ---@field right_comment_ranges? [integer, integer][]
+---@field left_fetching boolean
+---@field right_fetching boolean
 ---@field associated_bufs integer[]
 ---@field diffhunks? string[]
 ---@field viewed_state ViewedState
@@ -103,6 +105,8 @@ function FileEntry:new(opt)
     right_lines = {},
     left_fetched = false,
     right_fetched = false,
+    left_fetching = false,
+    right_fetching = false,
     diffhunks = diffhunks,
     associated_bufs = {},
     viewed_state = pr.files[opt.path],
@@ -121,29 +125,32 @@ function FileEntry:toggle_viewed()
   ---@type string, string
   local query, next_state
   if self.viewed_state == "VIEWED" then
-    query = graphql("unmark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    query = mutations.unmark_file_as_viewed
     next_state = "UNVIEWED"
   elseif self.viewed_state == "UNVIEWED" then
-    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    query = mutations.mark_file_as_viewed
     next_state = "VIEWED"
   elseif self.viewed_state == "DISMISSED" then
-    query = graphql("mark_file_as_viewed_mutation", self.path, self.pull_request.id)
+    query = mutations.mark_file_as_viewed
     next_state = "VIEWED"
   end
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.print_err(stderr)
-      elseif output then
-        self.viewed_state = next_state
-        local current_review = require("octo.reviews").get_current_review()
-        if current_review then
-          current_review.layout.file_panel:render()
-          current_review.layout.file_panel:redraw()
-        end
-      end
-    end,
+
+  gh.api.graphql {
+    query = query,
+    F = { path = self.path, pullRequestId = self.pull_request.id },
+    opts = {
+      cb = gh.create_callback {
+        failure = utils.print_err,
+        success = function()
+          self.viewed_state = next_state
+          local current_review = require("octo.reviews").get_current_review()
+          if current_review then
+            current_review.layout.file_panel:render()
+            current_review.layout.file_panel:redraw()
+          end
+        end,
+      },
+    },
   }
 end
 
@@ -209,18 +216,29 @@ function FileEntry:get_buf(split)
 end
 
 ---Fetch file content locally or from GitHub.
-function FileEntry:fetch()
+---@param sync boolean
+function FileEntry:fetch(sync)
   local right_path = self.path
   local left_path = self.path
   local current_review = require("octo.reviews").get_current_review()
   if not current_review then
     return
   end
+  local conf = config.values
+  if self.left_fetching or self.right_fetching then
+    if sync then
+      vim.wait(conf.timeout, function()
+        return self:is_ready_to_render()
+      end)
+    end
+    return
+  end
+  self.left_fetching = true
+  self.right_fetching = true
   local right_sha = current_review.layout.right.commit
   local left_sha = current_review.layout.left.commit
   local right_abbrev = current_review.layout.right:abbrev()
   local left_abbrev = current_review.layout.left:abbrev()
-  local conf = config.values
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
@@ -232,11 +250,13 @@ function FileEntry:fetch()
     utils.get_file_at_commit(right_path, right_sha, function(lines)
       self.right_lines = lines
       self.right_fetched = true
+      self.right_fetching = false
     end)
   else
     utils.get_file_contents(self.pull_request.repo, right_abbrev, right_path, function(lines)
       self.right_lines = lines
       self.right_fetched = true
+      self.right_fetching = false
     end)
   end
 
@@ -245,18 +265,22 @@ function FileEntry:fetch()
     utils.get_file_at_commit(left_path, left_sha, function(lines)
       self.left_lines = lines
       self.left_fetched = true
+      self.left_fetching = false
     end)
   else
     utils.get_file_contents(self.pull_request.repo, left_abbrev, left_path, function(lines)
       self.left_lines = lines
       self.left_fetched = true
+      self.left_fetching = false
     end)
   end
 
   -- wait until we have both versions
-  return vim.wait(conf.timeout, function()
-    return self:is_ready_to_render()
-  end)
+  if sync then
+    vim.wait(conf.timeout, function()
+      return self:is_ready_to_render()
+    end)
+  end
 end
 
 ---Determines whether the file content has been loaded and the file is ready to render
@@ -316,6 +340,9 @@ function FileEntry:load_buffers(left_winid, right_winid)
     M._configure_buffer(split.bufid)
     vim.api.nvim_win_set_buf(split.winid, split.bufid)
   end
+
+  -- Set this to disable LSPs from attempting to attach to this buffer
+  vim.api.nvim_set_option_value("buftype", "nofile", { buf = self.left_bufid })
 
   -- show thread signs and virtual text
   self:place_signs()

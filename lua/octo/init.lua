@@ -81,6 +81,9 @@ end
 
 function M.save_buffer()
   local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
   buffer:save()
 end
 
@@ -198,6 +201,9 @@ end
 
 function M.render_signs()
   local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
   buffer:render_signs()
 end
 
@@ -210,36 +216,38 @@ function M.on_cursor_hold()
   -- reactions popup
   local id = buffer:get_reactions_at_cursor()
   if id then
-    local query = graphql("reactions_for_object_query", id)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.print_err(stderr)
-        elseif output then
-          ---@type octo.queries.ReactionsForObject
-          local resp = vim.json.decode(output)
-          local reactions = {} ---@type table<string, string[]>
-          local reactionGroups = resp.data.node.reactionGroups
-          for _, reactionGroup in ipairs(reactionGroups) do
-            local users = reactionGroup.users.nodes
-            local logins = {} ---@type string[]
-            for _, user in ipairs(users) do
-              table.insert(logins, user.login)
+    gh.api.graphql {
+      query = queries.reactions_for_object,
+      F = { id = id },
+      opts = {
+        cb = function(output, stderr)
+          if stderr and not utils.is_blank(stderr) then
+            utils.print_err(stderr)
+          elseif output then
+            ---@type octo.queries.ReactionsForObject
+            local resp = vim.json.decode(output)
+            local reactions = {} ---@type table<string, string[]>
+            local reactionGroups = resp.data.node.reactionGroups
+            for _, reactionGroup in ipairs(reactionGroups) do
+              local users = reactionGroup.users.nodes
+              local logins = {} ---@type string[]
+              for _, user in ipairs(users) do
+                table.insert(logins, user.login)
+              end
+              if #logins > 0 then
+                reactions[reactionGroup.content] = logins
+              end
             end
-            if #logins > 0 then
-              reactions[reactionGroup.content] = logins
-            end
+            local popup_bufnr = vim.api.nvim_create_buf(false, true)
+            local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
+            window.create_popup {
+              bufnr = popup_bufnr,
+              width = 4 + max_length,
+              height = 2 + lines_count,
+            }
           end
-          local popup_bufnr = vim.api.nvim_create_buf(false, true)
-          local lines_count, max_length = writers.write_reactions_summary(popup_bufnr, reactions)
-          window.create_popup {
-            bufnr = popup_bufnr,
-            width = 4 + max_length,
-            height = 2 + lines_count,
-          }
-        end
-      end,
+        end,
+      },
     }
     return
   end
@@ -247,25 +255,28 @@ function M.on_cursor_hold()
   -- user popup
   local login = utils.extract_pattern_at_cursor(constants.USER_PATTERN)
   if login then
-    local query = graphql("user_profile_query", login)
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.print_err(stderr)
-        elseif output then
-          ---@type octo.queries.UserProfile
-          local resp = vim.json.decode(output)
-          local user = resp.data.user
-          local popup_bufnr = vim.api.nvim_create_buf(false, true)
-          local lines, max_length = writers.write_user_profile(popup_bufnr, user)
-          window.create_popup {
-            bufnr = popup_bufnr,
-            width = 4 + max_length,
-            height = 2 + lines,
-          }
-        end
-      end,
+    gh.api.graphql {
+      query = queries.user_profile,
+      jq = ".data.user",
+      F = {
+        login = login --[[@as string]],
+      },
+      opts = {
+        cb = gh.create_callback {
+          failure = utils.print_err,
+          success = function(data)
+            ---@type octo.UserProfile
+            local user = vim.json.decode(data)
+            local popup_bufnr = vim.api.nvim_create_buf(false, true)
+            local lines, max_length = writers.write_user_profile(popup_bufnr, user)
+            window.create_popup {
+              bufnr = popup_bufnr,
+              width = 4 + max_length,
+              height = 2 + lines,
+            }
+          end,
+        },
+      },
     }
     return
   end
@@ -289,9 +300,9 @@ function M.on_cursor_hold()
     }
   end
   local owner, name = utils.split_repo(repo)
-  local query = graphql("issue_summary_query", owner, name, number)
   gh.api.graphql {
-    query = query,
+    query = queries.issue_summary,
+    F = { owner = owner, name = name, number = number },
     jq = ".data.repository.issueOrPullRequest",
     opts = {
       cb = gh.create_callback {
@@ -323,9 +334,9 @@ function M.on_cursor_hold()
 end
 
 ---@param kind "repo"|"discussion"|"release"|"issue"|"pull_request"
----@param obj octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository
----@param repo string
----@param create boolean
+---@param obj octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository the object to render
+---@param repo string repository full name like "owner/name"
+---@param create boolean whether to create a new buffer
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
     utils.error("Cannot find " .. repo)

@@ -4,6 +4,7 @@ local octo_config = require "octo.config"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local utils = require "octo.utils"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local notifications = require "octo.notifications"
@@ -40,6 +41,7 @@ end
 ---  results_title: string,
 ---  window_title: string,
 ---  all: boolean,
+---  since: string,
 ---}
 return function(opts)
   opts = opts or {}
@@ -51,9 +53,10 @@ return function(opts)
       paginate = true,
       F = {
         all = opts.all,
+        since = opts.since,
       },
       opts = {
-        headers = { "Accept: application/vnd.github.v3.diff" },
+        headers = { headers.diff },
         stream_cb = function(data, err)
           if err and not utils.is_blank(err) then
             utils.error(err)
