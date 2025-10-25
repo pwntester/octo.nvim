@@ -377,8 +377,10 @@ function OctoBuffer:render_issue()
       prev_is_event = true
     elseif item.__typename == "HeadRefForcePushedEvent" then
       table.insert(unrendered_force_push_events, item)
-    elseif config.values.debug.notify_missing_timeline_items then
-      utils.info("Unhandled timeline item: " .. tostring(item.__typename))
+    elseif not utils.is_blank(item) and config.values.debug.notify_missing_timeline_items then
+      ---@diagnostic disable-next-line
+      local info = item.__typename and item.__typename or vim.inspect(item)
+      utils.info("Unhandled timeline item: " .. info)
     end
   end
   render_accumulated_events()
