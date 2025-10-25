@@ -902,7 +902,7 @@ mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
         labels(first: 20) {
           ...LabelConnectionFragment
         }
-        comments(first: 25, after: $endCursor) {
+        comments(first: 25) {
           totalCount
           nodes {
             ...DiscussionCommentFragment
@@ -912,10 +912,6 @@ mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
                 ...DiscussionCommentFragment
               }
             }
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
           }
         }
       }
