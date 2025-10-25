@@ -363,6 +363,12 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "DeployedEvent" then
       writers.write_deployed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "HeadRefDeletedEvent" then
+      writers.write_head_ref_deleted_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefRestoredEvent" then
+      writers.write_head_ref_restored_event(self.bufnr, item)
+      prev_is_event = true
     end
   end
   render_accumulated_events()
