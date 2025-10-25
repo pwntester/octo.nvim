@@ -1937,8 +1937,9 @@ function M.merge_pr(...)
   end
 
   opts.opts = {
-    cb = function(output, stderr)
-      utils.info(output .. " " .. stderr)
+    cb = function(output, stderr, exit_code)
+      local log = exit_code == 0 and utils.info or utils.error
+      log(output .. " " .. stderr)
       writers.write_state(buffer.bufnr)
     end,
   }
