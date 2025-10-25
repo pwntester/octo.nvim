@@ -5,6 +5,7 @@ local config = require "octo.config"
 local constants = require "octo.constants"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local mutations = require "octo.gh.mutations"
 local signs = require "octo.ui.signs"
@@ -944,7 +945,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
       "--jq",
       ".",
     },
-    headers = { "Accept: application/vnd.github.v3+json" },
+    headers = { headers.json },
     cb = function(output, stderr)
       if not utils.is_blank(stderr) then
         utils.error(stderr)

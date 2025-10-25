@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local headers = require "octo.gh.headers"
 local queries = require "octo.gh.queries"
 local parser = require "octo.gh.parser"
 local navigation = require "octo.navigation"
@@ -1409,7 +1410,7 @@ function M.notifications(opts)
       all = opts.all,
     },
     opts = {
-      headers = { "Accept: application/vnd.github.v3.diff" },
+      headers = { headers.diff },
       cb = gh.create_callback { success = create_notification_picker },
     },
   }

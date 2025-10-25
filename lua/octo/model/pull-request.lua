@@ -1,5 +1,6 @@
 local FileEntry = require("octo.reviews.file-entry").FileEntry
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local utils = require "octo.utils"
 
 local M = {}
@@ -111,7 +112,7 @@ function PullRequest:get_diff(pr)
     format = { repo = pr.repo, number = pr.number },
     paginate = true,
     opts = {
-      headers = { "Accept: application/vnd.github.v3.diff" },
+      headers = { headers.diff },
       cb = gh.create_callback {
         success = function(diff)
           pr.diff = diff

@@ -1,5 +1,6 @@
 ---@diagnostic disable
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
@@ -331,7 +332,7 @@ function M.notifications(opts)
     endpoint,
     paginate = true,
     opts = {
-      headers = { "Accept: application/vnd.github.v3.diff" },
+      headers = { headers.diff },
       cb = gh.create_callback {
         success = function(output)
           local notifications = vim.json.decode(output)
@@ -443,7 +444,7 @@ function M.notifications(opts)
                 "/notifications/threads/{id}",
                 format = { id = item.id },
                 opts = {
-                  headers = { "Accept: application/vnd.github.v3.diff" },
+                  headers = { headers.diff },
                   cb = gh.create_callback { success = function() end },
                 },
               }
