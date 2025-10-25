@@ -5,6 +5,7 @@ local config = require "octo.config"
 local constants = require "octo.constants"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local mutations = require "octo.gh.mutations"
 local signs = require "octo.ui.signs"
@@ -196,6 +197,7 @@ function OctoBuffer:render_issue()
   local unrendered_unlabeled_events = {} ---@type octo.fragments.UnlabeledEvent[]
   local unrendered_subissue_added_events = {} ---@type octo.fragments.SubIssueAddedEvent[]
   local unrendered_subissue_removed_events = {} ---@type octo.fragments.SubIssueRemovedEvent[]
+  local unrendered_force_push_events = {} ---@type octo.fragments.HeadRefForcePushedEvent[]
   local commits = {} ---@type octo.fragments.PullRequestCommit[]
   local prev_is_event = false
 
@@ -236,6 +238,11 @@ function OctoBuffer:render_issue()
     if (not item or item.__typename ~= "PullRequestCommit") and #commits > 0 then
       writers.write_commits(self.bufnr, commits)
       commits = {}
+      prev_is_event = true
+    end
+    if (not item or item.__typename ~= "HeadRefForcePushedEvent") and #unrendered_force_push_events > 0 then
+      writers.write_head_ref_force_pushed_events(self.bufnr, unrendered_force_push_events)
+      unrendered_force_push_events = {}
       prev_is_event = true
     end
   end
@@ -359,6 +366,33 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "ReadyForReviewEvent" then
       writers.write_ready_for_review_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "DeployedEvent" then
+      writers.write_deployed_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefDeletedEvent" then
+      writers.write_head_ref_deleted_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefRestoredEvent" then
+      writers.write_head_ref_restored_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefForcePushedEvent" then
+      table.insert(unrendered_force_push_events, item)
+    elseif item.__typename == "AutoSquashEnabledEvent" then
+      writers.write_auto_squash_enabled_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "AddedToProjectV2Event" then
+      writers.write_added_to_project_v2_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "RemovedFromProjectV2Event" then
+      writers.write_removed_from_project_v2_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ProjectV2ItemStatusChangedEvent" then
+      writers.write_project_v2_item_status_changed_event(self.bufnr, item)
+      prev_is_event = true
+    elseif not utils.is_blank(item) and config.values.debug.notify_missing_timeline_items then
+      ---@diagnostic disable-next-line
+      local info = item.__typename and item.__typename or vim.inspect(item)
+      utils.info("Unhandled timeline item: " .. info)
     end
   end
   render_accumulated_events()
@@ -522,48 +556,51 @@ function OctoBuffer:do_save_title_and_body()
       return
     end
 
-    local query ---@type string
+    local input = { body = desc_metadata.body, title = title_metadata.body }
+
+    local query, jq ---@type string, string
     if self:isIssue() then
-      query = graphql("update_issue_mutation", id, title_metadata.body, desc_metadata.body)
+      query = mutations.update_issue
+      jq = ".data.updateIssue.issue"
+      input["id"] = id
     elseif self:isPullRequest() then
-      query = graphql("update_pull_request_mutation", id, title_metadata.body, desc_metadata.body)
+      query = mutations.update_pull_request
+      jq = ".data.updatePullRequest.pullRequest"
+      input["pullRequestId"] = id
     elseif self:isDiscussion() then
-      query = graphql("update_discussion_mutation", id, title_metadata.body, desc_metadata.body)
+      query = mutations.update_discussion
+      jq = ".data.updateDiscussion.discussion"
+      input["discussionId"] = id
     end
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.print_err(stderr)
-        elseif output then
-          ---@type octo.mutations.UpdatePullRequest|octo.mutations.UpdateIssue|octo.mutations.UpdateDiscussion
-          local resp = vim.json.decode(output)
-          local obj ---@type { title: string, body: string }
 
-          if self:isPullRequest() then
-            obj = resp.data.updatePullRequest.pullRequest
-          elseif self:isIssue() then
-            obj = resp.data.updateIssue.issue
-          elseif self:isDiscussion() then
-            obj = resp.data.updateDiscussion.discussion
-          end
+    gh.api.graphql {
+      query = query,
+      F = { input = input },
+      jq = jq,
+      opts = {
+        cb = gh.create_callback {
+          failure = utils.print_err,
+          success = function(output)
+            ---@type { title: string, body: string }
+            local obj = vim.json.decode(output)
 
-          if title_metadata.body == obj.title then
-            title_metadata.savedBody = obj.title
-            title_metadata.dirty = false
-            self.titleMetadata = title_metadata
-          end
+            if title_metadata.body == obj.title then
+              title_metadata.savedBody = obj.title
+              title_metadata.dirty = false
+              self.titleMetadata = title_metadata
+            end
 
-          if desc_metadata.body == obj.body then
-            desc_metadata.savedBody = obj.body
-            desc_metadata.dirty = false
-            self.bodyMetadata = desc_metadata
-          end
+            if desc_metadata.body == obj.body then
+              desc_metadata.savedBody = obj.body
+              desc_metadata.dirty = false
+              self.bodyMetadata = desc_metadata
+            end
 
-          self:render_signs()
-          utils.info "Saved!"
-        end
-      end,
+            self:render_signs()
+            utils.info "Saved!"
+          end,
+        },
+      },
     }
   end
 end
@@ -742,77 +779,70 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
 
   -- create new thread
   if review_level == "PR" then
-    local query ---@type string
+    ---@type octo.mutations.AddPullRequestReviewThreadInput
+    local input = {
+      pullRequestReviewId = comment_metadata.reviewId,
+      body = comment_metadata.body,
+      path = comment_metadata.path,
+      side = comment_metadata.diffSide,
+      line = comment_metadata.snippetStartLine,
+    }
+
     if isMultiline then
-      query = graphql(
-        "add_pull_request_review_multiline_thread_mutation",
-        comment_metadata.reviewId,
-        comment_metadata.body,
-        comment_metadata.path,
-        comment_metadata.diffSide,
-        comment_metadata.diffSide,
-        comment_metadata.snippetStartLine,
-        comment_metadata.snippetEndLine
-      )
-    else
-      query = graphql(
-        "add_pull_request_review_thread_mutation",
-        comment_metadata.reviewId,
-        comment_metadata.body,
-        comment_metadata.path,
-        comment_metadata.diffSide,
-        comment_metadata.snippetStartLine
-      )
+      input["startLine"] = comment_metadata.snippetStartLine
+      input["line"] = comment_metadata.snippetEndLine
     end
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.print_err(stderr)
-        elseif output then
-          ---@type octo.mutations.AddPullRequestReviewThread
-          local resp_data = vim.json.decode(output)
-          local resp = resp_data.data.addPullRequestReviewThread
 
-          if utils.is_blank(resp) then
-            utils.error "Failed to create thread"
-            return
-          end
+    gh.api.graphql {
+      query = mutations.add_pull_request_review_thread,
+      F = { input = input },
+      opts = {
+        cb = gh.create_callback {
+          failure = utils.print_err,
+          success = function(output)
+            ---@type octo.mutations.AddPullRequestReviewThread
+            local resp = vim.json.decode(output).data.addPullRequestReviewThread
 
-          -- Register new thread id
-          local threads = self.threadsMetadata
-          local new_thread = nil
-          for _, t in pairs(threads) do
-            if tonumber(t.threadId) == -1 then
-              new_thread = t
-              break
+            if utils.is_blank(resp) then
+              utils.error "Failed to create thread"
+              return
             end
-          end
 
-          -- Register new comment data
-          local new_comment = resp.thread.comments.nodes[1]
-          if new_thread then
-            new_thread.threadId = resp.thread.id
-            new_thread.replyTo = new_comment.id
-          end
-          if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
-            local comments = self.commentsMetadata
-            for i, c in ipairs(comments) do
-              if tonumber(c.id) == -1 then
-                comments[i].id = new_comment.id
-                comments[i].savedBody = new_comment.body
-                comments[i].dirty = false
+            -- Register new thread id
+            local threads = self.threadsMetadata
+            local new_thread = nil
+            for _, t in pairs(threads) do
+              if tonumber(t.threadId) == -1 then
+                new_thread = t
                 break
               end
             end
-            local review_threads = resp.thread.pullRequest.reviewThreads.nodes
-            if review then
-              review:update_threads(review_threads)
+
+            -- Register new comment data
+            local new_comment = resp.thread.comments.nodes[1]
+            if new_thread then
+              new_thread.threadId = resp.thread.id
+              new_thread.replyTo = new_comment.id
             end
-            self:render_signs()
-          end
-        end
-      end,
+            if utils.trim(comment_metadata.body) == utils.trim(new_comment.body) then
+              local comments = self.commentsMetadata
+              for i, c in ipairs(comments) do
+                if tonumber(c.id) == -1 then
+                  comments[i].id = new_comment.id
+                  comments[i].savedBody = new_comment.body
+                  comments[i].dirty = false
+                  break
+                end
+              end
+              local review_threads = resp.thread.pullRequest.reviewThreads.nodes
+              if review then
+                review:update_threads(review_threads)
+              end
+              self:render_signs()
+            end
+          end,
+        },
+      },
     }
   elseif review_level == "COMMIT" then
     if isMultiline then
@@ -945,7 +975,7 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
       "--jq",
       ".",
     },
-    headers = { "Accept: application/vnd.github.v3+json" },
+    headers = { headers.json },
     cb = function(output, stderr)
       if not utils.is_blank(stderr) then
         utils.error(stderr)

@@ -147,7 +147,7 @@ end
 ---@class RunOpts
 ---@field args? table
 ---@field mode? "sync" | "async"
----@field cb? fun(stdout: string, stderr: string)
+---@field cb? fun(stdout: string, stderr: string, status: integer)
 ---@field stream_cb? fun(stdout: string, stderr: string)
 ---@field headers? string[]
 ---@field hostname? string
@@ -210,11 +210,11 @@ local function run(opts)
         opts.stream_cb(data, err)
       end
     end),
-    on_exit = vim.schedule_wrap(function(j_self, _, _)
+    on_exit = vim.schedule_wrap(function(j_self, status, _)
       if mode == "async" and opts.cb then
         local output = table.concat(j_self:result(), "\n")
         local stderr = table.concat(j_self:stderr_result(), "\n")
-        opts.cb(output, stderr)
+        opts.cb(output, stderr, status)
       end
     end),
     env = env,
@@ -387,9 +387,12 @@ function M.api.graphql(opts)
   }
 end
 
+---Mapping between format keys and their values
+---@alias FormatTable table<string, string | number>
+
 ---Format the endpoint with the format table
 ---@param endpoint string the endpoint to format
----@param format table<string, string> the format table
+---@param format FormatTable the format table
 local function format_endpoint(endpoint, format)
   for key, value in pairs(format) do
     endpoint = endpoint:gsub("{" .. key .. "}", value)
@@ -397,11 +400,13 @@ local function format_endpoint(endpoint, format)
   return endpoint
 end
 
----@class CreateRestArgsOpts
----@field [1] string
----@field format? table<string, string>
+---@alias Method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"
 
----@param method string? the rest method
+---@class CreateRestArgsOpts
+---@field [1] string The endpoint to call
+---@field format FormatTable?
+
+---@param method Method? the rest method
 ---@param opts CreateRestArgsOpts the options for the rest command
 ---@return string[]|nil
 function M.create_rest_args(method, opts)
@@ -421,14 +426,14 @@ function M.create_rest_args(method, opts)
   end
 
   opts.format = nil
-  return M.insert_args(args, opts)
+  return M.insert_args(args, opts, { ["_"] = "-" })
 end
 
 ---@class RestOpts : CreateRestArgsOpts
 ---@field opts? RunOpts
 
 ---Run a rest command
----@param method "GET"|"POST"|"PATCH"|"DELETE"|"PUT"|nil
+---@param method Method? the rest method
 ---@param opts RestOpts
 local function rest(method, opts)
   local run_opts = opts.opts or {}

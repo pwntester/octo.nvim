@@ -81,6 +81,9 @@ end
 
 function M.save_buffer()
   local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
   buffer:save()
 end
 
@@ -198,6 +201,9 @@ end
 
 function M.render_signs()
   local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
   buffer:render_signs()
 end
 
@@ -328,9 +334,9 @@ function M.on_cursor_hold()
 end
 
 ---@param kind "repo"|"discussion"|"release"|"issue"|"pull_request"
----@param obj octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository
----@param repo string
----@param create boolean
+---@param obj octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository the object to render
+---@param repo string repository full name like "owner/name"
+---@param create boolean whether to create a new buffer
 function M.create_buffer(kind, obj, repo, create)
   if not obj.id then
     utils.error("Cannot find " .. repo)

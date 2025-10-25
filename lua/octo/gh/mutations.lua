@@ -118,8 +118,8 @@ mutation {
 
 -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
 M.mark_file_as_viewed = [[
-mutation {
-  markFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+mutation($path: String!, $pullRequestId: ID!) {
+  markFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
     pullRequest {
       files(first:100){
         nodes {
@@ -134,8 +134,8 @@ mutation {
 
 -- https://docs.github.com/en/graphql/reference/mutations#unmarkfileasviewed
 M.unmark_file_as_viewed = [[
-mutation {
-  unmarkFileAsViewed(input: {path: "%s", pullRequestId: "%s"}) {
+mutation($path: String!, $pullRequestId: ID!) {
+  unmarkFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
     pullRequest {
       files(first:100){
         nodes {
@@ -171,105 +171,22 @@ mutation {
 }
 ]]
 
--- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
-M.add_pull_request_review_thread = [[
-mutation {
-  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: """%s""", path: "%s", side: %s, line:%d}) {
-    thread {
-      id
-      comments(last:100) {
-        nodes {
-          id
-          body
-          diffHunk
-          createdAt
-          lastEditedAt
-          commit {
-            oid
-            abbreviatedOid
-          }
-          author {login}
-          authorAssociation
-          viewerDidAuthor
-          viewerCanUpdate
-          viewerCanDelete
-          state
-          url
-          replyTo { id url }
-          pullRequestReview {
-            id
-            state
-          }
-          path
-          ...ReactionGroupsFragment
-        }
-      }
-      pullRequest {
-        reviewThreads(last:100) {
-          nodes {
-            ...ReviewThreadInformationFragment
-            comments(first:100) {
-              nodes {
-                ...ReviewThreadCommentFragment
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
----@class octo.mutations.AddPullRequestReviewThread
----@field data {
----  addPullRequestReviewThread: {
----    thread: {
----      id: string,
----      comments: {
----        nodes: {
----          id: string,
----          body: string,
----          diffHunk: string,
----          createdAt: string,
----          lastEditedAt: string,
----          commit: {
----            oid: string,
----            abbreviatedOid: string,
----          },
----          author: {
----            login: string,
----          },
----          authorAssociation: string,
----          viewerDidAuthor: boolean,
----          viewerCanUpdate: boolean,
----          viewerCanDelete: boolean,
----          state: string,
----          url: string,
----          replyTo: {
----            id: string,
----            url: string,
----          },
----          pullRequest: {
----            reviewThreads: {
----              nodes: octo.ReviewThread[],
----            },
----          },
----          path: string,
----        }[],
----      },
----      pullRequest: {
----        reviewThreads: {
----          nodes: octo.ReviewThread[],
----        },
----      },
----    },
----  },
----}
+---@alias DiffSide "LEFT" | "RIGHT"
+
+---https://docs.github.com/en/graphql/reference/input-objects#addpullrequestreviewthreadinput
+---@class octo.mutations.AddPullRequestReviewThreadInput
+---@field pullRequestReviewId string
+---@field body string
+---@field path string?
+---@field startSide DiffSide?
+---@field side DiffSide?
+---@field startLine integer?
+---@field line integer?
 
 -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
-M.add_pull_request_review_multiline_thread = [[
-mutation {
-  addPullRequestReviewThread(input: { pullRequestReviewId: "%s", body: """%s""", path: "%s", startSide: %s, side: %s, startLine: %d, line:%d}) {
+M.add_pull_request_review_thread = [[
+mutation($input: AddPullRequestReviewThreadInput!) {
+  addPullRequestReviewThread(input: $input) {
     thread {
       id
       comments(last:100) {
@@ -315,6 +232,49 @@ mutation {
   }
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+
+---@class octo.mutations.AddPullRequestReviewThread
+---@field thread {
+---   id: string,
+---   comments: {
+---     nodes: {
+---       id: string,
+---       body: string,
+---       diffHunk: string,
+---       createdAt: string,
+---       lastEditedAt: string,
+---       commit: {
+---         oid: string,
+---         abbreviatedOid: string,
+---       },
+---       author: {
+---         login: string,
+---       },
+---       authorAssociation: string,
+---       viewerDidAuthor: boolean,
+---       viewerCanUpdate: boolean,
+---       viewerCanDelete: boolean,
+---       state: string,
+---       url: string,
+---       replyTo: {
+---         id: string,
+---         url: string,
+---       },
+---       pullRequest: {
+---         reviewThreads: {
+---           nodes: octo.ReviewThread[],
+---         },
+---       },
+---       path: string,
+---     }[],
+---   },
+---   pullRequest: {
+---     reviewThreads: {
+---       nodes: octo.ReviewThread[],
+---     },
+---   },
+--- }
+
 ---@class octo.mutations.AddIssueComment
 ---@field data {
 ---  addComment: {
@@ -431,13 +391,16 @@ mutation {
 ---  },
 ---}
 
+---https://docs.github.com/en/graphql/reference/input-objects#updatediscussioninput
+---@class octo.mutations.UpdateDiscussionInput
+---@field discussionId string
+---@field title string?
+---@field body string?
+---@field categoryId string?
+
 M.update_discussion = [[
-mutation {
-  updateDiscussion(input: {
-    discussionId: "%s",
-    title: """%s""",
-    body: """%s"""
-  }) {
+mutation($input: UpdateDiscussionInput!) {
+  updateDiscussion(input: $input) {
     discussion {
       id
       title
@@ -628,10 +591,16 @@ mutation {
 ---  },
 ---}
 
+---https://docs.github.com/en/graphql/reference/input-objects#updateissueinput
+---@class octo.mutations.UpdateIssueInput
+---@field id string
+---@field title string?
+---@field body string?
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue = [[
-mutation {
-  updateIssue(input: {id: "%s", title: """%s""", body: """%s"""}) {
+mutation($input: UpdateIssueInput!) {
+  updateIssue(input: $input) {
     issue {
       id
       number
@@ -646,10 +615,16 @@ mutation {
 }
 ]]
 
+---https://docs.github.com/en/graphql/reference/input-objects#createissueinput
+---@class octo.mutations.CreateIssueInput
+---@field repositoryId string
+---@field title string
+---@field body string?
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#createissue
 M.create_issue = [[
-mutation {
-  createIssue(input: {repositoryId: "%s", title: """%s""", body: """%s"""}) {
+mutation($input: CreateIssueInput!) {
+  createIssue(input: $input) {
     issue {
       ...IssueInformationFragment
       participants(first:10) {
@@ -673,11 +648,11 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.renamed_title_event .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.renamed_title_event .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.added_to_project_v2_event .. fragments.project_v2_item_status_changed_event .. fragments.removed_from_project_v2_event
 
 M.close_issue = [[
-mutation {
-  closeIssue(input: {issueId: "%s", stateReason: %s}) {
+mutation($issueId: ID!, $stateReason: IssueCloseReason) {
+  closeIssue(input: {issueId: $issueId, stateReason: $stateReason}) {
     issue {
       ...IssueInformationFragment
       participants(first:10) {
@@ -710,12 +685,12 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.added_to_project_v2_event .. fragments.project_v2_item_status_changed_event .. fragments.removed_from_project_v2_event
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
 M.update_issue_state = [[
-mutation {
-  updateIssue(input: {id: "%s", state: %s}) {
+mutation($id: ID!, $state: IssueState!) {
+  updateIssue(input: {id: $id, state: $state}) {
     issue {
       ...IssueInformationFragment
       participants(first:10) {
@@ -748,7 +723,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.added_to_project_v2_event .. fragments.project_v2_item_status_changed_event .. fragments.removed_from_project_v2_event
 
 -- https://docs.github.com/en/graphql/reference/mutations#reopenissue
 M.reopen_issue = [[
@@ -788,7 +763,8 @@ mutation($issueId: ID!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.added_to_project_v2_event .. fragments.project_v2_item_status_changed_event .. fragments.removed_from_project_v2_event
+
 ---@class octo.mutations.UpdatePullRequest
 ---@field data {
 ---  updatePullRequest: {
@@ -802,10 +778,16 @@ mutation($issueId: ID!) {
 ---  },
 ---}
 
+---https://docs.github.com/en/graphql/reference/input-objects#updatepullrequestinput
+---@class octo.mutations.UpdatePullRequestInput
+---@field pullRequestId string
+---@field title string?
+---@field body string?
+
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request = [[
-mutation {
-  updatePullRequest(input: {pullRequestId: "%s", title: """%s""", body: """%s"""}) {
+mutation($input: UpdatePullRequestInput!) {
+  updatePullRequest(input: $input) {
     pullRequest {
       id
       number
@@ -819,8 +801,8 @@ mutation {
 
 -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
 M.update_pull_request_state = [[
-mutation {
-  updatePullRequest(input: {pullRequestId: "%s", state: %s}) {
+mutation($pullRequestId: ID!, $state: PullRequestState!) {
+  updatePullRequest(input: {pullRequestId: $pullRequestId, state: $state}) {
     pullRequest {
       id
       number
@@ -906,7 +888,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.added_to_project_v2_event .. fragments.removed_from_project_v2_event .. fragments.project_v2_item_status_changed_event
 
 M.create_discussion = [[
 mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
@@ -916,13 +898,27 @@ mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
     title: $title,
     body: $body
   }) {
-    discussion {
-      id
-      url
+      discussion {
+        ...DiscussionDetailsFragment
+        labels(first: 20) {
+          ...LabelConnectionFragment
+        }
+        comments(first: 25) {
+          totalCount
+          nodes {
+            ...DiscussionCommentFragment
+            replies(first: 15) {
+              totalCount
+              nodes {
+                ...DiscussionCommentFragment
+              }
+            }
+          }
+        }
+      }
     }
   }
-}
-]]
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addprojectv2itembyid
 M.add_project_v2_item = [[
@@ -1068,10 +1064,19 @@ mutation($object_id: ID!, $user_ids: [ID!]!) {
 }
 ]]
 
+---https://docs.github.com/en/graphql/reference/input-objects#createpullrequestinput
+---@class octo.mutations.CreatePullRequestInput
+---@field baseRefName string
+---@field headRefName string
+---@field repositoryId string
+---@field title string
+---@field body string
+---@field draft boolean
+
 -- https://docs.github.com/en/graphql/reference/mutations#createpullrequest
 M.create_pr = [[
-mutation {
-  createPullRequest(input: {baseRefName: "%s", headRefName: "%s", repositoryId: "%s", title: """%s""", body: """%s""", draft: %s}) {
+mutation($input: CreatePullRequestInput!) {
+  createPullRequest(input: $input) {
     pullRequest {
       id
       number
@@ -1163,7 +1168,7 @@ mutation {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.added_to_project_v2_event .. fragments.removed_from_project_v2_event .. fragments.project_v2_item_status_changed_event
 
 M.mark_answer = [[
 mutation($id: ID!) {

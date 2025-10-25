@@ -6,17 +6,12 @@ local gh = require "octo.gh"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local utils = require "octo.utils"
 
+---@param opts {repo: string, number: integer, prompt_title: string?}
 return function(opts)
-  opts = opts or {}
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-
   local formatted_commits = {}
 
   local function get_contents(fzf_cb)
-    local url = string.format("repos/%s/pulls/%d/commits", buffer.repo, buffer.number)
+    local url = string.format("repos/%s/pulls/%d/commits", opts.repo, opts.number)
     gh.run {
       args = { "api", "--paginate", url },
       cb = function(output, stderr)
@@ -48,7 +43,7 @@ return function(opts)
       ["--no-multi"] = "", -- TODO this can support multi, maybe.
       ["--with-nth"] = "2..",
     },
-    previewer = previewers.commit(formatted_commits, buffer.repo),
+    previewer = previewers.commit(formatted_commits, opts.repo),
     actions = fzf_actions.common_buffer_actions(formatted_commits),
   })
 end

@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
+local headers = require "octo.gh.headers"
 local queries = require "octo.gh.queries"
 local parser = require "octo.gh.parser"
 local navigation = require "octo.navigation"
@@ -397,16 +398,13 @@ end
 --
 -- COMMITS
 --
-function M.commits()
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
 
+---@param opts {repo: string, number: integer}
+function M.commits(opts)
   -- TODO: graphql
   gh.api.get {
     "/repos/{repo}/pulls/{number}/commits",
-    format = { repo = buffer.repo, number = buffer.number },
+    format = { repo = opts.repo, number = opts.number },
     paginate = true,
     opts = {
       cb = gh.create_callback {
@@ -422,7 +420,7 @@ function M.commits()
                 entry_maker = entry_maker.gen_from_git_commits(),
               },
               sorter = conf.generic_sorter {},
-              previewer = previewers.commit.new { repo = buffer.repo },
+              previewer = previewers.commit.new { repo = opts.repo },
               attach_mappings = function(_, map)
                 action_set.select:replace(function(prompt_bufnr, type)
                   open_preview_buffer(type)(prompt_bufnr)
@@ -438,13 +436,9 @@ function M.commits()
   }
 end
 
-function M.review_commits(callback)
-  local current_review = require("octo.reviews").get_current_review()
-  if not current_review then
-    utils.error "No review in progress"
-    return
-  end
-
+---@param current_review Review
+---@param callback fun(right: Rev, left: Rev): nil
+function M.review_commits(current_review, callback)
   -- TODO: graphql
   gh.api.get {
     "/repos/{repo}/pulls/{number}/commits",
@@ -506,15 +500,12 @@ end
 --
 -- FILES
 --
-function M.changed_files()
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
 
+---@param opts {repo: string, number: integer}
+function M.changed_files(opts)
   gh.api.get {
     "/repos/{repo}/pulls/{number}/files",
-    format = { repo = buffer.repo, number = buffer.number },
+    format = { repo = opts.repo, number = opts.number },
     paginate = true,
     opts = {
       cb = gh.create_callback {
@@ -545,7 +536,7 @@ function M.changed_files()
                 },
               },
               sorter = conf.generic_sorter {},
-              previewer = previewers.changed_files.new { repo = buffer.repo, number = buffer.number },
+              previewer = previewers.changed_files.new { repo = opts.repo, number = opts.number },
               attach_mappings = function()
                 action_set.select:replace(function(prompt_bufnr, type)
                   open_preview_buffer(type)(prompt_bufnr)
@@ -1422,7 +1413,7 @@ function M.notifications(opts)
       all = opts.all,
     },
     opts = {
-      headers = { "Accept: application/vnd.github.v3.diff" },
+      headers = { headers.diff },
       cb = gh.create_callback { success = create_notification_picker },
     },
   }

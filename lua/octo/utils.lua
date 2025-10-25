@@ -25,6 +25,21 @@ M.viewed_state_map = {
   UNVIEWED = { icon = "󰄰 ", hl = "OctoBlue" },
 }
 
+---@type table<DeploymentState, table<string, string>>
+M.deployed_state_map = {
+  ABANDONED = { "Abandoned", "OctoBubbleRed" },
+  ACTIVE = { "Active", "OctoBubbleGreen" },
+  DESTROYED = { "Destroyed", "OctoBubbleGray" },
+  ERROR = { "Error", "OctoBubbleRed" },
+  FAILURE = { "Failure", "OctoBubbleRed" },
+  INACTIVE = { "Inactive", "OctoBubbleGrey" },
+  IN_PROGRESS = { "In Progress", "OctoBubbleYellow" },
+  PENDING = { "Pending", "OctoBubbleYellow" },
+  QUEUED = { "Queued", "OctoBubbleYellow" },
+  SUCCESS = { "Success", "OctoBubbleGreen" },
+  WAITING = { "Waiting", "OctoBubbleYellow" },
+}
+
 M.state_msg_map = {
   APPROVED = "approved",
   CHANGES_REQUESTED = "requested changes",
@@ -603,12 +618,14 @@ end
 
 M.merge_queue_to_flag = {
   queue = "--queue",
+  auto = "--auto",
 }
 
 M.merge_method_to_flag = {
   squash = "--squash",
   rebase = "--rebase",
   commit = "--merge",
+  merge = "--merge",
 }
 
 ---@param args string[]
@@ -2043,6 +2060,7 @@ function M.input(opts)
   return value
 end
 
+---@return OctoBuffer?
 function M.get_current_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   return octo_buffers[bufnr]

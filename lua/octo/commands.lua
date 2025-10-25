@@ -1,7 +1,9 @@
 ---@diagnostic disable
 local constants = require "octo.constants"
+local context = require "octo.context"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
@@ -113,6 +115,14 @@ function M.setup()
         local opts = M.process_varargs(repo, ...)
         picker.discussions(opts)
       end,
+      category = context.within_discussion(function(buffer)
+        local node = buffer:discussion()
+        require("octo.discussions").change_category {
+          repo = node.repository.nameWithOwner,
+          current_category = node.category.name,
+          discussion_id = node.id,
+        }
+      end),
       create = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
 
@@ -123,18 +133,7 @@ function M.setup()
 
         require("octo.discussions").create(opts)
       end,
-      reopen = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
-        if not buffer:isDiscussion() then
-          utils.error "Not a discussion buffer"
-          return
-        end
-
+      reopen = context.within_discussion(function(buffer)
         gh.api.graphql {
           query = mutations.reopen_discussion,
           fields = { discussion_id = buffer:discussion().id },
@@ -149,7 +148,7 @@ function M.setup()
             },
           },
         }
-      end,
+      end),
       search = function(...)
         local args = table.pack(...)
         local prompt = table.concat(args, " ")
@@ -157,18 +156,7 @@ function M.setup()
         prompt = "repo:" .. repo .. " " .. prompt
         picker.search { prompt = prompt, type = "DISCUSSION" }
       end,
-      close = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
-        if not buffer:isDiscussion() then
-          utils.error "Not a discussion buffer"
-          return
-        end
-
+      close = context.within_discussion(function(buffer)
         --https://docs.github.com/en/graphql/reference/enums#discussionclosereason
         local reasons = {
           "Duplicate",
@@ -197,10 +185,10 @@ function M.setup()
             },
           }
         end)
-      end,
+      end),
     },
     type = {
-      add = M.within_issue(function(buffer)
+      add = context.within_issue(function(buffer)
         local owner, repo = utils.split_repo(buffer.repo)
 
         gh.api.graphql {
@@ -256,7 +244,7 @@ function M.setup()
           },
         }
       end),
-      remove = M.within_issue(function(buffer)
+      remove = context.within_issue(function(buffer)
         local current_type = buffer:issue().issueType
 
         if not current_type or utils.is_blank(current_type) then
@@ -307,13 +295,7 @@ function M.setup()
         end
         picker.milestones(opts)
       end,
-      remove = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer then
-          utils.error "No buffer found"
-          return
-        end
-
+      remove = context.within_issue_or_pr(function(buffer)
         local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
         local milestone = node.milestone
         if utils.is_blank(milestone) then
@@ -322,7 +304,7 @@ function M.setup()
         end
 
         utils.remove_milestone(buffer:isIssue(), buffer.number)
-      end,
+      end),
       create = function(milestoneTitle)
         if utils.is_blank(milestoneTitle) then
           vim.fn.inputsave()
@@ -338,7 +320,7 @@ function M.setup()
       end,
     },
     parent = {
-      edit = M.within_issue(function(buffer)
+      edit = context.within_issue(function(buffer)
         local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
@@ -349,7 +331,7 @@ function M.setup()
         local uri = string.format("octo://%s/issue/%s", buffer.repo, parent.number)
         vim.cmd.edit(uri)
       end),
-      remove = M.within_issue(function(buffer)
+      remove = context.within_issue(function(buffer)
         local parent = buffer.issue().parent
 
         if utils.is_blank(parent) then
@@ -375,7 +357,7 @@ function M.setup()
           },
         }
       end),
-      add = M.within_issue(function(buffer)
+      add = context.within_issue(function(buffer)
         local opts = {}
         opts.cb = function(selected)
           gh.api.graphql {
@@ -401,6 +383,21 @@ function M.setup()
       end),
     },
     issue = {
+      copilot = context.within_issue(function(buffer)
+        gh.issue.edit {
+          buffer:issue().number,
+          add_assignee = "@copilot",
+          opts = {
+            cb = function(_, _, exit_code)
+              if exit_code == 0 then
+                utils.info "GitHub Copilot assigned to the Issue"
+              else
+                utils.error "Failed to assign GitHub Copilot to the Issue"
+              end
+            end,
+          },
+        }
+      end),
       create = function(repo)
         M.create_issue(repo)
       end,
@@ -411,10 +408,10 @@ function M.setup()
         stateReason = stateReason or "CLOSED"
         M.change_state(stateReason)
       end,
-      unpin = M.within_issue(function(buffer)
+      unpin = context.within_issue(function(buffer)
         M.pin_issue { obj = buffer:issue(), add = false }
       end),
-      pin = M.within_issue(function(buffer)
+      pin = context.within_issue(function(buffer)
         M.pin_issue { obj = buffer:issue(), add = true }
       end),
       develop = function(repo, ...)
@@ -461,19 +458,27 @@ function M.setup()
       end,
     },
     pr = {
+      copilot = context.within_pr(function(buffer)
+        gh.pr.edit {
+          buffer:pullRequest().number,
+          add_assignee = "@copilot",
+          opts = {
+            cb = function(_, _, exit_code)
+              if exit_code == 0 then
+                utils.info "GitHub Copilot assigned to the Pull Request"
+              else
+                utils.error "Failed to assign GitHub Copilot to the Pull Request"
+              end
+            end,
+          },
+        }
+      end),
       edit = function(...)
         utils.get_pull_request(...)
       end,
-      runs = function()
-        local buffer = utils.get_current_buffer()
-        if not buffer or not buffer:isPullRequest() then
-          utils.error "Not a pull request buffer"
-          return
-        end
-        local headRefName = buffer:pullRequest().headRefName
-
-        require("octo.workflow_runs").list { branch = headRefName }
-      end,
+      runs = context.within_pr(function(buffer)
+        require("octo.workflow_runs").list { branch = buffer:pullRequest().headRefName }
+      end),
       close = function()
         M.change_state "CLOSED"
       end,
@@ -503,27 +508,25 @@ function M.setup()
       create = function(...)
         M.create_pr(...)
       end,
-      commits = function()
-        picker.commits()
-      end,
-      changes = function()
-        picker.changed_files()
-      end,
+      commits = context.within_pr(function(buffer)
+        picker.commits(buffer)
+      end),
+      changes = context.within_pr(function(buffer)
+        picker.changed_files(buffer)
+      end),
       diff = function()
         M.show_pr_diff()
       end,
       merge = function(...)
         M.merge_pr(...)
       end,
-      checks = function()
-        M.pr_checks()
-      end,
-      ready = function()
-        M.gh_pr_ready { undo = false }
-      end,
-      draft = function()
-        M.gh_pr_ready { undo = true }
-      end,
+      checks = context.within_pr(M.pr_checks),
+      ready = context.within_pr(function(buffer)
+        M.gh_pr_ready { pr = buffer:pullRequest(), bufnr = buffer.bufnr, undo = false }
+      end),
+      draft = context.within_pr(function(buffer)
+        M.gh_pr_ready { pr = buffer:pullRequest(), bufnr = buffer.bufnr, undo = true }
+      end),
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
         if utils.is_blank(opts.repo) then
@@ -547,9 +550,7 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
-      sha = function()
-        M.copy_sha()
-      end,
+      sha = M.copy_sha,
     },
     repo = {
       search = function(prompt)
@@ -602,14 +603,9 @@ function M.setup()
       resume = function()
         reviews.resume_review()
       end,
-      comments = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          current_review:show_pending_comments()
-        else
-          utils.error "Please start or resume a review first"
-        end
-      end,
+      comments = context.within_review(function(current_review)
+        current_review:show_pending_comments()
+      end),
       submit = function()
         reviews.submit_review()
       end,
@@ -623,16 +619,11 @@ function M.setup()
           utils.error "Please start or resume a review first"
         end
       end,
-      commit = function()
-        local current_review = reviews.get_current_review()
-        if current_review then
-          picker.review_commits(function(right, left)
-            current_review:focus_commit(right, left)
-          end)
-        else
-          utils.error "Please start or resume a review first"
-        end
-      end,
+      commit = context.within_review(function(current_review)
+        picker.review_commits(current_review, function(left, right)
+          current_review:focus_commit(left, right)
+        end)
+      end),
       thread = function()
         require("octo.reviews.thread-panel").show_review_threads(true)
       end,
@@ -673,15 +664,9 @@ function M.setup()
           M.add_pr_issue_or_review_thread_comment()
         end
       end,
-      suggest = function()
-        local current_review = reviews.get_current_review()
-        if not current_review then
-          utils.error "Please start or resume a review first"
-          return
-        end
-
+      suggest = context.within_review(function(current_review)
         current_review:add_comment(true)
-      end,
+      end),
       reply = M.add_pr_issue_or_review_thread_comment_reply,
       url = function()
         local buffer = utils.get_current_buffer()
@@ -1393,25 +1378,25 @@ function M.change_state(state)
   local id = node.id
   local query, jq, desired_state, fields
   if buffer:isIssue() and state == "CLOSED" then
-    query = graphql("update_issue_state_mutation", id, state)
+    query = mutations.update_issue_state
     desired_state = state
     jq = ".data.updateIssue.issue"
-    fields = {}
+    fields = { id = id, state = state }
   elseif buffer:isIssue() and state == "OPEN" then
     query = mutations.reopen_issue
     desired_state = "OPEN"
     jq = ".data.reopenIssue.issue"
     fields = { issueId = id }
   elseif buffer:isIssue() then
-    query = graphql("close_issue_mutation", id, state)
+    query = mutations.close_issue
     desired_state = "CLOSED"
     jq = ".data.closeIssue.issue"
-    fields = {}
+    fields = { issueId = id, stateReason = state }
   elseif buffer:isPullRequest() then
-    query = graphql("update_pull_request_state_mutation", id, state)
+    query = mutations.update_pull_request_state
     desired_state = state
     jq = ".data.updatePullRequest.pullRequest"
-    fields = {}
+    fields = { pullRequestId = id, state = state }
   end
 
   local function update_state(output)
@@ -1427,12 +1412,7 @@ function M.change_state(state)
     local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
     writers.write_state(buffer.bufnr, updated_state:upper(), buffer.number)
     writers.write_details(buffer.bufnr, obj, true)
-    local kind
-    if buffer:isIssue() then
-      kind = "Issue"
-    else
-      kind = "Pull Request"
-    end
+    local kind = buffer:isIssue() and "Issue" or "Pull Request"
     utils.info(kind .. " state changed to: " .. updated_state)
   end
 
@@ -1473,6 +1453,12 @@ function M.create_issue(repo)
   end
 end
 
+---@class SaveIssueOpts
+---@field repo string
+---@field base_title string
+---@field base_body? string
+
+---@param opts SaveIssueOpts
 function M.save_issue(opts)
   vim.fn.inputsave()
   local title = vim.fn.input(string.format("Creating issue in %s. Enter title: ", opts.repo), opts.base_title)
@@ -1496,20 +1482,19 @@ function M.save_issue(opts)
     -- TODO: let the user edit the template before submitting
   end
 
-  local repo_id = utils.get_repo_id(opts.repo)
-  local query = graphql("create_issue_mutation", repo_id, title, body)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        require("octo").create_buffer("issue", resp.data.createIssue.issue, opts.repo, true)
-        vim.fn.execute "normal! Gk"
-        vim.fn.execute "startinsert"
-      end
-    end,
+  gh.api.graphql {
+    query = mutations.create_issue,
+    jq = ".data.createIssue.issue",
+    F = { input = { repositoryId = utils.get_repo_id(opts.repo), title = title, body = body } },
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          require("octo").create_buffer("issue", vim.json.decode(output), opts.repo, true)
+          vim.fn.execute "normal! Gk"
+          vim.fn.execute "startinsert"
+        end,
+      },
+    },
   }
 end
 
@@ -1703,57 +1688,52 @@ function M.save_pr(opts)
   vim.fn.inputrestore()
 
   local repo_id = utils.get_repo_id(opts.candidates[repo_idx])
-  title = title and title or ""
-  body = body and body or ""
-  local query = graphql(
-    "create_pr_mutation",
-    base_ref_name,
-    head_ref_name,
-    repo_id,
-    utils.escape_char(title),
-    utils.escape_char(body),
-    opts.is_draft
-  )
-
   local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          local resp = vim.json.decode(output)
-          local pr = resp.data.createPullRequest.pullRequest
-          utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
-          require("octo").create_buffer("pull", pr, opts.repo, true)
-        end
-      end,
+    gh.api.graphql {
+      query = mutations.create_pr,
+      F = {
+        input = {
+          repositoryId = repo_id,
+          baseRefName = base_ref_name,
+          headRefName = head_ref_name,
+          title = title and title or "",
+          body = body and body or "",
+          draft = opts.is_draft,
+        },
+      },
+      jq = ".data.createPullRequest.pullRequest",
+      opts = {
+        cb = gh.create_callback {
+          success = function(output)
+            local pr = vim.json.decode(output)
+            utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
+            require("octo").create_buffer("pull", pr, opts.repo, true)
+          end,
+        },
+      },
     }
   end
 end
 
 --- @class PRReadyOpts
+--- @field pr octo.PullRequest The PR
+--- @field bufnr integer Buffer number
 --- @field undo boolean Whether to undo from ready to draft
 
 --- Change PR state to ready for review or draft
 --- @param opts PRReadyOpts
 function M.gh_pr_ready(opts)
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    utils.error "Not a PR buffer"
-    return
-  end
-
   gh.pr.ready {
-    buffer.number,
+    opts.pr.number,
+    repo = opts.pr.baseRepository.nameWithOwner,
     undo = opts.undo,
     opts = {
       cb = gh.create_callback {
         -- There seems to be something wrong with the CLI output. It comes back as stderr
         failure = function(output)
           utils.info(output)
-          writers.write_state(buffer.bufnr)
+          writers.write_state(opts.bufnr)
         end,
         success = utils.error,
       },
@@ -1810,13 +1790,8 @@ local format_checks = function(parts)
   return lines
 end
 
-function M.pr_checks()
-  local buffer = utils.get_current_buffer()
-
-  if not buffer or not buffer:isPullRequest() then
-    return
-  end
-
+---@param buffer OctoBuffer
+function M.pr_checks(buffer)
   local mappings = require("octo.config").values.mappings.runs
 
   local function show_checks(data)
@@ -1928,17 +1903,22 @@ function M.merge_pr(...)
     return
   end
 
-  local args = { "pr", "merge", tostring(buffer.number) }
+  local node = buffer:pullRequest()
+
+  local opts = {
+    buffer.number,
+    repo = node.baseRepository.nameWithOwner,
+  }
+
   local params = table.pack(...)
   local conf = config.values
 
   local merge_method = conf.default_merge_method
   for _, param in ipairs(params) do
     if utils.merge_method_to_flag[param] then
-      merge_method = param
+      opts[param] = true
     end
   end
-  utils.insert_merge_flag(args, merge_method)
 
   local delete_branch = conf.default_delete_branch
   for _, param in ipairs(params) do
@@ -1949,21 +1929,23 @@ function M.merge_pr(...)
       delete_branch = false
     end
   end
-  utils.insert_delete_flag(args, delete_branch)
+  opts["delete-branch"] = delete_branch
 
   for _, param in ipairs(params) do
     if utils.merge_queue_to_flag[param] then
-      utils.insert_merge_flag(args, param)
+      opts["auto"] = true
     end
   end
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      utils.info(output .. " " .. stderr)
+  opts.opts = {
+    cb = function(output, stderr, exit_code)
+      local log = exit_code == 0 and utils.info or utils.error
+      log(output .. " " .. stderr)
       writers.write_state(buffer.bufnr)
     end,
   }
+
+  gh.pr.merge(opts)
 end
 
 function M.show_pr_diff()
@@ -1975,7 +1957,7 @@ function M.show_pr_diff()
   local url = string.format("/repos/%s/pulls/%s", buffer.repo, buffer.number)
   gh.run {
     args = { "api", "--paginate", url },
-    headers = { "Accept: application/vnd.github.v3.diff" },
+    headers = { headers.diff },
     cb = function(output, stderr)
       if stderr and not utils.is_blank(stderr) then
         utils.error(stderr)
@@ -2497,32 +2479,15 @@ function M.copy_url()
   utils.copy_url(url)
 end
 
-function M.copy_sha()
-  local buffer = utils.get_current_buffer()
-
-  if not buffer then
-    utils.error "No buffer found"
-    return
-  end
-
-  local sha
-  if buffer:isPullRequest() then
-    sha = buffer:pullRequest().headRefOid
-  elseif buffer:isIssue() then
-    utils.error "Issues don't have commit SHAs"
-    return
-  else
-    utils.error "Not in a supported buffer type"
-    return
-  end
-
+M.copy_sha = context.within_pr(function(buffer)
+  local sha = buffer:pullRequest().headRefOid
   if not sha then
     utils.error "No SHA found"
     return
   end
 
   utils.copy_sha(sha)
-end
+end)
 
 function M.actions()
   local flattened_actions = {}
@@ -2558,19 +2523,6 @@ function M.search(...)
   end
 
   picker.search { prompt = prompt, type = type }
-end
-
----@param cb fun(buffer: OctoBuffer): nil
-function M.within_issue(cb)
-  return function()
-    local buffer = utils.get_current_buffer()
-    if not buffer or not buffer:isIssue() then
-      utils.error "Not an issue buffer"
-      return
-    end
-
-    cb(buffer)
-  end
 end
 
 --- @class PinIssueOpts

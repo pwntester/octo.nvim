@@ -1,5 +1,6 @@
 ---@diagnostic disable
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
@@ -327,167 +328,165 @@ function M.notifications(opts)
   opts.preview_title = ""
   opts.results_title = ""
 
-  gh.run {
-    args = { "api", "--paginate", endpoint },
-    headers = { "Accept: application/vnd.github.v3.diff" },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local notifications = vim.json.decode(output)
+  gh.api.get {
+    endpoint,
+    paginate = true,
+    opts = {
+      headers = { headers.diff },
+      cb = gh.create_callback {
+        success = function(output)
+          local notifications = vim.json.decode(output)
 
-        if #notifications == 0 then
-          utils.info "There are no notifications"
-          return
-        end
-
-        local safe_notifications = {}
-
-        for _, notification in ipairs(notifications) do
-          local safe = false
-          notification.subject.number = notification.subject.url:match "%d+$"
-          notification.text = string.format("#%d %s", notification.subject.number, notification.subject.title)
-          notification.kind = notification.subject.type:lower()
-          if notification.kind == "pullrequest" then
-            notification.kind = "pull_request"
+          if #notifications == 0 then
+            utils.info "There are no notifications"
+            return
           end
-          notification.status = notification.unread and "unread" or "read"
-          if notification.kind == "issue" then
-            notification.file = utils.get_issue_uri(notification.subject.number, notification.repository.full_name)
-            safe = true
-          elseif notification.kind == "pull_request" then
-            notification.file =
-              utils.get_pull_request_uri(notification.subject.number, notification.repository.full_name)
-            safe = true
-          end
-          if safe then
-            safe_notifications[#safe_notifications + 1] = notification
-          end
-        end
 
-        -- Prepare actions and keys for Snacks
-        local final_actions = {}
-        local final_keys = {}
-        local default_mode = { "n", "i" }
+          local safe_notifications = {}
 
-        -- Process custom actions from config array
-        local custom_actions_defined = {}
-        if
-          cfg.picker_config.snacks
-          and cfg.picker_config.snacks.actions
-          and cfg.picker_config.snacks.actions.notifications
-        then
-          for _, action_item in ipairs(cfg.picker_config.snacks.actions.notifications) do
-            if action_item.name and action_item.fn then
-              final_actions[action_item.name] = action_item.fn
-              custom_actions_defined[action_item.name] = true
-              if action_item.lhs then
-                final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+          for _, notification in ipairs(notifications) do
+            local safe = false
+            notification.subject.number = notification.subject.url:match "%d+$"
+            notification.text = string.format("#%d %s", notification.subject.number, notification.subject.title)
+            notification.kind = notification.subject.type:lower()
+            if notification.kind == "pullrequest" then
+              notification.kind = "pull_request"
+            end
+            notification.status = notification.unread and "unread" or "read"
+            if notification.kind == "issue" then
+              notification.file = utils.get_issue_uri(notification.subject.number, notification.repository.full_name)
+              safe = true
+            elseif notification.kind == "pull_request" then
+              notification.file =
+                utils.get_pull_request_uri(notification.subject.number, notification.repository.full_name)
+              safe = true
+            end
+            if safe then
+              safe_notifications[#safe_notifications + 1] = notification
+            end
+          end
+
+          -- Prepare actions and keys for Snacks
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          -- Process custom actions from config array
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.notifications
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.notifications) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
               end
             end
           end
-        end
 
-        -- Add default actions/keys if not overridden
-        if not custom_actions_defined["open_in_browser"] then
-          final_actions["open_in_browser"] = function(_picker, item)
-            navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
-          end
-        end
-        if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
-          final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
-        end
-
-        if not custom_actions_defined["copy_url"] then
-          final_actions["copy_url"] = function(_picker, item)
-            -- Note: notification item doesn't have a direct .url, need to construct or use subject URL?
-            -- Using subject URL for now, might need adjustment depending on desired behavior.
-            utils.copy_url(item.subject.url or "")
-          end
-        end
-        if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
-          final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
-        end
-
-        if not custom_actions_defined["copy_sha"] then
-          final_actions["copy_sha"] = function(_picker, item)
-            if item.kind == "pull_request" then
-              -- For PR notifications, we need to fetch the PR details to get the head SHA
-              -- This is a simplified approach - in a real implementation, you might want to cache this
-              utils.info "Fetching PR details for SHA..."
-              local owner, repo = item.repository.full_name:match "([^/]+)/(.+)"
-              gh.api.get {
-                "/repos/{owner}/{repo}/pulls/{pull_number}",
-                format = { owner = owner, repo = repo, pull_number = item.subject.number },
-                opts = {
-                  cb = gh.create_callback {
-                    success = function(output)
-                      local pr_data = vim.json.decode(output)
-                      utils.copy_sha(pr_data.head.sha)
-                    end,
-                  },
-                },
-              }
-            else
-              utils.info "Copy SHA not available for this notification type"
+          -- Add default actions/keys if not overridden
+          if not custom_actions_defined["open_in_browser"] then
+            final_actions["open_in_browser"] = function(_picker, item)
+              navigation.open_in_browser(item.kind, item.repository.full_name, item.subject.number)
             end
           end
-        end
-        if not final_keys[cfg.picker_config.mappings.copy_sha.lhs] then
-          final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
-        end
-
-        if not custom_actions_defined["mark_notification_read"] then
-          final_actions["mark_notification_read"] = function(picker, item)
-            local url = string.format("/notifications/threads/%s", item.id)
-            gh.run {
-              args = { "api", "--method", "PATCH", url },
-              headers = { "Accept: application/vnd.github.v3.diff" },
-              cb = function(_, stderr)
-                if stderr and not utils.is_blank(stderr) then
-                  utils.error(stderr)
-                  return
-                end
-              end,
-            }
-            -- TODO: No current way to redraw the list/remove just this item
-            picker:close()
-            M.notifications(opts)
+          if not final_keys[cfg.picker_config.mappings.open_in_browser.lhs] then
+            final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
           end
-        end
-        -- Use the default mapping from the main config section for 'read'
-        if
-          cfg.mappings.notification
-          and cfg.mappings.notification.read
-          and not final_keys[cfg.mappings.notification.read.lhs]
-        then
-          final_keys[cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = default_mode }
-        end
 
-        Snacks.picker.pick {
-          title = opts.preview_title or "Notifications",
-          items = safe_notifications,
-          format = function(item, _)
-            ---@type snacks.picker.Highlight[]
-            local ret = {}
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            ret[#ret + 1] = utils.icons.notification[item.kind][item.status]
-            ret[#ret + 1] = { string.format("#%d", item.subject.number), "Comment" }
-            ret[#ret + 1] = { " " }
-            ret[#ret + 1] = { item.repository.full_name, "Function" }
-            ret[#ret + 1] = { " " }
-            ret[#ret + 1] = { item.subject.title, "Normal" }
-            return ret
-          end,
-          win = {
-            input = {
-              keys = final_keys, -- Use the constructed keys map
+          if not custom_actions_defined["copy_url"] then
+            final_actions["copy_url"] = function(_picker, item)
+              -- Note: notification item doesn't have a direct .url, need to construct or use subject URL?
+              -- Using subject URL for now, might need adjustment depending on desired behavior.
+              utils.copy_url(item.subject.url or "")
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.copy_url.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
+          end
+
+          if not custom_actions_defined["copy_sha"] then
+            final_actions["copy_sha"] = function(_picker, item)
+              if item.kind == "pull_request" then
+                -- For PR notifications, we need to fetch the PR details to get the head SHA
+                -- This is a simplified approach - in a real implementation, you might want to cache this
+                utils.info "Fetching PR details for SHA..."
+                local owner, repo = item.repository.full_name:match "([^/]+)/(.+)"
+                gh.api.get {
+                  "/repos/{owner}/{repo}/pulls/{pull_number}",
+                  format = { owner = owner, repo = repo, pull_number = item.subject.number },
+                  opts = {
+                    cb = gh.create_callback {
+                      success = function(output)
+                        local pr_data = vim.json.decode(output)
+                        utils.copy_sha(pr_data.head.sha)
+                      end,
+                    },
+                  },
+                }
+              else
+                utils.info "Copy SHA not available for this notification type"
+              end
+            end
+          end
+          if not final_keys[cfg.picker_config.mappings.copy_sha.lhs] then
+            final_keys[cfg.picker_config.mappings.copy_sha.lhs] = { "copy_sha", mode = default_mode }
+          end
+
+          if not custom_actions_defined["mark_notification_read"] then
+            final_actions["mark_notification_read"] = function(picker, item)
+              gh.api.patch {
+                "/notifications/threads/{id}",
+                format = { id = item.id },
+                opts = {
+                  headers = { headers.diff },
+                  cb = gh.create_callback { success = function() end },
+                },
+              }
+              -- TODO: No current way to redraw the list/remove just this item
+              picker:close()
+              M.notifications(opts)
+            end
+          end
+          -- Use the default mapping from the main config section for 'read'
+          if
+            cfg.mappings.notification
+            and cfg.mappings.notification.read
+            and not final_keys[cfg.mappings.notification.read.lhs]
+          then
+            final_keys[cfg.mappings.notification.read.lhs] = { "mark_notification_read", mode = default_mode }
+          end
+
+          Snacks.picker.pick {
+            title = opts.preview_title or "Notifications",
+            items = safe_notifications,
+            format = function(item, _)
+              ---@type snacks.picker.Highlight[]
+              local ret = {}
+              ---@diagnostic disable-next-line: assign-type-mismatch
+              ret[#ret + 1] = utils.icons.notification[item.kind][item.status]
+              ret[#ret + 1] = { string.format("#%d", item.subject.number), "Comment" }
+              ret[#ret + 1] = { " " }
+              ret[#ret + 1] = { item.repository.full_name, "Function" }
+              ret[#ret + 1] = { " " }
+              ret[#ret + 1] = { item.subject.title, "Normal" }
+              return ret
+            end,
+            win = {
+              input = {
+                keys = final_keys, -- Use the constructed keys map
+              },
             },
-          },
-          actions = final_actions, -- Use the constructed actions map
-        }
-      end
-    end,
+            actions = final_actions, -- Use the constructed actions map
+          }
+        end,
+      },
+    },
   }
 end
 
@@ -588,17 +587,11 @@ function M.issue_templates(templates, cb)
   }
 end
 
+---@param opts {repo: string, number: integer, title: string?}
 function M.commits(opts)
-  opts = opts or {}
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    utils.error "Commits picker only works in pull request buffers"
-    return
-  end
-
   gh.api.get {
-    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
-    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    "/repos/{repo}/pulls/{number}/commits",
+    format = { repo = opts.repo, number = opts.number },
     opts = {
       paginate = true,
       cb = gh.create_callback {
@@ -719,22 +712,17 @@ function M.commits(opts)
   }
 end
 
-function M.review_commits(callback)
-  local current_review = require("octo.reviews").get_current_review()
-  if not current_review then
-    utils.error "No review in progress"
-    return
-  end
-
+---@param current_review Review
+---@param callback fun(left: Rev, right: Rev): nil
+function M.review_commits(current_review, callback)
   gh.api.get {
-    "/repos/{owner}/{repo}/pulls/{pull_number}/commits",
+    "/repos/{repo}/pulls/{number}/commits",
     format = {
-      owner = current_review.pull_request.repo:match "([^/]+)/",
-      repo = current_review.pull_request.repo:match "/(.+)",
-      pull_number = current_review.pull_request.number,
+      repo = current_review.pull_request.repo,
+      number = current_review.pull_request.number,
     },
+    paginate = true,
     opts = {
-      paginate = true,
       cb = gh.create_callback {
         success = function(output)
           local results = vim.json.decode(output)
@@ -1092,17 +1080,11 @@ function M.search(opts)
   end
 end
 
+---@param opts {repo: string, number: integer, title: string?}
 function M.changed_files(opts)
-  opts = opts or {}
-  local buffer = utils.get_current_buffer()
-  if not buffer or not buffer:isPullRequest() then
-    utils.error "Changed files picker only works in pull request buffers"
-    return
-  end
-
   gh.api.get {
-    "/repos/{owner}/{repo}/pulls/{pull_number}/files",
-    format = { owner = buffer.repo:match "([^/]+)/", repo = buffer.repo:match "/(.+)", pull_number = buffer.number },
+    "/repos/{repo}/pulls/{number}/files",
+    format = { repo = opts.repo, number = opts.number },
     opts = {
       paginate = true,
       cb = gh.create_callback {

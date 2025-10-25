@@ -4,6 +4,7 @@ local octo_config = require "octo.config"
 local entry_maker = require "octo.pickers.fzf-lua.entry_maker"
 local utils = require "octo.utils"
 local gh = require "octo.gh"
+local headers = require "octo.gh.headers"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local notifications = require "octo.notifications"
@@ -53,7 +54,7 @@ return function(opts)
         all = opts.all,
       },
       opts = {
-        headers = { "Accept: application/vnd.github.v3.diff" },
+        headers = { headers.diff },
         stream_cb = function(data, err)
           if err and not utils.is_blank(err) then
             utils.error(err)

@@ -104,6 +104,9 @@ local M = {}
 ---@class OctoMissingScopeConfig
 ---@field projects_v2 boolean
 
+---@class OctoConfigDebug
+---@field notify_missing_timeline_items boolean
+
 ---@class OctoConfig Octo configuration settings
 ---@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
@@ -145,6 +148,7 @@ local M = {}
 ---@field mappings_disable_default boolean
 ---@field discussions OctoConfigDiscussions
 ---@field notifications OctoConfigNotifications
+---@field debug OctoConfigDebug
 
 --- Returns the default octo config values
 ---@return OctoConfig
@@ -190,17 +194,22 @@ function M.get_default_values()
     timeline_indent = 2,
     use_timeline_icons = true,
     timeline_icons = {
+      auto_squash = "  ",
       commit_push = "  ",
+      force_push = "  ",
       draft = "  ",
       ready = " ",
       commit = "  ",
+      deployed = "  ",
       issue_type = "  ",
       label = "  ",
       reference = " ",
+      project = "  ",
       connected = "  ",
       subissue = "  ",
       cross_reference = "  ",
       parent_issue = "  ",
+      head_ref = "  ",
       pinned = "  ",
       milestone = "  ",
       renamed = "  ",
@@ -478,6 +487,9 @@ function M.get_default_values()
       repo = {},
       release = {},
     },
+    debug = {
+      notify_missing_timeline_items = false,
+    },
   }
 end
 
@@ -646,6 +658,13 @@ function M.validate_config()
     end
   end
 
+  local function validate_debug()
+    if not validate_type(config.debug, "debug", "table") then
+      return
+    end
+    validate_type(config.debug.notify_missing_timeline_items, "debug.notify_missing_timeline_items", "boolean")
+  end
+
   if validate_type(config, "base config", "table") then
     validate_type(config.use_local_fs, "use_local_fs", "boolean")
     validate_type(config.enable_builtin, "enable_builtin", "boolean")
@@ -699,6 +718,7 @@ function M.validate_config()
     validate_aliases()
     validate_pickers()
     validate_mappings()
+    validate_debug()
   end
 
   return errors
