@@ -33,6 +33,55 @@ function M.open(command, entry)
   elseif command == "tab" then
     vim.cmd [[:tab sb %]]
   end
+
+  if not entry.kind then
+    local buf = vim.api.nvim_create_buf(false, true)
+
+    if entry.author and entry.ordinal then
+      local lines = {}
+
+      vim.list_extend(lines, { string.format("Commit: %s", entry.value) })
+      vim.list_extend(lines, { string.format("Author: %s", entry.author) })
+      vim.list_extend(lines, { string.format("Date: %s", entry.date) })
+      vim.list_extend(lines, { "" })
+      vim.list_extend(lines, vim.split(entry.msg, "\n"))
+      vim.list_extend(lines, { "" })
+
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+      vim.api.nvim_buf_set_option(buf, "filetype", "git")
+
+      vim.api.nvim_buf_add_highlight(buf, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
+      vim.api.nvim_buf_add_highlight(buf, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
+      vim.api.nvim_buf_add_highlight(buf, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
+
+      local url = string.format("/repos/%s/commits/%s", entry.repo, entry.value)
+      local cmd =
+        table.concat({ "gh", "api", "--paginate", url, "-H", "'Accept: application/vnd.github.v3.diff'" }, " ")
+      local proc = io.popen(cmd, "r")
+      local output ---@type string
+      if proc ~= nil then
+        output = proc:read "*a"
+        proc:close()
+      else
+        output = "Failed to read from " .. url
+      end
+
+      vim.api.nvim_buf_set_lines(buf, #lines, -1, false, vim.split(output, "\n"))
+    end
+
+    if entry.change and entry.change.patch then
+      local diff = entry.change.patch
+      if diff then
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(diff, "\n"))
+        vim.api.nvim_buf_set_option(buf, "filetype", "diff")
+      end
+    end
+
+    vim.api.nvim_win_set_buf(0, buf)
+    return
+  end
+
   utils.get(entry.kind, entry.value, entry.repo)
 end
 
