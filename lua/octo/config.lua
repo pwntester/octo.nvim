@@ -194,6 +194,7 @@ function M.get_default_values()
     timeline_indent = 2,
     use_timeline_icons = true,
     timeline_icons = {
+      auto_squash = "  ",
       commit_push = "  ",
       force_push = "  ",
       draft = "  ",
