@@ -202,6 +202,7 @@ function M.get_default_values()
       subissue = "  ",
       cross_reference = "  ",
       parent_issue = "  ",
+      head_ref = "  ",
       pinned = "  ",
       milestone = "  ",
       renamed = "  ",
