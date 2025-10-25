@@ -728,9 +728,17 @@ function M.parse_utc_date(date_string)
   }
 end
 
+---Relative date options
+---@class DateOpts
+---@field minutes integer
+---@field hours integer
+---@field days integer
+---@field weeks integer
+
 ---@param opts DateOpts
 ---@param reference? string|osdate|number Optional reference date (ISO string or os.time() or os.date table)
 function M.relative_date(opts, reference)
+  ---@type integer
   local ref_ts
   if type(reference) == "string" then
     ref_ts = M.parse_utc_date(reference)
