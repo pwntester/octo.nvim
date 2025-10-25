@@ -197,6 +197,7 @@ function OctoBuffer:render_issue()
   local unrendered_unlabeled_events = {} ---@type octo.fragments.UnlabeledEvent[]
   local unrendered_subissue_added_events = {} ---@type octo.fragments.SubIssueAddedEvent[]
   local unrendered_subissue_removed_events = {} ---@type octo.fragments.SubIssueRemovedEvent[]
+  local unrendered_force_push_events = {} ---@type octo.fragments.HeadRefForcePushedEvent[]
   local commits = {} ---@type octo.fragments.PullRequestCommit[]
   local prev_is_event = false
 
@@ -237,6 +238,11 @@ function OctoBuffer:render_issue()
     if (not item or item.__typename ~= "PullRequestCommit") and #commits > 0 then
       writers.write_commits(self.bufnr, commits)
       commits = {}
+      prev_is_event = true
+    end
+    if (not item or item.__typename ~= "HeadRefForcePushedEvent") and #unrendered_force_push_events > 0 then
+      writers.write_head_ref_force_pushed_events(self.bufnr, unrendered_force_push_events)
+      unrendered_force_push_events = {}
       prev_is_event = true
     end
   end
@@ -363,6 +369,18 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "DeployedEvent" then
       writers.write_deployed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "HeadRefDeletedEvent" then
+      writers.write_head_ref_deleted_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefRestoredEvent" then
+      writers.write_head_ref_restored_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefForcePushedEvent" then
+      table.insert(unrendered_force_push_events, item)
+    elseif not utils.is_blank(item) and config.values.debug.notify_missing_timeline_items then
+      ---@diagnostic disable-next-line
+      local info = item.__typename and item.__typename or vim.inspect(item)
+      utils.info("Unhandled timeline item: " .. info)
     end
   end
   render_accumulated_events()

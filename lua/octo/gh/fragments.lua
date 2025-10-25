@@ -77,6 +77,57 @@ fragment PullRequestFields on PullRequest {
 }
 ]]
 
+---https://docs.github.com/en/graphql/reference/objects#headrefdeletedevent
+---@class octo.fragments.HeadRefDeletedEvent
+---@field __typename "HeadRefDeletedEvent"
+---@field actor { login: string }
+---@field createdAt string
+---@field headRefName string
+
+M.head_ref_deleted_event = [[
+fragment HeadRefDeletedEventFragment on HeadRefDeletedEvent {
+  actor {
+    login
+  }
+  createdAt
+  headRefName
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#headrefrestoredevent
+---@class octo.fragments.HeadRefRestoredEvent
+---@field __typename "HeadRefRestoredEvent"
+---@field actor { login: string }
+---@field createdAt string
+---@field pullRequest { headRefName: string }
+
+M.head_ref_restored_event = [[
+fragment HeadRefRestoredEventFragment on HeadRefRestoredEvent {
+  actor { login }
+  createdAt
+  pullRequest { headRefName }
+}
+]]
+
+---https://docs.github.com/en/graphql/reference/objects#headrefforcepushedevent
+---@class octo.fragments.HeadRefForcePushedEvent
+---@field __typename "HeadRefForcePushedEvent"
+---@field actor { login: string }
+---@field pullRequest { headRefName: string }
+---@field createdAt string
+---@field beforeCommit { abbreviatedOid: string }
+---@field afterCommit { abbreviatedOid: string }
+
+M.head_ref_force_pushed_event = [[
+fragment HeadRefForcePushedEventFragment on HeadRefForcePushedEvent {
+  actor { login }
+  createdAt
+  pullRequest { headRefName }
+  beforeCommit { abbreviatedOid }
+  afterCommit { abbreviatedOid }
+}
+]]
+
 ---@class octo.fragments.ConnectedEvent
 --- @field __typename "ConnectedEvent"
 --- @field actor { login: string }
@@ -866,7 +917,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   }
 }
 ]]
----@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent
+---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent
 
 ---@class octo.fragments.PullRequestTimelineItemsConnection
 ---@field nodes octo.PullRequestTimelineItem[]
@@ -895,9 +946,13 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     ...ReviewRequestedEventFragment
     ...UnlabeledEventFragment
     ...DeployedEventFragment
+    ...HeadRefDeletedEventFragment
+    ...HeadRefRestoredEventFragment
+    ...HeadRefForcePushedEventFragment
   }
 }
 ]]
+
 ---@class octo.fragments.IssueInformation
 ---@field id string
 ---@field number integer

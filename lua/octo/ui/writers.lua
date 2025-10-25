@@ -1938,6 +1938,92 @@ function M.write_commits(bufnr, commits)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.HeadRefDeletedEvent
+function M.write_head_ref_deleted_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.head_ref, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " deleted the ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.headRefName, "OctoDetailsLabel" })
+  table.insert(vt, { " branch", "OctoTimelineItemHeading" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.HeadRefRestoredEvent
+function M.write_head_ref_restored_event(bufnr, item)
+  local vt = {}
+  local conf = config.values
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.head_ref, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+  table.insert(vt, {
+    item.actor.login,
+    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " restored the ", "OctoTimelineItemHeading" })
+  table.insert(vt, { item.pullRequest.headRefName, "OctoDetailsLabel" })
+  table.insert(vt, { " branch", "OctoTimelineItemHeading" })
+  table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
+
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
+---@param items octo.fragments.HeadRefForcePushedEvent[]
+function M.write_head_ref_force_pushed_events(bufnr, items)
+  local total_events = #items
+  local vt = {}
+  local conf = config.values
+  if conf.use_timeline_icons then
+    table.insert(vt, { conf.timeline_icons.force_push, "OctoTimelineMarker" })
+  else
+    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
+    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
+  end
+
+  table.insert(vt, {
+    items[1].actor.login,
+    items[1].actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
+  })
+  table.insert(vt, { " force-pushed the ", "OctoTimelineItemHeading" })
+  table.insert(vt, { items[1].pullRequest.headRefName, "OctoDetailsLabel" })
+
+  if total_events > 1 then
+    table.insert(
+      vt,
+      { " branch " .. tostring(total_events) .. " times, most recently from ", "OctoTimelineItemHeading" }
+    )
+    table.insert(vt, { items[total_events].beforeCommit.abbreviatedOid, "OctoDetailsValue" })
+    table.insert(vt, { " to ", "OctoTimelineItemHeading" })
+    table.insert(vt, { items[total_events].afterCommit.abbreviatedOid, "OctoDetailsValue" })
+    table.insert(vt, { " " .. utils.format_date(items[total_events].createdAt), "OctoDate" })
+  else
+    table.insert(vt, { " branch from ", "OctoTimelineItemHeading" })
+    table.insert(vt, { items[1].beforeCommit.abbreviatedOid, "OctoDetailsValue" })
+    table.insert(vt, { " to ", "OctoTimelineItemHeading" })
+    table.insert(vt, { items[1].afterCommit.abbreviatedOid, "OctoDetailsValue" })
+    table.insert(vt, { " " .. utils.format_date(items[1].createdAt), "OctoDate" })
+  end
+
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.AssignedEvent
 function M.write_assigned_event(bufnr, item)
   -- local actor_bubble = bubbles.make_user_bubble(
