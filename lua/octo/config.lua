@@ -191,6 +191,7 @@ function M.get_default_values()
     use_timeline_icons = true,
     timeline_icons = {
       commit_push = "  ",
+      force_push = "  ",
       draft = "  ",
       ready = " ",
       commit = "  ",
