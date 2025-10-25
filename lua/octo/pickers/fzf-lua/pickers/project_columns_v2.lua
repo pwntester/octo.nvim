@@ -17,7 +17,7 @@ return function(cb)
   local formatted_projects = {} ---@type table<string, table> entry.ordinal -> entry
   local common_fzf_opts = vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
     fzf_opts = {
-      ["--delimiter"] = "' '",
+      ["--delimiter"] = " ",
       ["--with-nth"] = "2..",
     },
   })

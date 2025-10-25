@@ -41,7 +41,7 @@ return function(callback)
       vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
         fzf_opts = {
           ["--no-multi"] = "", -- TODO this can support multi, maybe.
-          ["--delimiter"] = "' '",
+          ["--delimiter"] = " ",
           ["--with-nth"] = "3..",
         },
         actions = {
