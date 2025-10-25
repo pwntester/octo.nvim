@@ -618,12 +618,14 @@ end
 
 M.merge_queue_to_flag = {
   queue = "--queue",
+  auto = "--auto",
 }
 
 M.merge_method_to_flag = {
   squash = "--squash",
   rebase = "--rebase",
   commit = "--merge",
+  merge = "--merge",
 }
 
 ---@param args string[]

@@ -1902,17 +1902,22 @@ function M.merge_pr(...)
     return
   end
 
-  local args = { "pr", "merge", tostring(buffer.number) }
+  local node = buffer:pullRequest()
+
+  local opts = {
+    buffer.number,
+    repo = node.baseRepository.nameWithOwner,
+  }
+
   local params = table.pack(...)
   local conf = config.values
 
   local merge_method = conf.default_merge_method
   for _, param in ipairs(params) do
     if utils.merge_method_to_flag[param] then
-      merge_method = param
+      opts[param] = true
     end
   end
-  utils.insert_merge_flag(args, merge_method)
 
   local delete_branch = conf.default_delete_branch
   for _, param in ipairs(params) do
@@ -1923,21 +1928,23 @@ function M.merge_pr(...)
       delete_branch = false
     end
   end
-  utils.insert_delete_flag(args, delete_branch)
+  opts["delete-branch"] = delete_branch
 
   for _, param in ipairs(params) do
     if utils.merge_queue_to_flag[param] then
-      utils.insert_merge_flag(args, param)
+      opts["auto"] = true
     end
   end
 
-  gh.run {
-    args = args,
-    cb = function(output, stderr)
-      utils.info(output .. " " .. stderr)
+  opts.opts = {
+    cb = function(output, stderr, exit_code)
+      local log = exit_code == 0 and utils.info or utils.error
+      log(output .. " " .. stderr)
       writers.write_state(buffer.bufnr)
     end,
   }
+
+  gh.pr.merge(opts)
 end
 
 function M.show_pr_diff()
