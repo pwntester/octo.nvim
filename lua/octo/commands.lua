@@ -522,10 +522,10 @@ function M.setup()
       end,
       checks = context.within_pr(M.pr_checks),
       ready = context.within_pr(function(buffer)
-        M.gh_pr_ready { number = buffer.number, bufnr = buffer.bufnr, undo = false }
+        M.gh_pr_ready { pr = buffer:pullRequest(), bufnr = buffer.bufnr, undo = false }
       end),
       draft = context.within_pr(function(buffer)
-        M.gh_pr_ready { number = buffer.number, bufnr = buffer.bufnr, undo = true }
+        M.gh_pr_ready { pr = buffer:pullRequest(), bufnr = buffer.bufnr, undo = true }
       end),
       search = function(repo, ...)
         local opts = M.process_varargs(repo, ...)
@@ -1717,7 +1717,7 @@ function M.save_pr(opts)
 end
 
 --- @class PRReadyOpts
---- @field number integer PR number
+--- @field pr octo.PullRequest The PR
 --- @field bufnr integer Buffer number
 --- @field undo boolean Whether to undo from ready to draft
 
@@ -1725,7 +1725,8 @@ end
 --- @param opts PRReadyOpts
 function M.gh_pr_ready(opts)
   gh.pr.ready {
-    opts.number,
+    opts.pr.number,
+    repo = opts.pr.baseRepository.nameWithOwner,
     undo = opts.undo,
     opts = {
       cb = gh.create_callback {
