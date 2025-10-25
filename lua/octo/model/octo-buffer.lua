@@ -377,6 +377,9 @@ function OctoBuffer:render_issue()
       prev_is_event = true
     elseif item.__typename == "HeadRefForcePushedEvent" then
       table.insert(unrendered_force_push_events, item)
+    elseif item.__typename == "AutoSquashEnabledEvent" then
+      writers.write_auto_squash_enabled_event(self.bufnr, item)
+      prev_is_event = true
     elseif not utils.is_blank(item) and config.values.debug.notify_missing_timeline_items then
       ---@diagnostic disable-next-line
       local info = item.__typename and item.__typename or vim.inspect(item)
