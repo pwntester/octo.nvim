@@ -204,6 +204,7 @@ function M.get_default_values()
       issue_type = "  ",
       label = "  ",
       reference = " ",
+      project = "  ",
       connected = "  ",
       subissue = "  ",
       cross_reference = "  ",
