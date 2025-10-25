@@ -897,13 +897,31 @@ mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
     title: $title,
     body: $body
   }) {
-    discussion {
-      id
-      url
+      discussion {
+        ...DiscussionDetailsFragment
+        labels(first: 20) {
+          ...LabelConnectionFragment
+        }
+        comments(first: 25, after: $endCursor) {
+          totalCount
+          nodes {
+            ...DiscussionCommentFragment
+            replies(first: 15) {
+              totalCount
+              nodes {
+                ...DiscussionCommentFragment
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
     }
   }
-}
-]]
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
 
 -- https://docs.github.com/en/graphql/reference/mutations#addprojectv2itembyid
 M.add_project_v2_item = [[
