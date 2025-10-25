@@ -3,6 +3,7 @@ local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
 local utils = require "octo.utils"
+local octo = require "octo"
 
 local M = {}
 
@@ -28,8 +29,9 @@ local function create_discussion(opts)
       cb = gh.create_callback {
         success = function(output)
           utils.info("Successfully created discussion " .. opts.title)
+          ---@type octo.Discussion
           local resp = vim.json.decode(output)
-          utils.copy_url(resp.url)
+          octo.create_buffer("discussion", resp, resp.repository.nameWithOwner, true)
         end,
       },
     },
