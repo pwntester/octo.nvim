@@ -551,6 +551,13 @@ function M.setup()
         M.copy_url()
       end,
       sha = M.copy_sha,
+      update = context.within_pr(function(buffer)
+        gh.pr.update_branch {
+          buffer:pullRequest().number,
+          repo = buffer:pullRequest().baseRepository.nameWithOwner,
+          opts = { cb = gh.create_callback {} },
+        }
+      end),
     },
     repo = {
       search = function(prompt)
