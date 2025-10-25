@@ -1953,7 +1953,14 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
   })
   table.insert(vt, { " moved this ", "OctoTimelineItemHeading" })
-  if item.status ~= "" then
+  if item.previousStatus ~= "" and item.status ~= "" then
+    table.insert(vt, { "from ", "OctoTimelineItemHeading" })
+    table.insert(vt, { item.previousStatus, "OctoDetailsLabel" })
+    table.insert(vt, { " to ", "OctoTimelineItemHeading" })
+    table.insert(vt, { item.status, "OctoDetailsLabel" })
+    table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
+    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+  elseif item.status ~= "" then
     table.insert(vt, { "to ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.status, "OctoDetailsLabel" })
     table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
