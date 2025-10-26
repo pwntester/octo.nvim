@@ -83,7 +83,7 @@ return function(opts)
     fzf_opts = {
       ["--info"] = "default",
       ["--no-multi"] = "",
-      ["--delimiter"] = "' '",
+      ["--delimiter"] = " ",
       ["--with-nth"] = "2..",
     },
     actions = {
