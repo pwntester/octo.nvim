@@ -36,8 +36,6 @@ function M.open_in_browser(kind, repo, number)
     return
   end
 
-  vim.notify(vim.inspect { kind, repo, number })
-
   if not kind and not repo then
     local buffer = utils.get_current_buffer()
     if not buffer then
