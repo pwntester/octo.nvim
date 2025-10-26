@@ -485,7 +485,9 @@ function M.get_default_values()
         unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
       },
       repo = {},
-      release = {},
+      release = {
+        open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
+      },
     },
     debug = {
       notify_missing_timeline_items = false,
