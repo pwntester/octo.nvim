@@ -121,6 +121,11 @@ See |octo-command-examples| for examples.
   view                  Open a repo by path ({organization}/{name}).
 
 
+:Octo release [action]                         *octo-commands-release*
+
+  notes                  Generate release notes for a tag in the current buffer.
+
+
 :Octo gist [action]                             *octo-commands-gist*
 
   list [repo] {key=val} Lists user gists.
