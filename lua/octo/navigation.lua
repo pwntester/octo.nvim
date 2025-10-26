@@ -25,7 +25,7 @@ function M.open_in_browser_raw(url)
   end
 end
 
----@param kind? "issue"|"pull_request"|"discussion"|"repo"|"gist"|"project"|"workflow_run"
+---@param kind? "issue"|"pull_request"|"discussion"|"repo"|"gist"|"project"|"workflow_run"|"release"
 ---@param repo? string|{ url: string }
 ---@param number? integer|string
 function M.open_in_browser(kind, repo, number)
@@ -35,6 +35,8 @@ function M.open_in_browser(kind, repo, number)
     utils.error "Cannot find repo remote host"
     return
   end
+
+  vim.notify(vim.inspect { kind, repo, number })
 
   if not kind and not repo then
     local buffer = utils.get_current_buffer()
@@ -58,6 +60,13 @@ function M.open_in_browser(kind, repo, number)
       local url = buffer:discussion().url
       M.open_in_browser_raw(url)
       return
+    elseif buffer:isRelease() then
+      gh.release.view {
+        buffer:release().tagName,
+        repo = buffer.repo,
+        web = true,
+      }
+      return
     end
   else
     if kind == "pr" or kind == "pull_request" then
@@ -73,6 +82,13 @@ function M.open_in_browser(kind, repo, number)
       cmd = string.format("gh project view --owner %s --web %s", repo, number)
     elseif kind == "workflow_run" then
       cmd = string.format("gh run view %s --web", number)
+    elseif kind == "release" then
+      gh.release.view {
+        number,
+        repo = repo,
+        web = true,
+      }
+      return
     end
   end
   ---@diagnostic disable-next-line: param-type-mismatch
