@@ -730,10 +730,10 @@ end
 
 ---Relative date options
 ---@class DateOpts
----@field minutes integer
----@field hours integer
----@field days integer
----@field weeks integer
+---@field minutes? integer
+---@field hours? integer
+---@field days? integer
+---@field weeks? integer
 
 ---@param opts DateOpts
 ---@param reference? string|osdate|number Optional reference date (ISO string or os.time() or os.date table)
