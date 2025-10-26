@@ -2121,4 +2121,13 @@ function M.pop_key(tbl, key)
   return value
 end
 
+---Insert text under the current cursor position
+---@param text string
+---@return nil
+function M.put_text_under_cursor(text)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  vim.api.nvim_buf_set_lines(bufnr, cursor_pos[1], cursor_pos[1], false, vim.split(text, "\n"))
+end
+
 return M
