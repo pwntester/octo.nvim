@@ -904,6 +904,8 @@ function M.write_comment(bufnr, comment, kind, line)
     --vim.list_extend(header_vt, author_bubble)
     if comment.author ~= vim.NIL then
       table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
+    else
+      table.insert(header_vt, { "ghost", "OctoUser" })
     end
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
     if not comment.viewerCanUpdate then
@@ -1948,6 +1950,11 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
     table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
+
+  if utils.is_blank(item.actor) then
+    item.actor = { login = "ghost" }
+  end
+
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -1987,6 +1994,11 @@ local write_project_v2_event = function(bufnr, item, verb)
     table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
+
+  if utils.is_blank(item.actor) then
+    item.actor = { login = "ghost" }
+  end
+
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -2271,6 +2283,10 @@ function M.write_cross_referenced_event(bufnr, item)
     table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
     spaces = 10
+  end
+
+  if utils.is_blank(item.actor) then
+    item.actor = { login = "ghost" }
   end
 
   table.insert(vt, {
@@ -2678,10 +2694,10 @@ function M.write_labeled_events(bufnr, items, action)
     --vim.list_extend(vt, actor_bubble)
     if actor ~= vim.NIL then
       table.insert(vt, { actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-      table.insert(vt, { " " .. action .. " ", "OctoTimelineItemHeading" })
     else
-      table.insert(vt, { action .. " ", "OctoTimelineItemHeading" })
+      table.insert(vt, { "ghost", "OctoUser" })
     end
+    table.insert(vt, { " " .. action .. " ", "OctoTimelineItemHeading" })
     local labels = labels_by_actor[actor]
     for _, label in ipairs(labels) do
       local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
