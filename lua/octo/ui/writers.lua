@@ -702,6 +702,25 @@ function M.write_details(bufnr, issue, update)
     end
     table.insert(details, reviewers_vt)
 
+    ---Development
+    local development_vt = {
+      { "Development: ", "OctoDetailsLabel" },
+    }
+    if issue.closingIssuesReferences and issue.closingIssuesReferences.totalCount > 0 then
+      for _, closing_issue in ipairs(issue.closingIssuesReferences.nodes) do
+        local obj = closing_issue --[[@as EntryObject]]
+        local icon = utils.get_icon { kind = "issue", obj = obj }
+        table.insert(development_vt, icon)
+        table.insert(
+          development_vt,
+          { " #" .. tostring(closing_issue.number) .. " " .. closing_issue.title .. " ", "OctoDetailsValue" }
+        )
+      end
+    else
+      table.insert(development_vt, { "None yet", "OctoMissingDetails" })
+    end
+    table.insert(details, development_vt)
+
     -- merged_by
     if issue.merged then
       local merged_by_vt = { { "Merged by: ", "OctoDetailsLabel" } }
