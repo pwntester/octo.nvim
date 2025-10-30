@@ -132,6 +132,7 @@ local function create_replace(cb)
   end
 end
 
+---@param opts { repo: string, states: string[], cb: function }
 function M.issues(opts)
   opts = opts or {}
 
@@ -296,6 +297,7 @@ local function merge_pull_request()
   end
 end
 
+---@param opts { repo: string, states: string[], cb: function }
 function M.pull_requests(opts)
   opts = opts or {}
   if not opts.states then
@@ -399,7 +401,7 @@ end
 -- COMMITS
 --
 
----@param opts {repo: string, number: integer}
+---@param opts {repo: string, number: integer }
 function M.commits(opts)
   -- TODO: graphql
   gh.api.get {
@@ -1448,6 +1450,7 @@ function M.issue_templates(templates, cb)
     :find()
 end
 
+---@param opts { repo: string, cb: function }
 function M.discussions(opts)
   opts = opts or {}
 
