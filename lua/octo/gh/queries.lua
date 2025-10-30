@@ -103,6 +103,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
 ---@field closedAt string
 ---@field updatedAt string
 ---@field url string
+---@field closingIssuesReferences { totalCount: number, nodes: octo.fragments.Issue[] }
 ---@field headRepository { nameWithOwner: string }
 ---@field files { nodes: { path: string, viewerViewedState: ViewedState }[] }
 ---@field merged boolean
@@ -150,6 +151,12 @@ query($endCursor: String) {
       updatedAt
       url
       headRepository { nameWithOwner }
+      closingIssuesReferences(first: 10) {
+        totalCount
+        nodes {
+          ...IssueFields
+        }
+      }
       files(first:100) {
         nodes {
           path

@@ -314,6 +314,13 @@ function M.pull_requests(opts)
   }
 end
 
+---@param opts {
+---  repo: string?,
+---  all: boolean?,
+---  since: string?,
+---  prompt_title: string?,
+---  results_title: string?,
+---}
 function M.notifications(opts)
   opts = opts or {}
   local cfg = octo_config.values
@@ -331,6 +338,10 @@ function M.notifications(opts)
   gh.api.get {
     endpoint,
     paginate = true,
+    F = {
+      all = opts.all,
+      since = opts.since,
+    },
     opts = {
       headers = { headers.diff },
       cb = gh.create_callback {

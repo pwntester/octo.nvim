@@ -551,6 +551,48 @@ function M.setup()
         M.copy_url()
       end,
       sha = M.copy_sha,
+      update = context.within_pr(function(buffer)
+        gh.pr.update_branch {
+          buffer:pullRequest().number,
+          repo = buffer:pullRequest().baseRepository.nameWithOwner,
+          opts = { cb = gh.create_callback {} },
+        }
+      end),
+    },
+    release = {
+      notes = function(tag_name)
+        local repo = utils.get_remote_name()
+        if utils.is_blank(tag_name) then
+          local latest_release = gh.release.list {
+            exclude_drafts = true,
+            exclude_pre_releases = true,
+            limit = 1,
+            repo = repo,
+            json = "tagName",
+            jq = ".[0].tagName",
+            opts = { mode = "sync" },
+          }
+          local prompt
+          if utils.is_blank(latest_release) then
+            prompt = "Enter tag name: "
+          else
+            prompt = "Enter tag name (latest release: " .. latest_release .. "): "
+          end
+          tag_name = utils.input { prompt = prompt }
+        end
+
+        gh.api.post {
+          "/repos/{repo}/releases/generate-notes",
+          format = { repo = repo },
+          F = { tag_name = tag_name },
+          jq = ".body",
+          opts = {
+            cb = gh.create_callback {
+              success = utils.put_text_under_cursor,
+            },
+          },
+        }
+      end,
     },
     repo = {
       search = function(prompt)

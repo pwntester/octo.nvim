@@ -506,6 +506,8 @@ local function create_subcommand(command)
 
         local run_opts = opts.opts or {}
 
+        key = string.gsub(key, "_", "-")
+
         local args = {
           t.command,
           key,

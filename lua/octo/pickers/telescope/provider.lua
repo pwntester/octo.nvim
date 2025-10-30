@@ -132,6 +132,7 @@ local function create_replace(cb)
   end
 end
 
+---@param opts { repo: string, states: string[], cb: function }
 function M.issues(opts)
   opts = opts or {}
 
@@ -296,6 +297,7 @@ local function merge_pull_request()
   end
 end
 
+---@param opts { repo: string, states: string[], cb: function }
 function M.pull_requests(opts)
   opts = opts or {}
   if not opts.states then
@@ -399,7 +401,7 @@ end
 -- COMMITS
 --
 
----@param opts {repo: string, number: integer}
+---@param opts {repo: string, number: integer }
 function M.commits(opts)
   -- TODO: graphql
   gh.api.get {
@@ -1324,6 +1326,7 @@ end
 ---@class NotificationOpts
 ---@field repo string
 ---@field all boolean Whether to show all of the notifications including read ones
+---@field since string ISO 8601 timestamp
 ---@field preview_title string
 ---@field prompt_title string
 ---@field results_title string
@@ -1411,6 +1414,7 @@ function M.notifications(opts)
     paginate = true,
     F = {
       all = opts.all,
+      since = opts.since,
     },
     opts = {
       headers = { headers.diff },
@@ -1449,6 +1453,7 @@ function M.issue_templates(templates, cb)
     :find()
 end
 
+---@param opts { repo: string, cb: function }
 function M.discussions(opts)
   opts = opts or {}
 

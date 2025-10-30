@@ -41,6 +41,7 @@ end
 ---  results_title: string,
 ---  window_title: string,
 ---  all: boolean,
+---  since: string,
 ---}
 return function(opts)
   opts = opts or {}
@@ -52,6 +53,7 @@ return function(opts)
       paginate = true,
       F = {
         all = opts.all,
+        since = opts.since,
       },
       opts = {
         headers = { headers.diff },

@@ -394,6 +394,10 @@ require"octo".setup({
       done = { lhs = "<localleader>nd", desc = "mark notification as done" },
       unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
     },
+    repo = {},
+    release = {
+      open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
+    },
   },
 })
 ```
@@ -498,6 +502,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | parent   | add                                           | Add a parent issue to current issue |
 |          | remove                                           | Remove the parent issue to current issue |
 |          | edit                                           | Edit the parent issue to current issue |
+| release  | notes                                           | Generate release notes in current buffer |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

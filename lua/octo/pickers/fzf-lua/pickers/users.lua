@@ -78,7 +78,7 @@ return function(cb)
     contents,
     vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
       fzf_opts = {
-        ["--delimiter"] = "' '",
+        ["--delimiter"] = " ",
         ["--with-nth"] = "2..",
       },
       actions = {
