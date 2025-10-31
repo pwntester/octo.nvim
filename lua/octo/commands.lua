@@ -1958,9 +1958,11 @@ function M.merge_pr(...)
   local merge_method = conf.default_merge_method
   for _, param in ipairs(params) do
     if utils.merge_method_to_flag[param] then
-      opts[param] = true
+      merge_method = param
+      break
     end
   end
+  opts[merge_method] = true
 
   local delete_branch = conf.default_delete_branch
   for _, param in ipairs(params) do
