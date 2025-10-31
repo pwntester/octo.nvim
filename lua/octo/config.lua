@@ -5,7 +5,7 @@ local M = {}
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
 ---@alias OctoSplit "right" | "left"
----@alias OctoMergeMethod "squash" | "rebase" | "commit"
+---@alias OctoMergeMethod "squash" | "rebase" | "merge"
 
 ---@class OctoPickerMapping
 ---@field lhs string
@@ -179,7 +179,7 @@ function M.get_default_values()
       },
     },
     default_remote = { "upstream", "origin" },
-    default_merge_method = "commit",
+    default_merge_method = "merge",
     default_delete_branch = false,
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
