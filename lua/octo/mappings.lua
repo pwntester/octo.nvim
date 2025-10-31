@@ -34,10 +34,10 @@ return {
     require("octo.commands").show_pr_diff()
   end,
   merge_pr = function()
-    require("octo.commands").merge_pr "commit"
+    require("octo.commands").merge_pr "merge"
   end,
   merge_pr_queue = function()
-    require("octo.commands").merge_pr("commit", "queue")
+    require("octo.commands").merge_pr("merge", "queue")
   end,
   squash_and_merge_pr = function()
     require("octo.commands").merge_pr "squash"

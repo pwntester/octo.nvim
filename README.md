@@ -116,7 +116,7 @@ require"octo".setup({
   use_local_fs = false,                    -- use local files on right side of reviews
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
   default_remote = {"upstream", "origin"}, -- order to try remotes
-  default_merge_method = "commit",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `commit`, `rebase` or `squash`
+  default_merge_method = "merge",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `merge`, `rebase` or `squash`
   default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
   picker = "telescope",                    -- or "fzf-lua" or "snacks"
@@ -278,7 +278,7 @@ require"octo".setup({
     },
     pull_request = {
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
-      merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
+      merge_pr = { lhs = "<localleader>pm", desc = "merge PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
       rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
       merge_pr_queue = { lhs = "<localleader>pq", desc = "merge commit PR and add to merge queue (Merge queue must be enabled in the repo)" },
@@ -431,7 +431,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | commits                                           | List all PR commits                                                                                                                                    |
 |          | changes                                           | Show all PR changes (diff hunks)                                                                                                                       |
 |          | diff                                              | Show PR diff                                                                                                                                           |
-|          | merge [commit\|rebase\|squash] [delete\|nodelete] | Merge current PR using the specified method                                                                                                            |
+|          | merge [merge\|rebase\|squash] [delete\|nodelete]  | Merge current PR using the specified method                                                                                                            |
 |          | ready                                             | Mark a draft PR as ready for review                                                                                                                    |
 |          | draft                                             | Send a ready PR back to draft                                                                                                                          |
 |          | checks                                            | Show the status of all checks run on the PR                                                                                                            |

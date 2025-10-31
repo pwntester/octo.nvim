@@ -5,7 +5,7 @@ local M = {}
 ---@alias OctoMappingsList { [string]: table}
 ---@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
 ---@alias OctoSplit "right" | "left"
----@alias OctoMergeMethod "squash" | "rebase" | "commit"
+---@alias OctoMergeMethod "squash" | "rebase" | "merge"
 
 ---@class OctoPickerMapping
 ---@field lhs string
@@ -179,7 +179,7 @@ function M.get_default_values()
       },
     },
     default_remote = { "upstream", "origin" },
-    default_merge_method = "commit",
+    default_merge_method = "merge",
     default_delete_branch = false,
     ssh_aliases = {},
     reaction_viewer_hint_icon = " ",
@@ -697,6 +697,7 @@ function M.validate_config()
       end
     end
     validate_type(config.default_merge_method, "default_merge_method", "string")
+    validate_string_enum(config.default_merge_method, "default_merge_method", { "merge", "rebase", "squash" })
     if validate_type(config.ui, "ui", "table") then
       validate_type(config.ui.use_signcolumn, "ui.use_signcolumn", "boolean")
       validate_type(config.ui.use_statuscolumn, "ui.use_statuscolumn", "boolean")

@@ -140,7 +140,7 @@ M.merge_state_message_map = {
 }
 
 M.auto_merge_method_map = {
-  MERGE = "commit",
+  MERGE = "merge",
   REBASE = "rebase",
   SQUASH = "squash",
 }
@@ -624,7 +624,6 @@ M.merge_queue_to_flag = {
 M.merge_method_to_flag = {
   squash = "--squash",
   rebase = "--rebase",
-  commit = "--merge",
   merge = "--merge",
 }
 

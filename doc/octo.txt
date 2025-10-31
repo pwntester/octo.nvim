@@ -75,7 +75,7 @@ See |octo-command-examples| for examples.
   changes               Show all PR changes (diff hunks).
   diff                  Show PR diff.
   merge [strategy]      Merge the current PR using the specified strategy.
-                        Strategies: `commit`, `rebase`, `squash`, `delete`
+                        Strategies: `merge`, `rebase`, `squash`, `delete`
   ready                 Mark a draft PR as ready for review.          
   draft                 Send a ready for review PR back to draft.          
   checks                Show the status of all checks run on the PR.
