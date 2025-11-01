@@ -185,6 +185,7 @@ require"octo".setup({
   gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
   timeout = 5000,                          -- timeout for requests between the remote server
   default_to_projects_v2 = false,          -- use projects v2 for the `Octo card ...` command by default. Both legacy and v2 commands are available under `Octo cardlegacy ...` and `Octo cardv2 ...` respectively.
+                                           -- Also disable sending v2 events into Github API.
   ui = {
     use_signcolumn = false,                -- show "modified" marks on the sign column
     use_signstatus = true,                 -- show "modified" marks on the status column

@@ -1,5 +1,7 @@
 local config = require "octo.config"
 local fragments = require "octo.gh.fragments"
+local queries = require "octo.gh.queries"
+local mutations = require "octo.gh.mutations"
 local _, Job = pcall(require, "plenary.job")
 local vim = vim
 
@@ -98,6 +100,9 @@ function M.has_scope(test_scopes)
 end
 
 function M.setup()
+  fragments.setup()
+  queries.setup()
+  mutations.setup()
   _G.octo_pv2_fragment = ""
   ---@diagnostic disable-next-line: missing-fields
   Job:new({

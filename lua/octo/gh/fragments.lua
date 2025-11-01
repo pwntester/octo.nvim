@@ -1,24 +1,26 @@
+local config = require "octo.config"
 local M = {}
 
----@class octo.fragments.ProjectsV2Connection
----@field nodes {
----  id: string,
----  project: {
----    id: string,
----    title: string,
----  },
----  fieldValues: {
----    nodes: {
----      name: string,
----      optionId: string,
----      field: {
----        name: string,
----      },
----    }[],
----  },
----}[]
+M.setup = function()
+  ---@class octo.fragments.ProjectsV2Connection
+  ---@field nodes {
+  ---  id: string,
+  ---  project: {
+  ---    id: string,
+  ---    title: string,
+  ---  },
+  ---  fieldValues: {
+  ---    nodes: {
+  ---      name: string,
+  ---      optionId: string,
+  ---      field: {
+  ---        name: string,
+  ---      },
+  ---    }[],
+  ---  },
+  ---}[]
 
-M.projects_v2 = [[
+  M.projects_v2 = [[
   projectItems(first: 100) {
     nodes {
       id
@@ -43,15 +45,15 @@ M.projects_v2 = [[
   }
 ]]
 
----@class octo.fragments.Issue
---- @field __typename "Issue"
----@field id string
----@field number integer
----@field title string
----@field state string
----@field stateReason string
+  ---@class octo.fragments.Issue
+  ---@field __typename "Issue"
+  ---@field id string
+  ---@field number integer
+  ---@field title string
+  ---@field state string
+  ---@field stateReason string
 
-M.issue = [[
+  M.issue = [[
 fragment IssueFields on Issue {
   id
   number
@@ -61,14 +63,14 @@ fragment IssueFields on Issue {
 }
 ]]
 
----@class octo.fragments.PullRequest
---- @field __typename "PullRequest"
---- @field number integer
---- @field title string
---- @field state string
---- @field isDraft boolean
+  ---@class octo.fragments.PullRequest
+  --- @field __typename "PullRequest"
+  --- @field number integer
+  --- @field title string
+  --- @field state string
+  --- @field isDraft boolean
 
-M.pull_request = [[
+  M.pull_request = [[
 fragment PullRequestFields on PullRequest {
   number
   title
@@ -77,16 +79,16 @@ fragment PullRequestFields on PullRequest {
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/objects#projectv2itemstatuschangedevent
----@class octo.fragments.ProjectV2ItemStatusChangedEvent
----@field __typename "ProjectV2ItemStatusChangedEvent"
----@field actor { login: string }
----@field createdAt string
----@field previousStatus string
----@field status string
----@field project { title: string }
+  ---https://docs.github.com/en/graphql/reference/objects#projectv2itemstatuschangedevent
+  ---@class octo.fragments.ProjectV2ItemStatusChangedEvent
+  ---@field __typename "ProjectV2ItemStatusChangedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field previousStatus string
+  ---@field status string
+  ---@field project { title: string }
 
-M.project_v2_item_status_changed_event = [[
+  M.project_v2_item_status_changed_event = [[
 fragment ProjectV2ItemStatusChangedEventFragment on ProjectV2ItemStatusChangedEvent {
   actor { login }
   createdAt
@@ -96,14 +98,14 @@ fragment ProjectV2ItemStatusChangedEventFragment on ProjectV2ItemStatusChangedEv
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/objects#addedtoprojectv2event
----@class octo.fragments.AddedToProjectV2Event
----@field __typename "AddedToProjectV2Event"
----@field actor { login: string }
----@field createdAt string
----@field project { title: string }
+  ---https://docs.github.com/en/graphql/reference/objects#addedtoprojectv2event
+  ---@class octo.fragments.AddedToProjectV2Event
+  ---@field __typename "AddedToProjectV2Event"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field project { title: string }
 
-M.added_to_project_v2_event = [[
+  M.added_to_project_v2_event = [[
 fragment AddedToProjectV2EventFragment on AddedToProjectV2Event {
   actor { login }
   createdAt
@@ -111,14 +113,14 @@ fragment AddedToProjectV2EventFragment on AddedToProjectV2Event {
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/objects#removedfromprojectv2event
----@class octo.fragments.RemovedFromProjectV2Event
----@field __typename "RemovedFromProjectV2Event"
----@field actor { login: string }
----@field createdAt string
----@field project { title: string }
+  ---https://docs.github.com/en/graphql/reference/objects#removedfromprojectv2event
+  ---@class octo.fragments.RemovedFromProjectV2Event
+  ---@field __typename "RemovedFromProjectV2Event"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field project { title: string }
 
-M.removed_from_project_v2_event = [[
+  M.removed_from_project_v2_event = [[
 fragment RemovedFromProjectV2EventFragment on RemovedFromProjectV2Event {
   actor { login }
   createdAt
@@ -126,27 +128,27 @@ fragment RemovedFromProjectV2EventFragment on RemovedFromProjectV2Event {
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/objects#autosquashenabledevent
----@class octo.fragments.AutoSquashEnabledEvent
----@field __typename "AutoSquashEnabledEvent"
----@field actor { login: string }
----@field createdAt string
+  ---https://docs.github.com/en/graphql/reference/objects#autosquashenabledevent
+  ---@class octo.fragments.AutoSquashEnabledEvent
+  ---@field __typename "AutoSquashEnabledEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
 
-M.auto_squash_enabled_event = [[
+  M.auto_squash_enabled_event = [[
 fragment AutoSquashEnabledEventFragment on AutoSquashEnabledEvent {
   actor { login }
   createdAt
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/objects#headrefdeletedevent
----@class octo.fragments.HeadRefDeletedEvent
----@field __typename "HeadRefDeletedEvent"
----@field actor { login: string }
----@field createdAt string
----@field headRefName string
+  ---https://docs.github.com/en/graphql/reference/objects#headrefdeletedevent
+  ---@class octo.fragments.HeadRefDeletedEvent
+  ---@field __typename "HeadRefDeletedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field headRefName string
 
-M.head_ref_deleted_event = [[
+  M.head_ref_deleted_event = [[
 fragment HeadRefDeletedEventFragment on HeadRefDeletedEvent {
   actor {
     login
@@ -156,14 +158,14 @@ fragment HeadRefDeletedEventFragment on HeadRefDeletedEvent {
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/objects#headrefrestoredevent
----@class octo.fragments.HeadRefRestoredEvent
----@field __typename "HeadRefRestoredEvent"
----@field actor { login: string }
----@field createdAt string
----@field pullRequest { headRefName: string }
+  ---https://docs.github.com/en/graphql/reference/objects#headrefrestoredevent
+  ---@class octo.fragments.HeadRefRestoredEvent
+  ---@field __typename "HeadRefRestoredEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field pullRequest { headRefName: string }
 
-M.head_ref_restored_event = [[
+  M.head_ref_restored_event = [[
 fragment HeadRefRestoredEventFragment on HeadRefRestoredEvent {
   actor { login }
   createdAt
@@ -171,16 +173,16 @@ fragment HeadRefRestoredEventFragment on HeadRefRestoredEvent {
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/objects#headrefforcepushedevent
----@class octo.fragments.HeadRefForcePushedEvent
----@field __typename "HeadRefForcePushedEvent"
----@field actor { login: string }
----@field pullRequest { headRefName: string }
----@field createdAt string
----@field beforeCommit { abbreviatedOid: string }
----@field afterCommit { abbreviatedOid: string }
+  ---https://docs.github.com/en/graphql/reference/objects#headrefforcepushedevent
+  ---@class octo.fragments.HeadRefForcePushedEvent
+  ---@field __typename "HeadRefForcePushedEvent"
+  ---@field actor { login: string }
+  ---@field pullRequest { headRefName: string }
+  ---@field createdAt string
+  ---@field beforeCommit { abbreviatedOid: string }
+  ---@field afterCommit { abbreviatedOid: string }
 
-M.head_ref_force_pushed_event = [[
+  M.head_ref_force_pushed_event = [[
 fragment HeadRefForcePushedEventFragment on HeadRefForcePushedEvent {
   actor { login }
   createdAt
@@ -190,15 +192,15 @@ fragment HeadRefForcePushedEventFragment on HeadRefForcePushedEvent {
 }
 ]]
 
----@class octo.fragments.ConnectedEvent
---- @field __typename "ConnectedEvent"
---- @field actor { login: string }
---- @field createdAt string
---- @field isCrossRepository boolean
---- @field source octo.fragments.Issue|octo.fragments.PullRequest
---- @field subject octo.fragments.Issue|octo.fragments.PullRequest
+  ---@class octo.fragments.ConnectedEvent
+  --- @field __typename "ConnectedEvent"
+  --- @field actor { login: string }
+  --- @field createdAt string
+  --- @field isCrossRepository boolean
+  --- @field source octo.fragments.Issue|octo.fragments.PullRequest
+  --- @field subject octo.fragments.Issue|octo.fragments.PullRequest
 
-M.connected_event = [[
+  M.connected_event = [[
 fragment ConnectedEventFragment on ConnectedEvent {
   actor { login }
   createdAt
@@ -216,12 +218,12 @@ fragment ConnectedEventFragment on ConnectedEvent {
 }
 ]]
 
----@class octo.fragments.ConvertToDraftEvent
----@field __typename "ConvertToDraftEvent"
----@field actor { login: string }
----@field createdAt string
+  ---@class octo.fragments.ConvertToDraftEvent
+  ---@field __typename "ConvertToDraftEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
 
-M.convert_to_draft_event = [[
+  M.convert_to_draft_event = [[
 fragment ConvertToDraftEventFragment on ConvertToDraftEvent {
   actor {
     login
@@ -230,20 +232,20 @@ fragment ConvertToDraftEventFragment on ConvertToDraftEvent {
 }
 ]]
 
----@class octo.fragments.ReferencedEvent
----@field __typename "ReferencedEvent"
----@field createdAt string
----@field actor { login: string }
----@field commit {
----  __typename: string,
----  abbreviatedOid: string,
----  message: string,
----  repository: {
----    nameWithOwner: string,
----  },
----}
+  ---@class octo.fragments.ReferencedEvent
+  ---@field __typename "ReferencedEvent"
+  ---@field createdAt string
+  ---@field actor { login: string }
+  ---@field commit {
+  ---  __typename: string,
+  ---  abbreviatedOid: string,
+  ---  message: string,
+  ---  repository: {
+  ---    nameWithOwner: string,
+  ---  },
+  ---}
 
-M.referenced_event = [[
+  M.referenced_event = [[
 fragment ReferencedEventFragment on ReferencedEvent {
   createdAt
   actor {
@@ -259,15 +261,15 @@ fragment ReferencedEventFragment on ReferencedEvent {
   }
 }
 ]]
----@class octo.fragments.CrossReferencedEvent
----@field __typename "CrossReferencedEvent"
----@field actor { login: string }
----@field createdAt string
----@field willCloseTarget boolean
----@field source octo.fragments.Issue|octo.fragments.PullRequest
----@field target octo.fragments.Issue|octo.fragments.PullRequest
+  ---@class octo.fragments.CrossReferencedEvent
+  ---@field __typename "CrossReferencedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field willCloseTarget boolean
+  ---@field source octo.fragments.Issue|octo.fragments.PullRequest
+  ---@field target octo.fragments.Issue|octo.fragments.PullRequest
 
-M.cross_referenced_event = [[
+  M.cross_referenced_event = [[
 fragment CrossReferencedEventFragment on CrossReferencedEvent {
   createdAt
   actor { login }
@@ -285,26 +287,26 @@ fragment CrossReferencedEventFragment on CrossReferencedEvent {
 }
 ]]
 
----@class octo.fragments.MilestonedEvent
----@field __typename "MilestonedEvent"
----@field actor { login: string }
----@field createdAt string
----@field milestoneTitle string
+  ---@class octo.fragments.MilestonedEvent
+  ---@field __typename "MilestonedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field milestoneTitle string
 
-M.milestoned_event = [[
+  M.milestoned_event = [[
 fragment MilestonedEventFragment on MilestonedEvent {
   actor { login }
   createdAt
   milestoneTitle
 }
 ]]
----@class octo.fragments.DemilestonedEvent
----@field __typename "DemilestonedEvent"
----@field actor { login: string }
----@field createdAt string
----@field milestoneTitle string
+  ---@class octo.fragments.DemilestonedEvent
+  ---@field __typename "DemilestonedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field milestoneTitle string
 
-M.demilestoned_event = [[
+  M.demilestoned_event = [[
 fragment DemilestonedEventFragment on DemilestonedEvent {
   actor { login }
   createdAt
@@ -312,15 +314,15 @@ fragment DemilestonedEventFragment on DemilestonedEvent {
 }
 ]]
 
----@class octo.ReactionGroupsFragment.reactionGroups
---- @field content string
---- @field viewerHasReacted boolean
---- @field users { totalCount: number }
+  ---@class octo.ReactionGroupsFragment.reactionGroups
+  --- @field content string
+  --- @field viewerHasReacted boolean
+  --- @field users { totalCount: number }
 
----@class octo.ReactionGroupsFragment
---- @field reactionGroups octo.ReactionGroupsFragment.reactionGroups[]
+  ---@class octo.ReactionGroupsFragment
+  --- @field reactionGroups octo.ReactionGroupsFragment.reactionGroups[]
 
-M.reaction_groups = [[
+  M.reaction_groups = [[
 fragment ReactionGroupsFragment on Reactable {
   reactionGroups {
     content
@@ -331,15 +333,15 @@ fragment ReactionGroupsFragment on Reactable {
   }
 }
 ]]
----@class octo.fragments.ReactionGroupsUsers
----@field reactionGroups {
----  content: string,
----  users: {
----    nodes: { login: string }[],
----  },
----}[]
+  ---@class octo.fragments.ReactionGroupsUsers
+  ---@field reactionGroups {
+  ---  content: string,
+  ---  users: {
+  ---    nodes: { login: string }[],
+  ---  },
+  ---}[]
 
-M.reaction_groups_users = [[
+  M.reaction_groups_users = [[
 fragment ReactionGroupsUsersFragment on Reactable {
   reactionGroups {
     content
@@ -351,32 +353,32 @@ fragment ReactionGroupsUsersFragment on Reactable {
   }
 }
 ]]
----@class octo.fragments.Label
----@field id string
----@field name string
----@field color string
+  ---@class octo.fragments.Label
+  ---@field id string
+  ---@field name string
+  ---@field color string
 
-M.label = [[
+  M.label = [[
 fragment LabelFragment on Label {
   id
   name
   color
 }
 ]]
----@class octo.fragments.LabelConnection
----@field nodes octo.fragments.Label[]
+  ---@class octo.fragments.LabelConnection
+  ---@field nodes octo.fragments.Label[]
 
-M.label_connection = [[
+  M.label_connection = [[
 fragment LabelConnectionFragment on LabelConnection {
   nodes {
     ...LabelFragment
   }
 }
 ]]
----@class octo.fragments.AssigneeConnection
----@field nodes { id: string, login: string, isViewer: boolean }[]
+  ---@class octo.fragments.AssigneeConnection
+  ---@field nodes { id: string, login: string, isViewer: boolean }[]
 
-M.assignee_connection = [[
+  M.assignee_connection = [[
 fragment AssigneeConnectionFragment on UserConnection {
   nodes {
     id
@@ -386,17 +388,17 @@ fragment AssigneeConnectionFragment on UserConnection {
 }
 ]]
 
----@class octo.fragments.IssueComment : octo.ReactionGroupsFragment
----@field __typename "IssueComment"
----@field id string
----@field body string
----@field createdAt string
----@field author { login: string }
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field viewerCanDelete boolean
+  ---@class octo.fragments.IssueComment : octo.ReactionGroupsFragment
+  ---@field __typename "IssueComment"
+  ---@field id string
+  ---@field body string
+  ---@field createdAt string
+  ---@field author { login: string }
+  ---@field viewerDidAuthor boolean
+  ---@field viewerCanUpdate boolean
+  ---@field viewerCanDelete boolean
 
-M.issue_comment = [[
+  M.issue_comment = [[
 fragment IssueCommentFragment on IssueComment {
   id
   body
@@ -410,13 +412,13 @@ fragment IssueCommentFragment on IssueComment {
   viewerCanDelete
 }
 ]]
----@class octo.fragments.AssignedEvent
----@field __typename "AssignedEvent"
----@field actor { login: string }
----@field assignee { name?: string, login?: string, isViewer?: boolean }
----@field createdAt string
+  ---@class octo.fragments.AssignedEvent
+  ---@field __typename "AssignedEvent"
+  ---@field actor { login: string }
+  ---@field assignee { name?: string, login?: string, isViewer?: boolean }
+  ---@field createdAt string
 
-M.assigned_event = [[
+  M.assigned_event = [[
 fragment AssignedEventFragment on AssignedEvent {
   actor {
     login
@@ -434,13 +436,13 @@ fragment AssignedEventFragment on AssignedEvent {
 }
 ]]
 
----@class octo.fragments.LabeledEvent
----@field __typename "LabeledEvent"
----@field actor { login: string }
----@field createdAt string
----@field label octo.fragments.Label
+  ---@class octo.fragments.LabeledEvent
+  ---@field __typename "LabeledEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field label octo.fragments.Label
 
-M.labeled_event = [[
+  M.labeled_event = [[
 fragment LabeledEventFragment on LabeledEvent {
   actor {
     login
@@ -452,13 +454,13 @@ fragment LabeledEventFragment on LabeledEvent {
 }
 ]]
 
----@class octo.fragments.UnlabeledEvent
----@field __typename "UnlabeledEvent"
----@field actor { login: string }
----@field createdAt string
----@field label octo.fragments.Label
+  ---@class octo.fragments.UnlabeledEvent
+  ---@field __typename "UnlabeledEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field label octo.fragments.Label
 
-M.unlabeled_event = [[
+  M.unlabeled_event = [[
 fragment UnlabeledEventFragment on UnlabeledEvent {
   actor {
     login
@@ -469,14 +471,14 @@ fragment UnlabeledEventFragment on UnlabeledEvent {
   }
 }
 ]]
----@class octo.fragments.ClosedEvent
----@field __typename "ClosedEvent"
----@field actor { login: string }
----@field createdAt string
----@field stateReason string
----@field closable { __typename: string, state: string, stateReason?: string }
+  ---@class octo.fragments.ClosedEvent
+  ---@field __typename "ClosedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field stateReason string
+  ---@field closable { __typename: string, state: string, stateReason?: string }
 
-M.closed_event = [[
+  M.closed_event = [[
 fragment ClosedEventFragment on ClosedEvent {
   actor {
     login
@@ -496,12 +498,12 @@ fragment ClosedEventFragment on ClosedEvent {
 }
 ]]
 
----@class octo.fragments.ReopenedEvent
----@field __typename "ReopenedEvent"
----@field actor { login: string }
----@field createdAt string
+  ---@class octo.fragments.ReopenedEvent
+  ---@field __typename "ReopenedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
 
-M.reopened_event = [[
+  M.reopened_event = [[
 fragment ReopenedEventFragment on ReopenedEvent {
   actor {
     login
@@ -509,39 +511,39 @@ fragment ReopenedEventFragment on ReopenedEvent {
   createdAt
 }
 ]]
----@class octo.fragments.PullRequestReview.comment : octo.ReactionGroupsFragment
----@field id string
----@field url string
----@field replyTo { id: string, url: string }
----@field body string
----@field commit { oid: string, abbreviatedOid: string }
----@field author { login: string }
----@field authorAssociation string
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field viewerCanDelete boolean
----@field originalPosition integer
----@field position integer
----@field state string
----@field outdated boolean
----@field diffHunk string
+  ---@class octo.fragments.PullRequestReview.comment : octo.ReactionGroupsFragment
+  ---@field id string
+  ---@field url string
+  ---@field replyTo { id: string, url: string }
+  ---@field body string
+  ---@field commit { oid: string, abbreviatedOid: string }
+  ---@field author { login: string }
+  ---@field authorAssociation string
+  ---@field viewerDidAuthor boolean
+  ---@field viewerCanUpdate boolean
+  ---@field viewerCanDelete boolean
+  ---@field originalPosition integer
+  ---@field position integer
+  ---@field state string
+  ---@field outdated boolean
+  ---@field diffHunk string
 
----@class octo.fragments.PullRequestReview : octo.ReactionGroupsFragment
----@field __typename "PullRequestReview"
----@field id string
----@field body string
----@field createdAt string
----@field viewerCanUpdate boolean
----@field viewerCanDelete boolean
----@field author { login: string }
----@field viewerDidAuthor boolean
----@field state string
----@field comments {
----  totalCount: integer,
----  nodes: octo.fragments.PullRequestReview.comment[],
----}
+  ---@class octo.fragments.PullRequestReview : octo.ReactionGroupsFragment
+  ---@field __typename "PullRequestReview"
+  ---@field id string
+  ---@field body string
+  ---@field createdAt string
+  ---@field viewerCanUpdate boolean
+  ---@field viewerCanDelete boolean
+  ---@field author { login: string }
+  ---@field viewerDidAuthor boolean
+  ---@field state string
+  ---@field comments {
+  ---  totalCount: integer,
+  ---  nodes: octo.fragments.PullRequestReview.comment[],
+  ---}
 
-M.pull_request_review = [[
+  M.pull_request_review = [[
 fragment PullRequestReviewFragment on PullRequestReview {
   id
   body
@@ -580,13 +582,13 @@ fragment PullRequestReviewFragment on PullRequestReview {
   }
 }
 ]]
----@class octo.fragments.ProjectCard
----@field id string
----@field note string
----@field state string
----@field column { id: string, name: string }
+  ---@class octo.fragments.ProjectCard
+  ---@field id string
+  ---@field note string
+  ---@field state string
+  ---@field column { id: string, name: string }
 
-M.project_cards = [[
+  M.project_cards = [[
 fragment ProjectCardFragment on ProjectCard {
   id
   note
@@ -597,22 +599,22 @@ fragment ProjectCardFragment on ProjectCard {
   }
 }
 ]]
----@class octo.fragments.PullRequestCommit
----@field __typename "PullRequestCommit"
----@field commit {
----  messageHeadline: string,
----  committedDate: string,
----  oid: string,
----  abbreviatedOid: string,
----  changedFiles: integer,
----  additions: integer,
----  deletions: integer,
----  author: { user: { login: string } },
----  statusCheckRollup: { state: string },
----  committer: { user: { login: string } },
----}
+  ---@class octo.fragments.PullRequestCommit
+  ---@field __typename "PullRequestCommit"
+  ---@field commit {
+  ---  messageHeadline: string,
+  ---  committedDate: string,
+  ---  oid: string,
+  ---  abbreviatedOid: string,
+  ---  changedFiles: integer,
+  ---  additions: integer,
+  ---  deletions: integer,
+  ---  author: { user: { login: string } },
+  ---  statusCheckRollup: { state: string },
+  ---  committer: { user: { login: string } },
+  ---}
 
-M.pull_request_commit = [[
+  M.pull_request_commit = [[
 fragment PullRequestCommitFragment on PullRequestCommit {
   commit {
     messageHeadline
@@ -639,17 +641,17 @@ fragment PullRequestCommitFragment on PullRequestCommit {
 }
 ]]
 
----@class octo.fragments.ReviewRequestRemovedEvent
----@field __typename "ReviewRequestRemovedEvent"
----@field createdAt string
----@field actor { login: string }
----@field requestedReviewer {
----  login?: string,
----  isViewer?: boolean,
----  name?: string,
----}
+  ---@class octo.fragments.ReviewRequestRemovedEvent
+  ---@field __typename "ReviewRequestRemovedEvent"
+  ---@field createdAt string
+  ---@field actor { login: string }
+  ---@field requestedReviewer {
+  ---  login?: string,
+  ---  isViewer?: boolean,
+  ---  name?: string,
+  ---}
 
-M.review_request_removed_event = [[
+  M.review_request_removed_event = [[
 fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
   createdAt
   actor {
@@ -670,16 +672,16 @@ fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/enums#deploymentstatusstate
----@alias DeploymentState "ABANDONED" | "ACTIVE" | "DESTROYED" | "ERROR" | "FAILURE" | "INACTIVE" | "IN_PROGRESS" | "PENDING" | "QUEUED" | "SUCCESS" | "WAITING"
+  ---https://docs.github.com/en/graphql/reference/enums#deploymentstatusstate
+  ---@alias DeploymentState "ABANDONED" | "ACTIVE" | "DESTROYED" | "ERROR" | "FAILURE" | "INACTIVE" | "IN_PROGRESS" | "PENDING" | "QUEUED" | "SUCCESS" | "WAITING"
 
----@class octo.fragments.DeployedEvent
----@field __typename "DeployedEvent"
----@field createdAt string
----@field actor { login: string }
----@field deployment { environment: string, state: DeploymentState }
+  ---@class octo.fragments.DeployedEvent
+  ---@field __typename "DeployedEvent"
+  ---@field createdAt string
+  ---@field actor { login: string }
+  ---@field deployment { environment: string, state: DeploymentState }
 
-M.deployed_event = [[
+  M.deployed_event = [[
 fragment DeployedEventFragment on DeployedEvent {
   actor { login }
   createdAt
@@ -690,17 +692,17 @@ fragment DeployedEventFragment on DeployedEvent {
 }
 ]]
 
----@class octo.fragments.ReviewRequestedEvent
----@field __typename "ReviewRequestedEvent"
----@field createdAt string
----@field actor { login: string }
----@field requestedReviewer {
----  login?: string,
----  isViewer?: boolean,
----  name?: string,
----}
+  ---@class octo.fragments.ReviewRequestedEvent
+  ---@field __typename "ReviewRequestedEvent"
+  ---@field createdAt string
+  ---@field actor { login: string }
+  ---@field requestedReviewer {
+  ---  login?: string,
+  ---  isViewer?: boolean,
+  ---  name?: string,
+  ---}
 
-M.review_requested_event = [[
+  M.review_requested_event = [[
 fragment ReviewRequestedEventFragment on ReviewRequestedEvent {
   createdAt
   actor {
@@ -718,14 +720,14 @@ fragment ReviewRequestedEventFragment on ReviewRequestedEvent {
 }
 ]]
 
----@class octo.fragments.MergedEvent
----@field __typename "MergedEvent"
----@field createdAt string
----@field actor { login: string }
----@field commit { oid: string, abbreviatedOid: string }
----@field mergeRefName string
+  ---@class octo.fragments.MergedEvent
+  ---@field __typename "MergedEvent"
+  ---@field createdAt string
+  ---@field actor { login: string }
+  ---@field commit { oid: string, abbreviatedOid: string }
+  ---@field mergeRefName string
 
-M.merged_event = [[
+  M.merged_event = [[
 fragment MergedEventFragment on MergedEvent {
   createdAt
   actor {
@@ -739,12 +741,12 @@ fragment MergedEventFragment on MergedEvent {
 }
 ]]
 
----@class octo.fragments.ReadyForReviewEvent
----@field __typename "ReadyForReviewEvent"
----@field actor { login: string }
----@field createdAt string
+  ---@class octo.fragments.ReadyForReviewEvent
+  ---@field __typename "ReadyForReviewEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
 
-M.ready_for_review_event = [[
+  M.ready_for_review_event = [[
 fragment ReadyForReviewEventFragment on ReadyForReviewEvent {
   actor {
     login
@@ -753,14 +755,14 @@ fragment ReadyForReviewEventFragment on ReadyForReviewEvent {
 }
 ]]
 
----@class octo.fragments.RenamedTitleEvent
----@field __typename "RenamedTitleEvent"
----@field actor { login: string }
----@field createdAt string
----@field previousTitle string
----@field currentTitle string
+  ---@class octo.fragments.RenamedTitleEvent
+  ---@field __typename "RenamedTitleEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field previousTitle string
+  ---@field currentTitle string
 
-M.renamed_title_event = [[
+  M.renamed_title_event = [[
 fragment RenamedTitleEventFragment on RenamedTitleEvent {
   actor { login }
   createdAt
@@ -769,13 +771,13 @@ fragment RenamedTitleEventFragment on RenamedTitleEvent {
 }
 ]]
 
----@class octo.fragments.ReviewDismissedEvent
----@field __typename "ReviewDismissedEvent"
----@field createdAt string
----@field actor { login: string }
----@field dismissalMessage string
+  ---@class octo.fragments.ReviewDismissedEvent
+  ---@field __typename "ReviewDismissedEvent"
+  ---@field createdAt string
+  ---@field actor { login: string }
+  ---@field dismissalMessage string
 
-M.review_dismissed_event = [[
+  M.review_dismissed_event = [[
 fragment ReviewDismissedEventFragment on ReviewDismissedEvent {
   createdAt
   actor {
@@ -785,12 +787,12 @@ fragment ReviewDismissedEventFragment on ReviewDismissedEvent {
 }
 ]]
 
----@class octo.fragments.PinnedEvent
----@field __typename "PinnedEvent"
----@field actor { login: string }
----@field createdAt string
+  ---@class octo.fragments.PinnedEvent
+  ---@field __typename "PinnedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
 
-M.pinned_event = [[
+  M.pinned_event = [[
 fragment PinnedEventFragment on PinnedEvent {
   actor {
     login
@@ -799,12 +801,12 @@ fragment PinnedEventFragment on PinnedEvent {
 }
 ]]
 
----@class octo.fragments.UnpinnedEvent
----@field __typename "UnpinnedEvent"
----@field actor { login: string }
----@field createdAt string
+  ---@class octo.fragments.UnpinnedEvent
+  ---@field __typename "UnpinnedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
 
-M.unpinned_event = [[
+  M.unpinned_event = [[
 fragment UnpinnedEventFragment on UnpinnedEvent {
   actor {
     login
@@ -813,13 +815,13 @@ fragment UnpinnedEventFragment on UnpinnedEvent {
 }
 ]]
 
----@class octo.fragments.SubIssueAddedEvent
----@field __typename "SubIssueAddedEvent"
----@field actor { login: string }
----@field createdAt string
----@field subIssue {}
+  ---@class octo.fragments.SubIssueAddedEvent
+  ---@field __typename "SubIssueAddedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field subIssue {}
 
-M.subissue_added_event = [[
+  M.subissue_added_event = [[
 fragment SubIssueAddedEventFragment on SubIssueAddedEvent {
   actor {
     login
@@ -831,13 +833,13 @@ fragment SubIssueAddedEventFragment on SubIssueAddedEvent {
 }
 ]]
 
----@class octo.fragments.SubIssueRemovedEvent
----@field __typename "SubIssueRemovedEvent"
----@field actor { login: string }
----@field createdAt string
----@field subIssue {}
+  ---@class octo.fragments.SubIssueRemovedEvent
+  ---@field __typename "SubIssueRemovedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field subIssue {}
 
-M.subissue_removed_event = [[
+  M.subissue_removed_event = [[
 fragment SubIssueRemovedEventFragment on SubIssueRemovedEvent {
   actor {
     login
@@ -849,13 +851,13 @@ fragment SubIssueRemovedEventFragment on SubIssueRemovedEvent {
 }
 ]]
 
----@class octo.fragments.ParentIssueAddedEvent
----@field __typename "ParentIssueAddedEvent"
----@field actor { login: string }
----@field createdAt string
----@field parent {}
+  ---@class octo.fragments.ParentIssueAddedEvent
+  ---@field __typename "ParentIssueAddedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field parent {}
 
-M.parent_issue_added_event = [[
+  M.parent_issue_added_event = [[
 fragment ParentIssueAddedEventFragment on ParentIssueAddedEvent {
   actor {
     login
@@ -867,13 +869,13 @@ fragment ParentIssueAddedEventFragment on ParentIssueAddedEvent {
 }
 ]]
 
----@class octo.fragments.ParentIssueRemovedEvent
----@field __typename "ParentIssueRemovedEvent"
----@field actor { login: string }
----@field createdAt string
----@field parent {}
+  ---@class octo.fragments.ParentIssueRemovedEvent
+  ---@field __typename "ParentIssueRemovedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field parent {}
 
-M.parent_issue_removed_event = [[
+  M.parent_issue_removed_event = [[
 fragment ParentIssueRemovedEventFragment on ParentIssueRemovedEvent {
   actor {
     login
@@ -884,13 +886,13 @@ fragment ParentIssueRemovedEventFragment on ParentIssueRemovedEvent {
   }
 }
 ]]
----@class octo.fragments.IssueTypeAddedEvent
----@field __typename "IssueTypeAddedEvent"
----@field actor { login: string }
----@field createdAt string
----@field issueType { id: string, name: string, color: string }
+  ---@class octo.fragments.IssueTypeAddedEvent
+  ---@field __typename "IssueTypeAddedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field issueType { id: string, name: string, color: string }
 
-M.issue_type_added_event = [[
+  M.issue_type_added_event = [[
 fragment IssueTypeAddedEventFragment on IssueTypeAddedEvent {
   actor {
     login
@@ -903,13 +905,13 @@ fragment IssueTypeAddedEventFragment on IssueTypeAddedEvent {
   }
 }
 ]]
----@class octo.fragments.IssueTypeRemovedEvent
----@field __typename "IssueTypeRemovedEvent"
----@field actor { login: string }
----@field createdAt string
----@field issueType { id: string, name: string, color: string }
+  ---@class octo.fragments.IssueTypeRemovedEvent
+  ---@field __typename "IssueTypeRemovedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field issueType { id: string, name: string, color: string }
 
-M.issue_type_removed_event = [[
+  M.issue_type_removed_event = [[
 fragment IssueTypeRemovedEventFragment on IssueTypeRemovedEvent {
   actor {
     login
@@ -922,14 +924,14 @@ fragment IssueTypeRemovedEventFragment on IssueTypeRemovedEvent {
   }
 }
 ]]
----@class octo.fragments.IssueTypeChangedEvent
----@field __typename "IssueTypeChangedEvent"
----@field actor { login: string }
----@field createdAt string
----@field prevIssueType { id: string, name: string, color: string }
----@field issueType { id: string, name: string, color: string }
+  ---@class octo.fragments.IssueTypeChangedEvent
+  ---@field __typename "IssueTypeChangedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field prevIssueType { id: string, name: string, color: string }
+  ---@field issueType { id: string, name: string, color: string }
 
-M.issue_type_changed_event = [[
+  M.issue_type_changed_event = [[
 fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
   actor {
     login
@@ -947,14 +949,8 @@ fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
   }
 }
 ]]
----@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event
 
----@class octo.fragments.IssueTimelineItemsConnection
----@field nodes octo.IssueTimelineItem[]
-
-M.issue_timeline_items_connection = [[
-fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
-  nodes {
+  local issue_timeline_items_connection_fragments = [[
     __typename
     ...AssignedEventFragment
     ...ClosedEventFragment
@@ -977,20 +973,33 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...IssueTypeAddedEventFragment
     ...IssueTypeRemovedEventFragment
     ...IssueTypeChangedEventFragment
+]]
+  if config.values.default_to_projects_v2 then
+    issue_timeline_items_connection_fragments = issue_timeline_items_connection_fragments
+      .. [[
     ...AddedToProjectV2EventFragment
     ...RemovedFromProjectV2EventFragment
     ...ProjectV2ItemStatusChangedEventFragment
+    ]]
+  end
+
+  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event
+
+  ---@class octo.fragments.IssueTimelineItemsConnection
+  ---@field nodes octo.IssueTimelineItem[]
+
+  M.issue_timeline_items_connection = string.format(
+    [[
+fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
+  nodes {
+  %s
   }
 }
-]]
----@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
+]],
+    issue_timeline_items_connection_fragments
+  )
 
----@class octo.fragments.PullRequestTimelineItemsConnection
----@field nodes octo.PullRequestTimelineItem[]
-
-M.pull_request_timeline_items_connection = [[
-fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsConnection {
-  nodes {
+  local pull_request_timeline_items_connection_fragments = [[
     __typename
     ...AssignedEventFragment
     ...ClosedEventFragment
@@ -1016,31 +1025,51 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     ...HeadRefRestoredEventFragment
     ...HeadRefForcePushedEventFragment
     ...AutoSquashEnabledEventFragment
+]]
+
+  if config.values.default_to_projects_v2 then
+    pull_request_timeline_items_connection_fragments = pull_request_timeline_items_connection_fragments
+      .. [[
     ...AddedToProjectV2EventFragment
     ...RemovedFromProjectV2EventFragment
     ...ProjectV2ItemStatusChangedEventFragment
+    ]]
+  end
+
+  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
+
+  ---@class octo.fragments.PullRequestTimelineItemsConnection
+  ---@field nodes octo.PullRequestTimelineItem[]
+
+  M.pull_request_timeline_items_connection = string.format(
+    [[
+fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsConnection {
+  nodes {
+  %s
   }
 }
-]]
+]],
+    pull_request_timeline_items_connection_fragments
+  )
 
----@class octo.fragments.IssueInformation
----@field id string
----@field number integer
----@field state string
----@field stateReason string
----@field issueType { id: string, name: string, color: string }
----@field title string
----@field body string
----@field createdAt string
----@field closedAt string
----@field updatedAt string
----@field url string
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field milestone { title: string, state: string }
----@field author { login: string }
+  ---@class octo.fragments.IssueInformation
+  ---@field id string
+  ---@field number integer
+  ---@field state string
+  ---@field stateReason string
+  ---@field issueType { id: string, name: string, color: string }
+  ---@field title string
+  ---@field body string
+  ---@field createdAt string
+  ---@field closedAt string
+  ---@field updatedAt string
+  ---@field url string
+  ---@field viewerDidAuthor boolean
+  ---@field viewerCanUpdate boolean
+  ---@field milestone { title: string, state: string }
+  ---@field author { login: string }
 
-M.issue_information = [[
+  M.issue_information = [[
 fragment IssueInformationFragment on Issue {
   id
   number
@@ -1069,26 +1098,26 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
----@class octo.ReviewThreadCommentFragment : octo.ReactionGroupsFragment
---- @field id string
---- @field body string
---- @field diffHunk string
---- @field createdAt string
---- @field lastEditedAt string
---- @field outdated boolean
---- @field originalCommit { oid: string, abbreviatedOid: string }
---- @field author { login: string }
---- @field authorAssociation string
---- @field viewerDidAuthor boolean
---- @field viewerCanUpdate boolean
---- @field viewerCanDelete boolean
---- @field state string
---- @field url string
---- @field replyTo { id: string, url: string }
---- @field pullRequestReview { id: string, state: string }
---- @field path string
+  ---@class octo.ReviewThreadCommentFragment : octo.ReactionGroupsFragment
+  --- @field id string
+  --- @field body string
+  --- @field diffHunk string
+  --- @field createdAt string
+  --- @field lastEditedAt string
+  --- @field outdated boolean
+  --- @field originalCommit { oid: string, abbreviatedOid: string }
+  --- @field author { login: string }
+  --- @field authorAssociation string
+  --- @field viewerDidAuthor boolean
+  --- @field viewerCanUpdate boolean
+  --- @field viewerCanDelete boolean
+  --- @field state string
+  --- @field url string
+  --- @field replyTo { id: string, url: string }
+  --- @field pullRequestReview { id: string, state: string }
+  --- @field path string
 
-M.review_thread_comment = [[
+  M.review_thread_comment = [[
 fragment ReviewThreadCommentFragment on PullRequestReviewComment {
   id
   body
@@ -1122,21 +1151,21 @@ fragment ReviewThreadCommentFragment on PullRequestReviewComment {
 }
 ]]
 
----@class octo.ReviewThreadInformationFragment
---- @field id string
---- @field path string
---- @field diffSide string
---- @field startDiffSide string
---- @field line number
---- @field originalLine number
---- @field startLine number
---- @field originalStartLine number
---- @field resolvedBy { login: string }
---- @field isResolved boolean
---- @field isCollapsed boolean
---- @field isOutdated boolean
+  ---@class octo.ReviewThreadInformationFragment
+  --- @field id string
+  --- @field path string
+  --- @field diffSide string
+  --- @field startDiffSide string
+  --- @field line number
+  --- @field originalLine number
+  --- @field startLine number
+  --- @field originalStartLine number
+  --- @field resolvedBy { login: string }
+  --- @field isResolved boolean
+  --- @field isCollapsed boolean
+  --- @field isOutdated boolean
 
-M.review_thread_information = [[
+  M.review_thread_information = [[
 fragment ReviewThreadInformationFragment on PullRequestReviewThread {
   id
   path
@@ -1155,18 +1184,18 @@ fragment ReviewThreadInformationFragment on PullRequestReviewThread {
 }
 ]]
 
----@class octo.fragments.DiscussionInfo
----@field id string
----@field number integer
----@field title string
----@field url string
----@field closed boolean
----@field isAnswered boolean
----@field viewerDidAuthor boolean
----@field repository { nameWithOwner: string }
----@field author { login: string }
+  ---@class octo.fragments.DiscussionInfo
+  ---@field id string
+  ---@field number integer
+  ---@field title string
+  ---@field url string
+  ---@field closed boolean
+  ---@field isAnswered boolean
+  ---@field viewerDidAuthor boolean
+  ---@field repository { nameWithOwner: string }
+  ---@field author { login: string }
 
-M.discussion_info = [[
+  M.discussion_info = [[
 fragment DiscussionInfoFragment on Discussion {
   id
   number
@@ -1183,18 +1212,18 @@ fragment DiscussionInfoFragment on Discussion {
   }
 }
 ]]
----@class octo.fragments.DiscussionDetails : octo.fragments.DiscussionInfo, octo.ReactionGroupsFragment
----@field body string
----@field category { name: string, emoji: string }
----@field answer { author: { login: string }, body: string, createdAt: string, viewerDidAuthor: boolean }
----@field createdAt string
----@field closedAt string
----@field updatedAt string
----@field upvoteCount integer
----@field viewerHasUpvoted boolean
----@field viewerDidAuthor boolean
+  ---@class octo.fragments.DiscussionDetails : octo.fragments.DiscussionInfo, octo.ReactionGroupsFragment
+  ---@field body string
+  ---@field category { name: string, emoji: string }
+  ---@field answer { author: { login: string }, body: string, createdAt: string, viewerDidAuthor: boolean }
+  ---@field createdAt string
+  ---@field closedAt string
+  ---@field updatedAt string
+  ---@field upvoteCount integer
+  ---@field viewerHasUpvoted boolean
+  ---@field viewerDidAuthor boolean
 
-M.discussion_details = [[
+  M.discussion_details = [[
 fragment DiscussionDetailsFragment on Discussion {
   ...DiscussionInfoFragment
   body
@@ -1219,20 +1248,20 @@ fragment DiscussionDetailsFragment on Discussion {
   ...ReactionGroupsFragment
 }
 ]]
----@class octo.fragments.DiscussionComment : octo.ReactionGroupsFragment
----@field __typename string
----@field id string
----@field body string
----@field url string
----@field createdAt string
----@field lastEditedAt string
----@field author { login: string }
----@field replyTo { id: string }
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field viewerCanDelete boolean
+  ---@class octo.fragments.DiscussionComment : octo.ReactionGroupsFragment
+  ---@field __typename string
+  ---@field id string
+  ---@field body string
+  ---@field url string
+  ---@field createdAt string
+  ---@field lastEditedAt string
+  ---@field author { login: string }
+  ---@field replyTo { id: string }
+  ---@field viewerDidAuthor boolean
+  ---@field viewerCanUpdate boolean
+  ---@field viewerCanDelete boolean
 
-M.discussion_comment = [[
+  M.discussion_comment = [[
 fragment DiscussionCommentFragment on DiscussionComment {
   __typename
   id
@@ -1252,27 +1281,27 @@ fragment DiscussionCommentFragment on DiscussionComment {
   viewerCanDelete
 }
 ]]
----@class octo.fragments.Repository
----@field id string
----@field createdAt string
----@field description string
----@field diskUsage integer
----@field forkCount integer
----@field isArchived boolean
----@field isDisabled boolean
----@field isEmpty boolean
----@field isFork boolean
----@field isInOrganization boolean
----@field isPrivate boolean
----@field isSecurityPolicyEnabled boolean
----@field name string
----@field nameWithOwner string
----@field parent { nameWithOwner: string }
----@field stargazerCount integer
----@field updatedAt string
----@field url string
+  ---@class octo.fragments.Repository
+  ---@field id string
+  ---@field createdAt string
+  ---@field description string
+  ---@field diskUsage integer
+  ---@field forkCount integer
+  ---@field isArchived boolean
+  ---@field isDisabled boolean
+  ---@field isEmpty boolean
+  ---@field isFork boolean
+  ---@field isInOrganization boolean
+  ---@field isPrivate boolean
+  ---@field isSecurityPolicyEnabled boolean
+  ---@field name string
+  ---@field nameWithOwner string
+  ---@field parent { nameWithOwner: string }
+  ---@field stargazerCount integer
+  ---@field updatedAt string
+  ---@field url string
 
-M.repository = [[
+  M.repository = [[
 fragment RepositoryFragment on Repository {
   id
   createdAt
@@ -1296,5 +1325,6 @@ fragment RepositoryFragment on Repository {
   url
 }
 ]]
+end
 
 return M
