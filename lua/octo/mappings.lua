@@ -8,12 +8,18 @@ return {
   end,
   create_discussion = function()
     local buffer = utils.get_current_buffer()
+
     local repo
     if buffer and buffer.repo then
       repo = buffer.repo
     else
-      repo = utils.get_remote()
+      repo = utils.get_remote_name()
     end
+    if not repo then
+      utils.error "Could not determine repository"
+      return
+    end
+
     require("octo.discussions").create { repo = repo }
   end,
   close_issue = function()
