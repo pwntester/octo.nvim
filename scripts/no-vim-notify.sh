@@ -5,7 +5,7 @@ set -euo pipefail
 matches=$(git grep -n "vim.notify" -- "lua/octo/" || true)
 
 if [ -z "$matches" ]; then
-  echo "❌ No occurrences of 'vim.notify' found in the repo. There should be in lua/octo/notify module."
+  echo "❌ No occurrences of 'vim.notify' found in the repo. There should be one in the lua/octo/notify module."
   exit 1
 fi
 
