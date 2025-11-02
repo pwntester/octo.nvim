@@ -15,12 +15,15 @@ return {
     else
       repo = utils.get_remote_name()
     end
+
     if not repo then
       utils.error "Could not determine repository"
       return
     end
 
-    require("octo.discussions").create { repo = repo }
+    require("octo.discussions").create {
+      repo = repo --[[@as string]],
+    }
   end,
   close_issue = function()
     require("octo.commands").change_state "CLOSED"
