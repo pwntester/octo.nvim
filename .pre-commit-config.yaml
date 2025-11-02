@@ -10,7 +10,7 @@ repos:
   - repo: local
     hooks:
       - id: check-vim-notify-once
-        name: Ensure 'vim.notify' appears exactly once
+        name: Use notify or utils module for notifications over vim.notify
         entry: scripts/no-vim-notify.sh
         language: script
         files: ^lua/octo/.*\.lua$
