@@ -395,7 +395,10 @@ require"octo".setup({
       done = { lhs = "<localleader>nd", desc = "mark notification as done" },
       unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
     },
-    repo = {},
+    repo = {
+      create_issue = { lhs = "<localleader>ic", desc = "create issue" },
+      create_discussion = { lhs = "<localleader>dc", desc = "create discussion" },
+    },
     release = {
       open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
     },

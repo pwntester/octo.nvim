@@ -3,6 +3,19 @@ local reviews = require "octo.reviews"
 local utils = require "octo.utils"
 
 return {
+  create_issue = function()
+    require("octo.commands").create_issue()
+  end,
+  create_discussion = function()
+    local buffer = utils.get_current_buffer()
+    local repo
+    if buffer and buffer.repo then
+      repo = buffer.repo
+    else
+      repo = utils.get_remote()
+    end
+    require("octo.discussions").create { repo = repo }
+  end,
   close_issue = function()
     require("octo.commands").change_state "CLOSED"
   end,
