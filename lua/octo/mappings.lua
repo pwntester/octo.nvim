@@ -9,7 +9,7 @@ return {
   create_discussion = function()
     local buffer = utils.get_current_buffer()
 
-    local repo
+    local repo --[[@as string|nil]]
     if buffer and buffer.repo then
       repo = buffer.repo
     else
@@ -21,9 +21,7 @@ return {
       return
     end
 
-    require("octo.discussions").create {
-      repo = repo --[[@as string]],
-    }
+    require("octo.discussions").create { repo = repo }
   end,
   close_issue = function()
     require("octo.commands").change_state "CLOSED"
