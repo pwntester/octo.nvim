@@ -9,14 +9,15 @@ return {
   create_discussion = function()
     local buffer = utils.get_current_buffer()
 
-    local repo --[[@as string|nil]]
+    ---@type string?
+    local repo
     if buffer and buffer.repo then
       repo = buffer.repo
     else
       repo = utils.get_remote_name()
     end
 
-    if not repo then
+    if repo == nil then
       utils.error "Could not determine repository"
       return
     end
