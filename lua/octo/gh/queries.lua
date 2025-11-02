@@ -1291,6 +1291,29 @@ query($owner: String!, $name: String!) {
   }
 }
 ]]
+
+  ---https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors#about-contributing-guidelines
+  M.contributing_file = [[
+  query($owner: String!, $name: String!) {
+    repository(owner: $owner, name: $name) {
+      root: object(expression: "HEAD:CONTRIBUTING.md") {
+        ... on Blob {
+          text
+        }
+      }
+      docs: object(expression: "HEAD:docs/CONTRIBUTING.md") {
+        ... on Blob {
+          text
+        }
+      }
+      github: object(expression: "HEAD:.github/CONTRIBUTING.md") {
+        ... on Blob {
+          text
+        }
+      }
+    }
+  }
+  ]]
 end
 
 return M

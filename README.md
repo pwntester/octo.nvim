@@ -398,6 +398,7 @@ require"octo".setup({
     repo = {
       create_issue = { lhs = "<localleader>ic", desc = "create issue" },
       create_discussion = { lhs = "<localleader>dc", desc = "create discussion" },
+      contributing_guidelines = { lhs = "<localleader>cg", desc = "view contributing guidelines" },
     },
     release = {
       open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
