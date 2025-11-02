@@ -1471,9 +1471,11 @@ function M.change_state(state)
 end
 
 function M.create_issue(repo)
+  local buffer = utils.get_current_buffer()
   if not repo then
-    repo = utils.get_remote_name()
+    repo = buffer.repo or utils.get_remote_name()
   end
+
   if not repo then
     utils.error "Cant find repo name"
     return
