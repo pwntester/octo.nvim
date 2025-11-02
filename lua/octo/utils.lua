@@ -2113,6 +2113,8 @@ function M.put_text_under_cursor(text)
   vim.api.nvim_buf_set_lines(bufnr, cursor_pos[1], cursor_pos[1], false, vim.split(text, "\n"))
 end
 
+---@param data table
+---@return string
 local get_content_by_priority = function(data)
   local priority = { "root", "docs", "github" }
   for _, loc in ipairs(priority) do
@@ -2120,6 +2122,7 @@ local get_content_by_priority = function(data)
       return data[loc].text
     end
   end
+  return ""
 end
 
 ---@param repo string Full name of repository
