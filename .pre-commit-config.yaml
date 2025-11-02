@@ -7,3 +7,10 @@ repos:
     rev: v2.1.0
     hooks:
       - id: stylua-github
+  - repo: local
+    hooks:
+      - id: check-vim-notify-once
+        name: Ensure 'vim.notify' appears exactly once
+        entry: scripts/no-vim-notify.sh
+        language: script
+        files: ^lua/octo/.*\.lua$
