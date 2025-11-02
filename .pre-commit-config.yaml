@@ -14,3 +14,4 @@ repos:
         entry: scripts/no-vim-notify.sh
         language: script
         files: ^lua/octo/.*\.lua$
+        pass_filenames: false

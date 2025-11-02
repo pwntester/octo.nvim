@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # Find all tracked files that contain "vim.notify"
-matches=$(git grep -n "vim.notify" || true)
+matches=$(git grep -n "vim.notify" -- "lua/octo/" || true)
 
 if [ -z "$matches" ]; then
-  echo "❌ No occurrences of 'vim.notify' found in the repo."
+  echo "❌ No occurrences of 'vim.notify' found in the repo. There should be in lua/octo/notify module."
   exit 1
 fi
 

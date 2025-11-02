@@ -5,6 +5,7 @@ local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local _, Job = pcall(require, "plenary.job")
 local release = require "octo.release"
+local notify = require "octo.notify"
 local vim = vim
 
 local M = {}
@@ -1630,27 +1631,10 @@ function M.fork_repo()
   M.info(vim.fn.system('echo "n" | gh repo fork ' .. buffer.repo .. " 2>&1 | cat "))
 end
 
----@param msg string
-function M.notify(msg, level)
-  if level == 1 then
-    level = vim.log.levels.INFO
-  elseif level == 2 then
-    level = vim.log.levels.ERROR
-  else
-    level = vim.log.levels.INFO
-  end
-  vim.notify(msg, level, { title = "Octo.nvim" })
-end
-
----@param msg string
-function M.info(msg)
-  vim.notify(msg, vim.log.levels.INFO, { title = "Octo.nvim" })
-end
-
----@param msg string
-function M.error(msg)
-  vim.notify(msg, vim.log.levels.ERROR, { title = "Octo.nvim" })
-end
+---For backward compatibility
+M.notify = notify.notify
+M.info = notify.info
+M.error = notify.error
 
 ---@param cb fun(pr: PullRequest):nil
 function M.get_pull_request_for_current_branch(cb)
