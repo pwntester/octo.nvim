@@ -700,7 +700,7 @@ function M.setup()
           -- TODO: implement 'non-review' commits here, which adds a diff commit
           -- but outside of a review.
           if current_review.id == -1 then
-            vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+            utils.error "Please start or resume a review first"
             return
           end
           current_review:add_comment(false)
@@ -1087,7 +1087,7 @@ function M.add_pr_issue_or_review_thread_comment(body)
     -- are we trying to add a review comment while in 'review browse' mode?
     local current_review = reviews.get_current_review()
     if current_review == nil or current_review.id == -1 then
-      vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+      utils.error "Please start or resume a review first"
       return
     end
 
