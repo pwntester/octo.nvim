@@ -595,7 +595,9 @@ function M.setup()
       end,
     },
     repo = {
-      search = function(prompt)
+      search = function(...)
+        local args = table.pack(...)
+        local prompt = table.concat(args, " ")
         picker.search {
           type = "REPOSITORY",
           prompt = prompt,
