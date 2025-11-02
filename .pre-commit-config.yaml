@@ -4,7 +4,7 @@ ci:
 
 repos:
   - repo: https://github.com/JohnnyMorganz/StyLua
-    rev: v2.1.0
+    rev: v2.3.1
     hooks:
       - id: stylua-github
   - repo: local
