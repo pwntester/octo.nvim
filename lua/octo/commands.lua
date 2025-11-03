@@ -2392,9 +2392,7 @@ function M.add_user(subject, logins)
       paginate = true,
       query = query,
       F = {
-        user_ids = vim.json.encode(user_ids),
-      },
-      f = {
+        user_ids = user_ids,
         object_id = iid,
       },
       opts = {
