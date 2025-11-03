@@ -2113,4 +2113,48 @@ function M.put_text_under_cursor(text)
   vim.api.nvim_buf_set_lines(bufnr, cursor_pos[1], cursor_pos[1], false, vim.split(text, "\n"))
 end
 
+---@param data table
+---@return string
+local get_content_by_priority = function(data)
+  local priority = { "root", "docs", "github" }
+  for _, loc in ipairs(priority) do
+    if not M.is_blank(data[loc]) and not M.is_blank(data[loc].text) then
+      return data[loc].text
+    end
+  end
+  return ""
+end
+
+---@param repo string Full name of repository
+M.display_contributing_file = function(repo)
+  local owner, name = M.split_repo(repo)
+  gh.api.graphql {
+    query = queries.contributing_file,
+    F = { owner = owner, name = name },
+    jq = ".data.repository",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          data = vim.json.decode(data)
+          local content = get_content_by_priority(data)
+
+          if M.is_blank(content) then
+            M.error("No CONTRIBUTING.md found for " .. repo)
+            return
+          end
+
+          local _, bufnr = require("octo.ui.window").create_centered_float {
+            header = "CONTRIBUTING.md",
+            content = vim.split(content, "\n"),
+          }
+
+          vim.bo[bufnr].filetype = "markdown"
+          vim.bo[bufnr].modifiable = false
+          vim.bo[bufnr].readonly = true
+        end,
+      },
+    },
+  }
+end
+
 return M
