@@ -4,6 +4,14 @@ ci:
 
 repos:
   - repo: https://github.com/JohnnyMorganz/StyLua
-    rev: v2.1.0
+    rev: v2.3.1
     hooks:
       - id: stylua-github
+  - repo: local
+    hooks:
+      - id: check-vim-notify-once
+        name: Use notify or utils module for notifications over vim.notify
+        entry: scripts/no-vim-notify.sh
+        language: script
+        files: ^lua/octo/.*\.lua$
+        pass_filenames: false

@@ -100,7 +100,7 @@ function M.load_buffer(opts)
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
   local repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
-  if not repo then
+  if id == "repo" or not repo then
     repo = string.match(bufname, "octo://(.+)/repo")
     if repo then
       kind = "repo"
@@ -113,6 +113,7 @@ function M.load_buffer(opts)
     utils.print_err("Incorrect buffer: " .. bufname)
     return
   end
+
   M.load(repo, kind, id, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
       M.create_buffer(kind, obj, repo, false)

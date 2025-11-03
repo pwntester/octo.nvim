@@ -521,7 +521,7 @@ function M.add_review_comment(isSuggestion)
 
   -- we maybe in browse mode, where no review has been started.
   if review.id == -1 then
-    vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+    utils.error "Please start or resume a review first"
     return
   end
 
@@ -625,7 +625,7 @@ function M.browse_review()
   local current_review = M.get_current_review()
 
   if current_review and current_review.id ~= -1 then
-    vim.notify("Cannot browse when a review has been started", vim.log.levels.ERROR)
+    utils.error "Cannot browse when a review has been started"
     return
   end
 

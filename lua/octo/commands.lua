@@ -595,7 +595,9 @@ function M.setup()
       end,
     },
     repo = {
-      search = function(prompt)
+      search = function(...)
+        local args = table.pack(...)
+        local prompt = table.concat(args, " ")
         picker.search {
           type = "REPOSITORY",
           prompt = prompt,
@@ -698,7 +700,7 @@ function M.setup()
           -- TODO: implement 'non-review' commits here, which adds a diff commit
           -- but outside of a review.
           if current_review.id == -1 then
-            vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+            utils.error "Please start or resume a review first"
             return
           end
           current_review:add_comment(false)
@@ -1085,7 +1087,7 @@ function M.add_pr_issue_or_review_thread_comment(body)
     -- are we trying to add a review comment while in 'review browse' mode?
     local current_review = reviews.get_current_review()
     if current_review == nil or current_review.id == -1 then
-      vim.notify("Please start or resume a review first", vim.log.levels.ERROR)
+      utils.error "Please start or resume a review first"
       return
     end
 
@@ -1469,9 +1471,11 @@ function M.change_state(state)
 end
 
 function M.create_issue(repo)
+  local buffer = utils.get_current_buffer()
   if not repo then
-    repo = utils.get_remote_name()
+    repo = buffer.repo or utils.get_remote_name()
   end
+
   if not repo then
     utils.error "Cant find repo name"
     return
@@ -1958,9 +1962,11 @@ function M.merge_pr(...)
   local merge_method = conf.default_merge_method
   for _, param in ipairs(params) do
     if utils.merge_method_to_flag[param] then
-      opts[param] = true
+      merge_method = param
+      break
     end
   end
+  opts[merge_method] = true
 
   local delete_branch = conf.default_delete_branch
   for _, param in ipairs(params) do
@@ -2385,8 +2391,10 @@ function M.add_user(subject, logins)
     gh.api.graphql {
       paginate = true,
       query = query,
+      F = {
+        user_ids = vim.json.encode(user_ids),
+      },
       f = {
-        user_ids = user_ids,
         object_id = iid,
       },
       opts = {

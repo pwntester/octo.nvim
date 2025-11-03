@@ -1,26 +1,34 @@
 local fragments = require "octo.gh.fragments"
+local config = require "octo.config"
 
 local M = {}
 
----@class octo.queries.PendingReviewThreads
----@field data {
----  repository: {
----    pullRequest: {
----      reviews: {
----        nodes: {
----          id: string,
----          viewerDidAuthor: boolean,
----        }[],
----      },
----      reviewThreads: {
----        nodes: octo.ReviewThread[],
----      },
----    },
----  },
----}
+---@class octo.PageInfo
+---@field endCursor string
+---@field hasNextPage boolean
+---@field hasPreviousPage boolean
+---@field startCursor string
 
--- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
-M.pending_review_threads = [[
+M.setup = function()
+  ---@class octo.queries.PendingReviewThreads
+  ---@field data {
+  ---  repository: {
+  ---    pullRequest: {
+  ---      reviews: {
+  ---        nodes: {
+  ---          id: string,
+  ---          viewerDidAuthor: boolean,
+  ---        }[],
+  ---      },
+  ---      reviewThreads: {
+  ---        nodes: octo.ReviewThread[],
+  ---      },
+  ---    },
+  ---  },
+  ---}
+
+  -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
+  M.pending_review_threads = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest (number: $number){
@@ -45,28 +53,25 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
----@class octo.ReviewThread : octo.ReviewThreadInformationFragment
---- @field comments {
----   nodes: octo.ReviewThreadCommentFragment[],
----   pageInfo: {
----     hasNextPage: boolean,
----     endCursor: string,
----   },
---- }
+  ---@class octo.ReviewThread : octo.ReviewThreadInformationFragment
+  --- @field comments {
+  ---   nodes: octo.ReviewThreadCommentFragment[],
+  ---   pageInfo: octo.PageInfo,
+  --- }
 
----@class octo.queries.ReviewThreads
----@field data {
----  repository: {
----    pullRequest: {
----      reviewThreads: {
----        nodes: octo.ReviewThread[],
----      },
----    },
----  },
----}
+  ---@class octo.queries.ReviewThreads
+  ---@field data {
+  ---  repository: {
+  ---    pullRequest: {
+  ---      reviewThreads: {
+  ---        nodes: octo.ReviewThread[],
+  ---      },
+  ---    },
+  ---  },
+  ---}
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
-M.review_threads = [[
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequestreviewthread
+  M.review_threads = [[
 query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -89,54 +94,54 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
----@class octo.PullRequestTimelineItemsConnection : octo.fragments.PullRequestTimelineItemsConnection
----@field pageInfo { hasNextPage: boolean, endCursor: string }
+  ---@class octo.PullRequestTimelineItemsConnection : octo.fragments.PullRequestTimelineItemsConnection
+  ---@field pageInfo octo.PageInfo
 
----@class octo.PullRequest : octo.ReactionGroupsFragment
----@field id string
----@field isDraft boolean
----@field number integer
----@field state string
----@field title string
----@field body string
----@field createdAt string
----@field closedAt string
----@field updatedAt string
----@field url string
----@field closingIssuesReferences { totalCount: number, nodes: octo.fragments.Issue[] }
----@field headRepository { nameWithOwner: string }
----@field files { nodes: { path: string, viewerViewedState: ViewedState }[] }
----@field merged boolean
----@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }
----@field participants { nodes: { login: string }[] }
----@field additions integer
----@field deletions integer
----@field commits { totalCount: integer }
----@field changedFiles integer
----@field headRefName string
----@field headRefOid string
----@field baseRefName string
----@field baseRefOid string
----@field baseRepository { name: string, nameWithOwner: string }
----@field milestone { title: string, state: string }
----@field author { login: string }
----@field authorAssociation string
----@field viewerDidAuthor boolean
----@field viewerCanUpdate boolean
----@field projectItems? octo.fragments.ProjectsV2Connection
----@field timelineItems octo.PullRequestTimelineItemsConnection
----@field reviewDecision string
----@field reviewThreads { nodes: octo.ReviewThread[] }
----@field labels octo.fragments.LabelConnection
----@field assignees octo.fragments.AssigneeConnection
----@field reviewRequests { totalCount: integer, nodes: { requestedReviewer: { name: string }|{ login: string }|{ login: string, isViewer: boolean } }[] }
----@field statusCheckRollup { state: string }
----@field mergeStateStatus string
----@field mergeable string
----@field autoMergeRequest { enabledBy: { login: string }, mergeMethod: string }
+  ---@class octo.PullRequest : octo.ReactionGroupsFragment
+  ---@field id string
+  ---@field isDraft boolean
+  ---@field number integer
+  ---@field state string
+  ---@field title string
+  ---@field body string
+  ---@field createdAt string
+  ---@field closedAt string
+  ---@field updatedAt string
+  ---@field url string
+  ---@field headRepository { nameWithOwner: string }
+  ---@field files { nodes: { path: string, viewerViewedState: ViewedState }[] }
+  ---@field merged boolean
+  ---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }
+  ---@field participants { nodes: { login: string }[] }
+  ---@field additions integer
+  ---@field deletions integer
+  ---@field commits { totalCount: integer }
+  ---@field changedFiles integer
+  ---@field headRefName string
+  ---@field headRefOid string
+  ---@field baseRefName string
+  ---@field baseRefOid string
+  ---@field baseRepository { name: string, nameWithOwner: string }
+  ---@field milestone { title: string, state: string }
+  ---@field author { login: string }
+  ---@field authorAssociation string
+  ---@field viewerDidAuthor boolean
+  ---@field viewerCanUpdate boolean
+  ---@field projectItems? octo.fragments.ProjectsV2Connection
+  ---@field timelineItems octo.PullRequestTimelineItemsConnection
+  ---@field reviewDecision string
+  ---@field reviewThreads { nodes: octo.ReviewThread[] }
+  ---@field labels octo.fragments.LabelConnection
+  ---@field assignees octo.fragments.AssigneeConnection
+  ---@field reviewRequests { totalCount: integer, nodes: { requestedReviewer: { name: string }|{ login: string }|{ login: string, isViewer: boolean } }[] }
+  ---@field statusCheckRollup { state: string }
+  ---@field mergeStateStatus string
+  ---@field mergeable string
+  ---@field autoMergeRequest { enabledBy: { login: string }, mergeMethod: string }
+  ---@field closingIssuesReferences { totalCount: integer, nodes: octo.Issue[], edges: { cursor: string, node: octo.Issue }[], pageInfo: octo.PageInfo }
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
-M.pull_request = [[
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
+  M.pull_request = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequest(number: %d) {
@@ -151,12 +156,6 @@ query($endCursor: String) {
       updatedAt
       url
       headRepository { nameWithOwner }
-      closingIssuesReferences(first: 10) {
-        totalCount
-        nodes {
-          ...IssueFields
-        }
-      }
       files(first:100) {
         nodes {
           path
@@ -253,21 +252,28 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.added_to_project_v2_event .. fragments.removed_from_project_v2_event .. fragments.project_v2_item_status_changed_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event
 
----@class octo.IssueTimelineItemConnection : octo.fragments.IssueTimelineItemsConnection
---- @field pageInfo { hasNextPage: boolean, endCursor: string }
+  if config.values.default_to_projects_v2 then
+    M.pull_request = M.pull_request
+      .. fragments.added_to_project_v2_event
+      .. fragments.removed_from_project_v2_event
+      .. fragments.project_v2_item_status_changed_event
+  end
 
----@class octo.Issue : octo.fragments.IssueInformation, octo.ReactionGroupsFragment
----@field participants { nodes: { login: string }[] }
----@field parent octo.fragments.Issue
----@field projectItems? octo.fragments.ProjectsV2Connection
----@field timelineItems octo.IssueTimelineItemConnection
----@field labels octo.fragments.LabelConnection
----@field assignees octo.fragments.AssigneeConnection
+  ---@class octo.IssueTimelineItemConnection : octo.fragments.IssueTimelineItemsConnection
+  --- @field pageInfo octo.PageInfo
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
-M.issue = [[
+  ---@class octo.Issue : octo.fragments.IssueInformation, octo.ReactionGroupsFragment
+  ---@field participants { nodes: { login: string }[] }
+  ---@field parent octo.fragments.Issue
+  ---@field projectItems? octo.fragments.ProjectsV2Connection
+  ---@field timelineItems octo.IssueTimelineItemConnection
+  ---@field labels octo.fragments.LabelConnection
+  ---@field assignees octo.fragments.AssigneeConnection
+
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
+  M.issue = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
     issue(number: %d) {
@@ -298,10 +304,17 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.added_to_project_v2_event .. fragments.project_v2_item_status_changed_event .. fragments.removed_from_project_v2_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event
 
--- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
-M.issue_kind = [[
+  if config.values.default_to_projects_v2 then
+    M.issue = M.issue
+      .. fragments.added_to_project_v2_event
+      .. fragments.removed_from_project_v2_event
+      .. fragments.project_v2_item_status_changed_event
+  end
+
+  -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
+  M.issue_kind = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issueOrPullRequest(number: $number) {
@@ -311,12 +324,12 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]]
 
----@class octo.DiscussionSummary : octo.fragments.DiscussionInfo
----@field createdAt string
----@field body string
----@field labels octo.fragments.LabelConnection
+  ---@class octo.DiscussionSummary : octo.fragments.DiscussionInfo
+  ---@field createdAt string
+  ---@field body string
+  ---@field labels octo.fragments.LabelConnection
 
-M.discussion_summary = [[
+  M.discussion_summary = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     discussion(number: $number) {
@@ -330,37 +343,37 @@ query($owner: String!, $name: String!, $number: Int!) {
   }
 }
 ]] .. fragments.discussion_info .. fragments.label_connection .. fragments.label
----@class octo.PullRequestSummary
----@field __typename "PullRequest"
----@field headRefName string
----@field baseRefName string
----@field createdAt string
----@field state string
----@field number integer
----@field title string
----@field body string
----@field repository { nameWithOwner: string }
----@field author { login: string }
----@field authorAssociation string
----@field labels octo.fragments.LabelConnection
+  ---@class octo.PullRequestSummary
+  ---@field __typename "PullRequest"
+  ---@field headRefName string
+  ---@field baseRefName string
+  ---@field createdAt string
+  ---@field state string
+  ---@field number integer
+  ---@field title string
+  ---@field body string
+  ---@field repository { nameWithOwner: string }
+  ---@field author { login: string }
+  ---@field authorAssociation string
+  ---@field labels octo.fragments.LabelConnection
 
----@class octo.IssueSummary
----@field __typename "Issue"
----@field createdAt string
----@field state string
----@field stateReason string
----@field number integer
----@field title string
----@field body string
----@field repository { nameWithOwner: string }
----@field author { login: string }
----@field authorAssociation string
----@field labels octo.fragments.LabelConnection
+  ---@class octo.IssueSummary
+  ---@field __typename "Issue"
+  ---@field createdAt string
+  ---@field state string
+  ---@field stateReason string
+  ---@field number integer
+  ---@field title string
+  ---@field body string
+  ---@field repository { nameWithOwner: string }
+  ---@field author { login: string }
+  ---@field authorAssociation string
+  ---@field labels octo.fragments.LabelConnection
 
----@alias octo.IssueOrPullRequestSummary octo.PullRequestSummary|octo.IssueSummary
+  ---@alias octo.IssueOrPullRequestSummary octo.PullRequestSummary|octo.IssueSummary
 
--- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
-M.issue_summary = [[
+  -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
+  M.issue_summary = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issueOrPullRequest(number: $number) {
@@ -400,8 +413,8 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
-M.repository_id = [[
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
+  M.repository_id = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     id
@@ -409,14 +422,14 @@ query($owner: String!, $name: String!) {
 }
 ]]
 
----@class octo.queries.RepositoryTemplates.data.repository
----@field issueTemplates { body: string, about: string, name: string, title: string }[]
----@field pullRequestTemplates { body: string, filename: string }[]
+  ---@class octo.queries.RepositoryTemplates.data.repository
+  ---@field issueTemplates { body: string, about: string, name: string, title: string }[]
+  ---@field pullRequestTemplates { body: string, filename: string }[]
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
--- https://docs.github.com/en/graphql/reference/objects#issuetemplate
--- https://docs.github.com/en/graphql/reference/objects#pullrequesttemplate
-M.repository_templates = [[
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#repository
+  -- https://docs.github.com/en/graphql/reference/objects#issuetemplate
+  -- https://docs.github.com/en/graphql/reference/objects#pullrequesttemplate
+  M.repository_templates = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     issueTemplates { body about name title  }
@@ -425,29 +438,29 @@ query($owner: String!, $name: String!) {
 }
 ]]
 
----https://docs.github.com/en/graphql/reference/input-objects#issuefilters
----@class octo.queries.IssueFilters
----@field assignee? string
----@field createdBy? string
----@field labels? string[]
----@field mentioned? string
----@field milestone string
----@field milestoneNumber? string
----@field since? string
----@field states? string[]
----@field type? string
----@field viewerSubscribed? boolean
+  ---https://docs.github.com/en/graphql/reference/input-objects#issuefilters
+  ---@class octo.queries.IssueFilters
+  ---@field assignee? string
+  ---@field createdBy? string
+  ---@field labels? string[]
+  ---@field mentioned? string
+  ---@field milestone string
+  ---@field milestoneNumber? string
+  ---@field since? string
+  ---@field states? string[]
+  ---@field type? string
+  ---@field viewerSubscribed? boolean
 
---- https://docs.github.com/en/graphql/reference/input-objects#issueorder
----@class octo.queries.IssueOrder
----@field direction string
----@field field string
+  --- https://docs.github.com/en/graphql/reference/input-objects#issueorder
+  ---@class octo.queries.IssueOrder
+  ---@field direction string
+  ---@field field string
 
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issueorder
--- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters
--- filter eg: labels: ["help wanted", "bug"]
-M.issues = [[
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issueorder
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/input-objects#issuefilters
+  -- filter eg: labels: ["help wanted", "bug"]
+  M.issues = [[
 query(
   $owner: String!,
   $name: String!,
@@ -476,9 +489,9 @@ query(
 }
 ]]
 
----
+  ---
 
-M.pull_requests = [[
+  M.pull_requests = [[
 query(
   $owner: String!,
   $name: String!,
@@ -518,7 +531,7 @@ query(
 }
 ]]
 
-M.search_count = [[
+  M.search_count = [[
 query($prompt: String!, $type: SearchType = ISSUE) {
   search(query: $prompt, type: $type, last: 100) {
     issueCount
@@ -526,7 +539,7 @@ query($prompt: String!, $type: SearchType = ISSUE) {
 }
 ]]
 
-M.search = [[
+  M.search = [[
 query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
   search(query: $prompt, type: $type, last: $last) {
     nodes {
@@ -574,7 +587,7 @@ query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
 }
 ]] .. fragments.discussion_info .. fragments.repository
 
-M.discussions = [[
+  M.discussions = [[
 query(
   $owner: String!,
   $name: String!,
@@ -604,7 +617,7 @@ query(
 }
 ]] .. fragments.discussion_info
 
-M.discussion_categories = [[
+  M.discussion_categories = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     discussionCategories(first: 20) {
@@ -617,24 +630,21 @@ query($owner: String!, $name: String!) {
   }
 }
 ]]
----@class octo.DiscussionComment : octo.fragments.DiscussionComment
----@field replies {
----  totalCount: integer,
----  nodes: octo.fragments.DiscussionComment[],
----  pageInfo: {
----    hasNextPage: boolean,
----    endCursor: string,
----  },
----}
+  ---@class octo.DiscussionComment : octo.fragments.DiscussionComment
+  ---@field replies {
+  ---  totalCount: integer,
+  ---  nodes: octo.fragments.DiscussionComment[],
+  ---  pageInfo: octo.PageInfo,
+  ---}
 
----@class octo.Discussion : octo.fragments.DiscussionDetails
----@field labels octo.fragments.LabelConnection
----@field comments {
----  totalCount: integer,
----  nodes: octo.DiscussionComment[],
----}
+  ---@class octo.Discussion : octo.fragments.DiscussionDetails
+  ---@field labels octo.fragments.LabelConnection
+  ---@field comments {
+  ---  totalCount: integer,
+  ---  nodes: octo.DiscussionComment[],
+  ---}
 
-M.discussion = [[
+  M.discussion = [[
 query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     discussion(number: $number) {
@@ -663,27 +673,27 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
 }
 ]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
 
----@class octo.Release : octo.ReactionGroupsFragment
---- @field id string
---- @field name string
---- @field tagName string
---- @field tagCommit { abbreviatedOid: string }
---- @field url string
---- @field isPrerelease boolean
---- @field isLatest boolean
---- @field publishedAt string
---- @field description string
---- @field author { login: string }
---- @field releaseAssets {
----   nodes: {
----     name: string,
----     downloadUrl: string,
----     downloadCount: number,
----     size: number,
----     updatedAt: string,
----   }[] }
+  ---@class octo.Release : octo.ReactionGroupsFragment
+  --- @field id string
+  --- @field name string
+  --- @field tagName string
+  --- @field tagCommit { abbreviatedOid: string }
+  --- @field url string
+  --- @field isPrerelease boolean
+  --- @field isLatest boolean
+  --- @field publishedAt string
+  --- @field description string
+  --- @field author { login: string }
+  --- @field releaseAssets {
+  ---   nodes: {
+  ---     name: string,
+  ---     downloadUrl: string,
+  ---     downloadCount: number,
+  ---     size: number,
+  ---     updatedAt: string,
+  ---   }[] }
 
-M.release = [[
+  M.release = [[
 query($owner: String!, $name: String!, $tag: String!) {
   repository(owner: $owner, name: $name) {
     release(tagName: $tag) {
@@ -716,8 +726,8 @@ query($owner: String!, $name: String!, $tag: String!) {
 }
 ]] .. fragments.reaction_groups
 
--- https://docs.github.com/en/graphql/reference/objects#projectv2
-M.projects_v2 = [[
+  -- https://docs.github.com/en/graphql/reference/objects#projectv2
+  M.projects_v2 = [[
 query($owner: String!, $name: String!, $viewer: String!) {
   repository(owner: $owner, name: $name) {
     projects: projectsV2(first: 100) {
@@ -806,8 +816,8 @@ query($owner: String!, $name: String!, $viewer: String!) {
 }
 ]]
 
--- https://docs.github.com/en/graphql/reference/objects#label
-M.labels = [[
+  -- https://docs.github.com/en/graphql/reference/objects#label
+  M.labels = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     labels(first: 100) {
@@ -817,7 +827,7 @@ query($owner: String!, $name: String!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
-M.issue_labels = [[
+  M.issue_labels = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issue(number: $number) {
@@ -829,7 +839,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
-M.discussion_labels = [[
+  M.discussion_labels = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     discussion(number: $number) {
@@ -841,7 +851,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
-M.pull_request_labels = [[
+  M.pull_request_labels = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -853,7 +863,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
-M.pull_request_reviewers = [[
+  M.pull_request_reviewers = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -882,7 +892,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]]
 
-M.issue_assignees = [[
+  M.issue_assignees = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issue(number: $number) {
@@ -894,7 +904,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 ]] .. fragments.assignee_connection
 
-M.pull_request_assignees = [[
+  M.pull_request_assignees = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -905,29 +915,29 @@ query($owner: String!, $name: String!, $number: Int!) {
   }
 }
 ]] .. fragments.assignee_connection
----@class octo.UserProfile
----@field login string
----@field bio string
----@field company string
----@field followers { totalCount: integer }
----@field following { totalCount: integer }
----@field hovercard { contexts: { message: string }[] }
----@field hasSponsorsListing boolean
----@field isEmployee boolean
----@field isViewer boolean
----@field location string
----@field organizations { nodes: { name: string }[] }
----@field name string
----@field status { emoji: string, message: string }
----@field twitterUsername string
----@field websiteUrl string
+  ---@class octo.UserProfile
+  ---@field login string
+  ---@field bio string
+  ---@field company string
+  ---@field followers { totalCount: integer }
+  ---@field following { totalCount: integer }
+  ---@field hovercard { contexts: { message: string }[] }
+  ---@field hasSponsorsListing boolean
+  ---@field isEmployee boolean
+  ---@field isViewer boolean
+  ---@field location string
+  ---@field organizations { nodes: { name: string }[] }
+  ---@field name string
+  ---@field status { emoji: string, message: string }
+  ---@field twitterUsername string
+  ---@field websiteUrl string
 
----@class octo.queries.UserProfile
----@field data {
----  user: octo.UserProfile,
----}
+  ---@class octo.queries.UserProfile
+  ---@field data {
+  ---  user: octo.UserProfile,
+  ---}
 
-M.user_profile = [[
+  M.user_profile = [[
 query($login: String!) {
   user(login: $login) {
     login
@@ -964,7 +974,7 @@ query($login: String!) {
 }
 ]]
 
-M.changed_files = [[
+  M.changed_files = [[
 query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -984,7 +994,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
 }
 ]]
 
-M.file_content = [[
+  M.file_content = [[
 query($owner: String!, $name: String!, $expression: String!) {
   repository(owner: $owner, name: $name) {
     object(expression: $expression) {
@@ -996,7 +1006,7 @@ query($owner: String!, $name: String!, $expression: String!) {
 }
 ]]
 
-M.directory_file_content = [[
+  M.directory_file_content = [[
 query($owner: String!, $name: String!, $expression: String!) {
   repository(owner: $owner, name: $name) {
     object(expression: $expression) {
@@ -1015,12 +1025,12 @@ query($owner: String!, $name: String!, $expression: String!) {
 }
 ]]
 
----@class octo.queries.ReactionsForObject
----@field data {
----  node: octo.fragments.ReactionGroupsUsers,
----}
+  ---@class octo.queries.ReactionsForObject
+  ---@field data {
+  ---  node: octo.fragments.ReactionGroupsUsers,
+  ---}
 
-M.reactions_for_object = [[
+  M.reactions_for_object = [[
 query($id: ID!) {
   node(id: $id) {
     ... on Issue {
@@ -1048,7 +1058,7 @@ query($id: ID!) {
 }
 ]] .. fragments.reaction_groups_users
 
-M.mentionable_users = [[
+  M.mentionable_users = [[
 query($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
       mentionableUsers(first: 100, after: $endCursor) {
@@ -1066,7 +1076,7 @@ query($owner: String!, $name: String!, $endCursor: String) {
 }
 ]]
 
-M.assignable_users = [[
+  M.assignable_users = [[
 query($owner: String!, $name: String! $endCursor: String) {
   repository(owner: $owner, name: $name) {
     assignableUsers(first: 100, after: $endCursor) {
@@ -1084,7 +1094,7 @@ query($owner: String!, $name: String! $endCursor: String) {
 }
 ]]
 
-M.users = [[
+  M.users = [[
 query($prompt: String!, $endCursor: String) {
   search(query: $prompt, type: USER, first: 100) {
     nodes {
@@ -1112,7 +1122,7 @@ query($prompt: String!, $endCursor: String) {
 }
 ]]
 
-M.repos = [[
+  M.repos = [[
 query($login: String!, $endCursor: String) {
   repositoryOwner(login: $login) {
     repositories(first: 10, after: $endCursor, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER, OWNER]) {
@@ -1127,23 +1137,23 @@ query($login: String!, $endCursor: String) {
   }
 }
 ]] .. fragments.repository
----@class octo.Repository : octo.fragments.Repository
----@field pushedAt string
----@field defaultBranchRef { name: string }
----@field securityPolicyUrl string
----@field isLocked boolean
----@field lockReason string
----@field isMirror boolean
----@field mirrorUrl string
----@field hasProjectsEnabled boolean
----@field hasDiscussionsEnabled boolean
----@field projectsUrl string
----@field homepageUrl string
----@field primaryLanguage { name: string, color: string }
----@field refs { nodes: { name: string }[] }
----@field languages { nodes: { name: string, color: string }[] }
+  ---@class octo.Repository : octo.fragments.Repository
+  ---@field pushedAt string
+  ---@field defaultBranchRef { name: string }
+  ---@field securityPolicyUrl string
+  ---@field isLocked boolean
+  ---@field lockReason string
+  ---@field isMirror boolean
+  ---@field mirrorUrl string
+  ---@field hasProjectsEnabled boolean
+  ---@field hasDiscussionsEnabled boolean
+  ---@field projectsUrl string
+  ---@field homepageUrl string
+  ---@field primaryLanguage { name: string, color: string }
+  ---@field refs { nodes: { name: string }[] }
+  ---@field languages { nodes: { name: string, color: string }[] }
 
-M.repository = [[
+  M.repository = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     ...RepositoryFragment
@@ -1179,7 +1189,7 @@ query($owner: String!, $name: String!) {
 }
 ]] .. fragments.repository
 
-M.gists = [[
+  M.gists = [[
 query($privacy: GistPrivacy = ALL, $endCursor: String) {
   viewer {
     gists(first: 100, privacy: $privacy, after: $endCursor) {
@@ -1207,8 +1217,8 @@ query($privacy: GistPrivacy = ALL, $endCursor: String) {
 }
 ]]
 
--- https://docs.github.com/en/graphql/reference/queries#user
-M.user = [[
+  -- https://docs.github.com/en/graphql/reference/queries#user
+  M.user = [[
 query($login: String!) {
   user(login: $login) {
     id
@@ -1216,8 +1226,8 @@ query($login: String!) {
 }
 ]]
 
--- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
-M.repo_labels = [[
+  -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
+  M.repo_labels = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     labels(first: 100) {
@@ -1227,7 +1237,7 @@ query($owner: String!, $name: String!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
-M.open_milestones = [[
+  M.open_milestones = [[
 query($name: String!, $owner: String!, $n_milestones: Int!) {
   repository(owner: $owner, name: $name) {
     milestones(first: $n_milestones, states: [OPEN]) {
@@ -1242,7 +1252,7 @@ query($name: String!, $owner: String!, $n_milestones: Int!) {
 }
 ]]
 
-M.comment_url = [[
+  M.comment_url = [[
 query($id: ID!) {
   node(id: $id) {
     ... on IssueComment {
@@ -1261,13 +1271,13 @@ query($id: ID!) {
 }
 ]]
 
----@class octo.IssueType
----@field id string
----@field name string
----@field description string
----@field color string
+  ---@class octo.IssueType
+  ---@field id string
+  ---@field name string
+  ---@field description string
+  ---@field color string
 
-M.issue_types = [[
+  M.issue_types = [[
 query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     issueTypes(first: 100) {
@@ -1281,5 +1291,29 @@ query($owner: String!, $name: String!) {
   }
 }
 ]]
+
+  ---https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors#about-contributing-guidelines
+  M.contributing_file = [[
+  query($owner: String!, $name: String!) {
+    repository(owner: $owner, name: $name) {
+      root: object(expression: "HEAD:CONTRIBUTING.md") {
+        ... on Blob {
+          text
+        }
+      }
+      docs: object(expression: "HEAD:docs/CONTRIBUTING.md") {
+        ... on Blob {
+          text
+        }
+      }
+      github: object(expression: "HEAD:.github/CONTRIBUTING.md") {
+        ... on Blob {
+          text
+        }
+      }
+    }
+  }
+  ]]
+end
 
 return M

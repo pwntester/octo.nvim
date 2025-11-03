@@ -5,6 +5,7 @@ local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local _, Job = pcall(require, "plenary.job")
 local release = require "octo.release"
+local notify = require "octo.notify"
 local vim = vim
 
 local M = {}
@@ -140,7 +141,7 @@ M.merge_state_message_map = {
 }
 
 M.auto_merge_method_map = {
-  MERGE = "commit",
+  MERGE = "merge",
   REBASE = "rebase",
   SQUASH = "squash",
 }
@@ -624,7 +625,6 @@ M.merge_queue_to_flag = {
 M.merge_method_to_flag = {
   squash = "--squash",
   rebase = "--rebase",
-  commit = "--merge",
   merge = "--merge",
 }
 
@@ -1631,27 +1631,10 @@ function M.fork_repo()
   M.info(vim.fn.system('echo "n" | gh repo fork ' .. buffer.repo .. " 2>&1 | cat "))
 end
 
----@param msg string
-function M.notify(msg, level)
-  if level == 1 then
-    level = vim.log.levels.INFO
-  elseif level == 2 then
-    level = vim.log.levels.ERROR
-  else
-    level = vim.log.levels.INFO
-  end
-  vim.notify(msg, level, { title = "Octo.nvim" })
-end
-
----@param msg string
-function M.info(msg)
-  vim.notify(msg, vim.log.levels.INFO, { title = "Octo.nvim" })
-end
-
----@param msg string
-function M.error(msg)
-  vim.notify(msg, vim.log.levels.ERROR, { title = "Octo.nvim" })
-end
+---For backward compatibility
+M.notify = notify.notify
+M.info = notify.info
+M.error = notify.error
 
 ---@param cb fun(pr: PullRequest):nil
 function M.get_pull_request_for_current_branch(cb)
@@ -2128,6 +2111,50 @@ function M.put_text_under_cursor(text)
   local bufnr = vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   vim.api.nvim_buf_set_lines(bufnr, cursor_pos[1], cursor_pos[1], false, vim.split(text, "\n"))
+end
+
+---@param data table
+---@return string
+local get_content_by_priority = function(data)
+  local priority = { "root", "docs", "github" }
+  for _, loc in ipairs(priority) do
+    if not M.is_blank(data[loc]) and not M.is_blank(data[loc].text) then
+      return data[loc].text
+    end
+  end
+  return ""
+end
+
+---@param repo string Full name of repository
+M.display_contributing_file = function(repo)
+  local owner, name = M.split_repo(repo)
+  gh.api.graphql {
+    query = queries.contributing_file,
+    F = { owner = owner, name = name },
+    jq = ".data.repository",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          data = vim.json.decode(data)
+          local content = get_content_by_priority(data)
+
+          if M.is_blank(content) then
+            M.error("No CONTRIBUTING.md found for " .. repo)
+            return
+          end
+
+          local _, bufnr = require("octo.ui.window").create_centered_float {
+            header = "CONTRIBUTING.md",
+            content = vim.split(content, "\n"),
+          }
+
+          vim.bo[bufnr].filetype = "markdown"
+          vim.bo[bufnr].modifiable = false
+          vim.bo[bufnr].readonly = true
+        end,
+      },
+    },
+  }
 end
 
 return M

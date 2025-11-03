@@ -3,6 +3,44 @@ local reviews = require "octo.reviews"
 local utils = require "octo.utils"
 
 return {
+  create_issue = function()
+    require("octo.commands").create_issue()
+  end,
+  create_discussion = function()
+    local buffer = utils.get_current_buffer()
+
+    ---@type string?
+    local repo
+    if buffer and buffer.repo then
+      repo = buffer.repo
+    else
+      repo = utils.get_remote_name()
+    end
+
+    if repo == nil then
+      utils.error "Could not determine repository"
+      return
+    end
+
+    require("octo.discussions").create { repo = repo }
+  end,
+  contributing_guidelines = function()
+    local buffer = utils.get_current_buffer()
+    ---@type string?
+    local repo
+    if buffer and buffer.repo then
+      repo = buffer.repo
+    else
+      repo = utils.get_remote_name()
+    end
+
+    if repo == nil then
+      utils.error "Could not determine repository"
+      return
+    end
+
+    utils.display_contributing_file(repo)
+  end,
   close_issue = function()
     require("octo.commands").change_state "CLOSED"
   end,
@@ -34,10 +72,10 @@ return {
     require("octo.commands").show_pr_diff()
   end,
   merge_pr = function()
-    require("octo.commands").merge_pr "commit"
+    require("octo.commands").merge_pr "merge"
   end,
   merge_pr_queue = function()
-    require("octo.commands").merge_pr("commit", "queue")
+    require("octo.commands").merge_pr("merge", "queue")
   end,
   squash_and_merge_pr = function()
     require("octo.commands").merge_pr "squash"
