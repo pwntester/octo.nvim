@@ -406,6 +406,7 @@ function OctoBuffer:render_issue()
     elseif
       not utils.is_blank(item)
       and config.values.debug.notify_missing_timeline_items
+      ---@diagnostic disable-next-line
       and is_rendering_event(item.__typename)
     then
       ---@diagnostic disable-next-line
