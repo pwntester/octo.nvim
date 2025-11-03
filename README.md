@@ -755,9 +755,9 @@ Set `mappings_disable_default = true` in user config.
 
 Contributions are always welcome!
 
-See [`CONTRIBUTING`](/CONTRIBUTING.md) for ways to get started.
+See [`CONTRIBUTING`](CONTRIBUTING.md) for ways to get started.
 
-Please adhere to this project's [`CODE_OF_CONDUCT`](/CODE_OF_CONDUCT.md).
+Please adhere to this project's [`CODE_OF_CONDUCT`](CODE_OF_CONDUCT.md).
 
 You are welcome to join the [#octo.nvim:matrix.org](https://matrix.to/#/#octo.nvim:matrix.org) chatroom if you need help on anything.
 
