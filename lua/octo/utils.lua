@@ -2118,7 +2118,7 @@ end
 local get_content_by_priority = function(data)
   local priority = { "root", "docs", "github" }
   for _, loc in ipairs(priority) do
-    if data[loc] and data[loc].text then
+    if not M.is_blank(data[loc]) and not M.is_blank(data[loc].text) then
       return data[loc].text
     end
   end
@@ -2139,7 +2139,7 @@ M.display_contributing_file = function(repo)
           local content = get_content_by_priority(data)
 
           if M.is_blank(content) then
-            M.error "No CONTRIBUTING.md found in the repository"
+            M.error("No CONTRIBUTING.md found for " .. repo)
             return
           end
 
