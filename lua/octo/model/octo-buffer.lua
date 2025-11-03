@@ -406,7 +406,7 @@ function OctoBuffer:render_issue()
     elseif
       not utils.is_blank(item)
       and config.values.debug.notify_missing_timeline_items
-      and not is_rendering_event(item)
+      and is_rendering_event(item.__typename)
     then
       ---@diagnostic disable-next-line
       local info = item.__typename and item.__typename or vim.inspect(item)
