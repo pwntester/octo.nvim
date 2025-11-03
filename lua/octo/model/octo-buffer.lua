@@ -164,6 +164,20 @@ function OctoBuffer:render_discussion()
   self.ready = true
 end
 
+---@type string[]
+local non_rendering_events = { "UnsubscribedEvent", "SubscribedEvent", "MentionedEvent" }
+
+---@param typename string
+---@return boolean
+local is_rendering_event = function(typename)
+  for _, t in ipairs(non_rendering_events) do
+    if t == typename then
+      return false
+    end
+  end
+  return true
+end
+
 ---Writes an issue or pull request to the buffer.
 function OctoBuffer:render_issue()
   self:clear()
@@ -389,7 +403,12 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "ProjectV2ItemStatusChangedEvent" then
       writers.write_project_v2_item_status_changed_event(self.bufnr, item)
       prev_is_event = true
-    elseif not utils.is_blank(item) and config.values.debug.notify_missing_timeline_items then
+    elseif
+      not utils.is_blank(item)
+      and config.values.debug.notify_missing_timeline_items
+      ---@diagnostic disable-next-line
+      and is_rendering_event(item.__typename)
+    then
       ---@diagnostic disable-next-line
       local info = item.__typename and item.__typename or vim.inspect(item)
       utils.info("Unhandled timeline item: " .. info)
