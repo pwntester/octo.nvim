@@ -300,6 +300,7 @@ function M.get_default_values()
     mappings_disable_default = false,
     mappings = {
       discussion = {
+        open_in_browser = { lhs = "<C-b>", desc = "open discussion in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
         add_reply = { lhs = "<localleader>cr", desc = "add reply" },
