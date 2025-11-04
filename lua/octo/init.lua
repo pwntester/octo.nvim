@@ -130,7 +130,7 @@ end
 
 ---@param repo string
 ---@param kind octo.NodeKind
----@param id integer|string pull request, issue, or discussion number or release tag
+---@param id? integer|string pull request, issue, or discussion number or release tag
 ---@param cb fun(obj: octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository): nil
 function M.load(repo, kind, id, cb)
   local owner, name = utils.split_repo(repo)
