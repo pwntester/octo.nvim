@@ -150,10 +150,18 @@ function M.load(repo, kind, id, cb)
     fields = { owner = owner, name = name }
   elseif kind == "discussion" then
     query = queries.discussion
-    fields = { owner = owner, name = name, number = id }
+    fields = {
+      owner = owner,
+      name = name,
+      number = id --[[@as integer]],
+    }
   elseif kind == "release" then
     query = queries.release
-    fields = { owner = owner, name = name, tag = id }
+    fields = {
+      owner = owner,
+      name = name,
+      tag = id --[[@as string]],
+    }
   end
 
   local function load_buffer(output)
