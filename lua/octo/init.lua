@@ -15,6 +15,7 @@ local window = require "octo.ui.window"
 local colors = require "octo.ui.colors"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
+local uri = require "octo.uri"
 local vim = vim
 
 ---@type table<string, { number: integer, title: string }[]>
@@ -99,20 +100,12 @@ function M.load_buffer(opts)
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
-  local repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
-  if id == "repo" or not repo then
-    repo = string.match(bufname, "octo://(.+)/repo")
-    if repo then
-      kind = "repo"
-    end
-  end
-  if (kind == "issue" or kind == "pull") and not repo and not id then
-    utils.print_err("Incorrect buffer: " .. bufname)
-    return
-  elseif kind == "repo" and not repo then
-    utils.print_err("Incorrect buffer: " .. bufname)
+  local buffer_info = uri.parse(bufname)
+  if buffer_info == nil then
+    utils.print_err("Cannot parse buffer name: " .. bufname)
     return
   end
+  local repo, kind, id = buffer_info.repo, buffer_info.kind, buffer_info.id
 
   M.load(repo, kind, id, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
