@@ -5,6 +5,7 @@ local TitleMetadata = require("octo.model.title-metadata").TitleMetadata
 local constants = require "octo.constants"
 local config = require "octo.config"
 local utils = require "octo.utils"
+local logins = require "octo.logins"
 local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
 local vim = vim
@@ -533,10 +534,12 @@ function M.write_details(bufnr, issue, update)
   -- author
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
   local opts = {}
-  if utils.is_blank(issue.author) then
-    issue.author = { login = "ghost" }
+
+  issue.author = logins.format_author(issue.author)
+  if issue.author.login == "ghost" then
     opts = { ghost = true }
   end
+
   local author_bubble = bubbles.make_user_bubble(issue.author.login, issue.viewerDidAuthor, opts)
 
   vim.list_extend(author_vt, author_bubble)
@@ -873,6 +876,7 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
     table.insert(header_vt, { "REVIEW: ", "OctoTimelineItemHeading" })
     --vim.list_extend(header_vt, author_bubble)
+    comment.author = logins.format_author(comment.author)
     table.insert(header_vt, {
       comment.author.login,
       comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser",
@@ -891,6 +895,7 @@ function M.write_comment(bufnr, comment, kind, line)
       header_vt,
       { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker" }
     )
+    comment.author = logins.format_author(comment.author)
     table.insert(header_vt, { "THREAD COMMENT: ", "OctoTimelineItemHeading" })
     table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     if comment.state ~= "SUBMITTED" then
@@ -906,6 +911,7 @@ function M.write_comment(bufnr, comment, kind, line)
       header_vt,
       { string.rep(" ", 2 * conf.timeline_indent) .. conf.timeline_marker .. " ", "OctoTimelineMarker" }
     )
+    comment.author = logins.format_author(comment.author)
     table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
     table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
@@ -921,11 +927,8 @@ function M.write_comment(bufnr, comment, kind, line)
       table.insert(header_vt, { "REPLY: ", "OctoTimelineItemHeading" })
     end
     --vim.list_extend(header_vt, author_bubble)
-    if comment.author ~= vim.NIL then
-      table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
-    else
-      table.insert(header_vt, { "ghost", "OctoUser" })
-    end
+    comment.author = logins.format_author(comment.author)
+    table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
     if not comment.viewerCanUpdate then
       table.insert(header_vt, { " ", "OctoRed" })
@@ -1785,7 +1788,6 @@ end
 ---@param opts? { max_length?: integer }
 function M.write_issue_summary(bufnr, issue, opts)
   opts = opts or {}
-  local conf = config.values
   local max_length = opts.max_length or 80
   local chunks = {}
 
@@ -1842,19 +1844,12 @@ function M.write_issue_summary(bufnr, issue, opts)
   end
 
   -- author line
-  if utils.is_blank(issue.author) then
-    table.insert(chunks, {
-      { " " },
-      { conf.ghost_icon or "󰊠 " },
-      { "ghost" },
-    })
-  else
-    table.insert(chunks, {
-      { " " },
-      { conf.user_icon or " " },
-      { issue.author.login },
-    })
-  end
+  issue.author = logins.format_author(issue.author)
+  table.insert(chunks, {
+    { " " },
+    { logins.get_user_icon(issue.author.login) },
+    { issue.author.login },
+  })
 
   for i = 1, #chunks do
     M.write_block(bufnr, { "" }, i)
@@ -1970,9 +1965,7 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
 
-  if utils.is_blank(item.actor) then
-    item.actor = { login = "ghost" }
-  end
+  item.actor = logins.format_author(item.actor)
 
   table.insert(vt, {
     item.actor.login,
@@ -2014,9 +2007,7 @@ local write_project_v2_event = function(bufnr, item, verb)
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
 
-  if utils.is_blank(item.actor) then
-    item.actor = { login = "ghost" }
-  end
+  item.actor = logins.format_author(item.actor)
 
   table.insert(vt, {
     item.actor.login,
@@ -2164,6 +2155,8 @@ function M.write_assigned_event(bufnr, item)
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
   --vim.list_extend(vt, actor_bubble)
+  item.actor = logins.format_author(item.actor)
+  item.assignee = logins.format_author(item.assignee)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   if item.actor.login == item.assignee.login then
     table.insert(vt, { " self-assigned this", "OctoTimelineItemHeading" })
@@ -2304,9 +2297,7 @@ function M.write_cross_referenced_event(bufnr, item)
     spaces = 10
   end
 
-  if utils.is_blank(item.actor) then
-    item.actor = { login = "ghost" }
-  end
+  item.actor = logins.format_author(item.actor)
 
   table.insert(vt, {
     item.actor.login,
@@ -2610,6 +2601,7 @@ function M.write_renamed_title_event(bufnr, item)
     return
   end
 
+  item.actor = logins.format_author(item.actor)
   table.insert(vt, {
     item.actor.login,
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
@@ -2711,11 +2703,8 @@ function M.write_labeled_events(bufnr, items, action)
       table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
     end
     --vim.list_extend(vt, actor_bubble)
-    if actor ~= vim.NIL then
-      table.insert(vt, { actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-    else
-      table.insert(vt, { "ghost", "OctoUser" })
-    end
+    actor = logins.format_author(actor)
+    table.insert(vt, { actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
     table.insert(vt, { " " .. action .. " ", "OctoTimelineItemHeading" })
     local labels = labels_by_actor[actor]
     for _, label in ipairs(labels) do
@@ -2766,6 +2755,7 @@ function M.write_review_requested_event(bufnr, item)
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
   --vim.list_extend(vt, actor_bubble)
+  item.actor = logins.format_author(item.actor)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   if item.requestedReviewer == vim.NIL then
     table.insert(vt, { " requested a review", "OctoTimelineItemHeading" })
