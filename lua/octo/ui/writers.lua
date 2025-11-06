@@ -693,6 +693,7 @@ function M.write_details(bufnr, issue, update)
       local reviewer_names = vim.tbl_keys(reviewers)
       for _, name in ipairs(reviewer_names) do
         local strongest_review = utils.calculate_strongest_review_state(reviewers[name])
+        name = logins.format_author({ login = name }).login
         local reviewer_vt = {
           { name, "OctoUser" },
           { utils.state_icon_map[strongest_review], utils.state_hl_map[strongest_review] },
@@ -2756,6 +2757,8 @@ function M.write_review_requested_event(bufnr, item)
   end
   --vim.list_extend(vt, actor_bubble)
   item.actor = logins.format_author(item.actor)
+  item.requestedReviewer = logins.format_author(item.requestedReviewer)
+
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   if item.requestedReviewer == vim.NIL then
     table.insert(vt, { " requested a review", "OctoTimelineItemHeading" })
