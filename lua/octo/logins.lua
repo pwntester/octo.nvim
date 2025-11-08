@@ -8,10 +8,11 @@ local M = {}
 local copilot_logins = { "copilot-swe-agent", "copilot-pull-request-reviewer" }
 
 ---Formats author login for display
----@param author? {login: string}
+---@param author? { login: string }
 ---@return { name?: string, login?: string, isViewer?: boolean }
-M.format_author = function(author)
+function M.format_author(author)
   if author == nil or utils.is_blank(author) then
+    author = { login = "ghost" }
     return { login = "ghost" }
   end
 

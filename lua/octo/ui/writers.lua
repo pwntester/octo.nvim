@@ -2685,7 +2685,7 @@ function M.write_labeled_events(bufnr, items, action)
   --   item.actor.login,
   --   item.actor.login == vim.g.octo_viewer
   -- )
-  local labels_by_actor = {} ---@type table<string|vim.NIL, octo.fragments.Label[]>
+  local labels_by_actor = {} ---@type table<string, octo.fragments.Label[]>
   for _, item in ipairs(items) do
     local key = item.actor ~= vim.NIL and item.actor.login or vim.NIL
     ---@type octo.fragments.Label[]
@@ -2704,7 +2704,7 @@ function M.write_labeled_events(bufnr, items, action)
       table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
     end
     --vim.list_extend(vt, actor_bubble)
-    actor = logins.format_author(actor)
+    actor = logins.format_author({ login = actor }).login
     table.insert(vt, { actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
     table.insert(vt, { " " .. action .. " ", "OctoTimelineItemHeading" })
     local labels = labels_by_actor[actor]
@@ -2733,6 +2733,7 @@ function M.write_reopened_event(bufnr, item)
     table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
   end
   --vim.list_extend(vt, actor_bubble)
+  item.actor = logins.format_author(item.actor)
   table.insert(vt, { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
   table.insert(vt, { " reopened this ", "OctoTimelineItemHeading" })
   table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
