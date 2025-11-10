@@ -213,6 +213,7 @@ function M.get_default_values()
       pinned = "  ",
       milestone = "  ",
       renamed = "  ",
+      automatic_base_change_succeeded = "  ",
       merged = { "  ", "OctoPurple" },
       closed = {
         closed = { "  ", "OctoRed" },
