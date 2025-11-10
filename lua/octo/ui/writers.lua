@@ -2458,6 +2458,26 @@ function M.write_convert_to_draft_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.AutomaticBaseChangeSucceededEvent
+function M.write_automatic_base_change_succeeded_event(bufnr, item)
+  local vt = {} ---@type [string, string][]
+  local conf = config.values
+  if conf.use_timeline_icons then
+    vt[#vt + 1] = { conf.timeline_icons.automatic_base_change_succeeded, "OctoStateSubmitted" }
+  else
+    vt[#vt + 1] = { conf.timeline_marker .. " ", "OctoTimelineMarker" }
+    vt[#vt + 1] = { "EVENT: ", "OctoTimelineItemHeading" }
+  end
+  vt[#vt + 1] = { "Base automatically changed from ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { item.oldBase, "OctoDetailsLabel" }
+  vt[#vt + 1] = { " to ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { item.newBase, "OctoDetailsLabel" }
+  vt[#vt + 1] = { " ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { utils.format_date(item.createdAt), "OctoDate" }
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.ReadyForReviewEvent
 function M.write_ready_for_review_event(bufnr, item)
   local vt = {} ---@type [string, string][]
