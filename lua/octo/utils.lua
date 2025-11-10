@@ -2157,4 +2157,23 @@ M.display_contributing_file = function(repo)
   }
 end
 
+---Populate the Octo search command with options
+---@param opts { include_current_repo: boolean, query: string? }
+function M.create_base_search_command(opts)
+  local cmd = ":Octo search "
+  if opts.include_current_repo then
+    local repo = M.get_remote_name()
+    if repo ~= nil then
+      cmd = cmd .. "repo:" .. repo .. " "
+    else
+      M.error "No remote found"
+    end
+  end
+  if opts.query then
+    cmd = cmd .. opts.query
+  end
+
+  vim.fn.feedkeys(vim.api.nvim_replace_termcodes(cmd, true, true, true), "n")
+end
+
 return M
