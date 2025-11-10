@@ -56,6 +56,7 @@ Just edit the title, body, or comments as a regular buffer and use `:w(rite)` to
 - Add/Modify/Delete comments
 - Add/Remove label, reactions, assignees, project cards, reviewers, etc.
 - Add Review PRs
+- Interact with `GitHub CLI` from [`lua`](https://github.com/pwntester/octo.nvim/discussions/876) with `octo.gh` module.
 
 ## 🔥 Examples
 
@@ -91,28 +92,64 @@ Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 
 ## 📦 Installation
 
-Use your favourite plugin manager to install it, e.g.:
+For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
 
 ```lua
-use {
-  'pwntester/octo.nvim',
-  requires = {
-    'nvim-lua/plenary.nvim',
-    'nvim-telescope/telescope.nvim',
-    -- OR 'ibhagwan/fzf-lua',
-    -- OR 'folke/snacks.nvim',
-    'nvim-tree/nvim-web-devicons',
+{
+  "pwntester/octo.nvim",
+  cmd = "Octo",
+  opts = {
+    -- or "fzf-lua" or "snacks"
+    picker = "telescope",  
+    -- bare Octo command opens picker of commands
+    enable_builtin = true,
   },
-  config = function ()
-    require"octo".setup()
-  end
+  keys = {
+    {
+      "<leader>oi",
+      "<CMD>Octo issue list<CR>",
+      desc = "List GitHub Issues",
+    },
+    {
+      "<leader>op",
+      "<CMD>Octo pr list<CR>",
+      desc = "List GitHub PullRequests",
+    },
+    {
+      "<leader>od",
+      "<CMD>Octo discussion list<CR>",
+      desc = "List GitHub Discussions",
+    },
+    {
+      "<leader>on",
+      "<CMD>Octo notification list<CR>",
+      desc = "List GitHub Notifications",
+    },
+    {
+      "<leader>os",
+      function()
+        require("octo.utils").create_base_search_command { include_current_repo = true }
+      end,
+      desc = "Search GitHub",
+    },
+  },
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-telescope/telescope.nvim",
+    -- OR "ibhagwan/fzf-lua",
+    -- OR "folke/snacks.nvim",
+    "nvim-tree/nvim-web-devicons",
+  },
 }
 ```
 
+
 ## 🔧 Configuration
 
+Below is the full *default* configuration for `octo.nvim`.
+
 ```lua
-require"octo".setup({
+require"octo".setup {
   use_local_fs = false,                    -- use local files on right side of reviews
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
   default_remote = {"upstream", "origin"}, -- order to try remotes
@@ -424,7 +461,7 @@ require"octo".setup({
       open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
     },
   },
-})
+}
 ```
 
 ## 🤖 Commands
