@@ -2,7 +2,131 @@ local context = require "octo.context"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
 
+--- Create a picker to select from a list of callable options
+---@param options table<string, fun()>
+---@param prompt string
+local create_options_picker = function(options, prompt)
+  vim.ui.select(vim.fn.keys(options), {
+    prompt = prompt,
+    format_item = function(item)
+      return item
+    end,
+  }, function(choice)
+    if choice == nil then
+      return
+    end
+
+    return options[choice]()
+  end)
+end
+
 return {
+  repo_options = function()
+    local commands = require("octo.commands").commands
+
+    local options = {
+      ["Open in Browser"] = commands.repo.browser,
+      ["View Contribution Guidelines"] = function()
+        local buffer = utils.get_current_buffer()
+        ---@type string?
+        local repo
+        if buffer and buffer.repo then
+          repo = buffer.repo
+        else
+          repo = utils.get_remote_name()
+        end
+
+        if repo == nil then
+          utils.error "Could not determine repository"
+          return
+        end
+
+        utils.display_contributing_file(repo)
+      end,
+      ["Create Issue"] = commands.issue.create,
+      ["Create Discussion"] = commands.discussion.create,
+    }
+    create_options_picker(options, "Select an option:")
+  end,
+  pr_options = function()
+    local commands = require("octo.commands").commands
+    local options = {
+      ["Get Review from Copilot"] = commands.pr.copilot,
+      ["Get Workflow Runs"] = commands.pr.runs,
+      ["View Checks"] = commands.pr.checks,
+      ["Checkout PR"] = commands.pr.checkout,
+      ["List Commits"] = commands.pr.commits,
+      ["List Changed Files"] = commands.pr.changes,
+      ["View diff"] = commands.pr.diff,
+      ["Close PR"] = commands.pr.close,
+      ["Reopen PR"] = commands.pr.reopen,
+      ["Merge PR"] = commands.pr.merge,
+      ["Mark as Ready for Review"] = commands.pr.ready,
+      ["Update Base Branch"] = commands.pr.update,
+      ["Copy URL"] = commands.pr.url,
+      ["Open in Browser"] = commands.pr.browser,
+      ["Reload PR buffer"] = commands.pr.reload,
+      ["Squash and Merge PR"] = function()
+        commands.pr.merge "squash"
+      end,
+      ["Start Review"] = commands.review.start,
+      ["Resume Review"] = commands.review.resume,
+      ["Add Label(s)"] = commands.label.add,
+      ["Remove Label(s)"] = commands.label.remove,
+      ["Add Milestone"] = commands.milestone.add,
+      ["Remove Milestone"] = commands.milestone.remove,
+      ["Copy SHA"] = commands.pr.sha,
+      ["Add Reviewer"] = commands.reviewer.add,
+      ["Remove Reviewer"] = commands.reviewer.remove,
+      ["Resolve Thread"] = commands.thread.resolve,
+      ["Unresolve Thread"] = commands.thread.unresolve,
+      ["Add Assignee"] = commands.assignee.add,
+      ["Remove Assignee"] = commands.assignee.remove,
+      ["Add ProjectV2 Card"] = commands.cardv2.set,
+      ["Remove ProjectV2 Card"] = commands.cardv2.remove,
+      ["Add Comment"] = commands.comment.add,
+      ["Add Reply"] = commands.comment.reply,
+      ["Delete Comment"] = commands.comment.delete,
+      ["View Repo"] = context.within_issue_or_pr(function(buffer)
+        commands.repo.view(buffer.repo)
+      end),
+    }
+    create_options_picker(options, "Select an option:")
+  end,
+  issue_options = function()
+    local commands = require("octo.commands").commands
+
+    local options = {
+      ["Add Label(s)"] = commands.label.add,
+      ["Remove Label(s)"] = commands.label.remove,
+      ["Reload Issue"] = commands.issue.reload,
+      ["Reopen Issue"] = commands.issue.reopen,
+      ["Close Issue"] = commands.issue.close,
+      ["Open in Browser"] = commands.issue.browser,
+      ["Copy URL"] = commands.issue.url,
+      ["Add Type"] = commands.type.add,
+      ["Remove Type"] = commands.type.remove,
+      ["Add Milestone"] = commands.milestone.add,
+      ["Remove Milestone"] = commands.milestone.remove,
+      ["Edit Parent Issue"] = commands.parent.edit,
+      ["Add Parent Issue"] = commands.parent.add,
+      ["Remove Parent Issue"] = commands.parent.remove,
+      ["Assign to Copilot"] = commands.issue.copilot,
+      ["Develop Issue"] = commands.issue.develop,
+      ["Pin Issue"] = commands.issue.pin,
+      ["Unpin Issue"] = commands.issue.unpin,
+      ["Add Assignee"] = commands.assignee.add,
+      ["Remove Assignee"] = commands.assignee.remove,
+      ["Add ProjectV2 Card"] = commands.cardv2.set,
+      ["Remove ProjectV2 Card"] = commands.cardv2.remove,
+      ["Add Comment"] = commands.comment.add,
+      ["Delete Comment"] = commands.comment.delete,
+      ["View Repo"] = context.within_issue_or_pr(function(buffer)
+        commands.repo.view(buffer.repo)
+      end),
+    }
+    create_options_picker(options, "Select an option:")
+  end,
   create_issue = function()
     require("octo.commands").create_issue()
   end,
