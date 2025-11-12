@@ -7,6 +7,7 @@ local config = require "octo.config"
 local utils = require "octo.utils"
 local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
+local notify = require "octo.notify"
 local vim = vim
 
 local M = {}
@@ -18,11 +19,7 @@ local projects_v2_config_warned = false
 local function warn_projects_v2_config()
   if not projects_v2_config_warned and not config.values.default_to_projects_v2 then
     projects_v2_config_warned = true
-    vim.notify(
-      "ProjectsV2 timeline events are disabled. Enable them by setting 'default_to_projects_v2 = true' in your Octo config.",
-      vim.log.levels.WARN,
-      { title = "Octo.nvim" }
-    )
+    notify.warn "ProjectsV2 timeline events are disabled. Enable them by setting 'default_to_projects_v2 = true' in your Octo config."
   end
 end
 

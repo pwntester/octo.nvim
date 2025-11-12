@@ -7,6 +7,8 @@ function M.notify(msg, level)
     level = vim.log.levels.INFO
   elseif level == 2 then
     level = vim.log.levels.ERROR
+  elseif level == 3 then
+    level = vim.log.levels.WARN
   else
     level = vim.log.levels.INFO
   end
@@ -21,6 +23,11 @@ end
 ---@param msg string
 function M.error(msg)
   M.notify(msg, 2)
+end
+
+---@param msg string
+function M.warn(msg)
+  M.notify(msg, 3)
 end
 
 return M
