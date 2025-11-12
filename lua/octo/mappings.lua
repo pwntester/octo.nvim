@@ -21,6 +21,7 @@ local create_options_picker = function(options, prompt)
 end
 
 local create_reaction_picker = function()
+  ---@type {name: string, value: string}[]
   local reactions = {}
   for name, value in pairs(utils.reaction_map) do
     reactions[#reactions + 1] = { name = name, value = value }
