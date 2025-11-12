@@ -20,6 +20,25 @@ local create_options_picker = function(options, prompt)
   end)
 end
 
+local create_reaction_picker = function()
+  local reactions = {}
+  for name, value in pairs(utils.reaction_map) do
+    reactions[#reactions + 1] = { name = name, value = value }
+  end
+
+  vim.ui.select(reactions, {
+    prompt = "Select a reaction:",
+    format_item = function(item)
+      return item.value
+    end,
+  }, function(choice)
+    if choice == nil then
+      return
+    end
+    require("octo.commands").reaction_action(choice.name)
+  end)
+end
+
 return {
   repo_options = function()
     local commands = require("octo.commands").commands
@@ -53,10 +72,10 @@ return {
     local options = {
       ["Get Review from Copilot"] = commands.pr.copilot,
       ["Get Workflow Runs"] = commands.pr.runs,
-      ["View Checks"] = commands.pr.checks,
+      ["View Check Status"] = commands.pr.checks,
       ["Checkout PR"] = commands.pr.checkout,
       ["List Commits"] = commands.pr.commits,
-      ["List Changed Files"] = commands.pr.changes,
+      ["List File Changes"] = commands.pr.changes,
       ["View diff"] = commands.pr.diff,
       ["Close PR"] = commands.pr.close,
       ["Reopen PR"] = commands.pr.reopen,
@@ -90,6 +109,7 @@ return {
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),
+      ["React"] = create_reaction_picker,
     }
     create_options_picker(options, "Select an option:")
   end,
@@ -124,6 +144,7 @@ return {
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),
+      ["React"] = create_reaction_picker,
     }
     create_options_picker(options, "Select an option:")
   end,
