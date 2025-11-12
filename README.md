@@ -74,6 +74,8 @@ Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
+From any octo buffer, press `<CR>` in normal mode to see common actions.
+
 ## 🎯 Requirements
 
 - [Neovim `>=0.10.0`](https://neovim.io/)
