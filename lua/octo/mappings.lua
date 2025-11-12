@@ -30,7 +30,7 @@ local create_reaction_picker = function()
   vim.ui.select(reactions, {
     prompt = "Select a reaction:",
     format_item = function(item)
-      return item.value
+      return item.value .. "(" .. utils.title_case(utils.remove_underscore(item.name)) .. ")"
     end,
   }, function(choice)
     if choice == nil then
