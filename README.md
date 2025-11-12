@@ -56,6 +56,7 @@ Just edit the title, body, or comments as a regular buffer and use `:w(rite)` to
 - Add/Modify/Delete comments
 - Add/Remove label, reactions, assignees, project cards, reviewers, etc.
 - Add Review PRs
+- Interact with `GitHub CLI` from [`lua`](https://github.com/pwntester/octo.nvim/discussions/876) with `octo.gh` module.
 
 ## 🔥 Examples
 
@@ -72,6 +73,8 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
+
+From any octo buffer, press `<CR>` in normal mode to see common actions.
 
 ## 🎯 Requirements
 
@@ -91,28 +94,64 @@ Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 
 ## 📦 Installation
 
-Use your favourite plugin manager to install it, e.g.:
+For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
 
 ```lua
-use {
-  'pwntester/octo.nvim',
-  requires = {
-    'nvim-lua/plenary.nvim',
-    'nvim-telescope/telescope.nvim',
-    -- OR 'ibhagwan/fzf-lua',
-    -- OR 'folke/snacks.nvim',
-    'nvim-tree/nvim-web-devicons',
+{
+  "pwntester/octo.nvim",
+  cmd = "Octo",
+  opts = {
+    -- or "fzf-lua" or "snacks"
+    picker = "telescope",  
+    -- bare Octo command opens picker of commands
+    enable_builtin = true,
   },
-  config = function ()
-    require"octo".setup()
-  end
+  keys = {
+    {
+      "<leader>oi",
+      "<CMD>Octo issue list<CR>",
+      desc = "List GitHub Issues",
+    },
+    {
+      "<leader>op",
+      "<CMD>Octo pr list<CR>",
+      desc = "List GitHub PullRequests",
+    },
+    {
+      "<leader>od",
+      "<CMD>Octo discussion list<CR>",
+      desc = "List GitHub Discussions",
+    },
+    {
+      "<leader>on",
+      "<CMD>Octo notification list<CR>",
+      desc = "List GitHub Notifications",
+    },
+    {
+      "<leader>os",
+      function()
+        require("octo.utils").create_base_search_command { include_current_repo = true }
+      end,
+      desc = "Search GitHub",
+    },
+  },
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-telescope/telescope.nvim",
+    -- OR "ibhagwan/fzf-lua",
+    -- OR "folke/snacks.nvim",
+    "nvim-tree/nvim-web-devicons",
+  },
 }
 ```
 
+
 ## 🔧 Configuration
 
+Below is the full *default* configuration for `octo.nvim`.
+
 ```lua
-require"octo".setup({
+require"octo".setup {
   use_local_fs = false,                    -- use local files on right side of reviews
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
   default_remote = {"upstream", "origin"}, -- order to try remotes
@@ -270,6 +309,7 @@ require"octo".setup({
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
     },
     issue = {
+      issue_options = { lhs = "<CR>", desc = "show issue options" },
       close_issue = { lhs = "<localleader>ic", desc = "close issue" },
       reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
       list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
@@ -297,6 +337,7 @@ require"octo".setup({
       react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
     },
     pull_request = {
+      pr_options = { lhs = "<CR>", desc = "show PR options" },
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
       merge_pr = { lhs = "<localleader>pm", desc = "merge PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
@@ -415,6 +456,7 @@ require"octo".setup({
       unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
     },
     repo = {
+      repo_options = { lhs = "<CR>", desc = "show repo options" },
       create_issue = { lhs = "<localleader>ic", desc = "create issue" },
       create_discussion = { lhs = "<localleader>dc", desc = "create discussion" },
       contributing_guidelines = { lhs = "<localleader>cg", desc = "view contributing guidelines" },
@@ -424,7 +466,7 @@ require"octo".setup({
       open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
     },
   },
-})
+}
 ```
 
 ## 🤖 Commands
