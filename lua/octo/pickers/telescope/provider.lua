@@ -651,6 +651,9 @@ end
 function M.search(opts)
   opts = opts or {}
   opts.type = opts.type or "ISSUE"
+  if opts.static == nil then
+    opts.static = octo_config.values.picker_config.search_static
+  end
 
   if opts.type == "REPOSITORY" then
     repo_search(opts)
