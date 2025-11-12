@@ -2187,7 +2187,7 @@ end
 ---@param str string
 ---@return string
 function M.remove_underscore(str)
-  return str:gsub("_", " ")
+  return (str:gsub("_", " "))
 end
 
 return M
