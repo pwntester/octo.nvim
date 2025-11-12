@@ -11,6 +11,21 @@ local vim = vim
 
 local M = {}
 
+-- Track if we've already warned about ProjectV2 config
+local projects_v2_config_warned = false
+
+--- Show a one-time warning about enabling ProjectsV2 config
+local function warn_projects_v2_config()
+  if not projects_v2_config_warned and not config.values.default_to_projects_v2 then
+    projects_v2_config_warned = true
+    vim.notify(
+      "ProjectsV2 timeline events are disabled. Enable them by setting 'default_to_projects_v2 = true' in your Octo config.",
+      vim.log.levels.WARN,
+      { title = "Octo.nvim" }
+    )
+  end
+end
+
 ---@param bufnr integer?
 ---@param lines string[] | string
 ---@param line? integer
@@ -1952,6 +1967,13 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.ProjectV2ItemStatusChangedEvent
 function M.write_project_v2_item_status_changed_event(bufnr, item)
+  -- Skip rendering if project is nil - GitHub API returns empty events
+  -- These new event types (added Nov 2025) sometimes return with all fields nil
+  if not item.project then
+    warn_projects_v2_config()
+    return
+  end
+
   local vt = {}
   local conf = config.values
   if conf.use_timeline_icons then
@@ -1975,26 +1997,20 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
     table.insert(vt, { item.previousStatus, "OctoDetailsLabel" })
     table.insert(vt, { " to ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.status, "OctoDetailsLabel" })
-    if item.project then
-      table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-      table.insert(vt, { item.project.title, "OctoDetailsLabel" })
-    end
+    table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
+    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
   elseif item.status ~= "" then
     table.insert(vt, { "to ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.status, "OctoDetailsLabel" })
-    if item.project then
-      table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-      table.insert(vt, { item.project.title, "OctoDetailsLabel" })
-    end
+    table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
+    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
   else
     table.insert(vt, { "from ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.previousStatus, "OctoDetailsLabel" })
     table.insert(vt, { " to ", "OctoTimelineItemHeading" })
     table.insert(vt, { "No Status", "OctoDetailsLabel" })
-    if item.project then
-      table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-      table.insert(vt, { item.project.title, "OctoDetailsLabel" })
-    end
+    table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
+    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
   end
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
 
@@ -2002,6 +2018,13 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
 end
 
 local write_project_v2_event = function(bufnr, item, verb)
+  -- Skip rendering if project is nil - GitHub API returns empty events
+  -- These new event types (added Nov 2025) sometimes return with all fields nil
+  if not item.project then
+    warn_projects_v2_config()
+    return
+  end
+
   local vt = {}
   local conf = config.values
   if conf.use_timeline_icons then
@@ -2020,9 +2043,7 @@ local write_project_v2_event = function(bufnr, item, verb)
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
   })
   table.insert(vt, { " " .. verb .. " this to " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-  if item.project then
-    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
-  end
+  table.insert(vt, { item.project.title, "OctoDetailsLabel" })
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
 
   write_event(bufnr, vt)
