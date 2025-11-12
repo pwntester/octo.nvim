@@ -2561,7 +2561,7 @@ function M.search(...)
 
   local type = "ISSUE"
   local static = nil
-  
+
   if string.match(prompt, "is:discussion") then
     type = "DISCUSSION"
     prompt = string.gsub(prompt, "is:discussion", "")
@@ -2569,7 +2569,7 @@ function M.search(...)
     type = "REPOSITORY"
     prompt = string.gsub(prompt, "is:repository", "")
   end
-  
+
   if string.match(prompt, "static:true") then
     static = true
     prompt = string.gsub(prompt, "%s*static:true%s*", "")
