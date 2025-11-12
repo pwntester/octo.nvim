@@ -565,7 +565,7 @@ function M.write_details(bufnr, issue, update)
     --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
     --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
     for idx, item in ipairs(issue.projectItems.nodes) do
-      if item.project ~= vim.NIL then
+      if item.project ~= vim.NIL and item.project then
         if idx >= 2 then
           table.insert(projects_vt, { ", " })
         end
@@ -1975,20 +1975,26 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
     table.insert(vt, { item.previousStatus, "OctoDetailsLabel" })
     table.insert(vt, { " to ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.status, "OctoDetailsLabel" })
-    table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+    if item.project then
+      table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
+      table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+    end
   elseif item.status ~= "" then
     table.insert(vt, { "to ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.status, "OctoDetailsLabel" })
-    table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+    if item.project then
+      table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
+      table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+    end
   else
     table.insert(vt, { "from ", "OctoTimelineItemHeading" })
     table.insert(vt, { item.previousStatus, "OctoDetailsLabel" })
     table.insert(vt, { " to ", "OctoTimelineItemHeading" })
     table.insert(vt, { "No Status", "OctoDetailsLabel" })
-    table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+    if item.project then
+      table.insert(vt, { " in " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
+      table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+    end
   end
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
 
@@ -2014,7 +2020,9 @@ local write_project_v2_event = function(bufnr, item, verb)
     item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
   })
   table.insert(vt, { " " .. verb .. " this to " .. conf.timeline_icons.project, "OctoTimelineItemHeading" })
-  table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+  if item.project then
+    table.insert(vt, { item.project.title, "OctoDetailsLabel" })
+  end
   table.insert(vt, { " " .. utils.format_date(item.createdAt), "OctoDate" })
 
   write_event(bufnr, vt)
