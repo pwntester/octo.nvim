@@ -30,13 +30,13 @@ local M = {}
 -- Helper function to extract hostname from octo:// buffer URL
 local function get_hostname_from_buffer()
   local bufname = vim.fn.bufname()
-  if bufname:match("^octo://") then
+  if bufname:match "^octo://" then
     -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
     -- vs without hostname: octo://owner/repo/kind/id
-    local first_segment = bufname:match("^octo://([^/]+)")
+    local first_segment = bufname:match "^octo://([^/]+)"
 
     -- Check if this looks like a hostname (contains a dot) vs owner name
-    if first_segment and first_segment:match("%.") then
+    if first_segment and first_segment:match "%." then
       return first_segment
     end
   end
