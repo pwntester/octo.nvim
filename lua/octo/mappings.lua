@@ -65,6 +65,15 @@ return {
       end,
       ["Create Issue"] = commands.issue.create,
       ["Create Discussion"] = commands.discussion.create,
+      ["List Issues"] = context.within_octo_buffer(function(buffer)
+        commands.issue.list(buffer.repo)
+      end),
+      ["List Discussions"] = context.within_octo_buffer(function(buffer)
+        commands.discussion.list(buffer.repo)
+      end),
+      ["List Pull Requests"] = context.within_octo_buffer(function(buffer)
+        commands.pr.list(buffer.repo)
+      end),
     }
     create_options_picker(options, "Select an option:")
   end,
