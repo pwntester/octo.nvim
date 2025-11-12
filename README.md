@@ -74,6 +74,8 @@ Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
+From any octo buffer, press `<CR>` in normal mode to see common actions.
+
 ## 🎯 Requirements
 
 - [Neovim `>=0.10.0`](https://neovim.io/)
@@ -307,6 +309,7 @@ require"octo".setup {
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
     },
     issue = {
+      issue_options = { lhs = "<CR>", desc = "show issue options" },
       close_issue = { lhs = "<localleader>ic", desc = "close issue" },
       reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
       list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
@@ -334,6 +337,7 @@ require"octo".setup {
       react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
     },
     pull_request = {
+      pr_options = { lhs = "<CR>", desc = "show PR options" },
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
       merge_pr = { lhs = "<localleader>pm", desc = "merge PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
@@ -452,6 +456,7 @@ require"octo".setup {
       unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
     },
     repo = {
+      repo_options = { lhs = "<CR>", desc = "show repo options" },
       create_issue = { lhs = "<localleader>ic", desc = "create issue" },
       create_discussion = { lhs = "<localleader>dc", desc = "create discussion" },
       contributing_guidelines = { lhs = "<localleader>cg", desc = "view contributing guidelines" },

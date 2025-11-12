@@ -489,20 +489,11 @@ function M.write_reactions(bufnr, reaction_groups, line)
   return line
 end
 
-local function title_case(str)
-  str = string.lower(str)
-  return str:gsub("^%l", string.upper)
-end
-
-local function remove_underscore(str)
-  return str:gsub("_", " ")
-end
-
 local function format_author_association(association)
   if association == "FIRST_TIME_CONTRIBUTOR" then
     return "First-time contributor"
   else
-    return title_case(remove_underscore(association))
+    return utils.title_case(utils.remove_underscore(association))
   end
 end
 

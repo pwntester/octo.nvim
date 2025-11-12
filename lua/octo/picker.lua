@@ -28,12 +28,6 @@ local utils = require "octo.utils"
 ---@type octo.PickerModule
 local M = {}
 
-local to_title_case = function(str)
-  return (str:gsub("(%a)([%w_']*)", function(first, rest)
-    return first:upper() .. rest:lower()
-  end))
-end
-
 function M.setup()
   local provider_name = config.values.picker
   if utils.is_blank(provider_name) then
@@ -43,7 +37,7 @@ function M.setup()
     __index = function(_, key)
       return function()
         utils.error(
-          to_title_case(provider_name)
+          utils.title_case(provider_name)
             .. " doesn't support the "
             .. key
             .. " picker. Please create issue or submit a PR to add it."

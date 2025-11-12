@@ -321,7 +321,7 @@ function M.setup()
     },
     parent = {
       edit = context.within_issue(function(buffer)
-        local parent = buffer.issue().parent
+        local parent = buffer:issue().parent
 
         if utils.is_blank(parent) then
           utils.error "No parent issue found"
