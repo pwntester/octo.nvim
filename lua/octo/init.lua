@@ -131,7 +131,7 @@ function M.load_buffer(opts)
 
   M.load(repo, kind, id, hostname, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
-      M.create_buffer(kind, obj, repo, false)
+      M.create_buffer(kind, obj, repo, false, hostname)
 
       -- get size of newly created buffer
       local lines = vim.api.nvim_buf_line_count(bufnr)
@@ -355,7 +355,7 @@ end
 ---@param obj octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository the object to render
 ---@param repo string repository full name like "owner/name"
 ---@param create boolean whether to create a new buffer
-function M.create_buffer(kind, obj, repo, create)
+function M.create_buffer(kind, obj, repo, create, hostname)
   if not obj.id then
     utils.error("Cannot find " .. repo)
     return
@@ -365,7 +365,12 @@ function M.create_buffer(kind, obj, repo, create)
   if create then
     bufnr = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_set_current_buf(bufnr)
-    vim.cmd(string.format("file octo://%s/%s/%d", repo, kind, obj.number))
+    -- Include hostname in buffer name if provided
+    if hostname then
+      vim.cmd(string.format("file octo://%s/%s/%s/%d", hostname, repo, kind, obj.number))
+    else
+      vim.cmd(string.format("file octo://%s/%s/%d", repo, kind, obj.number))
+    end
   else
     bufnr = vim.api.nvim_get_current_buf()
   end
