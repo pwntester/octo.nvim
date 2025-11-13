@@ -42,4 +42,3 @@ jobs:
       - name: Typecheck
         run: |
           env VIMRUNTIME=${PWD}/_neovim/share/nvim/runtime lua-language-server --check=${PWD}/lua --configpath=${PWD}/.github/workflows/.luarc.json --checklevel=Information
-

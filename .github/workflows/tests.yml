@@ -22,7 +22,7 @@ jobs:
           path: _neovim
           key: ${{ runner.os }}-latest-${{ hashFiles('todays-date') }}
       - name: Prepare
-        env: 
+        env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ${{ matrix.manager }} update
