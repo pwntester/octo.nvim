@@ -74,6 +74,23 @@ Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
+You can also use `octo://` URLs to open issues and PRs directly:
+
+```vim
+" Open from the default GitHub instance (github.com or configured github_hostname)
+:e octo://owner/repo/issue/123
+:e octo://owner/repo/pull/456
+
+" Open from a specific GitHub Enterprise instance
+:e octo://ghe.example.com/owner/repo/issue/123
+:e octo://ghe.example.com/owner/repo/pull/456
+```
+
+The `octo://` URL format is especially useful for:
+- Opening issues/PRs from notes or wiki links without needing to be in the repository directory
+- Working with multiple GitHub instances (e.g., GitHub.com and GitHub Enterprise) without setting `GH_HOST` globally
+- Creating quick links in your workflow that work regardless of your current directory
+
 From any octo buffer, press `<CR>` in normal mode to see common actions.
 
 ## 🎯 Requirements
