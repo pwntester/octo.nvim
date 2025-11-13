@@ -207,7 +207,7 @@ return {
     if not current_review then
       return
     end
-    require("octo.picker").review_commits(function(right, left)
+    require("octo.picker").review_commits(current_review, function(right, left)
       current_review:focus_commit(right, left)
     end)
   end,
