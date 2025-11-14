@@ -41,7 +41,7 @@ Any CLI arguments can be passed as well. For example, >lua
 <
 
 This is same as `gh issue list --label "bug" --limit 5 --state "closed"` in
-the terminal. *NOTE:* For parameters with `-`, use an `_` in the key instead.  For
+the terminal. Note: For parameters with `-`, use an `_` in the key instead.  For
 example, `--add-assignee` becomes `add_assignee` in the Lua API.
 
 Consult the GitHub CLI documentation for the available commands and
@@ -139,7 +139,7 @@ This is the same as >terminal
 
     gh api graphql -f query='query { viewer { login } }' --jq '.data.viewer.json'
 <
-in the terminal. *NOTE:* Single character keys are passed with single `-` in
+in the terminal. Note: Single character keys are passed with single `-` in
 the CLI.
 
 Parameterized queries are also possible mirroring the syntax in CLI. Just pass
