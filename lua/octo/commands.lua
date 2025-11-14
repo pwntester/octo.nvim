@@ -1712,54 +1712,58 @@ function M.save_pr(opts)
   -- You cannot update the base branch on a pull request to point to another repository.
   -- get repo default branch
   local default_branch = opts.info.defaultBranchRef.name
-  local base_ref_name = vim.fn.input {
-    prompt = "Enter BASE branch: ",
-    default = default_branch,
-    highlight = function(input)
-      return { { 0, #input, "String" } }
-    end,
-  }
-  -- The name of the branch where your changes are implemented. For cross-repository pull requests in the same network,
-  -- namespace head_ref_name with a user like this: username:branch.
-  local head_ref_name = vim.fn.input {
-    prompt = "Enter HEAD branch: ",
-    default = opts.remote_branch,
-    highlight = function(input)
-      return { { 0, #input, "String" } }
-    end,
-  }
-  if opts.info.isFork and opts.candidates[repo_idx] == opts.info.parent.nameWithOwner then
-    head_ref_name = vim.g.octo_viewer .. ":" .. head_ref_name
-  end
-  vim.fn.inputrestore()
+  -- local ok, err = pcall(picker.branches, opts.info)
+  picker.branches(
+    { repo = opts.info, default_branch_name = default_branch, title = "Select BASE branch" },
+    function(base_ref_name)
+      -- The name of the branch where your changes are implemented. For cross-repository pull requests in the same network,
+      -- namespace head_ref_name with a user like this: username:branch.
+      picker.branches(
+        { repo = opts.info, default_branch_name = opts.remote_branch, title = "Select HEAD branch" },
+        function(head_ref_name)
+          if opts.info.isFork and opts.candidates[repo_idx] == opts.info.parent.nameWithOwner then
+            head_ref_name = vim.g.octo_viewer .. ":" .. head_ref_name
+          end
+          vim.fn.inputrestore()
 
-  local repo_id = utils.get_repo_id(opts.candidates[repo_idx])
-  local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
-  if choice == 1 then
-    gh.api.graphql {
-      query = mutations.create_pr,
-      F = {
-        input = {
-          repositoryId = repo_id,
-          baseRefName = base_ref_name,
-          headRefName = head_ref_name,
-          title = title and title or "",
-          body = body and body or "",
-          draft = opts.is_draft,
-        },
-      },
-      jq = ".data.createPullRequest.pullRequest",
-      opts = {
-        cb = gh.create_callback {
-          success = function(output)
-            local pr = vim.json.decode(output)
-            utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
-            require("octo").create_buffer("pull", pr, opts.repo, true)
-          end,
-        },
-      },
-    }
-  end
+          local repo_id = utils.get_repo_id(opts.candidates[repo_idx])
+          local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
+          if choice == 1 then
+            gh.api.graphql {
+              query = mutations.create_pr,
+              F = {
+                input = {
+                  repositoryId = repo_id,
+                  baseRefName = base_ref_name,
+                  headRefName = head_ref_name,
+                  title = title and title or "",
+                  body = body and body or "",
+                  draft = opts.is_draft,
+                },
+              },
+              jq = ".data.createPullRequest.pullRequest",
+              opts = {
+                cb = gh.create_callback {
+                  success = function(output)
+                    local pr = vim.json.decode(output)
+                    utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
+                    require("octo").create_buffer("pull", pr, opts.repo, true)
+                  end,
+                },
+              },
+            }
+          end
+        end
+      )
+      -- local head_ref_name = vim.fn.input {
+      --   prompt = "Enter HEAD branch: ",
+      --   default = opts.remote_branch,
+      --   highlight = function(input)
+      --     return { { 0, #input, "String" } }
+      --   end,
+      -- }
+    end
+  )
 end
 
 --- @class PRReadyOpts

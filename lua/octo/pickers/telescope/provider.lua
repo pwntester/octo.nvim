@@ -1678,6 +1678,43 @@ function M.project_cards_v2(cb)
   end
 end
 
+---@class octo.PickerRefsOptions
+---@field repo octo.Repository
+---@field default_branch_name string
+---@field title string
+
+---@param opts octo.PickerRefsOptions
+---@param cb function
+function M.branches(opts, cb)
+  pickers
+    .new({}, {
+      finder = finders.new_table {
+        results = opts.repo.refs.nodes,
+        entry_maker = entry_maker.gen_from_branches(),
+      },
+      sorter = conf.generic_sorter {},
+      results_title = opts.title or "Select Branch",
+      default_text = opts.default_branch_name,
+      initial_mode = "normal",
+      attach_mappings = function(_, _map)
+        actions.select_default:replace(function(prompt_bufnr)
+          select {
+            bufnr = prompt_bufnr,
+            single_cb = function(selected)
+              cb(selected[1])
+            end,
+            multiple_cb = nil,
+            get_item = function(selected)
+              return selected.value
+            end,
+          }
+        end)
+        return true
+      end,
+    })
+    :find()
+end
+
 ---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
@@ -1701,6 +1738,7 @@ M.picker = {
   search = M.search,
   users = M.select_user,
   workflow_runs = M.workflow_runs,
+  branches = M.branches,
 }
 
 return M
