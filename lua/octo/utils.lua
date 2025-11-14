@@ -1769,6 +1769,14 @@ function M.get_user_id(login)
   return id --[[@as string]]
 end
 
+--- Detects if a node ID uses the new format (regular GitHub)
+--- vs the old base64 format (GitHub Enterprise)
+---@param id string
+---@return boolean
+function M.is_new_node_id_format(id)
+  return id and type(id) == "string" and id:match "^%u_" ~= nil
+end
+
 ---@param label string
 function M.get_label_id(label)
   local buffer = M.get_current_buffer()

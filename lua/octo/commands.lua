@@ -2377,8 +2377,68 @@ function M.add_user(subject, logins)
     utils.error "Cannot get issue/pr id"
   end
 
+  ---@param user_logins string[]?
   ---@param user_ids string[]
-  local function cb(user_ids)
+  local function cb(user_logins, user_ids)
+    user_ids = user_ids or {}
+    user_logins = user_logins or {}
+
+    -- Detect GitHub type based on node ID format
+    local use_new_format = #user_ids > 0 and utils.is_new_node_id_format(user_ids[1])
+
+    -- For regular GitHub, if we only have user IDs (from picker), query the logins
+    if use_new_format and #user_logins == 0 and #user_ids > 0 then
+      for _, uid in ipairs(user_ids) do
+        local query = string.format(
+          [[
+          query { node(id: "%s") { ... on User { login } } }
+        ]],
+          uid
+        )
+        local output = gh.api.graphql {
+          query = query,
+          jq = ".data.node.login",
+          opts = { mode = "sync" },
+        }
+        if output and output ~= "" then
+          table.insert(user_logins, vim.trim(output))
+        end
+      end
+    end
+
+    -- For regular GitHub (new node ID format), use REST API
+    if use_new_format and buffer:isPullRequest() and #user_logins > 0 then
+      local owner, name = utils.split_repo(buffer.repo)
+      local endpoint
+      if subject == "reviewer" then
+        endpoint = string.format("repos/%s/%s/pulls/%d/requested_reviewers", owner, name, buffer.number)
+      else
+        endpoint = string.format("repos/%s/%s/issues/%d/assignees", owner, name, buffer.number)
+      end
+
+      local field_name = subject == "reviewer" and "reviewers" or "assignees"
+      local json_body = vim.json.encode { [field_name] = user_logins }
+      local args = { "api", "-X", "POST", endpoint, "--input", "-" }
+
+      gh.run {
+        args = args,
+        writer = json_body,
+        cb = function(output, stderr, exit_code)
+          if exit_code == 0 then
+            -- refresh issue/pr details
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+              writers.write_details(buffer.bufnr, obj, true)
+              vim.cmd [[stopinsert]]
+            end)
+          else
+            utils.error("Failed to add " .. subject .. ": " .. (stderr or "unknown error"))
+          end
+        end,
+      }
+      return
+    end
+
+    -- For GitHub Enterprise (old base64 node ID format), use GraphQL API
     local query ---@type string
     if subject == "assignee" then
       query = mutations.add_assignees
@@ -2388,11 +2448,14 @@ function M.add_user(subject, logins)
       utils.error "Invalid user type"
       return
     end
+
     gh.api.graphql {
       paginate = true,
       query = query,
       F = {
-        user_ids = user_ids,
+        user_ids = vim.json.encode(user_ids),
+      },
+      f = {
         object_id = iid,
       },
       opts = {
@@ -2408,21 +2471,24 @@ function M.add_user(subject, logins)
       },
     }
   end
+
   if logins then
     local user_ids = {} ---@type string[]
+    local user_logins = {} ---@type string[]
     for _, user in ipairs(logins) do
       local user_id = utils.get_user_id(user)
       if user_id then
         user_ids[#user_ids + 1] = user_id
+        user_logins[#user_logins + 1] = user
       else
         utils.error("User " .. user .. " not found")
         return
       end
     end
-    cb(user_ids)
+    cb(user_logins, user_ids)
   else
     picker.users(function(user_id)
-      cb { user_id }
+      cb({}, { user_id })
     end)
   end
 end
