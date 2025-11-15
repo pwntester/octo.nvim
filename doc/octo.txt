@@ -137,7 +137,7 @@ The GraphQL endpoint is also available. For example,
 <
 This is the same as >terminal
 
-    gh api graphql -f query='query { viewer { login } }' --jq '.data.viewer.json'
+    gh api graphql -f query='query { viewer { login } }' --jq '.data.viewer.login'
 <
 in the terminal. Note: Single character keys are passed with single `-` in
 the CLI.
