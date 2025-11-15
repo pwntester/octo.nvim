@@ -514,18 +514,23 @@ function OctoBuffer:async_fetch_taggable_users()
   end
 
   -- add repo contributors
-  gh.run {
-    args = { "api", string.format("repos/%s/contributors", self.repo) },
-    cb = function(response)
-      if not utils.is_blank(response) then
-        ---@type { login: string }[]
-        local resp = vim.json.decode(response)
-        for _, contributor in ipairs(resp) do
-          table.insert(users, contributor.login)
-        end
-        self.taggable_users = users
-      end
-    end,
+  gh.api.get {
+    "repos/{repo}/contributors",
+    format = { repo = self.repo },
+    jq = "map(.login)",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          ---@type string[]
+          local contributors = vim.json.decode(data)
+          for _, contributor in ipairs(contributors) do
+            table.insert(users, contributor)
+          end
+          self.taggable_users = users
+        end,
+        failure = function() end,
+      },
+    },
   }
 end
 
