@@ -536,6 +536,21 @@ end
 
 ---Fetches the issues in the repo so they can be used for completion.
 function OctoBuffer:async_fetch_issues()
+  gh.api.get {
+    "repos/{repo}/issues",
+    format = { repo = self.repo },
+    jq = "map({title, number})",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          ---@type { number: integer, title: string }[]
+          local issues_metadata = vim.json.decode(data)
+          octo_repo_issues[self.repo] = issues_metadata
+        end,
+        failure = function() end,
+      },
+    },
+  }
   gh.run {
     args = { "api", string.format("repos/%s/issues", self.repo) },
     cb = function(response)
