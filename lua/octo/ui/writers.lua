@@ -8,9 +8,21 @@ local utils = require "octo.utils"
 local logins = require "octo.logins"
 local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
+local notify = require "octo.notify"
 local vim = vim
 
 local M = {}
+
+-- Track if we've already warned about ProjectV2 config
+local projects_v2_config_warned = false
+
+--- Show a one-time warning about enabling ProjectsV2 config
+local function warn_projects_v2_config()
+  if not projects_v2_config_warned and not config.values.default_to_projects_v2 then
+    projects_v2_config_warned = true
+    notify.info "ProjectsV2 timeline events are disabled. Enable them by setting 'default_to_projects_v2 = true' in your Octo config."
+  end
+end
 
 ---@param bufnr integer?
 ---@param lines string[] | string
@@ -490,20 +502,11 @@ function M.write_reactions(bufnr, reaction_groups, line)
   return line
 end
 
-local function title_case(str)
-  str = string.lower(str)
-  return str:gsub("^%l", string.upper)
-end
-
-local function remove_underscore(str)
-  return str:gsub("_", " ")
-end
-
 local function format_author_association(association)
   if association == "FIRST_TIME_CONTRIBUTOR" then
     return "First-time contributor"
   else
-    return title_case(remove_underscore(association))
+    return utils.title_case(utils.remove_underscore(association))
   end
 end
 
@@ -577,7 +580,7 @@ function M.write_details(bufnr, issue, update)
     --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
     --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
     for idx, item in ipairs(issue.projectItems.nodes) do
-      if item.project ~= vim.NIL then
+      if item.project ~= vim.NIL and item.project then
         if idx >= 2 then
           table.insert(projects_vt, { ", " })
         end
@@ -1957,6 +1960,13 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.ProjectV2ItemStatusChangedEvent
 function M.write_project_v2_item_status_changed_event(bufnr, item)
+  -- Skip rendering if project is nil - GitHub API returns empty events
+  -- These new event types (added Nov 2025) sometimes return with all fields nil
+  if not item.project then
+    warn_projects_v2_config()
+    return
+  end
+
   local vt = {}
   local conf = config.values
   if conf.use_timeline_icons then
@@ -1999,6 +2009,13 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
 end
 
 local write_project_v2_event = function(bufnr, item, verb)
+  -- Skip rendering if project is nil - GitHub API returns empty events
+  -- These new event types (added Nov 2025) sometimes return with all fields nil
+  if not item.project then
+    warn_projects_v2_config()
+    return
+  end
+
   local vt = {}
   local conf = config.values
   if conf.use_timeline_icons then

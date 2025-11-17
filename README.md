@@ -56,6 +56,7 @@ Just edit the title, body, or comments as a regular buffer and use `:w(rite)` to
 - Add/Modify/Delete comments
 - Add/Remove label, reactions, assignees, project cards, reviewers, etc.
 - Add Review PRs
+- Interact with `GitHub CLI` from [`lua`](https://github.com/pwntester/octo.nvim/discussions/876) with `octo.gh` module.
 
 ## 🔥 Examples
 
@@ -72,6 +73,25 @@ Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
 Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
+
+You can also use `octo://` URLs to open issues and PRs directly:
+
+```vim
+" Open from the default GitHub instance (github.com or configured github_hostname)
+:e octo://owner/repo/issue/123
+:e octo://owner/repo/pull/456
+
+" Open from a specific GitHub Enterprise instance
+:e octo://ghe.example.com/owner/repo/issue/123
+:e octo://ghe.example.com/owner/repo/pull/456
+```
+
+The `octo://` URL format is especially useful for:
+- Opening issues/PRs from notes or wiki links without needing to be in the repository directory
+- Working with multiple GitHub instances (e.g., GitHub.com and GitHub Enterprise) without setting `GH_HOST` globally
+- Creating quick links in your workflow that work regardless of your current directory
+
+From any octo buffer, press `<CR>` in normal mode to see common actions.
 
 ## 🎯 Requirements
 
@@ -91,28 +111,64 @@ Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 
 ## 📦 Installation
 
-Use your favourite plugin manager to install it, e.g.:
+For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
 
 ```lua
-use {
-  'pwntester/octo.nvim',
-  requires = {
-    'nvim-lua/plenary.nvim',
-    'nvim-telescope/telescope.nvim',
-    -- OR 'ibhagwan/fzf-lua',
-    -- OR 'folke/snacks.nvim',
-    'nvim-tree/nvim-web-devicons',
+{
+  "pwntester/octo.nvim",
+  cmd = "Octo",
+  opts = {
+    -- or "fzf-lua" or "snacks"
+    picker = "telescope",
+    -- bare Octo command opens picker of commands
+    enable_builtin = true,
   },
-  config = function ()
-    require"octo".setup()
-  end
+  keys = {
+    {
+      "<leader>oi",
+      "<CMD>Octo issue list<CR>",
+      desc = "List GitHub Issues",
+    },
+    {
+      "<leader>op",
+      "<CMD>Octo pr list<CR>",
+      desc = "List GitHub PullRequests",
+    },
+    {
+      "<leader>od",
+      "<CMD>Octo discussion list<CR>",
+      desc = "List GitHub Discussions",
+    },
+    {
+      "<leader>on",
+      "<CMD>Octo notification list<CR>",
+      desc = "List GitHub Notifications",
+    },
+    {
+      "<leader>os",
+      function()
+        require("octo.utils").create_base_search_command { include_current_repo = true }
+      end,
+      desc = "Search GitHub",
+    },
+  },
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-telescope/telescope.nvim",
+    -- OR "ibhagwan/fzf-lua",
+    -- OR "folke/snacks.nvim",
+    "nvim-tree/nvim-web-devicons",
+  },
 }
 ```
 
+
 ## 🔧 Configuration
 
+Below is the full *default* configuration for `octo.nvim`.
+
 ```lua
-require"octo".setup({
+require"octo".setup {
   use_local_fs = false,                    -- use local files on right side of reviews
   enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
   default_remote = {"upstream", "origin"}, -- order to try remotes
@@ -271,6 +327,7 @@ require"octo".setup({
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
     },
     issue = {
+      issue_options = { lhs = "<CR>", desc = "show issue options" },
       close_issue = { lhs = "<localleader>ic", desc = "close issue" },
       reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
       list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
@@ -298,6 +355,7 @@ require"octo".setup({
       react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
     },
     pull_request = {
+      pr_options = { lhs = "<CR>", desc = "show PR options" },
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
       merge_pr = { lhs = "<localleader>pm", desc = "merge PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
@@ -416,6 +474,7 @@ require"octo".setup({
       unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
     },
     repo = {
+      repo_options = { lhs = "<CR>", desc = "show repo options" },
       create_issue = { lhs = "<localleader>ic", desc = "create issue" },
       create_discussion = { lhs = "<localleader>dc", desc = "create discussion" },
       contributing_guidelines = { lhs = "<localleader>cg", desc = "view contributing guidelines" },
@@ -425,7 +484,7 @@ require"octo".setup({
       open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
     },
   },
-})
+}
 ```
 
 ## 🤖 Commands
@@ -439,7 +498,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reopen                                            | Reopen the current issue                                                                                                                               |
 |          | create [repo]                                     | Creates a new issue in the current or specified repo                                                                                                   |
 |          | develop                                           | Create and checkout a new branch for an issue in the current repo                                                                                      |
-|          | edit [repo] <number>                              | Edit issue `<number>` in current or specified repo                                                                                                     |
+|          | edit <number> [repo]                              | Edit issue `<number>` in current or specified repo                                                                                                     |
 |          | list [repo] [key=value] (1)                       | List all issues satisfying given filter                                                                                                                |
 |          | search                                            | Live issue search                                                                                                                                      |
 |          | reload                                            | Reload issue. Same as doing `e!`                                                                                                                       |
@@ -449,7 +508,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | unpin                                             | Unpin the current issue                                                                                                                                |
 | pr       | list [repo] [key=value] (2)                       | List all PRs satisfying given filter                                                                                                                   |
 |          | search                                            | Live issue search                                                                                                                                      |
-|          | edit [repo] <number>                              | Edit PR `<number>` in current or specified repo                                                                                                        |
+|          | edit <number> [repo]                             | Edit PR `<number>` in current or specified repo                                                                                                        |
 |          | reopen                                            | Reopen the current PR                                                                                                                                  |
 |          | create                                            | Creates a new PR for the current branch                                                                                                                |
 |          | close                                             | Close the current PR                                                                                                                                   |
@@ -476,7 +535,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
 |          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
-|          | reply                                            | Add comment as a reply to the current comment | 
+|          | reply                                            | Add comment as a reply to the current comment |
  | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
@@ -516,6 +575,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
+|    | edit <number> [repo] | Edit discussion in current or specified repo |
 |    | browser | Open the current discussion in the browser |
 |    | create [repo]                                          | Create discussion for current or specified repo |
 |    | reload                                                 | Reload the current discussion buffer |

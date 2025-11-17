@@ -1,5 +1,5 @@
 ---
-ci: 
+ci:
   autofix_prs: true
 
 repos:
@@ -15,3 +15,11 @@ repos:
         language: script
         files: ^lua/octo/.*\.lua$
         pass_filenames: false
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: debug-statements
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files

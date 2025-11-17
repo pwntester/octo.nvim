@@ -2176,4 +2176,18 @@ function M.create_base_search_command(opts)
   vim.fn.feedkeys(vim.api.nvim_replace_termcodes(cmd, true, true, true), "n")
 end
 
+---@param str string
+---@return string
+function M.title_case(str)
+  return (str:gsub("(%a)([%w_'.]*)", function(first, rest)
+    return first:upper() .. rest:lower()
+  end))
+end
+
+---@param str string
+---@return string
+function M.remove_underscore(str)
+  return (str:gsub("_", " "))
+end
+
 return M
