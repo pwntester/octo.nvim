@@ -556,18 +556,6 @@ function OctoBuffer:async_fetch_issues()
       },
     },
   }
-  gh.run {
-    args = { "api", string.format("repos/%s/issues", self.repo) },
-    cb = function(response)
-      local issues_metadata = {} ---@type { number: integer, title: string }[]
-      ---@type { number: integer, title: string }[]
-      local resp = vim.json.decode(response)
-      for _, issue in ipairs(resp) do
-        issues_metadata[#issues_metadata + 1] = { number = issue.number, title = issue.title }
-      end
-      octo_repo_issues[self.repo] = issues_metadata
-    end,
-  }
 end
 
 ---Syncs all the comments/title/body with GitHub
