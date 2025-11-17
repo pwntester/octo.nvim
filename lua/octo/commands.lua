@@ -118,6 +118,9 @@ function M.setup()
       browser = function()
         navigation.open_in_browser()
       end,
+      edit = function(...)
+        utils.get_discussion(...)
+      end,
       reload = function()
         M.reload { verbose = true }
       end,

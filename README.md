@@ -497,7 +497,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reopen                                            | Reopen the current issue                                                                                                                               |
 |          | create [repo]                                     | Creates a new issue in the current or specified repo                                                                                                   |
 |          | develop                                           | Create and checkout a new branch for an issue in the current repo                                                                                      |
-|          | edit [repo] <number>                              | Edit issue `<number>` in current or specified repo                                                                                                     |
+|          | edit <number> [repo]                              | Edit issue `<number>` in current or specified repo                                                                                                     |
 |          | list [repo] [key=value] (1)                       | List all issues satisfying given filter                                                                                                                |
 |          | search                                            | Live issue search                                                                                                                                      |
 |          | reload                                            | Reload issue. Same as doing `e!`                                                                                                                       |
@@ -507,7 +507,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | unpin                                             | Unpin the current issue                                                                                                                                |
 | pr       | list [repo] [key=value] (2)                       | List all PRs satisfying given filter                                                                                                                   |
 |          | search                                            | Live issue search                                                                                                                                      |
-|          | edit [repo] <number>                              | Edit PR `<number>` in current or specified repo                                                                                                        |
+|          | edit <number> [repo]                             | Edit PR `<number>` in current or specified repo                                                                                                        |
 |          | reopen                                            | Reopen the current PR                                                                                                                                  |
 |          | create                                            | Creates a new PR for the current branch                                                                                                                |
 |          | close                                             | Close the current PR                                                                                                                                   |
@@ -574,6 +574,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
+|    | edit <number> [repo] | Edit discussion in current or specified repo |
 |    | browser | Open the current discussion in the browser |
 |    | create [repo]                                          | Create discussion for current or specified repo |
 |    | reload                                                 | Reload the current discussion buffer |

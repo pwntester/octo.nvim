@@ -171,7 +171,7 @@ lua objects directly:
 
 There are plenty of examples in the repo so consider checking it out for more
 reference or read more in the GitHub discussion:
-`Octo https://github.com/pwntester/octo.nvim/discussions/876`
+`Octo discussion edit 876 pwntester/octo.nvim`
 
 COMMANDS                                        *octo-commands*
 
@@ -248,6 +248,8 @@ See |octo-command-examples| for examples.
   list [repo]           Lists all open discussions for the current or specified repo.
                         In-menu mappings:
                           <C-y>   Copy URL to system clipboard.
+  edit [number] {repo}  Edits discussion with the given number in the current or
+                        specified repo.
   browser               Open current discussion in the browser.
   create [repo]         Creates a new discussion for the current or specified repo.
   reload                Reload discussion. Same as doing `e!`.
