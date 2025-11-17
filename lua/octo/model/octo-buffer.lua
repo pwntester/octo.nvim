@@ -521,6 +521,11 @@ function OctoBuffer:async_fetch_taggable_users()
     opts = {
       cb = gh.create_callback {
         success = function(data)
+          if utils.is_blank(data) then
+            self.taggable_users = users
+            return
+          end
+
           ---@type string[]
           local contributors = vim.json.decode(data)
           for _, contributor in ipairs(contributors) do
