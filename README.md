@@ -208,6 +208,7 @@ require"octo".setup {
   users = "search",                        -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
   user_icon = " ",                        -- user icon
   ghost_icon = "󰊠 ",                       -- ghost icon
+  copilot_icon = " ",                     -- copilot icon
   timeline_marker = " ",                  -- timeline marker
   timeline_indent = 2,                   -- timeline indentation
   use_timeline_icons = true,               -- toggle timeline icons

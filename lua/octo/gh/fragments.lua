@@ -415,7 +415,7 @@ fragment IssueCommentFragment on IssueComment {
   ---@class octo.fragments.AssignedEvent
   ---@field __typename "AssignedEvent"
   ---@field actor { login: string }
-  ---@field assignee { name?: string, login?: string, isViewer?: boolean }
+  ---@field assignee { name?: string, login: string, isViewer?: boolean }
   ---@field createdAt string
 
   M.assigned_event = [[
@@ -711,7 +711,7 @@ fragment DeployedEventFragment on DeployedEvent {
   ---@field createdAt string
   ---@field actor { login: string }
   ---@field requestedReviewer {
-  ---  login?: string,
+  ---  login: string,
   ---  isViewer?: boolean,
   ---  name?: string,
   ---}

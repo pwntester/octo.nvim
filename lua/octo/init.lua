@@ -273,6 +273,10 @@ function M.on_cursor_hold()
   -- user popup
   local login = utils.extract_pattern_at_cursor(constants.USER_PATTERN)
   if login then
+    if login:lower() == "copilot" then
+      return
+    end
+
     gh.api.graphql {
       query = queries.user_profile,
       jq = ".data.user",
