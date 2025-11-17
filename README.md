@@ -119,7 +119,7 @@ For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
   cmd = "Octo",
   opts = {
     -- or "fzf-lua" or "snacks"
-    picker = "telescope",  
+    picker = "telescope",
     -- bare Octo command opens picker of commands
     enable_builtin = true,
   },
@@ -534,7 +534,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
 |          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
-|          | reply                                            | Add comment as a reply to the current comment | 
+|          | reply                                            | Add comment as a reply to the current comment |
  | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |

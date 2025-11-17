@@ -1489,7 +1489,11 @@ end
 function M.create_issue(repo)
   local buffer = utils.get_current_buffer()
   if not repo then
-    repo = buffer.repo or utils.get_remote_name()
+    if buffer and buffer.repo then
+      repo = buffer.repo
+    else
+      repo = utils.get_remote_name()
+    end
   end
 
   if not repo then

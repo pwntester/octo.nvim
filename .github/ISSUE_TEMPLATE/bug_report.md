@@ -13,7 +13,7 @@ assignees: ''
 ### Tell us your environment
 
 - nvim version:
-- octo.nvim commit hash: 
+- octo.nvim commit hash:
 - GitHub CLI version (`gh --version`):
 - OS:
 - GitHub product (GitHub, GitHub Enterprise, GHEC / See guide to determine [here](https://docs.github.com/en/get-started/using-github-docs/about-versions-of-github-docs#determining-which-github-product-you-use)):
