@@ -9,7 +9,7 @@ local copilot_logins = { "copilot-swe-agent", "copilot-pull-request-reviewer" }
 
 ---Formats author login for display
 ---@param author? { login: string }
----@return { name?: string, login?: string, isViewer?: boolean }
+---@return { name?: string, login: string, isViewer?: boolean }
 function M.format_author(author)
   if author == nil or utils.is_blank(author) then
     author = { login = "ghost" }

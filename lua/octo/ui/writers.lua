@@ -2725,10 +2725,14 @@ function M.write_labeled_events(bufnr, items, action)
   local labels_by_actor = {} ---@type table<string, octo.fragments.Label[]>
   for _, item in ipairs(items) do
     local key = item.actor ~= vim.NIL and item.actor.login or vim.NIL
-    ---@type octo.fragments.Label[]
-    local labels = labels_by_actor[key] or {}
-    table.insert(labels, item.label)
-    labels_by_actor[key] = labels
+    if key ~= vim.NIL then
+      ---@type octo.fragments.Label[]
+      local labels = labels_by_actor[key] or {}
+      labels[#labels + 1] = item.label
+      labels_by_actor[
+        key --[[@as string]]
+      ] = labels
+    end
   end
 
   for actor, _ in pairs(labels_by_actor) do
