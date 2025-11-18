@@ -119,6 +119,7 @@ local M = {}
 ---@field users string
 ---@field user_icon string
 ---@field ghost_icon string
+---@field copilot_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
 ---@field resolved_icon string
@@ -187,6 +188,7 @@ function M.get_default_values()
     users = "search",
     user_icon = " ",
     ghost_icon = "󰊠 ",
+    copilot_icon = " ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
@@ -213,6 +215,7 @@ function M.get_default_values()
       pinned = "  ",
       milestone = "  ",
       renamed = "  ",
+      automatic_base_change_succeeded = "  ",
       merged = { "  ", "OctoPurple" },
       closed = {
         closed = { "  ", "OctoRed" },
@@ -328,6 +331,7 @@ function M.get_default_values()
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       },
       issue = {
+        issue_options = { lhs = "<CR>", desc = "show issue options" },
         close_issue = { lhs = "<localleader>ic", desc = "close issue" },
         reopen_issue = { lhs = "<localleader>io", desc = "reopen issue" },
         list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
@@ -355,6 +359,7 @@ function M.get_default_values()
         react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
       },
       pull_request = {
+        pr_options = { lhs = "<CR>", desc = "show PR options" },
         checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
         merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
         squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
@@ -486,6 +491,7 @@ function M.get_default_values()
         unsubscribe = { lhs = "<localleader>nu", desc = "unsubscribe from notifications" },
       },
       repo = {
+        repo_options = { lhs = "<CR>", desc = "show repo options" },
         create_issue = { lhs = "<localleader>ic", desc = "create issue" },
         create_discussion = { lhs = "<localleader>dc", desc = "create discussion" },
         contributing_guidelines = { lhs = "<localleader>cg", desc = "view contributing guidelines" },
@@ -688,6 +694,7 @@ function M.validate_config()
     validate_string_enum(config.users, "users", { "search", "mentionable", "assignable" })
     validate_type(config.user_icon, "user_icon", "string")
     validate_type(config.ghost_icon, "ghost_icon", "string")
+    validate_type(config.copilot_icon, "copilot_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")

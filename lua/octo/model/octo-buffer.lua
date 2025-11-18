@@ -213,6 +213,8 @@ function OctoBuffer:render_issue()
   local unrendered_subissue_removed_events = {} ---@type octo.fragments.SubIssueRemovedEvent[]
   local unrendered_force_push_events = {} ---@type octo.fragments.HeadRefForcePushedEvent[]
   local commits = {} ---@type octo.fragments.PullRequestCommit[]
+  local unrendered_review_requested_events = {} ---@type octo.fragments.ReviewRequestedEvent[]
+  local unrendered_review_request_removed_events = {} ---@type octo.fragments.ReviewRequestRemovedEvent[]
   local prev_is_event = false
 
   ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
@@ -257,6 +259,30 @@ function OctoBuffer:render_issue()
     if (not item or item.__typename ~= "HeadRefForcePushedEvent") and #unrendered_force_push_events > 0 then
       writers.write_head_ref_force_pushed_events(self.bufnr, unrendered_force_push_events)
       unrendered_force_push_events = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_review_requested_events > 0
+      and (
+        not item
+        or item.__typename ~= "ReviewRequestedEvent"
+        or unrendered_review_requested_events[1].createdAt ~= item.createdAt
+      )
+    then
+      writers.write_review_requested_events(self.bufnr, unrendered_review_requested_events)
+      unrendered_review_requested_events = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_review_request_removed_events > 0
+      and (
+        not item
+        or item.__typename ~= "ReviewRequestRemovedEvent"
+        or unrendered_review_request_removed_events[1].createdAt ~= item.createdAt
+      )
+    then
+      writers.write_review_request_removed_events(self.bufnr, unrendered_review_request_removed_events)
+      unrendered_review_request_removed_events = {}
       prev_is_event = true
     end
   end
@@ -323,10 +349,10 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "UnlabeledEvent" then
       table.insert(unrendered_unlabeled_events, item)
     elseif item.__typename == "ReviewRequestedEvent" then
-      writers.write_review_requested_event(self.bufnr, item)
+      unrendered_review_requested_events[#unrendered_review_requested_events + 1] = item
       prev_is_event = true
     elseif item.__typename == "ReviewRequestRemovedEvent" then
-      writers.write_review_request_removed_event(self.bufnr, item)
+      unrendered_review_request_removed_events[#unrendered_review_request_removed_events + 1] = item
       prev_is_event = true
     elseif item.__typename == "ReviewDismissedEvent" then
       writers.write_review_dismissed_event(self.bufnr, item)
@@ -402,6 +428,9 @@ function OctoBuffer:render_issue()
       prev_is_event = true
     elseif item.__typename == "ProjectV2ItemStatusChangedEvent" then
       writers.write_project_v2_item_status_changed_event(self.bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "AutomaticBaseChangeSucceededEvent" then
+      writers.write_automatic_base_change_succeeded_event(self.bufnr, item)
       prev_is_event = true
     elseif
       not utils.is_blank(item)
@@ -485,34 +514,47 @@ function OctoBuffer:async_fetch_taggable_users()
   end
 
   -- add repo contributors
-  gh.run {
-    args = { "api", string.format("repos/%s/contributors", self.repo) },
-    cb = function(response)
-      if not utils.is_blank(response) then
-        ---@type { login: string }[]
-        local resp = vim.json.decode(response)
-        for _, contributor in ipairs(resp) do
-          table.insert(users, contributor.login)
-        end
-        self.taggable_users = users
-      end
-    end,
+  gh.api.get {
+    "repos/{repo}/contributors",
+    format = { repo = self.repo },
+    jq = "map(.login)",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          if utils.is_blank(data) then
+            self.taggable_users = users
+            return
+          end
+
+          ---@type string[]
+          local contributors = vim.json.decode(data)
+          for _, contributor in ipairs(contributors) do
+            table.insert(users, contributor)
+          end
+          self.taggable_users = users
+        end,
+        failure = function() end,
+      },
+    },
   }
 end
 
 ---Fetches the issues in the repo so they can be used for completion.
 function OctoBuffer:async_fetch_issues()
-  gh.run {
-    args = { "api", string.format("repos/%s/issues", self.repo) },
-    cb = function(response)
-      local issues_metadata = {} ---@type { number: integer, title: string }[]
-      ---@type { number: integer, title: string }[]
-      local resp = vim.json.decode(response)
-      for _, issue in ipairs(resp) do
-        issues_metadata[#issues_metadata + 1] = { number = issue.number, title = issue.title }
-      end
-      octo_repo_issues[self.repo] = issues_metadata
-    end,
+  gh.api.get {
+    "repos/{repo}/issues",
+    format = { repo = self.repo },
+    jq = "map({title, number})",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          ---@type { number: integer, title: string }[]
+          local issues_metadata = vim.json.decode(data)
+          octo_repo_issues[self.repo] = issues_metadata
+        end,
+        failure = function() end,
+      },
+    },
   }
 end
 

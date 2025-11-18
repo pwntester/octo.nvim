@@ -1604,6 +1604,7 @@ M.picker = {
   changed_files = M.changed_files,
   commits = M.commits,
   issues = M.issues,
+  issue_templates = M.issue_templates,
   notifications = M.notifications,
   prs = M.pull_requests,
   review_commits = M.review_commits,

@@ -223,3 +223,33 @@ describe("utils.pop_key", function()
     eq(tbl, { a = 1, b = 2, c = 3 })
   end)
 end)
+
+describe("string methods", function()
+  describe("title_case", function()
+    it("capitalizes the first letter of sentence", function()
+      local input = "hello world from octo.nvim"
+      local expected = "Hello World From Octo.nvim"
+      eq(this.title_case(input), expected)
+    end)
+
+    it("handles empty string", function()
+      local input = ""
+      local expected = ""
+      eq(this.title_case(input), expected)
+    end)
+
+    it("handles single word", function()
+      local input = "octo.nvim"
+      local expected = "Octo.nvim"
+      eq(this.title_case(input), expected)
+    end)
+  end)
+
+  describe("remove_underscore", function()
+    it("removes all underscores from the string", function()
+      local input = "hello_world_from_octo_nvim"
+      local expected = "hello world from octo nvim"
+      eq(this.remove_underscore(input), expected)
+    end)
+  end)
+end)

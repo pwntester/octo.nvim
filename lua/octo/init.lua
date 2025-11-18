@@ -99,9 +99,24 @@ function M.load_buffer(opts)
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
-  local repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
+
+  -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
+  local hostname, repo, kind, id = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/([^/]+)/([0-9a-z.]+)")
+
+  -- Fall back to without hostname: octo://owner/repo/kind/id
+  if not hostname then
+    repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
+    hostname = nil
+  end
+
   if id == "repo" or not repo then
-    repo = string.match(bufname, "octo://(.+)/repo")
+    -- Try with hostname: octo://hostname/owner/repo/repo
+    hostname, repo = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/repo")
+    if not hostname then
+      -- Fall back without hostname: octo://owner/repo/repo
+      repo = string.match(bufname, "octo://(.+)/repo")
+      hostname = nil
+    end
     if repo then
       kind = "repo"
     end
@@ -114,9 +129,9 @@ function M.load_buffer(opts)
     return
   end
 
-  M.load(repo, kind, id, function(obj)
+  M.load(repo, kind, id, hostname, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
-      M.create_buffer(kind, obj, repo, false)
+      M.create_buffer(kind, obj, repo, false, hostname)
 
       -- get size of newly created buffer
       local lines = vim.api.nvim_buf_line_count(bufnr)
@@ -138,8 +153,9 @@ end
 ---@param repo string
 ---@param kind octo.NodeKind
 ---@param id integer|string pull request, issue, or discussion number or release tag
+---@param hostname string|nil optional GitHub Enterprise hostname
 ---@param cb fun(obj: octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository): nil
-function M.load(repo, kind, id, cb)
+function M.load(repo, kind, id, hostname, cb)
   local owner, name = utils.split_repo(repo)
 
   ---@type string, string, table<string, string|integer>
@@ -194,6 +210,7 @@ function M.load(repo, kind, id, cb)
     fields = fields,
     paginate = true,
     jq = ".",
+    hostname = hostname,
     opts = {
       cb = gh.create_callback { failure = utils.print_err, success = load_buffer },
     },
@@ -256,6 +273,10 @@ function M.on_cursor_hold()
   -- user popup
   local login = utils.extract_pattern_at_cursor(constants.USER_PATTERN)
   if login then
+    if login:lower() == "copilot" then
+      return
+    end
+
     gh.api.graphql {
       query = queries.user_profile,
       jq = ".data.user",
@@ -338,7 +359,7 @@ end
 ---@param obj octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository the object to render
 ---@param repo string repository full name like "owner/name"
 ---@param create boolean whether to create a new buffer
-function M.create_buffer(kind, obj, repo, create)
+function M.create_buffer(kind, obj, repo, create, hostname)
   if not obj.id then
     utils.error("Cannot find " .. repo)
     return
@@ -348,7 +369,12 @@ function M.create_buffer(kind, obj, repo, create)
   if create then
     bufnr = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_set_current_buf(bufnr)
-    vim.cmd(string.format("file octo://%s/%s/%d", repo, kind, obj.number))
+    -- Include hostname in buffer name if provided
+    if hostname then
+      vim.cmd(string.format("file octo://%s/%s/%s/%d", hostname, repo, kind, obj.number))
+    else
+      vim.cmd(string.format("file octo://%s/%s/%d", repo, kind, obj.number))
+    end
   else
     bufnr = vim.api.nvim_get_current_buf()
   end

@@ -1,5 +1,6 @@
 local config = require "octo.config"
 local colors = require "octo.ui.colors"
+local logins = require "octo.logins"
 
 -- A Bubble in the UI is used to make certain elements to visually stand-out.
 -- Sometimes they are also called Chips in WebUI frameworks. After all they wrap
@@ -59,10 +60,9 @@ end
 ---@return [string, string][]
 local function make_user_bubble(name, is_viewer, opts)
   opts = opts or {}
-  local conf = config.values
   local highlight = is_viewer and "OctoUserViewer" or "OctoUser"
   local icon_position = opts.icon_position or "left"
-  local default_icon = opts.ghost and conf.ghost_icon or conf.user_icon
+  local default_icon = logins.get_user_icon(name)
   local icon = opts.icon or default_icon
   local content ---@type string
   if icon_position == "left" then

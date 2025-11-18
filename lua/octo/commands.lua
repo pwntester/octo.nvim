@@ -27,6 +27,22 @@ OctoLastCmdOpts = nil
 
 local M = {}
 
+-- Helper function to extract hostname from octo:// buffer URL
+local function get_hostname_from_buffer()
+  local bufname = vim.fn.bufname()
+  if bufname:match "^octo://" then
+    -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
+    -- vs without hostname: octo://owner/repo/kind/id
+    local first_segment = bufname:match "^octo://([^/]+)"
+
+    -- Check if this looks like a hostname (contains a dot) vs owner name
+    if first_segment and first_segment:match "%." then
+      return first_segment
+    end
+  end
+  return nil
+end
+
 local function merge_tables(t1, t2)
   local result = vim.deepcopy(t1)
   for k, v in pairs(t2) do
@@ -101,6 +117,9 @@ function M.setup()
     discussion = {
       browser = function()
         navigation.open_in_browser()
+      end,
+      edit = function(...)
+        utils.get_discussion(...)
       end,
       reload = function()
         M.reload { verbose = true }
@@ -321,7 +340,7 @@ function M.setup()
     },
     parent = {
       edit = context.within_issue(function(buffer)
-        local parent = buffer.issue().parent
+        local parent = buffer:issue().parent
 
         if utils.is_blank(parent) then
           utils.error "No parent issue found"
@@ -712,26 +731,14 @@ function M.setup()
         current_review:add_comment(true)
       end),
       reply = M.add_pr_issue_or_review_thread_comment_reply,
-      url = function()
-        local buffer = utils.get_current_buffer()
-
-        if not buffer then
-          return
-        end
-
-        local comment = buffer:get_comment_at_cursor()
-        if not comment then
-          utils.error "The cursor does not seem to be located at any comment"
-          return
-        end
-
+      url = context.on_comment(function(comment)
         gh.api.graphql {
           query = queries.comment_url,
           f = { id = comment.id },
           jq = ".data.node.url",
           opts = { cb = gh.create_callback { success = utils.copy_url } },
         }
-      end,
+      end),
       delete = function()
         M.delete_comment()
       end,
@@ -1473,7 +1480,11 @@ end
 function M.create_issue(repo)
   local buffer = utils.get_current_buffer()
   if not repo then
-    repo = buffer.repo or utils.get_remote_name()
+    if buffer and buffer.repo then
+      repo = buffer.repo
+    else
+      repo = utils.get_remote_name()
+    end
   end
 
   if not repo then
@@ -1535,7 +1546,7 @@ function M.save_issue(opts)
     opts = {
       cb = gh.create_callback {
         success = function(output)
-          require("octo").create_buffer("issue", vim.json.decode(output), opts.repo, true)
+          require("octo").create_buffer("issue", vim.json.decode(output), opts.repo, true, nil)
           vim.fn.execute "normal! Gk"
           vim.fn.execute "startinsert"
         end,
@@ -1713,7 +1724,6 @@ function M.save_pr(opts)
   -- You cannot update the base branch on a pull request to point to another repository.
   -- get repo default branch
   local default_branch = opts.info.defaultBranchRef.name
-  -- local ok, err = pcall(picker.branches, opts.info)
   picker.branches(
     { repo = opts.info, default_branch_name = default_branch, title = "Select BASE branch" },
     function(base_ref_name)
@@ -1748,6 +1758,7 @@ function M.save_pr(opts)
                     local pr = vim.json.decode(output)
                     utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
                     require("octo").create_buffer("pull", pr, opts.repo, true)
+                    require("octo").create_buffer("pull", pr, opts.repo, true, nil)
                   end,
                 },
               },
@@ -2178,7 +2189,8 @@ function M.set_project_v2_card()
               elseif update_output then
                 -- TODO do update here
                 -- refresh issue/pr details
-                require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+                local hostname = get_hostname_from_buffer()
+                require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
                   writers.write_details(buffer.bufnr, obj, true)
                   node.projectCards = obj.projectCards
                 end)
@@ -2209,7 +2221,8 @@ function M.remove_project_v2_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+          local hostname = get_hostname_from_buffer()
+          require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
             node.projectCards = obj.projectCards
             writers.write_details(buffer.bufnr, obj, true)
           end)
@@ -2309,7 +2322,8 @@ local function label_action(opts)
     end
 
     local function refresh_details()
-      require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+      local hostname = get_hostname_from_buffer()
+      require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
         if buffer:isDiscussion() then
           writers.write_discussion_details(buffer.bufnr, obj)
         else
@@ -2396,7 +2410,8 @@ function M.add_user(subject, logins)
         cb = gh.create_callback {
           success = function()
             -- refresh issue/pr details
-            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+            local hostname = get_hostname_from_buffer()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               writers.write_details(buffer.bufnr, obj, true)
               vim.cmd [[stopinsert]]
             end)
@@ -2454,7 +2469,8 @@ function M.remove_assignee(login)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+          local hostname = get_hostname_from_buffer()
+          require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
             writers.write_details(buffer.bufnr, obj, true)
           end)
         end
@@ -2492,7 +2508,8 @@ function M.remove_reviewer(login)
       opts = {
         cb = gh.create_callback {
           success = function()
-            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+            local hostname = get_hostname_from_buffer()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               writers.write_details(buffer.bufnr, obj, true)
             end)
           end,
