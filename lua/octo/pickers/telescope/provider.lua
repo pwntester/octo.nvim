@@ -1678,13 +1678,7 @@ function M.project_cards_v2(cb)
   end
 end
 
----@class octo.PickerRefsOptions
----@field repo octo.Repository
----@field default_branch_name string
----@field title string
-
----@param opts octo.PickerRefsOptions
----@param cb function
+---@type octo.picker.branches
 function M.branches(opts, cb)
   pickers
     .new({}, {

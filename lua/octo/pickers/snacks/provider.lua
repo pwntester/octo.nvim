@@ -1564,6 +1564,40 @@ function M.users(cb)
   }
 end
 
+---@type octo.picker.branches
+function M.branches(opts, cb)
+  local final_actions = {}
+  ---@type snacks.picker.Action.fn
+  final_actions["confirm"] = function(picker, item)
+    picker:close()
+    cb(item.name)
+  end
+
+  for _, branch in ipairs(opts.repo.refs.nodes) do
+    branch.text = branch.name
+  end
+
+  Snacks.picker.pick {
+    title = opts.title or "Select Branch",
+    multi = false,
+    items = opts.repo.refs.nodes,
+    show_empty = true,
+    pattern = opts.default_branch_name,
+    layout = {
+      preset = "select",
+    },
+    format = function(item, _)
+      local ret = {} ---@type snacks.picker.Highlight[]
+
+      ret[#ret + 1] = { item.name, "Normal" }
+
+      return ret
+    end,
+    actions = final_actions,
+    confirm = final_actions.confirm,
+  }
+end
+
 ---@type octo.PickerModule
 M.picker = {
   assignees = M.assignees,
@@ -1575,6 +1609,7 @@ M.picker = {
   review_commits = M.review_commits,
   search = M.search,
   users = M.users,
+  branches = M.branches,
 }
 
 return M

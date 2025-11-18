@@ -1707,6 +1707,7 @@ function M.save_pr(opts)
       return { { 0, #input, "String" } }
     end,
   }
+  vim.fn.inputrestore()
 
   -- The name of the branch you want your changes pulled into. This should be an existing branch on the current repository.
   -- You cannot update the base branch on a pull request to point to another repository.
@@ -1724,7 +1725,6 @@ function M.save_pr(opts)
           if opts.info.isFork and opts.candidates[repo_idx] == opts.info.parent.nameWithOwner then
             head_ref_name = vim.g.octo_viewer .. ":" .. head_ref_name
           end
-          vim.fn.inputrestore()
 
           local repo_id = utils.get_repo_id(opts.candidates[repo_idx])
           local choice = vim.fn.confirm("Create PR?", "&Yes\n&No\n&Cancel", 2)
@@ -1755,13 +1755,6 @@ function M.save_pr(opts)
           end
         end
       )
-      -- local head_ref_name = vim.fn.input {
-      --   prompt = "Enter HEAD branch: ",
-      --   default = opts.remote_branch,
-      --   highlight = function(input)
-      --     return { { 0, #input, "String" } }
-      --   end,
-      -- }
     end
   )
 end
