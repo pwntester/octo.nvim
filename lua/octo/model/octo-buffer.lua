@@ -27,7 +27,7 @@ local M = {}
 ---@field commentsMetadata CommentMetadata[]
 ---@field threadsMetadata ThreadMetadata[]
 ---@field private node octo.PullRequest|octo.Issue|octo.Release|octo.Discussion|octo.Repository
----@field taggable_users? string[]
+---@field taggable_users? string[] list of taggable users for the buffer. Trigger with @
 ---@field owner? string
 ---@field name? string
 local OctoBuffer = {}
@@ -63,11 +63,11 @@ function OctoBuffer:new(opts)
 
   if this.node and this.node.commits then
     this.kind = "pull"
-    this.taggable_users = { this.node.author.login }
+    this.taggable_users = { this.node.author.login, "copilot" }
   elseif this.node and this.number then
     this.kind = opts.kind or "issue"
     if not utils.is_blank(this.node.author) then
-      this.taggable_users = { this.node.author.login }
+      this.taggable_users = { this.node.author.login, "copilot" }
     end
   elseif this.node and not this.number then
     this.kind = opts.kind or "repo"
@@ -494,10 +494,10 @@ function OctoBuffer:configure()
 end
 
 ---Accumulates all the taggable users into a single list that
---gets set as a buffer variable `taggable_users`. If this list of users
+---gets set as a buffer variable `taggable_users`. If this list of users
 ---is needed synchronously, this function will need to be refactored.
 ---The list of taggable users should contain:
---  - The PR author
+--  - The Issue / PR author
 --  - The authors of all the existing comments
 --  - The contributors of the repo
 function OctoBuffer:async_fetch_taggable_users()
