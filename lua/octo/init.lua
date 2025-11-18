@@ -109,6 +109,15 @@ function M.load_buffer(opts)
     hostname = nil
   end
 
+  -- Normalize plural forms to singular
+  if kind == "issues" then
+    kind = "issue"
+  elseif kind == "pulls" then
+    kind = "pull"
+  elseif kind == "discussions" then
+    kind = "discussion"
+  end
+
   if id == "repo" or not repo then
     -- Try with hostname: octo://hostname/owner/repo/repo
     hostname, repo = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/repo")
