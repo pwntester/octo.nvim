@@ -74,6 +74,18 @@ Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
+You can pass GitHub URLs directly to the `Octo` command, including GitHub Enterprise URLs:
+
+```vim
+" GitHub.com URLs
+Octo https://github.com/pwntester/octo.nvim/issues/12
+Octo https://github.com/pwntester/octo.nvim/pull/123
+
+" GitHub Enterprise URLs (hostname is automatically detected)
+Octo https://ghe.example.com/owner/repo/issues/456
+Octo https://ghe.example.com/owner/repo/pull/789
+```
+
 You can also use `octo://` URLs to open issues and PRs directly:
 
 ```vim
@@ -84,6 +96,10 @@ You can also use `octo://` URLs to open issues and PRs directly:
 " Open from a specific GitHub Enterprise instance
 :e octo://ghe.example.com/owner/repo/issue/123
 :e octo://ghe.example.com/owner/repo/pull/456
+
+" Both singular and plural forms are supported
+:e octo://owner/repo/issues/123
+:e octo://owner/repo/pulls/456
 ```
 
 The `octo://` URL format is especially useful for:

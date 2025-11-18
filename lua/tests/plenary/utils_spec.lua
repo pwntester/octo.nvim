@@ -168,26 +168,56 @@ end)
 describe("parse_url", function()
   it("issues", function()
     local url = "https://github.com/pwntester/octo.nvim/issues/1"
-    local repo, number, kind = this.parse_url(url)
+    local hostname, repo, number, kind = this.parse_url(url)
 
+    eq(hostname, "github.com")
     eq(repo, "pwntester/octo.nvim")
     eq(number, "1")
     eq(kind, "issue")
   end)
   it("pull", function()
     local url = "https://github.com/pwntester/octo.nvim/pull/1"
-    local repo, number, kind = this.parse_url(url)
+    local hostname, repo, number, kind = this.parse_url(url)
 
+    eq(hostname, "github.com")
     eq(repo, "pwntester/octo.nvim")
     eq(number, "1")
     eq(kind, "pull")
   end)
   it("discussion", function()
     local url = "https://github.com/pwntester/octo.nvim/discussions/1"
-    local repo, number, kind = this.parse_url(url)
+    local hostname, repo, number, kind = this.parse_url(url)
 
+    eq(hostname, "github.com")
     eq(repo, "pwntester/octo.nvim")
     eq(number, "1")
+    eq(kind, "discussion")
+  end)
+  it("GHE issues", function()
+    local url = "https://ghe.example.com/owner/repo/issues/42"
+    local hostname, repo, number, kind = this.parse_url(url)
+
+    eq(hostname, "ghe.example.com")
+    eq(repo, "owner/repo")
+    eq(number, "42")
+    eq(kind, "issue")
+  end)
+  it("GHE pull", function()
+    local url = "https://ghe.example.com/owner/repo/pull/123"
+    local hostname, repo, number, kind = this.parse_url(url)
+
+    eq(hostname, "ghe.example.com")
+    eq(repo, "owner/repo")
+    eq(number, "123")
+    eq(kind, "pull")
+  end)
+  it("GHE discussion", function()
+    local url = "https://ghe.example.com/owner/repo/discussions/99"
+    local hostname, repo, number, kind = this.parse_url(url)
+
+    eq(hostname, "ghe.example.com")
+    eq(repo, "owner/repo")
+    eq(number, "99")
     eq(kind, "discussion")
   end)
 end)
