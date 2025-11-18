@@ -731,26 +731,14 @@ function M.setup()
         current_review:add_comment(true)
       end),
       reply = M.add_pr_issue_or_review_thread_comment_reply,
-      url = function()
-        local buffer = utils.get_current_buffer()
-
-        if not buffer then
-          return
-        end
-
-        local comment = buffer:get_comment_at_cursor()
-        if not comment then
-          utils.error "The cursor does not seem to be located at any comment"
-          return
-        end
-
+      url = context.on_comment(function(comment)
         gh.api.graphql {
           query = queries.comment_url,
           f = { id = comment.id },
           jq = ".data.node.url",
           opts = { cb = gh.create_callback { success = utils.copy_url } },
         }
-      end,
+      end),
       delete = function()
         M.delete_comment()
       end,
