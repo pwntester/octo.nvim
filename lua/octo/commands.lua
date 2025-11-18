@@ -622,6 +622,22 @@ function M.setup()
           prompt = prompt,
         }
       end,
+      unstar = context.within_repo(function(buffer)
+        gh.api.graphql {
+          query = mutations.unstar_repo,
+          fields = { repo_id = buffer:repository().id },
+          jq = ".data.removeStar.starrable.id",
+          opts = { cb = gh.create_callback {} },
+        }
+      end),
+      star = context.within_repo(function(buffer)
+        gh.api.graphql {
+          query = mutations.star_repo,
+          fields = { repo_id = buffer:repository().id },
+          jq = ".data.addStar.starrable.id",
+          opts = { cb = gh.create_callback {} },
+        }
+      end),
       list = function(login)
         local opts = { login = login }
 
