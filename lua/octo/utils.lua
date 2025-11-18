@@ -1104,19 +1104,19 @@ function M.get_release(...)
 end
 
 ---@param url string
----@return string?, string?, string?
+---@return string?, string?, string?, string?
 function M.parse_url(url)
-  local repo, kind, number = string.match(url, constants.URL_ISSUE_PATTERN)
+  local hostname, repo, kind, number = string.match(url, constants.URL_ISSUE_PATTERN)
   if repo and number and kind == "issues" then
-    return repo, number, "issue"
+    return hostname, repo, number, "issue"
   elseif repo and number and kind == "pull" then
-    return repo, number, kind
+    return hostname, repo, number, kind
   elseif repo and number and kind == "discussions" then
-    return repo, number, "discussion"
+    return hostname, repo, number, "discussion"
   elseif not repo then
-    repo, kind, number = string.match(url, constants.URL_RELEASE_PATTERN)
+    hostname, repo, kind, number = string.match(url, constants.URL_RELEASE_PATTERN)
     if repo and number and kind == "releases" then
-      return repo, number, "release"
+      return hostname, repo, number, "release"
     end
   end
 end
