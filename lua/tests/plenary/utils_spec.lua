@@ -168,24 +168,27 @@ end)
 describe("parse_url", function()
   it("issues", function()
     local url = "https://github.com/pwntester/octo.nvim/issues/1"
-    local repo, number, kind = this.parse_url(url)
+    local hostname, repo, number, kind = this.parse_url(url)
 
+    eq(hostname, "github.com")
     eq(repo, "pwntester/octo.nvim")
     eq(number, "1")
     eq(kind, "issue")
   end)
   it("pull", function()
     local url = "https://github.com/pwntester/octo.nvim/pull/1"
-    local repo, number, kind = this.parse_url(url)
+    local hostname, repo, number, kind = this.parse_url(url)
 
+    eq(hostname, "github.com")
     eq(repo, "pwntester/octo.nvim")
     eq(number, "1")
     eq(kind, "pull")
   end)
   it("discussion", function()
     local url = "https://github.com/pwntester/octo.nvim/discussions/1"
-    local repo, number, kind = this.parse_url(url)
+    local hostname, repo, number, kind = this.parse_url(url)
 
+    eq(hostname, "github.com")
     eq(repo, "pwntester/octo.nvim")
     eq(number, "1")
     eq(kind, "discussion")
