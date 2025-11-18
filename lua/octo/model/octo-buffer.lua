@@ -497,7 +497,7 @@ end
 ---gets set as a buffer variable `taggable_users`. If this list of users
 ---is needed synchronously, this function will need to be refactored.
 ---The list of taggable users should contain:
---  - The Issue / PR author
+--  - The author of the issue/PR/discussion
 --  - The authors of all the existing comments
 --  - The contributors of the repo
 function OctoBuffer:async_fetch_taggable_users()
