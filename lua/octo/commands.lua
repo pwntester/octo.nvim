@@ -382,8 +382,7 @@ function M.setup()
           return
         end
 
-        local uri = string.format("octo://%s/issue/%s", buffer.repo, parent.number)
-        vim.cmd.edit(uri)
+        utils.get_issue(parent.number, buffer.repo)
       end),
       remove = context.within_issue(function(buffer)
         local parent = buffer.issue().parent

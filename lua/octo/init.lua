@@ -15,6 +15,7 @@ local window = require "octo.ui.window"
 local colors = require "octo.ui.colors"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
+local uri = require "octo.uri"
 local vim = vim
 
 ---@type table<string, { number: integer, title: string }[]>
@@ -99,44 +100,12 @@ function M.load_buffer(opts)
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
-
-  -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
-  local hostname, repo, kind, id = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/([^/]+)/([0-9a-z.]+)")
-
-  -- Fall back to without hostname: octo://owner/repo/kind/id
-  if not hostname then
-    repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
-    hostname = nil
-  end
-
-  -- Normalize plural forms to singular
-  if kind == "issues" then
-    kind = "issue"
-  elseif kind == "pulls" then
-    kind = "pull"
-  elseif kind == "discussions" then
-    kind = "discussion"
-  end
-
-  if id == "repo" or not repo then
-    -- Try with hostname: octo://hostname/owner/repo/repo
-    hostname, repo = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/repo")
-    if not hostname then
-      -- Fall back without hostname: octo://owner/repo/repo
-      repo = string.match(bufname, "octo://(.+)/repo")
-      hostname = nil
-    end
-    if repo then
-      kind = "repo"
-    end
-  end
-  if (kind == "issue" or kind == "pull") and not repo and not id then
-    utils.print_err("Incorrect buffer: " .. bufname)
-    return
-  elseif kind == "repo" and not repo then
-    utils.print_err("Incorrect buffer: " .. bufname)
+  local buffer_info = uri.parse(bufname)
+  if buffer_info == nil then
+    utils.print_err("Cannot parse buffer name: " .. bufname)
     return
   end
+  local repo, kind, id, hostname = buffer_info.repo, buffer_info.kind, buffer_info.id, buffer_info.hostname
 
   M.load(repo, kind, id, hostname, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
@@ -161,7 +130,7 @@ end
 
 ---@param repo string
 ---@param kind octo.NodeKind
----@param id integer|string pull request, issue, or discussion number or release tag
+---@param id? integer|string pull request, issue, or discussion number or release tag
 ---@param hostname string|nil optional GitHub Enterprise hostname
 ---@param cb fun(obj: octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository): nil
 function M.load(repo, kind, id, hostname, cb)
@@ -182,10 +151,18 @@ function M.load(repo, kind, id, hostname, cb)
     fields = { owner = owner, name = name }
   elseif kind == "discussion" then
     query = queries.discussion
-    fields = { owner = owner, name = name, number = id }
+    fields = {
+      owner = owner,
+      name = name,
+      number = id --[[@as integer]],
+    }
   elseif kind == "release" then
     query = queries.release
-    fields = { owner = owner, name = name, tag = id }
+    fields = {
+      owner = owner,
+      name = name,
+      tag = id --[[@as string]],
+    }
   end
 
   local function load_buffer(output)
