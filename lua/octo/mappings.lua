@@ -76,6 +76,7 @@ return {
       end),
       ["Star Repo"] = commands.repo.star,
       ["Unstar Repo"] = commands.repo.unstar,
+      ["Change Subscription"] = commands.repo.subscription,
     }
     create_options_picker(options, "Select an option:")
   end,
