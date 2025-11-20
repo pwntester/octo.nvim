@@ -27,6 +27,22 @@ OctoLastCmdOpts = nil
 
 local M = {}
 
+-- Helper function to extract hostname from octo:// buffer URL
+local function get_hostname_from_buffer()
+  local bufname = vim.fn.bufname()
+  if bufname:match "^octo://" then
+    -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
+    -- vs without hostname: octo://owner/repo/kind/id
+    local first_segment = bufname:match "^octo://([^/]+)"
+
+    -- Check if this looks like a hostname (contains a dot) vs owner name
+    if first_segment and first_segment:match "%." then
+      return first_segment
+    end
+  end
+  return nil
+end
+
 local function merge_tables(t1, t2)
   local result = vim.deepcopy(t1)
   for k, v in pairs(t2) do
@@ -37,6 +53,37 @@ local function merge_tables(t1, t2)
     end
   end
   return result
+end
+
+local function update_subscription(subscribable_id, current_subscription, display_name)
+  local subscription_options = {
+    Subscribe = "SUBSCRIBED",
+    Unsubscribe = "UNSUBSCRIBED",
+    Ignore = "IGNORED",
+  }
+  vim.ui.select(vim.fn.keys(subscription_options), {
+    prompt = "Select subscription state:",
+  }, function(choice)
+    if choice == nil then
+      utils.info(
+        "Subscription update cancelled. You are still " .. utils.title_case(current_subscription or "UNSUBSCRIBED")
+      )
+      return
+    end
+    local state = subscription_options[choice]
+    gh.api.graphql {
+      query = mutations.update_subscription,
+      fields = { subscribable_id = subscribable_id, state = state },
+      jq = ".data.updateSubscription.subscribable.viewerSubscription",
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            utils.info("Subscription updated to " .. state .. " for " .. display_name)
+          end,
+        },
+      },
+    }
+  end)
 end
 
 function M.setup()
@@ -101,6 +148,9 @@ function M.setup()
     discussion = {
       browser = function()
         navigation.open_in_browser()
+      end,
+      edit = function(...)
+        utils.get_discussion(...)
       end,
       reload = function()
         M.reload { verbose = true }
@@ -185,6 +235,10 @@ function M.setup()
             },
           }
         end)
+      end),
+      subscription = context.within_discussion(function(buffer)
+        local discussion = buffer:discussion()
+        update_subscription(discussion.id, discussion.viewerSubscription, "discussion #" .. discussion.number)
       end),
     },
     type = {
@@ -455,6 +509,10 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
+      subscription = context.within_issue(function(buffer)
+        local issue = buffer:issue()
+        update_subscription(issue.id, issue.viewerSubscription, "issue #" .. issue.number)
+      end),
     },
     pr = {
       copilot = context.within_pr(function(buffer)
@@ -557,6 +615,10 @@ function M.setup()
           opts = { cb = gh.create_callback {} },
         }
       end),
+      subscription = context.within_pr(function(buffer)
+        local pr = buffer:pullRequest()
+        update_subscription(pr.id, pr.viewerSubscription, "PR #" .. pr.number)
+      end),
     },
     release = {
       notes = function(tag_name)
@@ -602,6 +664,34 @@ function M.setup()
           prompt = prompt,
         }
       end,
+      unstar = context.within_repo(function(buffer)
+        gh.api.graphql {
+          query = mutations.unstar_repo,
+          fields = { repo_id = buffer:repository().id },
+          jq = ".data.removeStar.starrable.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Unstarred " .. buffer:repository().nameWithOwner)
+              end,
+            },
+          },
+        }
+      end),
+      star = context.within_repo(function(buffer)
+        gh.api.graphql {
+          query = mutations.star_repo,
+          fields = { repo_id = buffer:repository().id },
+          jq = ".data.addStar.starrable.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Starred " .. buffer:repository().nameWithOwner)
+              end,
+            },
+          },
+        }
+      end),
       list = function(login)
         local opts = { login = login }
 
@@ -635,6 +725,10 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
+      subscription = context.within_repo(function(buffer)
+        local repo = buffer:repository()
+        update_subscription(repo.id, repo.viewerSubscription, repo.nameWithOwner)
+      end),
     },
     review = {
       browse = function()
@@ -711,26 +805,14 @@ function M.setup()
         current_review:add_comment(true)
       end),
       reply = M.add_pr_issue_or_review_thread_comment_reply,
-      url = function()
-        local buffer = utils.get_current_buffer()
-
-        if not buffer then
-          return
-        end
-
-        local comment = buffer:get_comment_at_cursor()
-        if not comment then
-          utils.error "The cursor does not seem to be located at any comment"
-          return
-        end
-
+      url = context.on_comment(function(comment)
         gh.api.graphql {
           query = queries.comment_url,
           f = { id = comment.id },
           jq = ".data.node.url",
           opts = { cb = gh.create_callback { success = utils.copy_url } },
         }
-      end,
+      end),
       delete = function()
         M.delete_comment()
       end,
@@ -1014,13 +1096,25 @@ function M.octo(object, action, ...)
   end
   local o = M.commands[object]
   if not o then
-    local repo, number, kind = utils.parse_url(object)
+    local hostname, repo, number, kind = utils.parse_url(object)
     if repo and number and kind == "issue" then
-      utils.get_issue(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/issue/%s", hostname, repo, number))
+      else
+        utils.get_issue(number, repo)
+      end
     elseif repo and number and kind == "pull" then
-      utils.get_pull_request(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/pull/%s", hostname, repo, number))
+      else
+        utils.get_pull_request(number, repo)
+      end
     elseif repo and number and kind == "discussion" then
-      utils.get_discussion(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/discussion/%s", hostname, repo, number))
+      else
+        utils.get_discussion(number, repo)
+      end
     else
       utils.error("Incorrect argument: " .. object)
       return
@@ -1472,7 +1566,11 @@ end
 function M.create_issue(repo)
   local buffer = utils.get_current_buffer()
   if not repo then
-    repo = buffer.repo or utils.get_remote_name()
+    if buffer and buffer.repo then
+      repo = buffer.repo
+    else
+      repo = utils.get_remote_name()
+    end
   end
 
   if not repo then
@@ -1534,7 +1632,7 @@ function M.save_issue(opts)
     opts = {
       cb = gh.create_callback {
         success = function(output)
-          require("octo").create_buffer("issue", vim.json.decode(output), opts.repo, true)
+          require("octo").create_buffer("issue", vim.json.decode(output), opts.repo, true, nil)
           vim.fn.execute "normal! Gk"
           vim.fn.execute "startinsert"
         end,
@@ -1753,7 +1851,7 @@ function M.save_pr(opts)
           success = function(output)
             local pr = vim.json.decode(output)
             utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
-            require("octo").create_buffer("pull", pr, opts.repo, true)
+            require("octo").create_buffer("pull", pr, opts.repo, true, nil)
           end,
         },
       },
@@ -2180,7 +2278,8 @@ function M.set_project_v2_card()
               elseif update_output then
                 -- TODO do update here
                 -- refresh issue/pr details
-                require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+                local hostname = get_hostname_from_buffer()
+                require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
                   writers.write_details(buffer.bufnr, obj, true)
                   node.projectCards = obj.projectCards
                 end)
@@ -2211,7 +2310,8 @@ function M.remove_project_v2_card()
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+          local hostname = get_hostname_from_buffer()
+          require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
             node.projectCards = obj.projectCards
             writers.write_details(buffer.bufnr, obj, true)
           end)
@@ -2311,7 +2411,8 @@ local function label_action(opts)
     end
 
     local function refresh_details()
-      require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+      local hostname = get_hostname_from_buffer()
+      require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
         if buffer:isDiscussion() then
           writers.write_discussion_details(buffer.bufnr, obj)
         else
@@ -2398,7 +2499,8 @@ function M.add_user(subject, logins)
         cb = gh.create_callback {
           success = function()
             -- refresh issue/pr details
-            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+            local hostname = get_hostname_from_buffer()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               writers.write_details(buffer.bufnr, obj, true)
               vim.cmd [[stopinsert]]
             end)
@@ -2456,7 +2558,8 @@ function M.remove_assignee(login)
           utils.error(stderr)
         elseif output then
           -- refresh issue/pr details
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+          local hostname = get_hostname_from_buffer()
+          require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
             writers.write_details(buffer.bufnr, obj, true)
           end)
         end
@@ -2494,7 +2597,8 @@ function M.remove_reviewer(login)
       opts = {
         cb = gh.create_callback {
           success = function()
-            require("octo").load(buffer.repo, buffer.kind, buffer.number, function(obj)
+            local hostname = get_hostname_from_buffer()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               writers.write_details(buffer.bufnr, obj, true)
             end)
           end,

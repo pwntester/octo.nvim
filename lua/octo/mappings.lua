@@ -65,6 +65,18 @@ return {
       end,
       ["Create Issue"] = commands.issue.create,
       ["Create Discussion"] = commands.discussion.create,
+      ["List Issues"] = context.within_octo_buffer(function(buffer)
+        commands.issue.list(buffer.repo)
+      end),
+      ["List Discussions"] = context.within_octo_buffer(function(buffer)
+        commands.discussion.list(buffer.repo)
+      end),
+      ["List Pull Requests"] = context.within_octo_buffer(function(buffer)
+        commands.pr.list(buffer.repo)
+      end),
+      ["Star Repo"] = commands.repo.star,
+      ["Unstar Repo"] = commands.repo.unstar,
+      ["Change Subscription"] = commands.repo.subscription,
     }
     create_options_picker(options, "Select an option:")
   end,
@@ -104,6 +116,7 @@ return {
       ["Remove Assignee"] = commands.assignee.remove,
       ["Add ProjectV2 Card"] = commands.cardv2.set,
       ["Remove ProjectV2 Card"] = commands.cardv2.remove,
+      ["Change Subscription"] = commands.pr.subscription,
       ["Add Comment"] = commands.comment.add,
       ["Add Reply"] = commands.comment.reply,
       ["Delete Comment"] = commands.comment.delete,
@@ -140,9 +153,29 @@ return {
       ["Remove Assignee"] = commands.assignee.remove,
       ["Add ProjectV2 Card"] = commands.cardv2.set,
       ["Remove ProjectV2 Card"] = commands.cardv2.remove,
+      ["Change Subscription"] = commands.issue.subscription,
       ["Add Comment"] = commands.comment.add,
       ["Delete Comment"] = commands.comment.delete,
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
+        commands.repo.view(buffer.repo)
+      end),
+      ["React"] = create_reaction_picker,
+    }
+    create_options_picker(options, "Select an option:")
+  end,
+  discussion_options = function()
+    local commands = require("octo.commands").commands
+
+    local options = {
+      ["Reload Discussion"] = commands.discussion.reload,
+      ["Reopen Discussion"] = commands.discussion.reopen,
+      ["Close Discussion"] = commands.discussion.close,
+      ["Open in Browser"] = commands.discussion.browser,
+      ["Change Category"] = commands.discussion.category,
+      ["Change Subscription"] = commands.discussion.subscription,
+      ["Add Comment"] = commands.comment.add,
+      ["Delete Comment"] = commands.comment.delete,
+      ["View Repo"] = context.within_discussion(function(buffer)
         commands.repo.view(buffer.repo)
       end),
       ["React"] = create_reaction_picker,
@@ -207,7 +240,7 @@ return {
     if not current_review then
       return
     end
-    require("octo.picker").review_commits(function(right, left)
+    require("octo.picker").review_commits(current_review, function(right, left)
       current_review:focus_commit(right, left)
     end)
   end,

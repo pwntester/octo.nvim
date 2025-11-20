@@ -35,7 +35,12 @@ function M.setup()
   end
   setmetatable(M, {
     __index = function(_, key)
-      return function()
+      return function(...)
+        local default = require("octo.pickers.default.provider").picker[key]
+
+        if default then
+          return default(...)
+        end
         utils.error(
           utils.title_case(provider_name)
             .. " doesn't support the "

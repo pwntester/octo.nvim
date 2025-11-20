@@ -415,7 +415,7 @@ fragment IssueCommentFragment on IssueComment {
   ---@class octo.fragments.AssignedEvent
   ---@field __typename "AssignedEvent"
   ---@field actor { login: string }
-  ---@field assignee { name?: string, login?: string, isViewer?: boolean }
+  ---@field assignee { name?: string, login: string, isViewer?: boolean }
   ---@field createdAt string
 
   M.assigned_event = [[
@@ -711,7 +711,7 @@ fragment DeployedEventFragment on DeployedEvent {
   ---@field createdAt string
   ---@field actor { login: string }
   ---@field requestedReviewer {
-  ---  login?: string,
+  ---  login: string,
   ---  isViewer?: boolean,
   ---  name?: string,
   ---}
@@ -1113,6 +1113,26 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
+  ---State of a pull request (used for querying/filtering)
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequeststate
+  ---@alias octo.PullRequestState "OPEN"|"CLOSED"|"MERGED"
+
+  ---State enum for updating a pull request (used in mutations)
+  ---Note: MERGED is not included because PRs cannot be directly set to merged via mutation
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestupdatestate
+  ---@alias octo.PullRequestUpdateState "OPEN"|"CLOSED"
+
+  ---State of an individual pull request review comment
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewcommentstate
+  ---@alias octo.PullRequestReviewCommentState "PENDING"|"SUBMITTED"
+
+  ---State of a pull request review (the parent of review comments)
+  ---Note: Review threads can contain comments from multiple reviews with different states.
+  ---When filtering for pending comments, check pullRequestReview.state == "PENDING" to ensure
+  ---you're only getting comments from the pending review, not from previously submitted reviews.
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewstate
+  ---@alias octo.PullRequestReviewState "PENDING"|"COMMENTED"|"APPROVED"|"CHANGES_REQUESTED"|"DISMISSED"
+
   ---@class octo.ReviewThreadCommentFragment : octo.ReactionGroupsFragment
   --- @field id string
   --- @field body string
@@ -1126,10 +1146,10 @@ fragment IssueInformationFragment on Issue {
   --- @field viewerDidAuthor boolean
   --- @field viewerCanUpdate boolean
   --- @field viewerCanDelete boolean
-  --- @field state string
+  --- @field state octo.PullRequestReviewCommentState
   --- @field url string
   --- @field replyTo { id: string, url: string }
-  --- @field pullRequestReview { id: string, state: string }
+  --- @field pullRequestReview { id: string, state: octo.PullRequestReviewState }
   --- @field path string
 
   M.review_thread_comment = [[
@@ -1237,6 +1257,7 @@ fragment DiscussionInfoFragment on Discussion {
   ---@field upvoteCount integer
   ---@field viewerHasUpvoted boolean
   ---@field viewerDidAuthor boolean
+  ---@field viewerSubscription "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
 
   M.discussion_details = [[
 fragment DiscussionDetailsFragment on Discussion {
@@ -1260,6 +1281,7 @@ fragment DiscussionDetailsFragment on Discussion {
   upvoteCount
   viewerHasUpvoted
   viewerDidAuthor
+  viewerSubscription
   ...ReactionGroupsFragment
 }
 ]]

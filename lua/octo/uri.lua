@@ -9,6 +9,7 @@ local M = {}
 ---@field repo string
 ---@field kind string
 ---@field id string|nil
+---@field hostname string|nil
 
 --- Gets the repo and id from args.
 ---@type (fun(args: {n: integer}|string[], is_number: true): string?, integer?)|(fun(args: {n: integer}|string[], is_number: false): string?, string?)
@@ -19,7 +20,9 @@ local function get_repo_id_from_args(args, is_number)
     return
   elseif args.n == 1 then
     -- eg: Octo issue 1
-    repo = M.get_remote_name()
+    -- Lazy load utils to avoid circular dependency
+    local utils = require "octo.utils"
+    repo = utils.get_remote_name()
     id = tonumber(args[1])
   elseif args.n == 2 then
     -- eg: Octo issue 1 pwntester/octo.nvim
@@ -84,10 +87,12 @@ function M.get_release_uri(...)
     return string.format("octo://%s/release/%s", repo, tag_name_or_id)
   end
   if not repo then
-    M.error "Cannot find repo name"
+    notify.error "Cannot find repo name"
     return
   end
-  local owner, name = M.split_repo(repo)
+  -- Lazy load utils to avoid circular dependency
+  local utils = require "octo.utils"
+  local owner, name = utils.split_repo(repo)
   local tag_name = release.get_tag_from_release_id { owner = owner, repo = name, release_id = tostring(release_id) }
   return string.format("octo://%s/release/%s", repo, tag_name)
 end
@@ -95,13 +100,37 @@ end
 ---@param bufname string
 ---@return BufferInfo|nil
 M.parse = function(bufname)
-  local repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
+  -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
+  local hostname, repo, kind, id = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/([^/]+)/([0-9a-z.]+)")
+
+  -- Fall back to without hostname: octo://owner/repo/kind/id
+  if not hostname then
+    repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
+    hostname = nil
+  end
+
+  -- Normalize plural forms to singular
+  if kind == "issues" then
+    kind = "issue"
+  elseif kind == "pulls" then
+    kind = "pull"
+  elseif kind == "discussions" then
+    kind = "discussion"
+  end
+
   if id == "repo" or not repo then
-    repo = string.match(bufname, "octo://(.+)/repo")
+    -- Try with hostname: octo://hostname/owner/repo/repo
+    hostname, repo = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/repo")
+    if not hostname then
+      -- Fall back without hostname: octo://owner/repo/repo
+      repo = string.match(bufname, "octo://(.+)/repo")
+      hostname = nil
+    end
     if repo then
       kind = "repo"
     end
   end
+
   if (kind == "issue" or kind == "pull") and not repo and not id then
     return
   elseif kind == "repo" and not repo then
@@ -112,6 +141,7 @@ M.parse = function(bufname)
     repo = repo,
     kind = kind,
     id = id,
+    hostname = hostname,
   }
 end
 

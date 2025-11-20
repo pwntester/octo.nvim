@@ -1,6 +1,14 @@
 name: Linting and style checking
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
   pre-commit:

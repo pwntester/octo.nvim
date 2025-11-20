@@ -831,7 +831,7 @@ mutation($input: UpdatePullRequestInput!) {
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
   M.update_pull_request_state = [[
-mutation($pullRequestId: ID!, $state: PullRequestState!) {
+mutation($pullRequestId: ID!, $state: PullRequestUpdateState!) {
   updatePullRequest(input: {pullRequestId: $pullRequestId, state: $state}) {
     pullRequest {
       id
@@ -1309,6 +1309,51 @@ mutation($issue_id: ID!, $issue_type_id: ID) {
   }
 }
 ]]
+  M.star_repo = [[
+  mutation($repo_id: ID!) {
+    addStar(input: {starrableId: $repo_id}) {
+      starrable {
+        id
+        viewerHasStarred
+      }
+    }
+  }
+  ]]
+  M.unstar_repo = [[
+  mutation($repo_id: ID!) {
+    removeStar(input: {starrableId: $repo_id}) {
+      starrable {
+        id
+        viewerHasStarred
+      }
+    }
+  }
+  ]]
+  ---@class octo.mutations.UpdateSubscription
+  ---@field data {
+  ---  updateSubscription: {
+  ---    subscribable: {
+  ---      id: string,
+  ---      viewerSubscription: "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED",
+  ---    },
+  ---  },
+  ---}
+
+  ---@class octo.mutations.UpdateSubscriptionInput
+  ---@field subscribable_id string
+  ---@field state "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
+
+  -- https://docs.github.com/en/graphql/reference/mutations#updatesubscription
+  M.update_subscription = [[
+  mutation($subscribable_id: ID!, $state: SubscriptionState!) {
+    updateSubscription(input: {subscribableId: $subscribable_id, state: $state}) {
+      subscribable {
+        id
+        viewerSubscription
+      }
+    }
+  }
+  ]]
 end
 
 return M
