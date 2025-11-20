@@ -1309,6 +1309,26 @@ mutation($issue_id: ID!, $issue_type_id: ID) {
   }
 }
 ]]
+  M.star_repo = [[
+  mutation($repo_id: ID!) {
+    addStar(input: {starrableId: $repo_id}) {
+      starrable {
+        id
+        viewerHasStarred
+      }
+    }
+  }
+  ]]
+  M.unstar_repo = [[
+  mutation($repo_id: ID!) {
+    removeStar(input: {starrableId: $repo_id}) {
+      starrable {
+        id
+        viewerHasStarred
+      }
+    }
+  }
+  ]]
 end
 
 return M

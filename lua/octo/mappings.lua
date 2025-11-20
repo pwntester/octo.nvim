@@ -65,6 +65,8 @@ return {
       end,
       ["Create Issue"] = commands.issue.create,
       ["Create Discussion"] = commands.discussion.create,
+      ["Star Repo"] = commands.repo.star,
+      ["Unstar Repo"] = commands.repo.unstar,
     }
     create_options_picker(options, "Select an option:")
   end,

@@ -1170,6 +1170,7 @@ query($owner: String!, $name: String!) {
     hasDiscussionsEnabled
     projectsUrl
     homepageUrl
+    viewerHasStarred
     primaryLanguage {
       name
       color
