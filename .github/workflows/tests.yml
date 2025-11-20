@@ -1,6 +1,14 @@
 name: Tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
   x64-ubuntu:
@@ -22,7 +30,7 @@ jobs:
           path: _neovim
           key: ${{ runner.os }}-latest-${{ hashFiles('todays-date') }}
       - name: Prepare
-        env: 
+        env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ${{ matrix.manager }} update

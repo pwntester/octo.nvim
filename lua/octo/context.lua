@@ -19,6 +19,9 @@ local function create_buffer_wrapper(check_fn, error_message)
 end
 
 M.within_octo_buffer = create_buffer_wrapper(nil, "Not an Octo buffer")
+M.within_repo = create_buffer_wrapper(function(b)
+  return b:isRepo()
+end, "Not a Repository buffer")
 M.within_issue = create_buffer_wrapper(function(b)
   return b:isIssue()
 end, "Not an Issue buffer")

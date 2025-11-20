@@ -499,7 +499,7 @@ query(
   $head_ref_name: String,
   $labels: [String!],
   $states: [PullRequestState!],
-  $order_by: IssueOrder!,
+  $order_by: IssueOrder,
   $endCursor: String,
 ) {
   repository(owner: $owner, name: $name) {
@@ -1170,6 +1170,7 @@ query($owner: String!, $name: String!) {
     hasDiscussionsEnabled
     projectsUrl
     homepageUrl
+    viewerHasStarred
     primaryLanguage {
       name
       color

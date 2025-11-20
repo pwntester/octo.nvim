@@ -706,8 +706,22 @@ function M.gen_from_notification(opts)
       return nil
     end
     local ref = notification.subject.url:match "/(%d+)$"
+    local filename
+
+    if notification.kind == "issue" then
+      filename = utils.get_issue_uri(ref, notification.repository.full_name)
+    elseif notification.kind == "pull_request" then
+      filename = utils.get_pull_request_uri(ref, notification.repository.full_name)
+    elseif notification.kind == "discussion" then
+      filename = utils.get_discussion_uri(ref, notification.repository.full_name)
+    elseif notification.kind == "release" then
+      filename = utils.get_release_uri(ref, notification.repository.full_name)
+    else
+      filename = ""
+    end
 
     return {
+      filename = filename,
       value = ref,
       ordinal = notification.subject.title .. " " .. notification.repository.full_name .. " " .. ref,
       display = make_display,

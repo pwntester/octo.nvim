@@ -74,6 +74,8 @@ return {
       ["List Pull Requests"] = context.within_octo_buffer(function(buffer)
         commands.pr.list(buffer.repo)
       end),
+      ["Star Repo"] = commands.repo.star,
+      ["Unstar Repo"] = commands.repo.unstar,
     }
     create_options_picker(options, "Select an option:")
   end,
@@ -216,7 +218,7 @@ return {
     if not current_review then
       return
     end
-    require("octo.picker").review_commits(function(right, left)
+    require("octo.picker").review_commits(current_review, function(right, left)
       current_review:focus_commit(right, left)
     end)
   end,
