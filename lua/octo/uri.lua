@@ -137,6 +137,11 @@ M.parse = function(bufname)
     return
   end
 
+  -- Return nil if we couldn't parse anything meaningful
+  if not repo or not kind then
+    return
+  end
+
   return {
     repo = repo,
     kind = kind,
