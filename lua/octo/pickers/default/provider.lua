@@ -1,3 +1,4 @@
+---@diagnostic disable
 ---Picker that uses vim.ui.select
 local notify = require "octo.notify"
 local utils = require "octo.utils"
@@ -21,6 +22,57 @@ function M.actions(flattened_actions)
 
     choice.fun()
   end)
+end
+
+---@param opts? { repo: string, cb: function }
+function M.discussions(opts)
+  opts = opts or {}
+  if utils.is_blank(opts.repo) then
+    opts.repo = utils.get_remote_name()
+  end
+
+  local cfg = octo_config.values
+  local callback = opts.cb
+    or function(selection)
+      utils.get("discussion", selection.number, selection.repository.nameWithOwner)
+    end
+
+  local owner, name = utils.split_repo(opts.repo)
+
+  local order_by = cfg.discussions.order_by
+
+  gh.api.graphql {
+    query = queries.discussions,
+    F = {
+      owner = owner,
+      name = name,
+      states = { "OPEN" },
+      orderBy = order_by.field,
+      direction = order_by.direction,
+    },
+    paginate = true,
+    jq = ".data.repository.discussions.nodes",
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local discussions = utils.get_flatten_pages(output)
+
+          vim.ui.select(discussions, {
+            prompt = "Select Discussion:",
+            format_item = function(item)
+              return item.title
+            end,
+          }, function(choice)
+            if not choice then
+              notify.error "No discussion selected"
+              return
+            end
+            callback(choice)
+          end)
+        end,
+      },
+    },
+  }
 end
 
 local function open_buffer(selection)
@@ -84,9 +136,19 @@ function M.issues(opts)
   }
 end
 
----@param opts? { repo: string, states: string[], cb: function }
+---@param opts? {
+---   repo: string,
+---   states: string[],
+---   baseRefName?: string,
+---   headRefName?: string,
+---   labels?: string[],
+---   states?: string[],
+---   cb: function,
+--- }
 function M.pull_requests(opts)
-  local owner, name = utils.split_repo(utils.pop_key(opts, "repo") or utils.get_remote_name())
+  opts = opts or {}
+
+  local owner, name = utils.split_repo(opts.repo or utils.get_remote_name())
   utils.info "Fetching pull requests (this may take a while) ..."
   gh.api.graphql {
     query = queries.pull_requests,
@@ -128,6 +190,7 @@ end
 ---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
+  discussions = M.discussions,
   issues = M.issues,
   prs = M.pull_requests,
 }
