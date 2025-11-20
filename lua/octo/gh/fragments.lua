@@ -1237,6 +1237,7 @@ fragment DiscussionInfoFragment on Discussion {
   ---@field upvoteCount integer
   ---@field viewerHasUpvoted boolean
   ---@field viewerDidAuthor boolean
+  ---@field viewerSubscription "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
 
   M.discussion_details = [[
 fragment DiscussionDetailsFragment on Discussion {
@@ -1260,6 +1261,7 @@ fragment DiscussionDetailsFragment on Discussion {
   upvoteCount
   viewerHasUpvoted
   viewerDidAuthor
+  viewerSubscription
   ...ReactionGroupsFragment
 }
 ]]
