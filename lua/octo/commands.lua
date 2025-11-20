@@ -1614,7 +1614,7 @@ function M.save_issue(opts)
     local has_number = buffer and buffer.number
     local is_referenceable = has_number and (buffer:isIssue() or buffer:isPullRequest() or buffer:isDiscussion())
 
-    local prompt, default_choice, reference_format
+    local msg, choices, default_choice, reference_format
     if is_referenceable then
       local type_name = buffer:isIssue() and "issue" or buffer:isPullRequest() and "pull request" or "discussion"
 
@@ -1627,18 +1627,16 @@ function M.save_issue(opts)
         reference_format = string.format("#%d", buffer.number)
       end
 
-      prompt = string.format(
-        "Creating related issue from %s. How do you want to set the body?\n&Reference (Related to %s)\n&Copy content\n&Empty\n&Cancel",
-        type_name,
-        reference_format
-      )
+      msg = string.format("Creating related issue from %s. How do you want to set the body?", type_name)
+      choices = string.format("&Reference (Related to %s)\n&Copy content\n&Empty\n&Cancel", reference_format)
       default_choice = 1
     else
-      prompt = "Do you want to use the content of the current buffer as the body for the new issue?\n&Yes\n&No\n&Cancel"
+      msg = "Do you want to use the content of the current buffer as the body for the new issue?"
+      choices = "&Yes\n&No\n&Cancel"
       default_choice = 2
     end
 
-    local choice = vim.fn.confirm(prompt, default_choice)
+    local choice = vim.fn.confirm(msg, choices, default_choice)
 
     if is_referenceable then
       if choice == 1 then
