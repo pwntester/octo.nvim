@@ -231,6 +231,23 @@ function Review:initiate(opts)
   end)
 end
 
+---Counts pending comments with non-empty bodies in review threads
+---Filters for comments with state "PENDING" (not yet submitted as part of a review)
+---@see octo.PullRequestReviewCommentState
+---@param threads octo.ReviewThread[]
+---@return integer count The number of pending comments with content
+local function count_pending_comments(threads)
+  local count = 0
+  for _, thread in ipairs(threads) do
+    for _, comment in ipairs(thread.comments.nodes) do
+      if comment.pullRequestReview.state == "PENDING" and not utils.is_blank(utils.trim(comment.body)) then
+        count = count + 1
+      end
+    end
+  end
+  return count
+end
+
 function Review:discard()
   gh.api.graphql {
     query = queries.pending_review_threads,
@@ -248,7 +265,17 @@ function Review:discard()
           end
           self.id = resp.data.repository.pullRequest.reviews.nodes[1].id
 
-          local choice = vim.fn.confirm("All pending comments will get deleted, are you sure?", "&Yes\n&No\n&Cancel", 2)
+          local pending_count = count_pending_comments(resp.data.repository.pullRequest.reviewThreads.nodes)
+          local choice = 1
+          if pending_count > 0 then
+            local message = string.format(
+              "%d pending comment%s will be deleted, are you sure?",
+              pending_count,
+              pending_count == 1 and "" or "s"
+            )
+            choice = vim.fn.confirm(message, "&Yes\n&No\n&Cancel", 2)
+          end
+
           if choice == 1 then
             local delete_query = graphql("delete_pull_request_review_mutation", self.id --[[@as string]])
             gh.run {
