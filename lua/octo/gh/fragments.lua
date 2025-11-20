@@ -1113,6 +1113,9 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewcommentstate
+  ---@alias octo.PullRequestReviewCommentState "PENDING"|"SUBMITTED"
+
   ---@class octo.ReviewThreadCommentFragment : octo.ReactionGroupsFragment
   --- @field id string
   --- @field body string
@@ -1129,7 +1132,7 @@ fragment IssueInformationFragment on Issue {
   --- @field state string
   --- @field url string
   --- @field replyTo { id: string, url: string }
-  --- @field pullRequestReview { id: string, state: string }
+  --- @field pullRequestReview { id: string, state: octo.PullRequestReviewCommentState }
   --- @field path string
 
   M.review_thread_comment = [[
