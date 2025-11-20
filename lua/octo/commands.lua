@@ -1611,12 +1611,15 @@ function M.save_issue(opts)
   local body
   if utils.is_blank(opts.base_body) then
     local buffer = utils.get_current_buffer()
-    local is_issue_buffer = buffer and buffer:isIssue()
+    local has_number = buffer and buffer.number
+    local is_referenceable = has_number and (buffer:isIssue() or buffer:isPullRequest() or buffer:isDiscussion())
 
     local prompt, default_choice
-    if is_issue_buffer then
+    if is_referenceable then
+      local type_name = buffer:isIssue() and "issue" or buffer:isPullRequest() and "pull request" or "discussion"
       prompt = string.format(
-        "Creating related issue. How do you want to set the body?\n&Reference (Related to #%d)\n&Copy content\n&Empty\n&Cancel",
+        "Creating related issue from %s. How do you want to set the body?\n&Reference (Related to #%d)\n&Copy content\n&Empty\n&Cancel",
+        type_name,
         buffer.number
       )
       default_choice = 1
@@ -1627,7 +1630,7 @@ function M.save_issue(opts)
 
     local choice = vim.fn.confirm(prompt, default_choice)
 
-    if is_issue_buffer then
+    if is_referenceable then
       if choice == 1 then
         body = utils.escape_char(string.format("Related to #%d", buffer.number))
       elseif choice == 2 then
