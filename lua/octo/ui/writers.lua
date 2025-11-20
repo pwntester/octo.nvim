@@ -118,7 +118,7 @@ local function write_release_details(bufnr, release)
 
   table.insert(details, {
     { "Repo: ", "OctoDetailsLabel" },
-    { " " .. utils.parse_url(release.url), "OctoDetailsValue" },
+    { " " .. (select(2, utils.parse_url(release.url)) or ""), "OctoDetailsValue" },
   })
   local author_vt = { { "Publisher", "OctoDetailsLabel" } }
   local author_bubble = bubbles.make_user_bubble(release.author.login)
@@ -181,7 +181,7 @@ function M.write_discussion_details(bufnr, discussion)
 
   table.insert(details, {
     { "Repo: ", "OctoDetailsLabel" },
-    { " " .. utils.parse_url(discussion.url), "OctoDetailsValue" },
+    { " " .. (select(2, utils.parse_url(discussion.url)) or ""), "OctoDetailsValue" },
   })
 
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
@@ -530,7 +530,7 @@ function M.write_details(bufnr, issue, update)
   -- repo
   local repo_vt = {
     { "Repo: ", "OctoDetailsLabel" },
-    { " " .. utils.parse_url(issue.url), "OctoDetailsValue" },
+    { " " .. (select(2, utils.parse_url(issue.url)) or ""), "OctoDetailsValue" },
   }
   table.insert(details, repo_vt)
 

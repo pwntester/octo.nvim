@@ -3,7 +3,7 @@ local M = {}
 
 ---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "notification" | "runs"
 ---@alias OctoMappingsList { [string]: table}
----@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
+---@alias OctoPickers "telescope" | "fzf-lua" | "snacks" | "default"
 ---@alias OctoSplit "right" | "left"
 ---@alias OctoMergeMethod "squash" | "rebase" | "merge"
 
@@ -570,7 +570,7 @@ function M.validate_config()
   end
 
   local function validate_pickers()
-    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks" })
+    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks", "default" })
 
     if not validate_type(config.picker_config, "picker_config", "table") then
       return

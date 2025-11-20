@@ -74,6 +74,18 @@ Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
+You can pass GitHub URLs directly to the `Octo` command, including GitHub Enterprise URLs:
+
+```vim
+" GitHub.com URLs
+Octo https://github.com/pwntester/octo.nvim/issues/12
+Octo https://github.com/pwntester/octo.nvim/pull/123
+
+" GitHub Enterprise URLs (hostname is automatically detected)
+Octo https://ghe.example.com/owner/repo/issues/456
+Octo https://ghe.example.com/owner/repo/pull/789
+```
+
 You can also use `octo://` URLs to open issues and PRs directly:
 
 ```vim
@@ -84,6 +96,10 @@ You can also use `octo://` URLs to open issues and PRs directly:
 " Open from a specific GitHub Enterprise instance
 :e octo://ghe.example.com/owner/repo/issue/123
 :e octo://ghe.example.com/owner/repo/pull/456
+
+" Both singular and plural forms are supported
+:e octo://owner/repo/issues/123
+:e octo://owner/repo/pulls/456
 ```
 
 The `octo://` URL format is especially useful for:
@@ -103,10 +119,11 @@ From any octo buffer, press `<CR>` in normal mode to see common actions.
   - If you'd like to actually modify projects you can instead add the `project`
     scope to your token instead.
 - Install [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
-- Install one of:
+- Install one or none of:
   - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
   - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
   - [snacks.nvim](https://github.com/folke/snacks.nvim)
+  - default picker uses `vim.ui.select`
 - Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 
 ## 📦 Installation
@@ -118,7 +135,7 @@ For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
   "pwntester/octo.nvim",
   cmd = "Octo",
   opts = {
-    -- or "fzf-lua" or "snacks"
+    -- or "fzf-lua" or "snacks" or "default"
     picker = "telescope",
     -- bare Octo command opens picker of commands
     enable_builtin = true,
@@ -175,7 +192,7 @@ require"octo".setup {
   default_merge_method = "merge",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `merge`, `rebase` or `squash`
   default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
-  picker = "telescope",                    -- or "fzf-lua" or "snacks"
+  picker = "telescope",                    -- or "fzf-lua" or "snacks" or "default"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
     mappings = {                           -- mappings for the pickers

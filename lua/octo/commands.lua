@@ -1050,13 +1050,25 @@ function M.octo(object, action, ...)
   end
   local o = M.commands[object]
   if not o then
-    local repo, number, kind = utils.parse_url(object)
+    local hostname, repo, number, kind = utils.parse_url(object)
     if repo and number and kind == "issue" then
-      utils.get_issue(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/issue/%s", hostname, repo, number))
+      else
+        utils.get_issue(number, repo)
+      end
     elseif repo and number and kind == "pull" then
-      utils.get_pull_request(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/pull/%s", hostname, repo, number))
+      else
+        utils.get_pull_request(number, repo)
+      end
     elseif repo and number and kind == "discussion" then
-      utils.get_discussion(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/discussion/%s", hostname, repo, number))
+      else
+        utils.get_discussion(number, repo)
+      end
     else
       utils.error("Incorrect argument: " .. object)
       return
