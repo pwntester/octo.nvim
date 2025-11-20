@@ -1113,8 +1113,16 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
+  ---State of an individual pull request review comment
   ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewcommentstate
   ---@alias octo.PullRequestReviewCommentState "PENDING"|"SUBMITTED"
+
+  ---State of a pull request review (the parent of review comments)
+  ---Note: Review threads can contain comments from multiple reviews with different states.
+  ---When filtering for pending comments, check pullRequestReview.state == "PENDING" to ensure
+  ---you're only getting comments from the pending review, not from previously submitted reviews.
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewstate
+  ---@alias octo.PullRequestReviewState "PENDING"|"COMMENTED"|"APPROVED"|"CHANGES_REQUESTED"|"DISMISSED"
 
   ---@class octo.ReviewThreadCommentFragment : octo.ReactionGroupsFragment
   --- @field id string
@@ -1129,10 +1137,10 @@ fragment IssueInformationFragment on Issue {
   --- @field viewerDidAuthor boolean
   --- @field viewerCanUpdate boolean
   --- @field viewerCanDelete boolean
-  --- @field state string
+  --- @field state octo.PullRequestReviewCommentState
   --- @field url string
   --- @field replyTo { id: string, url: string }
-  --- @field pullRequestReview { id: string, state: octo.PullRequestReviewCommentState }
+  --- @field pullRequestReview { id: string, state: octo.PullRequestReviewState }
   --- @field path string
 
   M.review_thread_comment = [[

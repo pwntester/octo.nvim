@@ -232,8 +232,7 @@ function Review:initiate(opts)
 end
 
 ---Counts pending comments with non-empty bodies in review threads
----Filters for comments with state "PENDING" (not yet submitted as part of a review)
----@see octo.PullRequestReviewCommentState
+---@see octo.PullRequestReviewState for explanation of why we check pullRequestReview.state
 ---@param threads octo.ReviewThread[]
 ---@return integer count The number of pending comments with content
 local function count_pending_comments(threads)
