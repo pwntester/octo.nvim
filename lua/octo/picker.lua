@@ -31,7 +31,7 @@ local utils = require "octo.utils"
 ---@field search function Get search results
 ---@field users function Get users
 ---@field workflow_runs function Get workflow runs
----@field branches fun(opts: octo.PickerRefsOptions, cb: fun(branch: string)) Get repository branches
+---@field branches octo.picker.branches Get repository branches
 
 ---@type octo.PickerModule
 local M = {}

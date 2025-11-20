@@ -1727,11 +1727,19 @@ function M.save_pr(opts)
   picker.branches(
     { repo = opts.info, default_branch_name = default_branch, title = "Select BASE branch" },
     function(base_ref_name)
+      if not base_ref_name then
+        return
+      end
+
       -- The name of the branch where your changes are implemented. For cross-repository pull requests in the same network,
       -- namespace head_ref_name with a user like this: username:branch.
       picker.branches(
         { repo = opts.info, default_branch_name = opts.remote_branch, title = "Select HEAD branch" },
         function(head_ref_name)
+          if not head_ref_name then
+            return
+          end
+
           if opts.info.isFork and opts.candidates[repo_idx] == opts.info.parent.nameWithOwner then
             head_ref_name = vim.g.octo_viewer .. ":" .. head_ref_name
           end
