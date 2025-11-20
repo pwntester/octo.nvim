@@ -1610,16 +1610,43 @@ function M.save_issue(opts)
 
   local body
   if utils.is_blank(opts.base_body) then
-    local choice = vim.fn.confirm(
-      "Do you want to use the content of the current buffer as the body for the new issue?",
-      "&Yes\n&No\n&Cancel",
-      2
-    )
-    if choice == 1 then
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-      body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
+    local buffer = utils.get_current_buffer()
+    local is_issue_buffer = buffer and buffer:isIssue()
+
+    local prompt, default_choice
+    if is_issue_buffer then
+      prompt = string.format(
+        "Creating related issue. How do you want to set the body?\n&Reference (Related to #%d)\n&Copy content\n&Empty\n&Cancel",
+        buffer.number
+      )
+      default_choice = 1
     else
-      body = constants.NO_BODY_MSG
+      prompt = "Do you want to use the content of the current buffer as the body for the new issue?\n&Yes\n&No\n&Cancel"
+      default_choice = 2
+    end
+
+    local choice = vim.fn.confirm(prompt, default_choice)
+
+    if is_issue_buffer then
+      if choice == 1 then
+        body = utils.escape_char(string.format("Related to #%d", buffer.number))
+      elseif choice == 2 then
+        local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+        body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
+      elseif choice == 3 then
+        body = constants.NO_BODY_MSG
+      else
+        return
+      end
+    else
+      if choice == 1 then
+        local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+        body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
+      elseif choice == 2 then
+        body = constants.NO_BODY_MSG
+      else
+        return
+      end
     end
   else
     body = utils.escape_char(opts.base_body)
