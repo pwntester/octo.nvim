@@ -55,6 +55,37 @@ local function merge_tables(t1, t2)
   return result
 end
 
+local function update_subscription(subscribable_id, current_subscription, display_name)
+  local subscription_options = {
+    Subscribe = "SUBSCRIBED",
+    Unsubscribe = "UNSUBSCRIBED",
+    Ignore = "IGNORED",
+  }
+  vim.ui.select(vim.fn.keys(subscription_options), {
+    prompt = "Select subscription state:",
+  }, function(choice)
+    if choice == nil then
+      utils.info(
+        "Subscription update cancelled. You are still " .. utils.title_case(current_subscription or "UNSUBSCRIBED")
+      )
+      return
+    end
+    local state = subscription_options[choice]
+    gh.api.graphql {
+      query = mutations.update_subscription,
+      fields = { subscribable_id = subscribable_id, state = state },
+      jq = ".data.updateSubscription.subscribable.viewerSubscription",
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            utils.info("Subscription updated to " .. state .. " for " .. display_name)
+          end,
+        },
+      },
+    }
+  end)
+end
+
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     OctoLastCmdOpts = opts
@@ -204,6 +235,10 @@ function M.setup()
             },
           }
         end)
+      end),
+      subscription = context.within_discussion(function(buffer)
+        local discussion = buffer:discussion()
+        update_subscription(discussion.id, discussion.viewerSubscription, "discussion #" .. discussion.number)
       end),
     },
     type = {
@@ -475,6 +510,10 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
+      subscription = context.within_issue(function(buffer)
+        local issue = buffer:issue()
+        update_subscription(issue.id, issue.viewerSubscription, "issue #" .. issue.number)
+      end),
     },
     pr = {
       copilot = context.within_pr(function(buffer)
@@ -576,6 +615,10 @@ function M.setup()
           repo = buffer:pullRequest().baseRepository.nameWithOwner,
           opts = { cb = gh.create_callback {} },
         }
+      end),
+      subscription = context.within_pr(function(buffer)
+        local pr = buffer:pullRequest()
+        update_subscription(pr.id, pr.viewerSubscription, "PR #" .. pr.number)
       end),
     },
     release = {
@@ -684,35 +727,8 @@ function M.setup()
         M.copy_url()
       end,
       subscription = context.within_repo(function(buffer)
-        local subscription_options = {
-          Subscribe = "SUBSCRIBED",
-          Unsubscribe = "UNSUBSCRIBED",
-          Ignore = "IGNORED",
-        }
-        vim.ui.select(vim.fn.keys(subscription_options), {
-          prompt = "Select subscription state:",
-        }, function(choice)
-          if choice == nil then
-            utils.info(
-              "Subscription update cancelled. You are still "
-                .. utils.title_case(buffer:repository().viewerSubscription)
-            )
-            return
-          end
-          local state = subscription_options[choice]
-          gh.api.graphql {
-            query = mutations.update_subscription,
-            fields = { subscribable_id = buffer:repository().id, state = state },
-            jq = ".data.updateSubscription.subscribable.viewerSubscription",
-            opts = {
-              cb = gh.create_callback {
-                success = function()
-                  utils.info("Subscription updated to " .. state .. " for " .. buffer:repository().nameWithOwner)
-                end,
-              },
-            },
-          }
-        end)
+        local repo = buffer:repository()
+        update_subscription(repo.id, repo.viewerSubscription, repo.nameWithOwner)
       end),
     },
     review = {

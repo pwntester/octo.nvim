@@ -203,6 +203,7 @@ See |octo-command-examples| for examples.
   browser               Open current issue in the browser.
   url                   Copies the URL of the currently opened issue to the
                         system clipboard.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   pin                   Pin the current issue to the top of the list.
   unpin                 Unpin the current issue from the top of the list.
 
@@ -238,6 +239,7 @@ See |octo-command-examples| for examples.
   browser               Open current PR in the browser.
   url                   Copies the URL of the currently opened PR to the
                         system clipboard.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   sha                   Copies the head commit SHA of the currently opened PR
                         to the system clipboard.
   runs                  Show all workflow runs for the PR.
@@ -258,6 +260,7 @@ See |octo-command-examples| for examples.
   unmark                Mark the discussion comment as unanswered
   reopen                Reopen the discussion
   search                Live discussion search.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   category              Change the category of the current discussion.
 
 
@@ -275,6 +278,7 @@ See |octo-command-examples| for examples.
   browser               Open current repo in the browser.
   url                   Copies the URL of the current repo to the system
                         clipboard.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   view                  Open a repo by path ({organization}/{name}).
 
 

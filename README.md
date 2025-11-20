@@ -316,6 +316,7 @@ require"octo".setup {
   mappings_disable_default = false,        -- disable default mappings if true, but will still adapt user mappings
   mappings = {
     discussion = {
+      discussion_options = { lhs = "<CR>", desc = "show discussion options" },
       open_in_browser = { lhs = "<C-b>", desc = "open discussion in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
@@ -521,6 +522,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reload                                            | Reload issue. Same as doing `e!`                                                                                                                       |
 |          | browser                                           | Open current issue in the browser                                                                                                                      |
 |          | url                                               | Copies the URL of the current issue to the system clipboard                                                                                            |
+|          | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore)                                                                                          |
 |          | pin                                               | Pin the current issue                                                                                                                                  |
 |          | unpin                                             | Unpin the current issue                                                                                                                                |
 | pr       | list [repo] [key=value] (2)                       | List all PRs satisfying given filter                                                                                                                   |
@@ -540,12 +542,14 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reload                                            | Reload PR. Same as doing `e!`                                                                                                                          |
 |          | browser                                           | Open current PR in the browser                                                                                                                         |
 |          | url                                               | Copies the URL of the current PR to the system clipboard                                                                                               |
+|          | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore)                                                                                          |
 |          | sha                                               | Copies the head commit SHA of the current PR to the system clipboard                                                                                   |
 |          | runs                                              | List all workflow runs for the PR                                                                                                                      |
 | repo     | list (3)                                          | List repos user owns, contributes or belong to                                                                                                         |
 |          | fork                                              | Fork repo                                                                                                                                              |
 |          | browser                                           | Open current repo in the browser                                                                                                                       |
 |          | url                                               | Copies the URL of the current repo to the system clipboard                                                                                             |
+|          | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore)                                                                                          |
 |          | view                                              | Open a repo by path ({organization}/{name})                                                                                                            |
 | gist     | list [repo] [key=value] (4)                       | List user gists                                                                                                                                        |
 | comment  | add                                               | Add a new comment                                                                                                                                      |
@@ -601,6 +605,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |    | unmark                                                 | Unmark the discussion comment as answer |
 |    | reopen                                                 | Reopen the current discussion |
 |    | search                                                 | Search discussions |
+|    | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore) |
 |    | category                                                 | Change category of discussion |
 | parent   | add                                           | Add a parent issue to current issue |
 |          | remove                                           | Remove the parent issue to current issue |
