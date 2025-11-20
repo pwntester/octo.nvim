@@ -1113,6 +1113,15 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
+  ---State of a pull request (used for querying/filtering)
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequeststate
+  ---@alias octo.PullRequestState "OPEN"|"CLOSED"|"MERGED"
+
+  ---State enum for updating a pull request (used in mutations)
+  ---Note: MERGED is not included because PRs cannot be directly set to merged via mutation
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestupdatestate
+  ---@alias octo.PullRequestUpdateState "OPEN"|"CLOSED"
+
   ---State of an individual pull request review comment
   ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewcommentstate
   ---@alias octo.PullRequestReviewCommentState "PENDING"|"SUBMITTED"

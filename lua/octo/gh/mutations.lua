@@ -831,7 +831,7 @@ mutation($input: UpdatePullRequestInput!) {
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
   M.update_pull_request_state = [[
-mutation($pullRequestId: ID!, $state: PullRequestState!) {
+mutation($pullRequestId: ID!, $state: PullRequestUpdateState!) {
   updatePullRequest(input: {pullRequestId: $pullRequestId, state: $state}) {
     pullRequest {
       id
