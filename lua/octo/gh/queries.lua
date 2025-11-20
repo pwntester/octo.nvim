@@ -1152,6 +1152,8 @@ query($login: String!, $endCursor: String) {
   ---@field primaryLanguage { name: string, color: string }
   ---@field refs { nodes: { name: string }[] }
   ---@field languages { nodes: { name: string, color: string }[] }
+  ---@field viewerHasStarred boolean
+  ---@field viewerSubscription "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
 
   M.repository = [[
 query($owner: String!, $name: String!) {
@@ -1171,6 +1173,7 @@ query($owner: String!, $name: String!) {
     projectsUrl
     homepageUrl
     viewerHasStarred
+    viewerSubscription
     primaryLanguage {
       name
       color

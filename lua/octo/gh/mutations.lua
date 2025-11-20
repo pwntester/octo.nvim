@@ -1329,6 +1329,31 @@ mutation($issue_id: ID!, $issue_type_id: ID) {
     }
   }
   ]]
+  ---@class octo.mutations.UpdateSubscription
+  ---@field data {
+  ---  updateSubscription: {
+  ---    subscribable: {
+  ---      id: string,
+  ---      viewerSubscription: "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED",
+  ---    },
+  ---  },
+  ---}
+
+  ---@class octo.mutations.UpdateSubscriptionInput
+  ---@field subscribable_id string
+  ---@field state "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
+
+  -- https://docs.github.com/en/graphql/reference/mutations#updatesubscription
+  M.update_subscription = [[
+  mutation($subscribable_id: ID!, $state: SubscriptionState!) {
+    updateSubscription(input: {subscribableId: $subscribable_id, state: $state}) {
+      subscribable {
+        id
+        viewerSubscription
+      }
+    }
+  }
+  ]]
 end
 
 return M
