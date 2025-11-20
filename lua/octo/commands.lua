@@ -627,7 +627,13 @@ function M.setup()
           query = mutations.unstar_repo,
           fields = { repo_id = buffer:repository().id },
           jq = ".data.removeStar.starrable.id",
-          opts = { cb = gh.create_callback {} },
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Unstarred " .. buffer:repository().nameWithOwner)
+              end,
+            },
+          },
         }
       end),
       star = context.within_repo(function(buffer)
@@ -635,7 +641,13 @@ function M.setup()
           query = mutations.star_repo,
           fields = { repo_id = buffer:repository().id },
           jq = ".data.addStar.starrable.id",
-          opts = { cb = gh.create_callback {} },
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Starred " .. buffer:repository().nameWithOwner)
+              end,
+            },
+          },
         }
       end),
       list = function(login)
