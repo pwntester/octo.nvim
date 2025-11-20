@@ -101,11 +101,11 @@ end
 ---@return BufferInfo|nil
 M.parse = function(bufname)
   -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
-  local hostname, repo, kind, id = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/([^/]+)/([0-9a-z.]+)")
+  local hostname, repo, kind, id = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/([^/]+)/([0-9a-zA-Z.%-_]+)")
 
   -- Fall back to without hostname: octo://owner/repo/kind/id
   if not hostname then
-    repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
+    repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-zA-Z.%-_]+)")
     hostname = nil
   end
 
