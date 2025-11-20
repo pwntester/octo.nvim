@@ -1614,13 +1614,23 @@ function M.save_issue(opts)
     local has_number = buffer and buffer.number
     local is_referenceable = has_number and (buffer:isIssue() or buffer:isPullRequest() or buffer:isDiscussion())
 
-    local prompt, default_choice
+    local prompt, default_choice, reference_format
     if is_referenceable then
       local type_name = buffer:isIssue() and "issue" or buffer:isPullRequest() and "pull request" or "discussion"
+
+      -- Determine reference format based on whether repos match
+      if buffer.repo and buffer.repo ~= opts.repo then
+        -- Cross-repo reference: owner/repo#number
+        reference_format = string.format("%s#%d", buffer.repo, buffer.number)
+      else
+        -- Same repo reference: #number
+        reference_format = string.format("#%d", buffer.number)
+      end
+
       prompt = string.format(
-        "Creating related issue from %s. How do you want to set the body?\n&Reference (Related to #%d)\n&Copy content\n&Empty\n&Cancel",
+        "Creating related issue from %s. How do you want to set the body?\n&Reference (Related to %s)\n&Copy content\n&Empty\n&Cancel",
         type_name,
-        buffer.number
+        reference_format
       )
       default_choice = 1
     else
@@ -1632,7 +1642,7 @@ function M.save_issue(opts)
 
     if is_referenceable then
       if choice == 1 then
-        body = utils.escape_char(string.format("Related to #%d", buffer.number))
+        body = utils.escape_char(string.format("Related to %s", reference_format))
       elseif choice == 2 then
         local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
         body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
