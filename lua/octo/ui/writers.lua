@@ -2487,6 +2487,27 @@ function M.write_automatic_base_change_succeeded_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.BaseRefChangedEvent
+function M.write_base_ref_changed_event(bufnr, item)
+  local vt = {} ---@type [string, string][]
+  local conf = config.values
+  if conf.use_timeline_icons then
+    vt[#vt + 1] = { conf.timeline_icons.base_ref_changed, "OctoTimelineMarker" }
+  else
+    vt[#vt + 1] = { conf.timeline_marker .. " ", "OctoTimelineMarker" }
+    vt[#vt + 1] = { "EVENT: ", "OctoTimelineItemHeading" }
+  end
+  vt[#vt + 1] = { item.actor.login, item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" }
+  vt[#vt + 1] = { " changed the base branch from ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { item.previousRefName, "OctoDetailsLabel" }
+  vt[#vt + 1] = { " to ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { item.currentRefName, "OctoDetailsLabel" }
+  vt[#vt + 1] = { " ", "OctoTimelineItemHeading" }
+  vt[#vt + 1] = { utils.format_date(item.createdAt), "OctoDate" }
+  write_event(bufnr, vt)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.ReadyForReviewEvent
 function M.write_ready_for_review_event(bufnr, item)
   local vt = {} ---@type [string, string][]
