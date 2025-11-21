@@ -1353,6 +1353,18 @@ query($owner: String!, $name: String!) {
       name
       kind
       description
+      inputFields {
+        name
+        description
+        type {
+          kind
+          name
+          ofType {
+            name
+            kind
+          }
+        }
+      }
       fields {
         name
         description
