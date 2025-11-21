@@ -216,6 +216,7 @@ function M.get_default_values()
       milestone = "  ",
       renamed = "  ",
       automatic_base_change_succeeded = "  ",
+      base_ref_changed = "  ",
       merged = { "  ", "OctoPurple" },
       closed = {
         closed = { "  ", "OctoRed" },
