@@ -1,6 +1,8 @@
 ---Helper functions for debugging Octo internals
 local utils = require "octo.utils"
 local context = require "octo.context"
+local gh = require "octo.gh"
+local queries = require "octo.gh.queries"
 
 local M = {}
 
@@ -19,6 +21,62 @@ function M.globals()
     octo_pv2_fragment = _G.octo_pv2_fragment,
     OctoLastCmdOpts = _G.OctoLastCmdOpts,
   })
+end
+
+function M.list_types(cb)
+  cb = cb or function(data)
+    utils.info(vim.inspect(data))
+  end
+  gh.api.graphql {
+    query = queries.introspective_types,
+    jq = ".data.__schema.types | map({name, description})",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          local decoded = vim.json.decode(data)
+          vim.ui.select(decoded, {
+            prompt = "Select a GraphQL type:",
+            format_item = function(item)
+              return item.name .. (item.description and (" - " .. item.description) or "")
+            end,
+          }, function(choice)
+            if choice then
+              cb(choice)
+            else
+              utils.info "No type selected"
+            end
+          end)
+        end,
+      },
+    },
+  }
+end
+
+---Lookup a GraphQL type by name
+---@param name? string
+function M.lookup(name)
+  local function callback(n)
+    gh.api.graphql {
+      query = queries.introspective_type,
+      F = { name = n },
+      opts = {
+        cb = gh.create_callback {
+          success = function(data)
+            utils.info(vim.inspect(vim.json.decode(data)))
+          end,
+        },
+      },
+    }
+  end
+
+  if name then
+    callback(name)
+    return
+  end
+
+  M.list_types(function(type)
+    callback(type.name)
+  end)
 end
 
 return M
