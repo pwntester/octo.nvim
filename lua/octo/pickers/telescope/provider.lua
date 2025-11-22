@@ -1206,6 +1206,85 @@ function M.select_assignee(cb)
   }
 end
 
+---@param opts? { repo? : string, cb? : function }
+function M.releases(opts)
+  opts = opts or {}
+  opts.repo = opts.repo or utils.get_remote_name()
+
+  opts.cb = opts.cb or function(selection)
+    utils.get("release", selection.obj.tagName, repo)
+  end
+
+  -- Create custom layout configuration
+
+  local picker_opts = {
+    layout_config = {
+      width = 0.8,
+      height = 0.9,
+      preview_width = 0.65,
+    },
+  }
+
+  gh.release.list {
+    repo = opts.repo,
+    json = "name,tagName,createdAt",
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+
+          if #results == 0 then
+            local msg = "No releases found"
+            if opts.repo then
+              msg = msg .. " for " .. opts.repo
+            else
+              msg = msg .. " in the current repository"
+            end
+            utils.error(msg)
+            return
+          end
+
+          pickers
+            .new(picker_opts, {
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_release(opts),
+              },
+              sorter = conf.generic_sorter(opts),
+              previewer = previewers.release.new(opts),
+              attach_mappings = function(prompt_bufnr, map)
+                map("i", "<C-y>", function()
+                  local selection = action_state.get_selected_entry(prompt_bufnr)
+                  gh.release.view {
+                    selection.obj.tagName,
+                    repo = selection.obj.repo,
+                    json = "url",
+                    jq = ".url",
+                    opts = {
+                      cb = gh.create_callback { success = utils.copy_url },
+                    },
+                  }
+                  return true
+                end)
+                map("i", "<CR>", function()
+                  local selection = action_state.get_selected_entry(prompt_bufnr)
+                  local repo = opts.repo
+                  actions.close(prompt_bufnr)
+
+                  opts.cb(selection)
+
+                  return true
+                end)
+                return true
+              end,
+            })
+            :find()
+        end,
+      },
+    },
+  }
+end
+
 --
 -- REPOS
 --
@@ -1696,6 +1775,7 @@ M.picker = {
   project_cards_v2 = M.project_cards_v2,
   project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
+  releases = M.releases,
   repos = M.repos,
   review_commits = M.review_commits,
   search = M.search,

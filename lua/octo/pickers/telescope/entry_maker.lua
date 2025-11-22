@@ -770,4 +770,25 @@ function M.gen_from_issue_templates()
   end
 end
 
+function M.gen_from_release(opts)
+  return function(entry)
+    entry.repo = opts.repo
+
+    local display = entry.name
+    if entry.tagName ~= display then
+      display = display .. " (" .. entry.tagName .. ")"
+    end
+
+    display = display .. " " .. utils.format_date(entry.createdAt)
+
+    return {
+      filename = utils.get_release_uri(entry.tagName, opts.repo),
+      value = entry.tagName,
+      display = display,
+      ordinal = display,
+      obj = entry,
+    }
+  end
+end
+
 return M
