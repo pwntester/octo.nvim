@@ -247,6 +247,40 @@ local workflow_runs = defaulter(function(opts)
   }
 end, {})
 
+local release = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    title = opts.preview_title,
+    get_buffer_by_name = function(_, entry)
+      return entry.value
+    end,
+    define_preview = function(self, entry)
+      if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        local data = entry.obj
+        if data then
+          gh.release.view {
+            data.tagName,
+            repo = data.repo,
+            json = "body",
+            jq = ".body",
+            opts = {
+              cb = gh.create_callback {
+                success = function(body)
+                  vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(body, "\n"))
+                  --- wrap lines
+                  vim.api.nvim_set_option_value("filetype", "markdown", {
+                    scope = "local",
+                    buf = self.state.bufnr,
+                  })
+                end,
+              },
+            },
+          }
+        end
+      end
+    end,
+  }
+end, {})
+
 return {
   workflow_runs = workflow_runs,
   discussion = discussion,
@@ -257,4 +291,5 @@ return {
   review_thread = review_thread,
   issue_template = issue_template,
   notification = notification,
+  release = release,
 }
