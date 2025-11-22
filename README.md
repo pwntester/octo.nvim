@@ -611,6 +611,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | remove                                           | Remove the parent issue to current issue |
 |          | edit                                           | Edit the parent issue to current issue |
 | release  | notes                                           | Generate release notes in current buffer |
+|   | list [repo]                                           | List release notes for current or specified repo |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 
