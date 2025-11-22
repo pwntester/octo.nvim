@@ -621,6 +621,10 @@ function M.setup()
       end),
     },
     release = {
+      list = function(repo)
+        local opts = { repo = repo }
+        picker.releases(opts)
+      end,
       notes = function(tag_name)
         local repo = utils.get_remote_name()
         if utils.is_blank(tag_name) then
