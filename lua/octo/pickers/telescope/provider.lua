@@ -1212,7 +1212,7 @@ function M.releases(opts)
   opts.repo = opts.repo or utils.get_remote_name()
 
   opts.cb = opts.cb or function(selection)
-    utils.get("release", selection.obj.tagName, repo)
+    utils.get("release", selection.obj.tagName, opts.repo)
   end
 
   -- Create custom layout configuration
