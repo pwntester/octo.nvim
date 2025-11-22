@@ -77,6 +77,9 @@ return {
       ["Star Repo"] = commands.repo.star,
       ["Unstar Repo"] = commands.repo.unstar,
       ["Change Subscription"] = commands.repo.subscription,
+      ["List Releases"] = context.within_octo_buffer(function(buffer)
+        commands.release.list(buffer.repo)
+      end),
     }
     create_options_picker(options, "Select an option:")
   end,

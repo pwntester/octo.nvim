@@ -187,12 +187,60 @@ function M.pull_requests(opts)
   }
 end
 
+---@param opts? { repo?: string, cb?: function }
+M.releases = function(opts)
+  opts = opts or {}
+  opts.repo = opts.repo or utils.get_remote_name()
+
+  local callback = opts.cb or function(release)
+    utils.get("release", release.tagName, opts.repo)
+  end
+
+  gh.release.list {
+    repo = opts.repo,
+    json = "name,tagName,createdAt",
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local releases = vim.json.decode(output)
+
+          if #releases == 0 then
+            local msg = "No releases found"
+            if opts.repo then
+              msg = msg .. " for " .. opts.repo
+            else
+              msg = msg .. " in the current repository"
+            end
+            notify.error(msg)
+            return
+          end
+
+          vim.ui.select(releases, {
+            prompt = "Select Release:",
+            format_item = function(release)
+              return string.format("%s (%s)", release.name or release.tagName, release.tagName)
+            end,
+          }, function(release)
+            if not release then
+              notify.error "No release selected"
+              return
+            end
+
+            callback(release)
+          end)
+        end,
+      },
+    },
+  }
+end
+
 ---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
   discussions = M.discussions,
   issues = M.issues,
   prs = M.pull_requests,
+  releases = M.releases,
 }
 
 return M

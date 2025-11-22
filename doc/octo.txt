@@ -285,6 +285,7 @@ See |octo-command-examples| for examples.
 :Octo release [action]                         *octo-commands-release*
 
   notes                  Generate release notes for a tag in the current buffer.
+  list [repo]            Lists releases for the current or specified repo.
 
 
 :Octo gist [action]                             *octo-commands-gist*
