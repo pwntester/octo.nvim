@@ -1319,22 +1319,6 @@ query($owner: String!, $name: String!) {
   }
   ]]
 
-  M.introspective_mutations = [[
-  query {
-    __schema {
-      mutationType {
-        name
-        description
-      }
-      types {
-        name
-        kind
-        description
-      }
-    }
-  }
-  ]]
-
   M.introspective_types = [[
   query {
     __schema {
