@@ -1318,6 +1318,70 @@ query($owner: String!, $name: String!) {
     }
   }
   ]]
+
+  M.introspective_types = [[
+  query {
+    __schema {
+      types {
+        name
+        kind
+        description
+      }
+    }
+  }
+  ]]
+
+  M.introspective_type = [[
+  query($name: String!) {
+    __type(name: $name) {
+      name
+      kind
+      description
+      inputFields {
+        name
+        description
+        type {
+          kind
+          name
+          ofType {
+            name
+            kind
+          }
+        }
+      }
+      fields {
+        name
+        description
+        type {
+          name
+          kind
+          ofType {
+            name
+            kind
+          }
+        }
+        args {
+          name
+          description
+          type {
+            name
+            kind
+          }
+        }
+      }
+      interfaces {
+        name
+      }
+      possibleTypes {
+        name
+      }
+      enumValues {
+        name
+        description
+      }
+    }
+  }
+  ]]
 end
 
 return M
