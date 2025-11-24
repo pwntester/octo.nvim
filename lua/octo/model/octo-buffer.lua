@@ -256,7 +256,14 @@ function OctoBuffer:render_issue()
       commits = {}
       prev_is_event = true
     end
-    if (not item or item.__typename ~= "HeadRefForcePushedEvent") and #unrendered_force_push_events > 0 then
+    if
+      #unrendered_force_push_events > 0
+      and (
+        not item
+        or item.__typename ~= "HeadRefForcePushedEvent"
+        or item.actor.login ~= unrendered_force_push_events[1].actor.login
+      )
+    then
       writers.write_head_ref_force_pushed_events(self.bufnr, unrendered_force_push_events)
       unrendered_force_push_events = {}
       prev_is_event = true
