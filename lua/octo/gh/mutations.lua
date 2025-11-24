@@ -5,6 +5,7 @@ local M = {}
 
 M.setup = function()
   -- https://docs.github.com/en/graphql/reference/mutations#addreaction
+  -- inject: graphql
   M.add_reaction = [[
 mutation {
   addReaction(input: {subjectId: "%s", content: %s}) {

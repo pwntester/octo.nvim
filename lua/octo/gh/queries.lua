@@ -28,6 +28,7 @@ M.setup = function()
   ---}
 
   -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
+  -- inject: graphql
   M.pending_review_threads = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
