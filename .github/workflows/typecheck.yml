@@ -19,7 +19,7 @@ jobs:
         nvim_version: [stable]
         lua_ls_version: [3.15.0]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install neovim
         run: |
           url="https://github.com/neovim/neovim/releases/download/${{ matrix.nvim_version }}/nvim-linux-x86_64.tar.gz"
