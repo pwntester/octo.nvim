@@ -184,13 +184,25 @@ local function create_interface_buffer_content(data)
       local field_type = format_type(field.type)
       local field_args = format_args(field.args)
       local field_desc = field.description ---@type any
+      local is_deprecated = field.isDeprecated
+      local deprecation_reason = field.deprecationReason
 
-      -- Field signature
-      table.insert(lines, string.format("[%d] %s%s: %s", i, field_name, field_args, field_type))
+      -- Field signature with deprecation marker
+      local signature = string.format("[%d] %s%s: %s", i, field_name, field_args, field_type)
+      if is_deprecated then
+        signature = signature .. " ⚠ DEPRECATED"
+      end
+      table.insert(lines, signature)
 
       -- Field description
       if not is_nil(field_desc) then
         add_text_lines(lines, field_desc, "    ")
+      end
+
+      -- Deprecation reason with extra spacing
+      if is_deprecated and not is_nil(deprecation_reason) then
+        table.insert(lines, "")
+        table.insert(lines, "    ⚠ DEPRECATED: " .. deprecation_reason)
       end
 
       -- Arguments details (if any)
@@ -278,13 +290,25 @@ local function create_object_buffer_content(data)
       local field_type = format_type(field.type)
       local field_args = format_args(field.args)
       local field_desc = field.description ---@type any
+      local is_deprecated = field.isDeprecated
+      local deprecation_reason = field.deprecationReason
 
-      -- Field signature
-      table.insert(lines, string.format("[%d] %s%s: %s", i, field_name, field_args, field_type))
+      -- Field signature with deprecation marker
+      local signature = string.format("[%d] %s%s: %s", i, field_name, field_args, field_type)
+      if is_deprecated then
+        signature = signature .. " ⚠ DEPRECATED"
+      end
+      table.insert(lines, signature)
 
       -- Field description
       if not is_nil(field_desc) then
         add_text_lines(lines, field_desc, "    ")
+      end
+
+      -- Deprecation reason with extra spacing
+      if is_deprecated and not is_nil(deprecation_reason) then
+        table.insert(lines, "")
+        table.insert(lines, "    ⚠ DEPRECATED: " .. deprecation_reason)
       end
 
       -- Arguments details (if any)
@@ -413,13 +437,25 @@ local function create_enum_buffer_content(data)
     for i, enumValue in ipairs(enumValues) do
       local value_name = enumValue.name or "UNKNOWN"
       local value_desc = enumValue.description ---@type any
+      local is_deprecated = enumValue.isDeprecated
+      local deprecation_reason = enumValue.deprecationReason
 
-      -- Value name
-      table.insert(lines, string.format("[%d] %s", i, value_name))
+      -- Value name with deprecation marker
+      local value_line = string.format("[%d] %s", i, value_name)
+      if is_deprecated then
+        value_line = value_line .. " ⚠ DEPRECATED"
+      end
+      table.insert(lines, value_line)
 
       -- Value description
       if not is_nil(value_desc) then
         add_text_lines(lines, value_desc, "    ")
+      end
+
+      -- Deprecation reason with extra spacing
+      if is_deprecated and not is_nil(deprecation_reason) then
+        table.insert(lines, "")
+        table.insert(lines, "    ⚠ DEPRECATED: " .. deprecation_reason)
       end
 
       table.insert(lines, "")
@@ -543,12 +579,16 @@ function M.display_type(data)
     syntax match GraphQLFieldName /^\[\d\+\] \zs\w\+\ze/
     syntax match GraphQLType /: \zs[A-Z][A-Za-z0-9_\[\]!]\+/
     syntax match GraphQLSection /^Description:\|^Implements:\|^Implemented By:\|^Fields:\|^Input Fields:\|^Arguments:\|^Total Fields:\|^Total Input Fields:\|^Possible Types:\|^Total Possible Types:\|^Values:\|^Total Values:/
+    syntax match GraphQLDeprecated /⚠ DEPRECATED/
+    syntax match GraphQLDeprecatedReason /^\s*⚠ DEPRECATED:.*$/
 
     highlight link GraphQLHeader Title
     highlight link GraphQLFieldIndex Number
     highlight link GraphQLFieldName Identifier
     highlight link GraphQLType Type
     highlight link GraphQLSection Keyword
+    highlight GraphQLDeprecated ctermfg=Yellow guifg=#E5C07B gui=bold cterm=bold
+    highlight GraphQLDeprecatedReason ctermfg=Red guifg=#E06C75 gui=italic cterm=italic
   ]]
 
   -- Set up buffer-local keymaps, passing the type data
