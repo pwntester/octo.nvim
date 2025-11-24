@@ -7,8 +7,11 @@ local notify = require "octo.notify"
 local M = {}
 
 -- Helper function to safely get nested values
+---@param tbl table
+---@param ... any
+---@return any
 local function safe_get(tbl, ...)
-  local result = tbl
+  local result = tbl ---@type any
   for _, key in ipairs { ... } do
     if type(result) ~= "table" then
       return vim.NIL
@@ -22,24 +25,30 @@ local function safe_get(tbl, ...)
 end
 
 -- Helper function to check if value is nil/vim.NIL
+---@param value any
+---@return boolean
 local function is_nil(value)
   return value == nil or value == vim.NIL
 end
 
 -- Helper function to wrap text at a given width
+---@param text string
+---@param width number
+---@param prefix? string
+---@return string[]
 local function wrap_text(text, width, prefix)
   prefix = prefix or ""
   local prefix_len = #prefix
-  local max_width = width - prefix_len
-  local wrapped = {}
+  local max_width = width - prefix_len ---@type number
+  local wrapped = {} ---@type string[]
 
   -- First split by existing newlines
   for paragraph in text:gmatch "[^\r\n]+" do
-    local line = ""
+    local line = "" ---@type string
     -- Split paragraph into words
     for word in paragraph:gmatch "%S+" do
       -- Check if adding this word would exceed the width
-      local test_line = line == "" and word or (line .. " " .. word)
+      local test_line = line == "" and word or (line .. " " .. word) ---@type string
       if #test_line > max_width and line ~= "" then
         -- Add the current line and start a new one
         table.insert(wrapped, prefix .. line)
@@ -58,6 +67,10 @@ local function wrap_text(text, width, prefix)
 end
 
 -- Helper function to split text by newlines and add to lines table with prefix
+---@param lines string[]
+---@param text any
+---@param prefix? string
+---@param wrap_width? number
 local function add_text_lines(lines, text, prefix, wrap_width)
   prefix = prefix or ""
   wrap_width = wrap_width or 80
@@ -74,6 +87,9 @@ local function add_text_lines(lines, text, prefix, wrap_width)
 end
 
 -- Format a type reference (handles SCALAR, OBJECT, ENUM, etc.)
+---@param type_info any
+---@param depth? number
+---@return string
 local function format_type(type_info, depth)
   depth = depth or 0
   if depth > 5 then
@@ -84,30 +100,32 @@ local function format_type(type_info, depth)
     return "nil"
   end
 
-  local kind = type_info.kind
-  local name = type_info.name
-  local ofType = type_info.ofType
+  local kind = type_info.kind ---@type string
+  local name = type_info.name ---@type string?
+  local ofType = type_info.ofType ---@type any
 
   if kind == "NON_NULL" then
     return format_type(ofType, depth + 1) .. "!"
   elseif kind == "LIST" then
     return "[" .. format_type(ofType, depth + 1) .. "]"
   elseif not is_nil(name) then
-    return name
+    return name or "Unknown" -- fallback in case name is nil despite check
   else
     return "Unknown"
   end
 end
 
 -- Format field arguments
+---@param args any
+---@return string
 local function format_args(args)
   if is_nil(args) or #args == 0 then
     return ""
   end
 
-  local arg_strs = {}
+  local arg_strs = {} ---@type string[]
   for _, arg in ipairs(args) do
-    local arg_name = arg.name
+    local arg_name = arg.name ---@type string
     local arg_type = format_type(arg.type)
     table.insert(arg_strs, string.format("%s: %s", arg_name, arg_type))
   end
@@ -116,8 +134,10 @@ local function format_args(args)
 end
 
 -- Create buffer content for an Interface type
+---@param data table
+---@return string[]
 local function create_interface_buffer_content(data)
-  local lines = {}
+  local lines = {} ---@type string[]
   local type_info = safe_get(data, "data", "__type")
 
   if is_nil(type_info) then
@@ -162,7 +182,7 @@ local function create_interface_buffer_content(data)
       local field_name = field.name or "unknown"
       local field_type = format_type(field.type)
       local field_args = format_args(field.args)
-      local field_desc = field.description
+      local field_desc = field.description ---@type any
 
       -- Field signature
       table.insert(lines, string.format("[%d] %s%s: %s", i, field_name, field_args, field_type))
@@ -179,7 +199,7 @@ local function create_interface_buffer_content(data)
         for _, arg in ipairs(field.args) do
           local arg_name = arg.name or "unknown"
           local arg_type = format_type(arg.type)
-          local arg_desc = arg.description
+          local arg_desc = arg.description ---@type any
 
           table.insert(lines, string.format("      - %s: %s", arg_name, arg_type))
           if not is_nil(arg_desc) then
@@ -208,8 +228,10 @@ local function create_interface_buffer_content(data)
 end
 
 -- Create buffer content for an Object type
+---@param data table
+---@return string[]
 local function create_object_buffer_content(data)
-  local lines = {}
+  local lines = {} ---@type string[]
   local type_info = safe_get(data, "data", "__type")
 
   if is_nil(type_info) then
@@ -254,7 +276,7 @@ local function create_object_buffer_content(data)
       local field_name = field.name or "unknown"
       local field_type = format_type(field.type)
       local field_args = format_args(field.args)
-      local field_desc = field.description
+      local field_desc = field.description ---@type any
 
       -- Field signature
       table.insert(lines, string.format("[%d] %s%s: %s", i, field_name, field_args, field_type))
@@ -271,7 +293,7 @@ local function create_object_buffer_content(data)
         for _, arg in ipairs(field.args) do
           local arg_name = arg.name or "unknown"
           local arg_type = format_type(arg.type)
-          local arg_desc = arg.description
+          local arg_desc = arg.description ---@type any
 
           table.insert(lines, string.format("      - %s: %s", arg_name, arg_type))
           if not is_nil(arg_desc) then
@@ -293,8 +315,10 @@ local function create_object_buffer_content(data)
 end
 
 -- Create buffer content for an Input Object type
+---@param data table
+---@return string[]
 local function create_input_object_buffer_content(data)
-  local lines = {}
+  local lines = {} ---@type string[]
   local type_info = safe_get(data, "data", "__type")
 
   if is_nil(type_info) then
@@ -328,7 +352,7 @@ local function create_input_object_buffer_content(data)
     for i, field in ipairs(inputFields) do
       local field_name = field.name or "unknown"
       local field_type = format_type(field.type)
-      local field_desc = field.description
+      local field_desc = field.description ---@type any
 
       -- Field signature
       table.insert(lines, string.format("[%d] %s: %s", i, field_name, field_type))
@@ -351,8 +375,10 @@ local function create_input_object_buffer_content(data)
 end
 
 -- Create buffer content for an Enum type
+---@param data table
+---@return string[]
 local function create_enum_buffer_content(data)
-  local lines = {}
+  local lines = {} ---@type string[]
   local type_info = safe_get(data, "data", "__type")
 
   if is_nil(type_info) then
@@ -385,7 +411,7 @@ local function create_enum_buffer_content(data)
 
     for i, enumValue in ipairs(enumValues) do
       local value_name = enumValue.name or "UNKNOWN"
-      local value_desc = enumValue.description
+      local value_desc = enumValue.description ---@type any
 
       -- Value name
       table.insert(lines, string.format("[%d] %s", i, value_name))
@@ -408,8 +434,10 @@ local function create_enum_buffer_content(data)
 end
 
 -- Create buffer content for a Union type
+---@param data table
+---@return string[]
 local function create_union_buffer_content(data)
-  local lines = {}
+  local lines = {} ---@type string[]
   local type_info = safe_get(data, "data", "__type")
 
   if is_nil(type_info) then
@@ -456,9 +484,11 @@ local function create_union_buffer_content(data)
 end
 
 -- Create and display buffer for any GraphQL type
+---@param data table
+---@return number bufnr
 function M.display_type(data)
   local type_kind = safe_get(data, "data", "__type", "kind")
-  local lines
+  local lines ---@type string[]
 
   if type_kind == "UNION" then
     lines = create_union_buffer_content(data)
