@@ -20,6 +20,7 @@ M.setup = function()
   ---  },
   ---}[]
 
+  -- inject: graphql
   M.projects_v2 = [[
   projectItems(first: 100) {
     nodes {
