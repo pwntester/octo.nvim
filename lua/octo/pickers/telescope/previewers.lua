@@ -113,10 +113,7 @@ local notification = defaulter(function(opts)
       local bufnr = self.state.bufnr
 
       if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(bufnr) == 1 then
-        local number = entry.value ---@type string
-        local owner, name = utils.split_repo(entry.repo)
-
-        notifications.populate_preview_buf(bufnr, owner, name, number, entry.kind)
+        opts.preview_fn(bufnr, entry)
       end
     end,
   }

@@ -1434,6 +1434,27 @@ function M.notifications(opts)
       utils.info "There are no notifications"
       return
     end
+    ---@type table<string, any>
+    local cached_notification_infos = {}
+
+    local function preview_fn(bufnr, entry)
+      local number = entry.value ---@type string
+      local owner, name = utils.split_repo(entry.repo)
+      local kind = entry.kind
+      local preview = notifications.get_preview_fn(kind)
+      local cached_notification = cached_notification_infos[entry.ordinal]
+      if cached_notification then
+        preview(cached_notification, bufnr)
+      end
+      notifications.fetch_preview(owner, name, number, kind, function(obj)
+        cached_notification_infos[entry.ordinal] = obj
+        if not vim.api.nvim_buf_is_loaded(bufnr) then
+          return
+        end
+        preview(obj, bufnr)
+      end)
+    end
+    opts.preview_fn = preview_fn
 
     local function copy_notification_url(prompt_bufnr)
       local entry = action_state.get_selected_entry(prompt_bufnr)
