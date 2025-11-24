@@ -1360,7 +1360,7 @@ query($owner: String!, $name: String!) {
           }
         }
       }
-      fields {
+      fields(includeDeprecated: true) {
         name
         description
         type {
@@ -1377,8 +1377,18 @@ query($owner: String!, $name: String!) {
           type {
             name
             kind
+            ofType {
+              name
+              kind
+              ofType {
+                name
+                kind
+              }
+            }
           }
         }
+        isDeprecated
+        deprecationReason
       }
       interfaces {
         name
@@ -1386,9 +1396,11 @@ query($owner: String!, $name: String!) {
       possibleTypes {
         name
       }
-      enumValues {
+      enumValues(includeDeprecated: true) {
         name
         description
+        isDeprecated
+        deprecationReason
       }
     }
   }
