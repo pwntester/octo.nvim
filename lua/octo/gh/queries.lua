@@ -9,6 +9,8 @@ local M = {}
 ---@field hasPreviousPage boolean
 ---@field startCursor string
 
+---@alias octo.SubscriptionState "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
+
 M.setup = function()
   ---@class octo.queries.PendingReviewThreads
   ---@field data {
@@ -128,6 +130,8 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field authorAssociation string
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
+  ---@field viewerCanSubscribe boolean
+  ---@field viewerSubscription octo.SubscriptionState
   ---@field projectItems? octo.fragments.ProjectsV2Connection
   ---@field timelineItems octo.PullRequestTimelineItemsConnection
   ---@field reviewDecision string
@@ -202,6 +206,8 @@ query($endCursor: String) {
       authorAssociation
       viewerDidAuthor
       viewerCanUpdate
+      viewerCanSubscribe
+      viewerSubscription
       ...ReactionGroupsFragment
       %s
       timelineItems(first: 100, after: $endCursor) {
@@ -272,6 +278,8 @@ query($endCursor: String) {
   ---@field timelineItems octo.IssueTimelineItemConnection
   ---@field labels octo.fragments.LabelConnection
   ---@field assignees octo.fragments.AssigneeConnection
+  ---@field viewerCanSubscribe boolean
+  ---@field viewerSubscription octo.SubscriptionState
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
   M.issue = [[
@@ -302,6 +310,8 @@ query($endCursor: String) {
       assignees(first: 20) {
         ...AssigneeConnectionFragment
       }
+      viewerCanSubscribe
+      viewerSubscription
     }
   }
 }
@@ -1154,7 +1164,7 @@ query($login: String!, $endCursor: String) {
   ---@field refs { nodes: { name: string }[] }
   ---@field languages { nodes: { name: string, color: string }[] }
   ---@field viewerHasStarred boolean
-  ---@field viewerSubscription "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
+  ---@field viewerSubscription octo.SubscriptionState
 
   M.repository = [[
 query($owner: String!, $name: String!) {

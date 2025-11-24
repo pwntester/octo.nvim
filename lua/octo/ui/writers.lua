@@ -515,9 +515,23 @@ local function detect_issue_from_url(url)
   return url:find(keyword, 1, true) ~= nil
 end
 
+---@param details [string, string][][]
+---@param subscription_state octo.SubscriptionState
+local function add_subscription_detail(details, subscription_state)
+  local subscribed_label ---@type string
+  if subscription_state == "IGNORED" then
+    subscribed_label = "Never"
+  elseif subscription_state == "SUBSCRIBED" then
+    subscribed_label = "All activity"
+  elseif subscription_state == "UNSUBSCRIBED" then
+    subscribed_label = "Only participating and @mentioned"
+  end
+  add_details_line(details, "Subscribed", subscribed_label)
+end
+
 ---@param bufnr integer
 ---@param issue octo.PullRequest|octo.Issue
----@param update any
+---@param update? true
 function M.write_details(bufnr, issue, update)
   -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
@@ -823,6 +837,8 @@ function M.write_details(bufnr, issue, update)
     table.insert(changes_vt, { ")", "OctoDetailsLabel" })
     table.insert(details, changes_vt)
   end
+
+  add_subscription_detail(details, issue.viewerSubscription)
 
   local line = 3
   -- write #details + empty lines
