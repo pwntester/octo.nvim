@@ -217,6 +217,12 @@ function M.on_cursor_hold()
     return
   end
 
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local function is_stale()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local current_cursor = vim.api.nvim_win_get_cursor(0)
+    return buffer.bufnr ~= bufnr or cursor[1] ~= current_cursor[1]
+  end
   -- reactions popup
   local id = buffer:get_reactions_at_cursor()
   if id then
@@ -225,6 +231,9 @@ function M.on_cursor_hold()
       F = { id = id },
       opts = {
         cb = function(output, stderr)
+          if is_stale() then
+            return
+          end
           if stderr and not utils.is_blank(stderr) then
             utils.print_err(stderr)
           elseif output then
@@ -273,6 +282,9 @@ function M.on_cursor_hold()
         cb = gh.create_callback {
           failure = utils.print_err,
           success = function(data)
+            if is_stale() then
+              return
+            end
             ---@type octo.UserProfile
             local user = vim.json.decode(data)
             local popup_bufnr = vim.api.nvim_create_buf(false, true)
@@ -315,11 +327,17 @@ function M.on_cursor_hold()
     opts = {
       cb = gh.create_callback {
         success = function(output)
+          if is_stale() then
+            return
+          end
           ---@type octo.IssueOrPullRequestSummary
           local issue = vim.json.decode(output)
           write_popup(issue, writers.write_issue_summary)
         end,
         failure = function(_)
+          if is_stale() then
+            return
+          end
           gh.api.graphql {
             query = queries.discussion_summary,
             F = { owner = owner, name = name, number = number },
@@ -328,6 +346,9 @@ function M.on_cursor_hold()
               cb = gh.create_callback {
                 failure = utils.print_err,
                 success = function(output)
+                  if is_stale() then
+                    return
+                  end
                   ---@type octo.DiscussionSummary
                   local discussion = vim.json.decode(output)
                   write_popup(discussion, writers.write_discussion_summary)
