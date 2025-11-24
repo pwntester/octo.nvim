@@ -1,8 +1,8 @@
 -- debug-info.lua
 -- A self-contained script to display GraphQL schema information in a Neovim buffer
---
-local notify = require "octo.notify"
+-- local notify = require "octo.notify"
 local utils = require "octo.utils"
+local notify = require "octo.notify"
 
 local M = {}
 
@@ -521,6 +521,7 @@ function M.display_type(data)
   ]]
 
   -- Set up buffer-local keymaps, passing the type data
+  -- This will overwrite existing keymaps with new closures that capture the current data
   M.setup_buffer_keymaps(bufnr, data)
 
   return bufnr
@@ -589,24 +590,16 @@ function M.setup_buffer_keymaps(bufnr, data)
   })
 
   -- Map <C-b> to open GraphQL type documentation in browser
+  -- Opens the documentation for the current buffer's type, not the word under cursor
   vim.keymap.set("n", "<C-b>", function()
     local navigation = require "octo.navigation"
-    local word = vim.fn.expand "<cword>"
 
-    -- Check if it looks like a GraphQL type (starts with uppercase)
-    if word:match "^[A-Z]" then
-      -- Determine the type kind for the URL
-      local url_type_kind = type_kind
-      if word ~= type_name then
-        -- If looking at a different type, default to OBJECT
-        url_type_kind = "OBJECT"
-      end
-
-      local url = build_graphql_docs_url(word, url_type_kind)
+    if not is_nil(type_name) and not is_nil(type_kind) then
+      local url = build_graphql_docs_url(type_name, type_kind)
       navigation.open_in_browser_raw(url)
-      notify.info("Opening documentation for: " .. word)
+      notify.info("Opening documentation for: " .. type_name)
     else
-      notify.warn("Not a GraphQL type: " .. word)
+      notify.error "Unable to determine type information for this buffer"
     end
   end, {
     buffer = bufnr,
