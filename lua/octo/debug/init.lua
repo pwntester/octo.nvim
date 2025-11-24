@@ -3,6 +3,7 @@ local utils = require "octo.utils"
 local context = require "octo.context"
 local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
+local graphql_buffer = require "octo.debug.buffer"
 
 local M = {}
 
@@ -56,7 +57,8 @@ end
 ---@param name? string
 function M.lookup(name, cb)
   cb = cb or function(data)
-    utils.info(vim.inspect(vim.json.decode(data)))
+    local decoded = vim.json.decode(data)
+    graphql_buffer.display_type(decoded)
   end
   local function callback(n)
     gh.api.graphql {
