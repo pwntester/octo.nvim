@@ -55,7 +55,12 @@ local function merge_tables(t1, t2)
   return result
 end
 
-local function update_subscription(subscribable_id, current_subscription, display_name)
+---@param subscribable_id string
+---@param current_subscription octo.SubscriptionState
+---@param display_name string
+---@param on_success fun(new_subscription_state: octo.SubscriptionState): nil
+local function update_subscription(subscribable_id, current_subscription, display_name, on_success)
+  ---@type {[string]: octo.SubscriptionState}
   local subscription_options = {
     Subscribe = "SUBSCRIBED",
     Unsubscribe = "UNSUBSCRIBED",
@@ -79,6 +84,7 @@ local function update_subscription(subscribable_id, current_subscription, displa
         cb = gh.create_callback {
           success = function()
             utils.info("Subscription updated to " .. state .. " for " .. display_name)
+            on_success(state)
           end,
         },
       },
@@ -238,7 +244,14 @@ function M.setup()
       end),
       subscription = context.within_discussion(function(buffer)
         local discussion = buffer:discussion()
-        update_subscription(discussion.id, discussion.viewerSubscription, "discussion #" .. discussion.number)
+        update_subscription(
+          discussion.id,
+          discussion.viewerSubscription,
+          "discussion #" .. discussion.number,
+          function(new_subscription_state)
+            discussion.viewerSubscription = new_subscription_state
+          end
+        )
       end),
     },
     type = {
@@ -511,7 +524,15 @@ function M.setup()
       end,
       subscription = context.within_issue(function(buffer)
         local issue = buffer:issue()
-        update_subscription(issue.id, issue.viewerSubscription, "issue #" .. issue.number)
+        update_subscription(
+          issue.id,
+          issue.viewerSubscription,
+          "issue #" .. issue.number,
+          function(new_subscription_state)
+            issue.viewerSubscription = new_subscription_state
+            writers.write_details(buffer.bufnr, issue, true)
+          end
+        )
       end),
     },
     pr = {
@@ -617,7 +638,10 @@ function M.setup()
       end),
       subscription = context.within_pr(function(buffer)
         local pr = buffer:pullRequest()
-        update_subscription(pr.id, pr.viewerSubscription, "PR #" .. pr.number)
+        update_subscription(pr.id, pr.viewerSubscription, "PR #" .. pr.number, function(new_subscription_state)
+          pr.viewerSubscription = new_subscription_state
+          writers.write_details(buffer.bufnr, pr, true)
+        end)
       end),
     },
     release = {
@@ -731,7 +755,9 @@ function M.setup()
       end,
       subscription = context.within_repo(function(buffer)
         local repo = buffer:repository()
-        update_subscription(repo.id, repo.viewerSubscription, repo.nameWithOwner)
+        update_subscription(repo.id, repo.viewerSubscription, repo.nameWithOwner, function(new_subscription_state)
+          repo.viewerSubscription = new_subscription_state
+        end)
       end),
     },
     review = {
