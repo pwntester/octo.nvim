@@ -215,7 +215,7 @@ function M.get_default_values()
       pinned = "  ",
       milestone = "  ",
       renamed = "  ",
-      automatic_base_change_succeeded = "  ",
+      automatic_base_change_succeeded = "  ",
       base_ref_changed = "  ",
       merged = { "  ", "OctoPurple" },
       closed = {
