@@ -1,6 +1,7 @@
 -- debug-info.lua
 -- A self-contained script to display GraphQL schema information in a Neovim buffer
--- local notify = require "octo.notify"
+--
+---@diagnostic disable: no-unknown
 local utils = require "octo.utils"
 local notify = require "octo.notify"
 
