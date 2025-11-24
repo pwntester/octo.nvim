@@ -54,17 +54,16 @@ end
 
 ---Lookup a GraphQL type by name
 ---@param name? string
-function M.lookup(name)
+function M.lookup(name, cb)
+  cb = cb or function(data)
+    utils.info(vim.inspect(vim.json.decode(data)))
+  end
   local function callback(n)
     gh.api.graphql {
       query = queries.introspective_type,
       F = { name = n },
       opts = {
-        cb = gh.create_callback {
-          success = function(data)
-            utils.info(vim.inspect(vim.json.decode(data)))
-          end,
-        },
+        cb = gh.create_callback { success = cb },
       },
     }
   end
