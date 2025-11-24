@@ -2003,7 +2003,7 @@ function M.pr_checks(buffer)
         end
 
         local workflow = require "octo.workflow_runs"
-        workflow.render { id = run_id }
+        workflow.render { id = run_id, repo = buffer.repo }
       end,
     })
 
