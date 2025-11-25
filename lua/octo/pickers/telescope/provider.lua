@@ -428,6 +428,7 @@ function M.commits(opts)
                   open_preview_buffer(type)(prompt_bufnr)
                 end)
                 map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
+                map("i", octo_config.values.picker_config.mappings.copy_url.lhs, copy_url())
                 return true
               end,
             })
