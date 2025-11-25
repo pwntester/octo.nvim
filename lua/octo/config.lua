@@ -120,6 +120,7 @@ local M = {}
 ---@field user_icon string
 ---@field ghost_icon string
 ---@field copilot_icon string
+---@field dependabot_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
 ---@field resolved_icon string
@@ -189,6 +190,7 @@ function M.get_default_values()
     user_icon = " ",
     ghost_icon = "󰊠 ",
     copilot_icon = " ",
+    dependabot_icon = " ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
