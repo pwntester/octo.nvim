@@ -24,6 +24,7 @@ local gh = require "octo.gh"
 ---@field workflowDatabaseId string
 ---@field workflowName string
 ---@field jobs WorkflowJob[]
+---@field repo? string
 
 ---@class WorkflowJob
 ---@field completedAt string
@@ -288,14 +289,15 @@ local function write_zipped_file(stdout)
     end
 end
 
-local function get_logs(id)
+local function get_logs(id, repo)
   utils.info "Fetching workflow logs (this may take a while) ..."
-  local reponame = utils.get_remote_name()
+  local reponame = repo or utils.get_remote_name()
   local cmd = {
     "gh",
     "api",
     string.format("repos/%s/actions/runs/%s/logs", reponame, id, 0),
   }
+
   local out = vim.system(cmd):wait()
 
   if out.code ~= 0 then
@@ -424,7 +426,7 @@ local tree_keymaps = {
           return
         end
         if not next(node.children) then
-          get_logs(M.current_wf.databaseId)
+          get_logs(M.current_wf.databaseId, M.current_wf.repo)
         end
       end
     else
@@ -528,7 +530,7 @@ local function get_workflow_header()
   return lines
 end
 
-local function update_job_details(id)
+local function update_job_details(id, repo)
   if M.wf_cache[id] ~= nil then
     M.refresh()
     return
@@ -536,6 +538,7 @@ local function update_job_details(id)
 
   gh.run.view {
     id,
+    repo = repo,
     json = fields,
     opts = {
       cb = function(output, stderr)
@@ -545,6 +548,7 @@ local function update_job_details(id)
         elseif output then
           ---@type WorkflowRun
           local job_details = vim.json.decode(output)
+          job_details.repo = repo
           M.wf_cache[id] = job_details
           M.current_wf = job_details
           M.tree = generate_workflow_tree(job_details)
@@ -556,15 +560,16 @@ local function update_job_details(id)
 end
 
 ---@param id string
+---@param repo? string
 ---@param buf integer
-local function populate_preview_buffer(id, buf)
+local function populate_preview_buffer(id, repo, buf)
   local cached = M.wf_cache[id]
   if cached and vim.api.nvim_buf_is_valid(buf) then
     M.current_wf = cached
     M.tree = generate_workflow_tree(cached)
     M.refresh()
   else
-    update_job_details(id)
+    update_job_details(id, repo)
   end
 end
 
@@ -730,11 +735,12 @@ local function get_workflow_runs_sync(opts)
   return lines
 end
 
+---@param selected { id: string, repo: string }
 function M.render(selected)
   local new_buf = vim.api.nvim_create_buf(true, true)
   M.buf = new_buf
   vim.api.nvim_set_current_buf(new_buf)
-  populate_preview_buffer(selected.id, new_buf)
+  populate_preview_buffer(selected.id, selected.repo, new_buf)
   vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
 end
 
@@ -742,7 +748,7 @@ function M.previewer(self, entry)
   ---@type string
   local id = entry.value.id
   M.buf = self.state.bufnr
-  populate_preview_buffer(id, self.state.bufnr)
+  populate_preview_buffer(id, nil, self.state.bufnr)
 end
 
 function M.list(opts)
@@ -756,7 +762,7 @@ function M.refetch()
   local id = M.current_wf.databaseId
   M.wf_cache[id] = nil
   M.current_wf = nil
-  populate_preview_buffer(id, M.buf)
+  populate_preview_buffer(id, nil, M.buf)
 end
 
 ---@param db_id number | nil
