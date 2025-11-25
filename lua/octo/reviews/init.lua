@@ -432,25 +432,18 @@ function Review:add_comment(isSuggestion)
   end
 
   local diff_hunk ---@type string
-  -- for non-added files, check we are in a valid comment range
-  if file.status ~= "A" then
-    for i, range in ipairs(comment_ranges) do
-      if range[1] <= line1 and range[2] >= line2 then
-        diff_hunk = file.diffhunks[i]
-        break
-      end
+  for i, range in ipairs(comment_ranges) do
+    if range[1] <= line1 and range[2] >= line2 then
+      diff_hunk = file.diffhunks[i]
+      break
     end
-    if not diff_hunk then
-      utils.error "Cannot place comments outside diff hunks"
-      return
-    end
-    if not vim.startswith(diff_hunk, "@@") then
-      diff_hunk = "@@ " .. diff_hunk
-    end
-  else
-    -- not printing diff hunk for added files
-    -- we will get the right diff hunk from the server when updating the threads
-    -- TODO: trigger a thread update?
+  end
+  if not diff_hunk then
+    utils.error "Cannot place comments outside diff hunks"
+    return
+  end
+  if not vim.startswith(diff_hunk, "@@") then
+    diff_hunk = "@@ " .. diff_hunk
   end
 
   self.layout:ensure_layout()
