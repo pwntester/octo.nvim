@@ -1291,9 +1291,6 @@ end
 
 -- clear buffer undo history
 function M.clear_history()
-  if true then
-    return
-  end
   ---@type integer
   local old_undolevels = vim.o.undolevels
   vim.o.undolevels = -1
