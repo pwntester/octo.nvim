@@ -158,6 +158,9 @@ function M.gen_from_git_commits()
       display = make_display,
       author = string.format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
       date = entry.commit.author.date,
+      obj = {
+        url = entry.html_url,
+      },
     }
   end
 end
