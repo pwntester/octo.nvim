@@ -52,6 +52,7 @@ end
 ---@return VirtualTextBuilder self for chaining
 function VirtualTextBuilder:timeline_marker(icon_name, icon_highlight)
   if self.conf.use_timeline_icons and icon_name and self.conf.timeline_icons[icon_name] then
+    ---@type string|table
     local icon = self.conf.timeline_icons[icon_name]
     -- Handle both string icons and table icons { text, hl }
     if type(icon) == "table" then
