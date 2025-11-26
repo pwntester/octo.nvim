@@ -99,6 +99,9 @@ M.file_status_map = {
 }
 
 -- https://docs.github.com/en/graphql/reference/enums#statusstate
+---@alias octo.StatusState "ERROR" | "FAILURE" | "EXPECTED" | "PENDING" | "SUCCESS"
+
+---@type table<octo.StatusState, table<string, string>>
 M.state_map = {
   ERROR = { symbol = "× ", hl = "OctoStateDismissed" },
   FAILURE = { symbol = "× ", hl = "OctoStateDismissed" },
@@ -203,6 +206,8 @@ function table.pack(...)
   return { n = select("#", ...), ... }
 end
 
+---@param s any
+---@return boolean
 function M.is_blank(s)
   return (
     s == nil
@@ -768,7 +773,7 @@ function M.seconds_between(start_date, end_date)
 end
 
 ---Formats a string as a date
----@param date_string string
+---@param date_string string ISO 8601 date string in UTC format
 ---@param round_under_one_minute? boolean defaults to true
 ---@return string
 function M.format_date(date_string, round_under_one_minute)

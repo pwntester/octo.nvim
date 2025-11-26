@@ -542,6 +542,8 @@ fragment ReopenedEventFragment on ReopenedEvent {
   createdAt
 }
 ]]
+  ---@alias octo.CommentAuthorAssociation "MEMBER"|"OWNER"|"MANNEQUIN"|"COLLABORATOR"|"CONTRIBUTOR"|"FIRST_TIME_CONTRIBUTOR"|"FIRST_TIMER"|"NONE"
+
   ---@class octo.fragments.PullRequestReview.comment : octo.ReactionGroupsFragment
   ---@field id string
   ---@field url string
@@ -549,7 +551,7 @@ fragment ReopenedEventFragment on ReopenedEvent {
   ---@field body string
   ---@field commit { oid: string, abbreviatedOid: string }
   ---@field author { login: string }
-  ---@field authorAssociation string
+  ---@field authorAssociation octo.CommentAuthorAssociation
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
   ---@field viewerCanDelete boolean
@@ -641,7 +643,7 @@ fragment ProjectCardFragment on ProjectCard {
   ---  additions: integer,
   ---  deletions: integer,
   ---  author: { user: { login: string } },
-  ---  statusCheckRollup: { state: string },
+  ---  statusCheckRollup: { state: octo.StatusState },
   ---  committer: { user: { login: string } },
   ---}
 
@@ -704,7 +706,7 @@ fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
 ]]
 
   ---https://docs.github.com/en/graphql/reference/enums#deploymentstatusstate
-  ---@alias DeploymentState "ABANDONED" | "ACTIVE" | "DESTROYED" | "ERROR" | "FAILURE" | "INACTIVE" | "IN_PROGRESS" | "PENDING" | "QUEUED" | "SUCCESS" | "WAITING"
+  ---@alias DeploymentState "ABANDONED"|"ACTIVE"|"DESTROYED"|"ERROR"|"FAILURE"|"INACTIVE"|"IN_PROGRESS"|"PENDING"|"QUEUED"|"SUCCESS"|"WAITING"
 
   ---@class octo.fragments.DeployedEvent
   ---@field __typename "DeployedEvent"
@@ -1160,7 +1162,7 @@ fragment IssueInformationFragment on Issue {
   --- @field outdated boolean
   --- @field originalCommit { oid: string, abbreviatedOid: string }
   --- @field author { login: string }
-  --- @field authorAssociation string
+  --- @field authorAssociation octo.CommentAuthorAssociation
   --- @field viewerDidAuthor boolean
   --- @field viewerCanUpdate boolean
   --- @field viewerCanDelete boolean

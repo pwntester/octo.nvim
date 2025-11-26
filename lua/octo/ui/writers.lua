@@ -13,8 +13,7 @@ local vim = vim
 
 local M = {}
 
--- Track if we've already warned about ProjectV2 config
-local projects_v2_config_warned = false
+-- Track if we've already warned about ProjectV2 config local projects_v2_config_warned = false
 
 --- Show a one-time warning about enabling ProjectsV2 config
 local function warn_projects_v2_config()
@@ -24,11 +23,13 @@ local function warn_projects_v2_config()
   end
 end
 
----@param bufnr integer?
----@param lines string[] | string
----@param line? integer
----@param mark? boolean
----@return integer?
+--- Write text in a buffer, append to end unless specified, and optionally set
+--- an extmark for the block.
+---@param bufnr integer? buffer number, defaults to current buffer
+---@param lines string[] | string lines to write
+---@param line? integer starting line number
+---@param mark? boolean whether to set extmark for the block
+---@return integer? extmark_id
 function M.write_block(bufnr, lines, line, mark)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   line = line or vim.api.nvim_buf_line_count(bufnr) + 1
@@ -50,7 +51,7 @@ function M.write_block(bufnr, lines, line, mark)
     -- (empty line)
     -- (empty line) end ext mark at 0
     --
-    -- (except for title where we cant place initial mark on line -1)
+    -- (except for title where we can't place initial mark on line -1)
 
     local start_line = line
     local end_line = line
@@ -70,6 +71,10 @@ function M.write_block(bufnr, lines, line, mark)
   end
 end
 
+--- Add a line to details table if value is not nil
+--- Examples of usage:
+--- add_details_line(details, "Label", "value")
+--- add_details_line(details, "Label", function() return "value" end)
 ---@type (fun(
 --- details: [string, string][][], label: string, value: nil|string|integer|(fun(): nil|string|integer),
 ---): nil)|(fun(
@@ -249,8 +254,10 @@ function M.write_detail_table(opts)
   end
 end
 
+--- Write virtual text at given line in buffer
 ---@param bufnr integer
 ---@param obj octo.fragments.DiscussionDetails
+---@param line integer
 function M.write_upvotes(bufnr, obj, line)
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
@@ -386,6 +393,7 @@ function M.write_repo(bufnr, repo)
   end
 end
 
+--- Write virtual text title at given line in buffer
 ---@param bufnr integer
 ---@param title string
 ---@param line integer
@@ -407,6 +415,7 @@ function M.write_title(bufnr, title, line)
   end
 end
 
+--- Write virtual text state at given line in buffer
 ---@param bufnr? integer
 ---@param state? string
 ---@param number? integer
@@ -502,6 +511,7 @@ function M.write_reactions(bufnr, reaction_groups, line)
   return line
 end
 
+---@param association octo.CommentAuthorAssociation
 local function format_author_association(association)
   if association == "FIRST_TIME_CONTRIBUTOR" then
     return "First-time contributor"
@@ -529,6 +539,7 @@ local function add_subscription_detail(details, subscription_state)
   add_details_line(details, "Subscribed", subscribed_label)
 end
 
+--- Write issue or PR details virtual text in buffer
 ---@param bufnr integer
 ---@param issue octo.PullRequest|octo.Issue
 ---@param update? true
@@ -1593,6 +1604,7 @@ local function chunk_length(max_length, chunk)
   return math.max(max_length, length)
 end
 
+--- Write a user profile to the given buffer as virtual text.
 ---@param bufnr integer
 ---@param user octo.UserProfile
 ---@param opts? { max_width?: integer }
@@ -1880,6 +1892,7 @@ function M.write_issue_summary(bufnr, issue, opts)
   return #chunks
 end
 
+--- Helper to write an event virtual text with proper spacing.
 ---@param bufnr integer
 ---@param vt [string, string][]
 local function write_event(bufnr, vt)
@@ -1888,7 +1901,8 @@ local function write_event(bufnr, vt)
   M.write_virtual_text(bufnr, constants.OCTO_EVENT_VT_NS, line + 1, vt)
 end
 
----@param statusCheckRollup { state: string }
+---@param statusCheckRollup { state: octo.StatusState }
+---@return string[]
 local function get_status_check(statusCheckRollup)
   if utils.is_blank(statusCheckRollup) then
     return { "  " }
@@ -2984,10 +2998,11 @@ function M.write_threads(bufnr, threads)
   return comment_end
 end
 
----@param bufnr integer
----@param ns integer
----@param line integer
----@param chunks [string, string][]
+--- Write virtual text at a specific line in a buffer
+---@param bufnr integer The buffer number
+---@param ns integer The namespace id
+---@param line integer The line number
+---@param chunks [string, string][] The virtual text chunks
 function M.write_virtual_text(bufnr, ns, line, chunks)
   pcall(
     vim.api.nvim_buf_set_extmark,
