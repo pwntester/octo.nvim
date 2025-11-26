@@ -1919,9 +1919,10 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.PullRequestCommit
 local function write_commit(bufnr, item)
+  local status_check = get_status_check(item.commit.statusCheckRollup)
   VirtualTextBuilder:new()
     :timeline_marker("commit")
-    :extend(get_status_check(item.commit.statusCheckRollup))
+    :extend({ status_check })
     :text(item.commit.abbreviatedOid, "OctoDetailsLabel")
     :space()
     :text(item.commit.messageHeadline, "OctoDetailsLabel")
