@@ -2090,40 +2090,29 @@ end
 ---@param items octo.fragments.HeadRefForcePushedEvent[]
 function M.write_head_ref_force_pushed_events(bufnr, items)
   local total_events = #items
-  local vt = {}
-  local conf = config.values
-  if conf.use_timeline_icons then
-    table.insert(vt, { conf.timeline_icons.force_push, "OctoTimelineMarker" })
-  else
-    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-  end
-
-  table.insert(vt, {
-    items[1].actor.login,
-    items[1].actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
-  })
-  table.insert(vt, { " force-pushed the ", "OctoTimelineItemHeading" })
-  table.insert(vt, { items[1].pullRequest.headRefName, "OctoDetailsLabel" })
+  local builder = VirtualTextBuilder:new()
+    :timeline_marker("force_push")
+    :actor(items[1].actor)
+    :heading(" force-pushed the ")
+    :text(items[1].pullRequest.headRefName, "OctoDetailsLabel")
 
   if total_events > 1 then
-    table.insert(
-      vt,
-      { " branch " .. tostring(total_events) .. " times, most recently from ", "OctoTimelineItemHeading" }
-    )
-    table.insert(vt, { items[total_events].beforeCommit.abbreviatedOid, "OctoDetailsValue" })
-    table.insert(vt, { " to ", "OctoTimelineItemHeading" })
-    table.insert(vt, { items[total_events].afterCommit.abbreviatedOid, "OctoDetailsValue" })
-    table.insert(vt, { " " .. utils.format_date(items[total_events].createdAt), "OctoDate" })
+    builder
+      :heading(" branch " .. tostring(total_events) .. " times, most recently from ")
+      :text(items[total_events].beforeCommit.abbreviatedOid, "OctoDetailsValue")
+      :heading(" to ")
+      :text(items[total_events].afterCommit.abbreviatedOid, "OctoDetailsValue")
+      :date(items[total_events].createdAt)
   else
-    table.insert(vt, { " branch from ", "OctoTimelineItemHeading" })
-    table.insert(vt, { items[1].beforeCommit.abbreviatedOid, "OctoDetailsValue" })
-    table.insert(vt, { " to ", "OctoTimelineItemHeading" })
-    table.insert(vt, { items[1].afterCommit.abbreviatedOid, "OctoDetailsValue" })
-    table.insert(vt, { " " .. utils.format_date(items[1].createdAt), "OctoDate" })
+    builder
+      :heading(" branch from ")
+      :text(items[1].beforeCommit.abbreviatedOid, "OctoDetailsValue")
+      :heading(" to ")
+      :text(items[1].afterCommit.abbreviatedOid, "OctoDetailsValue")
+      :date(items[1].createdAt)
   end
 
-  write_event(bufnr, vt)
+  builder:write_event(bufnr)
 end
 
 ---@param bufnr integer
@@ -2249,45 +2238,27 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.CrossReferencedEvent
 function M.write_cross_referenced_event(bufnr, item)
-  local vt = {}
   local conf = config.values
-  local spaces ---@type integer
-  if conf.use_timeline_icons then
-    table.insert(vt, { conf.timeline_icons.cross_reference, "OctoTimelineMarker" })
-    spaces = 3
-  else
-    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-    spaces = 10
-  end
-
+  local spaces = conf.use_timeline_icons and 3 or 10
   item.actor = logins.format_author(item.actor)
-
-  table.insert(vt, {
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
-  })
 
   local target = item.target
   local will_close_target = item.willCloseTarget
+  local is_pr = target.__typename == "PullRequest"
 
-  if target.__typename == "PullRequest" and not will_close_target then
-    table.insert(vt, { " mentioned this pull request ", "OctoTimelineItemHeading" })
-    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
-  elseif target.__typename == "PullRequest" then
-    table.insert(vt, { " linked a pull request ", "OctoTimelineItemHeading" })
-    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
-    table.insert(vt, { " that will close this issue ", "OctoTimelineItemHeading" })
+  local builder = VirtualTextBuilder:new():timeline_marker("cross_reference"):actor(item.actor)
+
+  if is_pr and not will_close_target then
+    builder:heading(" mentioned this pull request "):date(item.createdAt, "")
+  elseif is_pr then
+    builder:heading(" linked a pull request "):date(item.createdAt, ""):heading " that will close this issue "
   elseif not will_close_target then
-    table.insert(vt, { " mentioned this issue ", "OctoTimelineItemHeading" })
-    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
+    builder:heading(" mentioned this issue "):date(item.createdAt, "")
   else
-    table.insert(vt, { " linked an issue ", "OctoTimelineItemHeading" })
-    table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
-    table.insert(vt, { " that may be closed by this pull request ", "OctoTimelineItemHeading" })
+    builder:heading(" linked an issue "):date(item.createdAt, ""):heading " that may be closed by this pull request "
   end
 
-  write_event(bufnr, vt)
+  builder:write_event(bufnr)
   write_issue_or_pr(bufnr, item.source, spaces)
 end
 
@@ -2564,6 +2535,7 @@ function M.write_closed_event(bufnr, item)
 
   local builder = VirtualTextBuilder:new()
   if conf.use_timeline_icons then
+    ---@type table
     local icon = conf.timeline_icons.closed[lookup_value]
     builder:text(icon[1], icon[2])
   else
