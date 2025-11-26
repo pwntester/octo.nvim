@@ -52,7 +52,13 @@ end
 ---@return VirtualTextBuilder self for chaining
 function VirtualTextBuilder:timeline_marker(icon_name, icon_highlight)
   if self.conf.use_timeline_icons and icon_name and self.conf.timeline_icons[icon_name] then
-    self:text(self.conf.timeline_icons[icon_name], icon_highlight or "OctoTimelineMarker")
+    local icon = self.conf.timeline_icons[icon_name]
+    -- Handle both string icons and table icons { text, hl }
+    if type(icon) == "table" then
+      self:text(icon[1], icon[2])
+    else
+      self:text(icon, icon_highlight or "OctoTimelineMarker")
+    end
   else
     self:text(self.conf.timeline_marker .. " ", "OctoTimelineMarker")
     if not self.conf.use_timeline_icons then
@@ -136,7 +142,7 @@ end
 ---@param opts? table Options for bubble creation
 ---@return VirtualTextBuilder self for chaining
 function VirtualTextBuilder:reaction(icon, has_reacted, opts)
-  local bubble = bubbles.make_reaction_bubble(icon, has_reacted, opts)
+  local bubble = bubbles.make_reaction_bubble(icon, has_reacted or false, opts)
   return self:extend(bubble)
 end
 

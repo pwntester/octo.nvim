@@ -2135,10 +2135,10 @@ function M.write_assigned_event(bufnr, item)
     :timeline_marker("assigned")
     :actor(item.actor)
     :when_fn(item.actor.login == item.assignee.login, function(b)
-      b:heading " self-assigned this"
+      return b:heading " self-assigned this"
     end)
     :when_fn(item.actor.login ~= item.assignee.login, function(b)
-      b:heading(" assigned this to "):text(item.assignee.login or item.assignee.name, "OctoDetailsLabel")
+      return b:heading(" assigned this to "):text(item.assignee.login or item.assignee.name, "OctoDetailsLabel")
     end)
     :date(item.createdAt)
     :write_event(bufnr)
@@ -2564,7 +2564,8 @@ function M.write_closed_event(bufnr, item)
 
   local builder = VirtualTextBuilder:new()
   if conf.use_timeline_icons then
-    builder:icon(conf.timeline_icons.closed[lookup_value])
+    local icon = conf.timeline_icons.closed[lookup_value]
+    builder:text(icon[1], icon[2])
   else
     builder:timeline_marker()
   end
@@ -2572,7 +2573,7 @@ function M.write_closed_event(bufnr, item)
   builder
     :actor(item.actor)
     :when_fn(item.closable and item.closable.__typename == "Issue", function(b)
-      b:heading(" closed this as "):text(string.gsub(string.lower(stateReason), "_", " "), "OctoUnderline")
+      return b:heading(" closed this as "):text(string.gsub(string.lower(stateReason), "_", " "), "OctoUnderline")
     end)
     :when(not (item.closable and item.closable.__typename == "Issue"), " closed this", "OctoTimelineItemHeading")
     :date(item.createdAt)
@@ -2668,7 +2669,7 @@ function M.write_review_request_removed_events(bufnr, items)
   for _, item in ipairs(items) do
     if item.requestedReviewer ~= vim.NIL then
       builder:when(found_reviewer, ", ", "OctoTimelineItemHeading")
-      local reviewer = item.requestedReviewer.login or item.requestedReviewer.name
+      local reviewer = item.requestedReviewer.login or item.requestedReviewer.name or "unknown"
       builder:user_plain(reviewer, reviewer == vim.g.octo_viewer)
       found_reviewer = true
     end
@@ -2687,7 +2688,7 @@ function M.write_review_dismissed_event(bufnr, item)
     :actor(item.actor)
     :heading(" dismissed a review")
     :when_fn(item.dismissalMessage ~= vim.NIL, function(b)
-      b:heading(" ["):text(item.dismissalMessage, "OctoUser"):heading "]"
+      return b:heading(" ["):text(item.dismissalMessage, "OctoUser"):heading "]"
     end)
     :date(item.createdAt)
     :write_event(bufnr)
