@@ -13,7 +13,8 @@ local vim = vim
 
 local M = {}
 
--- Track if we've already warned about ProjectV2 config local projects_v2_config_warned = false
+-- Track if we've already warned about ProjectV2 config
+local projects_v2_config_warned = false
 
 --- Show a one-time warning about enabling ProjectsV2 config
 local function warn_projects_v2_config()
