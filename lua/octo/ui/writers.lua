@@ -2185,10 +2185,8 @@ function M.write_referenced_event(bufnr, item)
     return
   end
 
-  local conf = config.values
   TextChunkBuilder:new()
-    :text(conf.timeline_marker .. " ", "OctoTimelineMarker")
-    :heading("EVENT: ")
+    :timeline_marker()
     :actor(item.actor)
     :heading(" added a commit to ")
     :text(item.commit.repository.nameWithOwner, "OctoDetailsLabel")
@@ -2204,28 +2202,17 @@ end
 function M.write_subissue_events(bufnr, items, action)
   local previous_actor = ""
   for i, item in ipairs(items) do
-    local vt = {}
     local conf = config.values
     local spaces = conf.use_timeline_icons and 3 or 10
     if item.actor.login ~= previous_actor then
-      if conf.use_timeline_icons then
-        table.insert(vt, { conf.timeline_icons.subissue, "OctoTimelineMarker" })
-      else
-        table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-        table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-      end
-      table.insert(vt, {
-        item.actor.login,
-        item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
-      })
       local next_actor = items[i + 1] and items[i + 1].actor and items[i + 1].actor.login or ""
-      if next_actor == item.actor.login then
-        table.insert(vt, { " " .. action .. " sub-issues ", "OctoTimelineItemHeading" })
-      else
-        table.insert(vt, { " " .. action .. " a sub-issue ", "OctoTimelineItemHeading" })
-      end
-      table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
-      write_event(bufnr, vt)
+      local plural = next_actor == item.actor.login
+      TextChunkBuilder:new()
+        :timeline_marker("subissue")
+        :actor(item.actor)
+        :heading(plural and (" " .. action .. " sub-issues ") or (" " .. action .. " a sub-issue "))
+        :date(item.createdAt)
+        :write_event(bufnr)
     end
     local subIssue = item.subIssue
     subIssue.__typename = "Issue"
@@ -2298,25 +2285,15 @@ end
 ---@param add boolean
 local function write_issue_type_event(bufnr, item, add)
   local verb = add and "added" or "removed"
-  local vt = {}
-  local conf = config.values
-
-  if conf.use_timeline_icons then
-    table.insert(vt, { conf.timeline_icons.issue_type, "OctoTimelineMarker" })
-  else
-    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-  end
-
-  table.insert(vt, {
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
-  })
-  table.insert(vt, { " " .. verb .. " the ", "OctoTimelineItemHeading" })
-  vim.list_extend(vt, bubbles.make_label_bubble(item.issueType.name, item.issueType.color))
-  table.insert(vt, { " issue type ", "OctoTimelineItemHeading" })
-  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
-  write_event(bufnr, vt)
+  local label_bubble = bubbles.make_label_bubble(item.issueType.name, item.issueType.color)
+  TextChunkBuilder:new()
+    :timeline_marker("issue_type")
+    :actor(item.actor)
+    :heading(" " .. verb .. " the ")
+    :extend(label_bubble)
+    :heading(" issue type ")
+    :date(item.createdAt)
+    :write_event(bufnr)
 end
 
 ---@param bufnr integer
@@ -2334,27 +2311,18 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.IssueTypeChangedEvent
 function M.write_issue_type_changed_event(bufnr, item)
-  local vt = {}
-  local conf = config.values
-
-  if conf.use_timeline_icons then
-    table.insert(vt, { conf.timeline_icons.issue_type, "OctoTimelineMarker" })
-  else
-    table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-    table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-  end
-
-  table.insert(vt, {
-    item.actor.login,
-    item.actor.login == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser",
-  })
-  table.insert(vt, { " changed the issue type from ", "OctoTimelineItemHeading" })
-  vim.list_extend(vt, bubbles.make_label_bubble(item.prevIssueType.name, item.prevIssueType.color))
-  table.insert(vt, { " to ", "OctoTimelineItemHeading" })
-  vim.list_extend(vt, bubbles.make_label_bubble(item.issueType.name, item.issueType.color))
-  table.insert(vt, { " ", "OctoTimelineItemHeading" })
-  table.insert(vt, { utils.format_date(item.createdAt), "OctoDate" })
-  write_event(bufnr, vt)
+  local prev_bubble = bubbles.make_label_bubble(item.prevIssueType.name, item.prevIssueType.color)
+  local new_bubble = bubbles.make_label_bubble(item.issueType.name, item.issueType.color)
+  TextChunkBuilder:new()
+    :timeline_marker("issue_type")
+    :actor(item.actor)
+    :heading(" changed the issue type from ")
+    :extend(prev_bubble)
+    :heading(" to ")
+    :extend(new_bubble)
+    :space()
+    :date(item.createdAt)
+    :write_event(bufnr)
 end
 
 ---@param bufnr integer
@@ -2574,25 +2542,19 @@ function M.write_labeled_events(bufnr, items, action)
   end
 
   for actor, _ in pairs(labels_by_actor) do
-    local vt = {}
-    local conf = config.values
-    if conf.use_timeline_icons then
-      table.insert(vt, { conf.timeline_icons.label, "OctoTimelineMarker" })
-    else
-      table.insert(vt, { conf.timeline_marker .. " ", "OctoTimelineMarker" })
-      table.insert(vt, { "EVENT: ", "OctoTimelineItemHeading" })
-    end
-    --vim.list_extend(vt, actor_bubble)
     actor = logins.format_author({ login = actor }).login
-    table.insert(vt, { actor, actor == vim.g.octo_viewer and "OctoUserViewer" or "OctoUser" })
-    table.insert(vt, { " " .. action .. " ", "OctoTimelineItemHeading" })
     local labels = labels_by_actor[actor]
+    local builder = TextChunkBuilder:new()
+      :timeline_marker("label")
+      :user_plain(actor, actor == vim.g.octo_viewer)
+      :heading(" " .. action .. " ")
+
     for _, label in ipairs(labels) do
       local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
-      vim.list_extend(vt, label_bubble)
+      builder:extend(label_bubble)
     end
-    table.insert(vt, { #labels > 1 and "labels" or "label", "OctoTimelineItemHeading" })
-    write_event(bufnr, vt)
+
+    builder:heading(#labels > 1 and "labels" or "label"):write_event(bufnr)
   end
 end
 
@@ -2653,10 +2615,8 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.ReviewDismissedEvent
 function M.write_review_dismissed_event(bufnr, item)
-  local conf = config.values
   TextChunkBuilder:new()
-    :text(conf.timeline_marker .. " ", "OctoTimelineMarker")
-    :heading("EVENT: ")
+    :timeline_marker()
     :actor(item.actor)
     :heading(" dismissed a review")
     :when_fn(item.dismissalMessage ~= vim.NIL, function(b)
