@@ -9,7 +9,7 @@ local logins = require "octo.logins"
 local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
 local notify = require "octo.notify"
-local VirtualTextBuilder = require "octo.ui.virtual-text-builder"
+local TextChunkBuilder = require "octo.ui.text-chunk-builder"
 local vim = vim
 
 local M = {}
@@ -1920,7 +1920,7 @@ end
 ---@param item octo.fragments.PullRequestCommit
 local function write_commit(bufnr, item)
   local status_check = get_status_check(item.commit.statusCheckRollup)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("commit")
     :extend({ status_check })
     :text(item.commit.abbreviatedOid, "OctoDetailsLabel")
@@ -1952,7 +1952,7 @@ local function write_commit_header(bufnr, commits)
   local first_item = commits[1]
   local first_user = get_author(first_item)
 
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("commit_push")
     :user_plain(first_user, first_user == vim.g.octo_viewer)
     :when(
@@ -1988,7 +1988,7 @@ function M.write_project_v2_item_status_changed_event(bufnr, item)
   local conf = config.values
   item.actor = logins.format_author(item.actor)
 
-  local builder = VirtualTextBuilder:new():timeline_marker("project"):actor(item.actor):heading " moved this "
+  local builder = TextChunkBuilder:new():timeline_marker("project"):actor(item.actor):heading " moved this "
 
   if item.previousStatus ~= "" and item.status ~= "" then
     builder
@@ -2028,7 +2028,7 @@ local write_project_v2_event = function(bufnr, item, verb)
   local conf = config.values
   item.actor = logins.format_author(item.actor)
 
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("project")
     :actor(item.actor)
     :heading(" " .. verb .. " this to " .. conf.timeline_icons.project)
@@ -2052,7 +2052,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.AutoSquashEnabledEvent
 function M.write_auto_squash_enabled_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("auto_squash")
     :actor(item.actor)
     :heading(" enabled auto-merge (squash)")
@@ -2063,7 +2063,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.HeadRefDeletedEvent
 function M.write_head_ref_deleted_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("head_ref")
     :actor(item.actor)
     :heading(" deleted the ")
@@ -2076,7 +2076,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.HeadRefRestoredEvent
 function M.write_head_ref_restored_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("head_ref")
     :actor(item.actor)
     :heading(" restored the ")
@@ -2090,7 +2090,7 @@ end
 ---@param items octo.fragments.HeadRefForcePushedEvent[]
 function M.write_head_ref_force_pushed_events(bufnr, items)
   local total_events = #items
-  local builder = VirtualTextBuilder:new()
+  local builder = TextChunkBuilder:new()
     :timeline_marker("force_push")
     :actor(items[1].actor)
     :heading(" force-pushed the ")
@@ -2120,7 +2120,7 @@ end
 function M.write_assigned_event(bufnr, item)
   item.actor = logins.format_author(item.actor)
   item.assignee = logins.format_author(item.assignee)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("assigned")
     :actor(item.actor)
     :when_fn(item.actor.login == item.assignee.login, function(b)
@@ -2167,7 +2167,7 @@ end
 ---@param item octo.fragments.DeployedEvent
 function M.write_deployed_event(bufnr, item)
   local bubble_info = utils.deployed_state_map[item.deployment.state]
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("deployed")
     :actor(item.actor)
     :heading(" deployed to ")
@@ -2186,7 +2186,7 @@ function M.write_referenced_event(bufnr, item)
   end
 
   local conf = config.values
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :text(conf.timeline_marker .. " ", "OctoTimelineMarker")
     :heading("EVENT: ")
     :actor(item.actor)
@@ -2246,7 +2246,7 @@ function M.write_cross_referenced_event(bufnr, item)
   local will_close_target = item.willCloseTarget
   local is_pr = target.__typename == "PullRequest"
 
-  local builder = VirtualTextBuilder:new():timeline_marker("cross_reference"):actor(item.actor)
+  local builder = TextChunkBuilder:new():timeline_marker("cross_reference"):actor(item.actor)
 
   if is_pr and not will_close_target then
     builder:heading(" mentioned this pull request "):date(item.createdAt, "")
@@ -2270,7 +2270,7 @@ local function write_parent_issue_event(bufnr, item, add)
   local conf = config.values
   local spaces = conf.use_timeline_icons and 3 or 10
 
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("parent_issue")
     :actor(item.actor)
     :heading(" " .. verb .. " a parent issue ")
@@ -2360,7 +2360,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.ConvertToDraftEvent
 function M.write_convert_to_draft_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("draft")
     :actor(item.actor)
     :heading(" marked this pull request as draft ")
@@ -2371,7 +2371,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.AutomaticBaseChangeSucceededEvent
 function M.write_automatic_base_change_succeeded_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("automatic_base_change_succeeded", "OctoStateSubmitted")
     :heading("Base automatically changed from ")
     :text(item.oldBase, "OctoDetailsLabel")
@@ -2385,7 +2385,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.BaseRefChangedEvent
 function M.write_base_ref_changed_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("base_ref_changed")
     :actor(item.actor)
     :heading(" changed the base branch from ")
@@ -2400,7 +2400,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.ReadyForReviewEvent
 function M.write_ready_for_review_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("draft")
     :actor(item.actor)
     :heading(" marked this pull request as ready for review ")
@@ -2414,7 +2414,7 @@ end
 local function write_pinned_event(bufnr, item, add)
   local verb = add and "pinned" or "unpinned"
 
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("pinned")
     :actor(item.actor)
     :heading(" " .. verb .. " this issue ")
@@ -2441,7 +2441,7 @@ local function write_milestone_event(bufnr, item, add)
   local verb = add and "added" or "removed"
   local preposition = add and "to" or "from"
 
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("milestone")
     :actor(item.actor)
     :heading(" " .. verb .. " this " .. preposition .. " the ")
@@ -2470,7 +2470,7 @@ function M.write_connected_event(bufnr, item)
   local spaces = conf.use_timeline_icons and 3 or 10
   local subject = item.subject
 
-  local builder = VirtualTextBuilder:new():timeline_marker("connected"):actor(item.actor)
+  local builder = TextChunkBuilder:new():timeline_marker("connected"):actor(item.actor)
 
   if subject.__typename == "PullRequest" then
     builder:heading(" linked a pull request "):date(item.createdAt, ""):heading " that will close this issue "
@@ -2488,12 +2488,12 @@ function M.write_renamed_title_event(bufnr, item)
   local conf = config.values
 
   if utils.is_blank(item.actor) then
-    VirtualTextBuilder:new():timeline_marker("renamed"):heading("Title renamed"):write_event(bufnr)
+    TextChunkBuilder:new():timeline_marker("renamed"):heading("Title renamed"):write_event(bufnr)
     return
   end
 
   item.actor = logins.format_author(item.actor)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("renamed")
     :actor(item.actor)
     :heading(" changed the title ")
@@ -2507,7 +2507,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.MergedEvent
 function M.write_merged_event(bufnr, item)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("merged")
     :actor(item.actor)
     :heading(" merged commit ")
@@ -2533,7 +2533,7 @@ function M.write_closed_event(bufnr, item)
   lookup_value = string.lower(lookup_value)
   local conf = config.values
 
-  local builder = VirtualTextBuilder:new()
+  local builder = TextChunkBuilder:new()
   if conf.use_timeline_icons then
     ---@type table
     local icon = conf.timeline_icons.closed[lookup_value]
@@ -2600,7 +2600,7 @@ end
 ---@param item octo.fragments.ReopenedEvent
 function M.write_reopened_event(bufnr, item)
   item.actor = logins.format_author(item.actor)
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :timeline_marker("reopened")
     :actor(item.actor)
     :heading(" reopened this ")
@@ -2613,7 +2613,7 @@ end
 ---@param items octo.fragments.ReviewRequestedEvent[]
 function M.write_review_requested_events(bufnr, items)
   local builder =
-    VirtualTextBuilder:new():timeline_marker("review_requested"):actor(items[1].actor):heading " requested a review"
+    TextChunkBuilder:new():timeline_marker("review_requested"):actor(items[1].actor):heading " requested a review"
 
   local found_reviewer = false
   for _, item in ipairs(items) do
@@ -2632,7 +2632,7 @@ end
 ---@param bufnr integer
 ---@param items octo.fragments.ReviewRequestRemovedEvent[]
 function M.write_review_request_removed_events(bufnr, items)
-  local builder = VirtualTextBuilder:new()
+  local builder = TextChunkBuilder:new()
     :timeline_marker("review_requested")
     :actor(items[1].actor)
     :heading " removed a review request for "
@@ -2654,7 +2654,7 @@ end
 ---@param item octo.fragments.ReviewDismissedEvent
 function M.write_review_dismissed_event(bufnr, item)
   local conf = config.values
-  VirtualTextBuilder:new()
+  TextChunkBuilder:new()
     :text(conf.timeline_marker .. " ", "OctoTimelineMarker")
     :heading("EVENT: ")
     :actor(item.actor)
