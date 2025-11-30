@@ -44,6 +44,7 @@ local M = {}
 ---@field use_emojis boolean -- Used by fzf-lua
 ---@field mappings OctoPickerMappings
 ---@field snacks OctoPickerConfigSnacks -- Snacks specific config
+---@field search_static boolean -- Whether to use static search results (true) or dynamic search (false)
 
 ---@class OctoConfigColors
 ---@field white string
@@ -159,6 +160,7 @@ function M.get_default_values()
     picker = "telescope",
     picker_config = {
       use_emojis = false,
+      search_static = true,
       mappings = {
         open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
@@ -581,6 +583,7 @@ function M.validate_config()
     end
 
     validate_type(config.picker_config.use_emojis, "picker_config.use_emojis", "boolean")
+    validate_type(config.picker_config.search_static, "picker_config.search_static", "boolean")
     if validate_type(config.picker_config.mappings, "picker_config.mappings", "table") then
       ---@diagnostic disable-next-line: no-unknown
       for action, map in pairs(config.picker_config.mappings) do

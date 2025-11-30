@@ -2693,6 +2693,8 @@ function M.search(...)
   local prompt = table.concat(args, " ")
 
   local type = "ISSUE"
+  local static = nil
+
   if string.match(prompt, "is:discussion") then
     type = "DISCUSSION"
     prompt = string.gsub(prompt, "is:discussion", "")
@@ -2701,7 +2703,15 @@ function M.search(...)
     prompt = string.gsub(prompt, "is:repository", "")
   end
 
-  picker.search { prompt = prompt, type = type }
+  if string.match(prompt, "static:true") then
+    static = true
+    prompt = string.gsub(prompt, "%s*static:true%s*", "")
+  elseif string.match(prompt, "static:false") then
+    static = false
+    prompt = string.gsub(prompt, "%s*static:false%s*", "")
+  end
+
+  picker.search { prompt = prompt, type = type, static = static }
 end
 
 --- @class PinIssueOpts

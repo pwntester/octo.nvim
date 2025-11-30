@@ -195,6 +195,7 @@ require"octo".setup {
   picker = "telescope",                    -- or "fzf-lua" or "snacks" or "default"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
+    search_static = true,                  -- Whether to use static search results (true) or dynamic search (false)
     mappings = {                           -- mappings for the pickers
       open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
