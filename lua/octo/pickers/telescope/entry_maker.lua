@@ -158,6 +158,9 @@ function M.gen_from_git_commits()
       display = make_display,
       author = string.format("%s <%s>", entry.commit.author.name, entry.commit.author.email),
       date = entry.commit.author.date,
+      obj = {
+        url = entry.html_url,
+      },
     }
   end
 end
@@ -706,8 +709,22 @@ function M.gen_from_notification(opts)
       return nil
     end
     local ref = notification.subject.url:match "/(%d+)$"
+    local filename
+
+    if notification.kind == "issue" then
+      filename = utils.get_issue_uri(ref, notification.repository.full_name)
+    elseif notification.kind == "pull_request" then
+      filename = utils.get_pull_request_uri(ref, notification.repository.full_name)
+    elseif notification.kind == "discussion" then
+      filename = utils.get_discussion_uri(ref, notification.repository.full_name)
+    elseif notification.kind == "release" then
+      filename = utils.get_release_uri(ref, notification.repository.full_name)
+    else
+      filename = ""
+    end
 
     return {
+      filename = filename,
       value = ref,
       ordinal = notification.subject.title .. " " .. notification.repository.full_name .. " " .. ref,
       display = make_display,
@@ -752,6 +769,27 @@ function M.gen_from_issue_templates()
       ordinal = template.name .. " " .. template.about,
       display = make_display,
       template = template,
+    }
+  end
+end
+
+function M.gen_from_release(opts)
+  return function(entry)
+    entry.repo = opts.repo
+
+    local display = entry.name
+    if entry.tagName ~= display then
+      display = display .. " (" .. entry.tagName .. ")"
+    end
+
+    display = display .. " " .. utils.format_date(entry.createdAt)
+
+    return {
+      filename = utils.get_release_uri(entry.tagName, opts.repo),
+      value = entry.tagName,
+      display = display,
+      ordinal = display,
+      obj = entry,
     }
   end
 end

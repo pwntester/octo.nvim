@@ -1,6 +1,14 @@
 name: Typecheck
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
   typecheck:
@@ -8,10 +16,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nvim_version: [ stable ]
-        lua_ls_version: [ 3.15.0 ]
+        nvim_version: [stable]
+        lua_ls_version: [3.15.0]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install neovim
         run: |
           url="https://github.com/neovim/neovim/releases/download/${{ matrix.nvim_version }}/nvim-linux-x86_64.tar.gz"
@@ -42,4 +50,3 @@ jobs:
       - name: Typecheck
         run: |
           env VIMRUNTIME=${PWD}/_neovim/share/nvim/runtime lua-language-server --check=${PWD}/lua --configpath=${PWD}/.github/workflows/.luarc.json --checklevel=Information
-

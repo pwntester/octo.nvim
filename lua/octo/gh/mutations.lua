@@ -5,6 +5,7 @@ local M = {}
 
 M.setup = function()
   -- https://docs.github.com/en/graphql/reference/mutations#addreaction
+  -- inject: graphql
   M.add_reaction = [[
 mutation {
   addReaction(input: {subjectId: "%s", content: %s}) {
@@ -831,7 +832,7 @@ mutation($input: UpdatePullRequestInput!) {
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updatepullrequest
   M.update_pull_request_state = [[
-mutation($pullRequestId: ID!, $state: PullRequestState!) {
+mutation($pullRequestId: ID!, $state: PullRequestUpdateState!) {
   updatePullRequest(input: {pullRequestId: $pullRequestId, state: $state}) {
     pullRequest {
       id
@@ -918,7 +919,7 @@ mutation($pullRequestId: ID!, $state: PullRequestState!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event
 
   if config.values.default_to_projects_v2 then
     M.update_pull_request_state = M.update_pull_request_state
@@ -1205,7 +1206,7 @@ mutation($input: CreatePullRequestInput!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event
 
   if config.values.default_to_projects_v2 then
     M.create_pr = M.create_pr
@@ -1309,6 +1310,51 @@ mutation($issue_id: ID!, $issue_type_id: ID) {
   }
 }
 ]]
+  M.star_repo = [[
+  mutation($repo_id: ID!) {
+    addStar(input: {starrableId: $repo_id}) {
+      starrable {
+        id
+        viewerHasStarred
+      }
+    }
+  }
+  ]]
+  M.unstar_repo = [[
+  mutation($repo_id: ID!) {
+    removeStar(input: {starrableId: $repo_id}) {
+      starrable {
+        id
+        viewerHasStarred
+      }
+    }
+  }
+  ]]
+  ---@class octo.mutations.UpdateSubscription
+  ---@field data {
+  ---  updateSubscription: {
+  ---    subscribable: {
+  ---      id: string,
+  ---      viewerSubscription: octo.SubscriptionState,
+  ---    },
+  ---  },
+  ---}
+
+  ---@class octo.mutations.UpdateSubscriptionInput
+  ---@field subscribable_id string
+  ---@field state octo.SubscriptionState
+
+  -- https://docs.github.com/en/graphql/reference/mutations#updatesubscription
+  M.update_subscription = [[
+  mutation($subscribable_id: ID!, $state: SubscriptionState!) {
+    updateSubscription(input: {subscribableId: $subscribable_id, state: $state}) {
+      subscribable {
+        id
+        viewerSubscription
+      }
+    }
+  }
+  ]]
 end
 
 return M

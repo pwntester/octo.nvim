@@ -74,6 +74,39 @@ Octo search assignee:pwntester is:pr
 Octo search is:discussion repo:pwntester/octo.nvim category:"Show and Tell"
 ```
 
+You can pass GitHub URLs directly to the `Octo` command, including GitHub Enterprise URLs:
+
+```vim
+" GitHub.com URLs
+Octo https://github.com/pwntester/octo.nvim/issues/12
+Octo https://github.com/pwntester/octo.nvim/pull/123
+
+" GitHub Enterprise URLs (hostname is automatically detected)
+Octo https://ghe.example.com/owner/repo/issues/456
+Octo https://ghe.example.com/owner/repo/pull/789
+```
+
+You can also use `octo://` URLs to open issues and PRs directly:
+
+```vim
+" Open from the default GitHub instance (github.com or configured github_hostname)
+:e octo://owner/repo/issue/123
+:e octo://owner/repo/pull/456
+
+" Open from a specific GitHub Enterprise instance
+:e octo://ghe.example.com/owner/repo/issue/123
+:e octo://ghe.example.com/owner/repo/pull/456
+
+" Both singular and plural forms are supported
+:e octo://owner/repo/issues/123
+:e octo://owner/repo/pulls/456
+```
+
+The `octo://` URL format is especially useful for:
+- Opening issues/PRs from notes or wiki links without needing to be in the repository directory
+- Working with multiple GitHub instances (e.g., GitHub.com and GitHub Enterprise) without setting `GH_HOST` globally
+- Creating quick links in your workflow that work regardless of your current directory
+
 From any octo buffer, press `<CR>` in normal mode to see common actions.
 
 ## 🎯 Requirements
@@ -86,10 +119,11 @@ From any octo buffer, press `<CR>` in normal mode to see common actions.
   - If you'd like to actually modify projects you can instead add the `project`
     scope to your token instead.
 - Install [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
-- Install one of:
+- Install one or none of:
   - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
   - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
   - [snacks.nvim](https://github.com/folke/snacks.nvim)
+  - default picker uses `vim.ui.select`
 - Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 
 ## 📦 Installation
@@ -101,8 +135,8 @@ For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
   "pwntester/octo.nvim",
   cmd = "Octo",
   opts = {
-    -- or "fzf-lua" or "snacks"
-    picker = "telescope",  
+    -- or "fzf-lua" or "snacks" or "default"
+    picker = "telescope",
     -- bare Octo command opens picker of commands
     enable_builtin = true,
   },
@@ -158,7 +192,7 @@ require"octo".setup {
   default_merge_method = "merge",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `merge`, `rebase` or `squash`
   default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
   ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
-  picker = "telescope",                    -- or "fzf-lua" or "snacks"
+  picker = "telescope",                    -- or "fzf-lua" or "snacks" or "default"
   picker_config = {
     use_emojis = false,                    -- only used by "fzf-lua" picker for now
     search_static = true,                  -- Whether to use static search results (true) or dynamic search (false)
@@ -192,6 +226,7 @@ require"octo".setup {
   users = "search",                        -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
   user_icon = " ",                        -- user icon
   ghost_icon = "󰊠 ",                       -- ghost icon
+  copilot_icon = " ",                     -- copilot icon
   timeline_marker = " ",                  -- timeline marker
   timeline_indent = 2,                   -- timeline indentation
   use_timeline_icons = true,               -- toggle timeline icons
@@ -282,6 +317,7 @@ require"octo".setup {
   mappings_disable_default = false,        -- disable default mappings if true, but will still adapt user mappings
   mappings = {
     discussion = {
+      discussion_options = { lhs = "<CR>", desc = "show discussion options" },
       open_in_browser = { lhs = "<C-b>", desc = "open discussion in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
@@ -481,17 +517,18 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reopen                                            | Reopen the current issue                                                                                                                               |
 |          | create [repo]                                     | Creates a new issue in the current or specified repo                                                                                                   |
 |          | develop                                           | Create and checkout a new branch for an issue in the current repo                                                                                      |
-|          | edit [repo] <number>                              | Edit issue `<number>` in current or specified repo                                                                                                     |
+|          | edit <number> [repo]                              | Edit issue `<number>` in current or specified repo                                                                                                     |
 |          | list [repo] [key=value] (1)                       | List all issues satisfying given filter                                                                                                                |
 |          | search                                            | Live issue search                                                                                                                                      |
 |          | reload                                            | Reload issue. Same as doing `e!`                                                                                                                       |
 |          | browser                                           | Open current issue in the browser                                                                                                                      |
 |          | url                                               | Copies the URL of the current issue to the system clipboard                                                                                            |
+|          | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore)                                                                                          |
 |          | pin                                               | Pin the current issue                                                                                                                                  |
 |          | unpin                                             | Unpin the current issue                                                                                                                                |
 | pr       | list [repo] [key=value] (2)                       | List all PRs satisfying given filter                                                                                                                   |
 |          | search                                            | Live issue search                                                                                                                                      |
-|          | edit [repo] <number>                              | Edit PR `<number>` in current or specified repo                                                                                                        |
+|          | edit <number> [repo]                             | Edit PR `<number>` in current or specified repo                                                                                                        |
 |          | reopen                                            | Reopen the current PR                                                                                                                                  |
 |          | create                                            | Creates a new PR for the current branch                                                                                                                |
 |          | close                                             | Close the current PR                                                                                                                                   |
@@ -506,19 +543,21 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |          | reload                                            | Reload PR. Same as doing `e!`                                                                                                                          |
 |          | browser                                           | Open current PR in the browser                                                                                                                         |
 |          | url                                               | Copies the URL of the current PR to the system clipboard                                                                                               |
+|          | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore)                                                                                          |
 |          | sha                                               | Copies the head commit SHA of the current PR to the system clipboard                                                                                   |
 |          | runs                                              | List all workflow runs for the PR                                                                                                                      |
 | repo     | list (3)                                          | List repos user owns, contributes or belong to                                                                                                         |
 |          | fork                                              | Fork repo                                                                                                                                              |
 |          | browser                                           | Open current repo in the browser                                                                                                                       |
 |          | url                                               | Copies the URL of the current repo to the system clipboard                                                                                             |
+|          | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore)                                                                                          |
 |          | view                                              | Open a repo by path ({organization}/{name})                                                                                                            |
 | gist     | list [repo] [key=value] (4)                       | List user gists                                                                                                                                        |
 | comment  | add                                               | Add a new comment                                                                                                                                      |
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
 |          | delete                                            | Delete a comment                                                                                                                                       |
 |          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
-|          | reply                                            | Add comment as a reply to the current comment | 
+|          | reply                                            | Add comment as a reply to the current comment |
  | thread   | resolve                                           | Mark a review thread as resolved                                                                                                                       |
 |          | unresolve                                         | Mark a review thread as unresolved                                                                                                                     |
 | label    | add [label]                                       | Add a label from available label menu                                                                                                                  |
@@ -558,6 +597,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | run      | list                                              | List workflow runs                                                                                                                                     |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
+|    | edit <number> [repo] | Edit discussion in current or specified repo |
 |    | browser | Open the current discussion in the browser |
 |    | create [repo]                                          | Create discussion for current or specified repo |
 |    | reload                                                 | Reload the current discussion buffer |
@@ -566,11 +606,13 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 |    | unmark                                                 | Unmark the discussion comment as answer |
 |    | reopen                                                 | Reopen the current discussion |
 |    | search                                                 | Search discussions |
+|    | subscription                                      | Change subscription state (subscribe, unsubscribe, or ignore) |
 |    | category                                                 | Change category of discussion |
 | parent   | add                                           | Add a parent issue to current issue |
 |          | remove                                           | Remove the parent issue to current issue |
 |          | edit                                           | Edit the parent issue to current issue |
 | release  | notes                                           | Generate release notes in current buffer |
+|   | list [repo]                                           | List release notes for current or specified repo |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

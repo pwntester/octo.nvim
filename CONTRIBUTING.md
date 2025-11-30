@@ -1,4 +1,4 @@
-# Contributing to Octo.Nvim 
+# Contributing to Octo.Nvim
 
 Welcome to Octo! This document is a guideline about how to contribute to Octo.
 If you find something incorrect or missing, please leave comments / suggestions.

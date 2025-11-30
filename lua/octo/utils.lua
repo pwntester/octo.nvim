@@ -6,6 +6,7 @@ local queries = require "octo.gh.queries"
 local _, Job = pcall(require, "plenary.job")
 local release = require "octo.release"
 local notify = require "octo.notify"
+local uri = require "octo.uri"
 local vim = vim
 
 local M = {}
@@ -98,6 +99,9 @@ M.file_status_map = {
 }
 
 -- https://docs.github.com/en/graphql/reference/enums#statusstate
+---@alias octo.StatusState "ERROR" | "FAILURE" | "EXPECTED" | "PENDING" | "SUCCESS"
+
+---@type table<octo.StatusState, table<string, string>>
 M.state_map = {
   ERROR = { symbol = "× ", hl = "OctoStateDismissed" },
   FAILURE = { symbol = "× ", hl = "OctoStateDismissed" },
@@ -202,6 +206,8 @@ function table.pack(...)
   return { n = select("#", ...), ... }
 end
 
+---@param s any
+---@return boolean
 function M.is_blank(s)
   return (
     s == nil
@@ -767,7 +773,7 @@ function M.seconds_between(start_date, end_date)
 end
 
 ---Formats a string as a date
----@param date_string string
+---@param date_string string ISO 8601 date string in UTC format
 ---@param round_under_one_minute? boolean defaults to true
 ---@return string
 function M.format_date(date_string, round_under_one_minute)
@@ -986,87 +992,12 @@ function M.escape_char(s)
   return escaped
 end
 
---- Gets the repo and id from args.
----@type (fun(args: {n: integer}|string[], is_number: true): string?, integer?)|(fun(args: {n: integer}|string[], is_number: false): string?, string?)
-local function get_repo_id_from_args(args, is_number)
-  local repo, id ---@type string|nil, string|integer|nil
-  if args.n == 0 then
-    M.error "Missing arguments"
-    return
-  elseif args.n == 1 then
-    -- eg: Octo issue 1
-    repo = M.get_remote_name()
-    id = tonumber(args[1])
-  elseif args.n == 2 then
-    -- eg: Octo issue 1 pwntester/octo.nvim
-    repo = args[2] ---@type string
-    id = is_number and tonumber(args[1]) or args[1]
-  else
-    M.error "Unexpected arguments"
-    return
-  end
-  if not repo then
-    M.error "Can not find repo name"
-    return
-  end
-  if type(repo) ~= "string" then
-    M.error(("Expected repo name, received %s"):format(args[2]))
-    return
-  end
-  if not id or (is_number and type(id) ~= "number") then
-    M.error(("Expected issue/PR number, received %s"):format(args[1]))
-    return
-  end
-  return repo, id
-end
-
---- Extracts repo and number from Octo command varargs
----@param ... string|number
----@return string? repo
----@return integer? number
-function M.get_repo_number_from_varargs(...)
-  local args = table.pack(...)
-  return get_repo_id_from_args(args, true)
-end
-
---- Get the URI for a repository
-function M.get_repo_uri(_, repo)
-  return string.format("octo://%s/repo", repo)
-end
-
---- Get the URI for an issue
-function M.get_issue_uri(...)
-  local repo, number = M.get_repo_number_from_varargs(...)
-  return string.format("octo://%s/issue/%s", repo, number)
-end
-
---- Get the URI for an pull request
-function M.get_pull_request_uri(...)
-  local repo, number = M.get_repo_number_from_varargs(...)
-  return string.format("octo://%s/pull/%s", repo, number)
-end
-
-function M.get_discussion_uri(...)
-  local repo, number = M.get_repo_number_from_varargs(...)
-
-  return string.format("octo://%s/discussion/%s", repo, number)
-end
-
-function M.get_release_uri(...)
-  local args = table.pack(...)
-  local repo, tag_name_or_id = get_repo_id_from_args(args, false)
-  local release_id = tonumber(tag_name_or_id)
-  if not release_id then
-    return string.format("octo://%s/release/%s", repo, tag_name_or_id)
-  end
-  if not repo then
-    M.error "Cannot find repo name"
-    return
-  end
-  local owner, name = M.split_repo(repo)
-  local tag_name = release.get_tag_from_release_id { owner = owner, repo = name, release_id = tostring(release_id) }
-  return string.format("octo://%s/release/%s", repo, tag_name)
-end
+--- Backwards compatible wrapper
+M.get_repo_uri = uri.get_repo_uri
+M.get_issue_uri = uri.get_issue_uri
+M.get_pull_request_uri = uri.get_pull_request_uri
+M.get_discussion_uri = uri.get_discussion_uri
+M.get_release_uri = uri.get_release_uri
 
 ---Helper method opening octo buffers
 function M.get(kind, ...)
@@ -1104,19 +1035,19 @@ function M.get_release(...)
 end
 
 ---@param url string
----@return string?, string?, string?
+---@return string?, string?, string?, string?
 function M.parse_url(url)
-  local repo, kind, number = string.match(url, constants.URL_ISSUE_PATTERN)
+  local hostname, repo, kind, number = string.match(url, constants.URL_ISSUE_PATTERN)
   if repo and number and kind == "issues" then
-    return repo, number, "issue"
+    return hostname, repo, number, "issue"
   elseif repo and number and kind == "pull" then
-    return repo, number, kind
+    return hostname, repo, number, kind
   elseif repo and number and kind == "discussions" then
-    return repo, number, "discussion"
+    return hostname, repo, number, "discussion"
   elseif not repo then
-    repo, kind, number = string.match(url, constants.URL_RELEASE_PATTERN)
+    hostname, repo, kind, number = string.match(url, constants.URL_RELEASE_PATTERN)
     if repo and number and kind == "releases" then
-      return repo, number, "release"
+      return hostname, repo, number, "release"
     end
   end
 end
@@ -1365,9 +1296,6 @@ end
 
 -- clear buffer undo history
 function M.clear_history()
-  if true then
-    return
-  end
   ---@type integer
   local old_undolevels = vim.o.undolevels
   vim.o.undolevels = -1

@@ -19,6 +19,7 @@ local utils = require "octo.utils"
 ---@field project_cards_v2 function Get project cards
 ---@field project_columns_v2 function Get project columns
 ---@field prs function Get pull requests
+---@field releases fun(opts? : { repo?: string, cb?: function }) Get releases for a repository
 ---@field repos function Get repositories
 ---@field review_commits function Get review commits
 ---@field search function Get search results
@@ -35,7 +36,12 @@ function M.setup()
   end
   setmetatable(M, {
     __index = function(_, key)
-      return function()
+      return function(...)
+        local default = require("octo.pickers.default.provider").picker[key]
+
+        if default then
+          return default(...)
+        end
         utils.error(
           utils.title_case(provider_name)
             .. " doesn't support the "

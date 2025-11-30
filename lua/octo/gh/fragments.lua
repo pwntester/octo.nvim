@@ -20,6 +20,7 @@ M.setup = function()
   ---  },
   ---}[]
 
+  -- inject: graphql
   M.projects_v2 = [[
   projectItems(first: 100) {
     nodes {
@@ -415,7 +416,7 @@ fragment IssueCommentFragment on IssueComment {
   ---@class octo.fragments.AssignedEvent
   ---@field __typename "AssignedEvent"
   ---@field actor { login: string }
-  ---@field assignee { name?: string, login?: string, isViewer?: boolean }
+  ---@field assignee { name?: string, login: string, isViewer?: boolean }
   ---@field createdAt string
 
   M.assigned_event = [[
@@ -447,6 +448,22 @@ fragment AutomaticBaseChangeSucceededEventFragment on AutomaticBaseChangeSucceed
   createdAt
   oldBase
   newBase
+}
+]]
+
+  ---@class octo.fragments.BaseRefChangedEvent
+  ---@field __typename "BaseRefChangedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field currentRefName string
+  ---@field previousRefName string
+
+  M.base_ref_changed_event = [[
+fragment BaseRefChangedEventFragment on BaseRefChangedEvent {
+  actor { login }
+  createdAt
+  currentRefName
+  previousRefName
 }
 ]]
 
@@ -525,6 +542,8 @@ fragment ReopenedEventFragment on ReopenedEvent {
   createdAt
 }
 ]]
+  ---@alias octo.CommentAuthorAssociation "MEMBER"|"OWNER"|"MANNEQUIN"|"COLLABORATOR"|"CONTRIBUTOR"|"FIRST_TIME_CONTRIBUTOR"|"FIRST_TIMER"|"NONE"
+
   ---@class octo.fragments.PullRequestReview.comment : octo.ReactionGroupsFragment
   ---@field id string
   ---@field url string
@@ -532,7 +551,7 @@ fragment ReopenedEventFragment on ReopenedEvent {
   ---@field body string
   ---@field commit { oid: string, abbreviatedOid: string }
   ---@field author { login: string }
-  ---@field authorAssociation string
+  ---@field authorAssociation octo.CommentAuthorAssociation
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
   ---@field viewerCanDelete boolean
@@ -624,7 +643,7 @@ fragment ProjectCardFragment on ProjectCard {
   ---  additions: integer,
   ---  deletions: integer,
   ---  author: { user: { login: string } },
-  ---  statusCheckRollup: { state: string },
+  ---  statusCheckRollup: { state: octo.StatusState },
   ---  committer: { user: { login: string } },
   ---}
 
@@ -687,7 +706,7 @@ fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
 ]]
 
   ---https://docs.github.com/en/graphql/reference/enums#deploymentstatusstate
-  ---@alias DeploymentState "ABANDONED" | "ACTIVE" | "DESTROYED" | "ERROR" | "FAILURE" | "INACTIVE" | "IN_PROGRESS" | "PENDING" | "QUEUED" | "SUCCESS" | "WAITING"
+  ---@alias DeploymentState "ABANDONED"|"ACTIVE"|"DESTROYED"|"ERROR"|"FAILURE"|"INACTIVE"|"IN_PROGRESS"|"PENDING"|"QUEUED"|"SUCCESS"|"WAITING"
 
   ---@class octo.fragments.DeployedEvent
   ---@field __typename "DeployedEvent"
@@ -711,7 +730,7 @@ fragment DeployedEventFragment on DeployedEvent {
   ---@field createdAt string
   ---@field actor { login: string }
   ---@field requestedReviewer {
-  ---  login?: string,
+  ---  login: string,
   ---  isViewer?: boolean,
   ---  name?: string,
   ---}
@@ -1016,6 +1035,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   local pull_request_timeline_items_connection_fragments = [[
     __typename
     ...AutomaticBaseChangeSucceededEventFragment
+    ...BaseRefChangedEventFragment
     ...AssignedEventFragment
     ...ClosedEventFragment
     ...ConnectedEventFragment
@@ -1051,7 +1071,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ]]
   end
 
-  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
+  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
 
   ---@class octo.fragments.PullRequestTimelineItemsConnection
   ---@field nodes octo.PullRequestTimelineItem[]
@@ -1113,6 +1133,26 @@ fragment IssueInformationFragment on Issue {
 }
 ]]
 
+  ---State of a pull request (used for querying/filtering)
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequeststate
+  ---@alias octo.PullRequestState "OPEN"|"CLOSED"|"MERGED"
+
+  ---State enum for updating a pull request (used in mutations)
+  ---Note: MERGED is not included because PRs cannot be directly set to merged via mutation
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestupdatestate
+  ---@alias octo.PullRequestUpdateState "OPEN"|"CLOSED"
+
+  ---State of an individual pull request review comment
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewcommentstate
+  ---@alias octo.PullRequestReviewCommentState "PENDING"|"SUBMITTED"
+
+  ---State of a pull request review (the parent of review comments)
+  ---Note: Review threads can contain comments from multiple reviews with different states.
+  ---When filtering for pending comments, check pullRequestReview.state == "PENDING" to ensure
+  ---you're only getting comments from the pending review, not from previously submitted reviews.
+  ---https://docs.github.com/en/graphql/reference/enums#pullrequestreviewstate
+  ---@alias octo.PullRequestReviewState "PENDING"|"COMMENTED"|"APPROVED"|"CHANGES_REQUESTED"|"DISMISSED"
+
   ---@class octo.ReviewThreadCommentFragment : octo.ReactionGroupsFragment
   --- @field id string
   --- @field body string
@@ -1122,14 +1162,14 @@ fragment IssueInformationFragment on Issue {
   --- @field outdated boolean
   --- @field originalCommit { oid: string, abbreviatedOid: string }
   --- @field author { login: string }
-  --- @field authorAssociation string
+  --- @field authorAssociation octo.CommentAuthorAssociation
   --- @field viewerDidAuthor boolean
   --- @field viewerCanUpdate boolean
   --- @field viewerCanDelete boolean
-  --- @field state string
+  --- @field state octo.PullRequestReviewCommentState
   --- @field url string
   --- @field replyTo { id: string, url: string }
-  --- @field pullRequestReview { id: string, state: string }
+  --- @field pullRequestReview { id: string, state: octo.PullRequestReviewState }
   --- @field path string
 
   M.review_thread_comment = [[
@@ -1237,6 +1277,7 @@ fragment DiscussionInfoFragment on Discussion {
   ---@field upvoteCount integer
   ---@field viewerHasUpvoted boolean
   ---@field viewerDidAuthor boolean
+  ---@field viewerSubscription "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
 
   M.discussion_details = [[
 fragment DiscussionDetailsFragment on Discussion {
@@ -1260,6 +1301,7 @@ fragment DiscussionDetailsFragment on Discussion {
   upvoteCount
   viewerHasUpvoted
   viewerDidAuthor
+  viewerSubscription
   ...ReactionGroupsFragment
 }
 ]]

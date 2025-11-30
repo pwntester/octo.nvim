@@ -27,7 +27,7 @@ local M = {}
 ---@field commentsMetadata CommentMetadata[]
 ---@field threadsMetadata ThreadMetadata[]
 ---@field private node octo.PullRequest|octo.Issue|octo.Release|octo.Discussion|octo.Repository
----@field taggable_users? string[]
+---@field taggable_users? string[] list of taggable users for the buffer. Trigger with @
 ---@field owner? string
 ---@field name? string
 local OctoBuffer = {}
@@ -63,11 +63,11 @@ function OctoBuffer:new(opts)
 
   if this.node and this.node.commits then
     this.kind = "pull"
-    this.taggable_users = { this.node.author.login }
+    this.taggable_users = { this.node.author.login, "copilot" }
   elseif this.node and this.number then
     this.kind = opts.kind or "issue"
     if not utils.is_blank(this.node.author) then
-      this.taggable_users = { this.node.author.login }
+      this.taggable_users = { this.node.author.login, "copilot" }
     end
   elseif this.node and not this.number then
     this.kind = opts.kind or "repo"
@@ -256,7 +256,14 @@ function OctoBuffer:render_issue()
       commits = {}
       prev_is_event = true
     end
-    if (not item or item.__typename ~= "HeadRefForcePushedEvent") and #unrendered_force_push_events > 0 then
+    if
+      #unrendered_force_push_events > 0
+      and (
+        not item
+        or item.__typename ~= "HeadRefForcePushedEvent"
+        or item.actor.login ~= unrendered_force_push_events[1].actor.login
+      )
+    then
       writers.write_head_ref_force_pushed_events(self.bufnr, unrendered_force_push_events)
       unrendered_force_push_events = {}
       prev_is_event = true
@@ -432,6 +439,9 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "AutomaticBaseChangeSucceededEvent" then
       writers.write_automatic_base_change_succeeded_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "BaseRefChangedEvent" then
+      writers.write_base_ref_changed_event(self.bufnr, item)
+      prev_is_event = true
     elseif
       not utils.is_blank(item)
       and config.values.debug.notify_missing_timeline_items
@@ -448,9 +458,6 @@ function OctoBuffer:render_issue()
   if prev_is_event then
     writers.write_block(self.bufnr, { "" })
   end
-
-  -- drop undo history
-  utils.clear_history()
 
   -- reset modified option
   vim.bo[self.bufnr].modified = false
@@ -494,10 +501,10 @@ function OctoBuffer:configure()
 end
 
 ---Accumulates all the taggable users into a single list that
---gets set as a buffer variable `taggable_users`. If this list of users
+---gets set as a buffer variable `taggable_users`. If this list of users
 ---is needed synchronously, this function will need to be refactored.
 ---The list of taggable users should contain:
---  - The PR author
+--  - The author of the issue/PR/discussion
 --  - The authors of all the existing comments
 --  - The contributors of the repo
 function OctoBuffer:async_fetch_taggable_users()
@@ -514,34 +521,47 @@ function OctoBuffer:async_fetch_taggable_users()
   end
 
   -- add repo contributors
-  gh.run {
-    args = { "api", string.format("repos/%s/contributors", self.repo) },
-    cb = function(response)
-      if not utils.is_blank(response) then
-        ---@type { login: string }[]
-        local resp = vim.json.decode(response)
-        for _, contributor in ipairs(resp) do
-          table.insert(users, contributor.login)
-        end
-        self.taggable_users = users
-      end
-    end,
+  gh.api.get {
+    "repos/{repo}/contributors",
+    format = { repo = self.repo },
+    jq = "map(.login)",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          if utils.is_blank(data) then
+            self.taggable_users = users
+            return
+          end
+
+          ---@type string[]
+          local contributors = vim.json.decode(data)
+          for _, contributor in ipairs(contributors) do
+            table.insert(users, contributor)
+          end
+          self.taggable_users = users
+        end,
+        failure = function() end,
+      },
+    },
   }
 end
 
 ---Fetches the issues in the repo so they can be used for completion.
 function OctoBuffer:async_fetch_issues()
-  gh.run {
-    args = { "api", string.format("repos/%s/issues", self.repo) },
-    cb = function(response)
-      local issues_metadata = {} ---@type { number: integer, title: string }[]
-      ---@type { number: integer, title: string }[]
-      local resp = vim.json.decode(response)
-      for _, issue in ipairs(resp) do
-        issues_metadata[#issues_metadata + 1] = { number = issue.number, title = issue.title }
-      end
-      octo_repo_issues[self.repo] = issues_metadata
-    end,
+  gh.api.get {
+    "repos/{repo}/issues",
+    format = { repo = self.repo },
+    jq = "map({title, number})",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          ---@type { number: integer, title: string }[]
+          local issues_metadata = vim.json.decode(data)
+          octo_repo_issues[self.repo] = issues_metadata
+        end,
+        failure = function() end,
+      },
+    },
   }
 end
 

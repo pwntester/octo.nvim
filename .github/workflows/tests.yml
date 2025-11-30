@@ -1,6 +1,14 @@
 name: Tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
   x64-ubuntu:
@@ -14,7 +22,7 @@ jobs:
             manager: sudo apt-get
             packages: -y fd-find
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: date +%F > todays-date
       - name: Restore from todays cache
         uses: actions/cache@v4
@@ -22,7 +30,7 @@ jobs:
           path: _neovim
           key: ${{ runner.os }}-latest-${{ hashFiles('todays-date') }}
       - name: Prepare
-        env: 
+        env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ${{ matrix.manager }} update

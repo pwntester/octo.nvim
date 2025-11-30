@@ -9,6 +9,8 @@ local M = {}
 ---@field hasPreviousPage boolean
 ---@field startCursor string
 
+---@alias octo.SubscriptionState "SUBSCRIBED"|"UNSUBSCRIBED"|"IGNORED"
+
 M.setup = function()
   ---@class octo.queries.PendingReviewThreads
   ---@field data {
@@ -28,6 +30,7 @@ M.setup = function()
   ---}
 
   -- https://docs.github.com/en/graphql/reference/objects#pullrequestreviewthread
+  -- inject: graphql
   M.pending_review_threads = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
@@ -127,6 +130,8 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field authorAssociation string
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
+  ---@field viewerCanSubscribe boolean
+  ---@field viewerSubscription octo.SubscriptionState
   ---@field projectItems? octo.fragments.ProjectsV2Connection
   ---@field timelineItems octo.PullRequestTimelineItemsConnection
   ---@field reviewDecision string
@@ -201,6 +206,8 @@ query($endCursor: String) {
       authorAssociation
       viewerDidAuthor
       viewerCanUpdate
+      viewerCanSubscribe
+      viewerSubscription
       ...ReactionGroupsFragment
       %s
       timelineItems(first: 100, after: $endCursor) {
@@ -252,7 +259,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event
 
   if config.values.default_to_projects_v2 then
     M.pull_request = M.pull_request
@@ -271,6 +278,8 @@ query($endCursor: String) {
   ---@field timelineItems octo.IssueTimelineItemConnection
   ---@field labels octo.fragments.LabelConnection
   ---@field assignees octo.fragments.AssigneeConnection
+  ---@field viewerCanSubscribe boolean
+  ---@field viewerSubscription octo.SubscriptionState
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
   M.issue = [[
@@ -301,6 +310,8 @@ query($endCursor: String) {
       assignees(first: 20) {
         ...AssigneeConnectionFragment
       }
+      viewerCanSubscribe
+      viewerSubscription
     }
   }
 }
@@ -1152,6 +1163,8 @@ query($login: String!, $endCursor: String) {
   ---@field primaryLanguage { name: string, color: string }
   ---@field refs { nodes: { name: string }[] }
   ---@field languages { nodes: { name: string, color: string }[] }
+  ---@field viewerHasStarred boolean
+  ---@field viewerSubscription octo.SubscriptionState
 
   M.repository = [[
 query($owner: String!, $name: String!) {
@@ -1170,6 +1183,8 @@ query($owner: String!, $name: String!) {
     hasDiscussionsEnabled
     projectsUrl
     homepageUrl
+    viewerHasStarred
+    viewerSubscription
     primaryLanguage {
       name
       color
@@ -1310,6 +1325,86 @@ query($owner: String!, $name: String!) {
         ... on Blob {
           text
         }
+      }
+    }
+  }
+  ]]
+
+  M.introspective_types = [[
+  query {
+    __schema {
+      types {
+        name
+        kind
+        description
+      }
+    }
+  }
+  ]]
+
+  M.introspective_type = [[
+  query($name: String!) {
+    __type(name: $name) {
+      name
+      kind
+      description
+      inputFields {
+        name
+        description
+        type {
+          kind
+          name
+          ofType {
+            name
+            kind
+            ofType {
+              name
+              kind
+            }
+          }
+        }
+      }
+      fields(includeDeprecated: true) {
+        name
+        description
+        type {
+          name
+          kind
+          ofType {
+            name
+            kind
+          }
+        }
+        args {
+          name
+          description
+          type {
+            name
+            kind
+            ofType {
+              name
+              kind
+              ofType {
+                name
+                kind
+              }
+            }
+          }
+        }
+        isDeprecated
+        deprecationReason
+      }
+      interfaces {
+        name
+      }
+      possibleTypes {
+        name
+      }
+      enumValues(includeDeprecated: true) {
+        name
+        description
+        isDeprecated
+        deprecationReason
       }
     }
   }
