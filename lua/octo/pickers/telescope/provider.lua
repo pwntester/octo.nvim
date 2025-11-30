@@ -557,6 +557,9 @@ end
 ---
 -- SEARCH
 ---
+
+---@param prompt string[]
+---@return { single_repo: boolean, prompt: string }
 local function get_search_query(prompt)
   local full_prompt = prompt[1]
   local parts = vim.split(full_prompt, " ")
@@ -574,6 +577,8 @@ local function get_search_query(prompt)
   }
 end
 
+---@param prompt string
+---@return integer
 local function get_search_size(prompt)
   return gh.api.graphql {
     query = queries.search_count,
@@ -661,19 +666,6 @@ function M.search(opts)
     return
   end
 
-  local settings = opts.type == "ISSUE"
-      and {
-        previewer = previewers.issue,
-        entry_maker = entry_maker.gen_from_issue,
-        entry_maker_static = function(width)
-          return entry_maker.gen_from_issue(width, true)
-        end,
-      }
-    or {
-      previewer = previewers.discussion,
-      entry_maker = entry_maker.gen_from_discussion,
-    }
-
   local cfg = octo_config.values
   if type(opts.prompt) == "string" then
     opts.prompt = { opts.prompt }
@@ -685,6 +677,19 @@ function M.search(opts)
     local num_results = get_search_size(search.prompt)
     width = math.min(#num_results, width)
   end
+
+  local settings = opts.type == "ISSUE"
+      and {
+        previewer = previewers.issue,
+        entry_maker = entry_maker.gen_from_issue,
+        entry_maker_static = function(width)
+          return entry_maker.gen_from_issue(width, not search.single_repo)
+        end,
+      }
+    or {
+      previewer = previewers.discussion,
+      entry_maker = entry_maker.gen_from_discussion,
+    }
 
   local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
