@@ -215,6 +215,7 @@ function OctoBuffer:render_issue()
   local commits = {} ---@type octo.fragments.PullRequestCommit[]
   local unrendered_review_requested_events = {} ---@type octo.fragments.ReviewRequestedEvent[]
   local unrendered_review_request_removed_events = {} ---@type octo.fragments.ReviewRequestRemovedEvent[]
+  local unrendered_assignment_events = {} ---@type (octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent)[]
   local prev_is_event = false
 
   ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
@@ -292,6 +293,14 @@ function OctoBuffer:render_issue()
       unrendered_review_request_removed_events = {}
       prev_is_event = true
     end
+    if
+      #unrendered_assignment_events > 0
+      and (not item or (item.__typename ~= "AssignedEvent" and item.__typename ~= "UnassignedEvent"))
+    then
+      writers.write_assignment_events(self.bufnr, unrendered_assignment_events)
+      unrendered_assignment_events = {}
+      prev_is_event = true
+    end
   end
 
   for _, item in ipairs(timeline_nodes) do
@@ -337,8 +346,9 @@ function OctoBuffer:render_issue()
       end
       prev_is_event = false
     elseif item.__typename == "AssignedEvent" then
-      writers.write_assigned_event(self.bufnr, item)
-      prev_is_event = true
+      table.insert(unrendered_assignment_events, item)
+    elseif item.__typename == "UnassignedEvent" then
+      table.insert(unrendered_assignment_events, item)
     elseif item.__typename == "PullRequestCommit" then
       table.insert(commits, item)
       prev_is_event = true
