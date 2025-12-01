@@ -2120,11 +2120,18 @@ end
 ---@param viewer string Current viewer login
 ---@return TextChunkBuilder[] Array of builders, one per actor
 function M.build_assignment_event_chunks(items, viewer)
-  local events_by_actor = {} ---@type table<string, { assigned: table<string, integer>, unassigned: table<string, integer>, timestamp: string }>
+  ---@class ActorEvents
+  ---@field assigned table<string, integer>
+  ---@field unassigned table<string, integer>
+  ---@field timestamp string
+
+  ---@type table<string, ActorEvents>
+  local events_by_actor = {}
 
   for _, item in ipairs(items) do
     local actor_login = item.actor ~= vim.NIL and item.actor.login or vim.NIL
     if actor_login ~= vim.NIL then
+      ---@cast actor_login string
       if not events_by_actor[actor_login] then
         events_by_actor[actor_login] = { assigned = {}, unassigned = {}, timestamp = item.createdAt }
       end
@@ -2145,12 +2152,15 @@ function M.build_assignment_event_chunks(items, viewer)
     end
   end
 
+  ---@type TextChunkBuilder[]
   local results = {}
   for actor, events in pairs(events_by_actor) do
+    ---@type string[]
     local assigned_list = {}
     for assignee, _ in pairs(events.assigned) do
       table.insert(assigned_list, assignee)
     end
+    ---@type string[]
     local unassigned_list = {}
     for assignee, _ in pairs(events.unassigned) do
       table.insert(unassigned_list, assignee)
