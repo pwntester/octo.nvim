@@ -417,6 +417,44 @@ function M.write_title(bufnr, title, line)
   end
 end
 
+---@param state string
+---@param state_reason? string
+---@param is_issue? boolean
+---@param is_discussion? boolean
+---@return table|nil
+local function get_state_icon(state, state_reason, is_issue, is_discussion)
+  if is_discussion then
+    if state == "OPEN" then
+      return nil
+    elseif state == "ANSWERED" then
+      return utils.icons.discussion.answered
+    elseif state == "RESOLVED" then
+      return utils.icons.discussion.resolved
+    elseif state == "OUTDATED" then
+      return utils.icons.discussion.outdated
+    elseif state == "DUPLICATE" then
+      return utils.icons.discussion.duplicate
+    end
+  elseif is_issue then
+    if state == "OPEN" then
+      return utils.icons.issue.open
+    elseif state == "CLOSED" or state == "NOT_PLANNED" or state == "COMPLETED" then
+      return (state_reason == "NOT_PLANNED" or state == "NOT_PLANNED") and utils.icons.issue.not_planned
+        or utils.icons.issue.closed
+    end
+  else
+    if state == "OPEN" then
+      return utils.icons.pull_request.open
+    elseif state == "MERGED" then
+      return utils.icons.pull_request.merged
+    elseif state == "CLOSED" then
+      return utils.icons.pull_request.closed
+    elseif state == "DRAFT" then
+      return utils.icons.pull_request.draft
+    end
+  end
+end
+
 --- Write virtual text state at given line in buffer
 ---@param bufnr? integer
 ---@param state? string
@@ -424,29 +462,59 @@ end
 function M.write_state(bufnr, state, number)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
   local buffer = octo_buffers[bufnr]
-  state = state or (buffer:isIssue() and buffer:issue() or buffer:pullRequest()).state
+
+  if not buffer then
+    return
+  end
+
+  local obj
+  if buffer:isIssue() then
+    obj = buffer:issue()
+  elseif buffer:isPullRequest() then
+    obj = buffer:pullRequest()
+  elseif buffer:isDiscussion() then
+    obj = buffer:discussion()
+  else
+    return
+  end
+
+  state = state or obj.state
   number = number or buffer.number
 
-  -- clear virtual texts
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_TITLE_VT_NS, 0, -1)
 
-  -- title virtual text
-  ---@type [string, string][]
   local title_vt = {
-    { tostring(number) .. " ", "OctoIssueId" },
+    { tostring(number), "OctoIssueId" },
+    { " " },
   }
 
-  -- PR virtual text
-  if buffer and buffer:isPullRequest() then
-    if state ~= "OPEN" or not buffer:pullRequest().isDraft then
-      title_vt[#title_vt + 1] = { string.format("[%s]", state:gsub("_", " ")), utils.state_hl_map[state] }
-      title_vt[#title_vt + 1] = { " ", "OctoStateFloat" }
-    end
-    if buffer:pullRequest().isDraft then
-      title_vt[#title_vt + 1] = { "[DRAFT]", "OctoStateDraftFloat" }
-    end
+  local is_issue = buffer:isIssue()
+  local display_state
+
+  if buffer:isDiscussion() then
+    display_state = state
   else
-    title_vt[#title_vt + 1] = { string.format("[%s]", state:gsub("_", " ")), utils.state_hl_map[state] }
+    display_state = utils.get_displayed_state(is_issue, obj.state, obj.stateReason, obj.isDraft)
+  end
+
+  local is_discussion = buffer:isDiscussion()
+
+  -- Skip showing state for open discussions
+  if not (is_discussion and display_state == "OPEN") then
+    local function format_icon_text(icon)
+      return icon and icon[1]:match "^(.-)%s*$" .. " " or ""
+    end
+
+    local icon_text = format_icon_text(get_state_icon(display_state, obj.stateReason, is_issue, is_discussion))
+    local state_bubble = bubbles.make_bubble(icon_text .. display_state, utils.state_hl_map[display_state] .. "Bubble")
+    vim.list_extend(title_vt, state_bubble)
+
+    if obj.isDraft and display_state ~= "DRAFT" and display_state ~= "CLOSED" and display_state ~= "MERGED" then
+      table.insert(status_vt, { " " })
+      local draft_icon_text = format_icon_text(get_state_icon("DRAFT", nil, is_issue, is_discussion))
+      local draft_bubble = bubbles.make_bubble(draft_icon_text .. "DRAFT", "OctoStateDraftBubble")
+      vim.list_extend(title_vt, draft_bubble)
+    end
   end
 
   vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, 0, {
@@ -541,25 +609,52 @@ local function add_subscription_detail(details, subscription_state)
   add_details_line(details, "Subscribed", subscribed_label)
 end
 
+---@param details [string, string][][]
+---@param is_issue boolean
+---@param state string
+---@param state_reason? string
+---@param is_draft? boolean
+local function add_status_detail(details, is_issue, state, state_reason, is_draft)
+  local display_state = utils.get_displayed_state(is_issue, state, state_reason, is_draft)
+  local status_vt = { { "Status: ", "OctoDetailsLabel" } }
+
+  local function format_icon_text(icon)
+    return icon and icon[1]:match "^(.-)%s*$" .. " " or ""
+  end
+
+  local icon_text = format_icon_text(get_state_icon(display_state, state_reason, is_issue, false))
+  local state_bubble = bubbles.make_bubble(icon_text .. display_state, utils.state_hl_map[display_state] .. "Bubble")
+  vim.list_extend(status_vt, state_bubble)
+
+  if is_draft and display_state ~= "DRAFT" and display_state ~= "CLOSED" and display_state ~= "MERGED" then
+    table.insert(status_vt, { " " })
+    local draft_icon_text = format_icon_text(get_state_icon("DRAFT", nil, is_issue, false))
+    local draft_bubble = bubbles.make_bubble(draft_icon_text .. "DRAFT", "OctoStateDraftBubble")
+    vim.list_extend(status_vt, draft_bubble)
+  end
+
+  table.insert(details, status_vt)
+end
+
 --- Write issue or PR details virtual text in buffer
 ---@param bufnr integer
 ---@param issue octo.PullRequest|octo.Issue
 ---@param update? true
-function M.write_details(bufnr, issue, update)
-  -- clear virtual texts
+---@param include_status? boolean
+function M.write_details(bufnr, issue, update, include_status)
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, 0, -1)
 
   local is_issue = detect_issue_from_url(issue.url)
+  local details = {} ---@type [string, string][][]
 
-  ---@type [string, string][][]
-  local details = {}
+  if include_status then
+    add_status_detail(details, is_issue, issue.state, issue.stateReason, issue.isDraft)
+  end
 
-  -- repo
-  local repo_vt = {
+  table.insert(details, {
     { "Repo: ", "OctoDetailsLabel" },
     { " " .. (select(2, utils.parse_url(issue.url)) or ""), "OctoDetailsValue" },
-  }
-  table.insert(details, repo_vt)
+  })
 
   -- author
   local author_vt = { { "Created by: ", "OctoDetailsLabel" } }
@@ -2836,11 +2931,9 @@ end
 ---@param obj any
 ---@param bufnr integer
 function M.issue_preview(obj, bufnr)
-  local state = utils.get_displayed_state(obj.__typename == "Issue", obj.state, obj.stateReason)
   M.write_title(bufnr, obj.title, 1)
-  M.write_details(bufnr, obj)
+  M.write_details(bufnr, obj, false, true)
   M.write_body(bufnr, obj)
-  M.write_state(bufnr, state:upper(), obj.number)
   local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
   M.write_block(bufnr, { "", "" }, reactions_line)
   M.write_reactions(bufnr, obj.reactionGroups, reactions_line)

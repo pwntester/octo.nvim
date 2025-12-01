@@ -1867,6 +1867,10 @@ function M.get_displayed_state(isIssue, state, stateReason, isDraft)
     return stateReason or state
   end
 
+  if state == "CLOSED" or state == "MERGED" then
+    return state
+  end
+
   if isDraft then
     return "DRAFT"
   end
@@ -1904,9 +1908,10 @@ M.icons = {
     closed = { " ", "OctoRed" },
   },
   discussion = {
-    open = { " ", "OctoGrey" },
-    answered = { " ", "OctoGreen" },
-    closed = { " ", "OctoRed" },
+    answered = { " ", "OctoPurple" },
+    resolved = { " ", "OctoPurple" },
+    outdated = { " ", "OctoGrey" },
+    duplicate = { " ", "OctoGrey" },
   },
   notification = {
     issue = {
@@ -1929,10 +1934,10 @@ M.icons = {
   unknown = { " " },
 }
 
---- Get the icon for the entry
+--- Get the icon for issue or pull request entries
 ---@param entry Entry: The entry to get the icon for
 ---@return Icon: The icon for the entry
-function M.get_icon(entry)
+function M.get_issue_pr_icon(entry)
   local kind = entry.kind
 
   if kind == "issue" then
@@ -1959,17 +1964,44 @@ function M.get_icon(entry)
     elseif state == "OPEN" then
       return M.icons.pull_request.open
     end
-  elseif kind == "discussion" then
-    local closed = entry.obj.closed
-    local isAnswered = entry.obj.isAnswered
+  end
 
-    if isAnswered ~= vim.NIL and isAnswered then
-      return M.icons.discussion.answered
-    elseif not closed then
-      return M.icons.discussion.open
-    else
-      return M.icons.discussion.closed
-    end
+  return M.icons.unknown
+end
+
+--- Get the icon for discussion entries (for pickers)
+---@param entry Entry: The entry to get the icon for
+---@return Icon: The icon for the entry
+function M.get_discussion_icon(entry)
+  local closed = entry.obj.closed
+  local isAnswered = entry.obj.isAnswered
+  local stateReason = entry.obj.stateReason
+
+  if not closed then
+    return M.icons.notification.discussion.unread
+  elseif isAnswered ~= vim.NIL and isAnswered then
+    return M.icons.discussion.answered
+  elseif stateReason == "RESOLVED" then
+    return M.icons.discussion.resolved
+  elseif stateReason == "OUTDATED" then
+    return M.icons.discussion.outdated
+  elseif stateReason == "DUPLICATE" then
+    return M.icons.discussion.duplicate
+  else
+    return M.icons.discussion.answered
+  end
+end
+
+--- Get the icon for any entry (notifications, etc.)
+---@param entry Entry: The entry to get the icon for
+---@return Icon: The icon for the entry
+function M.get_icon(entry)
+  local kind = entry.kind
+
+  if kind == "issue" or kind == "pull_request" then
+    return M.get_issue_pr_icon(entry)
+  elseif kind == "discussion" then
+    return M.get_discussion_icon(entry)
   end
 
   return M.icons.unknown
