@@ -6,7 +6,7 @@ local vim = vim
 
 ---@class TextChunkBuilder
 ---@field chunks [string, string][]
----@field private conf table Configuration reference
+---@field private conf OctoConfig Configuration reference
 local TextChunkBuilder = {}
 TextChunkBuilder.__index = TextChunkBuilder
 

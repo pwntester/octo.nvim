@@ -2115,22 +2115,115 @@ function M.write_head_ref_force_pushed_events(bufnr, items)
   builder:write_event(bufnr)
 end
 
+---Build assignment event text builders
+---@param items (octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent)[]
+---@param viewer string Current viewer login
+---@return TextChunkBuilder[] Array of builders, one per actor
+function M.build_assignment_event_chunks(items, viewer)
+  ---@class ActorEvents
+  ---@field assigned table<string, integer>
+  ---@field unassigned table<string, integer>
+  ---@field timestamp string
+
+  ---@type table<string, ActorEvents>
+  local events_by_actor = {}
+
+  for _, item in ipairs(items) do
+    local actor_login = item.actor ~= vim.NIL and item.actor.login or vim.NIL
+    if actor_login ~= vim.NIL then
+      ---@cast actor_login string
+      if not events_by_actor[actor_login] then
+        events_by_actor[actor_login] = { assigned = {}, unassigned = {}, timestamp = item.createdAt }
+      end
+      local assignee_name = item.assignee.login or item.assignee.name
+      if item.__typename == "AssignedEvent" then
+        events_by_actor[actor_login].assigned[assignee_name] = (
+          events_by_actor[actor_login].assigned[assignee_name] or 0
+        ) + 1
+      elseif item.__typename == "UnassignedEvent" then
+        events_by_actor[actor_login].unassigned[assignee_name] = (
+          events_by_actor[actor_login].unassigned[assignee_name] or 0
+        ) + 1
+      end
+      -- Track earliest timestamp for this actor
+      if item.createdAt < events_by_actor[actor_login].timestamp then
+        events_by_actor[actor_login].timestamp = item.createdAt
+      end
+    end
+  end
+
+  ---@type TextChunkBuilder[]
+  local results = {}
+  for actor, events in pairs(events_by_actor) do
+    ---@type string[]
+    local assigned_list = {}
+    for assignee, _ in pairs(events.assigned) do
+      table.insert(assigned_list, assignee)
+    end
+    ---@type string[]
+    local unassigned_list = {}
+    for assignee, _ in pairs(events.unassigned) do
+      table.insert(unassigned_list, assignee)
+    end
+
+    local has_assigned = #assigned_list > 0
+    local has_unassigned = #unassigned_list > 0
+    local is_self_only_assigned = has_assigned and #assigned_list == 1 and assigned_list[1] == actor
+    local is_self_only_unassigned = has_unassigned and #unassigned_list == 1 and unassigned_list[1] == actor
+
+    local builder = TextChunkBuilder:new():timeline_marker("assigned"):user_plain(actor, actor == viewer)
+
+    if is_self_only_assigned and not has_unassigned then
+      builder:heading " self-assigned this"
+    elseif is_self_only_unassigned and not has_assigned then
+      builder:heading " removed their assignment"
+    else
+      if has_assigned then
+        builder:heading " assigned "
+        for i, assignee in ipairs(assigned_list) do
+          if i > 1 then
+            builder:heading ", "
+          end
+          builder:user_plain(assignee, assignee == viewer)
+        end
+      end
+
+      if has_assigned and has_unassigned then
+        builder:heading " and"
+      end
+
+      if has_unassigned then
+        builder:heading " unassigned "
+        for i, assignee in ipairs(unassigned_list) do
+          if i > 1 then
+            builder:heading ", "
+          end
+          builder:user_plain(assignee, assignee == viewer)
+        end
+      end
+    end
+
+    builder:date(events.timestamp)
+    table.insert(results, builder)
+  end
+
+  return results
+end
+
 ---@param bufnr integer
----@param item octo.fragments.AssignedEvent
-function M.write_assigned_event(bufnr, item)
-  item.actor = logins.format_author(item.actor)
-  item.assignee = logins.format_author(item.assignee)
-  TextChunkBuilder:new()
-    :timeline_marker("assigned")
-    :actor(item.actor)
-    :when_fn(item.actor.login == item.assignee.login, function(b)
-      return b:heading " self-assigned this"
-    end)
-    :when_fn(item.actor.login ~= item.assignee.login, function(b)
-      return b:heading(" assigned this to "):text(item.assignee.login or item.assignee.name, "OctoDetailsLabel")
-    end)
-    :date(item.createdAt)
-    :write_event(bufnr)
+---@param items (octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent)[]
+function M.write_assignment_events(bufnr, items)
+  -- Format authors first
+  for _, item in ipairs(items) do
+    item.actor = logins.format_author(item.actor)
+    item.assignee = logins.format_author(item.assignee)
+  end
+
+  local builders = M.build_assignment_event_chunks(items, vim.g.octo_viewer)
+
+  for _, builder in ipairs(builders) do
+    builder:write_event(bufnr)
+  end
 end
 
 ---@param bufnr integer
