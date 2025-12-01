@@ -1170,7 +1170,7 @@ function M.extract_issue_at_cursor(current_repo)
     end
   end
   if not repo or not number then
-    repo, _, number = M.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+    _, repo, _, number = M.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
   end
   return repo, number
 end
