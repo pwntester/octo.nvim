@@ -311,7 +311,7 @@ function TextChunkBuilder:state_with_icon(state, state_reason, is_draft, get_ico
   end
 
   local icon_text = format_icon_text(get_icon_fn(state, state_reason))
-  local state_text = state:gsub("_", " ")
+  local state_text = utils.title_case(utils.remove_underscore(state))
   local state_bubble = bubbles.make_bubble(icon_text .. state_text, utils.state_hl_map[state] .. "Bubble")
   self:extend(state_bubble)
 
