@@ -360,6 +360,7 @@ query($owner: String!, $name: String!, $number: Int!) {
   ---@field baseRefName string
   ---@field createdAt string
   ---@field state string
+  ---@field isDraft boolean
   ---@field number integer
   ---@field title string
   ---@field body string
