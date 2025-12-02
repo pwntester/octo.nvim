@@ -452,6 +452,9 @@ function OctoBuffer:render_issue()
     elseif item.__typename == "BaseRefChangedEvent" then
       writers.write_base_ref_changed_event(self.bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "CommentDeletedEvent" then
+      writers.write_comment_deleted_event(self.bufnr, item)
+      prev_is_event = true
     elseif
       not utils.is_blank(item)
       and config.values.debug.notify_missing_timeline_items

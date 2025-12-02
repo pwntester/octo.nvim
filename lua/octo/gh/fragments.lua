@@ -992,6 +992,20 @@ fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
 }
 ]]
 
+  ---@class octo.fragments.CommentDeletedEvent
+  ---@field __typename "CommentDeletedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field deletedCommentAuthor { login: string }
+
+  M.comment_deleted_event = [[
+fragment CommentDeletedEventFragment on CommentDeletedEvent {
+  actor { login }
+  createdAt
+  deletedCommentAuthor { login }
+}
+]]
+
   local issue_timeline_items_connection_fragments = [[
     __typename
     ...AssignedEventFragment
@@ -1016,6 +1030,7 @@ fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
     ...IssueTypeAddedEventFragment
     ...IssueTypeRemovedEventFragment
     ...IssueTypeChangedEventFragment
+    ...CommentDeletedEventFragment
 ]]
   if config.values.default_to_projects_v2 then
     issue_timeline_items_connection_fragments = issue_timeline_items_connection_fragments
@@ -1026,7 +1041,7 @@ fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
     ]]
   end
 
-  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event
+  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent
 
   ---@class octo.fragments.IssueTimelineItemsConnection
   ---@field nodes octo.IssueTimelineItem[]
@@ -1071,6 +1086,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...HeadRefRestoredEventFragment
     ...HeadRefForcePushedEventFragment
     ...AutoSquashEnabledEventFragment
+    ...CommentDeletedEventFragment
 ]]
 
   if config.values.default_to_projects_v2 then

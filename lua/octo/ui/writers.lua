@@ -2155,6 +2155,20 @@ function M.write_head_ref_deleted_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.CommentDeletedEvent
+function M.write_comment_deleted_event(bufnr, item)
+  item.actor = logins.format_author(item.actor)
+  item.deletedCommentAuthor = logins.format_author(item.deletedCommentAuthor)
+  TextChunkBuilder:new()
+    :timeline_marker("comment_deleted")
+    :actor(item.actor)
+    :heading(" deleted a comment from ")
+    :actor(item.deletedCommentAuthor)
+    :date(item.createdAt)
+    :write_event(bufnr)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.HeadRefRestoredEvent
 function M.write_head_ref_restored_event(bufnr, item)
   TextChunkBuilder:new()
