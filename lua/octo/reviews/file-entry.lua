@@ -46,7 +46,7 @@ M._null_buffer = {}
 ---@field right_fetching boolean
 ---@field associated_bufs integer[]
 ---@field diffhunks? string[]
----@field viewed_state ViewedState
+---@field viewed_state octo.FileViewedState
 local FileEntry = {}
 FileEntry.__index = FileEntry
 
