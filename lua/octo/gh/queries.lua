@@ -104,7 +104,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field id string
   ---@field isDraft boolean
   ---@field number integer
-  ---@field state string
+  ---@field state octo.PullRequestState
   ---@field title string
   ---@field body string
   ---@field createdAt string
@@ -112,7 +112,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field updatedAt string
   ---@field url string
   ---@field headRepository { nameWithOwner: string }
-  ---@field files { nodes: { path: string, viewerViewedState: ViewedState }[] }
+  ---@field files { nodes: { path: string, viewerViewedState: octo.FileViewedState }[] }
   ---@field merged boolean
   ---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }
   ---@field participants { nodes: { login: string }[] }
@@ -360,6 +360,7 @@ query($owner: String!, $name: String!, $number: Int!) {
   ---@field baseRefName string
   ---@field createdAt string
   ---@field state string
+  ---@field isDraft boolean
   ---@field number integer
   ---@field title string
   ---@field body string
@@ -394,6 +395,7 @@ query($owner: String!, $name: String!, $number: Int!) {
         baseRefName
         createdAt
         state
+        isDraft
         number
         title
         body
@@ -1290,7 +1292,7 @@ query($id: ID!) {
   ---@field id string
   ---@field name string
   ---@field description string
-  ---@field color string
+  ---@field color octo.IssueTypeColor
 
   M.issue_types = [[
 query($owner: String!, $name: String!) {
@@ -1373,6 +1375,10 @@ query($owner: String!, $name: String!) {
           ofType {
             name
             kind
+            ofType {
+              name
+              kind
+            }
           }
         }
         args {
@@ -1387,6 +1393,10 @@ query($owner: String!, $name: String!) {
               ofType {
                 name
                 kind
+                ofType {
+                  name
+                  kind
+                }
               }
             }
           }

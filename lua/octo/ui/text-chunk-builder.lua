@@ -298,4 +298,31 @@ function TextChunkBuilder:is_empty()
   return #self.chunks == 0
 end
 
+---Add a state bubble with icon (for issue/PR/discussion states)
+---Handles the pattern of: icon + state bubble, optionally followed by draft bubble
+---@param state string Display state (e.g., "OPEN", "CLOSED", "MERGED")
+---@param state_reason? string State reason for additional context
+---@param is_draft? boolean Whether item is a draft
+---@param get_icon_fn fun(state: string, state_reason?: string): table|nil Function to get icon config
+---@return TextChunkBuilder self for chaining
+function TextChunkBuilder:state_with_icon(state, state_reason, is_draft, get_icon_fn)
+  local function format_icon_text(icon)
+    return icon and icon[1]:match "^(.-)%s*$" .. " " or ""
+  end
+
+  local icon_text = format_icon_text(get_icon_fn(state, state_reason))
+  local state_text = utils.title_case(utils.remove_underscore(state))
+  local state_bubble = bubbles.make_bubble(icon_text .. state_text, utils.state_hl_map[state] .. "Bubble")
+  self:extend(state_bubble)
+
+  if is_draft and state ~= "DRAFT" and state ~= "CLOSED" and state ~= "MERGED" then
+    self:space()
+    local draft_icon_text = format_icon_text(get_icon_fn("DRAFT", nil))
+    local draft_bubble = bubbles.make_bubble(draft_icon_text .. "DRAFT", "OctoStateDraftBubble")
+    self:extend(draft_bubble)
+  end
+
+  return self
+end
+
 return TextChunkBuilder

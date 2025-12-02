@@ -87,7 +87,7 @@ function M.issue(formatted_issues)
           local state = utils.get_displayed_state(entry.kind == "issue", obj.state, obj.stateReason)
 
           writers.write_title(tmpbuf, obj.title, 1)
-          writers.write_details(tmpbuf, obj)
+          writers.write_details(tmpbuf, obj, false, true) -- include_status = true for preview
           writers.write_body(tmpbuf, obj)
           writers.write_state(tmpbuf, state:upper(), number)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1
@@ -147,7 +147,7 @@ function M.search()
           local state = utils.get_displayed_state(kind == "issue", obj.state, obj.stateReason)
 
           writers.write_title(tmpbuf, obj.title, 1)
-          writers.write_details(tmpbuf, obj)
+          writers.write_details(tmpbuf, obj, false, true) -- include_status = true for preview
           writers.write_body(tmpbuf, obj)
           writers.write_state(tmpbuf, state:upper(), number)
           local reactions_line = vim.api.nvim_buf_line_count(tmpbuf) - 1

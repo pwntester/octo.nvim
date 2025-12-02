@@ -6,7 +6,7 @@ local utils = require "octo.utils"
 local M = {}
 
 ---https://docs.github.com/en/graphql/reference/enums#fileviewedstate
----@alias ViewedState "DISMISSED" | "VIEWED" | "UNVIEWED"
+---@alias octo.FileViewedState "DISMISSED" | "VIEWED" | "UNVIEWED"
 
 ---@class PullRequest
 ---@field repo string
@@ -21,7 +21,7 @@ local M = {}
 ---@field right Rev
 ---@field local_right boolean
 ---@field local_left boolean
----@field files {[string]: ViewedState}
+---@field files {[string]: octo.FileViewedState}
 ---@field diff string
 local PullRequest = {}
 PullRequest.__index = PullRequest
@@ -35,7 +35,7 @@ PullRequest.__index = PullRequest
 ---@field left Rev
 ---@field right Rev
 ---@field bufnr? integer
----@field files { path: string, viewerViewedState: ViewedState }[]
+---@field files { path: string, viewerViewedState: octo.FileViewedState }[]
 
 ---PullRequest constructor.
 ---@param opts PullRequestOpts

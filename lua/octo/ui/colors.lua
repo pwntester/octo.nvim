@@ -8,11 +8,13 @@ local function get_fg(hl_group_name)
   return vim.api.nvim_get_hl(0, { name = hl_group_name }).fg
 end
 
+---@return OctoConfigColors
 local function get_colors()
   local conf = config.values
   return conf.colors
 end
 
+---@return table<string, vim.api.keyset.highlight>
 local function get_hl_groups()
   local colors = get_colors()
   local float_bg = M.get_background_color_of_highlight_group "NormalFloat"
@@ -32,8 +34,8 @@ local function get_hl_groups()
     BlueFloat = { fg = colors.blue, bg = float_bg },
     GreyFloat = { fg = colors.grey, bg = float_bg },
 
-    BubbleGreen = { fg = colors.grey, bg = colors.dark_green },
-    BubbleRed = { fg = colors.grey, bg = colors.dark_red },
+    BubbleGreen = { fg = colors.white, bg = colors.dark_green },
+    BubbleRed = { fg = colors.white, bg = colors.dark_red },
     BubblePurple = { fg = colors.white, bg = colors.purple },
     BubbleYellow = { fg = colors.grey, bg = colors.yellow },
     BubbleBlue = { fg = colors.grey, bg = colors.dark_blue },
@@ -53,9 +55,11 @@ local function get_hl_groups()
     Editable = { bg = float_bg },
     Strikethrough = { fg = colors.grey, strikethrough = true },
     Underline = { fg = colors.white, underline = true },
+    Bubble = { fg = colors.white, bg = colors.grey },
   }
 end
 
+---@return table<string, string>
 local function get_hl_links()
   return {
     Normal = "Normal",
@@ -91,7 +95,6 @@ local function get_hl_links()
     DetailsValue = "Identifier",
     MissingDetails = "Comment",
     Empty = "NormalFloat",
-    Bubble = "NormalFloat",
     User = "OctoBubble",
     UserViewer = "OctoViewer",
     Reaction = "OctoBubble",
@@ -120,6 +123,9 @@ local function get_hl_links()
 
     StateOpenBubble = "OctoBubbleGreen",
     StateClosedBubble = "OctoBubbleRed",
+    StateCompletedBubble = "OctoBubblePurple",
+    StateNotPlannedBubble = "OctoBubbleGrey",
+    StateDraftBubble = "OctoBubbleGrey",
     StateMergedBubble = "OctoBubblePurple",
     StatePendingBubble = "OctoBubbleYellow",
     StateApprovedBubble = "OctoBubbleGreen",

@@ -51,8 +51,8 @@ M.setup = function()
   ---@field id string
   ---@field number integer
   ---@field title string
-  ---@field state string
-  ---@field stateReason string
+  ---@field state octo.IssueState
+  ---@field stateReason octo.IssueStateReason
 
   M.issue = [[
 fragment IssueFields on Issue {
@@ -68,7 +68,7 @@ fragment IssueFields on Issue {
   --- @field __typename "PullRequest"
   --- @field number integer
   --- @field title string
-  --- @field state string
+  --- @field state octo.PullRequestState
   --- @field isDraft boolean
 
   M.pull_request = [[
@@ -314,9 +314,10 @@ fragment DemilestonedEventFragment on DemilestonedEvent {
   milestoneTitle
 }
 ]]
+  ---@alias octo.ReactionContent "THUMBS_UP"|"THUMBS_DOWN"|"LAUGH"|"HOORAY"|"CONFUSED"|"HEART"|"ROCKET"|"EYES"
 
   ---@class octo.ReactionGroupsFragment.reactionGroups
-  --- @field content string
+  --- @field content octo.ReactionContent
   --- @field viewerHasReacted boolean
   --- @field users { totalCount: number }
 
@@ -933,11 +934,15 @@ fragment ParentIssueRemovedEventFragment on ParentIssueRemovedEvent {
   }
 }
 ]]
+  --- Enum values found here:
+  --- https://docs.github.com/en/graphql/reference/enums#issuetypecolor
+  ---@alias octo.IssueTypeColor "GRAY"|"BLUE"|"GREEN"|"YELLOW"|"ORANGE"|"RED"|"PINK"|"PURPLE"
+
   ---@class octo.fragments.IssueTypeAddedEvent
   ---@field __typename "IssueTypeAddedEvent"
   ---@field actor { login: string }
   ---@field createdAt string
-  ---@field issueType { id: string, name: string, color: string }
+  ---@field issueType { id: string, name: string, color: octo.IssueTypeColor }
 
   M.issue_type_added_event = [[
 fragment IssueTypeAddedEventFragment on IssueTypeAddedEvent {
@@ -956,7 +961,7 @@ fragment IssueTypeAddedEventFragment on IssueTypeAddedEvent {
   ---@field __typename "IssueTypeRemovedEvent"
   ---@field actor { login: string }
   ---@field createdAt string
-  ---@field issueType { id: string, name: string, color: string }
+  ---@field issueType { id: string, name: string, color: octo.IssueTypeColor }
 
   M.issue_type_removed_event = [[
 fragment IssueTypeRemovedEventFragment on IssueTypeRemovedEvent {
@@ -975,25 +980,15 @@ fragment IssueTypeRemovedEventFragment on IssueTypeRemovedEvent {
   ---@field __typename "IssueTypeChangedEvent"
   ---@field actor { login: string }
   ---@field createdAt string
-  ---@field prevIssueType { id: string, name: string, color: string }
-  ---@field issueType { id: string, name: string, color: string }
+  ---@field prevIssueType { id: string, name: string, color: octo.IssueTypeColor }
+  ---@field issueType { id: string, name: string, color: octo.IssueTypeColor }
 
   M.issue_type_changed_event = [[
 fragment IssueTypeChangedEventFragment on IssueTypeChangedEvent {
-  actor {
-    login
-  }
+  actor { login }
   createdAt
-  prevIssueType {
-    id
-    name
-    color
-  }
-  issueType {
-    id
-    name
-    color
-  }
+  prevIssueType { id name color }
+  issueType { id name color }
 }
 ]]
 
@@ -1103,11 +1098,14 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
     pull_request_timeline_items_connection_fragments
   )
 
+  ---@alias octo.IssueState "OPEN"|"CLOSED"
+  ---@alias octo.IssueStateReason "REOPENED"|"NOT_PLANNED"|"COMPLETED"|"DUPLICATED"
+
   ---@class octo.fragments.IssueInformation
   ---@field id string
   ---@field number integer
-  ---@field state string
-  ---@field stateReason string
+  ---@field state octo.IssueState
+  ---@field stateReason octo.IssueStateReason
   ---@field issueType { id: string, name: string, color: string }
   ---@field title string
   ---@field body string
@@ -1126,11 +1124,7 @@ fragment IssueInformationFragment on Issue {
   number
   state
   stateReason
-  issueType {
-    id
-    name
-    color
-  }
+  issueType { id name color }
   title
   body
   createdAt
@@ -1139,13 +1133,8 @@ fragment IssueInformationFragment on Issue {
   url
   viewerDidAuthor
   viewerCanUpdate
-  milestone {
-    title
-    state
-  }
-  author {
-    login
-  }
+  milestone { title state }
+  author { login }
 }
 ]]
 
