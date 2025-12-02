@@ -448,6 +448,32 @@ function M.setup()
         picker.issues(opts)
       end),
     },
+    child = {
+      add = context.within_issue(function(buffer)
+        local opts = {}
+        opts.cb = function(selected)
+          gh.api.graphql {
+            query = mutations.add_subissue,
+            fields = {
+              parent_id = buffer:issue().id,
+              child_id = selected.obj.id,
+            },
+            jq = ".data.addSubIssue.subIssue.id",
+            opts = {
+              cb = gh.create_callback {
+                success = function(response_id)
+                  if response_id == selected.obj.id then
+                    utils.info "Sub-issue added to the issue"
+                  end
+                end,
+              },
+            },
+          }
+        end
+
+        picker.issues(opts)
+      end),
+    },
     issue = {
       copilot = context.within_issue(function(buffer)
         gh.issue.edit {
