@@ -611,6 +611,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | parent   | add                                           | Add a parent issue to current issue |
 |          | remove                                           | Remove the parent issue to current issue |
 |          | edit                                           | Edit the parent issue to current issue |
+| child   | add                                           | Add a child issue to current issue |
 | release  | notes                                           | Generate release notes in current buffer |
 |   | list [repo]                                           | List release notes for current or specified repo |
 
