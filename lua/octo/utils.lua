@@ -176,6 +176,7 @@ function M.calculate_strongest_review_state(states)
   end
 end
 
+---@type table<octo.ReactionContent, string>
 M.reaction_map = {
   ["THUMBS_UP"] = "👍 ",
   ["THUMBS_DOWN"] = "👎 ",
@@ -1859,8 +1860,8 @@ end
 
 --- Logic to determine the state displayed for issue or PR
 ---@param isIssue boolean
----@param state string
----@param stateReason string | nil
+---@param state octo.IssueState|octo.PullRequestState
+---@param stateReason? octo.IssueStateReason
 ---@return string
 function M.get_displayed_state(isIssue, state, stateReason, isDraft)
   if isIssue and state == "CLOSED" then
@@ -1879,9 +1880,9 @@ function M.get_displayed_state(isIssue, state, stateReason, isDraft)
 end
 
 --- @class EntryObject
---- @field state string
+--- @field state octo.IssueState
 --- @field isDraft boolean
---- @field stateReason string
+--- @field stateReason octo.IssueStateReason
 --- @field isAnswered boolean
 --- @field closed boolean
 
