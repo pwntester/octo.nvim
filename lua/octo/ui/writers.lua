@@ -467,6 +467,7 @@ function M.write_state(bufnr, state, number)
     return
   end
 
+  ---@type octo.Issue|octo.PullRequest|octo.Discussion
   local obj
   if buffer:isIssue() then
     obj = buffer:issue()
@@ -489,6 +490,7 @@ function M.write_state(bufnr, state, number)
   }
 
   local is_issue = buffer:isIssue()
+  ---@type string
   local display_state
 
   if buffer:isDiscussion() then
@@ -510,7 +512,7 @@ function M.write_state(bufnr, state, number)
     vim.list_extend(title_vt, state_bubble)
 
     if obj.isDraft and display_state ~= "DRAFT" and display_state ~= "CLOSED" and display_state ~= "MERGED" then
-      table.insert(status_vt, { " " })
+      table.insert(title_vt, { " " })
       local draft_icon_text = format_icon_text(get_state_icon("DRAFT", nil, is_issue, is_discussion))
       local draft_bubble = bubbles.make_bubble(draft_icon_text .. "DRAFT", "OctoStateDraftBubble")
       vim.list_extend(title_vt, draft_bubble)
@@ -2932,7 +2934,7 @@ end
 ---@param bufnr integer
 function M.issue_preview(obj, bufnr)
   M.write_title(bufnr, obj.title, 1)
-  M.write_details(bufnr, obj, false, true)
+  M.write_details(bufnr, obj, nil, true)
   M.write_body(bufnr, obj)
   local reactions_line = vim.api.nvim_buf_line_count(bufnr) - 1
   M.write_block(bufnr, { "", "" }, reactions_line)
