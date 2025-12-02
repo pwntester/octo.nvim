@@ -387,8 +387,9 @@ function M.issue_template(formatted_templates)
 end
 
 ---@param formatted_notifications table<string, octo.NotificationEntry>
+---@param cached_notification_infos table<string, any>
 ---@return fzf-lua.previewer.BufferOrFile
-function M.notifications(formatted_notifications)
+function M.notifications(formatted_notifications, cached_notification_infos)
   local previewer = M.bufferPreviewer:extend() ---@type fzf-lua.previewer.BufferOrFile
 
   function previewer:new(o, opts, fzf_win)
@@ -402,8 +403,20 @@ function M.notifications(formatted_notifications)
     local entry = formatted_notifications[entry_str]
     local number = entry.value ---@type string
     local owner, name = utils.split_repo(entry.repo)
+    local kind = entry.kind
+    local preview = notifications.get_preview_fn(kind)
+    local cached_notification = cached_notification_infos[entry.ordinal]
 
-    notifications.populate_preview_buf(tmpbuf, owner, name, number, entry.kind)
+    if cached_notification then
+      preview(cached_notification, tmpbuf)
+    end
+
+    notifications.fetch_preview(owner, name, number, kind, function(obj)
+      cached_notification_infos[entry.ordinal] = obj
+      if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
+        preview(obj, tmpbuf)
+      end
+    end)
     self:set_preview_buf(tmpbuf)
     self:update_border(entry.value)
     self.win:update_preview_scrollbar()
