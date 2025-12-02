@@ -503,20 +503,11 @@ function M.write_state(bufnr, state, number)
 
   -- Skip showing state for open discussions
   if not (is_discussion and display_state == "OPEN") then
-    local function format_icon_text(icon)
-      return icon and icon[1]:match "^(.-)%s*$" .. " " or ""
-    end
-
-    local icon_text = format_icon_text(get_state_icon(display_state, obj.stateReason, is_issue, is_discussion))
-    local state_bubble = bubbles.make_bubble(icon_text .. display_state, utils.state_hl_map[display_state] .. "Bubble")
-    vim.list_extend(title_vt, state_bubble)
-
-    if obj.isDraft and display_state ~= "DRAFT" and display_state ~= "CLOSED" and display_state ~= "MERGED" then
-      table.insert(title_vt, { " " })
-      local draft_icon_text = format_icon_text(get_state_icon("DRAFT", nil, is_issue, is_discussion))
-      local draft_bubble = bubbles.make_bubble(draft_icon_text .. "DRAFT", "OctoStateDraftBubble")
-      vim.list_extend(title_vt, draft_bubble)
-    end
+    local builder = TextChunkBuilder:new()
+    builder:state_with_icon(display_state, obj.stateReason, obj.isDraft, function(state, state_reason)
+      return get_state_icon(state, state_reason, is_issue, is_discussion)
+    end)
+    vim.list_extend(title_vt, builder:build())
   end
 
   vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_TITLE_VT_NS, 0, 0, {
@@ -618,24 +609,13 @@ end
 ---@param is_draft? boolean
 local function add_status_detail(details, is_issue, state, state_reason, is_draft)
   local display_state = utils.get_displayed_state(is_issue, state, state_reason, is_draft)
-  local status_vt = { { "Status: ", "OctoDetailsLabel" } }
 
-  local function format_icon_text(icon)
-    return icon and icon[1]:match "^(.-)%s*$" .. " " or ""
-  end
-
-  local icon_text = format_icon_text(get_state_icon(display_state, state_reason, is_issue, false))
-  local state_bubble = bubbles.make_bubble(icon_text .. display_state, utils.state_hl_map[display_state] .. "Bubble")
-  vim.list_extend(status_vt, state_bubble)
-
-  if is_draft and display_state ~= "DRAFT" and display_state ~= "CLOSED" and display_state ~= "MERGED" then
-    table.insert(status_vt, { " " })
-    local draft_icon_text = format_icon_text(get_state_icon("DRAFT", nil, is_issue, false))
-    local draft_bubble = bubbles.make_bubble(draft_icon_text .. "DRAFT", "OctoStateDraftBubble")
-    vim.list_extend(status_vt, draft_bubble)
-  end
-
-  table.insert(details, status_vt)
+  TextChunkBuilder:new()
+    :detail_label("Status")
+    :state_with_icon(display_state, state_reason, is_draft, function(s, sr)
+      return get_state_icon(s, sr, is_issue, false)
+    end)
+    :write_detail_line(details)
 end
 
 --- Write issue or PR details virtual text in buffer
@@ -1929,14 +1909,18 @@ function M.write_issue_summary(bufnr, issue, opts)
     { " " .. utils.format_date(issue.createdAt), "OctoDetailsValue" },
   })
 
-  -- issue body
+  -- issue title with state
   local state = utils.get_displayed_state(issue.__typename == "Issue", issue.state, issue.stateReason)
-  table.insert(chunks, {
-    { " " },
-    { "[" .. state:gsub("_", " ") .. "] ", utils.state_hl_map[state] },
-    { issue.title .. " ", "OctoDetailsLabel" },
-    { "#" .. issue.number .. " ", "OctoDetailsValue" },
-  })
+  local is_issue = issue.__typename == "Issue"
+  local title_line = TextChunkBuilder:new()
+    :text(" ")
+    :state_with_icon(state, issue.stateReason, issue.isDraft, function(s, sr)
+      return get_state_icon(s, sr, is_issue, false)
+    end)
+    :text(" " .. issue.title .. " ", "OctoDetailsLabel")
+    :text("#" .. issue.number .. " ", "OctoDetailsValue")
+    :build()
+  table.insert(chunks, title_line)
   table.insert(chunks, { { "" } })
 
   -- issue body
@@ -2694,7 +2678,7 @@ function M.write_closed_event(bufnr, item)
   local builder = TextChunkBuilder:new()
   if conf.use_timeline_icons then
     ---@type table
-    local icon = conf.timeline_icons.closed[lookup_value]
+    local icon = conf.timeline_icons.closed[lookup_value] or conf.timeline_icons.closed.closed
     builder:text(icon[1], icon[2])
   else
     builder:timeline_marker()
