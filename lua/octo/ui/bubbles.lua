@@ -85,10 +85,6 @@ local function make_reaction_bubble(icon, includes_viewer, opts)
   return make_bubble(content, highlight, opts)
 end
 
---- Enum values found here:
---- https://docs.github.com/en/graphql/reference/enums#issuetypecolor
----@alias octo.IssueTypeColor "GRAY" | "BLUE" | "GREEN" | "YELLOW" | "ORANGE" | "RED" | "PINK" | "PURPLE"
-
 ---@type table<octo.IssueTypeColor, string>
 local color_lookup = {
   GRAY = "3C444D",
