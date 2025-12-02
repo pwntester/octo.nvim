@@ -147,6 +147,7 @@ return {
       ["Remove Milestone"] = commands.milestone.remove,
       ["Edit Parent Issue"] = commands.parent.edit,
       ["Add Parent Issue"] = commands.parent.add,
+      ["Add Child Issue"] = commands.child.add,
       ["Remove Parent Issue"] = commands.parent.remove,
       ["Assign to Copilot"] = commands.issue.copilot,
       ["Develop Issue"] = commands.issue.develop,

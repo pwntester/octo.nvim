@@ -270,6 +270,10 @@ See |octo-command-examples| for examples.
   remove                Remove the parent from the current issue
   edit                  Edit the parent of the current issue
 
+:Octo child [action] {args}                *octo-commands-child*
+
+  add                   Add a child to the current issue
+
 
 :Octo repo [action]                             *octo-commands-repo*
 
