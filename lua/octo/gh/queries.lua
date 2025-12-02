@@ -1375,6 +1375,10 @@ query($owner: String!, $name: String!) {
           ofType {
             name
             kind
+            ofType {
+              name
+              kind
+            }
           }
         }
         args {
