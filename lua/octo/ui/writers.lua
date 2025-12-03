@@ -2763,6 +2763,7 @@ end
 ---@param bufnr integer
 ---@param items octo.fragments.ReviewRequestedEvent[]
 function M.write_review_requested_events(bufnr, items)
+  items[1].actor = logins.format_author(items[1].actor)
   local builder =
     TextChunkBuilder:new():timeline_marker("review_requested"):actor(items[1].actor):heading " requested a review"
 
