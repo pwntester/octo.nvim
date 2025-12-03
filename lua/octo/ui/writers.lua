@@ -2709,41 +2709,101 @@ function M.write_closed_event(bufnr, item)
     :write_event(bufnr)
 end
 
----@param bufnr integer
----@param items octo.fragments.LabeledEvent[]|octo.fragments.UnlabeledEvent[]
----@param action "added"|"removed"
-function M.write_labeled_events(bufnr, items, action)
-  -- local actor_bubble = bubbles.make_user_bubble(
-  --   item.actor.login,
-  --   item.actor.login == vim.g.octo_viewer
-  -- )
-  local labels_by_actor = {} ---@type table<string, octo.fragments.Label[]>
+---Build label event text builders, combining labeled and unlabeled events per actor
+---@param items (octo.fragments.LabeledEvent|octo.fragments.UnlabeledEvent)[]
+---@param viewer string Current viewer login
+---@return TextChunkBuilder[] Array of builders, one per actor
+function M.build_label_event_chunks(items, viewer)
+  ---@class ActorLabelEvents
+  ---@field added table<string, octo.fragments.Label>
+  ---@field removed table<string, octo.fragments.Label>
+  ---@field timestamp string
+
+  ---@type table<string, ActorLabelEvents>
+  local events_by_actor = {}
+
   for _, item in ipairs(items) do
-    local key = item.actor ~= vim.NIL and item.actor.login or vim.NIL
-    if key ~= vim.NIL then
-      ---@type octo.fragments.Label[]
-      local labels = labels_by_actor[key] or {}
-      labels[#labels + 1] = item.label
-      labels_by_actor[
-        key --[[@as string]]
-      ] = labels
+    local actor_login = item.actor ~= vim.NIL and item.actor.login or vim.NIL
+    if actor_login ~= vim.NIL then
+      ---@cast actor_login string
+      if not events_by_actor[actor_login] then
+        events_by_actor[actor_login] = { added = {}, removed = {}, timestamp = item.createdAt }
+      end
+      -- Use label name as key to automatically deduplicate
+      if item.__typename == "LabeledEvent" then
+        events_by_actor[actor_login].added[item.label.name] = item.label
+      elseif item.__typename == "UnlabeledEvent" then
+        events_by_actor[actor_login].removed[item.label.name] = item.label
+      end
+      -- Track earliest timestamp for this actor
+      if item.createdAt < events_by_actor[actor_login].timestamp then
+        events_by_actor[actor_login].timestamp = item.createdAt
+      end
     end
   end
 
-  for actor, _ in pairs(labels_by_actor) do
-    actor = logins.format_author({ login = actor }).login
-    local labels = labels_by_actor[actor]
-    local builder = TextChunkBuilder:new()
-      :timeline_marker("label")
-      :user_plain(actor, actor == vim.g.octo_viewer)
-      :heading(" " .. action .. " ")
-
-    for _, label in ipairs(labels) do
-      local label_bubble = bubbles.make_label_bubble(label.name, label.color, { right_margin_width = 1 })
-      builder:extend(label_bubble)
+  ---@type TextChunkBuilder[]
+  local results = {}
+  for actor, events in pairs(events_by_actor) do
+    ---@type octo.fragments.Label[]
+    local added_list = {}
+    for _, label in pairs(events.added) do
+      table.insert(added_list, label)
+    end
+    ---@type octo.fragments.Label[]
+    local removed_list = {}
+    for _, label in pairs(events.removed) do
+      table.insert(removed_list, label)
     end
 
-    builder:heading(#labels > 1 and "labels" or "label"):write_event(bufnr)
+    local has_added = #added_list > 0
+    local has_removed = #removed_list > 0
+
+    local builder = TextChunkBuilder:new():timeline_marker("label"):user_plain(actor, actor == viewer)
+
+    if has_added then
+      builder:heading " added "
+      for i, label in ipairs(added_list) do
+        local is_last = i == #added_list
+        local label_bubble =
+          bubbles.make_label_bubble(label.name, label.color, { right_margin_width = is_last and 0 or 1 })
+        builder:extend(label_bubble)
+      end
+    end
+
+    if has_added and has_removed then
+      builder:heading " and"
+    end
+
+    if has_removed then
+      builder:heading " removed "
+      for i, label in ipairs(removed_list) do
+        local is_last = i == #removed_list
+        local label_bubble =
+          bubbles.make_label_bubble(label.name, label.color, { right_margin_width = is_last and 0 or 1 })
+        builder:extend(label_bubble)
+      end
+    end
+
+    builder:date(events.timestamp)
+    table.insert(results, builder)
+  end
+
+  return results
+end
+
+---@param bufnr integer
+---@param items (octo.fragments.LabeledEvent|octo.fragments.UnlabeledEvent)[]
+function M.write_label_events(bufnr, items)
+  -- Format authors first
+  for _, item in ipairs(items) do
+    item.actor = logins.format_author(item.actor)
+  end
+
+  local builders = M.build_label_event_chunks(items, vim.g.octo_viewer)
+
+  for _, builder in ipairs(builders) do
+    builder:write_event(bufnr)
   end
 end
 
@@ -2966,8 +3026,7 @@ end
 ---@param bufnr integer
 ---@param obj octo.PullRequest|octo.Issue
 function M.write_timeline_items(bufnr, obj)
-  local unrendered_labeled_events = {} ---@type octo.fragments.LabeledEvent[]
-  local unrendered_unlabeled_events = {} ---@type octo.fragments.UnlabeledEvent[]
+  local unrendered_label_events = {} ---@type (octo.fragments.LabeledEvent|octo.fragments.UnlabeledEvent)[]
   local unrendered_subissue_added_events = {} ---@type octo.fragments.SubIssueAddedEvent[]
   local unrendered_subissue_removed_events = {} ---@type octo.fragments.SubIssueRemovedEvent[]
   local unrendered_force_push_events = {} ---@type octo.fragments.HeadRefForcePushedEvent[]
@@ -2991,14 +3050,12 @@ function M.write_timeline_items(bufnr, obj)
 
   ---@param item? octo.PullRequestTimelineItem|octo.IssueTimelineItem
   local function render_accumulated_events(item)
-    if (not item or item.__typename ~= "LabeledEvent") and #unrendered_labeled_events > 0 then
-      M.write_labeled_events(bufnr, unrendered_labeled_events, "added")
-      unrendered_labeled_events = {}
-      prev_is_event = true
-    end
-    if (not item or item.__typename ~= "UnlabeledEvent") and #unrendered_unlabeled_events > 0 then
-      M.write_labeled_events(bufnr, unrendered_unlabeled_events, "removed")
-      unrendered_unlabeled_events = {}
+    if
+      #unrendered_label_events > 0
+      and (not item or (item.__typename ~= "LabeledEvent" and item.__typename ~= "UnlabeledEvent"))
+    then
+      M.write_label_events(bufnr, unrendered_label_events)
+      unrendered_label_events = {}
       prev_is_event = true
     end
     if (not item or item.__typename ~= "SubIssueAddedEvent") and #unrendered_subissue_added_events > 0 then
@@ -3121,9 +3178,9 @@ function M.write_timeline_items(bufnr, obj)
       M.write_reopened_event(bufnr, item)
       prev_is_event = true
     elseif item.__typename == "LabeledEvent" then
-      table.insert(unrendered_labeled_events, item)
+      table.insert(unrendered_label_events, item)
     elseif item.__typename == "UnlabeledEvent" then
-      table.insert(unrendered_unlabeled_events, item)
+      table.insert(unrendered_label_events, item)
     elseif item.__typename == "ReviewRequestedEvent" then
       unrendered_review_requested_events[#unrendered_review_requested_events + 1] = item
       prev_is_event = true
