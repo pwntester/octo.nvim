@@ -36,8 +36,8 @@ local open_issue = {
 local closed_issue = {
   __typename = "Issue",
   id = id,
-  number = 1,
-  title = "Bug report",
+  number = 2,
+  title = "Another Bug report",
   state = "CLOSED",
   stateReason = "COMPLETED",
 }
@@ -46,7 +46,7 @@ local closed_issue = {
 local pull_request = {
   __typename = "PullRequest",
   id = id,
-  number = 2,
+  number = 3,
   title = "feat: Feature request",
   state = "MERGED",
   isDraft = false,
@@ -130,9 +130,17 @@ writers.write_timeline_items(bufnr, {
         createdAt = now,
         project = { title = "Project 1" },
       },
+      --- Various labeled and unlabeled events to test deduplication and combination
+      ---@type octo.fragments.LabeledEvent
       {
         __typename = "LabeledEvent",
         actor = { login = other },
+        createdAt = now,
+        label = { id = id, name = "bug", color = red },
+      },
+      {
+        __typename = "UnlabeledEvent",
+        actor = { login = me },
         createdAt = now,
         label = { id = id, name = "bug", color = red },
       },
@@ -142,6 +150,25 @@ writers.write_timeline_items(bufnr, {
         createdAt = now,
         label = { id = id, name = "enhancement", color = green },
       },
+      {
+        __typename = "LabeledEvent",
+        actor = { login = other },
+        createdAt = now,
+        label = { id = id, name = "tests", color = blue },
+      },
+      -- Duplicate labeled events (should be deduplicated)
+      {
+        __typename = "LabeledEvent",
+        actor = { login = other },
+        createdAt = now,
+        label = { id = id, name = "enhancement", color = green },
+      },
+      {
+        __typename = "LabeledEvent",
+        actor = { login = other },
+        createdAt = now,
+        label = { id = id, name = "tests", color = blue },
+      },
       ---@type octo.fragments.UnlabeledEvent
       {
         __typename = "UnlabeledEvent",
@@ -149,12 +176,13 @@ writers.write_timeline_items(bufnr, {
         createdAt = now,
         label = { id = id, name = "enhancement", color = green },
       },
+      -- Duplicate unlabeled events (should be deduplicated)
       ---@type octo.fragments.UnlabeledEvent
       {
         __typename = "UnlabeledEvent",
         actor = { login = other },
         createdAt = now,
-        label = { id = id, name = "bug", color = red },
+        label = { id = id, name = "enhancement", color = green },
       },
       {
         __typename = "CommentDeletedEvent",
