@@ -52,7 +52,7 @@ M.setup = function()
   ---@field number integer
   ---@field title string
   ---@field state octo.IssueState
-  ---@field stateReason octo.IssueStateReason
+  ---@field stateReason? octo.IssueStateReason
 
   M.issue = [[
 fragment IssueFields on Issue {
@@ -85,7 +85,7 @@ fragment PullRequestFields on PullRequest {
   ---@field __typename "ProjectV2ItemStatusChangedEvent"
   ---@field actor { login: string }
   ---@field createdAt string
-  ---@field previousStatus string
+  ---@field previousStatus? string
   ---@field status string
   ---@field project { title: string }
 

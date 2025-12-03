@@ -98,9 +98,6 @@ M.file_status_map = {
   renamed = "R",
 }
 
--- https://docs.github.com/en/graphql/reference/enums#statusstate
----@alias octo.StatusState "ERROR" | "FAILURE" | "EXPECTED" | "PENDING" | "SUCCESS"
-
 ---@type table<octo.StatusState, table<string, string>>
 M.state_map = {
   ERROR = { symbol = "× ", hl = "OctoStateDismissed" },
@@ -133,6 +130,7 @@ M.merge_state_hl_map = {
   UNSTABLE = "OctoStateDismissed",
 }
 
+---@type table<octo.MergeStateStatus, string>
 M.merge_state_message_map = {
   BEHIND = "- OUT-OF-DATE",
   BLOCKED = "× BLOCKED",
@@ -144,6 +142,9 @@ M.merge_state_message_map = {
   UNSTABLE = "! UNSTABLE",
 }
 
+---@alias octo.PullRequestMergeMethod "MERGE"|"SQUASH"|"REBASE"
+
+---@type table<octo.PullRequestMergeMethod, string>
 M.auto_merge_method_map = {
   MERGE = "merge",
   REBASE = "rebase",

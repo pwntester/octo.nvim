@@ -97,6 +97,10 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
+  ---@alias octo.MergeStateStatus "DIRTY"|"UNKNOWN"|"BLOCKED"|"BEHIND"|"DRAFT"|"UNSTABLE"|"HAS_HOOKS"|"CLEAN"
+  ---@alias octo.MergeableState "MERGEABLE"|"CONFLICTING"|"UNKNOWN"
+  ---@alias octo.StatusState "EXPECTED"|"ERROR"|"FAILURE"|"PENDING"|"SUCCESS"
+
   ---@class octo.PullRequestTimelineItemsConnection : octo.fragments.PullRequestTimelineItemsConnection
   ---@field pageInfo octo.PageInfo
 
@@ -139,9 +143,9 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field labels octo.fragments.LabelConnection
   ---@field assignees octo.fragments.AssigneeConnection
   ---@field reviewRequests { totalCount: integer, nodes: { requestedReviewer: { name: string }|{ login: string }|{ login: string, isViewer: boolean } }[] }
-  ---@field statusCheckRollup { state: string }
-  ---@field mergeStateStatus string
-  ---@field mergeable string
+  ---@field statusCheckRollup { state: octo.StatusState }
+  ---@field mergeStateStatus octo.MergeStateStatus
+  ---@field mergeable octo.MergeableState
   ---@field autoMergeRequest { enabledBy: { login: string }, mergeMethod: string }
   ---@field closingIssuesReferences { totalCount: integer, nodes: octo.Issue[], edges: { cursor: string, node: octo.Issue }[], pageInfo: octo.PageInfo }
 
