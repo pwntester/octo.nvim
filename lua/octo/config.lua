@@ -202,7 +202,7 @@ function M.get_default_values()
     timeline_icons = {
       auto_squash = "  ",
       commit_push = "  ",
-      comment_deleted = " ",
+      comment_deleted = "  ",
       force_push = "  ",
       draft = "  ",
       ready = " ",

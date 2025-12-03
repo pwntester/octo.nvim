@@ -10,6 +10,7 @@ if me == nil then
   error "Failed to get viewer login"
 end
 local other = "octocat"
+local copilot_swe_agent = "copilot-swe-agent"
 
 local id = "F_kwDOA8AAAW0b4h"
 
@@ -17,8 +18,8 @@ local repo = "pwntester/octo.nvim"
 local branch = "main"
 
 local bufnr = vim.api.nvim_get_current_buf()
-local red = "#ff0000"
-local green = "#00ff00"
+local red = "#ee0000"
+local green = "#00af00"
 local blue = "#0000ff"
 
 ---@type octo.fragments.Issue
@@ -251,6 +252,19 @@ writers.write_timeline_items(bufnr, {
       {
         __typename = "UnpinnedEvent",
         actor = { login = me },
+        createdAt = now,
+      },
+      ---@type octo.fragments.ReviewRequestedEvent
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = copilot_swe_agent },
+        requestedReviewer = { login = me },
+        createdAt = now,
+      },
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = copilot_swe_agent },
+        requestedReviewer = { login = other },
         createdAt = now,
       },
     },
