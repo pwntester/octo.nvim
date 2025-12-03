@@ -864,6 +864,7 @@ function M.write_details(bufnr, issue, update, include_status)
     if issue.statusCheckRollup and issue.statusCheckRollup ~= vim.NIL then
       local state = issue.statusCheckRollup.state
       local state_info = utils.state_map[state]
+      ---@type string
       local message = state_info.symbol .. state
       local checks_vt = {
         { "Checks: ", "OctoDetailsLabel" },
