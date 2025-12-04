@@ -38,7 +38,7 @@ function M.list_types(cb)
           vim.ui.select(decoded, {
             prompt = "Select a GraphQL type:",
             format_item = function(item)
-              return item.name .. (item.description and (" - " .. item.description) or "")
+              return item.name .. (not utils.is_blank(item.description) and (" - " .. item.description) or "")
             end,
           }, function(choice)
             if choice then
