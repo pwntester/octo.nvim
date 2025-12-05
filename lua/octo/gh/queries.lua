@@ -148,7 +148,6 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field mergeStateStatus octo.MergeStateStatus
   ---@field mergeable octo.MergeableState
   ---@field autoMergeRequest { enabledBy: { login: string }, mergeMethod: string }
-  ---@field closingIssuesReferences { totalCount: integer, nodes: octo.Issue[], edges: { cursor: string, node: octo.Issue }[], pageInfo: octo.PageInfo }
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
   M.pull_request = [[
