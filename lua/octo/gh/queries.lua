@@ -116,6 +116,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field updatedAt string
   ---@field url string
   ---@field headRepository { nameWithOwner: string }
+  ---@field closingIssuesReferences { totalCount: integer, nodes: octo.fragments.Issue[] }
   ---@field files { nodes: { path: string, viewerViewedState: octo.FileViewedState }[] }
   ---@field merged boolean
   ---@field mergedBy { name: string }|{ login: string }|{ login: string, isViewer: boolean }
@@ -147,7 +148,6 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field mergeStateStatus octo.MergeStateStatus
   ---@field mergeable octo.MergeableState
   ---@field autoMergeRequest { enabledBy: { login: string }, mergeMethod: string }
-  ---@field closingIssuesReferences { totalCount: integer, nodes: octo.Issue[], edges: { cursor: string, node: octo.Issue }[], pageInfo: octo.PageInfo }
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
   M.pull_request = [[
@@ -165,6 +165,12 @@ query($endCursor: String) {
       updatedAt
       url
       headRepository { nameWithOwner }
+      closingIssuesReferences(first: 10) {
+        totalCount
+        nodes {
+          ...IssueFields
+        }
+      }
       files(first:100) {
         nodes {
           path
