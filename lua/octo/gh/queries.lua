@@ -127,6 +127,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field changedFiles integer
   ---@field headRefName string
   ---@field headRefOid string
+  ---@field headRef? { id: string }
   ---@field baseRefName string
   ---@field baseRefOid string
   ---@field baseRepository { name: string, nameWithOwner: string }
@@ -199,6 +200,7 @@ query($endCursor: String) {
       }
       changedFiles
       headRefName
+      headRef { id }
       headRefOid
       baseRefName
       baseRefOid

@@ -1355,6 +1355,14 @@ mutation($issue_id: ID!, $issue_type_id: ID) {
     }
   }
   ]]
+
+  M.delete_branch = [[
+  mutation($branchRef: ID!) {
+    deleteRef(input: {refId: $branchRef}) {
+      clientMutationId
+    }
+  }
+  ]]
 end
 
 return M

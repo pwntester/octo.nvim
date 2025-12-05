@@ -2779,4 +2779,36 @@ function M.pin_issue(opts)
   }
 end
 
+M.delete_branch = context.within_pr(function(buffer)
+  local pr = buffer:pullRequest()
+  if utils.is_blank(pr.headRef) then
+    utils.error "Branch is already deleted"
+    return
+  end
+
+  if pr.state == "OPEN" then
+    local choice = vim.fn.confirm(
+      "The PR is still open. Are you sure you want to delete the branch and close the PR?",
+      "&Yes\n&No",
+      2
+    )
+    if choice ~= 1 then
+      utils.info "Aborting branch deletion"
+      return
+    end
+  end
+
+  gh.api.graphql {
+    query = mutations.delete_branch,
+    F = { branchRef = pr.headRef.id },
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          utils.info("Deleted branch " .. pr.headRefName)
+        end,
+      },
+    },
+  }
+end)
+
 return M
