@@ -97,6 +97,7 @@ return {
       ["Reopen PR"] = commands.pr.reopen,
       ["Merge PR"] = commands.pr.merge,
       ["Mark as Ready for Review"] = commands.pr.ready,
+      ["Mark as Draft"] = commands.pr.draft,
       ["Update Base Branch"] = commands.pr.update,
       ["Copy URL"] = commands.pr.url,
       ["Open in Browser"] = commands.pr.browser,
