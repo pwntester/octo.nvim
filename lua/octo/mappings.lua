@@ -99,6 +99,7 @@ return {
       ["Mark as Ready for Review"] = commands.pr.ready,
       ["Mark as Draft"] = commands.pr.draft,
       ["Update Base Branch"] = commands.pr.update,
+      ["Delete Branch"] = require("octo.commands").delete_branch,
       ["Copy URL"] = commands.pr.url,
       ["Open in Browser"] = commands.pr.browser,
       ["Reload PR buffer"] = commands.pr.reload,

@@ -2779,4 +2779,24 @@ function M.pin_issue(opts)
   }
 end
 
+M.delete_branch = context.within_pr(function(buffer)
+  local pr = buffer:pullRequest()
+  if utils.is_blank(pr.headRef) then
+    utils.error "Branch is already deleted"
+    return
+  end
+
+  gh.api.graphql {
+    query = mutations.delete_branch,
+    F = { branchRef = pr.headRef.id },
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          utils.info("Deleted branch " .. pr.headRefName)
+        end,
+      },
+    },
+  }
+end)
+
 return M
