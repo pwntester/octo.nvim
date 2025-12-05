@@ -674,6 +674,24 @@ function M.setup_buffer_keymaps(bufnr, data)
     desc = "Copy GraphQL type documentation URL to clipboard",
   })
 
+  -- Map <C-y> to copy GraphQL type documentation URL
+  -- Copies the documentation for the current buffer's type, not the word under cursor
+  vim.keymap.set("n", "<C-y>", function()
+    local navigation = require "octo.navigation"
+
+    if not is_nil(type_name) and not is_nil(type_kind) then
+      local url = build_graphql_docs_url(type_name, type_kind)
+      utils.copy_url(url)
+    else
+      notify.error "Unable to determine type information for this buffer"
+    end
+  end, {
+    buffer = bufnr,
+    noremap = true,
+    silent = true,
+    desc = "Copy GraphQL type documentation URL",
+  })
+
   -- Map <C-b> to open GraphQL type documentation in browser
   -- Opens the documentation for the current buffer's type, not the word under cursor
   vim.keymap.set("n", "<C-b>", function()
