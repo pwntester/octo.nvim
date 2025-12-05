@@ -761,6 +761,7 @@ function M.write_details(bufnr, issue, update, include_status)
 
   if not utils.is_blank(issue.issueType) then
     local issue_type = issue.issueType
+    ---@diagnostic disable-next-line
     local issue_type_bubble = bubbles.make_label_bubble(issue_type.name, issue_type.color)
     vim.list_extend(issue_type_vt, issue_type_bubble)
   else
