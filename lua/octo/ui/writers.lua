@@ -711,6 +711,22 @@ function M.write_details(bufnr, issue, update, include_status)
     table.insert(details, projects_vt)
   end
 
+  --- Parent
+  if is_issue then
+    local parent = issue.parent
+    local builder = TextChunkBuilder:new():detail_label "Parent"
+
+    if not utils.is_blank(parent) then
+      local obj = parent --[[@as EntryObject]]
+      local icon = utils.get_icon { kind = "issue", obj = obj }
+      builder:text(icon[1], icon[2]):detail_value("#" .. tostring(parent.number) .. " " .. parent.title .. " ")
+    else
+      builder:detail_missing "None yet"
+    end
+
+    builder:write_detail_line(details)
+  end
+
   -- milestones
   local ms = issue.milestone
   local milestone_vt = {
@@ -745,6 +761,7 @@ function M.write_details(bufnr, issue, update, include_status)
 
   if not utils.is_blank(issue.issueType) then
     local issue_type = issue.issueType
+    ---@diagnostic disable-next-line
     local issue_type_bubble = bubbles.make_label_bubble(issue_type.name, issue_type.color)
     vim.list_extend(issue_type_vt, issue_type_bubble)
   else

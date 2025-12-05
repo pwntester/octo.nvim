@@ -1121,8 +1121,8 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
   ---@field id string
   ---@field number integer
   ---@field state octo.IssueState
-  ---@field stateReason octo.IssueStateReason
-  ---@field issueType { id: string, name: string, color: string }
+  ---@field stateReason? octo.IssueStateReason
+  ---@field issueType? { id: string, name: string, color: string }
   ---@field title string
   ---@field body string
   ---@field createdAt string
