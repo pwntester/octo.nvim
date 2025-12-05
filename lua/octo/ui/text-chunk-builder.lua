@@ -227,6 +227,13 @@ function TextChunkBuilder:detail_value(value)
   return self:text(tostring(value), "OctoDetailsValue")
 end
 
+---Add missing details value
+---@param value string|number
+---@return TextChunkBuilder self for chaining
+function TextChunkBuilder:detail_missing(value)
+  return self:text(tostring(value), "OctoMissingDetails")
+end
+
 ---Build and return final chunks
 ---@return [string, string][]
 function TextChunkBuilder:build()
