@@ -2000,16 +2000,21 @@ end
 
 ---@param bufnr integer
 ---@param item octo.fragments.PullRequestCommit
-local function write_commit(bufnr, item)
+---@param include_date boolean
+local function write_commit(bufnr, item, include_date)
   local status_check = get_status_check(item.commit.statusCheckRollup)
-  TextChunkBuilder:new()
+  local builder = TextChunkBuilder:new()
     :timeline_marker("commit")
     :extend({ status_check })
     :text(item.commit.abbreviatedOid, "OctoDetailsLabel")
     :space()
     :text(item.commit.messageHeadline, "OctoDetailsLabel")
-    :date(item.commit.committedDate)
-    :write_event(bufnr)
+
+  if include_date then
+    builder = builder:date(item.commit.committedDate)
+  end
+
+  builder:write_event(bufnr)
 end
 
 ---@param bufnr integer
@@ -2051,9 +2056,12 @@ end
 ---@param bufnr integer
 ---@param commits octo.fragments.PullRequestCommit[]
 function M.write_commits(bufnr, commits)
-  write_commit_header(bufnr, commits)
+  local include_date = #commits == 1
+  if #commits ~= 1 then
+    write_commit_header(bufnr, commits)
+  end
   for _, item in ipairs(commits) do
-    write_commit(bufnr, item)
+    write_commit(bufnr, item, include_date)
   end
 end
 
