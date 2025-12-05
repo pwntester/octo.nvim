@@ -32,6 +32,24 @@ local open_issue = {
   stateReason = nil,
 }
 
+---@type octo.fragments.PullRequestCommit
+local example_commit = {
+  __typename = "PullRequestCommit",
+  commit = {
+    abbreviatedOid = "45f511e",
+    additions = 1,
+    author = { user = { login = me } },
+    changedFiles = 1,
+    committedDate = "2025-12-05T14:41:52Z",
+    committer = { user = { login = me } },
+    deletions = 0,
+    messageHeadline = "feat: add draft to PR buffer picker",
+    oid = "45f511ecc4973828392c61958777f781b9e0df21",
+    statusCheckRollup = {
+      state = "SUCCESS",
+    },
+  },
+}
 ---@type octo.fragments.Issue
 local closed_issue = {
   __typename = "Issue",
@@ -55,6 +73,8 @@ local pull_request = {
 writers.write_timeline_items(bufnr, {
   timelineItems = {
     nodes = {
+      --- Single commit event doesn't have summary
+      example_commit,
       ---@type octo.fragments.ReadyForReviewEvent
       {
         __typename = "ReadyForReviewEvent",
@@ -295,6 +315,10 @@ writers.write_timeline_items(bufnr, {
         requestedReviewer = { login = other },
         createdAt = now,
       },
+      --- Sequence of commits have a summary
+      example_commit,
+      example_commit,
+      example_commit,
     },
   },
 })
