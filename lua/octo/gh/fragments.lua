@@ -393,6 +393,7 @@ fragment AssigneeConnectionFragment on UserConnection {
   ---@class octo.fragments.IssueComment : octo.ReactionGroupsFragment
   ---@field __typename "IssueComment"
   ---@field id string
+  ---@field databaseId integer
   ---@field body string
   ---@field createdAt string
   ---@field author { login: string }
@@ -403,6 +404,7 @@ fragment AssigneeConnectionFragment on UserConnection {
   M.issue_comment = [[
 fragment IssueCommentFragment on IssueComment {
   id
+  databaseId
   body
   createdAt
   ...ReactionGroupsFragment
