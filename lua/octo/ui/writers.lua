@@ -2369,12 +2369,13 @@ local function write_issue_or_pr(bufnr, item, spaces)
 end
 
 local function write_reference_commit(bufnr, commit)
-  local vt = {}
-  table.insert(vt, { "          ", "OctoTimelineItemHeading" })
-  table.insert(vt, { commit.message, "OctoTimelineItemHeading" })
-  table.insert(vt, { " ", "OctoTimelineItemHeading" })
-  table.insert(vt, { commit.abbreviatedOid, "OctoTimelineItemHeading" })
-  write_event(bufnr, vt)
+  local spaces = config.values.use_timeline_icons and 3 or 10
+  TextChunkBuilder:new()
+    :space(spaces)
+    :text(commit.message, "OctoTimelineItemHeading")
+    :space()
+    :text(commit.abbreviatedOid, "OctoTimelineItemHeading")
+    :write_event(bufnr)
 end
 
 ---@param bufnr integer
@@ -2400,7 +2401,7 @@ function M.write_referenced_event(bufnr, item)
   end
 
   TextChunkBuilder:new()
-    :timeline_marker()
+    :timeline_marker("reference")
     :actor(item.actor)
     :heading(" added a commit to ")
     :text(item.commit.repository.nameWithOwner, "OctoDetailsLabel")
