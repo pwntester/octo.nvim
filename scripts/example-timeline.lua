@@ -2,6 +2,10 @@
 local gh = require "octo.gh"
 local writers = require "octo.ui.writers"
 
+local config = require("octo.config").values
+
+config.use_timeline_icons = true
+
 ---@type string
 local now = "" .. os.date "!%Y-%m-%dT%H:%M:%SZ"
 
@@ -267,6 +271,34 @@ writers.write_timeline_items(bufnr, {
         __typename = "AutoSquashEnabledEvent",
         actor = { login = other },
         createdAt = now,
+      },
+      --- Two referenced events to test grouping
+      ---@type octo.fragments.ReferencedEvent
+      {
+        __typename = "ReferencedEvent",
+        createdAt = now,
+        actor = { login = other },
+        commit = {
+          __typename = "Commit",
+          abbreviatedOid = "abc1234",
+          message = "Fix all the bugs",
+          repository = {
+            nameWithOwner = repo,
+          },
+        },
+      },
+      {
+        __typename = "ReferencedEvent",
+        createdAt = now,
+        actor = { login = other },
+        commit = {
+          __typename = "Commit",
+          abbreviatedOid = "abc1234",
+          message = "Fix all the bugs",
+          repository = {
+            nameWithOwner = repo,
+          },
+        },
       },
       ---@type octo.fragments.HeadRefDeletedEvent
       {
