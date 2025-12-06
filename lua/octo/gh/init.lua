@@ -206,7 +206,7 @@ local function run(opts)
   end
 
   ---@diagnostic disable-next-line: missing-fields
-  local job = Job:new {
+  local job_opts = {
     enable_recording = true,
     command = config.values.gh_cmd,
     args = opts.args,
@@ -224,6 +224,13 @@ local function run(opts)
     end),
     env = env,
   }
+
+  -- Support for passing data via stdin (e.g., for REST API JSON bodies)
+  if opts.writer then
+    job_opts.writer = opts.writer
+  end
+
+  local job = Job:new(job_opts)
   if mode == "sync" then
     job:sync(conf.timeout)
     return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
