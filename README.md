@@ -241,7 +241,7 @@ require"octo".setup {
     deployed = "  ",
     issue_type = "  ",
     label = "  ",
-    reference = " ",
+    reference = "  ",
     project = "  ",
     connected = "  ",
     subissue = "  ",
