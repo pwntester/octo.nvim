@@ -210,7 +210,7 @@ function M.get_default_values()
       deployed = "  ",
       issue_type = "  ",
       label = "  ",
-      reference = " ",
+      reference = "  ",
       project = "  ",
       connected = "  ",
       subissue = "  ",
