@@ -1098,6 +1098,7 @@ function M.write_comment(bufnr, comment, kind, line)
     CommentMetadata:new {
       author = "",
       id = comment.id,
+      databaseId = comment.databaseId,
       dirty = false,
       savedBody = comment_body,
       body = comment_body,

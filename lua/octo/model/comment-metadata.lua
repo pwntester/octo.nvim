@@ -2,6 +2,7 @@ local M = {}
 
 ---@class CommentMetadata
 ---@field id string
+---@field databaseId integer
 ---@field author string
 ---@field savedBody string
 ---@field body string
@@ -36,6 +37,7 @@ function CommentMetadata:new(opts)
   local this = {
     author = opts.author,
     id = opts.id,
+    databaseId = opts.databaseId,
     dirty = opts.dirty or false,
     savedBody = opts.savedBody,
     body = opts.body,
