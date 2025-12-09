@@ -1157,7 +1157,7 @@ end
 
 ---@param current_repo string
 function M.extract_issue_at_cursor(current_repo)
-  ---@type string?, integer?
+  ---@type string?, string?
   local repo, number = M.extract_pattern_at_cursor(constants.LONG_ISSUE_PATTERN)
   if not repo or not number then
     number = M.extract_pattern_at_cursor(constants.SHORT_ISSUE_PATTERN)
@@ -1173,6 +1173,13 @@ function M.extract_issue_at_cursor(current_repo)
   end
   if not repo or not number then
     _, repo, _, number = M.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+  end
+  if not repo or not number then
+    local url = M.extract_pattern_at_cursor(constants.MARKDOWN_URL_PATTERN)
+    if url then
+      ---@type string?, string?, string?, string?
+      _, repo, _, number = url:match(constants.URL_ISSUE_PATTERN)
+    end
   end
   return repo, number
 end
