@@ -1060,6 +1060,21 @@ function OctoBuffer:get_comment_at_line(line)
   end
 end
 
+---Navigate to a specific comment by its databaseId
+---@param opts { id: string, databaseId: integer }
+function OctoBuffer:navigate_to_comment(opts)
+  for _, comment in ipairs(self.commentsMetadata) do
+    if comment.databaseId == opts.databaseId or comment.id == opts.id then
+      local mark =
+        vim.api.nvim_buf_get_extmark_by_id(self.bufnr, constants.OCTO_COMMENT_NS, comment.extmark, { details = true })
+      local start_line = mark[1] + 1
+      vim.api.nvim_win_set_cursor(0, { start_line + 1, 0 })
+      vim.cmd "normal! zz"
+      return
+    end
+  end
+end
+
 ---Gets the issue/PR body at cursor (if any)
 function OctoBuffer:get_body_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
