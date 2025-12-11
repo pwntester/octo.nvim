@@ -201,6 +201,7 @@ function M.get_default_values()
     use_timeline_icons = true,
     timeline_icons = {
       auto_squash = "  ",
+      blocking = "  ",
       commit_push = "  ",
       comment_deleted = "  ",
       force_push = "  ",
