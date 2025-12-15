@@ -867,6 +867,7 @@ end
 
 ---Gets repo info
 ---@param repo string
+---@return octo.Repository|nil
 function M.get_repo_info(repo)
   if repo_info_cache[repo] then
     return repo_info_cache[repo]

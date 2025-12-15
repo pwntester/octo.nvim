@@ -1826,6 +1826,18 @@ function M.create_pr(is_draft)
   }
 end
 
+---@class SavePROpts
+---@field repo string
+---@field base_title string
+---@field base_body string
+---@field candidates string[]
+---@field candidate_entries string[]
+---@field is_draft boolean
+---@field info octo.Repository
+---@field remote_branch string
+
+--- Save a new pull request
+---@param opts SavePROpts
 function M.save_pr(opts)
   vim.fn.inputsave()
   local repo_idx = 1
@@ -1855,7 +1867,7 @@ function M.save_pr(opts)
   if not utils.is_blank(opts.base_body) then
     body = opts.base_body
     --TODO: append last commit?
-    -- TODO: let the use edit the body
+    --TODO: let the use edit the body
   end
 
   -- title
