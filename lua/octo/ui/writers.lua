@@ -2196,6 +2196,19 @@ function M.write_comment_deleted_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.TransferredEvent
+function M.write_transferred_event(bufnr, item)
+  item.actor = logins.format_author(item.actor)
+  TextChunkBuilder:new()
+    :timeline_marker("transferred")
+    :actor(item.actor)
+    :heading(" transferred this issue from ")
+    :text(item.fromRepository.nameWithOwner, "OctoDetailsLabel")
+    :date(item.createdAt)
+    :write_event(bufnr)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.HeadRefRestoredEvent
 function M.write_head_ref_restored_event(bufnr, item)
   TextChunkBuilder:new()
@@ -3297,6 +3310,9 @@ function M.write_timeline_items(bufnr, obj)
       prev_is_event = true
     elseif item.__typename == "CommentDeletedEvent" then
       M.write_comment_deleted_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "TransferredEvent" then
+      M.write_transferred_event(bufnr, item)
       prev_is_event = true
     elseif
       not utils.is_blank(item)
