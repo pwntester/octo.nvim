@@ -238,9 +238,9 @@ return {
   checkout_pr = function()
     require("octo.commands").commands.pr.checkout()
   end,
-  list_commits = function()
-    require("octo.picker").commits()
-  end,
+  list_commits = context.within_pr(function(buffer)
+    require("octo.picker").commits(buffer)
+  end),
   review_commits = function()
     local current_review = reviews.get_current_review()
     if not current_review then
@@ -250,9 +250,9 @@ return {
       current_review:focus_commit(right, left)
     end)
   end,
-  list_changed_files = function()
-    require("octo.picker").changed_files()
-  end,
+  list_changed_files = context.within_pr(function(buffer)
+    require("octo.picker").changed_files(buffer)
+  end),
   show_pr_diff = function()
     require("octo.commands").show_pr_diff()
   end,
