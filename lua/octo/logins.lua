@@ -32,6 +32,8 @@ M.get_user_icon = function(login)
     return conf.ghost_icon
   elseif login == "Copilot" then
     return conf.copilot_icon
+  elseif login == "dependabot" or login == "dependabot[bot]" then
+    return conf.dependabot_icon
   else
     return conf.user_icon
   end

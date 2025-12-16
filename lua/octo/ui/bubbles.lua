@@ -6,7 +6,7 @@ local logins = require "octo.logins"
 -- Sometimes they are also called Chips in WebUI frameworks. After all they wrap
 -- some content (usually text and icons) in a bubble kind-of-shape with a colorful
 -- background. The bubble shape gets especially defined by the outer delimiters.
--- An examplary usage in this plugin are for label assigned to an issue.
+-- An exemplary usage in this plugin are for label assigned to an issue.
 
 ---@class octo.ui.BubbleOpts
 ---@field margin_width? integer
@@ -85,8 +85,7 @@ local function make_reaction_bubble(icon, includes_viewer, opts)
   return make_bubble(content, highlight, opts)
 end
 
---- Enum values found here:
---- https://docs.github.com/en/graphql/reference/enums#issuetypecolor
+---@type table<octo.IssueTypeColor, string>
 local color_lookup = {
   GRAY = "3C444D",
   BLUE = "4493F8",

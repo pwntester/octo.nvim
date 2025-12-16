@@ -15,6 +15,7 @@ local window = require "octo.ui.window"
 local colors = require "octo.ui.colors"
 local writers = require "octo.ui.writers"
 local utils = require "octo.utils"
+local uri = require "octo.uri"
 local vim = vim
 
 ---@type table<string, { number: integer, title: string }[]>
@@ -99,35 +100,12 @@ function M.load_buffer(opts)
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local bufname = vim.fn.bufname(bufnr)
-
-  -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
-  local hostname, repo, kind, id = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/([^/]+)/([0-9a-z.]+)")
-
-  -- Fall back to without hostname: octo://owner/repo/kind/id
-  if not hostname then
-    repo, kind, id = string.match(bufname, "octo://(.+)/(.+)/([0-9a-z.]+)")
-    hostname = nil
-  end
-
-  if id == "repo" or not repo then
-    -- Try with hostname: octo://hostname/owner/repo/repo
-    hostname, repo = string.match(bufname, "octo://([^/]+)/([^/]+/[^/]+)/repo")
-    if not hostname then
-      -- Fall back without hostname: octo://owner/repo/repo
-      repo = string.match(bufname, "octo://(.+)/repo")
-      hostname = nil
-    end
-    if repo then
-      kind = "repo"
-    end
-  end
-  if (kind == "issue" or kind == "pull") and not repo and not id then
-    utils.print_err("Incorrect buffer: " .. bufname)
-    return
-  elseif kind == "repo" and not repo then
-    utils.print_err("Incorrect buffer: " .. bufname)
+  local buffer_info = uri.parse(bufname)
+  if buffer_info == nil then
+    utils.print_err("Cannot parse buffer name: " .. bufname)
     return
   end
+  local repo, kind, id, hostname = buffer_info.repo, buffer_info.kind, buffer_info.id, buffer_info.hostname
 
   M.load(repo, kind, id, hostname, function(obj)
     vim.api.nvim_buf_call(bufnr, function()
@@ -152,7 +130,7 @@ end
 
 ---@param repo string
 ---@param kind octo.NodeKind
----@param id integer|string pull request, issue, or discussion number or release tag
+---@param id? integer|string pull request, issue, or discussion number or release tag
 ---@param hostname string|nil optional GitHub Enterprise hostname
 ---@param cb fun(obj: octo.Issue|octo.PullRequest|octo.Discussion|octo.Release|octo.Repository): nil
 function M.load(repo, kind, id, hostname, cb)
@@ -173,10 +151,18 @@ function M.load(repo, kind, id, hostname, cb)
     fields = { owner = owner, name = name }
   elseif kind == "discussion" then
     query = queries.discussion
-    fields = { owner = owner, name = name, number = id }
+    fields = {
+      owner = owner,
+      name = name,
+      number = id --[[@as integer]],
+    }
   elseif kind == "release" then
     query = queries.release
-    fields = { owner = owner, name = name, tag = id }
+    fields = {
+      owner = owner,
+      name = name,
+      tag = id --[[@as string]],
+    }
   end
 
   local function load_buffer(output)
@@ -231,6 +217,12 @@ function M.on_cursor_hold()
     return
   end
 
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local function is_stale()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local current_cursor = vim.api.nvim_win_get_cursor(0)
+    return buffer.bufnr ~= bufnr or cursor[1] ~= current_cursor[1]
+  end
   -- reactions popup
   local id = buffer:get_reactions_at_cursor()
   if id then
@@ -239,6 +231,9 @@ function M.on_cursor_hold()
       F = { id = id },
       opts = {
         cb = function(output, stderr)
+          if is_stale() then
+            return
+          end
           if stderr and not utils.is_blank(stderr) then
             utils.print_err(stderr)
           elseif output then
@@ -287,6 +282,9 @@ function M.on_cursor_hold()
         cb = gh.create_callback {
           failure = utils.print_err,
           success = function(data)
+            if is_stale() then
+              return
+            end
             ---@type octo.UserProfile
             local user = vim.json.decode(data)
             local popup_bufnr = vim.api.nvim_create_buf(false, true)
@@ -329,11 +327,17 @@ function M.on_cursor_hold()
     opts = {
       cb = gh.create_callback {
         success = function(output)
+          if is_stale() then
+            return
+          end
           ---@type octo.IssueOrPullRequestSummary
           local issue = vim.json.decode(output)
           write_popup(issue, writers.write_issue_summary)
         end,
         failure = function(_)
+          if is_stale() then
+            return
+          end
           gh.api.graphql {
             query = queries.discussion_summary,
             F = { owner = owner, name = name, number = number },
@@ -342,6 +346,9 @@ function M.on_cursor_hold()
               cb = gh.create_callback {
                 failure = utils.print_err,
                 success = function(output)
+                  if is_stale() then
+                    return
+                  end
                   ---@type octo.DiscussionSummary
                   local discussion = vim.json.decode(output)
                   write_popup(discussion, writers.write_discussion_summary)
@@ -399,6 +406,7 @@ function M.create_buffer(kind, obj, repo, create, hostname)
     octo_buffer:async_fetch_taggable_users()
     octo_buffer:async_fetch_issues()
   end
+  utils.clear_history()
 end
 
 return M

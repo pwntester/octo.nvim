@@ -203,6 +203,7 @@ See |octo-command-examples| for examples.
   browser               Open current issue in the browser.
   url                   Copies the URL of the currently opened issue to the
                         system clipboard.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   pin                   Pin the current issue to the top of the list.
   unpin                 Unpin the current issue from the top of the list.
 
@@ -238,6 +239,7 @@ See |octo-command-examples| for examples.
   browser               Open current PR in the browser.
   url                   Copies the URL of the currently opened PR to the
                         system clipboard.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   sha                   Copies the head commit SHA of the currently opened PR
                         to the system clipboard.
   runs                  Show all workflow runs for the PR.
@@ -258,6 +260,7 @@ See |octo-command-examples| for examples.
   unmark                Mark the discussion comment as unanswered
   reopen                Reopen the discussion
   search                Live discussion search.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   category              Change the category of the current discussion.
 
 
@@ -267,6 +270,10 @@ See |octo-command-examples| for examples.
   remove                Remove the parent from the current issue
   edit                  Edit the parent of the current issue
 
+:Octo child [action] {args}                *octo-commands-child*
+
+  add                   Add a child to the current issue
+
 
 :Octo repo [action]                             *octo-commands-repo*
 
@@ -275,12 +282,14 @@ See |octo-command-examples| for examples.
   browser               Open current repo in the browser.
   url                   Copies the URL of the current repo to the system
                         clipboard.
+  subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   view                  Open a repo by path ({organization}/{name}).
 
 
 :Octo release [action]                         *octo-commands-release*
 
   notes                  Generate release notes for a tag in the current buffer.
+  list [repo]            Lists releases for the current or specified repo.
 
 
 :Octo gist [action]                             *octo-commands-gist*
@@ -397,6 +406,18 @@ COMMAND EXAMPLES                                *octo-command-examples*
   Octo search assignee:pwntester is:pr
 <
 
+You can pass GitHub URLs directly to the Octo command, including GitHub
+Enterprise URLs:
+>
+  " GitHub.com URLs
+  Octo https://github.com/pwntester/octo.nvim/issues/12
+  Octo https://github.com/pwntester/octo.nvim/pull/123
+
+  " GitHub Enterprise URLs (hostname is automatically detected)
+  Octo https://ghe.example.com/owner/repo/issues/456
+  Octo https://ghe.example.com/owner/repo/pull/789
+<
+
 You can also use `octo://` URLs to open issues and PRs directly:
 >
   " Open from the default GitHub instance (github.com or configured github_hostname)
@@ -406,6 +427,10 @@ You can also use `octo://` URLs to open issues and PRs directly:
   " Open from a specific GitHub Enterprise instance
   :e octo://ghe.example.com/owner/repo/issue/123
   :e octo://ghe.example.com/owner/repo/pull/456
+
+  " Both singular and plural forms are supported
+  :e octo://owner/repo/issues/123
+  :e octo://owner/repo/pulls/456
 <
 
 The `octo://` URL format is especially useful for:

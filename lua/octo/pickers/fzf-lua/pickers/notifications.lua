@@ -113,14 +113,19 @@ return function(opts)
       { fn = unsubscribe_notification(formatted_notifications), reload = true }
   end
 
+  ---@type table<string, any>
+  local cached_notification_infos = {}
+
   fzf.fzf_exec(get_contents, {
     prompt = picker_utils.get_prompt(opts.prompt_title),
-    previewer = previewers.notifications(formatted_notifications),
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    previewer = previewers.notifications(formatted_notifications, cached_notification_infos),
     fzf_opts = {
       ["--no-multi"] = "", -- TODO this can support multi, probably
       ["--header"] = opts.results_title,
       ["--info"] = "default",
     },
+    ---@diagnostic disable-next-line: missing-fields
     winopts = {
       title = opts.window_title or "Notifications",
       title_pos = "center",

@@ -428,6 +428,7 @@ function M.commits(opts)
                   open_preview_buffer(type)(prompt_bufnr)
                 end)
                 map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
+                map("i", octo_config.values.picker_config.mappings.copy_url.lhs, copy_url())
                 return true
               end,
             })
@@ -556,6 +557,9 @@ end
 ---
 -- SEARCH
 ---
+
+---@param prompt string[]
+---@return { single_repo: boolean, prompt: string }
 local function get_search_query(prompt)
   local full_prompt = prompt[1]
   local parts = vim.split(full_prompt, " ")
@@ -573,6 +577,8 @@ local function get_search_query(prompt)
   }
 end
 
+---@param prompt string
+---@return integer
 local function get_search_size(prompt)
   return gh.api.graphql {
     query = queries.search_count,
@@ -651,24 +657,14 @@ end
 function M.search(opts)
   opts = opts or {}
   opts.type = opts.type or "ISSUE"
+  if opts.static == nil then
+    opts.static = octo_config.values.picker_config.search_static
+  end
 
   if opts.type == "REPOSITORY" then
     repo_search(opts)
     return
   end
-
-  local settings = opts.type == "ISSUE"
-      and {
-        previewer = previewers.issue,
-        entry_maker = entry_maker.gen_from_issue,
-        entry_maker_static = function(width)
-          return entry_maker.gen_from_issue(width, true)
-        end,
-      }
-    or {
-      previewer = previewers.discussion,
-      entry_maker = entry_maker.gen_from_discussion,
-    }
 
   local cfg = octo_config.values
   if type(opts.prompt) == "string" then
@@ -681,6 +677,19 @@ function M.search(opts)
     local num_results = get_search_size(search.prompt)
     width = math.min(#num_results, width)
   end
+
+  local settings = opts.type == "ISSUE"
+      and {
+        previewer = previewers.issue,
+        entry_maker = entry_maker.gen_from_issue,
+        entry_maker_static = function(width)
+          return entry_maker.gen_from_issue(width, not search.single_repo)
+        end,
+      }
+    or {
+      previewer = previewers.discussion,
+      entry_maker = entry_maker.gen_from_discussion,
+    }
 
   local replace = opts.cb and create_replace(opts.cb) or open_buffer
 
@@ -1206,6 +1215,85 @@ function M.select_assignee(cb)
   }
 end
 
+---@param opts? { repo? : string, cb? : function }
+function M.releases(opts)
+  opts = opts or {}
+  opts.repo = opts.repo or utils.get_remote_name()
+
+  opts.cb = opts.cb or function(selection)
+    utils.get("release", selection.obj.tagName, opts.repo)
+  end
+
+  -- Create custom layout configuration
+
+  local picker_opts = {
+    layout_config = {
+      width = 0.8,
+      height = 0.9,
+      preview_width = 0.65,
+    },
+  }
+
+  gh.release.list {
+    repo = opts.repo,
+    json = "name,tagName,createdAt",
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local results = vim.json.decode(output)
+
+          if #results == 0 then
+            local msg = "No releases found"
+            if opts.repo then
+              msg = msg .. " for " .. opts.repo
+            else
+              msg = msg .. " in the current repository"
+            end
+            utils.error(msg)
+            return
+          end
+
+          pickers
+            .new(picker_opts, {
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_release(opts),
+              },
+              sorter = conf.generic_sorter(opts),
+              previewer = previewers.release.new(opts),
+              attach_mappings = function(prompt_bufnr, map)
+                map("i", "<C-y>", function()
+                  local selection = action_state.get_selected_entry(prompt_bufnr)
+                  gh.release.view {
+                    selection.obj.tagName,
+                    repo = selection.obj.repo,
+                    json = "url",
+                    jq = ".url",
+                    opts = {
+                      cb = gh.create_callback { success = utils.copy_url },
+                    },
+                  }
+                  return true
+                end)
+                map("i", "<CR>", function()
+                  local selection = action_state.get_selected_entry(prompt_bufnr)
+                  local repo = opts.repo
+                  actions.close(prompt_bufnr)
+
+                  opts.cb(selection)
+
+                  return true
+                end)
+                return true
+              end,
+            })
+            :find()
+        end,
+      },
+    },
+  }
+end
+
 --
 -- REPOS
 --
@@ -1355,6 +1443,27 @@ function M.notifications(opts)
       utils.info "There are no notifications"
       return
     end
+    ---@type table<string, any>
+    local cached_notification_infos = {}
+
+    local function preview_fn(bufnr, entry)
+      local number = entry.value ---@type string
+      local owner, name = utils.split_repo(entry.repo)
+      local kind = entry.kind
+      local preview = notifications.get_preview_fn(kind)
+      local cached_notification = cached_notification_infos[entry.ordinal]
+      if cached_notification then
+        preview(cached_notification, bufnr)
+      end
+      notifications.fetch_preview(owner, name, number, kind, function(obj)
+        cached_notification_infos[entry.ordinal] = obj
+        if not vim.api.nvim_buf_is_loaded(bufnr) then
+          return
+        end
+        preview(obj, bufnr)
+      end)
+    end
+    opts.preview_fn = preview_fn
 
     local function copy_notification_url(prompt_bufnr)
       local entry = action_state.get_selected_entry(prompt_bufnr)
@@ -1727,6 +1836,7 @@ M.picker = {
   project_cards_v2 = M.project_cards_v2,
   project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
+  releases = M.releases,
   repos = M.repos,
   review_commits = M.review_commits,
   search = M.search,

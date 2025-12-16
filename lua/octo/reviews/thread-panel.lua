@@ -147,6 +147,9 @@ function M.create_thread_buffer(threads, repo, number, side, path)
   }
   buffer:render_threads(threads)
   buffer:render_signs()
+  vim.api.nvim_buf_call(bufnr, function()
+    utils.clear_history()
+  end)
   return buffer
 end
 

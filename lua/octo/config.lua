@@ -1,9 +1,9 @@
 local vim = vim
 local M = {}
 
----@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "notification" | "runs"
+---@alias OctoMappingsWindow "issue" | "pull_request" | "review_thread" | "submit_win" | "review_diff" | "file_panel" | "repo" | "notification" | "runs" | "discussion"
 ---@alias OctoMappingsList { [string]: table}
----@alias OctoPickers "telescope" | "fzf-lua" | "snacks"
+---@alias OctoPickers "telescope" | "fzf-lua" | "snacks" | "default"
 ---@alias OctoSplit "right" | "left"
 ---@alias OctoMergeMethod "squash" | "rebase" | "merge"
 
@@ -44,6 +44,7 @@ local M = {}
 ---@field use_emojis boolean -- Used by fzf-lua
 ---@field mappings OctoPickerMappings
 ---@field snacks OctoPickerConfigSnacks -- Snacks specific config
+---@field search_static boolean -- Whether to use static search results (true) or dynamic search (false)
 
 ---@class OctoConfigColors
 ---@field white string
@@ -120,6 +121,7 @@ local M = {}
 ---@field user_icon string
 ---@field ghost_icon string
 ---@field copilot_icon string
+---@field dependabot_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
 ---@field resolved_icon string
@@ -158,6 +160,7 @@ function M.get_default_values()
     picker = "telescope",
     picker_config = {
       use_emojis = false,
+      search_static = true,
       mappings = {
         open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
@@ -189,6 +192,7 @@ function M.get_default_values()
     user_icon = " ",
     ghost_icon = "󰊠 ",
     copilot_icon = " ",
+    dependabot_icon = " ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
@@ -198,6 +202,7 @@ function M.get_default_values()
     timeline_icons = {
       auto_squash = "  ",
       commit_push = "  ",
+      comment_deleted = "  ",
       force_push = "  ",
       draft = "  ",
       ready = " ",
@@ -205,17 +210,19 @@ function M.get_default_values()
       deployed = "  ",
       issue_type = "  ",
       label = "  ",
-      reference = " ",
+      reference = "  ",
       project = "  ",
       connected = "  ",
       subissue = "  ",
       cross_reference = "  ",
+      transferred = "  ",
       parent_issue = "  ",
       head_ref = "  ",
       pinned = "  ",
       milestone = "  ",
       renamed = "  ",
-      automatic_base_change_succeeded = "  ",
+      automatic_base_change_succeeded = "  ",
+      base_ref_changed = "  ",
       merged = { "  ", "OctoPurple" },
       closed = {
         closed = { "  ", "OctoRed" },
@@ -303,6 +310,7 @@ function M.get_default_values()
     mappings_disable_default = false,
     mappings = {
       discussion = {
+        discussion_options = { lhs = "<CR>", desc = "show discussion options" },
         open_in_browser = { lhs = "<C-b>", desc = "open discussion in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         add_comment = { lhs = "<localleader>ca", desc = "add comment" },
@@ -570,13 +578,14 @@ function M.validate_config()
   end
 
   local function validate_pickers()
-    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks" })
+    validate_string_enum(config.picker, "picker", { "telescope", "fzf-lua", "snacks", "default" })
 
     if not validate_type(config.picker_config, "picker_config", "table") then
       return
     end
 
     validate_type(config.picker_config.use_emojis, "picker_config.use_emojis", "boolean")
+    validate_type(config.picker_config.search_static, "picker_config.search_static", "boolean")
     if validate_type(config.picker_config.mappings, "picker_config.mappings", "table") then
       ---@diagnostic disable-next-line: no-unknown
       for action, map in pairs(config.picker_config.mappings) do

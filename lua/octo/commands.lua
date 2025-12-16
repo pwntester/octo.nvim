@@ -55,6 +55,43 @@ local function merge_tables(t1, t2)
   return result
 end
 
+---@param subscribable_id string
+---@param current_subscription octo.SubscriptionState
+---@param display_name string
+---@param on_success fun(new_subscription_state: octo.SubscriptionState): nil
+local function update_subscription(subscribable_id, current_subscription, display_name, on_success)
+  ---@type {[string]: octo.SubscriptionState}
+  local subscription_options = {
+    Subscribe = "SUBSCRIBED",
+    Unsubscribe = "UNSUBSCRIBED",
+    Ignore = "IGNORED",
+  }
+  vim.ui.select(vim.fn.keys(subscription_options), {
+    prompt = "Select subscription state:",
+  }, function(choice)
+    if choice == nil then
+      utils.info(
+        "Subscription update cancelled. You are still " .. utils.title_case(current_subscription or "UNSUBSCRIBED")
+      )
+      return
+    end
+    local state = subscription_options[choice]
+    gh.api.graphql {
+      query = mutations.update_subscription,
+      fields = { subscribable_id = subscribable_id, state = state },
+      jq = ".data.updateSubscription.subscribable.viewerSubscription",
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            utils.info("Subscription updated to " .. state .. " for " .. display_name)
+            on_success(state)
+          end,
+        },
+      },
+    }
+  end)
+end
+
 function M.setup()
   vim.api.nvim_create_user_command("Octo", function(opts)
     OctoLastCmdOpts = opts
@@ -205,6 +242,17 @@ function M.setup()
           }
         end)
       end),
+      subscription = context.within_discussion(function(buffer)
+        local discussion = buffer:discussion()
+        update_subscription(
+          discussion.id,
+          discussion.viewerSubscription,
+          "discussion #" .. discussion.number,
+          function(new_subscription_state)
+            discussion.viewerSubscription = new_subscription_state
+          end
+        )
+      end),
     },
     type = {
       add = context.within_issue(function(buffer)
@@ -347,8 +395,7 @@ function M.setup()
           return
         end
 
-        local uri = string.format("octo://%s/issue/%s", buffer.repo, parent.number)
-        vim.cmd.edit(uri)
+        utils.get_issue(parent.number, buffer.repo)
       end),
       remove = context.within_issue(function(buffer)
         local parent = buffer.issue().parent
@@ -391,6 +438,32 @@ function M.setup()
                 success = function(response_id)
                   if response_id == buffer:issue().id then
                     utils.info "Issue added as sub-issue"
+                  end
+                end,
+              },
+            },
+          }
+        end
+
+        picker.issues(opts)
+      end),
+    },
+    child = {
+      add = context.within_issue(function(buffer)
+        local opts = {}
+        opts.cb = function(selected)
+          gh.api.graphql {
+            query = mutations.add_subissue,
+            fields = {
+              parent_id = buffer:issue().id,
+              child_id = selected.obj.id,
+            },
+            jq = ".data.addSubIssue.subIssue.id",
+            opts = {
+              cb = gh.create_callback {
+                success = function(response_id)
+                  if response_id == selected.obj.id then
+                    utils.info "Sub-issue added to the issue"
                   end
                 end,
               },
@@ -475,6 +548,18 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
+      subscription = context.within_issue(function(buffer)
+        local issue = buffer:issue()
+        update_subscription(
+          issue.id,
+          issue.viewerSubscription,
+          "issue #" .. issue.number,
+          function(new_subscription_state)
+            issue.viewerSubscription = new_subscription_state
+            writers.write_details(buffer.bufnr, issue, true)
+          end
+        )
+      end),
     },
     pr = {
       copilot = context.within_pr(function(buffer)
@@ -577,8 +662,19 @@ function M.setup()
           opts = { cb = gh.create_callback {} },
         }
       end),
+      subscription = context.within_pr(function(buffer)
+        local pr = buffer:pullRequest()
+        update_subscription(pr.id, pr.viewerSubscription, "PR #" .. pr.number, function(new_subscription_state)
+          pr.viewerSubscription = new_subscription_state
+          writers.write_details(buffer.bufnr, pr, true)
+        end)
+      end),
     },
     release = {
+      list = function(repo)
+        local opts = { repo = repo }
+        picker.releases(opts)
+      end,
       notes = function(tag_name)
         local repo = utils.get_remote_name()
         if utils.is_blank(tag_name) then
@@ -622,6 +718,34 @@ function M.setup()
           prompt = prompt,
         }
       end,
+      unstar = context.within_repo(function(buffer)
+        gh.api.graphql {
+          query = mutations.unstar_repo,
+          fields = { repo_id = buffer:repository().id },
+          jq = ".data.removeStar.starrable.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Unstarred " .. buffer:repository().nameWithOwner)
+              end,
+            },
+          },
+        }
+      end),
+      star = context.within_repo(function(buffer)
+        gh.api.graphql {
+          query = mutations.star_repo,
+          fields = { repo_id = buffer:repository().id },
+          jq = ".data.addStar.starrable.id",
+          opts = {
+            cb = gh.create_callback {
+              success = function()
+                utils.info("Starred " .. buffer:repository().nameWithOwner)
+              end,
+            },
+          },
+        }
+      end),
       list = function(login)
         local opts = { login = login }
 
@@ -655,6 +779,12 @@ function M.setup()
       url = function()
         M.copy_url()
       end,
+      subscription = context.within_repo(function(buffer)
+        local repo = buffer:repository()
+        update_subscription(repo.id, repo.viewerSubscription, repo.nameWithOwner, function(new_subscription_state)
+          repo.viewerSubscription = new_subscription_state
+        end)
+      end),
     },
     review = {
       browse = function()
@@ -1022,13 +1152,31 @@ function M.octo(object, action, ...)
   end
   local o = M.commands[object]
   if not o then
-    local repo, number, kind = utils.parse_url(object)
+    local hostname, repo, number, kind = utils.parse_url(object)
     if repo and number and kind == "issue" then
-      utils.get_issue(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/issue/%s", hostname, repo, number))
+      else
+        utils.get_issue(number, repo)
+      end
     elseif repo and number and kind == "pull" then
-      utils.get_pull_request(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/pull/%s", hostname, repo, number))
+      else
+        utils.get_pull_request(number, repo)
+      end
     elseif repo and number and kind == "discussion" then
-      utils.get_discussion(number, repo)
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/discussion/%s", hostname, repo, number))
+      else
+        utils.get_discussion(number, repo)
+      end
+    elseif repo and number and kind == "release" then
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/release/%s", hostname, repo, number))
+      else
+        utils.get_release(number, repo)
+      end
     else
       utils.error("Incorrect argument: " .. object)
       return
@@ -1892,7 +2040,7 @@ function M.pr_checks(buffer)
         end
 
         local workflow = require "octo.workflow_runs"
-        workflow.render { id = run_id }
+        workflow.render { id = run_id, repo = buffer.repo }
       end,
     })
 
@@ -2582,6 +2730,8 @@ function M.search(...)
   local prompt = table.concat(args, " ")
 
   local type = "ISSUE"
+  local static = nil
+
   if string.match(prompt, "is:discussion") then
     type = "DISCUSSION"
     prompt = string.gsub(prompt, "is:discussion", "")
@@ -2590,7 +2740,15 @@ function M.search(...)
     prompt = string.gsub(prompt, "is:repository", "")
   end
 
-  picker.search { prompt = prompt, type = type }
+  if string.match(prompt, "static:true") then
+    static = true
+    prompt = string.gsub(prompt, "%s*static:true%s*", "")
+  elseif string.match(prompt, "static:false") then
+    static = false
+    prompt = string.gsub(prompt, "%s*static:false%s*", "")
+  end
+
+  picker.search { prompt = prompt, type = type, static = static }
 end
 
 --- @class PinIssueOpts
@@ -2631,5 +2789,37 @@ function M.pin_issue(opts)
     },
   }
 end
+
+M.delete_branch = context.within_pr(function(buffer)
+  local pr = buffer:pullRequest()
+  if utils.is_blank(pr.headRef) then
+    utils.error "Branch is already deleted"
+    return
+  end
+
+  if pr.state == "OPEN" then
+    local choice = vim.fn.confirm(
+      "The PR is still open. Are you sure you want to delete the branch and close the PR?",
+      "&Yes\n&No",
+      2
+    )
+    if choice ~= 1 then
+      utils.info "Aborting branch deletion"
+      return
+    end
+  end
+
+  gh.api.graphql {
+    query = mutations.delete_branch,
+    F = { branchRef = pr.headRef.id },
+    opts = {
+      cb = gh.create_callback {
+        success = function(_)
+          utils.info("Deleted branch " .. pr.headRefName)
+        end,
+      },
+    },
+  }
+end)
 
 return M

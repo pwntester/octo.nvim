@@ -22,10 +22,10 @@ jobs:
             manager: sudo apt-get
             packages: -y fd-find
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: date +%F > todays-date
       - name: Restore from todays cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: _neovim
           key: ${{ runner.os }}-latest-${{ hashFiles('todays-date') }}
