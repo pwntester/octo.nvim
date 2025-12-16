@@ -14,10 +14,11 @@ local M = {}
 
 ---@param opts octo.BorderHeaderFloatOpts
 function M.create_floating_window(opts)
-  local winid, bufnr, border
+  local winid, bufnr
   bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.content or {})
-  if vim.o.winborder == "" then
+  local border = vim.o.winborder
+  if border == "" then
     border = "rounded"
   end
   winid = vim.api.nvim_open_win(bufnr, false, {
