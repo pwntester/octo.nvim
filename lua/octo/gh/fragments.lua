@@ -457,6 +457,7 @@ fragment AssigneeConnectionFragment on UserConnection {
   ---@class octo.fragments.IssueComment : octo.ReactionGroupsFragment
   ---@field __typename "IssueComment"
   ---@field id string
+  ---@field databaseId integer
   ---@field body string
   ---@field createdAt string
   ---@field author { login: string }
@@ -467,6 +468,7 @@ fragment AssigneeConnectionFragment on UserConnection {
   M.issue_comment = [[
 fragment IssueCommentFragment on IssueComment {
   id
+  databaseId
   body
   createdAt
   ...ReactionGroupsFragment
@@ -1070,6 +1072,20 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
 }
 ]]
 
+  ---@class octo.fragments.TransferredEvent
+  ---@field __typename "TransferredEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field fromRepository? { nameWithOwner: string }
+
+  M.transferred_event = [[
+  fragment TransferredEventFragment on TransferredEvent {
+    actor { login }
+    createdAt
+    fromRepository { nameWithOwner }
+  }
+  ]]
+
   local issue_timeline_items_connection_fragments = [[
     __typename
     ...AssignedEventFragment
@@ -1099,6 +1115,7 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
     ...BlockedByRemovedEventFragment
     ...BlockingAddedEventFragment
     ...BlockingRemovedEventFragment
+    ...TransferredEventFragment
 ]]
   if config.values.default_to_projects_v2 then
     issue_timeline_items_connection_fragments = issue_timeline_items_connection_fragments
@@ -1109,7 +1126,7 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
     ]]
   end
 
-  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent|octo.fragments.BlockedByAddedEvent|octo.fragments.BlockedByRemovedEvent|octo.fragments.BlockingAddedEvent|octo.fragments.BlockingRemovedEvent
+  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent|octo.fragments.BlockedByAddedEvent|octo.fragments.BlockedByRemovedEvent|octo.fragments.BlockingAddedEvent|octo.fragments.BlockingRemovedEvent|octo.fragments.TransferredEvent
 
   ---@class octo.fragments.IssueTimelineItemsConnection
   ---@field nodes octo.IssueTimelineItem[]

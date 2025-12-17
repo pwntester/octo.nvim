@@ -1098,6 +1098,7 @@ function M.write_comment(bufnr, comment, kind, line)
     CommentMetadata:new {
       author = "",
       id = comment.id,
+      databaseId = comment.databaseId,
       dirty = false,
       savedBody = comment_body,
       body = comment_body,
@@ -2190,6 +2191,19 @@ function M.write_comment_deleted_event(bufnr, item)
     :actor(item.actor)
     :heading(" deleted a comment from ")
     :actor(item.deletedCommentAuthor)
+    :date(item.createdAt)
+    :write_event(bufnr)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.TransferredEvent
+function M.write_transferred_event(bufnr, item)
+  item.actor = logins.format_author(item.actor)
+  TextChunkBuilder:new()
+    :timeline_marker("transferred")
+    :actor(item.actor)
+    :heading(" transferred this issue from ")
+    :text(item.fromRepository.nameWithOwner, "OctoDetailsLabel")
     :date(item.createdAt)
     :write_event(bufnr)
 end
@@ -3362,6 +3376,8 @@ function M.write_timeline_items(bufnr, obj)
       prev_is_event = true
     elseif item.__typename == "BlockedByRemovedEvent" then
       M.write_blocked_by_removed_event(bufnr, item)
+    elseif item.__typename == "TransferredEvent" then
+      M.write_transferred_event(bufnr, item)
       prev_is_event = true
     elseif
       not utils.is_blank(item)

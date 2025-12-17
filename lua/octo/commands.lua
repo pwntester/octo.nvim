@@ -1171,6 +1171,12 @@ function M.octo(object, action, ...)
       else
         utils.get_discussion(number, repo)
       end
+    elseif repo and number and kind == "release" then
+      if hostname and hostname ~= "github.com" then
+        vim.cmd(string.format("edit octo://%s/%s/release/%s", hostname, repo, number))
+      else
+        utils.get_release(number, repo)
+      end
     else
       utils.error("Incorrect argument: " .. object)
       return

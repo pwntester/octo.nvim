@@ -216,6 +216,7 @@ function M.get_default_values()
       connected = "  ",
       subissue = "  ",
       cross_reference = "  ",
+      transferred = "  ",
       parent_issue = "  ",
       head_ref = "  ",
       pinned = "  ",

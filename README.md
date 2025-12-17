@@ -246,6 +246,7 @@ require"octo".setup {
     connected = "  ",
     subissue = "  ",
     cross_reference = "  ",
+    transferred = "  ",
     parent_issue = "  ",
     head_ref = "  ",
     pinned = "  ",
