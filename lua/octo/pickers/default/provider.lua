@@ -234,6 +234,34 @@ M.releases = function(opts)
   }
 end
 
+---@type octo.picker.branches
+M.branches = function(opts, cb)
+  local default = opts.default_branch_name
+
+  vim.ui.select(
+    opts.repo.refs.nodes,
+    {
+      prompt = opts.title,
+      ---@param item {name: string}
+      format_item = function(item, supports_chunks)
+        if item.name == default then
+          return item.name .. " (default)"
+        end
+
+        return item.name
+      end,
+    },
+    ---@param choice {name: string}
+    function(choice)
+      if choice == nil then
+        cb(default)
+      else
+        cb(choice.name)
+      end
+    end
+  )
+end
+
 ---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
@@ -241,6 +269,7 @@ M.picker = {
   issues = M.issues,
   prs = M.pull_requests,
   releases = M.releases,
+  branches = M.branches,
 }
 
 return M

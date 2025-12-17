@@ -1752,15 +1752,18 @@ function M.create_pr(is_draft)
   local cmd = "git rev-parse --abbrev-ref HEAD"
   local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
 
+  --- @param i octo.Repository
+  local function is_repo_info_invalid(i)
+    return i == nil
+      or i.refs == nil
+      or i.refs.nodes == nil
+      or i == vim.NIL
+      or i.refs == vim.NIL
+      or i.refs.nodes == vim.NIL
+  end
+
   -- get remote branches
-  if
-    info == nil
-    or info.refs == nil
-    or info.refs.nodes == nil
-    or info == vim.NIL
-    or info.refs == vim.NIL
-    or info.refs.nodes == vim.NIL
-  then
+  if is_repo_info_invalid(info) then
     utils.error "Cannot grab remote branches"
     return
   end
@@ -1798,6 +1801,13 @@ function M.create_pr(is_draft)
         local stderr = table.concat(job:stderr_result(), "\n")
         if not utils.is_blank(stderr) then
           utils.error(stderr)
+        end
+
+        utils.invalidate_repo_info_cache(repo)
+        info = utils.get_repo_info(repo)
+        if is_repo_info_invalid(info) then
+          utils.error "Cannot grab remote branches. Abotring PR creation"
+          return
         end
       else
         utils.error "Aborting PR creation"
@@ -1913,7 +1923,6 @@ function M.save_pr(opts)
                   success = function(output)
                     local pr = vim.json.decode(output)
                     utils.info(string.format("#%d - `%s` created successfully", pr.number, pr.title))
-                    require("octo").create_buffer("pull", pr, opts.repo, true)
                     require("octo").create_buffer("pull", pr, opts.repo, true, nil)
                   end,
                 },
