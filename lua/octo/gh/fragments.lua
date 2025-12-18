@@ -129,6 +129,70 @@ fragment RemovedFromProjectV2EventFragment on RemovedFromProjectV2Event {
 }
 ]]
 
+  ---@class octo.fragments.BlockedByAddedEvent
+  ---@field __typename "BlockedByAddedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockingIssue octo.fragments.Issue
+
+  M.blocked_by_added_event = [[
+  fragment BlockedByAddedEventFragment on BlockedByAddedEvent {
+    actor { login }
+    createdAt
+    blockingIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
+  ---@class octo.fragments.BlockedByRemovedEvent
+  ---@field __typename "BlockedByRemovedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockingIssue octo.fragments.Issue
+
+  M.blocked_by_removed_event = [[
+  fragment BlockedByRemovedEventFragment on BlockedByRemovedEvent {
+    actor { login }
+    createdAt
+    blockingIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
+  ---@class octo.fragments.BlockingAddedEvent
+  ---@field __typename "BlockingAddedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockedIssue octo.fragments.Issue
+
+  M.blocking_added_event = [[
+  fragment BlockingAddedEventFragment on BlockingAddedEvent {
+    actor { login }
+    createdAt
+    blockedIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
+  ---@class octo.fragments.BlockingRemovedEvent
+  ---@field __typename "BlockingRemovedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockedIssue octo.fragments.Issue
+
+  M.blocking_removed_event = [[
+  fragment BlockingRemovedEventFragment on BlockingRemovedEvent {
+    actor { login }
+    createdAt
+    blockedIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
   ---https://docs.github.com/en/graphql/reference/objects#autosquashenabledevent
   ---@class octo.fragments.AutoSquashEnabledEvent
   ---@field __typename "AutoSquashEnabledEvent"
@@ -1047,6 +1111,10 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
     ...IssueTypeRemovedEventFragment
     ...IssueTypeChangedEventFragment
     ...CommentDeletedEventFragment
+    ...BlockedByAddedEventFragment
+    ...BlockedByRemovedEventFragment
+    ...BlockingAddedEventFragment
+    ...BlockingRemovedEventFragment
     ...TransferredEventFragment
 ]]
   if config.values.default_to_projects_v2 then
@@ -1058,7 +1126,7 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
     ]]
   end
 
-  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent|octo.fragments.TransferredEvent
+  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent|octo.fragments.BlockedByAddedEvent|octo.fragments.BlockedByRemovedEvent|octo.fragments.BlockingAddedEvent|octo.fragments.BlockingRemovedEvent|octo.fragments.TransferredEvent
 
   ---@class octo.fragments.IssueTimelineItemsConnection
   ---@field nodes octo.IssueTimelineItem[]

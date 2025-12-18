@@ -2452,6 +2452,60 @@ function M.write_subissue_events(bufnr, items, action)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.BlockedByAddedEvent|octo.fragments.BlockedByRemovedEvent
+local function write_blocked_by_event(bufnr, item, verb)
+  TextChunkBuilder:new()
+    :timeline_marker("blocking")
+    :actor(item.actor)
+    :space()
+    :heading(verb .. " this as blocked by")
+    :date(item.createdAt)
+    :write_event(bufnr)
+  local conf = config.values
+  local spaces = conf.use_timeline_icons and 3 or 10
+  write_issue_or_pr(bufnr, item.blockingIssue, spaces)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.BlockedByAddedEvent
+function M.write_blocked_by_added_event(bufnr, item)
+  write_blocked_by_event(bufnr, item, "marked")
+end
+
+---@param bufnr integer
+---@param item octo.fragments.BlockedByRemovedEvent
+function M.write_blocked_by_removed_event(bufnr, item)
+  write_blocked_by_event(bufnr, item, "unmarked")
+end
+
+---@param bufnr integer
+---@param item octo.fragments.BlockingAddedEvent|octo.fragments.BlockingRemovedEvent
+local function write_blocking_event(bufnr, item, verb)
+  TextChunkBuilder:new()
+    :timeline_marker("blocking")
+    :actor(item.actor)
+    :space()
+    :heading(verb .. " this as blocking")
+    :date(item.createdAt)
+    :write_event(bufnr)
+  local conf = config.values
+  local spaces = conf.use_timeline_icons and 3 or 10
+  write_issue_or_pr(bufnr, item.blockedIssue, spaces)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.BlockingAddedEvent
+function M.write_blocking_added_event(bufnr, item)
+  write_blocking_event(bufnr, item, "marked")
+end
+
+---@param bufnr integer
+---@param item octo.fragments.BlockingRemovedEvent
+function M.write_blocking_removed_event(bufnr, item)
+  write_blocking_event(bufnr, item, "unmarked")
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.CrossReferencedEvent
 function M.write_cross_referenced_event(bufnr, item)
   local conf = config.values
@@ -3311,6 +3365,17 @@ function M.write_timeline_items(bufnr, obj)
     elseif item.__typename == "CommentDeletedEvent" then
       M.write_comment_deleted_event(bufnr, item)
       prev_is_event = true
+    elseif item.__typename == "BlockingAddedEvent" then
+      M.write_blocking_added_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BlockingRemovedEvent" then
+      M.write_blocking_removed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BlockedByAddedEvent" then
+      M.write_blocked_by_added_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BlockedByRemovedEvent" then
+      M.write_blocked_by_removed_event(bufnr, item)
     elseif item.__typename == "TransferredEvent" then
       M.write_transferred_event(bufnr, item)
       prev_is_event = true
