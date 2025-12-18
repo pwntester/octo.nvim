@@ -20,6 +20,7 @@ local copilot_swe_agent = "copilot-swe-agent"
 local id = "F_kwDOA8AAAW0b4h"
 
 local repo = "pwntester/octo.nvim"
+local another_repo = "octocat/octo.nvim"
 local branch = "main"
 
 local bufnr = vim.api.nvim_get_current_buf()
@@ -47,6 +48,7 @@ local open_issue = {
   title = "Bug report",
   state = "OPEN",
   stateReason = nil,
+  repository = { nameWithOwner = repo },
 }
 
 ---@type octo.fragments.PullRequestCommit
@@ -75,6 +77,7 @@ local closed_issue = {
   title = "Another Bug report",
   state = "CLOSED",
   stateReason = "COMPLETED",
+  repository = { nameWithOwner = repo },
 }
 
 ---@type octo.fragments.PullRequest
@@ -85,6 +88,7 @@ local pull_request = {
   title = "feat: Feature request",
   state = "MERGED",
   isDraft = false,
+  repository = { nameWithOwner = repo },
 }
 
 writers.write_timeline_items(bufnr, {
@@ -110,6 +114,7 @@ writers.write_timeline_items(bufnr, {
         actor = { login = other },
         createdAt = now,
         willCloseTarget = false,
+        isCrossRepository = false,
         source = open_issue,
         target = open_issue,
       },
@@ -119,6 +124,7 @@ writers.write_timeline_items(bufnr, {
         actor = { login = other },
         createdAt = now,
         willCloseTarget = false,
+        isCrossRepository = false,
         source = closed_issue,
         target = open_issue,
       },
@@ -128,6 +134,16 @@ writers.write_timeline_items(bufnr, {
         actor = { login = other },
         createdAt = now,
         willCloseTarget = false,
+        isCrossRepository = false,
+        source = pull_request,
+        target = open_issue,
+      },
+      {
+        __typename = "CrossReferencedEvent",
+        actor = { login = other },
+        createdAt = now,
+        willCloseTarget = false,
+        isCrossRepository = true,
         source = pull_request,
         target = open_issue,
       },
