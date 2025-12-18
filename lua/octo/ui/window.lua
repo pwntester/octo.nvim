@@ -2,6 +2,7 @@ local utils = require "octo.utils"
 local M = {}
 
 ---@class octo.BorderHeaderFloatOpts
+---@field content? string[]
 ---@field width integer
 ---@field border_width integer
 ---@field padding integer
@@ -12,71 +13,25 @@ local M = {}
 ---@field x_offset integer
 
 ---@param opts octo.BorderHeaderFloatOpts
-function M.create_border_header_float(opts)
-  local outer_winid, outer_bufnr
-  outer_bufnr = vim.api.nvim_create_buf(false, true)
-  local outer = {}
-  local line_fill = string.rep("─", opts.width - 2 * opts.border_width)
-  table.insert(outer, string.format("┌%s┐", line_fill))
-  if opts.header then
-    local trimmed_header = string.sub(opts.header, 1, opts.width - 2 * opts.border_width - 2 * opts.padding)
-    local fill =
-      string.rep(" ", opts.width - 2 * opts.padding - 2 * opts.border_width - vim.fn.strdisplaywidth(trimmed_header))
-    table.insert(outer, string.format("│ %s%s │", trimmed_header, fill))
-    table.insert(outer, string.format("├%s┤", line_fill))
-    for _ = 1, opts.height - 2 * opts.border_width - 2 * opts.header_height do
-      table.insert(outer, string.format("│%s│", string.rep(" ", opts.width - 2 * opts.border_width)))
-    end
-  else
-    for _ = 1, opts.height - 2 * opts.border_width do
-      table.insert(outer, string.format("│%s│", line_fill))
-    end
+function M.create_floating_window(opts)
+  local winid, bufnr
+  bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.content or {})
+  local border = "rounded"
+  if vim.o.winborder ~= "" and vim.o.winborder ~= "none" then
+    border = tostring(vim.o.winborder)
   end
-  table.insert(outer, string.format("└%s┘", line_fill))
-  vim.api.nvim_buf_set_lines(outer_bufnr, 0, -1, false, outer)
-  outer_winid = vim.api.nvim_open_win(outer_bufnr, false, {
+  winid = vim.api.nvim_open_win(bufnr, false, {
     relative = "editor",
+    title = opts.header,
+    border = border,
     row = opts.y_offset,
     col = opts.x_offset,
     width = opts.width,
     height = opts.height,
-    focusable = false,
-  })
-  vim.bo[outer_bufnr].modifiable = false
-  vim.wo[outer_winid].foldcolumn = "0"
-  vim.wo[outer_winid].signcolumn = "no"
-  vim.wo[outer_winid].number = false
-  vim.wo[outer_winid].relativenumber = false
-  vim.wo[outer_winid].cursorline = false
-  return outer_winid
-end
-
----@class octo.ContentFloatOpts
----@field content? string[]
----@field header boolean
----@field header_height integer
----@field x_offset integer
----@field y_offset integer
----@field width integer
----@field height integer
----@field border_width integer
----@field padding integer
-
----@param opts octo.ContentFloatOpts
-function M.create_content_float(opts)
-  local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, opts.content or {})
-  local winid = vim.api.nvim_open_win(bufnr, true, {
-    relative = "editor",
-    row = opts.header and (opts.y_offset + 2 * opts.border_width + opts.header_height)
-      or (opts.y_offset + opts.border_width),
-    col = opts.x_offset + opts.border_width + opts.padding,
-    width = opts.width - 2 * opts.border_width - 2 * opts.padding,
-    height = opts.header and (opts.height - 3 * opts.border_width - 2 * opts.header_height)
-      or (opts.height - 2 * opts.border_width),
     focusable = true,
   })
-  vim.wo[winid].previewwindow = true
+  vim.bo[bufnr].modifiable = true
   vim.wo[winid].foldcolumn = "0"
   vim.wo[winid].signcolumn = "no"
   vim.wo[winid].number = false
@@ -140,8 +95,9 @@ function M.create_centered_float(opts)
   local x_offset = math.floor((vim_width - width) / 2)
   local y_offset = math.floor((vim_height - height) / 2)
 
-  -- outer win (header + border)
-  local outer_winid = M.create_border_header_float {
+  -- floating window
+  local winid, bufnr = M.create_floating_window {
+    content = opts.content,
     width = width,
     border_width = border_width,
     padding = padding,
@@ -152,32 +108,18 @@ function M.create_centered_float(opts)
     x_offset = x_offset,
   }
 
-  -- content win
-  local winid, bufnr = M.create_content_float {
-    content = opts.content,
-    width = width,
-    border_width = border_width,
-    padding = padding,
-    height = height,
-    header = opts.header and true or false,
-    header_height = header_height,
-    y_offset = y_offset,
-    x_offset = x_offset,
-  }
-
   -- window binding
   local aucmd = string.format(
-    "autocmd BufLeave,BufDelete <buffer=%d> :lua require('octo.ui.window').try_close_wins(%d, %d)",
+    "autocmd BufLeave,BufDelete <buffer=%d> :lua require('octo.ui.window').try_close_wins(%d)",
     bufnr,
-    winid,
-    outer_winid
+    winid
   )
   vim.cmd(aucmd)
 
   -- mappings
   local mapping_opts = { script = true, silent = true, noremap = true, buffer = bufnr, desc = "Close window" }
   vim.keymap.set("n", "<C-c>", function()
-    require("octo.ui.window").try_close_wins(winid, outer_winid)
+    require("octo.ui.window").try_close_wins(winid)
   end, mapping_opts)
   return winid, bufnr
 end
