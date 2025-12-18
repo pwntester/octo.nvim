@@ -53,6 +53,7 @@ M.setup = function()
   ---@field title string
   ---@field state octo.IssueState
   ---@field stateReason? octo.IssueStateReason
+  ---@field repository { nameWithOwner: string }
 
   M.issue = [[
 fragment IssueFields on Issue {
@@ -61,15 +62,17 @@ fragment IssueFields on Issue {
   title
   state
   stateReason
+  repository { nameWithOwner }
 }
 ]]
 
   ---@class octo.fragments.PullRequest
-  --- @field __typename "PullRequest"
-  --- @field number integer
-  --- @field title string
-  --- @field state octo.PullRequestState
-  --- @field isDraft boolean
+  ---@field __typename "PullRequest"
+  ---@field number integer
+  ---@field title string
+  ---@field state octo.PullRequestState
+  ---@field isDraft boolean
+  ---@field repository { nameWithOwner: string }
 
   M.pull_request = [[
 fragment PullRequestFields on PullRequest {
@@ -77,6 +80,7 @@ fragment PullRequestFields on PullRequest {
   title
   state
   isDraft
+  repository { nameWithOwner }
 }
 ]]
 
@@ -267,6 +271,7 @@ fragment ReferencedEventFragment on ReferencedEvent {
   ---@field actor { login: string }
   ---@field createdAt string
   ---@field willCloseTarget boolean
+  ---@field isCrossRepository boolean
   ---@field source octo.fragments.Issue|octo.fragments.PullRequest
   ---@field target octo.fragments.Issue|octo.fragments.PullRequest
 
@@ -275,6 +280,7 @@ fragment CrossReferencedEventFragment on CrossReferencedEvent {
   createdAt
   actor { login }
   willCloseTarget
+  isCrossRepository
   source {
     __typename
     ...IssueFields

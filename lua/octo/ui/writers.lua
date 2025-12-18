@@ -2364,8 +2364,10 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.PullRequest|octo.fragments.Issue
 ---@param spaces? integer
-local function write_issue_or_pr(bufnr, item, spaces)
+---@param include_repo? boolean
+local function write_issue_or_pr(bufnr, item, spaces, include_repo)
   spaces = spaces or 10
+  include_repo = include_repo or false
   local vt = {}
   local state = utils.get_displayed_state(item.__typename == "Issue", item.state, item.stateReason, item.isDraft)
   local entry = {
@@ -2375,7 +2377,14 @@ local function write_issue_or_pr(bufnr, item, spaces)
   local icon = utils.get_icon(entry)
   table.insert(vt, { string.rep(" ", spaces), "OctoTimelineItemHeading" })
   table.insert(vt, { item.title, "OctoDetailsLabel" })
-  table.insert(vt, { " #" .. tostring(item.number) .. " ", "OctoDetailsValue" })
+  if include_repo then
+    table.insert(
+      vt,
+      { " " .. item.repository.nameWithOwner .. "#" .. tostring(item.number) .. " ", "OctoDetailsValue" }
+    )
+  else
+    table.insert(vt, { " #" .. tostring(item.number) .. " ", "OctoDetailsValue" })
+  end
   table.insert(vt, icon)
   table.insert(vt, { state, utils.state_hl_map[state] })
 
@@ -2475,7 +2484,7 @@ function M.write_cross_referenced_event(bufnr, item)
   end
 
   builder:write_event(bufnr)
-  write_issue_or_pr(bufnr, item.source, spaces)
+  write_issue_or_pr(bufnr, item.source, spaces, item.isCrossRepository)
 end
 
 ---@param bufnr integer
