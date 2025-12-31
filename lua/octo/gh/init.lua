@@ -68,7 +68,7 @@ function M.get_user_name(remote_hostname)
     args = { "auth", "status", "--hostname", remote_hostname },
     env = get_env(),
   }
-  job:sync()
+  job:sync(config.values.timeout)
   local stderr = table.concat(job:stderr_result(), "\n")
   local stdout = table.concat(job:result(), "\n")
   -- Newer versions of the gh cli have a different message. See #467
