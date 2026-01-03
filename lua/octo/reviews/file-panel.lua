@@ -107,11 +107,12 @@ function FilePanel:open()
   vim.cmd("resize " .. self.size)
   self.winid = vim.api.nvim_get_current_win()
 
+  vim.cmd("buffer " .. self.bufid)
+
   for k, v in pairs(FilePanel.winopts) do
-    vim.api.nvim_set_option_value(k, v, { win = self.winid })
+    vim.api.nvim_set_option_value(k, v, { win = self.winid, scope = "local" })
   end
 
-  vim.cmd("buffer " .. self.bufid)
   vim.cmd ":wincmd ="
 end
 
