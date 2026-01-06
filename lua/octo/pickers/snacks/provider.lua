@@ -1468,6 +1468,7 @@ function M.users(cb)
                   end
                 end
               end
+              ctx.async:resume()
             end,
           },
         }
