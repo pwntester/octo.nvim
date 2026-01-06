@@ -1121,6 +1121,8 @@ query($owner: String!, $name: String!, $endCursor: String) {
         id
         login
         name
+        pronouns
+        avatarUrl
       }
     }
   }
@@ -1139,6 +1141,8 @@ query($owner: String!, $name: String! $endCursor: String) {
         id
         login
         name
+        pronouns
+        avatarUrl
       }
     }
   }
@@ -1152,6 +1156,9 @@ query($prompt: String!, $endCursor: String) {
       ... on User {
         id
         login
+        name
+        pronouns
+        avatarUrl
       }
       ... on Organization {
         id
