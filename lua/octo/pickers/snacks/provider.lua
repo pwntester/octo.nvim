@@ -1443,8 +1443,10 @@ function M.users(cb)
                       id = user.id,
                       login = user.login,
                       name = user.name,
-                      text = user.login,
                       kind = "user",
+                      pronouns = user.pronouns or "",
+                      avatarUrl = user.avatarUrl or "",
+                      ft = "markdown",
                     }
                   elseif user.teams and user.teams.totalCount > 0 then
                     for _, team in ipairs(user.teams.nodes) do
@@ -1487,8 +1489,12 @@ function M.users(cb)
   if not custom_actions_defined["confirm"] then
     ---@type snacks.picker.Action.fn
     final_actions["confirm"] = function(picker, item)
+      items = {}
+      for _, item in ipairs(picker:selected { fallback = true }) do
+        items[#items + 1] = item.id
+      end
       picker:close()
-      cb(item.id)
+      cb(items)
     end
   end
 
@@ -1515,7 +1521,33 @@ function M.users(cb)
     layout = {
       preset = "select",
       -- Ensure preview window is shown
-      hidden = {},
+      layout = {
+        backdrop = false,
+        width = 0.5,
+        min_width = 80,
+        max_width = 100,
+        height = 0.4,
+        min_height = 2,
+        box = "horizontal",
+        border = true,
+        title = "{title}",
+        title_pos = "center",
+        {
+          box = "vertical",
+          border = "right",
+          { win = "input", height = 1, border = "bottom" },
+          { win = "list", border = "none" },
+        },
+        {
+          win = "preview",
+          title = "{preview}",
+          height = 0,
+          width = 0.5,
+          wo = {
+            number = false,
+          },
+        },
+      },
     },
     preview = function(ctx)
       local item = ctx.item
@@ -1527,10 +1559,14 @@ function M.users(cb)
       local lines = {}
       if item.kind == "user" then
         lines = {
-          "User: " .. item.login,
-          "ID: " .. item.id,
-          "Type: " .. item.kind,
+          item["name"] ~= vim.NIL and item["name"] or "",
+          item["pronouns"] ~= vim.NIL and ("_" .. item["pronouns"] .. "_") or "",
+          "",
+          "Username: `" .. item["login"] .. "`",
+          "![](" .. item["avatarUrl"] .. ")",
         }
+        -- vim.bo[ctx.preview.win.buf] = "markdown"
+        ctx.preview:highlight { ft = "markdown" }
       elseif item.kind == "team" then
         lines = {
           "Name: " .. item.name,
