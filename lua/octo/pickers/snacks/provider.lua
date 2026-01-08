@@ -1091,11 +1091,14 @@ function M.search(opts)
   end
 end
 
----@param opts {repo: string, number: integer, title: string?}
-function M.changed_files(opts)
+function M.changed_files()
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isPullRequest() then
+    return
+  end
   gh.api.get {
     "/repos/{repo}/pulls/{number}/files",
-    format = { repo = opts.repo, number = opts.number },
+    format = { repo = buffer.repo, number = buffer.number },
     opts = {
       paginate = true,
       cb = gh.create_callback {
@@ -1157,7 +1160,7 @@ function M.changed_files(opts)
           end
 
           Snacks.picker.pick {
-            title = opts.title or "Changed Files",
+            title = buffer.title or "Changed Files",
             items = results,
             format = function(item, _)
               local ret = {} ---@type snacks.picker.Highlight[]
