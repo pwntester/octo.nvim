@@ -516,7 +516,7 @@ function M.issue_templates(templates, cb)
         ordinal = template.name .. " " .. (template.about or ""),
         template = template,
       }
-      table.insert(formatted_templates, item)
+      formatted_templates[#formatted_templates + 1] = item
     end
   end
 
@@ -647,7 +647,7 @@ function M.commits(opts)
           -- Add default confirm action (what happens when you press Enter)
           if not custom_actions_defined["confirm"] then
             final_actions["confirm"] = function(_picker, item)
-              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              local commit_url = string.format("https://github.com/%s/commit/%s", opts.repo, item.sha)
               navigation.open_in_browser_raw(commit_url)
             end
           end
@@ -655,7 +655,7 @@ function M.commits(opts)
           -- Add default actions/keys if not overridden
           if not custom_actions_defined["open_in_browser"] then
             final_actions["open_in_browser"] = function(_picker, item)
-              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              local commit_url = string.format("https://github.com/%s/commit/%s", opts.repo, item.sha)
               navigation.open_in_browser_raw(commit_url)
             end
           end
@@ -665,7 +665,7 @@ function M.commits(opts)
 
           if not custom_actions_defined["copy_url"] then
             final_actions["copy_url"] = function(_picker, item)
-              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              local commit_url = string.format("https://github.com/%s/commit/%s", opts.repo, item.sha)
               utils.copy_url(commit_url)
             end
           end
@@ -953,7 +953,7 @@ function M.search(opts)
       end
 
       item.text = item.title .. " #" .. item.number .. (item.category and (" " .. item.category.name) or "")
-      table.insert(search_results, item)
+      search_results[#search_results + 1] = item
     end
   end
 
@@ -1148,7 +1148,7 @@ function M.changed_files(opts)
           if not custom_actions_defined["open_in_browser"] then
             final_actions["open_in_browser"] = function(_picker, item)
               local file_url =
-                string.format("https://github.com/%s/pull/%s/files#diff-%s", buffer.repo, buffer.number, item.sha)
+                string.format("https://github.com/%s/pull/%s/files#diff-%s", opts.repo, opts.number, item.sha)
               navigation.open_in_browser_raw(file_url)
             end
           end
@@ -1208,7 +1208,6 @@ function M.changed_files(opts)
                 "",
               }
 
-              local line_count = #lines
               if item.additions and item.deletions then
                 lines[#lines + 1] = string.format("Changes: +%d -%d", item.additions, item.deletions)
                 lines[#lines + 1] = ""
@@ -1437,7 +1436,7 @@ function M.users(cb)
                 for _, user in ipairs(search_node) do
                   -- Orgs hidden due to missing 2FA will appear as "null"
                   if type(user) ~= "table" then
-                  elseif not user[teams] then
+                  elseif not user.teams then
                     -- regular user
                     emit {
                       id = user.id,
