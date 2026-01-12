@@ -11,6 +11,7 @@ local M = {}
 ---@field height integer
 ---@field y_offset integer
 ---@field x_offset integer
+---@field enter? boolean
 
 ---@param opts octo.BorderHeaderFloatOpts
 function M.create_floating_window(opts)
@@ -21,7 +22,7 @@ function M.create_floating_window(opts)
   if vim.o.winborder ~= "" and vim.o.winborder ~= "none" then
     border = tostring(vim.o.winborder)
   end
-  winid = vim.api.nvim_open_win(bufnr, false, {
+  winid = vim.api.nvim_open_win(bufnr, opts.enter or false, {
     relative = "editor",
     title = opts.header,
     border = border,
@@ -45,6 +46,7 @@ end
 ---@field y_percent? number
 ---@field header? string
 ---@field content? string[]
+---@field enter? boolean
 
 ---@param opts? octo.CenteredFloatOpts
 ---@return integer winid
@@ -106,6 +108,7 @@ function M.create_centered_float(opts)
     height = height,
     y_offset = y_offset,
     x_offset = x_offset,
+    enter = opts.enter,
   }
 
   -- window binding
