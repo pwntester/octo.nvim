@@ -2017,6 +2017,7 @@ function M.pr_checks(buffer)
     local _, wbufnr = window.create_centered_float {
       header = "Checks",
       content = lines,
+      enter = true,
     }
 
     vim.api.nvim_buf_set_keymap(wbufnr, "n", "<CR>", "", {
