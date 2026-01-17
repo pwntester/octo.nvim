@@ -9,6 +9,7 @@ local navigation = require "octo.navigation"
 local Async = require "snacks.picker.util.async"
 local Snacks = require "snacks"
 local notify = require "snacks.notify"
+local bubbles = require "octo.ui.bubbles"
 
 local M = {}
 
@@ -516,7 +517,7 @@ function M.issue_templates(templates, cb)
         ordinal = template.name .. " " .. (template.about or ""),
         template = template,
       }
-      table.insert(formatted_templates, item)
+      formatted_templates[#formatted_templates + 1] = item
     end
   end
 
@@ -647,7 +648,7 @@ function M.commits(opts)
           -- Add default confirm action (what happens when you press Enter)
           if not custom_actions_defined["confirm"] then
             final_actions["confirm"] = function(_picker, item)
-              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              local commit_url = string.format("https://github.com/%s/commit/%s", opts.repo, item.sha)
               navigation.open_in_browser_raw(commit_url)
             end
           end
@@ -655,7 +656,7 @@ function M.commits(opts)
           -- Add default actions/keys if not overridden
           if not custom_actions_defined["open_in_browser"] then
             final_actions["open_in_browser"] = function(_picker, item)
-              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              local commit_url = string.format("https://github.com/%s/commit/%s", opts.repo, item.sha)
               navigation.open_in_browser_raw(commit_url)
             end
           end
@@ -665,7 +666,7 @@ function M.commits(opts)
 
           if not custom_actions_defined["copy_url"] then
             final_actions["copy_url"] = function(_picker, item)
-              local commit_url = string.format("https://github.com/%s/commit/%s", buffer.repo, item.sha)
+              local commit_url = string.format("https://github.com/%s/commit/%s", opts.repo, item.sha)
               utils.copy_url(commit_url)
             end
           end
@@ -953,7 +954,7 @@ function M.search(opts)
       end
 
       item.text = item.title .. " #" .. item.number .. (item.category and (" " .. item.category.name) or "")
-      table.insert(search_results, item)
+      search_results[#search_results + 1] = item
     end
   end
 
@@ -1148,7 +1149,7 @@ function M.changed_files(opts)
           if not custom_actions_defined["open_in_browser"] then
             final_actions["open_in_browser"] = function(_picker, item)
               local file_url =
-                string.format("https://github.com/%s/pull/%s/files#diff-%s", buffer.repo, buffer.number, item.sha)
+                string.format("https://github.com/%s/pull/%s/files#diff-%s", opts.repo, opts.number, item.sha)
               navigation.open_in_browser_raw(file_url)
             end
           end
@@ -1208,7 +1209,6 @@ function M.changed_files(opts)
                 "",
               }
 
-              local line_count = #lines
               if item.additions and item.deletions then
                 lines[#lines + 1] = string.format("Changes: +%d -%d", item.additions, item.deletions)
                 lines[#lines + 1] = ""
@@ -1437,7 +1437,7 @@ function M.users(cb)
                 for _, user in ipairs(search_node) do
                   -- Orgs hidden due to missing 2FA will appear as "null"
                   if type(user) ~= "table" then
-                  elseif not user[teams] then
+                  elseif not user.teams then
                     -- regular user
                     emit {
                       id = user.id,
@@ -1564,13 +1564,203 @@ function M.users(cb)
   }
 end
 
+function M.labels(opts)
+  opts = opts or {}
+  local cb = opts.cb
+  local repo = opts.repo or utils.get_remote_name()
+  local owner, name = utils.split_repo(repo)
+
+  utils.info "Fetching labels..."
+  gh.api.graphql {
+    query = queries.labels,
+    F = { owner = owner, name = name },
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = vim.json.decode(output)
+          local labels = resp.data.repository.labels.nodes
+
+          if #labels == 0 then
+            utils.info "No labels found"
+            return
+          end
+
+          for _, label in ipairs(labels) do
+            label.text = label.name
+            label.kind = "label"
+          end
+
+          local cfg = octo_config.values
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.labels
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.labels) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(picker, item)
+              picker:close()
+              if type(cb) == "function" then
+                cb { item }
+              end
+            end
+          end
+
+          Snacks.picker.pick {
+            title = "Labels",
+            items = labels,
+            format = function(item, _)
+              local ret = {}
+              local bubble = bubbles.make_label_bubble(item.name, item.color)
+              for _, part in ipairs(bubble) do
+                ret[#ret + 1] = part
+              end
+              return ret
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end
+      end,
+    },
+  }
+end
+
+function M.assigned_labels(opts)
+  opts = opts or {}
+  local cb = opts.cb
+
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    utils.error "No buffer found"
+    return
+  end
+
+  local query, key
+  if buffer:isIssue() then
+    query = queries.issue_labels
+    key = "issue"
+  elseif buffer:isPullRequest() then
+    query = queries.pull_request_labels
+    key = "pullRequest"
+  elseif buffer:isDiscussion() then
+    query = queries.discussion_labels
+    key = "discussion"
+  else
+    utils.error "Assigned labels picker only works in issue, PR, or discussion buffers"
+    return
+  end
+
+  local F = { owner = buffer.owner, name = buffer.name, number = buffer.number }
+
+  utils.info "Fetching assigned labels..."
+  gh.api.graphql {
+    query = query,
+    F = F,
+    opts = {
+      cb = function(output, stderr)
+        if stderr and not utils.is_blank(stderr) then
+          utils.error(stderr)
+        elseif output then
+          local resp = vim.json.decode(output)
+          local labels = resp.data.repository[key].labels.nodes
+
+          if #labels == 0 then
+            local display_name = { issue = "issue", pullRequest = "pull request", discussion = "discussion" }
+            utils.info("No labels assigned to this " .. display_name[key])
+            return
+          end
+
+          for _, label in ipairs(labels) do
+            label.text = label.name
+            label.kind = "label"
+          end
+
+          local cfg = octo_config.values
+          local final_actions = {}
+          local final_keys = {}
+          local default_mode = { "n", "i" }
+
+          local custom_actions_defined = {}
+          if
+            cfg.picker_config.snacks
+            and cfg.picker_config.snacks.actions
+            and cfg.picker_config.snacks.actions.assigned_labels
+          then
+            for _, action_item in ipairs(cfg.picker_config.snacks.actions.assigned_labels) do
+              if action_item.name and action_item.fn then
+                final_actions[action_item.name] = action_item.fn
+                custom_actions_defined[action_item.name] = true
+                if action_item.lhs then
+                  final_keys[action_item.lhs] = { action_item.name, mode = action_item.mode or default_mode }
+                end
+              end
+            end
+          end
+
+          if not custom_actions_defined["confirm"] then
+            final_actions["confirm"] = function(picker, item)
+              picker:close()
+              if type(cb) == "function" then
+                cb { item }
+              end
+            end
+          end
+
+          Snacks.picker.pick {
+            title = "Assigned Labels",
+            items = labels,
+            format = function(item, _)
+              local ret = {}
+              local bubble = bubbles.make_label_bubble(item.name, item.color)
+              for _, part in ipairs(bubble) do
+                ret[#ret + 1] = part
+              end
+              return ret
+            end,
+            win = {
+              input = {
+                keys = final_keys,
+              },
+            },
+            actions = final_actions,
+          }
+        end
+      end,
+    },
+  }
+end
+
 ---@type octo.PickerModule
 M.picker = {
+  assigned_labels = M.assigned_labels,
   assignees = M.assignees,
   changed_files = M.changed_files,
   commits = M.commits,
   issues = M.issues,
   issue_templates = M.issue_templates,
+  labels = M.labels,
   notifications = M.notifications,
   prs = M.pull_requests,
   review_commits = M.review_commits,
