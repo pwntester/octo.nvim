@@ -2587,8 +2587,12 @@ function M.add_user(subject, logins)
     end
     cb(user_ids)
   else
-    picker.users(function(user_id)
-      cb { user_id }
+    picker.users(function(user_ids)
+      if type(user_ids) == "string" then
+        cb { user_ids }
+      else
+        cb(user_ids)
+      end
     end)
   end
 end
