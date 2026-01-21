@@ -103,8 +103,17 @@ function M.hide_thread_buffer(split, file)
       -- if we are not showing the corresponding alternative diff buffer, do so
       vim.api.nvim_win_set_buf(alt_win, alt_buf)
 
+      -- Save cursor position before show_diff (which scrolls to sync windows)
+      local current_win = vim.api.nvim_get_current_win()
+      local cursor_pos = vim.api.nvim_win_get_cursor(current_win)
+
       -- show the diff
       file:show_diff()
+
+      -- Restore cursor position (show_diff scrolls which can disrupt cursor)
+      if vim.api.nvim_win_is_valid(current_win) then
+        pcall(vim.api.nvim_win_set_cursor, current_win, cursor_pos)
+      end
     end
   end
 end
