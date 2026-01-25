@@ -889,6 +889,14 @@ function M.get_repo_info(repo)
   return info
 end
 
+---Removes cached data of repo information
+---@param repo string
+function M.invalidate_repo_info_cache(repo)
+  if repo_info_cache[repo] then
+    repo_info_cache[repo] = nil
+  end
+end
+
 ---Gets repo's templates
 ---@param repo string
 function M.get_repo_templates(repo)
