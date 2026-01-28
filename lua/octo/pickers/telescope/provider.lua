@@ -867,7 +867,18 @@ local function select(opts)
   local items = {}
   if #selections == 0 then
     local selection = action_state.get_selected_entry(prompt_bufnr)
-    table.insert(items, get_item(selection))
+    local item
+    if selection then
+      item = get_item(selection)
+    else
+      local prompt_value = picker:_get_prompt()
+      if prompt_value and prompt_value ~= "" then
+        item = { name = prompt_value }
+      end
+    end
+    if item then
+      table.insert(items, item)
+    end
     cb = single_cb
   elseif multiple_cb == nil then
     utils.error "Multiple selections are not allowed"
@@ -910,7 +921,24 @@ function M.select_label(opts)
           actions.select_default:replace(function(prompt_bufnr)
             select {
               bufnr = prompt_bufnr,
-              single_cb = cb,
+              single_cb = function(items)
+                local result_labels = {}
+                for _, item in ipairs(items) do
+                  -- If item has a name field but no id, it's from prompt text
+                  if item.name and not item.id then
+                    local label_id = utils.get_label_id(item.name)
+                    if label_id then
+                      table.insert(result_labels, { id = label_id })
+                    else
+                      utils.error("Cannot find label: " .. item.name)
+                      return
+                    end
+                  else
+                    table.insert(result_labels, item)
+                  end
+                end
+                cb(result_labels)
+              end,
               multiple_cb = cb,
               get_item = function(selection)
                 return selection.label
