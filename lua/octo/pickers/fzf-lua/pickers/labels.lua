@@ -48,7 +48,7 @@ return function(opts)
       actions = {
         ["default"] = function(selected, fzf_opts)
           local labels = {}
-          
+
           -- If nothing selected but query text exists, treat it as label name
           if #selected == 0 then
             local query_text = fzf_opts and fzf_opts.last_query or ""
@@ -71,7 +71,7 @@ return function(opts)
               table.insert(labels, { id = id })
             end
           end
-          
+
           cb(labels)
         end,
       },

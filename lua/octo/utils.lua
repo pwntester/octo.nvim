@@ -1727,7 +1727,7 @@ function M.get_label_id(label)
     return
   end
 
-  return M.trim(output)
+  return M.trim(output or "")
 end
 
 --- Generate maps from diffhunk line to code line:
