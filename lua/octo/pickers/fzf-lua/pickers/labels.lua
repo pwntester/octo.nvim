@@ -46,12 +46,32 @@ return function(opts)
         ["--with-nth"] = "2..",
       },
       actions = {
-        ["default"] = function(selected)
+        ["default"] = function(selected, fzf_opts)
           local labels = {}
-          for _, row in ipairs(selected) do
-            local id, _ = unpack(vim.split(row, " "))
-            table.insert(labels, { id = id })
+          
+          -- If nothing selected but query text exists, treat it as label name
+          if #selected == 0 then
+            local query_text = fzf_opts and fzf_opts.last_query or ""
+            if query_text and query_text ~= "" then
+              -- Fetch label ID by name
+              local label_id = utils.get_label_id(query_text)
+              if label_id then
+                table.insert(labels, { id = label_id })
+              else
+                utils.error("Cannot find label: " .. query_text)
+                return
+              end
+            else
+              return
+            end
+          else
+            -- Normal selection flow
+            for _, row in ipairs(selected) do
+              local id, _ = unpack(vim.split(row, " "))
+              table.insert(labels, { id = id })
+            end
           end
+          
           cb(labels)
         end,
       },

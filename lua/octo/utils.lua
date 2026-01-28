@@ -1715,22 +1715,19 @@ function M.get_label_id(label)
   end
 
   local owner, name = M.split_repo(buffer.repo)
-  local jq = ([[
-    .data.repository.labels.nodes
-    | map(select(.name == "{label}"))
-    | .[0].id
-  ]]):gsub("{label}", label)
-  local id = gh.api.graphql {
-    query = queries.repo_labels,
-    fields = { owner = owner, name = name },
-    jq = jq,
+  -- Use REST API to fetch a specific label directly instead of fetching all labels
+  local output = gh.api.get {
+    "/repos/{owner}/{repo}/labels/{name}",
+    format = { owner = owner, repo = name, name = label },
+    jq = ".node_id",
     opts = { mode = "sync" },
   }
-  if id == "" then
+
+  if M.is_blank(output) then
     return
   end
 
-  return id
+  return M.trim(output)
 end
 
 --- Generate maps from diffhunk line to code line:
