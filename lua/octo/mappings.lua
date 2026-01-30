@@ -301,6 +301,9 @@ return {
   remove_label = function()
     require("octo.commands").remove_label()
   end,
+  set_project_field_ws = function()
+    require("octo.commands").commands.project.field.set("WS")
+  end,
   add_assignee = function()
     require("octo.commands").add_user "assignee"
   end,

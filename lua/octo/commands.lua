@@ -561,6 +561,13 @@ function M.setup()
         )
       end),
     },
+    project = {
+      field = {
+        set = function(field_name)
+          require("octo.commands.project").set_field(field_name)
+        end,
+      },
+    },
     pr = {
       copilot = context.within_pr(function(buffer)
         gh.pr.edit {

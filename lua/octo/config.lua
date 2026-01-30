@@ -366,6 +366,7 @@ function M.get_default_values()
         react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
         react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
         react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+        set_project_field_ws = { lhs = "<localleader>ws", desc = "set project WS field" },
       },
       pull_request = {
         pr_options = { lhs = "<CR>", desc = "show PR options" },
