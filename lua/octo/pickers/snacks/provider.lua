@@ -1396,10 +1396,10 @@ function M.users(cb)
       F = { prompt = ctx.filter.search }
     elseif cfg.users == "assignable" then
       query = queries.assignable_users
-      F = { owner = owner, name = name }
+      F = { owner = owner, name = name, prompt = ctx.filter.search }
     elseif cfg.users == "mentionable" then
       query = queries.mentionable_users
-      F = { owner = owner, name = name }
+      F = { owner = owner, name = name, prompt = ctx.filter.search }
     end
 
     return function(emit)
@@ -1442,9 +1442,12 @@ function M.users(cb)
                     emit {
                       id = user.id,
                       login = user.login,
-                      name = user.name,
-                      text = user.login,
+                      name = user.name or "",
                       kind = "user",
+                      pronouns = user.pronouns or "",
+                      avatarUrl = user.avatarUrl or "",
+                      ft = "markdown",
+                      text = user.login,
                     }
                   elseif user.teams and user.teams.totalCount > 0 then
                     for _, team in ipairs(user.teams.nodes) do
@@ -1459,6 +1462,7 @@ function M.users(cb)
                   end
                 end
               end
+              ctx.async:resume()
             end,
           },
         }
@@ -1487,8 +1491,12 @@ function M.users(cb)
   if not custom_actions_defined["confirm"] then
     ---@type snacks.picker.Action.fn
     final_actions["confirm"] = function(picker, item)
+      items = {}
+      for _, item in ipairs(picker:selected { fallback = true }) do
+        items[#items + 1] = item.id
+      end
       picker:close()
-      cb(item.id)
+      cb(items)
     end
   end
 
@@ -1502,20 +1510,41 @@ function M.users(cb)
     final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
   end
 
-  local limit = nil
-  if cfg.users == "search" then
-    limit = 100
-  end
   Snacks.picker.pick {
     title = "Select users",
-    limit = limit,
-    live = cfg.users == "search",
+    limit = 100,
+    live = true,
     show_empty = true,
-    format = "text",
     layout = {
       preset = "select",
       -- Ensure preview window is shown
-      hidden = {},
+      layout = {
+        backdrop = false,
+        width = 0.5,
+        min_width = 80,
+        max_width = 100,
+        height = 0.4,
+        min_height = 2,
+        box = "horizontal",
+        border = true,
+        title = "{title}",
+        title_pos = "center",
+        {
+          box = "vertical",
+          border = "right",
+          { win = "input", height = 1, border = "bottom" },
+          { win = "list", border = "none" },
+        },
+        {
+          win = "preview",
+          title = "{preview}",
+          height = 0,
+          width = 0.5,
+          wo = {
+            number = false,
+          },
+        },
+      },
     },
     preview = function(ctx)
       local item = ctx.item
@@ -1527,10 +1556,14 @@ function M.users(cb)
       local lines = {}
       if item.kind == "user" then
         lines = {
-          "User: " .. item.login,
-          "ID: " .. item.id,
-          "Type: " .. item.kind,
+          item["name"] ~= vim.NIL and item["name"] or "",
+          item["pronouns"] ~= vim.NIL and ("_" .. item["pronouns"] .. "_") or "",
+          "",
+          "Username: `" .. item["login"] .. "`",
+          "![](" .. item["avatarUrl"] .. ")",
         }
+        -- vim.bo[ctx.preview.win.buf] = "markdown"
+        ctx.preview:highlight { ft = "markdown" }
       elseif item.kind == "team" then
         lines = {
           "Name: " .. item.name,
@@ -1548,7 +1581,7 @@ function M.users(cb)
         ret[#ret + 1] = { item.login, "Normal" }
       elseif item.kind == "team" then
         ret[#ret + 1] = { "🏢 ", "Special" }
-        ret[#ret + 1] = { item.text, "Normal" }
+        ret[#ret + 1] = { item.name, "Normal" }
       end
 
       return ret
