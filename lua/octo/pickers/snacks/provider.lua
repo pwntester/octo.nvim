@@ -1399,10 +1399,10 @@ function M.users(cb)
       F = { prompt = ctx.filter.search }
     elseif cfg.users == "assignable" then
       query = queries.assignable_users
-      F = { owner = owner, name = name }
+      F = { owner = owner, name = name, prompt = ctx.filter.search }
     elseif cfg.users == "mentionable" then
       query = queries.mentionable_users
-      F = { owner = owner, name = name }
+      F = { owner = owner, name = name, prompt = ctx.filter.search }
     end
 
     return function(emit)
@@ -1445,11 +1445,12 @@ function M.users(cb)
                     emit {
                       id = user.id,
                       login = user.login,
-                      name = user.name,
+                      name = user.name or "",
                       kind = "user",
                       pronouns = user.pronouns or "",
                       avatarUrl = user.avatarUrl or "",
                       ft = "markdown",
+                      text = user.login,
                     }
                   elseif user.teams and user.teams.totalCount > 0 then
                     for _, team in ipairs(user.teams.nodes) do
@@ -1512,16 +1513,11 @@ function M.users(cb)
     final_keys[cfg.picker_config.mappings.open_in_browser.lhs] = { "open_in_browser", mode = default_mode }
   end
 
-  local limit = nil
-  if cfg.users == "search" then
-    limit = 100
-  end
   Snacks.picker.pick {
     title = "Select users",
-    limit = limit,
-    live = cfg.users == "search",
+    limit = 100,
+    live = true,
     show_empty = true,
-    format = "text",
     layout = {
       preset = "select",
       -- Ensure preview window is shown
@@ -1569,7 +1565,6 @@ function M.users(cb)
           "Username: `" .. item["login"] .. "`",
           "![](" .. item["avatarUrl"] .. ")",
         }
-        -- vim.bo[ctx.preview.win.buf] = "markdown"
         ctx.preview:highlight { ft = "markdown" }
       elseif item.kind == "team" then
         lines = {
@@ -1588,7 +1583,7 @@ function M.users(cb)
         ret[#ret + 1] = { item.login, "Normal" }
       elseif item.kind == "team" then
         ret[#ret + 1] = { "🏢 ", "Special" }
-        ret[#ret + 1] = { item.text, "Normal" }
+        ret[#ret + 1] = { item.name, "Normal" }
       end
 
       return ret
