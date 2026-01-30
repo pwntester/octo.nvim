@@ -1090,9 +1090,9 @@ query($id: ID!) {
 ]] .. fragments.reaction_groups_users
 
   M.mentionable_users = [[
-query($owner: String!, $name: String!, $endCursor: String) {
+query($owner: String!, $name: String!, $endCursor: String, $prompt: String) {
   repository(owner: $owner, name: $name) {
-      mentionableUsers(first: 100, after: $endCursor) {
+      mentionableUsers(first: 100, after: $endCursor, query: $prompt) {
       pageInfo {
         endCursor
         hasNextPage
@@ -1110,9 +1110,9 @@ query($owner: String!, $name: String!, $endCursor: String) {
 ]]
 
   M.assignable_users = [[
-query($owner: String!, $name: String! $endCursor: String) {
+query($owner: String!, $name: String! $endCursor: String, $prompt: String) {
   repository(owner: $owner, name: $name) {
-    assignableUsers(first: 100, after: $endCursor) {
+    assignableUsers(first: 100, after: $endCursor, query: $prompt) {
       pageInfo {
         endCursor
         hasNextPage
