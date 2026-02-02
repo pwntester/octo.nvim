@@ -56,6 +56,8 @@ M.state_hl_map = {
   DRAFT = "OctoStateDraft",
   COMPLETED = "OctoStateCompleted",
   NOT_PLANNED = "OctoStateNotPlanned",
+  REOPENED = "OctoStateOpen",
+  DUPLICATED = "OctoStateClosed",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -1870,7 +1872,11 @@ end
 ---@return string
 function M.get_displayed_state(isIssue, state, stateReason, isDraft)
   if isIssue and state == "CLOSED" then
-    return stateReason or state
+    -- Handle vim.NIL which can come from JSON responses
+    if stateReason and stateReason ~= vim.NIL and type(stateReason) == "string" then
+      return stateReason
+    end
+    return state
   end
 
   if state == "CLOSED" or state == "MERGED" then
@@ -2153,6 +2159,10 @@ end
 ---@param str string
 ---@return string
 function M.remove_underscore(str)
+  -- Defensive check: ensure str is a string (not vim.NIL or other userdata)
+  if type(str) ~= "string" then
+    return ""
+  end
   return (str:gsub("_", " "))
 end
 
