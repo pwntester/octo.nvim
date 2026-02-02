@@ -304,6 +304,9 @@ return {
   set_project_field_ws = function()
     require("octo.commands").commands.project.field.set("WS")
   end,
+  set_project_field_status = function()
+    require("octo.commands").commands.project.field.set("Status")
+  end,
   add_assignee = function()
     require("octo.commands").add_user "assignee"
   end,
