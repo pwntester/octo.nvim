@@ -319,7 +319,9 @@ function TextChunkBuilder:state_with_icon(state, state_reason, is_draft, get_ico
 
   local icon_text = format_icon_text(get_icon_fn(state, state_reason))
   local state_text = utils.title_case(utils.remove_underscore(state))
-  local state_bubble = bubbles.make_bubble(icon_text .. state_text, utils.state_hl_map[state] .. "Bubble")
+  -- Use default highlight if state is not in the map
+  local state_hl = utils.state_hl_map[state] or "OctoStateClosed"
+  local state_bubble = bubbles.make_bubble(icon_text .. state_text, state_hl .. "Bubble")
   self:extend(state_bubble)
 
   if is_draft and state ~= "DRAFT" and state ~= "CLOSED" and state ~= "MERGED" then

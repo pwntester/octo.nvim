@@ -56,6 +56,8 @@ M.state_hl_map = {
   DRAFT = "OctoStateDraft",
   COMPLETED = "OctoStateCompleted",
   NOT_PLANNED = "OctoStateNotPlanned",
+  REOPENED = "OctoStateOpen",
+  DUPLICATED = "OctoStateClosed",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -1715,22 +1717,19 @@ function M.get_label_id(label)
   end
 
   local owner, name = M.split_repo(buffer.repo)
-  local jq = ([[
-    .data.repository.labels.nodes
-    | map(select(.name == "{label}"))
-    | .[0].id
-  ]]):gsub("{label}", label)
-  local id = gh.api.graphql {
-    query = queries.repo_labels,
-    fields = { owner = owner, name = name },
-    jq = jq,
+  -- Use REST API to fetch a specific label directly instead of fetching all labels
+  local output = gh.api.get {
+    "/repos/{owner}/{repo}/labels/{name}",
+    format = { owner = owner, repo = name, name = label },
+    jq = ".node_id",
     opts = { mode = "sync" },
   }
-  if id == "" then
+
+  if M.is_blank(output) then
     return
   end
 
-  return id
+  return M.trim(output or "")
 end
 
 --- Generate maps from diffhunk line to code line:
@@ -1873,7 +1872,11 @@ end
 ---@return string
 function M.get_displayed_state(isIssue, state, stateReason, isDraft)
   if isIssue and state == "CLOSED" then
-    return stateReason or state
+    -- Handle vim.NIL which can come from JSON responses
+    if stateReason and stateReason ~= vim.NIL and type(stateReason) == "string" then
+      return stateReason
+    end
+    return state
   end
 
   if state == "CLOSED" or state == "MERGED" then
@@ -2156,6 +2159,10 @@ end
 ---@param str string
 ---@return string
 function M.remove_underscore(str)
+  -- Defensive check: ensure str is a string (not vim.NIL or other userdata)
+  if type(str) ~= "string" then
+    return ""
+  end
   return (str:gsub("_", " "))
 end
 

@@ -561,6 +561,13 @@ function M.setup()
         )
       end),
     },
+    project = {
+      field = {
+        set = function(field_name)
+          require("octo.commands.project").set_field(field_name)
+        end,
+      },
+    },
     pr = {
       copilot = context.within_pr(function(buffer)
         gh.pr.edit {
@@ -1607,6 +1614,10 @@ function M.change_state(state)
     end
 
     node.state = new_state
+    -- Update stateReason if present in the response
+    if obj.stateReason ~= nil then
+      node.stateReason = obj.stateReason
+    end
 
     local updated_state = utils.get_displayed_state(buffer:isIssue(), new_state, obj.stateReason)
     writers.write_state(buffer.bufnr, updated_state:upper(), buffer.number)
