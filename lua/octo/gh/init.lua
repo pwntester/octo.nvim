@@ -159,6 +159,28 @@ end
 ---@field debug? boolean
 ---@field [string] any
 
+---Collect paginated `gh api --paginate` output into a JSON array, replicating
+---the `--slurp` flag introduced in gh CLI v2.29.0. Older distributions (e.g.
+---Debian stable) ship versions that predate this flag, causing octo to hang on
+---"Loading..." because the gh call errors immediately and never resolves.
+---`gh api --paginate` emits each page as a compact JSON value on its own line,
+---so splitting on newlines and re-wrapping produces the same result as --slurp.
+---@param output string raw stdout from `gh api --paginate`
+---@return string JSON array of all pages
+local function native_slurp(output)
+  local pages = {}
+  for line in (output .. "\n"):gmatch("([^\n]+)\n?") do
+    line = vim.trim(line)
+    if #line > 0 then
+      local ok, decoded = pcall(vim.json.decode, line)
+      if ok then
+        table.insert(pages, decoded)
+      end
+    end
+  end
+  return vim.json.encode(pages)
+end
+
 ---Run a gh command
 ---@param opts RunOpts
 ---@return string? output
@@ -177,6 +199,18 @@ local function run(opts)
   opts = opts or {}
   local conf = config.values
   local mode = opts.mode or "async"
+
+  -- Strip --slurp and handle it natively so octo works with gh CLI < 2.29.0.
+  local do_slurp = false
+  local filtered_args = {}
+  for _, arg in ipairs(opts.args) do
+    if arg == "--slurp" then
+      do_slurp = true
+    else
+      table.insert(filtered_args, arg)
+    end
+  end
+  opts.args = filtered_args
   local hostname = ""
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
@@ -218,6 +252,7 @@ local function run(opts)
     on_exit = vim.schedule_wrap(function(j_self, status, _)
       if mode == "async" and opts.cb then
         local output = table.concat(j_self:result(), "\n")
+        if do_slurp then output = native_slurp(output) end
         local stderr = table.concat(j_self:stderr_result(), "\n")
         opts.cb(output, stderr, status)
       end
@@ -226,7 +261,9 @@ local function run(opts)
   }
   if mode == "sync" then
     job:sync(conf.timeout)
-    return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
+    local output = table.concat(job:result(), "\n")
+    if do_slurp then output = native_slurp(output) end
+    return output, table.concat(job:stderr_result(), "\n")
   else
     job:start()
   end
