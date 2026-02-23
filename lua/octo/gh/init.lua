@@ -150,7 +150,7 @@ function M.create_callback(opts)
 end
 
 ---@class RunOpts
----@field args? table
+---@field args? string[]
 ---@field mode? "sync" | "async"
 ---@field cb? fun(stdout: string, stderr: string, status: integer)
 ---@field stream_cb? fun(stdout: string, stderr: string)
@@ -169,7 +169,7 @@ end
 ---@return string JSON array of all pages
 local function native_slurp(output)
   local pages = {}
-  for line in (output .. "\n"):gmatch("([^\n]+)\n?") do
+  for line in (output .. "\n"):gmatch "([^\n]+)\n?" do
     line = vim.trim(line)
     if #line > 0 then
       local ok, decoded = pcall(vim.json.decode, line)
@@ -252,7 +252,9 @@ local function run(opts)
     on_exit = vim.schedule_wrap(function(j_self, status, _)
       if mode == "async" and opts.cb then
         local output = table.concat(j_self:result(), "\n")
-        if do_slurp then output = native_slurp(output) end
+        if do_slurp then
+          output = native_slurp(output)
+        end
         local stderr = table.concat(j_self:stderr_result(), "\n")
         opts.cb(output, stderr, status)
       end
@@ -262,7 +264,9 @@ local function run(opts)
   if mode == "sync" then
     job:sync(conf.timeout)
     local output = table.concat(job:result(), "\n")
-    if do_slurp then output = native_slurp(output) end
+    if do_slurp then
+      output = native_slurp(output)
+    end
     return output, table.concat(job:stderr_result(), "\n")
   else
     job:start()
