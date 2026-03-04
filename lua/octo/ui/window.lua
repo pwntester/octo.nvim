@@ -111,14 +111,6 @@ function M.create_centered_float(opts)
     enter = opts.enter,
   }
 
-  -- window binding
-  local aucmd = string.format(
-    "autocmd BufLeave,BufDelete <buffer=%d> :lua require('octo.ui.window').try_close_wins(%d)",
-    bufnr,
-    winid
-  )
-  vim.cmd(aucmd)
-
   -- mappings
   local mapping_opts = { script = true, silent = true, noremap = true, buffer = bufnr, desc = "Close window" }
   vim.keymap.set("n", "<C-c>", function()
