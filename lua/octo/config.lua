@@ -394,6 +394,7 @@ function M.get_default_values()
         reopen_issue = { lhs = "<localleader>io", desc = "reopen PR" },
         list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
         reload = { lhs = "<C-r>", desc = "reload PR" },
+        approve_pr = { lhs = "<leader>qa", desc = "approve PR" },
         open_in_browser = { lhs = "<C-b>", desc = "open PR in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },

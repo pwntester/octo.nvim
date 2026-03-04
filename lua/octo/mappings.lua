@@ -1,6 +1,8 @@
 local context = require "octo.context"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
+local gh = require "octo.gh"
+local mutations = require "octo.gh.mutations"
 
 --- Create a picker to select from a list of callable options
 ---@param options table<string, fun()>
@@ -108,6 +110,7 @@ return {
       end,
       ["Start Review"] = commands.review.start,
       ["Resume Review"] = commands.review.resume,
+      ["Approve PR"] = require("octo.mappings").approve_pr,
       ["Add Label(s)"] = commands.label.add,
       ["Remove Label(s)"] = commands.label.remove,
       ["Add Milestone"] = commands.milestone.add,
@@ -473,6 +476,39 @@ return {
       return
     end
     current_review:submit "APPROVE"
+  end,
+  approve_pr = function()
+    local buffer = utils.get_current_buffer()
+    if not buffer or not buffer:isPullRequest() then
+      utils.error "Not a pull request buffer"
+      return
+    end
+
+    local pull_request = buffer:pullRequest()
+    if not pull_request or not pull_request.id then
+      utils.error "Could not get pull request ID"
+      return
+    end
+
+    vim.ui.input({ prompt = "Enter approval comment (optional): " }, function(body)
+      if body == nil then
+        return
+      end
+      body = body or ""
+      gh.api.graphql {
+        query = mutations.add_pull_request_review,
+        F = { input = { pullRequestId = pull_request.id, event = "APPROVE", body = body } },
+        jq = ".data.addPullRequestReview.pullRequestReview.state",
+        opts = {
+          cb = gh.create_callback {
+            success = function()
+              utils.info "PR approved successfully!"
+              require("octo").load_buffer { bufnr = buffer.bufnr }
+            end,
+          },
+        },
+      }
+    end)
   end,
   comment_review = function()
     local current_review = reviews.get_current_review()
