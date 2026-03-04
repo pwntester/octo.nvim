@@ -105,6 +105,12 @@ local M = {}
 ---@class OctoMissingScopeConfig
 ---@field projects_v2 boolean
 
+---@class OctoConfigPoll
+---@field enabled boolean
+---@field interval number
+---@field notify_on_refresh boolean
+---@field notify_on_change boolean
+
 ---@class OctoConfigDebug
 ---@field notify_missing_timeline_items boolean
 
@@ -151,6 +157,7 @@ local M = {}
 ---@field mappings_disable_default boolean
 ---@field discussions OctoConfigDiscussions
 ---@field notifications OctoConfigNotifications
+---@field poll OctoConfigPoll
 ---@field debug OctoConfigDebug
 
 --- Returns the default octo config values
@@ -394,6 +401,7 @@ function M.get_default_values()
         reopen_issue = { lhs = "<localleader>io", desc = "reopen PR" },
         list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
         reload = { lhs = "<C-r>", desc = "reload PR" },
+        approve_pr = { lhs = "<leader>qa", desc = "approve PR" },
         open_in_browser = { lhs = "<C-b>", desc = "open PR in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
@@ -449,10 +457,10 @@ function M.get_default_values()
         unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
       },
       submit_win = {
-        approve_review = { lhs = "<C-a>", desc = "approve review", mode = { "n", "i" } },
-        comment_review = { lhs = "<C-m>", desc = "comment review", mode = { "n", "i" } },
-        request_changes = { lhs = "<C-r>", desc = "request changes review", mode = { "n", "i" } },
-        close_review_tab = { lhs = "<C-c>", desc = "close review tab", mode = { "n", "i" } },
+        approve_review = { lhs = "<C-a>", desc = "approve review", mode = { "n" } },
+        comment_review = { lhs = "<C-m>", desc = "comment review", mode = { "n" } },
+        request_changes = { lhs = "<C-r>", desc = "request changes review", mode = { "n" } },
+        close_review_tab = { lhs = "<C-c>", desc = "close review tab", mode = { "n" } },
       },
       review_diff = {
         submit_review = { lhs = "<localleader>vs", desc = "submit review" },
@@ -509,6 +517,12 @@ function M.get_default_values()
       release = {
         open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
       },
+    },
+    poll = {
+      enabled = false,
+      interval = 10000,
+      notify_on_refresh = true,
+      notify_on_change = true,
     },
     debug = {
       notify_missing_timeline_items = false,
@@ -682,6 +696,16 @@ function M.validate_config()
     end
   end
 
+  local function validate_poll()
+    if not validate_type(config.poll, "poll", "table") then
+      return
+    end
+    validate_type(config.poll.enabled, "poll.enabled", "boolean")
+    validate_type(config.poll.interval, "poll.interval", "number")
+    validate_type(config.poll.notify_on_refresh, "poll.notify_on_refresh", "boolean")
+    validate_type(config.poll.notify_on_change, "poll.notify_on_change", "boolean")
+  end
+
   local function validate_debug()
     if not validate_type(config.debug, "debug", "table") then
       return
@@ -744,6 +768,7 @@ function M.validate_config()
     validate_aliases()
     validate_pickers()
     validate_mappings()
+    validate_poll()
     validate_debug()
   end
 

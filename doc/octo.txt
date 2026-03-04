@@ -292,6 +292,28 @@ See |octo-command-examples| for examples.
   list [repo]            Lists releases for the current or specified repo.
 
 
+:Octo poll [action]                             *octo-commands-poll*
+
+  start                  Start polling tracked buffers for remote changes.
+  stop                   Stop polling.
+  toggle                 Toggle polling on/off.
+  status                 Show polling status and tracked buffers.
+  apply                  Force-reload a dirty buffer with pending remote changes.
+
+  Polling periodically checks GitHub for updates to open issue/PR buffers
+  using a lightweight GraphQL query (only fetches `updatedAt`). When a
+  remote change is detected:
+  - If the buffer has no local edits, it is automatically reloaded.
+  - If the buffer has unsaved local edits, the reload is skipped and
+    the user is notified. Use `:Octo poll apply` to force-reload.
+
+  Configure polling via the `poll` config table:
+    `enabled`             (boolean, default false) Auto-start on buffer open
+    `interval`            (number, default 10000) Polling interval in ms
+    `notify_on_refresh`   (boolean, default true) Notify on auto-refresh
+    `notify_on_change`    (boolean, default true) Notify when dirty skip
+
+
 :Octo gist [action]                             *octo-commands-gist*
 
   list [repo] {key=val} Lists user gists.

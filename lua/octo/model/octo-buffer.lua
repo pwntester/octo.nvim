@@ -1174,4 +1174,12 @@ function OctoBuffer:update_reactions_at_cursor(reaction_groups, reaction_line)
   end
 end
 
+---Get the updatedAt timestamp from the underlying node
+---@return string|nil
+function OctoBuffer:get_updated_at()
+  if self.node and self.node.updatedAt then
+    return self.node.updatedAt
+  end
+end
+
 return M

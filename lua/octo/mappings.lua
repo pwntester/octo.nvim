@@ -1,6 +1,8 @@
 local context = require "octo.context"
 local reviews = require "octo.reviews"
 local utils = require "octo.utils"
+local gh = require "octo.gh"
+local mutations = require "octo.gh.mutations"
 
 --- Create a picker to select from a list of callable options
 ---@param options table<string, fun()>
@@ -37,6 +39,40 @@ local create_reaction_picker = function()
       return
     end
     require("octo.commands").reaction_action(choice.name)
+  end)
+end
+
+local approve_pr = function()
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isPullRequest() then
+    utils.error "Not a pull request buffer"
+    return
+  end
+
+  local pull_request = buffer:pullRequest()
+  if not pull_request or not pull_request.id then
+    utils.error "Could not get pull request ID"
+    return
+  end
+
+  vim.ui.input({ prompt = "Enter approval comment (optional): " }, function(body)
+    if body == nil then
+      return
+    end
+    body = body or ""
+    gh.api.graphql {
+      query = mutations.add_pull_request_review,
+      F = { input = { pullRequestId = pull_request.id, event = "APPROVE", body = body } },
+      jq = ".data.addPullRequestReview.pullRequestReview.state",
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            utils.info "PR approved successfully!"
+            require("octo").load_buffer { bufnr = buffer.bufnr }
+          end,
+        },
+      },
+    }
   end)
 end
 
@@ -108,6 +144,7 @@ return {
       end,
       ["Start Review"] = commands.review.start,
       ["Resume Review"] = commands.review.resume,
+      ["Approve PR"] = approve_pr,
       ["Add Label(s)"] = commands.label.add,
       ["Remove Label(s)"] = commands.label.remove,
       ["Add Milestone"] = commands.milestone.add,
@@ -125,6 +162,7 @@ return {
       ["Add Comment"] = commands.comment.add,
       ["Add Reply"] = commands.comment.reply,
       ["Delete Comment"] = commands.comment.delete,
+      ["Toggle Polling"] = commands.poll.toggle,
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),
@@ -162,6 +200,7 @@ return {
       ["Change Subscription"] = commands.issue.subscription,
       ["Add Comment"] = commands.comment.add,
       ["Delete Comment"] = commands.comment.delete,
+      ["Toggle Polling"] = commands.poll.toggle,
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),
@@ -238,9 +277,9 @@ return {
   checkout_pr = function()
     require("octo.commands").commands.pr.checkout()
   end,
-  list_commits = function()
-    require("octo.picker").commits()
-  end,
+  list_commits = context.within_pr(function(buffer)
+    require("octo.picker").commits(buffer)
+  end),
   review_commits = function()
     local current_review = reviews.get_current_review()
     if not current_review then
@@ -250,9 +289,9 @@ return {
       current_review:focus_commit(right, left)
     end)
   end,
-  list_changed_files = function()
-    require("octo.picker").changed_files()
-  end,
+  list_changed_files = context.within_pr(function(buffer)
+    require("octo.picker").changed_files(buffer)
+  end),
   show_pr_diff = function()
     require("octo.commands").show_pr_diff()
   end,
@@ -474,6 +513,7 @@ return {
     end
     current_review:submit "APPROVE"
   end,
+  approve_pr = approve_pr,
   comment_review = function()
     local current_review = reviews.get_current_review()
     if not current_review then
