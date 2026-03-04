@@ -1084,6 +1084,37 @@ function M.setup()
         picker.notifications(opts)
       end,
     },
+    poll = {
+      start = function()
+        require("octo.polling").start()
+      end,
+      stop = function()
+        require("octo.polling").stop()
+      end,
+      toggle = function()
+        require("octo.polling").toggle()
+      end,
+      status = function()
+        local polling = require "octo.polling"
+        local s = polling.status()
+        local lines = {
+          string.format("Polling enabled: %s", tostring(s.enabled)),
+          string.format("Timer running: %s", tostring(s.running)),
+          string.format("Tracked buffers: %d", s.tracked_count),
+        }
+        for bufnr, entry in pairs(s.buffers) do
+          table.insert(lines, string.format(
+            "  buf %d: %s/%s #%d (%s)%s",
+            bufnr, entry.owner, entry.name, entry.number, entry.kind,
+            entry.remote_changed and " [remote changed]" or ""
+          ))
+        end
+        utils.info(table.concat(lines, "\n"))
+      end,
+      apply = function()
+        require("octo.polling").apply_pending()
+      end,
+    },
   }
 
   setmetatable(M.commands.pr, {

@@ -31,6 +31,14 @@ function M.setup()
     })
   end
 
+  define({ "BufDelete", "BufWipeout" }, {
+    group = "octo_autocmds",
+    pattern = { "octo://*" },
+    callback = function(ev)
+      require("octo.polling").untrack_buffer(ev.buf)
+    end,
+  })
+
   define({ "BufReadCmd" }, {
     group = "octo_autocmds",
     pattern = { "octo://*" },
