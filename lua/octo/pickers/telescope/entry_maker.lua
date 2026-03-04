@@ -794,4 +794,38 @@ function M.gen_from_release(opts)
   end
 end
 
+function M.gen_from_branches()
+  local function make_display(entry)
+    if not entry then
+      return nil
+    end
+
+    local columns = {
+      { entry.value, "TelescopeResultsNumber" },
+    }
+
+    local displayer = entry_display.create {
+      separator = "",
+      items = {
+        { width = math.min(#entry.value, 50) },
+      },
+    }
+
+    return displayer(columns)
+  end
+
+  ---@type { name: string }
+  return function(branch)
+    if not branch or vim.tbl_isempty(branch) then
+      return nil
+    end
+
+    return {
+      value = branch.name,
+      ordinal = branch.name,
+      display = make_display,
+    }
+  end
+end
+
 return M
