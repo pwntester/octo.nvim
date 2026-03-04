@@ -87,6 +87,7 @@ return {
   end,
   pr_options = function()
     local commands = require("octo.commands").commands
+    local mappings = require "octo.mappings"
     local options = {
       ["Get Review from Copilot"] = commands.pr.copilot,
       ["Get Workflow Runs"] = commands.pr.runs,
@@ -110,7 +111,7 @@ return {
       end,
       ["Start Review"] = commands.review.start,
       ["Resume Review"] = commands.review.resume,
-      ["Approve PR"] = require("octo.mappings").approve_pr,
+      ["Approve PR"] = mappings.approve_pr,
       ["Add Label(s)"] = commands.label.add,
       ["Remove Label(s)"] = commands.label.remove,
       ["Add Milestone"] = commands.milestone.add,
