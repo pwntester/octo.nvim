@@ -309,6 +309,12 @@ require"octo".setup {
   notifications = {
     current_repo_only = false,             -- show notifications for current repo only
   },
+  poll = {
+    enabled = false,                       -- opt-in polling for remote changes
+    interval = 10000,                      -- polling interval in milliseconds (default: 10s)
+    notify_on_refresh = true,              -- notify when a buffer is auto-refreshed
+    notify_on_change = true,               -- notify when remote changed but buffer has local edits
+  },
   file_panel = {
     size = 10,                             -- changed files panel rows
     use_icons = true                       -- use web-devicons in file panel (if false, nvim-web-devicons does not need to be installed)
@@ -627,6 +633,11 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | child   | add                                           | Add a child issue to current issue |
 | release  | notes                                           | Generate release notes in current buffer |
 |   | list [repo]                                           | List release notes for current or specified repo |
+| poll     | start                                             | Start polling tracked buffers for remote changes |
+|          | stop                                              | Stop polling |
+|          | toggle                                            | Toggle polling on/off |
+|          | status                                            | Show polling status and tracked buffers |
+|          | apply                                             | Force-reload a dirty buffer with pending remote changes |
 
 0. `[repo]`: If repo is not provided, it will be derived from `<cwd>/.git/config`.
 

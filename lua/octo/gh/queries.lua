@@ -1437,6 +1437,16 @@ query($owner: String!, $name: String!) {
     }
   }
   ]]
+  M.updated_at = [[
+  query($owner: String!, $name: String!, $number: Int!) {
+    repository(owner: $owner, name: $name) {
+      issueOrPullRequest(number: $number) {
+        ... on Issue { updatedAt }
+        ... on PullRequest { updatedAt }
+      }
+    }
+  }
+  ]]
 end
 
 return M

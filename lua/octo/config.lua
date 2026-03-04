@@ -105,6 +105,12 @@ local M = {}
 ---@class OctoMissingScopeConfig
 ---@field projects_v2 boolean
 
+---@class OctoConfigPoll
+---@field enabled boolean
+---@field interval number
+---@field notify_on_refresh boolean
+---@field notify_on_change boolean
+
 ---@class OctoConfigDebug
 ---@field notify_missing_timeline_items boolean
 
@@ -151,6 +157,7 @@ local M = {}
 ---@field mappings_disable_default boolean
 ---@field discussions OctoConfigDiscussions
 ---@field notifications OctoConfigNotifications
+---@field poll OctoConfigPoll
 ---@field debug OctoConfigDebug
 
 --- Returns the default octo config values
@@ -510,6 +517,12 @@ function M.get_default_values()
         open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
       },
     },
+    poll = {
+      enabled = false,
+      interval = 10000,
+      notify_on_refresh = true,
+      notify_on_change = true,
+    },
     debug = {
       notify_missing_timeline_items = false,
     },
@@ -682,6 +695,16 @@ function M.validate_config()
     end
   end
 
+  local function validate_poll()
+    if not validate_type(config.poll, "poll", "table") then
+      return
+    end
+    validate_type(config.poll.enabled, "poll.enabled", "boolean")
+    validate_type(config.poll.interval, "poll.interval", "number")
+    validate_type(config.poll.notify_on_refresh, "poll.notify_on_refresh", "boolean")
+    validate_type(config.poll.notify_on_change, "poll.notify_on_change", "boolean")
+  end
+
   local function validate_debug()
     if not validate_type(config.debug, "debug", "table") then
       return
@@ -744,6 +767,7 @@ function M.validate_config()
     validate_aliases()
     validate_pickers()
     validate_mappings()
+    validate_poll()
     validate_debug()
   end
 
