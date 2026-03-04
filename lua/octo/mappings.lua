@@ -125,6 +125,7 @@ return {
       ["Add Comment"] = commands.comment.add,
       ["Add Reply"] = commands.comment.reply,
       ["Delete Comment"] = commands.comment.delete,
+      ["Toggle Polling"] = commands.poll.toggle,
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),
@@ -162,6 +163,7 @@ return {
       ["Change Subscription"] = commands.issue.subscription,
       ["Add Comment"] = commands.comment.add,
       ["Delete Comment"] = commands.comment.delete,
+      ["Toggle Polling"] = commands.poll.toggle,
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),

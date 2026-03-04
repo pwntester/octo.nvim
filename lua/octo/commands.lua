@@ -1103,11 +1103,18 @@ function M.setup()
           string.format("Tracked buffers: %d", s.tracked_count),
         }
         for bufnr, entry in pairs(s.buffers) do
-          table.insert(lines, string.format(
-            "  buf %d: %s/%s #%d (%s)%s",
-            bufnr, entry.owner, entry.name, entry.number, entry.kind,
-            entry.remote_changed and " [remote changed]" or ""
-          ))
+          table.insert(
+            lines,
+            string.format(
+              "  buf %d: %s/%s #%d (%s)%s",
+              bufnr,
+              entry.owner,
+              entry.name,
+              entry.number,
+              entry.kind,
+              entry.remote_changed and " [remote changed]" or ""
+            )
+          )
         end
         utils.info(table.concat(lines, "\n"))
       end,
