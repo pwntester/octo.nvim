@@ -119,6 +119,17 @@ mutation {
 }
 ]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
 
+  M.add_pull_request_review = [[
+mutation($input: AddPullRequestReviewInput!) {
+  addPullRequestReview(input: $input) {
+    pullRequestReview {
+      id
+      state
+    }
+  }
+}
+]]
+
   -- https://docs.github.com/en/graphql/reference/mutations#markfileasviewed
   M.mark_file_as_viewed = [[
 mutation($path: String!, $pullRequestId: ID!) {
