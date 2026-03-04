@@ -234,6 +234,7 @@ function M.get_default_values()
       reopened = { "  ", "OctoGreen" },
       assigned = "  ",
       review_requested = "  ",
+      viewed = { " ● ", "OctoTimelineItemViewed" },
     },
     right_bubble_delimiter = "",
     left_bubble_delimiter = "",
