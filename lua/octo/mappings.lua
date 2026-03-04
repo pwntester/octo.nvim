@@ -42,6 +42,40 @@ local create_reaction_picker = function()
   end)
 end
 
+local approve_pr = function()
+  local buffer = utils.get_current_buffer()
+  if not buffer or not buffer:isPullRequest() then
+    utils.error "Not a pull request buffer"
+    return
+  end
+
+  local pull_request = buffer:pullRequest()
+  if not pull_request or not pull_request.id then
+    utils.error "Could not get pull request ID"
+    return
+  end
+
+  vim.ui.input({ prompt = "Enter approval comment (optional): " }, function(body)
+    if body == nil then
+      return
+    end
+    body = body or ""
+    gh.api.graphql {
+      query = mutations.add_pull_request_review,
+      F = { input = { pullRequestId = pull_request.id, event = "APPROVE", body = body } },
+      jq = ".data.addPullRequestReview.pullRequestReview.state",
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            utils.info "PR approved successfully!"
+            require("octo").load_buffer { bufnr = buffer.bufnr }
+          end,
+        },
+      },
+    }
+  end)
+end
+
 return {
   repo_options = function()
     local commands = require("octo.commands").commands
@@ -87,7 +121,6 @@ return {
   end,
   pr_options = function()
     local commands = require("octo.commands").commands
-    local mappings = require "octo.mappings"
     local options = {
       ["Get Review from Copilot"] = commands.pr.copilot,
       ["Get Workflow Runs"] = commands.pr.runs,
@@ -111,7 +144,7 @@ return {
       end,
       ["Start Review"] = commands.review.start,
       ["Resume Review"] = commands.review.resume,
-      ["Approve PR"] = mappings.approve_pr,
+      ["Approve PR"] = approve_pr,
       ["Add Label(s)"] = commands.label.add,
       ["Remove Label(s)"] = commands.label.remove,
       ["Add Milestone"] = commands.milestone.add,
@@ -478,39 +511,7 @@ return {
     end
     current_review:submit "APPROVE"
   end,
-  approve_pr = function()
-    local buffer = utils.get_current_buffer()
-    if not buffer or not buffer:isPullRequest() then
-      utils.error "Not a pull request buffer"
-      return
-    end
-
-    local pull_request = buffer:pullRequest()
-    if not pull_request or not pull_request.id then
-      utils.error "Could not get pull request ID"
-      return
-    end
-
-    vim.ui.input({ prompt = "Enter approval comment (optional): " }, function(body)
-      if body == nil then
-        return
-      end
-      body = body or ""
-      gh.api.graphql {
-        query = mutations.add_pull_request_review,
-        F = { input = { pullRequestId = pull_request.id, event = "APPROVE", body = body } },
-        jq = ".data.addPullRequestReview.pullRequestReview.state",
-        opts = {
-          cb = gh.create_callback {
-            success = function()
-              utils.info "PR approved successfully!"
-              require("octo").load_buffer { bufnr = buffer.bufnr }
-            end,
-          },
-        },
-      }
-    end)
-  end,
+  approve_pr = approve_pr,
   comment_review = function()
     local current_review = reviews.get_current_review()
     if not current_review then
