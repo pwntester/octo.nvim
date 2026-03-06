@@ -735,6 +735,12 @@ function M.write_details(bufnr, issue, update, include_status)
   if ms ~= nil and ms ~= vim.NIL then
     table.insert(milestone_vt, { ms.title, "OctoDetailsValue" })
     table.insert(milestone_vt, { string.format(" (%s)", utils.state_message_map[ms.state]), "OctoDetailsValue" })
+
+    -- Add progress bar inline
+    local progress = utils.get_milestone_progress(ms)
+    if progress then
+      vim.list_extend(milestone_vt, M.make_progress_bar(progress.percentage))
+    end
   else
     table.insert(milestone_vt, { "No milestone", "OctoMissingDetails" })
   end
@@ -3055,6 +3061,24 @@ function M.write_threads(bufnr, threads)
   end
 
   return comment_end
+end
+
+--- Create a progress bar visualization for virtual text
+---@param percentage number Progress percentage (0-100)
+---@param width? number Width of the progress bar (default: 25)
+---@return [string, string][] Virtual text chunks
+function M.make_progress_bar(percentage, width)
+  width = width or 25
+  local filled = math.floor((percentage / 100) * width)
+  local empty = width - filled
+  local bar_char = "━"
+
+  return {
+    { "  ", "Normal" },
+    { string.rep(bar_char, filled), "DiagnosticOk" },
+    { string.rep(bar_char, empty), "NonText" },
+    { string.format(" %d%%", percentage), "Normal" },
+  }
 end
 
 --- Write virtual text at a specific line in a buffer

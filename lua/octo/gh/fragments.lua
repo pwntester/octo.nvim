@@ -1222,7 +1222,7 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
   ---@field url string
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
-  ---@field milestone { title: string, state: string }
+  ---@field milestone { title: string, state: string, openIssueCount: number, closedIssueCount: number, progressPercentage: number }
   ---@field author { login: string }
 
   M.issue_information = [[
@@ -1240,7 +1240,13 @@ fragment IssueInformationFragment on Issue {
   url
   viewerDidAuthor
   viewerCanUpdate
-  milestone { title state }
+  milestone {
+    title
+    state
+    openIssueCount
+    closedIssueCount
+    progressPercentage
+  }
   author { login }
 }
 ]]
