@@ -422,6 +422,30 @@ function M.create_milestone(title, description)
   }
 end
 
+---Extract progress information from a milestone payload
+---@param milestone { title: string, state: string, openIssueCount: number?, closedIssueCount: number?, progressPercentage: number? }?
+---@return { open: number, closed: number, total: number, percentage: number }?
+function M.get_milestone_progress(milestone)
+  if not milestone or not milestone.openIssueCount then
+    return nil
+  end
+
+  local open = milestone.openIssueCount or 0
+  local closed = milestone.closedIssueCount or 0
+  local total = open + closed
+
+  if total == 0 then
+    return nil
+  end
+
+  return {
+    open = open,
+    closed = closed,
+    total = total,
+    percentage = math.floor(milestone.progressPercentage or 0),
+  }
+end
+
 local function branch_switch_message()
   local output = vim.fn.system "git branch --show-current"
   M.info("Switched to " .. vim.fn.trim(output))
