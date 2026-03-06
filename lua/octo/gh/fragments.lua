@@ -40,6 +40,40 @@ M.setup = function()
               }
             }
           }
+          ... on ProjectV2ItemFieldTextValue {
+            text
+            field {
+              ... on ProjectV2FieldCommon {
+                name
+              }
+            }
+          }
+          ... on ProjectV2ItemFieldNumberValue {
+            number
+            field {
+              ... on ProjectV2FieldCommon {
+                name
+              }
+            }
+          }
+          ... on ProjectV2ItemFieldDateValue {
+            date
+            field {
+              ... on ProjectV2FieldCommon {
+                name
+              }
+            }
+          }
+          ... on ProjectV2ItemFieldIterationValue {
+            title
+            duration
+            startDate
+            field {
+              ... on ProjectV2IterationField {
+                name
+              }
+            }
+          }
         }
       }
     }
