@@ -41,6 +41,8 @@ local function get_hl_groups()
     BubbleBlue = { fg = colors.grey, bg = colors.dark_blue },
     BubbleGrey = { fg = colors.white, bg = colors.grey },
 
+    TimelineItemViewed = { fg = colors.white, bg = colors.blue },
+
     BubbleDelimiterGreen = { fg = colors.dark_green },
     BubbleDelimiterRed = { fg = colors.dark_red },
     BubbleDelimiterPurple = { fg = colors.purple },

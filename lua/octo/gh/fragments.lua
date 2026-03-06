@@ -875,6 +875,16 @@ fragment ReadyForReviewEventFragment on ReadyForReviewEvent {
 }
 ]]
 
+  ---@class octo.fragments.PullRequestRevisionMarker
+  ---@field __typename "PullRequestRevisionMarker"
+  ---@field createdAt string
+
+  M.pull_request_revision_marker = [[
+fragment PullRequestRevisionMarkerFragment on PullRequestRevisionMarker {
+  createdAt
+}
+]]
+
   ---@class octo.fragments.RenamedTitleEvent
   ---@field __typename "RenamedTitleEvent"
   ---@field actor { login: string }
@@ -1165,6 +1175,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ...MilestonedEventFragment
     ...PullRequestCommitFragment
     ...PullRequestReviewFragment
+    ...PullRequestRevisionMarkerFragment
     ...ReadyForReviewEventFragment
     ...RenamedTitleEventFragment
     ...ReopenedEventFragment
@@ -1189,7 +1200,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     ]]
   end
 
-  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
+  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.PullRequestRevisionMarker|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
 
   ---@class octo.fragments.PullRequestTimelineItemsConnection
   ---@field nodes octo.PullRequestTimelineItem[]
