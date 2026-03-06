@@ -131,7 +131,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field baseRefName string
   ---@field baseRefOid string
   ---@field baseRepository { name: string, nameWithOwner: string }
-  ---@field milestone { title: string, state: string }
+  ---@field milestone { title: string, state: string, openIssueCount: number, closedIssueCount: number, progressPercentage: number }
   ---@field author { login: string }
   ---@field authorAssociation string
   ---@field viewerDidAuthor boolean
@@ -211,6 +211,9 @@ query($endCursor: String) {
       milestone {
         title
         state
+        openIssueCount
+        closedIssueCount
+        progressPercentage
       }
       author {
         login
