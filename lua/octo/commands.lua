@@ -2574,7 +2574,7 @@ function M.add_user(subject, logins)
       },
     }
   end
-  if logins then
+  if logins and #logins > 0 then
     local user_ids = {} ---@type string[]
     for _, user in ipairs(logins) do
       local user_id = utils.get_user_id(user)
