@@ -306,45 +306,68 @@ function M.write_discussion_poll(bufnr, poll, start_line)
     return start_line
   end
 
-  local lines = {}
-
-  -- Poll header with emoji
-  table.insert(lines, "")
-  table.insert(lines, string.format("📊 Poll: %s", poll.question))
-  table.insert(lines, "")
-
   -- Sort options by vote count (descending) for better visual hierarchy
   local options = vim.deepcopy(poll.options.nodes)
   table.sort(options, function(a, b)
     return a.totalVoteCount > b.totalVoteCount
   end)
 
-  -- Calculate percentages
+  -- Calculate percentages and total votes
   local total_votes = poll.totalVoteCount
 
-  -- Write each option
+  -- First pass: Calculate maximum option text width for alignment
+  local max_width = 0
   for _, option in ipairs(options) do
-    local percentage = total_votes > 0 and math.floor((option.totalVoteCount / total_votes) * 100) or 0
-
-    -- Build the option line with checkmark if viewer voted
     local prefix = option.viewerHasVoted and "✓ " or "  "
     local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
-
-    table.insert(lines, string.format("%s%s: %s", prefix, option.option, vote_text))
+    local line_text = string.format("%s%s: %s", prefix, option.option, vote_text)
+    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text))
   end
 
-  table.insert(lines, "")
-
-  -- Write the lines to buffer
-  vim.api.nvim_buf_set_lines(bufnr, start_line, start_line, false, lines)
-
-  -- Add progress bars as virtual text
-  local vt_line = start_line + 3 -- Start after header lines (empty, question, empty)
+  -- Second pass: Build virtual text arrays with aligned progress bars
+  local poll_vt_lines = {}
   for _, option in ipairs(options) do
     local percentage = total_votes > 0 and math.floor((option.totalVoteCount / total_votes) * 100) or 0
 
-    local progress_bar = M.make_progress_bar(percentage, 30)
-    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, vt_line, progress_bar)
+    local prefix = option.viewerHasVoted and "✓ " or "  "
+    local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
+    local option_text = string.format("%s%s: %s", prefix, option.option, vote_text)
+
+    -- Calculate padding for alignment
+    local current_width = vim.fn.strdisplaywidth(option_text)
+    local padding = string.rep(" ", max_width - current_width + 2)
+
+    -- Build complete virtual text array (option text + padding + progress bar)
+    local vt = {
+      { option_text, "Normal" },
+      { padding, "Normal" },
+    }
+    vim.list_extend(vt, M.make_progress_bar(percentage, 30))
+
+    table.insert(poll_vt_lines, vt)
+  end
+
+  -- Write header and empty lines for options
+  local lines = {
+    string.format("📊 Poll: %s", poll.question),
+  }
+
+  -- Add empty lines for each option (will be overlaid with virtual text)
+  for _ = 1, #options do
+    table.insert(lines, "")
+  end
+
+  -- Add trailing blank lines to separate from next section
+  table.insert(lines, "")
+  table.insert(lines, "")
+
+  -- Write to buffer
+  vim.api.nvim_buf_set_lines(bufnr, start_line, start_line, false, lines)
+
+  -- Overlay virtual text on empty option lines
+  local vt_line = start_line + 1 -- Start after header (question)
+  for _, vt in ipairs(poll_vt_lines) do
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, vt_line, vt)
     vt_line = vt_line + 1
   end
 
