@@ -79,13 +79,11 @@ function M.format_rate_limits(data)
 
   -- Add each API line and track its remaining percentage
   for _, api in ipairs(api_order) do
+    ---@type table|nil
     local resource = data.resources[api.key]
     if resource then
-      ---@type table
-      local api_resource = resource
-      table.insert(lines, format_api_line(api.name, api_resource))
-      local remaining_pct = 100 - math.floor((api_resource.used / api_resource.limit) * 100)
-      ---@type number
+      table.insert(lines, format_api_line(api.name, resource))
+      local remaining_pct = 100 - math.floor((resource.used / resource.limit) * 100)
       line_percentages[#lines] = remaining_pct
     end
   end
