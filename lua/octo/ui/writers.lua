@@ -296,6 +296,86 @@ function M.write_discussion_answer(bufnr, obj, line)
   M.write_block(bufnr, answer.body:gsub("\r\n", "\n"), line)
 end
 
+--- Write poll results for a discussion
+---@param bufnr integer The buffer number
+---@param poll octo.fragments.DiscussionPoll The poll data
+---@param start_line integer The starting line number
+---@return integer The next available line number
+function M.write_discussion_poll(bufnr, poll, start_line)
+  if not poll or poll == vim.NIL then
+    return start_line
+  end
+
+  -- Sort options by vote count (descending) for better visual hierarchy
+  local options = vim.deepcopy(poll.options.nodes)
+  table.sort(options, function(a, b)
+    return a.totalVoteCount > b.totalVoteCount
+  end)
+
+  -- Calculate percentages and total votes
+  local total_votes = poll.totalVoteCount
+
+  -- First pass: Calculate maximum option text width for alignment
+  local max_width = 0
+  for _, option in ipairs(options) do
+    local prefix = option.viewerHasVoted and "✓ " or "  "
+    local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
+    local line_text = string.format("%s%s: %s", prefix, option.option, vote_text)
+    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text))
+  end
+
+  -- Second pass: Build virtual text arrays with aligned progress bars
+  ---@type [string, string][][]
+  local poll_vt_lines = {}
+  for _, option in ipairs(options) do
+    local percentage = total_votes > 0 and math.floor((option.totalVoteCount / total_votes) * 100) or 0
+
+    local prefix = option.viewerHasVoted and "✓ " or "  "
+    local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
+    local option_text = string.format("%s%s: %s", prefix, option.option, vote_text)
+
+    -- Calculate padding for alignment
+    local current_width = vim.fn.strdisplaywidth(option_text)
+    local padding = string.rep(" ", max_width - current_width + 2)
+
+    -- Build complete virtual text array (option text + padding + progress bar)
+    local vt = {
+      { option_text, "Normal" },
+      { padding, "Normal" },
+    }
+    vim.list_extend(vt, M.make_progress_bar(percentage, 30))
+
+    table.insert(poll_vt_lines, vt)
+  end
+
+  -- Write header and empty lines for options
+  local lines = {
+    string.format("📊 Poll: %s", poll.question),
+  }
+
+  -- Add empty lines for each option (will be overlaid with virtual text)
+  for _ = 1, #options do
+    table.insert(lines, "")
+  end
+
+  -- Add trailing blank lines to separate from next section
+  table.insert(lines, "")
+  table.insert(lines, "")
+
+  -- Write to buffer
+  vim.api.nvim_buf_set_lines(bufnr, start_line, start_line, false, lines)
+
+  -- Overlay virtual text on empty option lines
+  local vt_line = start_line + 1 -- Start after header (question)
+  for _, vt in ipairs(poll_vt_lines) do
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, vt_line, vt)
+    vt_line = vt_line + 1
+  end
+
+  -- Return next available line
+  return start_line + #lines
+end
+
 ---@param bufnr integer
 ---@param repo octo.Repository
 function M.write_repo(bufnr, repo)
