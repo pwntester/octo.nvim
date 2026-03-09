@@ -731,16 +731,44 @@ function M.format_seconds(seconds)
   local minutes = math.floor(seconds / 60)
   seconds = seconds % 60
   if minutes < 60 then
+    if seconds == 0 then
+      return string.format("%dm", minutes)
+    end
     return string.format("%dm%ds", minutes, seconds)
   end
   local hours = math.floor(minutes / 60)
   minutes = minutes % 60
   if hours < 24 then
+    if minutes == 0 then
+      return string.format("%dh", hours)
+    end
     return string.format("%dh%dm", hours, minutes)
   end
   local days = math.floor(hours / 24)
   hours = hours % 24
+  if hours == 0 then
+    return string.format("%dd", days)
+  end
   return string.format("%dd%dh", days, hours)
+end
+
+---Formats a Unix epoch timestamp as relative time until that moment
+---@param unix_timestamp number|string Unix epoch seconds
+---@return string Formatted relative time (e.g., "54m 12s")
+function M.format_reset_time(unix_timestamp)
+  local timestamp = tonumber(unix_timestamp)
+  if not timestamp then
+    return "unknown"
+  end
+
+  local now = os.time()
+  local seconds_until = timestamp - now
+
+  if seconds_until <= 0 then
+    return "now"
+  end
+
+  return M.format_seconds(seconds_until)
 end
 
 ---Formats a string as a date

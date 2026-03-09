@@ -151,6 +151,9 @@ function M.setup()
     search = function(...)
       M.search(...)
     end,
+    limits = function()
+      require("octo.ratelimit").show_rate_limits()
+    end,
     discussion = {
       browser = function()
         navigation.open_in_browser()
