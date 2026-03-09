@@ -325,6 +325,7 @@ function M.write_discussion_poll(bufnr, poll, start_line)
   end
 
   -- Second pass: Build virtual text arrays with aligned progress bars
+  ---@type [string, string][][]
   local poll_vt_lines = {}
   for _, option in ipairs(options) do
     local percentage = total_votes > 0 and math.floor((option.totalVoteCount / total_votes) * 100) or 0
