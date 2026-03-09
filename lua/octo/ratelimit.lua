@@ -108,14 +108,58 @@ function M.show_rate_limits()
     end
 
     local lines, line_percentages = M.format_rate_limits(data)
-    local window = require "octo.ui.window"
 
-    -- Create centered popup window
-    local winid, bufnr = window.create_centered_float {
-      header = "GitHub API Rate Limits",
-      content = lines,
-      enter = true, -- Let cursor enter the window
-    }
+    -- Create buffer and set content
+    local bufnr = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+    vim.bo[bufnr].modifiable = false
+
+    -- Calculate window dimensions
+    local vim_width = vim.o.columns
+    local vim_height = vim.o.lines - vim.o.cmdheight
+    if vim.o.laststatus ~= 0 then
+      vim_height = vim_height - 1
+    end
+
+    -- Calculate max line width for window width
+    local max_width = 0
+    for _, line in ipairs(lines) do
+      max_width = math.max(max_width, vim.fn.strdisplaywidth(line))
+    end
+
+    -- Window dimensions (exact fit for content)
+    local width = math.min(math.floor(vim_width * 0.9), max_width + 4)
+    local height = #lines
+
+    -- Center the window
+    local row = math.floor((vim_height - height) / 2)
+    local col = math.floor((vim_width - width) / 2)
+
+    -- Determine border style
+    local border = "rounded"
+    if vim.o.winborder ~= "" and vim.o.winborder ~= "none" then
+      border = tostring(vim.o.winborder)
+    end
+
+    -- Create floating window
+    local winid = vim.api.nvim_open_win(bufnr, true, {
+      relative = "editor",
+      title = "GitHub API Rate Limits",
+      border = border,
+      row = row,
+      col = col,
+      width = width,
+      height = height,
+      style = "minimal",
+      focusable = true,
+    })
+
+    -- Set window options
+    vim.wo[winid].number = false
+    vim.wo[winid].relativenumber = false
+    vim.wo[winid].cursorline = false
+    vim.wo[winid].signcolumn = "no"
+    vim.wo[winid].foldcolumn = "0"
 
     -- Apply color highlighting based on remaining percentage
     for line_num, remaining_pct in pairs(line_percentages) do
@@ -132,13 +176,15 @@ function M.show_rate_limits()
       vim.api.nvim_buf_add_highlight(bufnr, -1, hl_group, line_num - 1, 0, -1)
     end
 
-    -- Add 'q' mapping to close window
+    -- Add close mappings
+    local window = require "octo.ui.window"
     vim.keymap.set("n", "q", function()
       window.try_close_wins(winid)
     end, { buffer = bufnr, noremap = true, silent = true, desc = "Close rate limits window" })
 
-    -- Make buffer read-only
-    vim.bo[bufnr].modifiable = false
+    vim.keymap.set("n", "<C-c>", function()
+      window.try_close_wins(winid)
+    end, { buffer = bufnr, noremap = true, silent = true, desc = "Close rate limits window" })
   end)
 end
 
