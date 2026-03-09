@@ -81,8 +81,11 @@ function M.format_rate_limits(data)
   for _, api in ipairs(api_order) do
     local resource = data.resources[api.key]
     if resource then
-      table.insert(lines, format_api_line(api.name, resource))
-      local remaining_pct = 100 - math.floor((resource.used / resource.limit) * 100)
+      ---@type table
+      local api_resource = resource
+      table.insert(lines, format_api_line(api.name, api_resource))
+      local remaining_pct = 100 - math.floor((api_resource.used / api_resource.limit) * 100)
+      ---@type number
       line_percentages[#lines] = remaining_pct
     end
   end
@@ -162,7 +165,9 @@ function M.show_rate_limits()
     vim.wo[winid].foldcolumn = "0"
 
     -- Apply color highlighting based on remaining percentage
+    local namespace = vim.api.nvim_create_namespace "octo_ratelimit"
     for line_num, remaining_pct in pairs(line_percentages) do
+      ---@type string
       local hl_group
       if remaining_pct > 50 then
         hl_group = "OctoPassingTest" -- Green
@@ -172,8 +177,11 @@ function M.show_rate_limits()
         hl_group = "OctoFailingTest" -- Red
       end
 
-      -- line_num is 1-indexed, nvim_buf_add_highlight expects 0-indexed
-      vim.api.nvim_buf_add_highlight(bufnr, -1, hl_group, line_num - 1, 0, -1)
+      -- line_num is 1-indexed, nvim_buf_set_extmark expects 0-indexed
+      vim.api.nvim_buf_set_extmark(bufnr, namespace, line_num - 1, 0, {
+        end_line = line_num,
+        hl_group = hl_group,
+      })
     end
 
     -- Add close mappings
