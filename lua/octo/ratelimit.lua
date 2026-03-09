@@ -56,7 +56,9 @@ end
 ---@return string[] lines Formatted lines for display
 ---@return table<number, number> line_percentages Map of line number to remaining percentage for coloring
 function M.format_rate_limits(data)
+  ---@type string[]
   local lines = {}
+  ---@type table<number, number>
   local line_percentages = {}
 
   -- Define display order and names for all APIs
