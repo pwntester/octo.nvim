@@ -296,6 +296,62 @@ function M.write_discussion_answer(bufnr, obj, line)
   M.write_block(bufnr, answer.body:gsub("\r\n", "\n"), line)
 end
 
+--- Write poll results for a discussion
+---@param bufnr integer The buffer number
+---@param poll octo.fragments.DiscussionPoll The poll data
+---@param start_line integer The starting line number
+---@return integer The next available line number
+function M.write_discussion_poll(bufnr, poll, start_line)
+  if not poll or poll == vim.NIL then
+    return start_line
+  end
+
+  local lines = {}
+
+  -- Poll header with emoji
+  table.insert(lines, "")
+  table.insert(lines, string.format("📊 Poll: %s", poll.question))
+  table.insert(lines, "")
+
+  -- Sort options by vote count (descending) for better visual hierarchy
+  local options = vim.deepcopy(poll.options.nodes)
+  table.sort(options, function(a, b)
+    return a.totalVoteCount > b.totalVoteCount
+  end)
+
+  -- Calculate percentages
+  local total_votes = poll.totalVoteCount
+
+  -- Write each option
+  for _, option in ipairs(options) do
+    local percentage = total_votes > 0 and math.floor((option.totalVoteCount / total_votes) * 100) or 0
+
+    -- Build the option line with checkmark if viewer voted
+    local prefix = option.viewerHasVoted and "✓ " or "  "
+    local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
+
+    table.insert(lines, string.format("%s%s: %s", prefix, option.option, vote_text))
+  end
+
+  table.insert(lines, "")
+
+  -- Write the lines to buffer
+  vim.api.nvim_buf_set_lines(bufnr, start_line, start_line, false, lines)
+
+  -- Add progress bars as virtual text
+  local vt_line = start_line + 3 -- Start after header lines (empty, question, empty)
+  for _, option in ipairs(options) do
+    local percentage = total_votes > 0 and math.floor((option.totalVoteCount / total_votes) * 100) or 0
+
+    local progress_bar = M.make_progress_bar(percentage, 30)
+    M.write_virtual_text(bufnr, constants.OCTO_DETAILS_VT_NS, vt_line, progress_bar)
+    vt_line = vt_line + 1
+  end
+
+  -- Return next available line
+  return start_line + #lines
+end
+
 ---@param bufnr integer
 ---@param repo octo.Repository
 function M.write_repo(bufnr, repo)
