@@ -247,7 +247,12 @@ local function count_pending_comments(threads)
   return count
 end
 
-function Review:discard()
+---Discard the current review
+---@param opts? { skip_confirm?: boolean } Options for discarding the review
+function Review:discard(opts)
+  opts = opts or {}
+  local skip_confirm = opts.skip_confirm or false
+
   gh.api.graphql {
     query = queries.pending_review_threads,
     F = { owner = self.pull_request.owner, name = self.pull_request.name, number = self.pull_request.number },
@@ -266,7 +271,7 @@ function Review:discard()
 
           local pending_count = count_pending_comments(resp.data.repository.pullRequest.reviewThreads.nodes)
           local choice = 1
-          if pending_count > 0 then
+          if pending_count > 0 and not skip_confirm then
             local message = string.format(
               "%d pending comment%s will be deleted, are you sure?",
               pending_count,
