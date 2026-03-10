@@ -102,6 +102,12 @@ writers.write_timeline_items(bufnr, {
         actor = { login = me },
         createdAt = now,
       },
+      ---@type octo.fragments.PullRequestRevisionMarker
+      {
+        __typename = "PullRequestRevisionMarker",
+        actor = { login = me },
+        createdAt = now,
+      },
       ---@type octo.fragments.ConvertToDraftEvent
       {
         __typename = "ConvertToDraftEvent",

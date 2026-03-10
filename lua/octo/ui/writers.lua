@@ -2755,6 +2755,12 @@ function M.write_ready_for_review_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.PullRequestRevisionMarker
+function M.write_pull_request_revision_marker_event(bufnr, item)
+  TextChunkBuilder:new():timeline_marker("viewed"):heading("New changes since you last viewed"):write_event(bufnr)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent
 ---@param add boolean
 local function write_pinned_event(bufnr, item, add)
@@ -3445,6 +3451,9 @@ function M.write_timeline_items(bufnr, obj)
       prev_is_event = true
     elseif item.__typename == "ReadyForReviewEvent" then
       M.write_ready_for_review_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "PullRequestRevisionMarker" then
+      M.write_pull_request_revision_marker_event(bufnr, item)
       prev_is_event = true
     elseif item.__typename == "DeployedEvent" then
       M.write_deployed_event(bufnr, item)
