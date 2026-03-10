@@ -26,6 +26,7 @@ local M = {}
 ---@field bodyMetadata BodyMetadata
 ---@field commentsMetadata CommentMetadata[]
 ---@field threadsMetadata ThreadMetadata[]
+---@field timeline_state? table State for progressive timeline loading
 ---@field private node octo.PullRequest|octo.Issue|octo.Release|octo.Discussion|octo.Repository
 ---@field taggable_users? string[] list of taggable users for the buffer. Trigger with @
 ---@field owner? string
@@ -198,13 +199,58 @@ function OctoBuffer:render_issue()
   self.bodyMetadata.reactionGroups = obj.reactionGroups
   self.bodyMetadata.reactionLine = reaction_line
 
-  -- write timeline items
-  writers.write_timeline_items(self.bufnr, obj)
+  -- Initialize timeline state for progressive loading
+  self.timeline_state = {
+    loaded_pages = 0, -- Start at 0 since we haven't loaded any timeline pages yet
+    is_complete = false,
+    pending_label_events = {},
+    pending_subissue_added_events = {},
+    pending_subissue_removed_events = {},
+    pending_force_push_events = {},
+    pending_commits = {},
+    pending_review_requested_events = {},
+    pending_review_request_removed_events = {},
+    pending_assignment_events = {},
+    prev_is_event = false,
+  }
+
+  -- write timeline items (will be empty initially, populated by append_timeline_page)
+  if obj.timelineItems and #obj.timelineItems.nodes > 0 then
+    writers.write_timeline_items(self.bufnr, obj, self.timeline_state)
+  else
+    -- Show loading indicator if timeline is empty (will be removed when first page arrives)
+    self.timeline_state.loading_indicator_line = writers.write_loading_indicator(self.bufnr)
+  end
 
   -- reset modified option
   vim.bo[self.bufnr].modified = false
 
   self.ready = true
+end
+
+---Appends additional timeline items to the buffer (for progressive loading)
+---@param items table[] Timeline items to append
+---@param is_final boolean Whether this is the last page
+function OctoBuffer:append_timeline_page(items, is_final)
+  if not self.timeline_state then
+    return
+  end
+
+  -- Remove loading indicator on first page
+  if self.timeline_state.loaded_pages == 0 and self.timeline_state.loading_indicator_line then
+    writers.remove_loading_indicator(self.bufnr, self.timeline_state.loading_indicator_line)
+    self.timeline_state.loading_indicator_line = nil
+  end
+
+  -- Append timeline items to buffer
+  writers.append_timeline_items(self.bufnr, items, self.timeline_state, is_final)
+
+  self.timeline_state.loaded_pages = self.timeline_state.loaded_pages + 1
+
+  if is_final then
+    self.timeline_state.is_complete = true
+    vim.bo[self.bufnr].modified = false
+  end
 end
 
 ---Draws review threads
