@@ -108,8 +108,9 @@ function M.load_buffer(opts)
   local repo, kind, id, hostname = buffer_info.repo, buffer_info.kind, buffer_info.id, buffer_info.hostname
 
   M.load(repo, kind, id, hostname, function(obj)
+    local buffer
     vim.api.nvim_buf_call(bufnr, function()
-      M.create_buffer(kind, obj, repo, false, hostname)
+      buffer = M.create_buffer(kind, obj, repo, false, hostname)
 
       -- get size of newly created buffer
       local lines = vim.api.nvim_buf_line_count(bufnr)
@@ -125,6 +126,7 @@ function M.load_buffer(opts)
         utils.info(string.format("Loaded %s/%s/%d", repo, kind, id))
       end
     end)
+    return buffer
   end)
 end
 
@@ -139,13 +141,13 @@ function M.load(repo, kind, id, hostname, cb)
   ---@type string, string, table<string, string|integer>
   local query, key, fields
   if kind == "pull" then
-    query = graphql("pull_request_query", owner, name, id, _G.octo_pv2_fragment)
+    query = queries.pull_request_metadata
     key = "pullRequest"
-    fields = {}
+    fields = { owner = owner, name = name, number = id }
   elseif kind == "issue" then
-    query = graphql("issue_query", owner, name, id, _G.octo_pv2_fragment)
+    query = string.format(queries.issue_metadata, _G.octo_pv2_fragment)
     key = "issue"
-    fields = {}
+    fields = { owner = owner, name = name, number = id }
   elseif kind == "repo" then
     query = queries.repository
     fields = { owner = owner, name = name }
@@ -167,10 +169,30 @@ function M.load(repo, kind, id, hostname, cb)
 
   local function load_buffer(output)
     if kind == "pull" or kind == "issue" then
-      local resp = utils.aggregate_pages(output, string.format("data.repository.%s.timelineItems.nodes", key))
+      -- For pull requests and issues, load metadata first then timeline
+      local resp = vim.json.decode(output)
+
       ---@type octo.Issue|octo.PullRequest
       local obj = resp.data.repository[key]
-      cb(obj)
+
+      -- Initialize empty timeline for initial render
+      obj.timelineItems = { nodes = {}, pageInfo = { hasNextPage = false } }
+
+      -- Create buffer with metadata only (no timeline yet)
+      local buffer = cb(obj)
+
+      if not buffer then
+        utils.error(string.format("Failed to create buffer for %s/%s#%s", repo, kind, tostring(id)))
+        return
+      end
+
+      -- For PRs, fetch review threads in background
+      if kind == "pull" then
+        M.load_review_threads(repo, id, hostname, buffer)
+      end
+
+      -- Start loading timeline from the first page
+      M.load_timeline_pages(repo, kind, id, hostname, buffer, nil)
     elseif kind == "repo" then
       local resp = vim.json.decode(output)
       ---@type octo.Repository
@@ -191,14 +213,122 @@ function M.load(repo, kind, id, hostname, cb)
     end
   end
 
+  local query_start = vim.loop.hrtime()
+
   gh.api.graphql {
     query = query,
     fields = fields,
-    paginate = true,
+    paginate = false, -- Don't paginate automatically, we'll do it manually
     jq = ".",
     hostname = hostname,
     opts = {
-      cb = gh.create_callback { failure = utils.print_err, success = load_buffer },
+      cb = gh.create_callback {
+        failure = utils.print_err,
+        success = function(output)
+          load_buffer(output)
+        end,
+      },
+    },
+  }
+end
+
+-- Load review threads in background (for PRs)
+function M.load_review_threads(repo, id, hostname, buffer)
+  if not buffer or not vim.api.nvim_buf_is_valid(buffer.bufnr) then
+    return
+  end
+
+  local owner, name = utils.split_repo(repo)
+
+  gh.api.graphql {
+    query = queries.pull_request_review_threads,
+    fields = {
+      owner = owner,
+      name = name,
+      number = id,
+    },
+    paginate = false,
+    jq = ".",
+    hostname = hostname,
+    opts = {
+      cb = gh.create_callback {
+        failure = utils.print_err,
+        success = function(output)
+          local resp = vim.json.decode(output)
+          local review_threads = resp.data.repository.pullRequest.reviewThreads
+
+          -- Update the PR object with review threads
+          if vim.api.nvim_buf_is_valid(buffer.bufnr) then
+            local pr = buffer:pullRequest()
+            if pr then
+              pr.reviewThreads = review_threads
+            end
+          end
+        end,
+      },
+    },
+  }
+end
+
+-- Load additional timeline pages progressively
+function M.load_timeline_pages(repo, kind, id, hostname, buffer, cursor)
+  if not buffer or not vim.api.nvim_buf_is_valid(buffer.bufnr) then
+    return
+  end
+
+  local owner, name = utils.split_repo(repo)
+  local query
+
+  if kind == "pull" then
+    query = queries.pull_request_timeline_page
+  elseif kind == "issue" then
+    query = queries.issue_timeline_page
+  else
+    return
+  end
+
+  local key = kind == "pull" and "pullRequest" or "issue"
+
+  gh.api.graphql {
+    query = query,
+    fields = {
+      owner = owner,
+      name = name,
+      number = id,
+      cursor = cursor, -- nil for first page
+    },
+    paginate = false,
+    jq = ".",
+    hostname = hostname,
+    opts = {
+      cb = gh.create_callback {
+        failure = utils.print_err,
+        success = function(output)
+          local resp = vim.json.decode(output)
+          local timeline_info = resp.data.repository[key].timelineItems
+          local items = timeline_info.nodes
+          local has_next_page = timeline_info.pageInfo.hasNextPage
+          local next_cursor = timeline_info.pageInfo.endCursor
+
+          -- Filter out vim.NIL values
+          local filtered_items = {}
+          for _, item in ipairs(items) do
+            if item ~= vim.NIL then
+              table.insert(filtered_items, item)
+            end
+          end
+
+          -- Append timeline items to buffer
+          if vim.api.nvim_buf_is_valid(buffer.bufnr) then
+            buffer:append_timeline_page(filtered_items, not has_next_page)
+
+            -- Load next page if available
+            if has_next_page then
+              M.load_timeline_pages(repo, kind, id, hostname, buffer, next_cursor)
+            end
+          end
+        end,
+      },
     },
   }
 end
@@ -408,6 +538,8 @@ function M.create_buffer(kind, obj, repo, create, hostname)
   end
   utils.clear_history()
   require("octo.polling").track_buffer(bufnr)
+
+  return octo_buffer
 end
 
 return M
