@@ -64,6 +64,10 @@ local function open_preview_buffer(command)
     actions.close(prompt_bufnr)
     ---@type integer
     local preview_bufnr = require("telescope.state").get_global_key "last_preview_bufnr"
+    if not preview_bufnr then
+      utils.error "No preview available"
+      return
+    end
     if command == "default" then
       vim.cmd(string.format(":buffer %d", preview_bufnr))
     elseif command == "horizontal" then
