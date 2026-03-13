@@ -1727,13 +1727,8 @@ function M.write_review_thread_header(bufnr, opts, line)
     { "] ", "OctoSymbol" },
   }
   if opts.isOutdated then
-    -- local outdated_bubble = bubbles.make_bubble(
-    --   "outdate",
-    --   "OctoBubbleRed",
-    --   { margin_width = 1 }
-    -- )
-    -- vim.list_extend(header_vt, outdated_bubble)
-    vim.list_extend(header_vt, { { conf.outdated_icon, "OctoRed" } })
+    local outdated_bubble = bubbles.make_bubble("Outdated", "OctoBubbleYellow", { margin_width = 1 })
+    vim.list_extend(header_vt, outdated_bubble)
   end
 
   if opts.isResolved then
