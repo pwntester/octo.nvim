@@ -1621,7 +1621,17 @@ function M.labels(opts)
             final_actions["confirm"] = function(picker, item)
               picker:close()
               if type(cb) == "function" then
-                cb { item }
+                if item then
+                  cb { { id = item.id } }
+                else
+                  local prompt = vim.trim(picker.input.filter.pattern or "")
+                  if prompt ~= "" then
+                    local label_id = utils.get_label_id(prompt)
+                    if label_id then
+                      cb { { id = label_id } }
+                    end
+                  end
+                end
               end
             end
           end
@@ -1643,6 +1653,7 @@ function M.labels(opts)
               },
             },
             actions = final_actions,
+            confirm = final_actions.confirm,
           }
         end
       end,
@@ -1726,7 +1737,17 @@ function M.assigned_labels(opts)
             final_actions["confirm"] = function(picker, item)
               picker:close()
               if type(cb) == "function" then
-                cb { item }
+                if item then
+                  cb { { id = item.id } }
+                else
+                  local prompt = vim.trim(picker.input.filter.pattern or "")
+                  if prompt ~= "" then
+                    local label_id = utils.get_label_id(prompt)
+                    if label_id then
+                      cb { { id = label_id } }
+                    end
+                  end
+                end
               end
             end
           end
@@ -1748,6 +1769,7 @@ function M.assigned_labels(opts)
               },
             },
             actions = final_actions,
+            confirm = final_actions.confirm,
           }
         end
       end,

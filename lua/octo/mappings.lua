@@ -189,6 +189,9 @@ return {
       ["Change Status Field"] = function()
         commands.project.field.set "Status"
       end,
+      ["Change Priority Field"] = function()
+        commands.project.field.set("Priority")
+      end,
       ["Add Milestone"] = commands.milestone.add,
       ["Remove Milestone"] = commands.milestone.remove,
       ["Edit Parent Issue"] = commands.parent.edit,
@@ -351,6 +354,9 @@ return {
   end,
   set_project_field_status = function()
     require("octo.commands").commands.project.field.set "Status"
+  end,
+  set_project_field_priority = function()
+    require("octo.commands").commands.project.field.set("Priority")
   end,
   add_assignee = function()
     require("octo.commands").add_user "assignee"
