@@ -151,6 +151,9 @@ function M.setup()
     search = function(...)
       M.search(...)
     end,
+    limits = function()
+      require("octo.ratelimit").show_rate_limits()
+    end,
     discussion = {
       browser = function()
         navigation.open_in_browser()
@@ -2623,7 +2626,7 @@ function M.add_user(subject, logins)
       },
     }
   end
-  if logins then
+  if logins and #logins > 0 then
     local user_ids = {} ---@type string[]
     for _, user in ipairs(logins) do
       local user_id = utils.get_user_id(user)

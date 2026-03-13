@@ -1256,7 +1256,7 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
   ---@field url string
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
-  ---@field milestone { title: string, state: string }
+  ---@field milestone { title: string, state: string, openIssueCount: number, closedIssueCount: number, progressPercentage: number }
   ---@field author { login: string }
 
   M.issue_information = [[
@@ -1274,7 +1274,13 @@ fragment IssueInformationFragment on Issue {
   url
   viewerDidAuthor
   viewerCanUpdate
-  milestone { title state }
+  milestone {
+    title
+    state
+    openIssueCount
+    closedIssueCount
+    progressPercentage
+  }
   author { login }
 }
 ]]
@@ -1416,6 +1422,7 @@ fragment DiscussionInfoFragment on Discussion {
   ---@class octo.fragments.DiscussionDetails : octo.fragments.DiscussionInfo, octo.ReactionGroupsFragment
   ---@field body string
   ---@field category { name: string, emoji: string }
+  ---@field poll octo.fragments.DiscussionPoll
   ---@field answer { author: { login: string }, body: string, createdAt: string, viewerDidAuthor: boolean }
   ---@field createdAt string
   ---@field closedAt string
@@ -1432,6 +1439,9 @@ fragment DiscussionDetailsFragment on Discussion {
   category {
     name
     emoji
+  }
+  poll {
+    ...DiscussionPollFragment
   }
   answer {
     author {
@@ -1482,6 +1492,42 @@ fragment DiscussionCommentFragment on DiscussionComment {
   viewerDidAuthor
   viewerCanUpdate
   viewerCanDelete
+}
+]]
+  ---@class octo.fragments.DiscussionPollOption
+  ---@field id string
+  ---@field option string
+  ---@field totalVoteCount number
+  ---@field viewerHasVoted boolean
+
+  M.discussion_poll_option = [[
+fragment DiscussionPollOptionFragment on DiscussionPollOption {
+  id
+  option
+  totalVoteCount
+  viewerHasVoted
+}
+]]
+  ---@class octo.fragments.DiscussionPoll
+  ---@field id string
+  ---@field question string
+  ---@field totalVoteCount number
+  ---@field viewerCanVote boolean
+  ---@field viewerHasVoted boolean
+  ---@field options { nodes: octo.fragments.DiscussionPollOption[] }
+
+  M.discussion_poll = [[
+fragment DiscussionPollFragment on DiscussionPoll {
+  id
+  question
+  totalVoteCount
+  viewerCanVote
+  viewerHasVoted
+  options(first: 10) {
+    nodes {
+      ...DiscussionPollOptionFragment
+    }
+  }
 }
 ]]
   ---@class octo.fragments.Repository

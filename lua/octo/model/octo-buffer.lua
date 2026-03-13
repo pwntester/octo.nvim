@@ -134,6 +134,12 @@ function OctoBuffer:render_discussion()
   writers.write_discussion_details(self.bufnr, obj)
   writers.write_body(self.bufnr, obj, 13)
 
+  -- write poll if it exists
+  if obj.poll ~= vim.NIL and obj.poll then
+    local line = vim.api.nvim_buf_line_count(self.bufnr) + 1
+    writers.write_discussion_poll(self.bufnr, obj.poll, line)
+  end
+
   -- write body reactions
   local reaction_line ---@type integer?
   if utils.count_reactions(obj.reactionGroups) > 0 then

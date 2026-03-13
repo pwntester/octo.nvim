@@ -131,7 +131,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field baseRefName string
   ---@field baseRefOid string
   ---@field baseRepository { name: string, nameWithOwner: string }
-  ---@field milestone { title: string, state: string }
+  ---@field milestone { title: string, state: string, openIssueCount: number, closedIssueCount: number, progressPercentage: number }
   ---@field author { login: string }
   ---@field authorAssociation string
   ---@field viewerDidAuthor boolean
@@ -211,6 +211,9 @@ query($endCursor: String) {
       milestone {
         title
         state
+        openIssueCount
+        closedIssueCount
+        progressPercentage
       }
       author {
         login
@@ -702,7 +705,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
     }
   }
 }
-]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_poll .. fragments.discussion_poll_option .. fragments.discussion_comment
 
   ---@class octo.Release : octo.ReactionGroupsFragment
   --- @field id string
