@@ -735,7 +735,7 @@ function M.write_details(bufnr, issue, update, include_status)
   end
   table.insert(details, author_vt)
 
-  add_details_line(details, "Creation date", issue.createdAt, "date")
+  add_details_line(details, "Created", issue.createdAt, "date")
   if issue.state == "CLOSED" then
     add_details_line(details, "Closed", issue.closedAt, "date")
   else

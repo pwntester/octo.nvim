@@ -1450,6 +1450,28 @@ query($owner: String!, $name: String!) {
     }
   }
   ]]
+
+  -- https://docs.github.com/en/graphql/reference/objects#projectv2singleSelectField
+  M.project_v2_single_select_fields = [[
+  query($project_id: ID!) {
+    node(id: $project_id) {
+      ... on ProjectV2 {
+        fields(first: 100) {
+          nodes {
+            ... on ProjectV2SingleSelectField {
+              id
+              name
+              options {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  ]]
 end
 
 return M
