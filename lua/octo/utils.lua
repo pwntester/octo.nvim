@@ -1779,7 +1779,7 @@ function M.get_label_id(label)
   }
 
   if not M.is_blank(output) then
-    local resp = vim.json.decode(output)
+    local resp = vim.json.decode(output --[[@as string]])
     if resp and resp.data and resp.data.repository then
       local lbl = resp.data.repository.label ---@type any
       if lbl and lbl ~= vim.NIL and lbl.id then

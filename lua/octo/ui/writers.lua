@@ -768,7 +768,7 @@ function M.write_details(bufnr, issue, update, include_status)
         table.insert(details, project_header)
 
         -- Collect and display all field values (including empty ones)
-        local fields = {}
+        local fields = {} ---@type { name: string, value: string? }[]
         for _, fieldValue in ipairs(item.fieldValues.nodes) do
           if fieldValue.field ~= nil and fieldValue.field.name ~= nil then
             local field_name = fieldValue.field.name
