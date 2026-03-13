@@ -26,7 +26,9 @@ local function get_field_options(project_id, field_name, cb)
           return
         end
 
+        ---@diagnostic disable-next-line: no-unknown
         for _, field in ipairs(resp.data.node.fields.nodes) do
+          ---@cast field any
           if field.name == field_name then
             cb(field.id, field.options)
             return
@@ -99,7 +101,9 @@ M.set_field = function(field_name)
 
     -- Create picker options
     local items = {}
+    ---@diagnostic disable-next-line: no-unknown
     for _, option in ipairs(options) do
+      ---@cast option any
       table.insert(items, option.name)
     end
 
@@ -112,8 +116,11 @@ M.set_field = function(field_name)
 
       -- Find the option ID
       local option_id = nil
+      ---@diagnostic disable-next-line: no-unknown
       for _, option in ipairs(options) do
+        ---@cast option any
         if option.name == choice then
+          ---@diagnostic disable-next-line: no-unknown
           option_id = option.id
           break
         end

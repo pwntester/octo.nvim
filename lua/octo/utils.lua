@@ -1781,7 +1781,7 @@ function M.get_label_id(label)
   if not M.is_blank(output) then
     local resp = vim.json.decode(output)
     if resp and resp.data and resp.data.repository then
-      local lbl = resp.data.repository.label
+      local lbl = resp.data.repository.label ---@type any
       if lbl and lbl ~= vim.NIL and lbl.id then
         return lbl.id
       end
@@ -1808,13 +1808,8 @@ function M.get_label_id(label)
     return
   end
 
-  local create_resp = vim.json.decode(create_output)
-  if
-    create_resp
-    and create_resp.data
-    and create_resp.data.createLabel
-    and create_resp.data.createLabel.label
-  then
+  local create_resp = vim.json.decode(create_output --[[@as string]])
+  if create_resp and create_resp.data and create_resp.data.createLabel and create_resp.data.createLabel.label then
     M.info("Created label: " .. label)
     return create_resp.data.createLabel.label.id
   end

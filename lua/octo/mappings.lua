@@ -184,10 +184,10 @@ return {
       ["Add Type"] = commands.type.add,
       ["Remove Type"] = commands.type.remove,
       ["Change WS Field"] = function()
-        commands.project.field.set("WS")
+        commands.project.field.set "WS"
       end,
       ["Change Status Field"] = function()
-        commands.project.field.set("Status")
+        commands.project.field.set "Status"
       end,
       ["Add Milestone"] = commands.milestone.add,
       ["Remove Milestone"] = commands.milestone.remove,
@@ -347,10 +347,10 @@ return {
     require("octo.commands").remove_label()
   end,
   set_project_field_ws = function()
-    require("octo.commands").commands.project.field.set("WS")
+    require("octo.commands").commands.project.field.set "WS"
   end,
   set_project_field_status = function()
-    require("octo.commands").commands.project.field.set("Status")
+    require("octo.commands").commands.project.field.set "Status"
   end,
   add_assignee = function()
     require("octo.commands").add_user "assignee"

@@ -11,9 +11,13 @@ M.setup = function()
   ---  },
   ---  fieldValues: {
   ---    nodes: {
-  ---      name: string,
-  ---      optionId: string,
-  ---      field: {
+  ---      name?: string,
+  ---      optionId?: string,
+  ---      text?: string,
+  ---      number?: number,
+  ---      date?: string,
+  ---      title?: string,
+  ---      field?: {
   ---        name: string,
   ---      },
   ---    }[],
