@@ -11,9 +11,13 @@ M.setup = function()
   ---  },
   ---  fieldValues: {
   ---    nodes: {
-  ---      name: string,
-  ---      optionId: string,
-  ---      field: {
+  ---      name?: string,
+  ---      optionId?: string,
+  ---      text?: string,
+  ---      number?: number,
+  ---      date?: string,
+  ---      title?: string,
+  ---      field?: {
   ---        name: string,
   ---      },
   ---    }[],
@@ -36,6 +40,40 @@ M.setup = function()
             optionId
             field {
               ... on ProjectV2SingleSelectField {
+                name
+              }
+            }
+          }
+          ... on ProjectV2ItemFieldTextValue {
+            text
+            field {
+              ... on ProjectV2FieldCommon {
+                name
+              }
+            }
+          }
+          ... on ProjectV2ItemFieldNumberValue {
+            number
+            field {
+              ... on ProjectV2FieldCommon {
+                name
+              }
+            }
+          }
+          ... on ProjectV2ItemFieldDateValue {
+            date
+            field {
+              ... on ProjectV2FieldCommon {
+                name
+              }
+            }
+          }
+          ... on ProjectV2ItemFieldIterationValue {
+            title
+            duration
+            startDate
+            field {
+              ... on ProjectV2IterationField {
                 name
               }
             }

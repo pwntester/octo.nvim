@@ -1374,6 +1374,24 @@ mutation($issue_id: ID!, $issue_type_id: ID) {
     }
   }
   ]]
+
+  -- https://docs.github.com/en/graphql/reference/mutations#updateprojectv2itemfieldvalue
+  M.update_project_v2_item_field_value = [[
+  mutation($project_id: ID!, $item_id: ID!, $field_id: ID!, $option_id: String!) {
+    updateProjectV2ItemFieldValue(
+      input: {
+        projectId: $project_id,
+        itemId: $item_id,
+        fieldId: $field_id,
+        value: { singleSelectOptionId: $option_id }
+      }
+    ) {
+      projectV2Item {
+        id
+      }
+    }
+  }
+  ]]
 end
 
 return M

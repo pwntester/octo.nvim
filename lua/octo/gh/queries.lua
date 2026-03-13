@@ -1275,6 +1275,17 @@ query($owner: String!, $name: String!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
+  -- https://docs.github.com/en/graphql/reference/objects#repository (label field)
+  M.label_by_name = [[
+query($owner: String!, $name: String!, $label: String!) {
+  repository(owner: $owner, name: $name) {
+    label(name: $label) {
+      id
+    }
+  }
+}
+]]
+
   M.open_milestones = [[
 query($name: String!, $owner: String!, $n_milestones: Int!) {
   repository(owner: $owner, name: $name) {
@@ -1446,6 +1457,28 @@ query($owner: String!, $name: String!) {
       issueOrPullRequest(number: $number) {
         ... on Issue { updatedAt }
         ... on PullRequest { updatedAt }
+      }
+    }
+  }
+  ]]
+
+  -- https://docs.github.com/en/graphql/reference/objects#projectv2singleSelectField
+  M.project_v2_single_select_fields = [[
+  query($project_id: ID!) {
+    node(id: $project_id) {
+      ... on ProjectV2 {
+        fields(first: 100) {
+          nodes {
+            ... on ProjectV2SingleSelectField {
+              id
+              name
+              options {
+                id
+                name
+              }
+            }
+          }
+        }
       }
     }
   }
