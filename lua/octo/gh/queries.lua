@@ -1275,6 +1275,17 @@ query($owner: String!, $name: String!) {
 }
 ]] .. fragments.label_connection .. fragments.label
 
+  -- https://docs.github.com/en/graphql/reference/objects#repository (label field)
+  M.label_by_name = [[
+query($owner: String!, $name: String!, $label: String!) {
+  repository(owner: $owner, name: $name) {
+    label(name: $label) {
+      id
+    }
+  }
+}
+]]
+
   M.open_milestones = [[
 query($name: String!, $owner: String!, $n_milestones: Int!) {
   repository(owner: $owner, name: $name) {

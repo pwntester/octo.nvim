@@ -1769,19 +1769,57 @@ function M.get_label_id(label)
   end
 
   local owner, name = M.split_repo(buffer.repo)
-  -- Use REST API to fetch a specific label directly instead of fetching all labels
-  local output = gh.api.get {
-    "/repos/{owner}/{repo}/labels/{name}",
-    format = { owner = owner, repo = name, name = label },
-    jq = ".node_id",
+  -- Use GraphQL label(name:) to fetch a single label by name.
+  -- Variables handle special characters safely (no string injection).
+  -- Avoid jq to prevent ambiguity with null values.
+  local output = gh.api.graphql {
+    query = queries.label_by_name,
+    fields = { owner = owner, name = name, label = label },
     opts = { mode = "sync" },
   }
 
-  if M.is_blank(output) then
+  if not M.is_blank(output) then
+    local resp = vim.json.decode(output)
+    if resp and resp.data and resp.data.repository then
+      local lbl = resp.data.repository.label
+      if lbl and lbl ~= vim.NIL and lbl.id then
+        return lbl.id
+      end
+    end
+  end
+
+  -- Label not found — create it with a random color
+  local repo_id = M.get_repo_id(buffer.repo)
+  if not repo_id then
+    M.error("Cannot get repo ID to create label: " .. label)
     return
   end
 
-  return M.trim(output or "")
+  math.randomseed(os.time())
+  local color = string.format("%06X", math.random(0, 0xFFFFFF))
+  local create_query = graphql("create_label_mutation", repo_id, label, "", color)
+  local create_output = gh.api.graphql {
+    query = create_query,
+    opts = { mode = "sync" },
+  }
+
+  if M.is_blank(create_output) then
+    M.error("Failed to create label: " .. label)
+    return
+  end
+
+  local create_resp = vim.json.decode(create_output)
+  if
+    create_resp
+    and create_resp.data
+    and create_resp.data.createLabel
+    and create_resp.data.createLabel.label
+  then
+    M.info("Created label: " .. label)
+    return create_resp.data.createLabel.label.id
+  end
+
+  M.error("Failed to create label: " .. label)
 end
 
 --- Generate maps from diffhunk line to code line:
