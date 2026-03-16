@@ -108,6 +108,9 @@ function M.load_buffer(opts)
   local repo, kind, id, hostname = buffer_info.repo, buffer_info.kind, buffer_info.id, buffer_info.hostname
 
   M.load(repo, kind, id, hostname, function(obj)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      return
+    end
     vim.api.nvim_buf_call(bufnr, function()
       M.create_buffer(kind, obj, repo, false, hostname)
 
