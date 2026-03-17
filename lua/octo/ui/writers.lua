@@ -321,7 +321,7 @@ function M.write_discussion_poll(bufnr, poll, start_line)
     local prefix = option.viewerHasVoted and "✓ " or "  "
     local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
     local line_text = string.format("%s%s: %s", prefix, option.option, vote_text)
-    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text))
+    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text) --[[@as integer]])
   end
 
   -- Second pass: Build virtual text arrays with aligned progress bars
@@ -758,37 +758,59 @@ function M.write_details(bufnr, issue, update, include_status)
 
   -- projects v2
   if issue.projectItems and #issue.projectItems.nodes > 0 then
-    local projects_vt = {
-      { "Projects (v2): ", "OctoDetailsLabel" },
-    }
-    --local project_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("NormalFloat")), "bg#"):sub(2)
-    --local column_color = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID("Comment")), "fg#"):sub(2)
     for idx, item in ipairs(issue.projectItems.nodes) do
       if item.project ~= vim.NIL and item.project then
-        if idx >= 2 then
-          table.insert(projects_vt, { ", " })
-        end
+        -- Project title header
+        local project_header = {
+          { string.format("Project%s: ", idx > 1 and " " .. idx or ""), "OctoDetailsLabel" },
+          { item.project.title, "OctoDetailsValue" },
+        }
+        table.insert(details, project_header)
 
-        local status = nil
+        -- Collect and display all field values (including empty ones)
+        local fields = {} ---@type { name: string, value: string? }[]
+        for _, fieldValue in ipairs(item.fieldValues.nodes) do
+          if fieldValue.field ~= nil and fieldValue.field.name ~= nil then
+            local field_name = fieldValue.field.name
+            local field_val = nil
 
-        for _, fieldValues in ipairs(item.fieldValues.nodes) do
-          if fieldValues.field ~= nil and fieldValues.field.name == "Status" then
-            status = fieldValues.name
+            -- Extract value based on field type
+            if fieldValue.name ~= nil then
+              -- SingleSelectValue
+              field_val = fieldValue.name
+            elseif fieldValue.text ~= nil then
+              -- TextValue
+              field_val = fieldValue.text
+            elseif fieldValue.number ~= nil then
+              -- NumberValue
+              field_val = tostring(fieldValue.number)
+            elseif fieldValue.date ~= nil then
+              -- DateValue - just display as-is since it's a simple date (YYYY-MM-DD)
+              field_val = fieldValue.date
+            elseif fieldValue.title ~= nil then
+              -- IterationValue
+              field_val = fieldValue.title
+            end
+
+            -- Always add field, even if it has no value
+            table.insert(fields, { name = field_name, value = field_val })
           end
         end
 
-        if status == nil then
-          table.insert(projects_vt, { "No status", "OctoRed" })
-        else
-          table.insert(projects_vt, { status })
+        -- Display fields
+        for _, field in ipairs(fields) do
+          local field_vt = {
+            { "  " .. field.name .. ": ", "OctoDetailsLabel" },
+          }
+          if field.value ~= nil and field.value ~= "" then
+            table.insert(field_vt, { field.value, "OctoDetailsValue" })
+          else
+            table.insert(field_vt, { "No value", "OctoMissingDetails" })
+          end
+          table.insert(details, field_vt)
         end
-
-        table.insert(projects_vt, { " (", "OctoDetailsLabel" })
-        table.insert(projects_vt, { item.project.title })
-        table.insert(projects_vt, { ")", "OctoDetailsLabel" })
       end
     end
-    table.insert(details, projects_vt)
   end
 
   --- Parent
