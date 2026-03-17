@@ -585,6 +585,18 @@ query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
         state
         repository { nameWithOwner }
         stateReason
+        projectItems(first: 10) {
+          nodes {
+            fieldValues(first: 20) {
+              nodes {
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                  name
+                  field { ... on ProjectV2FieldCommon { name } }
+                }
+              }
+            }
+          }
+        }
       }
       ... on PullRequest {
         __typename
