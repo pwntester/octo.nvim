@@ -237,8 +237,6 @@ function FileEntry:fetch(sync)
   self.right_fetching = true
   local right_sha = current_review.layout.right.commit
   local left_sha = current_review.layout.left.commit
-  local right_abbrev = current_review.layout.right:abbrev()
-  local left_abbrev = current_review.layout.left:abbrev()
 
   -- handle renamed files
   if self.status == "R" and self.previous_path then
@@ -253,7 +251,7 @@ function FileEntry:fetch(sync)
       self.right_fetching = false
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, right_abbrev, right_path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, right_sha, right_path, function(lines)
       self.right_lines = lines
       self.right_fetched = true
       self.right_fetching = false
@@ -268,7 +266,7 @@ function FileEntry:fetch(sync)
       self.left_fetching = false
     end)
   else
-    utils.get_file_contents(self.pull_request.repo, left_abbrev, left_path, function(lines)
+    utils.get_file_contents(self.pull_request.repo, left_sha, left_path, function(lines)
       self.left_lines = lines
       self.left_fetched = true
       self.left_fetching = false
