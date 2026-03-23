@@ -321,7 +321,7 @@ function M.write_discussion_poll(bufnr, poll, start_line)
     local prefix = option.viewerHasVoted and "✓ " or "  "
     local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
     local line_text = string.format("%s%s: %s", prefix, option.option, vote_text)
-    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text))
+    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text) --[[@as integer]])
   end
 
   -- Second pass: Build virtual text arrays with aligned progress bars
@@ -1727,13 +1727,8 @@ function M.write_review_thread_header(bufnr, opts, line)
     { "] ", "OctoSymbol" },
   }
   if opts.isOutdated then
-    -- local outdated_bubble = bubbles.make_bubble(
-    --   "outdate",
-    --   "OctoBubbleRed",
-    --   { margin_width = 1 }
-    -- )
-    -- vim.list_extend(header_vt, outdated_bubble)
-    vim.list_extend(header_vt, { { conf.outdated_icon, "OctoRed" } })
+    local outdated_bubble = bubbles.make_bubble("Outdated", "OctoBubbleYellow", { margin_width = 1 })
+    vim.list_extend(header_vt, outdated_bubble)
   end
 
   if opts.isResolved then
