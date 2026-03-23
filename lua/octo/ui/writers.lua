@@ -2776,6 +2776,45 @@ function M.write_unpinned_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.LockedEvent|octo.fragments.UnlockedEvent
+---@param lock boolean
+local function write_locked_event(bufnr, item, lock)
+  ---@type string
+  local text
+  if lock then
+    local reason = ""
+    local locked_item = item --[[@as octo.fragments.LockedEvent]]
+    if locked_item.lockReason and locked_item.lockReason ~= vim.NIL then
+      local formatted = locked_item.lockReason:lower():gsub("_", " ")
+      reason = " as " .. formatted
+    end
+    text = " locked" .. reason .. " and limited conversation to collaborators "
+  else
+    text = " unlocked this conversation "
+  end
+  TextChunkBuilder:new()
+    :timeline_marker("locked")
+    :actor(item.actor)
+    :heading(text)
+    :date(item.createdAt, "")
+    :write_event(bufnr)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.LockedEvent
+function M.write_locked_event(bufnr, item)
+  item.actor = logins.format_author(item.actor)
+  write_locked_event(bufnr, item, true)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.UnlockedEvent
+function M.write_unlocked_event(bufnr, item)
+  item.actor = logins.format_author(item.actor)
+  write_locked_event(bufnr, item, false)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.MilestonedEvent|octo.fragments.DemilestonedEvent
 ---@param add boolean
 local function write_milestone_event(bufnr, item, add)
@@ -3415,6 +3454,12 @@ function M.write_timeline_items(bufnr, obj)
       prev_is_event = true
     elseif item.__typename == "UnpinnedEvent" then
       M.write_unpinned_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "LockedEvent" then
+      M.write_locked_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "UnlockedEvent" then
+      M.write_unlocked_event(bufnr, item)
       prev_is_event = true
     elseif item.__typename == "SubIssueAddedEvent" then
       table.insert(unrendered_subissue_added_events, item)

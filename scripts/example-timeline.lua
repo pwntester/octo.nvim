@@ -374,6 +374,33 @@ writers.write_timeline_items(bufnr, {
       example_commit,
       example_commit,
       example_commit,
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = "TOO_HEATED",
+      },
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = vim.NIL,
+      },
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = "OFF_TOPIC",
+      },
+      ---@type octo.fragments.UnlockedEvent
+      {
+        __typename = "UnlockedEvent",
+        actor = { login = me },
+        createdAt = now,
+      },
       ---@type octo.fragments.TransferredEvent
       {
         __typename = "TransferredEvent",

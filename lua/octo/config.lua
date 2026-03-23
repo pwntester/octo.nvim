@@ -240,6 +240,7 @@ function M.get_default_values()
       },
       reopened = { "  ", "OctoGreen" },
       assigned = "  ",
+      locked = "  ",
       review_requested = "  ",
     },
     right_bubble_delimiter = "",
