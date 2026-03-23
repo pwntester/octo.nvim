@@ -2776,14 +2776,16 @@ function M.write_unpinned_event(bufnr, item)
 end
 
 ---@param bufnr integer
----@param item octo.fragments.LockedEvent
+---@param item octo.fragments.LockedEvent|octo.fragments.UnlockedEvent
 ---@param lock boolean
 local function write_locked_event(bufnr, item, lock)
+  ---@type string
   local text
   if lock then
     local reason = ""
-    if item.lockReason and item.lockReason ~= vim.NIL then
-      local formatted = item.lockReason:lower():gsub("_", " ")
+    local locked_item = item --[[@as octo.fragments.LockedEvent]]
+    if locked_item.lockReason and locked_item.lockReason ~= vim.NIL then
+      local formatted = locked_item.lockReason:lower():gsub("_", " ")
       reason = " as " .. formatted
     end
     text = " locked" .. reason .. " and limited conversation to collaborators "
