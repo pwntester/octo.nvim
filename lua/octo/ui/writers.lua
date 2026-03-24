@@ -607,7 +607,13 @@ function M.write_body_agnostic(bufnr, body, line, viewer_can_update)
   local description = body:gsub("\r\n", "\n")
   local lines = vim.split(description, "\n", { plain = true })
   vim.list_extend(lines, { "" })
+  -- Resolve line before write_block (same default it uses internally)
+  line = line or vim.api.nvim_buf_line_count(bufnr) + 1
   local desc_mark = M.write_block(bufnr, lines, line, true)
+
+  -- Create folds for <details> blocks in the body
+  folds.create_details_folds(bufnr, line, line + #lines - 1)
+
   local buffer = octo_buffers[bufnr]
   if buffer then
     buffer.bodyMetadata = BodyMetadata:new {
@@ -1166,6 +1172,9 @@ function M.write_comment(bufnr, comment, kind, line)
   local content = vim.split(comment_body, "\n", { plain = true })
   vim.list_extend(content, { "" })
   local comment_mark = M.write_block(bufnr, content, line, true)
+
+  -- Create folds for <details> blocks in the comment
+  folds.create_details_folds(bufnr, line, line + #content - 1)
 
   line = line + #content
 
