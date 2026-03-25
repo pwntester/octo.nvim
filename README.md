@@ -126,6 +126,8 @@ From any octo buffer, press `<CR>` in normal mode to see common actions.
   - default picker uses `vim.ui.select`
 - Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 
+After installation, run `:checkhealth octo` to verify your setup.
+
 ## 📦 Installation
 
 For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
