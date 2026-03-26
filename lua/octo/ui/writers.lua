@@ -3166,7 +3166,11 @@ end
 ---@param viewer string
 ---@return TextChunkBuilder[]
 function M.build_review_request_removed_event_chunks(items, viewer)
-  ---@type table<string, ActorReviewRequestedEvents>
+  ---@class ActorReviewRemovedEvents
+  ---@field reviewers table<string, string>
+  ---@field timestamp string
+
+  ---@type table<string, ActorReviewRemovedEvents>
   local events_by_actor = {}
   ---@type string[]
   local actor_order = {}
@@ -3178,6 +3182,7 @@ function M.build_review_request_removed_event_chunks(items, viewer)
       table.insert(actor_order, actor_login)
     end
     if item.requestedReviewer ~= vim.NIL then
+      ---@cast item.requestedReviewer { login: string, name?: string, isViewer?: boolean }
       item.requestedReviewer = logins.format_author(item.requestedReviewer)
       local reviewer = item.requestedReviewer.login or item.requestedReviewer.name
       if reviewer then
