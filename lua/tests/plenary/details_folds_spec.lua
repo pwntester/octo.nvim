@@ -410,9 +410,7 @@ describe("details folds", function()
       for _, chunk in ipairs(outer_chunks) do
         outer_total = outer_total + vim.api.nvim_strwidth(chunk[1])
       end
-      assert.is_true(
-        outer_total >= vim.api.nvim_strwidth "<details><summary>Outer block summary</summary>"
-      )
+      assert.is_true(outer_total >= vim.api.nvim_strwidth "<details><summary>Outer block summary</summary>")
 
       -- Inner <details> line 7: summary overlay
       eq(6, extmarks[2][2])

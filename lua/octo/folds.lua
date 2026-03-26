@@ -2,6 +2,9 @@ local config = require "octo.config"
 
 local M = {}
 
+---@alias octo.DetailsBlock {open_line: integer, close_line: integer, summary: string, is_open: boolean, tag_lines: integer[]}
+---@alias octo.DetailsBlockPartial {open_line: integer, summary_parts: string[], in_summary: boolean, is_open: boolean, tag_lines: integer[]}
+
 function M.setup() end
 
 ---@param bufnr integer
@@ -25,10 +28,10 @@ end
 --- Returns a list of block descriptors without touching the buffer.
 ---@param lines string[] buffer lines
 ---@param start_line integer 1-based buffer line of the first element in `lines`
----@return {open_line: integer, close_line: integer, summary: string, is_open: boolean, tag_lines: integer[]}[]
+---@return octo.DetailsBlock[]
 function M.parse_details_blocks(lines, start_line)
-  local stack = {} ---@type {open_line: integer, summary_parts: string[], in_summary: boolean, is_open: boolean, tag_lines: integer[]}[]
-  local blocks = {} ---@type {open_line: integer, close_line: integer, summary: string, is_open: boolean, tag_lines: integer[]}[]
+  local stack = {} ---@type octo.DetailsBlockPartial[]
+  local blocks = {} ---@type octo.DetailsBlock[]
 
   for i, line in ipairs(lines) do
     local buf_line = start_line + i - 1
@@ -36,7 +39,10 @@ function M.parse_details_blocks(lines, start_line)
 
     if lower:match "%s*<details[^>]*>" then
       local is_open = lower:match "<details[^>]*%f[%a]open[%s=>]" ~= nil
-      table.insert(stack, { open_line = buf_line, summary_parts = {}, in_summary = false, is_open = is_open, tag_lines = { buf_line } })
+      table.insert(
+        stack,
+        { open_line = buf_line, summary_parts = {}, in_summary = false, is_open = is_open, tag_lines = { buf_line } }
+      )
     end
 
     if #stack > 0 then
@@ -83,16 +89,23 @@ function M.parse_details_blocks(lines, start_line)
       -- Only match </details> when it's the entire line (ignore inline occurrences)
       if lower:match "^%s*</details>%s*$" then
         local block = table.remove(stack)
-        block.close_line = buf_line
+        if not block then
+          goto continue
+        end
         table.insert(block.tag_lines, buf_line)
-        block.in_summary = nil
         local summary = table.concat(block.summary_parts, " ")
-        block.summary = (summary ~= "") and summary or "Details"
-        block.summary_parts = nil
-        block.is_open = block.is_open or false
-        table.insert(blocks, block)
+        ---@type octo.DetailsBlock
+        local finished = {
+          open_line = block.open_line,
+          close_line = buf_line,
+          summary = (summary ~= "") and summary or "Details",
+          is_open = block.is_open or false,
+          tag_lines = block.tag_lines,
+        }
+        table.insert(blocks, finished)
       end
     end
+    ::continue::
   end
 
   return blocks
@@ -129,7 +142,7 @@ function M.create_details_folds(bufnr, start_line, end_line)
     end
 
     -- Track which lines already get an extmark with an overlay
-    local has_extmark = {}
+    local has_extmark = {} ---@type table<integer, boolean>
 
     vim.api.nvim_buf_set_extmark(bufnr, details_ns, fold_start - 1, 0, {
       virt_text = virt_chunks,
@@ -184,12 +197,14 @@ function M.create_details_folds(bufnr, start_line, end_line)
 
     -- vim.on_key catches fold toggles that don't trigger CursorMoved
     local pending = false
+    local on_key_ns = vim.api.nvim_create_namespace("octo_details_on_key_" .. bufnr)
     vim.on_key(function(_, typed)
       if not typed or typed == "" then
         return
       end
       if not vim.api.nvim_buf_is_valid(bufnr) then
-        return true -- removes the callback
+        vim.on_key(nil, on_key_ns) -- removes the callback
+        return
       end
       if vim.api.nvim_get_current_buf() ~= bufnr then
         return
@@ -203,7 +218,7 @@ function M.create_details_folds(bufnr, start_line, end_line)
           end
         end)
       end
-    end, vim.api.nvim_create_namespace("octo_details_on_key_" .. bufnr))
+    end, on_key_ns)
   end
 end
 
@@ -220,7 +235,10 @@ function M.update_details_arrows(bufnr)
   for _, extmark in ipairs(extmarks) do
     local id = extmark[1]
     local row = extmark[2]
-    local details = extmark[4]
+    local details = extmark[4] ---@type vim.api.keyset.extmark_details?
+    if not details then
+      goto continue
+    end
     local virt_text = details.virt_text
     if not virt_text or #virt_text == 0 then
       goto continue
