@@ -2343,6 +2343,8 @@ function M.build_assignment_event_chunks(items, viewer)
 
   ---@type table<string, ActorEvents>
   local events_by_actor = {}
+  ---@type string[] ordered actor logins (first seen)
+  local actor_order = {}
 
   for _, item in ipairs(items) do
     local actor_login = item.actor ~= vim.NIL and item.actor.login or vim.NIL
@@ -2350,6 +2352,7 @@ function M.build_assignment_event_chunks(items, viewer)
       ---@cast actor_login string
       if not events_by_actor[actor_login] then
         events_by_actor[actor_login] = { assigned = {}, unassigned = {}, timestamp = item.createdAt }
+        table.insert(actor_order, actor_login)
       end
       local assignee_name = item.assignee.login or item.assignee.name
       if item.__typename == "AssignedEvent" then
@@ -2368,59 +2371,76 @@ function M.build_assignment_event_chunks(items, viewer)
     end
   end
 
+  ---Emit a user list with ", " separators and " and " before the last item
+  ---@param builder TextChunkBuilder
+  ---@param list string[]
+  local function append_user_list(builder, list)
+    local n = #list
+    for i, name in ipairs(list) do
+      if i > 1 then
+        builder:heading(i == n and " and " or ", ")
+      end
+      builder:user_plain(name, name == viewer)
+    end
+  end
+
   ---@type TextChunkBuilder[]
   local results = {}
-  for actor, events in pairs(events_by_actor) do
+  for _, actor in ipairs(actor_order) do
+    local events = events_by_actor[actor]
+
+    -- Separate self from others in each list
+    local self_assigned = events.assigned[actor] ~= nil
+    local self_unassigned = events.unassigned[actor] ~= nil
+
     ---@type string[]
-    local assigned_list = {}
+    local assigned_others = {}
     for assignee, _ in pairs(events.assigned) do
-      table.insert(assigned_list, assignee)
+      if assignee ~= actor then
+        table.insert(assigned_others, assignee)
+      end
     end
     ---@type string[]
-    local unassigned_list = {}
+    local unassigned_others = {}
     for assignee, _ in pairs(events.unassigned) do
-      table.insert(unassigned_list, assignee)
+      if assignee ~= actor then
+        table.insert(unassigned_others, assignee)
+      end
     end
 
-    local has_assigned = #assigned_list > 0
-    local has_unassigned = #unassigned_list > 0
-    local is_self_only_assigned = has_assigned and #assigned_list == 1 and assigned_list[1] == actor
-    local is_self_only_unassigned = has_unassigned and #unassigned_list == 1 and unassigned_list[1] == actor
+    local has_assigned_others = #assigned_others > 0
+    local has_unassigned_others = #unassigned_others > 0
 
-    local builder = TextChunkBuilder:new():timeline_marker("assigned"):user_plain(actor, actor == viewer)
-
-    if is_self_only_assigned and not has_unassigned then
+    -- Each clause is its own line (matching GitHub UI behaviour)
+    if self_assigned then
+      local builder = TextChunkBuilder:new():timeline_marker("assigned"):user_plain(actor, actor == viewer)
       builder:heading " self-assigned this"
-    elseif is_self_only_unassigned and not has_assigned then
-      builder:heading " removed their assignment"
-    else
-      if has_assigned then
-        builder:heading " assigned "
-        for i, assignee in ipairs(assigned_list) do
-          if i > 1 then
-            builder:heading ", "
-          end
-          builder:user_plain(assignee, assignee == viewer)
-        end
-      end
-
-      if has_assigned and has_unassigned then
-        builder:heading " and"
-      end
-
-      if has_unassigned then
-        builder:heading " unassigned "
-        for i, assignee in ipairs(unassigned_list) do
-          if i > 1 then
-            builder:heading ", "
-          end
-          builder:user_plain(assignee, assignee == viewer)
-        end
-      end
+      builder:date(events.timestamp)
+      table.insert(results, builder)
     end
 
-    builder:date(events.timestamp)
-    table.insert(results, builder)
+    if has_assigned_others then
+      local builder = TextChunkBuilder:new():timeline_marker("assigned"):user_plain(actor, actor == viewer)
+      builder:heading " assigned "
+      append_user_list(builder, assigned_others)
+      builder:date(events.timestamp)
+      table.insert(results, builder)
+    end
+
+    if self_unassigned then
+      local builder = TextChunkBuilder:new():timeline_marker("assigned"):user_plain(actor, actor == viewer)
+      builder:heading " removed their assignment"
+      builder:date(events.timestamp)
+      table.insert(results, builder)
+    end
+
+    if has_unassigned_others then
+      local builder = TextChunkBuilder:new():timeline_marker("assigned"):user_plain(actor, actor == viewer)
+      builder:heading " unassigned "
+      append_user_list(builder, unassigned_others)
+      builder:date(events.timestamp)
+      table.insert(results, builder)
+    end
   end
 
   return results
@@ -3042,47 +3062,166 @@ function M.write_reopened_event(bufnr, item)
     :write_event(bufnr)
 end
 
----Assumes all events are from the same time and from the same actor
----@param bufnr integer
----@param items octo.fragments.ReviewRequestedEvent[]
-function M.write_review_requested_events(bufnr, items)
-  items[1].actor = logins.format_author(items[1].actor)
-  local builder =
-    TextChunkBuilder:new():timeline_marker("review_requested"):actor(items[1].actor):heading " requested a review"
+---Build reviewer list chunks: "from X", "from X and Y", "from X, Y and Z" (no Oxford comma)
+---@param builder TextChunkBuilder
+---@param reviewer_list string[]
+---@param viewer string
+local function append_reviewer_list(builder, reviewer_list, viewer)
+  local n = #reviewer_list
+  if n == 0 then
+    return
+  end
+  builder:heading " from "
+  for i, reviewer in ipairs(reviewer_list) do
+    if i > 1 then
+      builder:heading(i == n and " and " or ", ")
+    end
+    builder:user_plain(reviewer, reviewer == viewer)
+  end
+end
 
-  local found_reviewer = false
+---Build review requested event text builders, grouped by actor.
+---One builder per actor; self-request emits a separate line.
+---@param items octo.fragments.ReviewRequestedEvent[]
+---@param viewer string
+---@return TextChunkBuilder[]
+function M.build_review_requested_event_chunks(items, viewer)
+  ---@class ActorReviewRequestedEvents
+  ---@field self_requested boolean
+  ---@field reviewers table<string, string>
+  ---@field timestamp string
+
+  ---@type table<string, ActorReviewRequestedEvents>
+  local events_by_actor = {}
+  ---@type string[] ordered actor logins (first seen)
+  local actor_order = {}
+
   for _, item in ipairs(items) do
+    local actor_login = item.actor.login
+    if not events_by_actor[actor_login] then
+      events_by_actor[actor_login] = { self_requested = false, reviewers = {}, timestamp = item.createdAt }
+      table.insert(actor_order, actor_login)
+    end
     if item.requestedReviewer ~= vim.NIL then
-      builder:heading(found_reviewer and ", " or " from ")
       item.requestedReviewer = logins.format_author(item.requestedReviewer)
       local reviewer = item.requestedReviewer.login or item.requestedReviewer.name
-      builder:user_plain(reviewer, reviewer == vim.g.octo_viewer)
-      found_reviewer = true
+      if reviewer then
+        if reviewer == actor_login then
+          events_by_actor[actor_login].self_requested = true
+        else
+          events_by_actor[actor_login].reviewers[reviewer] = reviewer
+        end
+      end
+    end
+    if item.createdAt < events_by_actor[actor_login].timestamp then
+      events_by_actor[actor_login].timestamp = item.createdAt
     end
   end
 
-  builder:date(items[1].createdAt):write_event(bufnr)
+  ---@type TextChunkBuilder[]
+  local results = {}
+  for _, actor_login in ipairs(actor_order) do
+    local events = events_by_actor[actor_login]
+    local actor = logins.format_author { login = actor_login }
+
+    if events.self_requested then
+      local builder = TextChunkBuilder:new()
+        :timeline_marker("review_requested")
+        :actor(actor)
+        :heading(" self-requested a review")
+        :date(events.timestamp)
+      table.insert(results, builder)
+    end
+
+    local reviewer_list = {}
+    for _, r in pairs(events.reviewers) do
+      table.insert(reviewer_list, r)
+    end
+    if #reviewer_list > 0 then
+      local builder =
+        TextChunkBuilder:new():timeline_marker("review_requested"):actor(actor):heading " requested a review"
+      append_reviewer_list(builder, reviewer_list, viewer)
+      builder:date(events.timestamp)
+      table.insert(results, builder)
+    end
+  end
+  return results
+end
+
+---@param bufnr integer
+---@param items octo.fragments.ReviewRequestedEvent[]
+function M.write_review_requested_events(bufnr, items)
+  for _, item in ipairs(items) do
+    item.actor = logins.format_author(item.actor)
+  end
+  local builders = M.build_review_requested_event_chunks(items, vim.g.octo_viewer)
+  for _, builder in ipairs(builders) do
+    builder:write_event(bufnr)
+  end
+end
+
+---Build review request removed event text builders, grouped by actor.
+---One builder per actor; reviewers deduplicated per actor.
+---@param items octo.fragments.ReviewRequestRemovedEvent[]
+---@param viewer string
+---@return TextChunkBuilder[]
+function M.build_review_request_removed_event_chunks(items, viewer)
+  ---@class ActorReviewRemovedEvents
+  ---@field reviewers table<string, string>
+  ---@field timestamp string
+
+  ---@type table<string, ActorReviewRemovedEvents>
+  local events_by_actor = {}
+  ---@type string[]
+  local actor_order = {}
+
+  for _, item in ipairs(items) do
+    local actor_login = item.actor.login
+    if not events_by_actor[actor_login] then
+      events_by_actor[actor_login] = { reviewers = {}, timestamp = item.createdAt }
+      table.insert(actor_order, actor_login)
+    end
+    if item.requestedReviewer ~= vim.NIL then
+      item.requestedReviewer = logins.format_author(item.requestedReviewer)
+      local reviewer = item.requestedReviewer.login or item.requestedReviewer.name
+      if reviewer then
+        events_by_actor[actor_login].reviewers[reviewer] = reviewer
+      end
+    end
+    if item.createdAt < events_by_actor[actor_login].timestamp then
+      events_by_actor[actor_login].timestamp = item.createdAt
+    end
+  end
+
+  ---@type TextChunkBuilder[]
+  local results = {}
+  for _, actor_login in ipairs(actor_order) do
+    local events = events_by_actor[actor_login]
+    local actor = logins.format_author { login = actor_login }
+    local reviewer_list = {}
+    for _, r in pairs(events.reviewers) do
+      table.insert(reviewer_list, r)
+    end
+
+    local builder =
+      TextChunkBuilder:new():timeline_marker("review_requested"):actor(actor):heading " removed a review request"
+    append_reviewer_list(builder, reviewer_list, viewer)
+    builder:date(events.timestamp)
+    table.insert(results, builder)
+  end
+  return results
 end
 
 ---@param bufnr integer
 ---@param items octo.fragments.ReviewRequestRemovedEvent[]
 function M.write_review_request_removed_events(bufnr, items)
-  local builder = TextChunkBuilder:new()
-    :timeline_marker("review_requested")
-    :actor(items[1].actor)
-    :heading " removed a review request for "
-
-  local found_reviewer = false
   for _, item in ipairs(items) do
-    if item.requestedReviewer ~= vim.NIL then
-      builder:when(found_reviewer, ", ", "OctoTimelineItemHeading")
-      local reviewer = item.requestedReviewer.login or item.requestedReviewer.name or "unknown"
-      builder:user_plain(reviewer, reviewer == vim.g.octo_viewer)
-      found_reviewer = true
-    end
+    item.actor = logins.format_author(item.actor)
   end
-
-  builder:date(items[1].createdAt):write_event(bufnr)
+  local builders = M.build_review_request_removed_event_chunks(items, vim.g.octo_viewer)
+  for _, builder in ipairs(builders) do
+    builder:write_event(bufnr)
+  end
 end
 
 ---@param bufnr integer
@@ -3326,25 +3465,14 @@ function M.write_timeline_items(bufnr, obj)
       unrendered_force_push_events = {}
       prev_is_event = true
     end
-    if
-      #unrendered_review_requested_events > 0
-      and (
-        not item
-        or item.__typename ~= "ReviewRequestedEvent"
-        or unrendered_review_requested_events[1].createdAt ~= item.createdAt
-      )
-    then
+    if #unrendered_review_requested_events > 0 and (not item or item.__typename ~= "ReviewRequestedEvent") then
       M.write_review_requested_events(bufnr, unrendered_review_requested_events)
       unrendered_review_requested_events = {}
       prev_is_event = true
     end
     if
       #unrendered_review_request_removed_events > 0
-      and (
-        not item
-        or item.__typename ~= "ReviewRequestRemovedEvent"
-        or unrendered_review_request_removed_events[1].createdAt ~= item.createdAt
-      )
+      and (not item or item.__typename ~= "ReviewRequestRemovedEvent")
     then
       M.write_review_request_removed_events(bufnr, unrendered_review_request_removed_events)
       unrendered_review_request_removed_events = {}
