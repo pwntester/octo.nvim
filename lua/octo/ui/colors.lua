@@ -93,6 +93,7 @@ local function get_hl_links()
     Date = "Comment",
     DetailsLabel = "Title",
     DetailsValue = "Identifier",
+    DetailsBlock = "CursorLine",
     MissingDetails = "Comment",
     Empty = "NormalFloat",
     User = "OctoBubble",
