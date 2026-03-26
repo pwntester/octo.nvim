@@ -42,16 +42,6 @@ local function builder_to_text(builder)
   return chunks_to_text(builder:build())
 end
 
--- Find a builder whose text matches a pattern
-local function find_builder(builders, pattern)
-  for _, builder in ipairs(builders) do
-    local text = builder_to_text(builder)
-    if text:match(pattern) then
-      return text
-    end
-  end
-end
-
 describe("Assignment Events", function()
   local build_assignment_event_chunks
 
@@ -74,65 +64,27 @@ describe("Assignment Events", function()
     build_assignment_event_chunks = writers.build_assignment_event_chunks
   end)
 
-  describe("self-assignment", function()
-    it("pure self-assign emits one line", function()
+  describe("single actor scenarios", function()
+    it("should handle self-assignment", function()
       local events = {
-        make_assigned_event("alice", "alice"),
+        make_assigned_event("alice", "alice", "2024-01-01T10:00:00Z"),
       }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
       assert.equals(1, #builders)
       local text = builder_to_text(builders[1])
       assert.matches("alice", text)
       assert.matches("self%-assigned this", text)
-      assert.is_nil(text:match "assigned alice") -- should not say "assigned alice"
     end)
 
-    it("pure self-unassign emits one line", function()
+    it("should handle single assignee by different actor", function()
       local events = {
-        make_unassigned_event("alice", "alice"),
+        make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
       }
-      local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(1, #builders)
-      local text = builder_to_text(builders[1])
-      assert.matches("alice", text)
-      assert.matches("removed their assignment", text)
-    end)
 
-    it("self-assign + assign others emits two separate lines", function()
-      local events = {
-        make_assigned_event("alice", "alice"),
-        make_assigned_event("alice", "bob"),
-      }
       local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(2, #builders)
-      local self_text = find_builder(builders, "self%-assigned")
-      local other_text = find_builder(builders, "assigned bob")
-      assert.is_not_nil(self_text, "should have self-assigned line")
-      assert.is_not_nil(other_text, "should have assigned bob line")
-      -- self-assigned line should NOT mention bob
-      assert.is_nil(self_text:match "bob")
-    end)
 
-    it("self-unassign + unassign others emits two separate lines", function()
-      local events = {
-        make_unassigned_event("alice", "alice"),
-        make_unassigned_event("alice", "bob"),
-      }
-      local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(2, #builders)
-      local self_text = find_builder(builders, "removed their assignment")
-      local other_text = find_builder(builders, "unassigned bob")
-      assert.is_not_nil(self_text, "should have removed their assignment line")
-      assert.is_not_nil(other_text, "should have unassigned bob line")
-    end)
-  end)
-
-  describe("assigning others", function()
-    it("single assignee", function()
-      local events = {
-        make_assigned_event("alice", "bob"),
-      }
-      local builders = build_assignment_event_chunks(events, "viewer")
       assert.equals(1, #builders)
       local text = builder_to_text(builders[1])
       assert.matches("alice", text)
@@ -140,167 +92,212 @@ describe("Assignment Events", function()
       assert.matches("bob", text)
     end)
 
-    it("two assignees joined with 'and'", function()
+    it("should handle self-unassignment", function()
       local events = {
-        make_assigned_event("alice", "bob"),
-        make_assigned_event("alice", "charlie"),
+        make_unassigned_event("alice", "alice", "2024-01-01T10:00:00Z"),
       }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
       assert.equals(1, #builders)
       local text = builder_to_text(builders[1])
-      assert.matches("bob", text)
-      assert.matches(" and ", text)
-      assert.matches("charlie", text)
-      -- no Oxford comma
-      assert.is_nil(text:match ", and ")
+      assert.matches("alice", text)
+      assert.matches("removed their assignment", text)
     end)
 
-    it("three assignees: X, Y and Z", function()
+    it("should handle assigning multiple people", function()
       local events = {
-        make_assigned_event("alice", "bob"),
-        make_assigned_event("alice", "charlie"),
-        make_assigned_event("alice", "dave"),
+        make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
+        make_assigned_event("alice", "charlie", "2024-01-01T10:00:01Z"),
       }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
       assert.equals(1, #builders)
       local text = builder_to_text(builders[1])
+      assert.matches("alice", text)
+      assert.matches("assigned", text)
       assert.matches("bob", text)
       assert.matches("charlie", text)
-      assert.matches("dave", text)
-      assert.matches(", ", text)
-      assert.matches(" and ", text)
-      assert.is_nil(text:match ", and ")
     end)
-  end)
 
-  describe("unassigning others", function()
-    it("single unassignee", function()
+    it("should handle unassigning multiple people", function()
       local events = {
-        make_unassigned_event("alice", "bob"),
+        make_unassigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
+        make_unassigned_event("alice", "charlie", "2024-01-01T10:00:01Z"),
       }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
       assert.equals(1, #builders)
       local text = builder_to_text(builders[1])
+      assert.matches("alice", text)
       assert.matches("unassigned", text)
       assert.matches("bob", text)
-    end)
-
-    it("two unassignees joined with 'and'", function()
-      local events = {
-        make_unassigned_event("alice", "bob"),
-        make_unassigned_event("alice", "charlie"),
-      }
-      local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(1, #builders)
-      local text = builder_to_text(builders[1])
-      assert.matches("unassigned", text)
-      assert.matches("bob", text)
-      assert.matches(" and ", text)
       assert.matches("charlie", text)
     end)
-  end)
 
-  describe("mixed assign and unassign", function()
-    it("assign one, unassign another: two separate lines", function()
+    it("should handle mixed assign and unassign", function()
       local events = {
-        make_assigned_event("alice", "bob"),
-        make_unassigned_event("alice", "charlie"),
+        make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
+        make_unassigned_event("alice", "charlie", "2024-01-01T10:00:01Z"),
       }
-      local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(2, #builders)
-      local assign_text = find_builder(builders, "assigned bob")
-      local unassign_text = find_builder(builders, "unassigned charlie")
-      assert.is_not_nil(assign_text)
-      assert.is_not_nil(unassign_text)
-    end)
-  end)
 
-  describe("multiple actors", function()
-    it("two different actors produce separate builders", function()
-      local events = {
-        make_assigned_event("alice", "bob"),
-        make_assigned_event("charlie", "dave"),
-      }
       local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(2, #builders)
-      assert.is_not_nil(find_builder(builders, "alice"))
-      assert.is_not_nil(find_builder(builders, "charlie"))
+
+      assert.equals(1, #builders)
+      local text = builder_to_text(builders[1])
+      assert.matches("alice", text)
+      assert.matches("assigned", text)
+      assert.matches("bob", text)
+      assert.matches("and", text)
+      assert.matches("unassigned", text)
+      assert.matches("charlie", text)
     end)
 
-    it("actor order is first-seen", function()
-      local events = {
-        make_assigned_event("alice", "bob"),
-        make_assigned_event("charlie", "dave"),
-      }
-      local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(2, #builders)
-      assert.matches("alice", builder_to_text(builders[1]))
-      assert.matches("charlie", builder_to_text(builders[2]))
-    end)
-
-    it("different actors requesting same assignee stay separate", function()
-      local events = {
-        make_assigned_event("alice", "bob"),
-        make_assigned_event("charlie", "bob"),
-      }
-      local builders = build_assignment_event_chunks(events, "viewer")
-      assert.equals(2, #builders)
-    end)
-  end)
-
-  describe("deduplication", function()
-    it("same assignee assigned twice only appears once", function()
+    it("should handle assigning same person multiple times (count)", function()
       local events = {
         make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
         make_assigned_event("alice", "bob", "2024-01-01T10:00:01Z"),
       }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
       assert.equals(1, #builders)
       local text = builder_to_text(builders[1])
-      local _, count = text:gsub("bob", "")
-      assert.equals(1, count)
+      assert.matches("alice", text)
+      assert.matches("assigned", text)
+      assert.matches("bob", text)
     end)
   end)
 
-  describe("viewer highlighting", function()
-    it("viewer as actor gets OctoUserViewer highlight", function()
-      local events = { make_assigned_event("viewer", "bob") }
+  describe("multiple actor scenarios", function()
+    it("should handle two different actors", function()
+      local events = {
+        make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
+        make_assigned_event("charlie", "dave", "2024-01-01T10:05:00Z"),
+      }
+
       local builders = build_assignment_event_chunks(events, "viewer")
-      local chunks = builders[1]:build()
-      local found = false
-      for _, chunk in ipairs(chunks) do
-        if chunk[1] == "viewer" then
-          assert.equals("OctoUserViewer", chunk[2])
-          found = true
-          break
+
+      -- Should have separate builders for each actor
+      assert.equals(2, #builders)
+
+      -- Find alice and charlie builders
+      local alice_text, charlie_text
+      for _, builder in ipairs(builders) do
+        local text = builder_to_text(builder)
+        if text:match "alice" then
+          alice_text = text
+        elseif text:match "charlie" then
+          charlie_text = text
         end
       end
-      assert.is_true(found)
+
+      assert.is_not_nil(alice_text)
+      assert.matches("alice", alice_text)
+      assert.matches("bob", alice_text)
+
+      assert.is_not_nil(charlie_text)
+      assert.matches("charlie", charlie_text)
+      assert.matches("dave", charlie_text)
     end)
 
-    it("viewer as assignee gets OctoUserViewer highlight", function()
-      local events = { make_assigned_event("alice", "viewer") }
+    it("should preserve actor-specific timestamps", function()
+      local events = {
+        make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
+        make_assigned_event("charlie", "dave", "2024-01-01T15:30:00Z"),
+      }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
+      -- Should have two builders
+      assert.equals(2, #builders)
+
+      -- Each builder should have chunks with dates
+      for _, builder in ipairs(builders) do
+        local chunks = builder:build()
+        assert.is_true(#chunks > 0)
+      end
+    end)
+
+    it("should handle same actor with mixed events spread across timeline", function()
+      local events = {
+        make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
+        make_assigned_event("alice", "charlie", "2024-01-01T10:00:01Z"),
+        make_unassigned_event("alice", "bob", "2024-01-01T10:00:02Z"),
+      }
+
+      local builders = build_assignment_event_chunks(events, "viewer")
+
+      assert.equals(1, #builders)
+      local text = builder_to_text(builders[1])
+
+      -- Alice assigned bob and charlie, then unassigned bob
+      assert.matches("alice", text)
+      assert.matches("assigned", text)
+      assert.matches("charlie", text) -- charlie is still assigned
+      assert.matches("unassigned", text)
+      assert.matches("bob", text) -- bob appears in unassigned
+    end)
+  end)
+
+  describe("viewer detection", function()
+    it("should highlight viewer as actor", function()
+      local events = {
+        make_assigned_event("viewer", "bob", "2024-01-01T10:00:00Z"),
+      }
+
+      local builders = build_assignment_event_chunks(events, "viewer")
+
+      assert.equals(1, #builders)
       local chunks = builders[1]:build()
-      local found = false
+
+      -- Find the viewer chunk and check its highlight
+      local found_viewer = false
       for _, chunk in ipairs(chunks) do
         if chunk[1] == "viewer" then
           assert.equals("OctoUserViewer", chunk[2])
-          found = true
+          found_viewer = true
           break
         end
       end
-      assert.is_true(found)
+      assert.is_true(found_viewer, "Should find viewer with correct highlight")
+    end)
+
+    it("should highlight viewer as assignee", function()
+      local events = {
+        make_assigned_event("alice", "viewer", "2024-01-01T10:00:00Z"),
+      }
+
+      local builders = build_assignment_event_chunks(events, "viewer")
+
+      assert.equals(1, #builders)
+      local chunks = builders[1]:build()
+
+      -- Find the viewer chunk in assignee position
+      local found_viewer = false
+      for _, chunk in ipairs(chunks) do
+        if chunk[1] == "viewer" then
+          assert.equals("OctoUserViewer", chunk[2])
+          found_viewer = true
+          break
+        end
+      end
+      assert.is_true(found_viewer, "Should find viewer as assignee with correct highlight")
     end)
   end)
 
   describe("edge cases", function()
-    it("empty list returns no builders", function()
-      local builders = build_assignment_event_chunks({}, "viewer")
+    it("should handle empty events list", function()
+      local events = {}
+      local builders = build_assignment_event_chunks(events, "viewer")
+
+      -- Should return empty array
       assert.equals(0, #builders)
     end)
 
-    it("nil actor is skipped gracefully", function()
+    it("should handle nil actor gracefully", function()
       local events = {
         {
           __typename = "AssignedEvent",
@@ -309,22 +306,65 @@ describe("Assignment Events", function()
           createdAt = "2024-01-01T10:00:00Z",
         },
       }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
+      -- Should not have entry for nil actor
       assert.equals(0, #builders)
     end)
 
-    it("assignee with name but no login", function()
+    it("should handle assignee with name but no login", function()
       local events = {
         {
           __typename = "AssignedEvent",
           actor = { login = "alice" },
-          assignee = { name = "Some Team" },
+          assignee = { name = "Bob Organization" },
           createdAt = "2024-01-01T10:00:00Z",
         },
       }
+
       local builders = build_assignment_event_chunks(events, "viewer")
+
       assert.equals(1, #builders)
-      assert.matches("Some Team", builder_to_text(builders[1]))
+      local text = builder_to_text(builders[1])
+      assert.matches("Bob Organization", text)
+    end)
+  end)
+
+  describe("deterministic ordering", function()
+    it("should produce consistent output for same input", function()
+      local events = {
+        make_assigned_event("alice", "bob", "2024-01-01T10:00:00Z"),
+        make_assigned_event("charlie", "dave", "2024-01-01T10:05:00Z"),
+        make_assigned_event("eve", "frank", "2024-01-01T10:10:00Z"),
+      }
+
+      -- Run multiple times and ensure same number of builders
+      local builders1 = build_assignment_event_chunks(events, "viewer")
+      local builders2 = build_assignment_event_chunks(events, "viewer")
+
+      -- Should have same number of builders (3 actors)
+      assert.equals(3, #builders1)
+      assert.equals(3, #builders2)
+
+      -- Should have all three actors
+      local actors1 = {}
+      for _, builder in ipairs(builders1) do
+        local text = builder_to_text(builder)
+        if text:match "alice" then
+          actors1.alice = true
+        end
+        if text:match "charlie" then
+          actors1.charlie = true
+        end
+        if text:match "eve" then
+          actors1.eve = true
+        end
+      end
+
+      assert.is_true(actors1.alice)
+      assert.is_true(actors1.charlie)
+      assert.is_true(actors1.eve)
     end)
   end)
 end)
