@@ -616,6 +616,8 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | actions  |                                                   | Lists all available Octo actions                                                                                                                       |
 | search   | <query>                                           | Search GitHub for issues and PRs matching the [query](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) or Discussions with `is:discussion`|
 | run      | list                                              | List workflow runs                                                                                                                                     |
+| auth     | status                                            | Show authenticated `gh` accounts for the current host                                                                                                  |
+|          | switch [login]                                    | Switch the active `gh` account for the current host                                                                                                    |
 | notification | list                                          | Shows current unread notifications |
 | discussion   | list [repo]                                          | List open discussions for current or specified repo |
 |    | edit <number> [repo] | Edit discussion in current or specified repo |
@@ -847,6 +849,14 @@ It is possible that Octo is trying to authenticate against the origin listed in 
 require('octo').setup({
   ssh_aliases = {["<THE ALIAS YOU HAVE LISTED IN ~/.ssh/config>"] = "github.com"}
 })
+```
+
+If you use multiple `gh` accounts on the same host, Octo uses the active `gh` account and you can inspect or switch it from Neovim:
+
+```
+:Octo auth status
+:Octo auth switch
+:Octo auth switch thedanielfactor
 ```
 
 **Can I use treesitter markdown parser with octo buffers?**
