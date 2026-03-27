@@ -366,26 +366,30 @@ function OctoBuffer:do_save_title_and_body()
       return
     end
 
-    local input = { body = desc_metadata.body, title = title_metadata.body }
+    -- Use f (raw-field) for body and title to avoid gh CLI interpreting @ as file path
+    -- (see https://github.com/cli/cli/issues/5979 - -F interprets @, -f treats as literal)
+    local input_f = { body = desc_metadata.body, title = title_metadata.body }
+    local input_F = {}
 
     local query, jq ---@type string, string
     if self:isIssue() then
       query = mutations.update_issue
       jq = ".data.updateIssue.issue"
-      input["id"] = id
+      input_F["id"] = id
     elseif self:isPullRequest() then
       query = mutations.update_pull_request
       jq = ".data.updatePullRequest.pullRequest"
-      input["pullRequestId"] = id
+      input_F["pullRequestId"] = id
     elseif self:isDiscussion() then
       query = mutations.update_discussion
       jq = ".data.updateDiscussion.discussion"
-      input["discussionId"] = id
+      input_F["discussionId"] = id
     end
 
     gh.api.graphql {
       query = query,
-      F = { input = input },
+      f = { input = input_f },
+      F = { input = input_F },
       jq = jq,
       opts = {
         cb = gh.create_callback {
