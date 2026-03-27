@@ -73,6 +73,51 @@ function M.write_block(bufnr, lines, line, mark)
   end
 end
 
+--- Write a loading indicator for timeline items
+--- Shows "Loading timeline items..." centered with Comment highlight
+---@param bufnr integer buffer number
+---@return integer line_number The starting line number of the indicator (for later removal)
+function M.write_loading_indicator(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+
+  -- Get buffer width for centering
+  local width = vim.api.nvim_win_get_width(0)
+  local message = "Loading timeline items..."
+  local padding = math.floor((width - #message) / 2)
+  local centered_message = string.rep(" ", math.max(0, padding)) .. message
+
+  -- Write: empty line, centered message, empty line
+  local line = vim.api.nvim_buf_line_count(bufnr) + 1
+  local lines = { "", centered_message, "" }
+  vim.api.nvim_buf_set_lines(bufnr, line - 1, line - 1, false, lines)
+
+  -- Add Comment highlight to the message line
+  vim.api.nvim_buf_set_extmark(bufnr, constants.OCTO_DETAILS_VT_NS, line, 0, {
+    end_line = line,
+    end_col = #centered_message,
+    hl_group = "Comment",
+  })
+
+  return line
+end
+
+--- Remove the loading indicator from the buffer
+---@param bufnr integer buffer number
+---@param line integer starting line number of the indicator
+function M.remove_loading_indicator(bufnr, line)
+  if not line then
+    return
+  end
+
+  -- Silently ignore errors (e.g., if user manually deleted lines)
+  pcall(function()
+    -- Remove 3 lines: empty, message, empty
+    vim.api.nvim_buf_set_lines(bufnr, line - 1, line + 2, false, {})
+    -- Clear any extmarks in the removed region
+    vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_DETAILS_VT_NS, line - 1, line + 2)
+  end)
+end
+
 --- Add a line to details table if value is not nil
 --- Examples of usage:
 --- add_details_line(details, "Label", "value")
@@ -3414,16 +3459,19 @@ end
 
 ---@param bufnr integer
 ---@param obj octo.PullRequest|octo.Issue
-function M.write_timeline_items(bufnr, obj)
-  local unrendered_label_events = {} ---@type (octo.fragments.LabeledEvent|octo.fragments.UnlabeledEvent)[]
-  local unrendered_subissue_added_events = {} ---@type octo.fragments.SubIssueAddedEvent[]
-  local unrendered_subissue_removed_events = {} ---@type octo.fragments.SubIssueRemovedEvent[]
-  local unrendered_force_push_events = {} ---@type octo.fragments.HeadRefForcePushedEvent[]
-  local commits = {} ---@type octo.fragments.PullRequestCommit[]
-  local unrendered_review_requested_events = {} ---@type octo.fragments.ReviewRequestedEvent[]
-  local unrendered_review_request_removed_events = {} ---@type octo.fragments.ReviewRequestRemovedEvent[]
-  local unrendered_assignment_events = {} ---@type (octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent)[]
-  local prev_is_event = false
+---@param timeline_state? table Optional timeline state for progressive loading
+function M.write_timeline_items(bufnr, obj, timeline_state)
+  local unrendered_label_events = timeline_state and timeline_state.pending_label_events or {} ---@type (octo.fragments.LabeledEvent|octo.fragments.UnlabeledEvent)[]
+  local unrendered_subissue_added_events = timeline_state and timeline_state.pending_subissue_added_events or {} ---@type octo.fragments.SubIssueAddedEvent[]
+  local unrendered_subissue_removed_events = timeline_state and timeline_state.pending_subissue_removed_events or {} ---@type octo.fragments.SubIssueRemovedEvent[]
+  local unrendered_force_push_events = timeline_state and timeline_state.pending_force_push_events or {} ---@type octo.fragments.HeadRefForcePushedEvent[]
+  local commits = timeline_state and timeline_state.pending_commits or {} ---@type octo.fragments.PullRequestCommit[]
+  local unrendered_review_requested_events = timeline_state and timeline_state.pending_review_requested_events or {} ---@type octo.fragments.ReviewRequestedEvent[]
+  local unrendered_review_request_removed_events = timeline_state
+      and timeline_state.pending_review_request_removed_events
+    or {} ---@type octo.fragments.ReviewRequestRemovedEvent[]
+  local unrendered_assignment_events = timeline_state and timeline_state.pending_assignment_events or {} ---@type (octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent)[]
+  local prev_is_event = timeline_state and timeline_state.prev_is_event or false
 
   ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
   local timeline_nodes = {}
@@ -3685,6 +3733,324 @@ function M.write_timeline_items(bufnr, obj)
   if prev_is_event then
     M.write_block(bufnr, { "" })
   end
+
+  -- Save state back for progressive loading
+  if timeline_state then
+    timeline_state.pending_label_events = unrendered_label_events
+    timeline_state.pending_subissue_added_events = unrendered_subissue_added_events
+    timeline_state.pending_subissue_removed_events = unrendered_subissue_removed_events
+    timeline_state.pending_force_push_events = unrendered_force_push_events
+    timeline_state.pending_commits = commits
+    timeline_state.pending_review_requested_events = unrendered_review_requested_events
+    timeline_state.pending_review_request_removed_events = unrendered_review_request_removed_events
+    timeline_state.pending_assignment_events = unrendered_assignment_events
+    timeline_state.prev_is_event = prev_is_event
+  end
+end
+
+---Append timeline items for progressive loading
+---@param bufnr integer
+---@param items table[]
+---@param timeline_state table
+---@param is_final boolean
+function M.append_timeline_items(bufnr, items, timeline_state, is_final)
+  local unrendered_label_events = timeline_state.pending_label_events
+  local unrendered_subissue_added_events = timeline_state.pending_subissue_added_events
+  local unrendered_subissue_removed_events = timeline_state.pending_subissue_removed_events
+  local unrendered_force_push_events = timeline_state.pending_force_push_events
+  local commits = timeline_state.pending_commits
+  local unrendered_review_requested_events = timeline_state.pending_review_requested_events
+  local unrendered_review_request_removed_events = timeline_state.pending_review_request_removed_events
+  local unrendered_assignment_events = timeline_state.pending_assignment_events
+  local prev_is_event = timeline_state.prev_is_event
+
+  -- Get the PR/Issue object from buffer for reviewThreads (needed for PullRequestReview rendering)
+  local buffer = require("octo.utils").get_current_buffer()
+  local obj = buffer and (buffer:isPullRequest() and buffer:pullRequest() or buffer:issue())
+
+  ---@type (octo.PullRequestTimelineItem|octo.IssueTimelineItem)[]
+  local timeline_nodes = items
+
+  -- If this is the final page, add empty node to flush pending events
+  if is_final then
+    table.insert(timeline_nodes, {})
+  end
+
+  ---@param item? octo.PullRequestTimelineItem|octo.IssueTimelineItem
+  local function render_accumulated_events(item)
+    if
+      #unrendered_label_events > 0
+      and (not item or (item.__typename ~= "LabeledEvent" and item.__typename ~= "UnlabeledEvent"))
+    then
+      M.write_label_events(bufnr, unrendered_label_events)
+      unrendered_label_events = {}
+      prev_is_event = true
+    end
+    if (not item or item.__typename ~= "SubIssueAddedEvent") and #unrendered_subissue_added_events > 0 then
+      M.write_subissue_events(bufnr, unrendered_subissue_added_events, "added")
+      unrendered_subissue_added_events = {}
+      prev_is_event = true
+    end
+    if (not item or item.__typename ~= "SubIssueRemovedEvent") and #unrendered_subissue_removed_events > 0 then
+      M.write_subissue_events(bufnr, unrendered_subissue_removed_events, "removed")
+      unrendered_subissue_removed_events = {}
+      prev_is_event = true
+    end
+    if (not item or item.__typename ~= "PullRequestCommit") and #commits > 0 then
+      M.write_commits(bufnr, commits)
+      commits = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_force_push_events > 0
+      and (
+        not item
+        or item.__typename ~= "HeadRefForcePushedEvent"
+        or item.actor.login ~= unrendered_force_push_events[1].actor.login
+      )
+    then
+      M.write_head_ref_force_pushed_events(bufnr, unrendered_force_push_events)
+      unrendered_force_push_events = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_review_requested_events > 0
+      and (
+        not item
+        or item.__typename ~= "ReviewRequestedEvent"
+        or unrendered_review_requested_events[1].createdAt ~= item.createdAt
+      )
+    then
+      M.write_review_requested_events(bufnr, unrendered_review_requested_events)
+      unrendered_review_requested_events = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_review_request_removed_events > 0
+      and (
+        not item
+        or item.__typename ~= "ReviewRequestRemovedEvent"
+        or unrendered_review_request_removed_events[1].createdAt ~= item.createdAt
+      )
+    then
+      M.write_review_request_removed_events(bufnr, unrendered_review_request_removed_events)
+      unrendered_review_request_removed_events = {}
+      prev_is_event = true
+    end
+    if
+      #unrendered_assignment_events > 0
+      and (not item or (item.__typename ~= "AssignedEvent" and item.__typename ~= "UnassignedEvent"))
+    then
+      M.write_assignment_events(bufnr, unrendered_assignment_events)
+      unrendered_assignment_events = {}
+      prev_is_event = true
+    end
+  end
+
+  for _, item in ipairs(timeline_nodes) do
+    render_accumulated_events(item)
+    if item.__typename == "IssueComment" then
+      if prev_is_event then
+        M.write_block(bufnr, { "" })
+      end
+
+      -- write the comment
+      local start_line, end_line = M.write_comment(bufnr, item, "IssueComment")
+      folds.create(bufnr, start_line + 1, end_line, true)
+      prev_is_event = false
+    elseif item.__typename == "PullRequestReview" then
+      if prev_is_event then
+        M.write_block(bufnr, { "" })
+      end
+
+      -- A review can have 0+ threads
+      local threads = {}
+      if obj and obj.reviewThreads then
+        for _, comment in ipairs(item.comments.nodes) do
+          for _, reviewThread in ipairs(obj.reviewThreads.nodes) do
+            if comment.id == reviewThread.comments.nodes[1].id then
+              -- found a thread for the current review
+              table.insert(threads, reviewThread)
+            end
+          end
+        end
+      end
+
+      -- skip reviews with no threads and empty body
+      if #threads > 0 or not utils.is_blank(item.body) then
+        -- print review header and top level comment
+        local review_start, review_end = M.write_comment(bufnr, item, "PullRequestReview")
+
+        -- print threads
+        if #threads > 0 then
+          review_end = M.write_threads(bufnr, threads)
+          folds.create(bufnr, review_start + 1, review_end, true)
+        end
+        M.write_block(bufnr, { "" })
+      else
+        M.write_review_decision(bufnr, item)
+      end
+      prev_is_event = false
+    elseif item.__typename == "AssignedEvent" then
+      table.insert(unrendered_assignment_events, item)
+    elseif item.__typename == "UnassignedEvent" then
+      table.insert(unrendered_assignment_events, item)
+    elseif item.__typename == "PullRequestCommit" then
+      table.insert(commits, item)
+      prev_is_event = true
+    elseif item.__typename == "MergedEvent" then
+      M.write_merged_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ClosedEvent" then
+      M.write_closed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ReopenedEvent" then
+      M.write_reopened_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "LabeledEvent" then
+      table.insert(unrendered_label_events, item)
+    elseif item.__typename == "UnlabeledEvent" then
+      table.insert(unrendered_label_events, item)
+    elseif item.__typename == "ReviewRequestedEvent" then
+      unrendered_review_requested_events[#unrendered_review_requested_events + 1] = item
+      prev_is_event = true
+    elseif item.__typename == "ReviewRequestRemovedEvent" then
+      unrendered_review_request_removed_events[#unrendered_review_request_removed_events + 1] = item
+      prev_is_event = true
+    elseif item.__typename == "ReviewDismissedEvent" then
+      M.write_review_dismissed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "RenamedTitleEvent" then
+      M.write_renamed_title_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ConnectedEvent" then
+      M.write_connected_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "CrossReferencedEvent" then
+      M.write_cross_referenced_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ReferencedEvent" then
+      M.write_referenced_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "MilestonedEvent" then
+      M.write_milestoned_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "DemilestonedEvent" then
+      M.write_demilestoned_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "PinnedEvent" then
+      M.write_pinned_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "UnpinnedEvent" then
+      M.write_unpinned_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "SubIssueAddedEvent" then
+      table.insert(unrendered_subissue_added_events, item)
+    elseif item.__typename == "SubIssueRemovedEvent" then
+      table.insert(unrendered_subissue_removed_events, item)
+    elseif item.__typename == "ParentIssueAddedEvent" then
+      M.write_parent_issue_added_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ParentIssueRemovedEvent" then
+      M.write_parent_issue_removed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "IssueTypeAddedEvent" then
+      M.write_issue_type_added_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "IssueTypeRemovedEvent" then
+      M.write_issue_type_removed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "IssueTypeChangedEvent" then
+      M.write_issue_type_changed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ConvertToDraftEvent" then
+      M.write_convert_to_draft_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ReadyForReviewEvent" then
+      M.write_ready_for_review_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "DeployedEvent" then
+      M.write_deployed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefDeletedEvent" then
+      M.write_head_ref_deleted_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefRestoredEvent" then
+      M.write_head_ref_restored_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "HeadRefForcePushedEvent" then
+      table.insert(unrendered_force_push_events, item)
+    elseif item.__typename == "AutoSquashEnabledEvent" then
+      M.write_auto_squash_enabled_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "AddedToProjectV2Event" then
+      M.write_added_to_project_v2_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "RemovedFromProjectV2Event" then
+      M.write_removed_from_project_v2_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "ProjectV2ItemStatusChangedEvent" then
+      M.write_project_v2_item_status_changed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "AutomaticBaseChangeSucceededEvent" then
+      M.write_automatic_base_change_succeeded_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BaseRefChangedEvent" then
+      M.write_base_ref_changed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "CommentDeletedEvent" then
+      M.write_comment_deleted_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BlockingAddedEvent" then
+      M.write_blocking_added_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BlockingRemovedEvent" then
+      M.write_blocking_removed_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BlockedByAddedEvent" then
+      M.write_blocked_by_added_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "BlockedByRemovedEvent" then
+      M.write_blocked_by_removed_event(bufnr, item)
+    elseif item.__typename == "TransferredEvent" then
+      M.write_transferred_event(bufnr, item)
+      prev_is_event = true
+    elseif
+      not utils.is_blank(item)
+      and config.values.debug.notify_missing_timeline_items
+      ---@diagnostic disable-next-line
+      and is_rendering_event(item.__typename)
+    then
+      ---@diagnostic disable-next-line
+      local info = item.__typename and item.__typename or vim.inspect(item)
+      utils.info("Unhandled timeline item: " .. info)
+    end
+  end
+
+  if is_final then
+    render_accumulated_events()
+    if prev_is_event then
+      M.write_block(bufnr, { "" })
+    end
+  end
+
+  -- Save state back
+  timeline_state.pending_label_events = unrendered_label_events
+  timeline_state.pending_subissue_added_events = unrendered_subissue_added_events
+  timeline_state.pending_subissue_removed_events = unrendered_subissue_removed_events
+  timeline_state.pending_force_push_events = unrendered_force_push_events
+  timeline_state.pending_commits = commits
+  timeline_state.pending_review_requested_events = unrendered_review_requested_events
+  timeline_state.pending_review_request_removed_events = unrendered_review_request_removed_events
+  timeline_state.pending_assignment_events = unrendered_assignment_events
+  timeline_state.prev_is_event = prev_is_event
+
+  -- Force redraw to show progressive updates
+  vim.schedule(function()
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      vim.cmd "redraw"
+    end
+  end)
 end
 
 return M
