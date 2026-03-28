@@ -56,6 +56,8 @@ M.state_hl_map = {
   DRAFT = "OctoStateDraft",
   COMPLETED = "OctoStateCompleted",
   NOT_PLANNED = "OctoStateNotPlanned",
+  REOPENED = "OctoStateOpen",
+  DUPLICATED = "OctoStateClosed",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -1767,22 +1769,52 @@ function M.get_label_id(label)
   end
 
   local owner, name = M.split_repo(buffer.repo)
-  local jq = ([[
-    .data.repository.labels.nodes
-    | map(select(.name == "{label}"))
-    | .[0].id
-  ]]):gsub("{label}", label)
-  local id = gh.api.graphql {
-    query = queries.repo_labels,
-    fields = { owner = owner, name = name },
-    jq = jq,
+  -- Use GraphQL label(name:) to fetch a single label by name.
+  -- Variables handle special characters safely (no string injection).
+  -- Avoid jq to prevent ambiguity with null values.
+  local output = gh.api.graphql {
+    query = queries.label_by_name,
+    fields = { owner = owner, name = name, label = label },
     opts = { mode = "sync" },
   }
-  if id == "" then
+
+  if not M.is_blank(output) then
+    local resp = vim.json.decode(output --[[@as string]])
+    if resp and resp.data and resp.data.repository then
+      local lbl = resp.data.repository.label ---@type any
+      if lbl and lbl ~= vim.NIL and lbl.id then
+        return lbl.id
+      end
+    end
+  end
+
+  -- Label not found — create it with a random color
+  local repo_id = M.get_repo_id(buffer.repo)
+  if not repo_id then
+    M.error("Cannot get repo ID to create label: " .. label)
     return
   end
 
-  return id
+  math.randomseed(os.time())
+  local color = string.format("%06X", math.random(0, 0xFFFFFF))
+  local create_query = graphql("create_label_mutation", repo_id, label, "", color)
+  local create_output = gh.api.graphql {
+    query = create_query,
+    opts = { mode = "sync" },
+  }
+
+  if M.is_blank(create_output) then
+    M.error("Failed to create label: " .. label)
+    return
+  end
+
+  local create_resp = vim.json.decode(create_output --[[@as string]])
+  if create_resp and create_resp.data and create_resp.data.createLabel and create_resp.data.createLabel.label then
+    M.info("Created label: " .. label)
+    return create_resp.data.createLabel.label.id
+  end
+
+  M.error("Failed to create label: " .. label)
 end
 
 --- Generate maps from diffhunk line to code line:
@@ -1925,7 +1957,11 @@ end
 ---@return string
 function M.get_displayed_state(isIssue, state, stateReason, isDraft)
   if isIssue and state == "CLOSED" then
-    return stateReason or state
+    -- Handle vim.NIL which can come from JSON responses
+    if stateReason and stateReason ~= vim.NIL and type(stateReason) == "string" then
+      return stateReason
+    end
+    return state
   end
 
   if state == "CLOSED" or state == "MERGED" then
@@ -2208,6 +2244,10 @@ end
 ---@param str string
 ---@return string
 function M.remove_underscore(str)
+  -- Defensive check: ensure str is a string (not vim.NIL or other userdata)
+  if type(str) ~= "string" then
+    return ""
+  end
   return (str:gsub("_", " "))
 end
 

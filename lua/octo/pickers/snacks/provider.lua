@@ -945,6 +945,21 @@ function M.search(opts)
       if item.__typename == "Issue" then
         item.kind = "issue"
         item.file = utils.get_issue_uri(item.number, item.repository.nameWithOwner)
+        -- Extract Status from projectItems field values
+        item.status_field = nil
+        if item.projectItems and item.projectItems.nodes then
+          for _, project_item in ipairs(item.projectItems.nodes) do
+            if project_item.fieldValues and project_item.fieldValues.nodes then
+              for _, fv in ipairs(project_item.fieldValues.nodes) do
+                if fv.field and fv.field.name == "Status" and fv.name then
+                  item.status_field = fv.name
+                  break
+                end
+              end
+            end
+            if item.status_field then break end
+          end
+        end
       elseif item.__typename == "PullRequest" then
         item.kind = "pull_request"
         item.file = utils.get_pull_request_uri(item.number, item.repository.nameWithOwner)
@@ -1071,7 +1086,11 @@ function M.search(opts)
         ret[#ret + 1] = { item.title }
 
         if item.kind == "discussion" and item.category then
-          ret[#ret + 1] = { " [" .. item.category.name .. "]", "SnacksPickerSpecial" }
+          ret[#ret + 1] = { " (" .. item.category.name .. ")", "SnacksPickerSpecial" }
+        end
+
+        if item.status_field then
+          ret[#ret + 1] = { " (" .. item.status_field .. ")", "OctoDetailsValue" }
         end
 
         return ret
@@ -1621,7 +1640,17 @@ function M.labels(opts)
             final_actions["confirm"] = function(picker, item)
               picker:close()
               if type(cb) == "function" then
-                cb { item }
+                if item then
+                  cb { { id = item.id } }
+                else
+                  local prompt = vim.trim(picker.input.filter.pattern or "")
+                  if prompt ~= "" then
+                    local label_id = utils.get_label_id(prompt)
+                    if label_id then
+                      cb { { id = label_id } }
+                    end
+                  end
+                end
               end
             end
           end
@@ -1643,6 +1672,7 @@ function M.labels(opts)
               },
             },
             actions = final_actions,
+            confirm = final_actions.confirm,
           }
         end
       end,
@@ -1726,7 +1756,17 @@ function M.assigned_labels(opts)
             final_actions["confirm"] = function(picker, item)
               picker:close()
               if type(cb) == "function" then
-                cb { item }
+                if item then
+                  cb { { id = item.id } }
+                else
+                  local prompt = vim.trim(picker.input.filter.pattern or "")
+                  if prompt ~= "" then
+                    local label_id = utils.get_label_id(prompt)
+                    if label_id then
+                      cb { { id = label_id } }
+                    end
+                  end
+                end
               end
             end
           end
@@ -1748,6 +1788,7 @@ function M.assigned_labels(opts)
               },
             },
             actions = final_actions,
+            confirm = final_actions.confirm,
           }
         end
       end,
