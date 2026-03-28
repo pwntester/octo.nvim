@@ -1143,8 +1143,12 @@ function M.changed_files()
 
           -- Add default confirm action (what happens when you press Enter)
           if not custom_actions_defined["confirm"] then
-            final_actions["confirm"] = function(_picker, item)
-              utils.edit_file(item.filename)
+            final_actions["confirm"] = function(picker, _)
+              local items = picker:selected { fallback = true }
+              picker:close()
+              for _, selected in ipairs(items) do
+                vim.cmd("edit " .. vim.fn.fnameescape(selected.filename))
+              end
             end
           end
 
