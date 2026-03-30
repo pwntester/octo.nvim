@@ -368,7 +368,9 @@ function OctoBuffer:do_save_title_and_body()
 
     -- Use f (raw-field) for body and title to avoid gh CLI interpreting @ as file path
     -- (see https://github.com/cli/cli/issues/5979 - -F interprets @, -f treats as literal)
+    ---@type table<string, string>
     local input_f = { body = desc_metadata.body, title = title_metadata.body }
+    ---@type table<string, string>
     local input_F = {}
 
     local query, jq ---@type string, string
