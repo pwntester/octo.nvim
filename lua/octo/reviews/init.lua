@@ -444,8 +444,9 @@ function Review:add_comment(isSuggestion)
     end
   end
   if not diff_hunk then
-    utils.error "Cannot place comments outside diff hunks"
-    return
+    -- The GitHub API does not require comments to be within diff hunks;
+    -- diff_hunk is only used locally and GitHub returns its own in the response.
+    diff_hunk = "@@ -0,0 +0,0 @@"
   end
   if not vim.startswith(diff_hunk, "@@") then
     diff_hunk = "@@ " .. diff_hunk
