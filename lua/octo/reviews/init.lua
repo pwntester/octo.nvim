@@ -446,7 +446,17 @@ function Review:add_comment(isSuggestion)
   if not diff_hunk then
     -- The GitHub API does not require comments to be within diff hunks;
     -- diff_hunk is only used locally and GitHub returns its own in the response.
-    diff_hunk = "@@ -0,0 +0,0 @@"
+    local best_dist = math.huge
+    for i, range in ipairs(comment_ranges) do
+      local dist = math.min(math.abs(range[1] - line1), math.abs(range[2] - line1))
+      if dist < best_dist then
+        best_dist = dist
+        diff_hunk = file.diffhunks[i]
+      end
+    end
+    if not diff_hunk then
+      diff_hunk = "@@ -0,0 +0,0 @@"
+    end
   end
   if not vim.startswith(diff_hunk, "@@") then
     diff_hunk = "@@ " .. diff_hunk
