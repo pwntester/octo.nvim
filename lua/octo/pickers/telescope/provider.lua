@@ -1796,7 +1796,7 @@ function M.comment_edits(edits)
       preview_title = "Diff",
       finder = finders.new_table {
         results = edits,
-        entry_maker = entry_maker.gen_from_comment_edit(),
+        entry_maker = entry_maker.gen_from_comment_edit(edits),
       },
       sorter = conf.generic_sorter {},
       previewer = previewers.comment_edit.new {},

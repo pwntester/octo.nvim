@@ -794,11 +794,20 @@ function M.gen_from_release(opts)
   end
 end
 
-function M.gen_from_comment_edit()
+---@param edits octo.UserContentEdit[]
+function M.gen_from_comment_edit(edits)
+  local max_author_width = 0
+  for _, edit in ipairs(edits) do
+    local login = edit.editor and edit.editor.login or "unknown"
+    if #login > max_author_width then
+      max_author_width = #login
+    end
+  end
+
   local displayer = entry_display.create {
     separator = " ",
     items = {
-      { width = 20 },
+      { width = max_author_width },
       { remaining = true },
     },
   }
