@@ -240,7 +240,10 @@ function M.comment_edits(edits)
     prompt = "Comment Edit History:",
     format_item = function(edit)
       local editor = edit.editor and edit.editor.login or "unknown"
-      return string.format("%s  by %s", utils.format_date(edit.editedAt), editor)
+      local utc_ts = utils.parse_utc_date(edit.editedAt)
+      local tz_offset = os.difftime(os.time(), os.time(os.date "!*t" --[[@as osdateparam]]))
+      local abs_time = os.date("%b %d %H:%M", utc_ts + tz_offset) --[[@as string]]
+      return string.format("%s  %s (%s)", editor, abs_time, utils.format_date(edit.editedAt))
     end,
   }, function(choice)
     if not choice then

@@ -798,27 +798,25 @@ function M.gen_from_comment_edit()
   local displayer = entry_display.create {
     separator = " ",
     items = {
-      { width = 12 },
+      { width = 20 },
       { remaining = true },
     },
   }
 
+  local function abs_local_time(date_string)
+    local utc_ts = utils.parse_utc_date(date_string)
+    local tz_offset = os.difftime(os.time(), os.time(os.date "!*t" --[[@as osdateparam]]))
+    return os.date("%b %d %H:%M", utc_ts + tz_offset) --[[@as string]]
+  end
+
   local function make_display(entry)
     local edit = entry.obj
     local editor = edit.editor and edit.editor.login or "unknown"
-    local diff_preview = ""
-    if edit.diff and edit.diff ~= vim.NIL and edit.diff ~= "" then
-      -- show the first non-empty line of the diff as a preview
-      for line in edit.diff:gsub("\r\n", "\n"):gsub("\r", "\n"):gmatch "[^\n]+" do
-        if line ~= "" then
-          diff_preview = line:sub(1, 60)
-          break
-        end
-      end
-    end
+    local abs_time = abs_local_time(edit.editedAt)
+    local rel_time = utils.format_date(edit.editedAt)
     return displayer {
-      { utils.format_date(edit.editedAt), "OctoDate" },
-      { editor .. (diff_preview ~= "" and ("  " .. diff_preview) or ""), "OctoUser" },
+      { editor, "OctoUser" },
+      { abs_time .. " (" .. rel_time .. ")", "OctoDate" },
     }
   end
 
@@ -827,9 +825,10 @@ function M.gen_from_comment_edit()
       return nil
     end
     local editor = edit.editor and edit.editor.login or "unknown"
+    local abs_time = abs_local_time(edit.editedAt)
     return {
       value = edit.id,
-      ordinal = utils.format_date(edit.editedAt) .. " " .. editor,
+      ordinal = editor .. " " .. abs_time .. " " .. utils.format_date(edit.editedAt),
       display = make_display,
       obj = edit,
     }
