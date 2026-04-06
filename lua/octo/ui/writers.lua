@@ -599,7 +599,9 @@ end
 ---@param body string
 ---@param line? integer
 ---@param viewer_can_update? boolean
-function M.write_body_agnostic(bufnr, body, line, viewer_can_update)
+---@param last_edited_at? string
+---@param includes_created_edit? boolean
+function M.write_body_agnostic(bufnr, body, line, viewer_can_update, last_edited_at, includes_created_edit)
   body = utils.trim(body)
   if vim.startswith(body, constants.NO_BODY_MSG) or utils.is_blank(body) then
     body = " "
@@ -622,6 +624,8 @@ function M.write_body_agnostic(bufnr, body, line, viewer_can_update)
       dirty = false,
       extmark = desc_mark,
       viewerCanUpdate = viewer_can_update,
+      lastEditedAt = last_edited_at ~= vim.NIL and last_edited_at or nil,
+      includesCreatedEdit = includes_created_edit ~= vim.NIL and includes_created_edit or nil,
     }
   end
 end
@@ -630,7 +634,7 @@ end
 ---@param issue octo.Issue|octo.PullRequest|octo.Discussion
 ---@param line? integer
 function M.write_body(bufnr, issue, line)
-  M.write_body_agnostic(bufnr, issue.body, line, issue.viewerCanUpdate)
+  M.write_body_agnostic(bufnr, issue.body, line, issue.viewerCanUpdate, issue.lastEditedAt, issue.includesCreatedEdit)
 end
 
 ---@param bufnr integer
@@ -742,6 +746,9 @@ function M.write_details(bufnr, issue, update, include_status)
   table.insert(details, author_vt)
 
   add_details_line(details, "Created", issue.createdAt, "date")
+  if not utils.is_blank(issue.lastEditedAt) and issue.lastEditedAt ~= issue.createdAt then
+    add_details_line(details, "Edited", issue.lastEditedAt, "date")
+  end
   if issue.state == "CLOSED" then
     add_details_line(details, "Closed", issue.closedAt, "date")
   else
@@ -1104,8 +1111,11 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, { " ", "OctoTimelineItemHeading" })
     vim.list_extend(header_vt, state_bubble)
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    if not utils.is_blank(comment.lastEditedAt) and comment.lastEditedAt ~= comment.createdAt then
+      table.insert(header_vt, { ", edited " .. utils.format_date(comment.lastEditedAt), "OctoDate" })
+    end
     if not comment.viewerCanUpdate then
-      table.insert(header_vt, { " ", "OctoRed" })
+      table.insert(header_vt, { " ", "OctoRed" })
     end
   elseif kind == "PullRequestReviewComment" then
     -- Review thread comments
@@ -1122,8 +1132,11 @@ function M.write_comment(bufnr, comment, kind, line)
       vim.list_extend(header_vt, state_bubble)
     end
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    if not utils.is_blank(comment.lastEditedAt) and comment.lastEditedAt ~= comment.createdAt then
+      table.insert(header_vt, { ", edited " .. utils.format_date(comment.lastEditedAt), "OctoDate" })
+    end
     if not comment.viewerCanUpdate then
-      table.insert(header_vt, { " ", "OctoRed" })
+      table.insert(header_vt, { " ", "OctoRed" })
     end
   elseif kind == "PullRequestComment" then
     -- Regular comment for a review thread comments
@@ -1135,8 +1148,11 @@ function M.write_comment(bufnr, comment, kind, line)
     table.insert(header_vt, { "COMMENT: ", "OctoTimelineItemHeading" })
     table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    if not utils.is_blank(comment.lastEditedAt) and comment.lastEditedAt ~= comment.createdAt then
+      table.insert(header_vt, { ", edited " .. utils.format_date(comment.lastEditedAt), "OctoDate" })
+    end
     if not comment.viewerCanUpdate then
-      table.insert(header_vt, { " ", "OctoRed" })
+      table.insert(header_vt, { " ", "OctoRed" })
     end
   elseif kind == "IssueComment" or kind == "DiscussionComment" then
     -- Issue comments
@@ -1150,8 +1166,11 @@ function M.write_comment(bufnr, comment, kind, line)
     comment.author = logins.format_author(comment.author)
     table.insert(header_vt, { comment.author.login, comment.viewerDidAuthor and "OctoUserViewer" or "OctoUser" })
     table.insert(header_vt, { " " .. utils.format_date(comment.createdAt), "OctoDate" })
+    if not utils.is_blank(comment.lastEditedAt) and comment.lastEditedAt ~= comment.createdAt then
+      table.insert(header_vt, { ", edited " .. utils.format_date(comment.lastEditedAt), "OctoDate" })
+    end
     if not comment.viewerCanUpdate then
-      table.insert(header_vt, { " ", "OctoRed" })
+      table.insert(header_vt, { " ", "OctoRed" })
     end
   end
 
@@ -1212,6 +1231,8 @@ function M.write_comment(bufnr, comment, kind, line)
       diffSide = comment.diffSide,
       snippetStartLine = comment.start_line,
       snippetEndLine = comment.end_line,
+      lastEditedAt = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or nil,
+      includesCreatedEdit = comment.includesCreatedEdit,
     }
   )
 

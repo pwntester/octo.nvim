@@ -466,6 +466,8 @@ fragment AssigneeConnectionFragment on UserConnection {
   ---@field databaseId integer
   ---@field body string
   ---@field createdAt string
+  ---@field lastEditedAt string
+  ---@field includesCreatedEdit boolean
   ---@field author { login: string }
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
@@ -477,6 +479,8 @@ fragment IssueCommentFragment on IssueComment {
   databaseId
   body
   createdAt
+  lastEditedAt
+  includesCreatedEdit
   ...ReactionGroupsFragment
   author {
     login
@@ -1251,6 +1255,8 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
   ---@field title string
   ---@field body string
   ---@field createdAt string
+  ---@field lastEditedAt? string
+  ---@field includesCreatedEdit? boolean
   ---@field closedAt string
   ---@field updatedAt string
   ---@field url string
@@ -1269,6 +1275,8 @@ fragment IssueInformationFragment on Issue {
   title
   body
   createdAt
+  lastEditedAt
+  includesCreatedEdit
   closedAt
   updatedAt
   url
@@ -1425,6 +1433,8 @@ fragment DiscussionInfoFragment on Discussion {
   ---@field poll octo.fragments.DiscussionPoll
   ---@field answer { author: { login: string }, body: string, createdAt: string, viewerDidAuthor: boolean }
   ---@field createdAt string
+  ---@field lastEditedAt? string
+  ---@field includesCreatedEdit? boolean
   ---@field closedAt string
   ---@field updatedAt string
   ---@field upvoteCount integer
@@ -1436,6 +1446,8 @@ fragment DiscussionInfoFragment on Discussion {
 fragment DiscussionDetailsFragment on Discussion {
   ...DiscussionInfoFragment
   body
+  lastEditedAt
+  includesCreatedEdit
   category {
     name
     emoji

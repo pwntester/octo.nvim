@@ -10,6 +10,8 @@ local M = {}
 ---@field viewerCanUpdate boolean
 ---@field reactionGroups? octo.ReactionGroupsFragment.reactionGroups[]
 ---@field reactionLine? integer
+---@field lastEditedAt? string
+---@field includesCreatedEdit? boolean
 local BodyMetadata = {}
 BodyMetadata.__index = BodyMetadata
 
@@ -26,6 +28,8 @@ function BodyMetadata:new(opts)
     viewerCanUpdate = opts.viewerCanUpdate or false,
     reactionLine = opts.reactionLine or nil,
     reactionGroups = opts.reactionGroups or {},
+    lastEditedAt = opts.lastEditedAt or nil,
+    includesCreatedEdit = opts.includesCreatedEdit or nil,
   }
   setmetatable(this, self)
   return this
