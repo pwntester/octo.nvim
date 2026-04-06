@@ -278,6 +278,32 @@ local release = defaulter(function(opts)
   }
 end, {})
 
+local comment_edit = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    title = opts.preview_title,
+    get_buffer_by_name = function(_, entry)
+      return entry.value
+    end,
+    define_preview = function(self, entry)
+      if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        local edit = entry.obj
+        if edit and edit.diff and edit.diff ~= vim.NIL and edit.diff ~= "" then
+          vim.api.nvim_buf_set_lines(
+            self.state.bufnr,
+            0,
+            -1,
+            false,
+            vim.split(edit.diff:gsub("\r\n", "\n"):gsub("\r", "\n"), "\n")
+          )
+          vim.api.nvim_set_option_value("filetype", "diff", { scope = "local", buf = self.state.bufnr })
+        else
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "(no diff available)" })
+        end
+      end
+    end,
+  }
+end, {})
+
 return {
   workflow_runs = workflow_runs,
   discussion = discussion,
@@ -289,4 +315,5 @@ return {
   issue_template = issue_template,
   notification = notification,
   release = release,
+  comment_edit = comment_edit,
 }

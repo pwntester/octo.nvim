@@ -1787,12 +1787,36 @@ function M.project_cards_v2(cb)
   end
 end
 
+---@param edits octo.UserContentEdit[]
+function M.comment_edits(edits)
+  pickers
+    .new({}, {
+      prompt_title = "Comment Edit History",
+      results_title = false,
+      preview_title = "Diff",
+      finder = finders.new_table {
+        results = edits,
+        entry_maker = entry_maker.gen_from_comment_edit(),
+      },
+      sorter = conf.generic_sorter {},
+      previewer = previewers.comment_edit.new {},
+      attach_mappings = function()
+        actions.select_default:replace(function(prompt_bufnr)
+          actions.close(prompt_bufnr)
+        end)
+        return true
+      end,
+    })
+    :find()
+end
+
 ---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
   assigned_labels = M.select_assigned_label,
   assignees = M.select_assignee,
   changed_files = M.changed_files,
+  comment_edits = M.comment_edits,
   commits = M.commits,
   discussions = M.discussions,
   gists = M.gists,

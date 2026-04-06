@@ -162,6 +162,8 @@ query($endCursor: String) {
       title
       body
       createdAt
+      lastEditedAt
+      includesCreatedEdit
       closedAt
       updatedAt
       url
@@ -1450,6 +1452,96 @@ query($owner: String!, $name: String!) {
     }
   }
   ]]
+
+  ---@class octo.UserContentEdit
+  ---@field id string
+  ---@field editedAt string
+  ---@field editor { login: string }
+  ---@field diff string
+
+  M.comment_edits = [[
+query($id: ID!) {
+  node(id: $id) {
+    ... on IssueComment {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on PullRequestReviewComment {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on PullRequestReview {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on DiscussionComment {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on Issue {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on PullRequest {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on Discussion {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+  }
+}
+]]
 end
 
 return M

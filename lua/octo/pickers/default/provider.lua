@@ -234,9 +234,36 @@ M.releases = function(opts)
   }
 end
 
+---@param edits octo.UserContentEdit[]
+function M.comment_edits(edits)
+  vim.ui.select(edits, {
+    prompt = "Comment Edit History:",
+    format_item = function(edit)
+      local editor = edit.editor and edit.editor.login or "unknown"
+      return string.format("%s  by %s", utils.format_date(edit.editedAt), editor)
+    end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+    if choice.diff and choice.diff ~= vim.NIL and choice.diff ~= "" then
+      -- show the diff in a scratch buffer
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(choice.diff:gsub("\r\n", "\n"):gsub("\r", "\n"), "\n"))
+      vim.api.nvim_set_option_value("filetype", "diff", { scope = "local", buf = bufnr })
+      vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = bufnr })
+      vim.cmd "split"
+      vim.api.nvim_win_set_buf(0, bufnr)
+    else
+      utils.info "No diff available for this edit"
+    end
+  end)
+end
+
 ---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
+  comment_edits = M.comment_edits,
   discussions = M.discussions,
   issues = M.issues,
   prs = M.pull_requests,
