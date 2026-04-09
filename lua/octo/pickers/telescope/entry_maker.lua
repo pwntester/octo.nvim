@@ -794,4 +794,54 @@ function M.gen_from_release(opts)
   end
 end
 
+---@param edits octo.UserContentEdit[]
+function M.gen_from_comment_edit(edits)
+  local max_author_width = 0
+  for _, edit in ipairs(edits) do
+    local login = edit.editor and edit.editor.login or "unknown"
+    if #login > max_author_width then
+      max_author_width = #login
+    end
+  end
+
+  local displayer = entry_display.create {
+    separator = " ",
+    items = {
+      { width = max_author_width },
+      { remaining = true },
+    },
+  }
+
+  local function abs_local_time(date_string)
+    local utc_ts = utils.parse_utc_date(date_string)
+    local tz_offset = os.difftime(os.time(), os.time(os.date "!*t" --[[@as osdateparam]]))
+    return os.date("%b %d %H:%M", utc_ts + tz_offset) --[[@as string]]
+  end
+
+  local function make_display(entry)
+    local edit = entry.obj
+    local editor = edit.editor and edit.editor.login or "unknown"
+    local abs_time = abs_local_time(edit.editedAt)
+    local rel_time = utils.format_date(edit.editedAt)
+    return displayer {
+      { editor, "OctoUser" },
+      { abs_time .. " (" .. rel_time .. ")", "OctoDate" },
+    }
+  end
+
+  return function(edit)
+    if not edit or vim.tbl_isempty(edit) then
+      return nil
+    end
+    local editor = edit.editor and edit.editor.login or "unknown"
+    local abs_time = abs_local_time(edit.editedAt)
+    return {
+      value = edit.id,
+      ordinal = editor .. " " .. abs_time .. " " .. utils.format_date(edit.editedAt),
+      display = make_display,
+      obj = edit,
+    }
+  end
+end
+
 return M

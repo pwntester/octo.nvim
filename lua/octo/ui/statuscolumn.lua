@@ -49,6 +49,13 @@ function M.get_sign(buf, lnum, vnum, win)
       elseif lnum == s.to and vnum == height_end - 1 then
         corner = corners.last
       end
+      -- Show last corner when a closed fold encompasses the comment's last line
+      if corner == corners.middle then
+        local fold_end = vim.fn.foldclosedend(lnum + 1) -- lnum is 0-based, foldclosedend takes 1-based
+        if fold_end ~= -1 and (fold_end - 1) >= s.to then
+          corner = corners.last
+        end
+      end
       return { text = corner, hl = s.dirty and "OctoDirty" or "OctoStatusColumn" }
     end
   end

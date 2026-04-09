@@ -882,6 +882,9 @@ function M.setup()
       delete = function()
         M.delete_comment()
       end,
+      edits = function()
+        M.comment_edits()
+      end,
     },
     label = {
       create = function(label)
@@ -1522,6 +1525,47 @@ function M.delete_comment()
       end,
     }
   end
+end
+
+function M.comment_edits()
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    return
+  end
+
+  local node_id
+  local comment = buffer:get_comment_at_cursor()
+  if comment then
+    node_id = comment.id
+  else
+    local body_metadata = buffer:get_body_at_cursor()
+    if body_metadata then
+      node_id = buffer.node.id
+    end
+  end
+
+  if not node_id then
+    utils.error "The cursor does not seem to be located at any comment or body"
+    return
+  end
+
+  gh.api.graphql {
+    query = queries.comment_edits,
+    fields = { id = node_id },
+    jq = ".data.node.userContentEdits",
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local result = vim.json.decode(output)
+          if not result or not result.nodes or #result.nodes == 0 then
+            utils.info "This comment has no edit history"
+            return
+          end
+          picker.comment_edits(result.nodes)
+        end,
+      },
+    },
+  }
 end
 
 local function update_review_thread_header(bufnr, thread, thread_id, thread_line)

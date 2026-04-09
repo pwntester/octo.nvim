@@ -257,12 +257,19 @@ writers.write_timeline_items(bufnr, {
         createdAt = now,
         assignee = { login = me },
       },
-      ---@type octo.fragments.AssignedEvent
+      -- same actor assigns themselves and another — should render:
+      -- "octocat self-assigned this and assigned williambdean and yet-another-user"
       {
         __typename = "AssignedEvent",
         actor = { login = other },
         createdAt = now,
         assignee = { login = other },
+      },
+      {
+        __typename = "AssignedEvent",
+        actor = { login = other },
+        createdAt = now,
+        assignee = { login = "yet-another-user" },
       },
       ---@type octo.fragments.AssignedEvent
       {
@@ -370,10 +377,59 @@ writers.write_timeline_items(bufnr, {
         requestedReviewer = { login = other },
         createdAt = now,
       },
+      --- Same actor requesting a third reviewer with a slightly different timestamp
+      --- (real-world GitHub API behaviour: each event may have its own createdAt)
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = copilot_swe_agent },
+        requestedReviewer = { login = "yet-another-user" },
+        createdAt = "" .. os.date("!%Y-%m-%dT%H:%M:%SZ", os.time() + 1),
+      },
+      --- A different actor requesting the same reviewer — must stay on its own line
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = other },
+        requestedReviewer = { login = me },
+        createdAt = now,
+      },
+      --- Actor self-requesting a review — should render: "octocat self-requested a review"
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = other },
+        requestedReviewer = { login = other },
+        createdAt = now,
+      },
       --- Sequence of commits have a summary
       example_commit,
       example_commit,
       example_commit,
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = "TOO_HEATED",
+      },
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = vim.NIL,
+      },
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = "OFF_TOPIC",
+      },
+      ---@type octo.fragments.UnlockedEvent
+      {
+        __typename = "UnlockedEvent",
+        actor = { login = me },
+        createdAt = now,
+      },
       ---@type octo.fragments.TransferredEvent
       {
         __typename = "TransferredEvent",

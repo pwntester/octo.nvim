@@ -18,6 +18,18 @@ Edit the issue title, body, or comments, as a regular buffer and use `:w(rite)`
 to sync the issue with GitHub.
 
 
+HEALTH CHECK                                    *octo-health*
+
+Run `:checkhealth octo` to verify your installation. The report covers:
+
+- `octo.nvim`      setup() was called
+- `Neovim version` minimum and recommended version requirements
+- `Dependencies`   gh CLI binary, plenary.nvim, picker plugin, nvim-web-devicons
+- `Authentication` active GitHub account, token source, and token scopes
+
+If any check fails, follow the advice shown in the report.
+
+
 LUA API                                         *octo-lua-api*
 
 The plugin exposes a Lua API to iteract with GitHub CLI which powers the
@@ -585,6 +597,8 @@ Why am I getting authentication error from gh?~
   ...and choose a method to authorise access for `gh`.
   `gh` must store the creds so it can work in a subshell.
 
+  Run `:checkhealth octo` for a full diagnosis.
+
 Can I use treesitter markdown parser with octo buffers?~
 
   Just add the following lines to your TreeSitter config:
@@ -628,6 +642,8 @@ I can't see my v2 projects in issues and/or pull requests!~
 
   If you don't care about projects v2 you can suppress the warning by setting
   `suppress_missing_scope.projects_v2 = true` in your Octo config.
+
+  Run `:checkhealth octo` for a full diagnosis.
 
 How can I disable default key mappings?~
   set `mappings_disable_default = true` in user config.
