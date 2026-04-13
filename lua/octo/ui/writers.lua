@@ -2550,7 +2550,7 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.ReferencedEvent
 function M.write_referenced_event(bufnr, item)
-  if utils.is_blank(item.actor) then
+  if utils.is_blank(item.actor) or utils.is_blank(item.commit) then
     return
   end
 
