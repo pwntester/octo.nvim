@@ -1197,6 +1197,47 @@ function M.octo(object, action, ...)
     end
     return
   end
+  -- :Octo 42  or  :Octo 42 owner/repo
+  local number = tonumber(object)
+  if number then
+    local repo = action or utils.get_remote_name()
+    local owner, name = utils.split_repo(repo)
+    -- Combined query: issueOrPullRequest covers issues+PRs; discussion is a
+    -- separate field. GitHub returns a partial error when discussion is not
+    -- found, but data is still intact, so we read stdout directly and ignore
+    -- the expected NOT_FOUND partial errors.
+    gh.api.graphql {
+      query = queries.issue_kind,
+      fields = { owner = owner, name = name, number = number },
+      opts = {
+        cb = function(stdout, _stderr)
+          if utils.is_blank(stdout) then
+            utils.error("No issue, PR, or discussion found with number: " .. number)
+            return
+          end
+          local ok, decoded = pcall(vim.json.decode, stdout)
+          if not ok or not decoded.data then
+            utils.error("No issue, PR, or discussion found with number: " .. number)
+            return
+          end
+          local repo_data = decoded.data.repository
+          local iop = repo_data.issueOrPullRequest
+          local discussion = repo_data.discussion
+          if iop and iop.__typename == "Issue" then
+            utils.get_issue(number, repo)
+          elseif iop and iop.__typename == "PullRequest" then
+            utils.get_pull_request(number, repo)
+          elseif discussion and discussion.__typename == "Discussion" then
+            utils.get_discussion(number, repo)
+          else
+            utils.error("No issue, PR, or discussion found with number: " .. number)
+          end
+        end,
+      },
+    }
+    return
+  end
+
   local o = M.commands[object]
   if not o then
     local hostname, repo, number, kind = utils.parse_url(object)
