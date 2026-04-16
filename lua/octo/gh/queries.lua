@@ -1297,15 +1297,27 @@ query($id: ID!) {
   node(id: $id) {
     ... on IssueComment {
       url
+      author {
+        login
+      }
     }
     ... on PullRequestReviewComment {
       url
+      author {
+        login
+      }
     }
     ... on PullRequestReview {
       url
+      author {
+        login
+      }
     }
     ... on DiscussionComment {
       url
+      author {
+        login
+      }
     }
   }
 }
