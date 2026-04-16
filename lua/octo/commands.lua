@@ -1223,11 +1223,11 @@ function M.octo(object, action, ...)
           local repo_data = decoded.data.repository
           local iop = repo_data.issueOrPullRequest
           local discussion = repo_data.discussion
-          if iop and iop.__typename == "Issue" then
+          if not utils.is_blank(iop) and iop.__typename == "Issue" then
             utils.get_issue(number, repo)
-          elseif iop and iop.__typename == "PullRequest" then
+          elseif not utils.is_blank(iop) and iop.__typename == "PullRequest" then
             utils.get_pull_request(number, repo)
-          elseif discussion and discussion.__typename == "Discussion" then
+          elseif not utils.is_blank(discussion) and discussion.__typename == "Discussion" then
             utils.get_discussion(number, repo)
           else
             utils.error("No issue, PR, or discussion found with number: " .. number)
