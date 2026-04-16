@@ -354,6 +354,9 @@ query($owner: String!, $name: String!, $number: Int!) {
     issueOrPullRequest(number: $number) {
       __typename
     }
+    discussion(number: $number) {
+      __typename
+    }
   }
 }
 ]]
