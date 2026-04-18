@@ -619,7 +619,7 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
             ---@type octo.mutations.AddPullRequestReviewThread
             local resp = vim.json.decode(output).data.addPullRequestReviewThread
 
-            if utils.is_blank(resp) then
+            if utils.is_blank(resp) or utils.is_blank(resp.thread) then
               utils.error "Failed to create thread"
               return
             end
