@@ -331,6 +331,7 @@ function M.repo(formatted_repos)
       if self.preview_bufnr == tmpbuf and vim.api.nvim_buf_is_valid(tmpbuf) then
         local resp = vim.json.decode(output)
         buffer.node = resp.data.repository
+        buffer.kind = "repo"
         buffer:render_repo()
       end
     end
