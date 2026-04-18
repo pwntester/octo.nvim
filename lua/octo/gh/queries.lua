@@ -151,6 +151,239 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field autoMergeRequest { enabledBy: { login: string }, mergeMethod: string }
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
+  -- Metadata only version - no timeline items for instant loading
+  M.pull_request_metadata = [[
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      id
+      isDraft
+      number
+      state
+      title
+      body
+      createdAt
+      closedAt
+      updatedAt
+      url
+      headRepository { nameWithOwner }
+      closingIssuesReferences(first: 10) {
+        totalCount
+        nodes {
+          ...IssueFields
+        }
+      }
+      files(first:100) {
+        nodes {
+          path
+          viewerViewedState
+        }
+      }
+      merged
+      mergedBy {
+        ... on Organization { name }
+        ... on Bot { login }
+        ... on User {
+          login
+          isViewer
+        }
+        ... on Mannequin { login }
+      }
+      participants(first:10) {
+        nodes {
+          login
+        }
+      }
+      additions
+      deletions
+      commits {
+        totalCount
+      }
+      changedFiles
+      headRefName
+      headRef { id }
+      headRefOid
+      baseRefName
+      baseRefOid
+      baseRepository {
+        name
+        nameWithOwner
+      }
+      milestone {
+        title
+        state
+        openIssueCount
+        closedIssueCount
+        progressPercentage
+      }
+      author {
+        login
+      }
+      authorAssociation
+      viewerDidAuthor
+      viewerCanUpdate
+      viewerCanSubscribe
+      viewerSubscription
+      ...ReactionGroupsFragment
+      reviewDecision
+      labels(first: 20) {
+        ...LabelConnectionFragment
+      }
+      assignees(first: 20) {
+        ...AssigneeConnectionFragment
+      }
+      reviewRequests(first: 20) {
+        totalCount
+        nodes {
+          requestedReviewer {
+            ... on User {
+              login
+              isViewer
+            }
+            ... on Mannequin { login }
+            ... on Team { name }
+          }
+        }
+      }
+      statusCheckRollup {
+        state
+      }
+      mergeStateStatus
+      mergeable
+      autoMergeRequest {
+        enabledBy { login }
+        mergeMethod
+      }
+    }
+  }
+}
+]] .. fragments.issue .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection
+
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
+  -- Fast version without expensive reviewThreads for initial load
+  M.pull_request_fast = [[
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      id
+      isDraft
+      number
+      state
+      title
+      body
+      createdAt
+      closedAt
+      updatedAt
+      url
+      headRepository { nameWithOwner }
+      closingIssuesReferences(first: 10) {
+        totalCount
+        nodes {
+          ...IssueFields
+        }
+      }
+      files(first:100) {
+        nodes {
+          path
+          viewerViewedState
+        }
+      }
+      merged
+      mergedBy {
+        ... on Organization { name }
+        ... on Bot { login }
+        ... on User {
+          login
+          isViewer
+        }
+        ... on Mannequin { login }
+      }
+      participants(first:10) {
+        nodes {
+          login
+        }
+      }
+      additions
+      deletions
+      commits {
+        totalCount
+      }
+      changedFiles
+      headRefName
+      headRef { id }
+      headRefOid
+      baseRefName
+      baseRefOid
+      baseRepository {
+        name
+        nameWithOwner
+      }
+      milestone {
+        title
+        state
+        openIssueCount
+        closedIssueCount
+        progressPercentage
+      }
+      author {
+        login
+      }
+      authorAssociation
+      viewerDidAuthor
+      viewerCanUpdate
+      viewerCanSubscribe
+      viewerSubscription
+      ...ReactionGroupsFragment
+      %s
+      timelineItems(first: 100, after: $endCursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        ...PullRequestTimelineItemsConnectionFragment
+      }
+      reviewDecision
+      labels(first: 20) {
+        ...LabelConnectionFragment
+      }
+      assignees(first: 20) {
+        ...AssigneeConnectionFragment
+      }
+      reviewRequests(first: 20) {
+        totalCount
+        nodes {
+          requestedReviewer {
+            ... on User {
+              login
+              isViewer
+            }
+            ... on Mannequin { login }
+            ... on Team { name }
+          }
+        }
+      }
+      statusCheckRollup {
+        state
+      }
+      mergeStateStatus
+      mergeable
+      autoMergeRequest {
+        enabledBy { login }
+        mergeMethod
+      }
+    }
+  }
+}
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event .. fragments.comment_deleted_event
+
+  if config.values.default_to_projects_v2 then
+    M.pull_request_fast = M.pull_request_fast
+      .. fragments.added_to_project_v2_event
+      .. fragments.removed_from_project_v2_event
+      .. fragments.project_v2_item_status_changed_event
+  end
+
+  -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#pullrequest
   M.pull_request = [[
 query($endCursor: String) {
   repository(owner: "%s", name: "%s") {
@@ -285,6 +518,50 @@ query($endCursor: String) {
       .. fragments.project_v2_item_status_changed_event
   end
 
+  -- Query for timeline page only (used for progressive loading)
+  M.pull_request_timeline_page = [[
+query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      timelineItems(first: 30, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        ...PullRequestTimelineItemsConnectionFragment
+      }
+    }
+  }
+}
+]] .. fragments.reaction_groups .. fragments.issue_comment .. fragments.pull_request_review .. fragments.label .. fragments.issue .. fragments.pull_request .. fragments.cross_referenced_event .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event .. fragments.comment_deleted_event .. fragments.pull_request_timeline_items_connection
+
+  if config.values.default_to_projects_v2 then
+    M.pull_request_timeline_page = M.pull_request_timeline_page
+      .. fragments.added_to_project_v2_event
+      .. fragments.removed_from_project_v2_event
+      .. fragments.project_v2_item_status_changed_event
+  end
+
+  -- Query to fetch review threads separately (deferred load)
+  M.pull_request_review_threads = [[
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(last:100) {
+        nodes {
+          ...ReviewThreadInformationFragment
+          comments(first: 100) {
+            nodes {
+              ...ReviewThreadCommentFragment
+            }
+          }
+        }
+      }
+    }
+  }
+}
+]] .. fragments.reaction_groups .. fragments.review_thread_information .. fragments.review_thread_comment
+
   ---@class octo.IssueTimelineItemConnection : octo.fragments.IssueTimelineItemsConnection
   --- @field pageInfo octo.PageInfo
 
@@ -297,6 +574,41 @@ query($endCursor: String) {
   ---@field assignees octo.fragments.AssigneeConnection
   ---@field viewerCanSubscribe boolean
   ---@field viewerSubscription octo.SubscriptionState
+
+  -- Metadata-only query for fast initial load (no timeline items)
+  M.issue_metadata = [[
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issue(number: $number) {
+      ...IssueInformationFragment
+      participants(first:10) {
+        nodes {
+          login
+        }
+      }
+      parent {
+        ...IssueFields
+      }
+      ...ReactionGroupsFragment
+      %s
+      labels(first: 20) {
+        ...LabelConnectionFragment
+      }
+      assignees(first: 20) {
+        ...AssigneeConnectionFragment
+      }
+      blockedBy(first: 10) {
+        nodes { ...IssueFields }
+      }
+      blocking(first: 10) {
+        nodes { ...IssueFields }
+      }
+      viewerCanSubscribe
+      viewerSubscription
+    }
+  }
+}
+]] .. fragments.issue .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_information
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
   M.issue = [[
@@ -342,6 +654,30 @@ query($endCursor: String) {
 
   if config.values.default_to_projects_v2 then
     M.issue = M.issue
+      .. fragments.added_to_project_v2_event
+      .. fragments.removed_from_project_v2_event
+      .. fragments.project_v2_item_status_changed_event
+  end
+
+  -- Query for timeline page only (used for progressive loading)
+  M.issue_timeline_page = [[
+query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    issue(number: $number) {
+      timelineItems(first: 30, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        ...IssueTimelineItemsConnectionFragment
+      }
+    }
+  }
+}
+]] .. fragments.reaction_groups .. fragments.issue_comment .. fragments.label .. fragments.issue .. fragments.pull_request .. fragments.cross_referenced_event .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.comment_deleted_event .. fragments.blocked_by_added_event .. fragments.blocked_by_removed_event .. fragments.blocking_added_event .. fragments.blocking_removed_event .. fragments.transferred_event .. fragments.issue_timeline_items_connection
+
+  if config.values.default_to_projects_v2 then
+    M.issue_timeline_page = M.issue_timeline_page
       .. fragments.added_to_project_v2_event
       .. fragments.removed_from_project_v2_event
       .. fragments.project_v2_item_status_changed_event
