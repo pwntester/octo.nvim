@@ -414,7 +414,7 @@ function M.complete(argLead, cmdLine)
   end
 
   local function resolve_action(qualifier, first, second)
-    local override = config.values.search_completion.overrides[qualifier]
+    local override = config.values.search.completion_overrides[qualifier]
     if override ~= nil then
       if type(override) == "function" then
         return override

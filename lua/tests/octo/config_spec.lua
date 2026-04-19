@@ -154,18 +154,18 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
-      it("should return invalid when completion isn't a table", function()
-        config.values.completion = "not a table"
+      it("should return invalid when search isn't a table", function()
+        config.values.search = "not a table"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
-      it("should return invalid when completion.overrides isn't a table", function()
-        config.values.completion.overrides = "not a table"
+      it("should return invalid when search.completion_overrides isn't a table", function()
+        config.values.search.completion_overrides = "not a table"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
-      it("should return invalid when completion.overrides entry isn't a table or function", function()
-        config.values.completion.overrides = { repo = "not valid" }
+      it("should return invalid when search.completion_overrides entry isn't a table or function", function()
+        config.values.search.completion_overrides = { repo = "not valid" }
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
@@ -205,13 +205,13 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
       end)
 
-      it("should return valid when completion.overrides has table values", function()
-        config.values.completion.overrides = { repo = { "my-org/repo1" } }
+      it("should return valid when search.completion_overrides has table values", function()
+        config.values.search.completion_overrides = { repo = { "my-org/repo1" } }
         assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
       end)
 
-      it("should return valid when completion.overrides has function values", function()
-        config.values.completion.overrides = { label = function() return {} end }
+      it("should return valid when search.completion_overrides has function values", function()
+        config.values.search.completion_overrides = { label = function() return {} end }
         assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
       end)
     end)

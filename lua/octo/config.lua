@@ -114,8 +114,8 @@ local M = {}
 ---@class OctoConfigDebug
 ---@field notify_missing_timeline_items boolean
 
----@class OctoConfigSearchCompletion
----@field overrides table<string, string[]|fun(argLead: string, cmdLine: string): string[]>
+---@class OctoConfigSearch
+---@field completion_overrides table<string, string[]|fun(argLead: string, cmdLine: string): string[]>
 
 ---@class OctoConfig Octo configuration settings
 ---@field picker OctoPickers
@@ -161,7 +161,7 @@ local M = {}
 ---@field discussions OctoConfigDiscussions
 ---@field notifications OctoConfigNotifications
 ---@field poll OctoConfigPoll
----@field search_completion OctoConfigSearchCompletion
+---@field search OctoConfigSearch
 ---@field debug OctoConfigDebug
 
 --- Returns the default octo config values
@@ -537,8 +537,8 @@ function M.get_default_values()
       notify_on_refresh = true,
       notify_on_change = true,
     },
-    search_completion = {
-      overrides = {},
+    search = {
+      completion_overrides = {},
     },
     debug = {
       notify_missing_timeline_items = false,
@@ -735,10 +735,10 @@ function M.validate_config()
     validate_type(config.snippet_context_lines, "snippet_context_lines", "number")
     validate_type(config.timeout, "timeout", "number")
     validate_type(config.default_to_projects_v2, "default_to_projects_v2", "boolean")
-    if validate_type(config.search_completion, "search_completion", "table") then
-      if validate_type(config.search_completion.overrides, "search_completion.overrides", "table") then
-        for name, value in pairs(config.search_completion.overrides) do
-          validate_type(value, "search_completion.overrides." .. name, { "table", "function" })
+    if validate_type(config.search, "search", "table") then
+      if validate_type(config.search.completion_overrides, "search.completion_overrides", "table") then
+        for name, value in pairs(config.search.completion_overrides) do
+          validate_type(value, "search.completion_overrides." .. name, { "table", "function" })
         end
       end
     end
