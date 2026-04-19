@@ -347,6 +347,18 @@ query($endCursor: String) {
       .. fragments.project_v2_item_status_changed_event
   end
 
+  ---@class octo.queries.IssueKind
+  ---@field data {
+  ---  repository: {
+  ---    issueOrPullRequest: {
+  ---      __typename: "Issue"|"PullRequest"?,
+  ---    },
+  ---    discussion: {
+  ---      __typename: "Discussion",
+  ---    },
+  ---  },
+  ---}
+
   -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
   M.issue_kind = [[
 query($owner: String!, $name: String!, $number: Int!) {
