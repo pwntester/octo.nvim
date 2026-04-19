@@ -154,6 +154,21 @@ describe("Octo config", function()
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
       end)
 
+      it("should return invalid when completion isn't a table", function()
+        config.values.completion = "not a table"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when completion.overrides isn't a table", function()
+        config.values.completion.overrides = "not a table"
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when completion.overrides entry isn't a table or function", function()
+        config.values.completion.overrides = { repo = "not valid" }
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
+      end)
+
       it("should return invalid when ui isn't a table", function()
         config.values.ui = "not a table"
         assert.True(vim.tbl_count(require("octo.config").validate_config()) ~= 0)
@@ -187,6 +202,16 @@ describe("Octo config", function()
 
     describe("for good configs", function()
       it("should return valid for the default config", function()
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
+      end)
+
+      it("should return valid when completion.overrides has table values", function()
+        config.values.completion.overrides = { repo = { "my-org/repo1" } }
+        assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
+      end)
+
+      it("should return valid when completion.overrides has function values", function()
+        config.values.completion.overrides = { label = function() return {} end }
         assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
       end)
     end)

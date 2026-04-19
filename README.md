@@ -524,6 +524,16 @@ require"octo".setup {
       open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
     },
   },
+  search_completion = {
+    overrides = {                               -- key is a qualifier, value is an array table or a function
+      -- repo = {},                             -- example: disable completion for "repo:"
+      -- org  = { 'org-a', 'org-b' },           -- example: use static values for "org:" completion
+      -- commenter = function(argLead, cmdLine) -- example: use custom logic for "commenter:" completion
+      --   -- custom logic
+      --   return result_table
+      -- end,
+    },
+  },
 }
 ```
 
@@ -795,6 +805,9 @@ Also, you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
+
+Completion for `:Octo search` arguments can be overridden for each specific qualifier using `search_completion.overrides` config option.
+Example usecase: disable completion functionality that requires remote calls to GitHub server.
 
 ## 📺 Demos
 
