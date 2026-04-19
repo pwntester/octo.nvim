@@ -409,30 +409,32 @@ local qualifiers = {
 --- @param cmdLine string: The command line
 --- @return string[]
 function M.complete(argLead, cmdLine)
-  local function resolve_qualifier_and_action(first, second)
-    local qualifier = type(first) == "number" and second or first
+  local function resolve_qualifier(first, second)
+    return type(first) == "number" and second or first
+  end
 
+  local function resolve_action(qualifier, first, second)
     local override = config.values.search_completion.overrides[qualifier]
     if override ~= nil then
       if type(override) == "function" then
-        return qualifier, override
+        return override
       end
-      return qualifier, function()
+      return function()
         return get_closest_valid(qualifier, override, argLead)
       end
     end
 
     if type(first) == "number" then
-      return qualifier, function()
+      return function()
         return {}
       end
     end
 
     if type(second) == "function" then
-      return qualifier, second
+      return second
     end
 
-    return qualifier, function()
+    return function()
       return get_closest_valid(qualifier, second, argLead)
     end
   end
@@ -440,7 +442,7 @@ function M.complete(argLead, cmdLine)
   if not string.match(argLead, ":") then
     local valid = {}
     for first, second in pairs(qualifiers) do
-      local qualifier = resolve_qualifier_and_action(first, second)
+      local qualifier = resolve_qualifier(first, second)
       if string.match(qualifier, argLead) then
         table.insert(valid, qualifier .. ":")
       end
@@ -451,8 +453,9 @@ function M.complete(argLead, cmdLine)
   local expected_qualifier = string.match(argLead, "([^:]+):")
 
   for first, second in pairs(qualifiers) do
-    local qualifier, action = resolve_qualifier_and_action(first, second)
+    local qualifier = resolve_qualifier(first, second)
     if qualifier == expected_qualifier then
+      local action = resolve_action(qualifier, first, second)
       return action(argLead, cmdLine)
     end
   end
