@@ -211,7 +211,11 @@ describe("Octo config", function()
       end)
 
       it("should return valid when search.completion_overrides has function values", function()
-        config.values.search.completion_overrides = { label = function() return {} end }
+        config.values.search.completion_overrides = {
+          label = function()
+            return {}
+          end,
+        }
         assert.True(vim.tbl_count(require("octo.config").validate_config()) == 0)
       end)
     end)
