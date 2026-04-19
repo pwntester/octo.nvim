@@ -527,7 +527,7 @@ require"octo".setup {
   search_completion = {
     overrides = {                               -- key is a qualifier, value is an array table or a function
       -- repo = {},                             -- example: disable completion for "repo:"
-      -- org  = { 'org-a', 'org-b' },           -- example: use static values for "org:" completion
+      -- org  = { "org-a", "org-b" },           -- example: use static values for "org:" completion
       -- commenter = function(argLead, cmdLine) -- example: use custom logic for "commenter:" completion
       --   -- custom logic
       --   return result_table
