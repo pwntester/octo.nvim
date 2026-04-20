@@ -8,8 +8,6 @@
     "library": [
       "$VIMRUNTIME/lua",
       "$PWD/lua",
-      "${3rd}/luv/library",
-      "$PWD/deps/luvit-meta/library",
       "$PWD/deps/snacks.nvim/lua",
       "$PWD/deps/plenary.nvim/lua",
       "$PWD/deps/telescope.nvim/lua",
