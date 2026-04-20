@@ -2280,6 +2280,28 @@ function M.write_auto_squash_enabled_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.AutoMergeEnabledEvent
+function M.write_auto_merge_enabled_event(bufnr, item)
+  TextChunkBuilder:new()
+    :timeline_marker("auto_squash")
+    :actor(item.actor)
+    :heading(" enabled auto-merge")
+    :date(item.createdAt)
+    :write_event(bufnr)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.AutoMergeDisabledEvent
+function M.write_auto_merge_disabled_event(bufnr, item)
+  TextChunkBuilder:new()
+    :timeline_marker("auto_squash")
+    :actor(item.actor)
+    :heading(" disabled auto-merge")
+    :date(item.createdAt)
+    :write_event(bufnr)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.HeadRefDeletedEvent
 function M.write_head_ref_deleted_event(bufnr, item)
   TextChunkBuilder:new()
@@ -3657,6 +3679,12 @@ function M.write_timeline_items(bufnr, obj)
       table.insert(unrendered_force_push_events, item)
     elseif item.__typename == "AutoSquashEnabledEvent" then
       M.write_auto_squash_enabled_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "AutoMergeEnabledEvent" then
+      M.write_auto_merge_enabled_event(bufnr, item)
+      prev_is_event = true
+    elseif item.__typename == "AutoMergeDisabledEvent" then
+      M.write_auto_merge_disabled_event(bufnr, item)
       prev_is_event = true
     elseif item.__typename == "AddedToProjectV2Event" then
       M.write_added_to_project_v2_event(bufnr, item)
