@@ -308,6 +308,46 @@ function M.get_remote(remote)
   }
 end
 
+---@param repo string
+---@param number integer
+function M.open_buffer(repo, number)
+  local owner, name = M.split_repo(repo)
+  -- Combined query: issueOrPullRequest covers issues+PRs; discussion is a
+  -- separate field. GitHub returns a partial error when discussion is not
+  -- found, but data is still intact, so we read stdout directly and ignore
+  -- the expected NOT_FOUND partial errors.
+  gh.api.graphql {
+    query = queries.issue_kind,
+    fields = { owner = owner, name = name, number = number },
+    opts = {
+      cb = function(stdout, _stderr)
+        if M.is_blank(stdout) then
+          M.error("No issue, PR, or discussion found with number: " .. number)
+          return
+        end
+        ---@type boolean, octo.queries.IssueKind
+        local ok, decoded = pcall(vim.json.decode, stdout)
+        if not ok or not decoded.data then
+          M.error("No issue, PR, or discussion found with number: " .. number)
+          return
+        end
+        local repo_data = decoded.data.repository
+        local iop = repo_data.issueOrPullRequest
+        local discussion = repo_data.discussion
+        if not M.is_blank(iop) and iop.__typename == "Issue" then
+          M.get_issue(number, repo)
+        elseif not M.is_blank(iop) and iop.__typename == "PullRequest" then
+          M.get_pull_request(number, repo)
+        elseif not M.is_blank(discussion) and discussion.__typename == "Discussion" then
+          M.get_discussion(number, repo)
+        else
+          M.error("No issue, PR, or discussion found with number: " .. number)
+        end
+      end,
+    },
+  }
+end
+
 function M.get_remote_url()
   local host = M.get_remote_host()
   local remote_name = M.get_remote_name()
@@ -1233,7 +1273,8 @@ function M.extract_issue_at_cursor(current_repo)
       _, repo, _, number = url:match(constants.URL_ISSUE_PATTERN)
     end
   end
-  return repo, number
+  local casted_number = tonumber(number)
+  return repo, casted_number and math.floor(casted_number) or nil
 end
 
 ---@param str string
