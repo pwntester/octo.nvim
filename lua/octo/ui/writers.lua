@@ -316,6 +316,7 @@ function M.write_discussion_poll(bufnr, poll, start_line)
   local total_votes = poll.totalVoteCount
 
   -- First pass: Calculate maximum option text width for alignment
+  ---@type integer
   local max_width = 0
   for _, option in ipairs(options) do
     local prefix = option.viewerHasVoted and "✓ " or "  "
