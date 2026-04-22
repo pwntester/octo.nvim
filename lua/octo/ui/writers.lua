@@ -3056,6 +3056,7 @@ function M.write_closed_event(bufnr, item)
 
   if stateReason == "DUPLICATE" and item.duplicateOf and not utils.is_blank(item.duplicateOf) then
     local dup = item.duplicateOf
+    ---@cast dup octo.fragments.Issue|octo.fragments.PullRequest
     local dup_state = utils.get_displayed_state(dup.__typename == "Issue", dup.state, dup.stateReason, dup.isDraft)
     local entry = {
       kind = dup.__typename == "Issue" and "issue" or "pull_request",
@@ -3064,8 +3065,8 @@ function M.write_closed_event(bufnr, item)
     local icon = utils.get_icon(entry)
     builder
       :heading(" duplicate of ")
-      :text(dup.title, "OctoDetailsLabel")
-      :text(" #" .. tostring(dup.number) .. " ", "OctoDetailsValue")
+      :text(dup.title or "", "OctoDetailsLabel")
+      :text(" #" .. tostring(dup.number or "") .. " ", "OctoDetailsValue")
       :text(icon[1], icon[2])
       :text(utils.title_case(utils.remove_underscore(dup_state)), utils.state_hl_map[dup_state])
   end

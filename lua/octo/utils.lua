@@ -1967,7 +1967,7 @@ end
 ---@return string
 function M.get_displayed_state(isIssue, state, stateReason, isDraft)
   if isIssue and state == "CLOSED" then
-    return stateReason or state
+    return (not M.is_blank(stateReason) and stateReason) or state
   end
 
   if state == "CLOSED" or state == "MERGED" then
