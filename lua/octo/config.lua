@@ -211,6 +211,7 @@ function M.get_default_values()
       blocking = "  ",
       commit_push = "  ",
       comment_deleted = "  ",
+      duplicate = "  ",
       force_push = "  ",
       draft = "  ",
       ready = " ",
@@ -235,8 +236,8 @@ function M.get_default_values()
       closed = {
         closed = { "  ", "OctoRed" },
         completed = { "  ", "OctoPurple" },
-        not_planned = { "  ", "OctoGrey" },
-        duplicate = { "  ", "OctoGrey" },
+        not_planned = { "  ", "OctoWhite" },
+        duplicate = { "  ", "OctoWhite" },
       },
       reopened = { "  ", "OctoGreen" },
       assigned = "  ",
