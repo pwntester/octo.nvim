@@ -5,6 +5,7 @@
 local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
+local config = require "octo.config"
 
 local M = {}
 
@@ -408,10 +409,40 @@ local qualifiers = {
 --- @param cmdLine string: The command line
 --- @return string[]
 function M.complete(argLead, cmdLine)
+  local function resolve_qualifier(first, second)
+    return type(first) == "number" and second or first
+  end
+
+  local function resolve_action(qualifier, first, second)
+    local override = config.values.search.completion_overrides[qualifier]
+    if override ~= nil then
+      if type(override) == "function" then
+        return override
+      end
+      return function()
+        return get_closest_valid(qualifier, override, argLead)
+      end
+    end
+
+    if type(first) == "number" then
+      return function()
+        return {}
+      end
+    end
+
+    if type(second) == "function" then
+      return second
+    end
+
+    return function()
+      return get_closest_valid(qualifier, second, argLead)
+    end
+  end
+
   if not string.match(argLead, ":") then
     local valid = {}
     for first, second in pairs(qualifiers) do
-      local qualifier = type(first) == "number" and second or first
+      local qualifier = resolve_qualifier(first, second)
       if string.match(qualifier, argLead) then
         table.insert(valid, qualifier .. ":")
       end
@@ -422,23 +453,9 @@ function M.complete(argLead, cmdLine)
   local expected_qualifier = string.match(argLead, "([^:]+):")
 
   for first, second in pairs(qualifiers) do
-    local qualifier, action
-    if type(first) == "number" then
-      qualifier = second
-      action = function()
-        return {}
-      end
-    else
-      qualifier = first
-      action = second
-      if type(action) == "table" then
-        action = function()
-          return get_closest_valid(qualifier, second, argLead)
-        end
-      end
-    end
-
+    local qualifier = resolve_qualifier(first, second)
     if qualifier == expected_qualifier then
+      local action = resolve_action(qualifier, first, second)
       return action(argLead, cmdLine)
     end
   end
