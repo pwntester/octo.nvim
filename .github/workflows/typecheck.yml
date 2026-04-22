@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         nvim_version: [stable]
-        lua_ls_version: [3.15.0]
+        lua_ls_version: [3.18.2]
     steps:
       - uses: actions/checkout@v6
       - name: Install neovim
@@ -41,7 +41,6 @@ jobs:
             "nvim-telescope/telescope.nvim"
             "ibhagwan/fzf-lua"
             "nvim-tree/nvim-web-devicons"
-            "Bilal2453/luvit-meta"
           )
           for dep in "${DEPS[@]}"; do
             repo_name=$(echo $dep | cut -d'/' -f2)

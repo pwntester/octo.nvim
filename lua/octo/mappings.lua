@@ -162,6 +162,7 @@ return {
       ["Add Comment"] = commands.comment.add,
       ["Add Reply"] = commands.comment.reply,
       ["Delete Comment"] = commands.comment.delete,
+      ["Reference in New Issue"] = commands.comment.reference,
       ["Toggle Polling"] = commands.poll.toggle,
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
@@ -200,6 +201,7 @@ return {
       ["Change Subscription"] = commands.issue.subscription,
       ["Add Comment"] = commands.comment.add,
       ["Delete Comment"] = commands.comment.delete,
+      ["Reference in New Issue"] = commands.comment.reference,
       ["Toggle Polling"] = commands.poll.toggle,
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
@@ -220,6 +222,7 @@ return {
       ["Change Subscription"] = commands.discussion.subscription,
       ["Add Comment"] = commands.comment.add,
       ["Delete Comment"] = commands.comment.delete,
+      ["Reference in New Issue"] = commands.comment.reference,
       ["View Repo"] = context.within_discussion(function(buffer)
         commands.repo.view(buffer.repo)
       end),
@@ -229,6 +232,9 @@ return {
   end,
   create_issue = function()
     require("octo.commands").create_issue()
+  end,
+  reference_in_new_issue = function()
+    require("octo.commands").reference_in_new_issue()
   end,
   create_discussion = function()
     local buffer = utils.get_current_buffer()

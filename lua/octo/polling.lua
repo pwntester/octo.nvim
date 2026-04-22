@@ -19,7 +19,7 @@ local M = {}
 ---@type table<integer, OctoPollingEntry>
 local tracked_buffers = {}
 
----@type uv_timer_t|nil
+---@type uv.uv_timer_t|nil
 local timer = nil
 
 ---Check if an OctoBuffer has unsaved local edits

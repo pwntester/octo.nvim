@@ -141,25 +141,7 @@ function M.go_to_issue()
   if not repo or not number then
     return
   end
-  local owner, name = utils.split_repo(repo)
-
-  gh.api.graphql {
-    query = queries.issue_kind,
-    fields = { owner = owner, name = name, number = number },
-    jq = ".data.repository.issueOrPullRequest.__typename",
-    opts = {
-      cb = gh.create_callback {
-        failure = utils.print_err,
-        success = function(kind)
-          if kind == "Issue" then
-            utils.get_issue(number, repo)
-          elseif kind == "PullRequest" then
-            utils.get_pull_request(number, repo)
-          end
-        end,
-      },
-    },
-  }
+  utils.open_buffer(repo, number)
 end
 
 function M.next_comment()

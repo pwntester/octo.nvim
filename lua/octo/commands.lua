@@ -872,6 +872,9 @@ function M.setup()
           opts = { cb = gh.create_callback { success = utils.copy_url } },
         }
       end),
+      reference = function()
+        M.reference_in_new_issue()
+      end,
       delete = function()
         M.delete_comment()
       end,
@@ -1194,6 +1197,14 @@ function M.octo(object, action, ...)
     end
     return
   end
+  -- :Octo 42  or  :Octo 42 owner/repo
+  local number = tonumber(object)
+  if number then
+    local repo = action or utils.get_remote_name()
+    utils.open_buffer(repo, number)
+    return
+  end
+
   local o = M.commands[object]
   if not o then
     local hostname, repo, number, kind = utils.parse_url(object)
@@ -1708,6 +1719,49 @@ function M.change_state(state)
       cb = gh.create_callback { success = update_state },
     },
   }
+end
+
+function M.reference_in_new_issue()
+  context.on_comment_in_buffer(function(comment, buffer)
+    -- Use savedBody (last synced) for the comment content
+    local comment_body = comment.savedBody or comment.body or ""
+
+    -- Title defaults to the first non-blank line of the comment body
+    local base_title = ""
+    for line in comment_body:gmatch "[^\n]+" do
+      local trimmed = vim.trim(line)
+      if trimmed ~= "" then
+        base_title = trimmed
+        break
+      end
+    end
+
+    -- Fetch comment URL and author in one query, then open the new issue form
+    gh.api.graphql {
+      query = queries.comment_url,
+      f = { id = comment.id },
+      jq = ".data.node",
+      opts = {
+        cb = gh.create_callback {
+          success = function(output)
+            local node = vim.json.decode(output)
+            local url = node and node.url or ""
+            local author = node and node.author and node.author.login or ""
+
+            -- Build body: full comment body + attribution footer
+            local attribution = string.format("_Originally posted by @%s in %s_", author, url)
+            local base_body = comment_body .. "\n\n" .. attribution
+
+            M.save_issue {
+              repo = buffer.repo,
+              base_title = base_title,
+              base_body = base_body,
+            }
+          end,
+        },
+      },
+    }
+  end)()
 end
 
 function M.create_issue(repo)
