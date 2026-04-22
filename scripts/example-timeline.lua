@@ -51,6 +51,17 @@ local open_issue = {
   repository = { nameWithOwner = repo },
 }
 
+---@type octo.fragments.Issue
+local duplicate_issue = {
+  __typename = "Issue",
+  id = id,
+  number = 1,
+  title = "Another Bug report",
+  state = "CLOSED",
+  stateReason = "DUPLICATE",
+  repository = { nameWithOwner = repo },
+}
+
 ---@type octo.fragments.PullRequestCommit
 local example_commit = {
   __typename = "PullRequestCommit",
@@ -77,6 +88,17 @@ local closed_issue = {
   title = "Another Bug report",
   state = "CLOSED",
   stateReason = "COMPLETED",
+  repository = { nameWithOwner = repo },
+}
+
+---@type octo.fragments.Issue
+local duplicate_issue = {
+  __typename = "Issue",
+  id = id,
+  number = 6235,
+  title = "Support AGENTS.md directly",
+  state = "OPEN",
+  stateReason = nil,
   repository = { nameWithOwner = repo },
 }
 
@@ -116,6 +138,16 @@ writers.write_timeline_items(bufnr, {
         willCloseTarget = false,
         isCrossRepository = false,
         source = open_issue,
+        target = open_issue,
+      },
+      ---@type octo.fragments.CrossReferencedEvent
+      {
+        __typename = "CrossReferencedEvent",
+        actor = { login = other },
+        createdAt = now,
+        willCloseTarget = false,
+        isCrossRepository = false,
+        source = duplicate_issue,
         target = open_issue,
       },
       ---@type octo.fragments.CrossReferencedEvent
@@ -436,6 +468,47 @@ writers.write_timeline_items(bufnr, {
         actor = { login = me },
         createdAt = now,
         fromRepository = { nameWithOwner = repo },
+      },
+      ---@type octo.fragments.ClosedEvent
+      {
+        __typename = "ClosedEvent",
+        actor = { login = other },
+        createdAt = now,
+        stateReason = "DUPLICATE",
+        closable = { __typename = "Issue", state = "CLOSED", stateReason = "DUPLICATE" },
+        duplicateOf = duplicate_issue,
+      },
+      ---@type octo.fragments.MarkedAsDuplicateEvent
+      {
+        __typename = "MarkedAsDuplicateEvent",
+        actor = { login = other },
+        createdAt = now,
+        isCrossRepository = false,
+        canonical = open_issue,
+      },
+      ---@type octo.fragments.MarkedAsDuplicateEvent
+      {
+        __typename = "MarkedAsDuplicateEvent",
+        actor = { login = other },
+        createdAt = now,
+        isCrossRepository = true,
+        canonical = {
+          __typename = "Issue",
+          id = id,
+          number = 6235,
+          title = "Support AGENTS.md directly",
+          state = "OPEN",
+          stateReason = nil,
+          repository = { nameWithOwner = another_repo },
+        },
+      },
+      ---@type octo.fragments.UnmarkedAsDuplicateEvent
+      {
+        __typename = "UnmarkedAsDuplicateEvent",
+        actor = { login = me },
+        createdAt = now,
+        isCrossRepository = false,
+        canonical = duplicate_issue,
       },
     },
   },
