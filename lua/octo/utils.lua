@@ -56,6 +56,7 @@ M.state_hl_map = {
   DRAFT = "OctoStateDraft",
   COMPLETED = "OctoStateCompleted",
   NOT_PLANNED = "OctoStateNotPlanned",
+  DUPLICATE = "OctoStateNotPlanned",
   OPEN = "OctoStateOpen",
   APPROVED = "OctoStateApproved",
   CHANGES_REQUESTED = "OctoStateChangesRequested",
@@ -1999,9 +2000,10 @@ end
 -- Symbols found with "Telescope symbols"
 M.icons = {
   issue = {
-    open = { " ", "OctoGreen" },
+    open = { " ", "OctoGreen" },
     closed = { " ", "OctoPurple" },
     not_planned = { " ", "OctoGrey" },
+    duplicate = { " ", "OctoGrey" },
   },
   pull_request = {
     open = { " ", "OctoGreen" },
@@ -2050,6 +2052,8 @@ function M.get_issue_pr_icon(entry)
       return M.icons.issue.open
     elseif state == "CLOSED" and stateReason == "NOT_PLANNED" then
       return M.icons.issue.not_planned
+    elseif state == "CLOSED" and stateReason == "DUPLICATE" then
+      return M.icons.issue.duplicate
     elseif state == "CLOSED" then
       return M.icons.issue.closed
     end
