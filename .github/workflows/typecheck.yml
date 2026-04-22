@@ -20,6 +20,11 @@ jobs:
         lua_ls_version: [3.18.2]
     steps:
       - uses: actions/checkout@v6
+      - name: Cache neovim
+        uses: actions/cache@v5
+        with:
+          path: _neovim
+          key: ${{ runner.os }}-neovim-${{ matrix.nvim_version }}
       - name: Install neovim
         run: |
           url="https://github.com/neovim/neovim/releases/download/${{ matrix.nvim_version }}/nvim-linux-x86_64.tar.gz"
@@ -27,11 +32,23 @@ jobs:
             mkdir -p _neovim
             curl -sL $url | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
           }
+      - name: Cache lua-language-server
+        uses: actions/cache@v5
+        with:
+          path: luals
+          key: ${{ runner.os }}-luals-${{ matrix.lua_ls_version }}
       - name: Install lua-language-server
         run: |
-          mkdir -p luals
-          curl -L "https://github.com/LuaLS/lua-language-server/releases/download/${{ matrix.lua_ls_version }}/lua-language-server-${{ matrix.lua_ls_version }}-linux-x64.tar.gz" | tar zx --directory luals
+          test -d luals/bin || {
+            mkdir -p luals
+            curl -L "https://github.com/LuaLS/lua-language-server/releases/download/${{ matrix.lua_ls_version }}/lua-language-server-${{ matrix.lua_ls_version }}-linux-x64.tar.gz" | tar zx --directory luals
+          }
       - run: echo "luals/bin" >> "$GITHUB_PATH"
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: deps
+          key: ${{ runner.os }}-typecheck-deps-${{ hashFiles('.github/workflows/typecheck.yml') }}
       - name: Checkout dependencies
         run: |
           mkdir -p deps
@@ -44,8 +61,9 @@ jobs:
           )
           for dep in "${DEPS[@]}"; do
             repo_name=$(echo $dep | cut -d'/' -f2)
-            git clone --depth 1 "https://github.com/${dep}.git" "deps/${repo_name}"
+            test -d "deps/${repo_name}" || git clone --depth 1 "https://github.com/${dep}.git" "deps/${repo_name}" &
           done
+          wait
       - name: Typecheck
         run: |
           env VIMRUNTIME=${PWD}/_neovim/share/nvim/runtime lua-language-server --check=${PWD}/lua --configpath=${PWD}/.github/workflows/.luarc.json --checklevel=Information
