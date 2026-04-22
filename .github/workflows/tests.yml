@@ -24,11 +24,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: date +%F > todays-date
-      - name: Restore from todays cache
+      - name: Restore neovim from cache
         uses: actions/cache@v5
         with:
           path: _neovim
           key: ${{ runner.os }}-latest-${{ hashFiles('todays-date') }}
+      - name: Restore plenary.nvim from cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
+          key: ${{ runner.os }}-plenary-${{ hashFiles('todays-date') }}
       - name: Prepare
         env:
           GH_TOKEN: ${{ github.token }}
