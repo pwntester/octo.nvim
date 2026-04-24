@@ -215,6 +215,10 @@ local function run(opts)
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
     table.insert(opts.args, "Accept: " .. table.concat(headers, ";"))
+    if opts.args[2] == "graphql" then
+      table.insert(opts.args, "-H")
+      table.insert(opts.args, "X-Github-Next-Global-ID: 1")
+    end
     if not require("octo.utils").is_blank(opts.hostname) then
       hostname = opts.hostname
     elseif not require("octo.utils").is_blank(conf.github_hostname) then
