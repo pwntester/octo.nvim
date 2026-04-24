@@ -2313,8 +2313,8 @@ function M.show_pr_diff()
         local wbufnr = vim.api.nvim_create_buf(true, true)
         vim.api.nvim_buf_set_lines(wbufnr, 0, -1, false, lines)
         vim.api.nvim_set_current_buf(wbufnr)
-        vim.api.nvim_buf_set_option(wbufnr, "filetype", "diff")
-        vim.api.nvim_buf_set_option(wbufnr, "modifiable", false)
+        vim.bo[wbufnr].filetype = "diff"
+        vim.bo[wbufnr].modifiable = false
         vim.api.nvim_buf_set_name(wbufnr, "DIFF: " .. buffer:pullRequest().title)
       end
     end,

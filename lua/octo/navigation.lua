@@ -13,8 +13,8 @@ Opens a url in your default browser, bypassing gh.
 ]]
 ---@param url string
 function M.open_in_browser_raw(url)
-  local os_name = vim.loop.os_uname().sysname
-  local is_windows = vim.loop.os_uname().version:match "Windows"
+  local os_name = vim.uv.os_uname().sysname
+  local is_windows = vim.uv.os_uname().version:match "Windows"
 
   if os_name == "Darwin" then
     os.execute("open " .. url)
@@ -94,7 +94,7 @@ function M.open_in_browser(kind, repo, number)
 end
 
 local function open_file_if_found(path, line)
-  local stat = vim.loop.fs_stat(path)
+  local stat = vim.uv.fs_stat(path)
   if stat and stat.type then
     vim.cmd("e " .. path)
     vim.api.nvim_win_set_cursor(0, { line, 0 })

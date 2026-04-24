@@ -167,7 +167,7 @@ local commit = defaulter(function(opts)
           bufname = self.state.bufname,
           mode = "append",
           callback = function(bufnr, _)
-            vim.api.nvim_buf_set_option(bufnr, "filetype", "diff")
+            vim.bo[bufnr].filetype = "diff"
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
@@ -190,7 +190,7 @@ local changed_files = defaulter(function(opts)
         local diff = entry.change.patch
         if diff then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          vim.bo[self.state.bufnr].filetype = "diff"
         end
       end
     end,
@@ -231,7 +231,7 @@ local issue_template = defaulter(function(opts)
         local template = entry.template.body
         if template then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(template, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "markdown")
+          vim.bo[self.state.bufnr].filetype = "markdown"
         end
       end
     end,
