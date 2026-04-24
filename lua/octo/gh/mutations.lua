@@ -662,14 +662,7 @@ mutation($input: CreateIssueInput!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.renamed_title_event .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.comment_deleted_event .. fragments.blocked_by_added_event .. fragments.blocked_by_removed_event .. fragments.blocking_added_event .. fragments.blocking_removed_event .. fragments.transferred_event .. fragments.locked_event .. fragments.unlocked_event .. fragments.marked_as_duplicate_event .. fragments.unmarked_as_duplicate_event
-
-  if config.values.default_to_projects_v2 then
-    M.create_issue = M.create_issue
-      .. fragments.added_to_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-      .. fragments.removed_from_project_v2_event
-  end
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   M.close_issue = [[
 mutation($issueId: ID!, $stateReason: IssueCloseReason) {
@@ -706,14 +699,7 @@ mutation($issueId: ID!, $stateReason: IssueCloseReason) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.comment_deleted_event .. fragments.blocked_by_added_event .. fragments.blocked_by_removed_event .. fragments.blocking_added_event .. fragments.blocking_removed_event .. fragments.transferred_event .. fragments.locked_event .. fragments.unlocked_event .. fragments.marked_as_duplicate_event .. fragments.unmarked_as_duplicate_event
-
-  if config.values.default_to_projects_v2 then
-    M.close_issue = M.close_issue
-      .. fragments.added_to_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-      .. fragments.removed_from_project_v2_event
-  end
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
   M.update_issue_state = [[
@@ -751,14 +737,7 @@ mutation($id: ID!, $state: IssueState!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.comment_deleted_event .. fragments.blocked_by_added_event .. fragments.blocked_by_removed_event .. fragments.blocking_added_event .. fragments.blocking_removed_event .. fragments.transferred_event .. fragments.locked_event .. fragments.unlocked_event .. fragments.marked_as_duplicate_event .. fragments.unmarked_as_duplicate_event
-
-  if config.values.default_to_projects_v2 then
-    M.update_issue_state = M.update_issue_state
-      .. fragments.added_to_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-      .. fragments.removed_from_project_v2_event
-  end
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   -- https://docs.github.com/en/graphql/reference/mutations#reopenissue
   M.reopen_issue = [[
@@ -798,14 +777,7 @@ mutation($issueId: ID!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.renamed_title_event .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.comment_deleted_event .. fragments.blocked_by_added_event .. fragments.blocked_by_removed_event .. fragments.blocking_added_event .. fragments.blocking_removed_event .. fragments.transferred_event .. fragments.locked_event .. fragments.unlocked_event .. fragments.marked_as_duplicate_event .. fragments.unmarked_as_duplicate_event
-
-  if config.values.default_to_projects_v2 then
-    M.reopen_issue = M.reopen_issue
-      .. fragments.added_to_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-      .. fragments.removed_from_project_v2_event
-  end
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   ---@class octo.mutations.UpdatePullRequest
   ---@field data {
@@ -931,14 +903,7 @@ mutation($pullRequestId: ID!, $state: PullRequestUpdateState!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.auto_merge_enabled_event .. fragments.auto_merge_disabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event .. fragments.comment_deleted_event .. fragments.locked_event .. fragments.unlocked_event .. fragments.marked_as_duplicate_event .. fragments.unmarked_as_duplicate_event
-
-  if config.values.default_to_projects_v2 then
-    M.update_pull_request_state = M.update_pull_request_state
-      .. fragments.added_to_project_v2_event
-      .. fragments.removed_from_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-  end
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
 
   M.create_discussion = [[
 mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
@@ -1220,14 +1185,7 @@ mutation($input: CreatePullRequestInput!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.renamed_title_event .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.auto_merge_enabled_event .. fragments.auto_merge_disabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event .. fragments.comment_deleted_event .. fragments.locked_event .. fragments.unlocked_event .. fragments.marked_as_duplicate_event .. fragments.unmarked_as_duplicate_event
-
-  if config.values.default_to_projects_v2 then
-    M.create_pr = M.create_pr
-      .. fragments.added_to_project_v2_event
-      .. fragments.removed_from_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-  end
+]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
 
   M.mark_answer = [[
 mutation($id: ID!) {
