@@ -15,6 +15,12 @@ repos:
         language: script
         files: ^lua/octo/.*\.lua$
         pass_filenames: false
+      - id: gen-config-docs
+        name: Auto-generate README config from config.lua
+        entry: scripts/gen-config-docs.sh
+        language: script
+        files: ^lua/octo/config\.lua$
+        pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

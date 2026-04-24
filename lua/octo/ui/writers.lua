@@ -322,7 +322,7 @@ function M.write_discussion_poll(bufnr, poll, start_line)
     local prefix = option.viewerHasVoted and "✓ " or "  "
     local vote_text = string.format("%d %s", option.totalVoteCount, option.totalVoteCount == 1 and "vote" or "votes")
     local line_text = string.format("%s%s: %s", prefix, option.option, vote_text)
-    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text) --[[@as integer]])
+    max_width = math.max(max_width, vim.fn.strdisplaywidth(line_text) --[[@as integer]]) --[[@as integer]]
   end
 
   -- Second pass: Build virtual text arrays with aligned progress bars
