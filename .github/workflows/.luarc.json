@@ -19,11 +19,13 @@
   "diagnostics": {
     "severity": {
       "await-in-sync": "Error",
-      "no-unknown": "Warning"
+      "no-unknown": "Warning",
+      "deprecated": "Warning"
     },
     "neededFileStatus": {
       "await-in-sync": "Any",
-      "no-unknown": "Any"
+      "no-unknown": "Any",
+      "deprecated": "Any"
     },
     "unusedLocalExclude": [
       "_*"

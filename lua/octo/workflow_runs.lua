@@ -280,7 +280,7 @@ local function write_zipped_file(stdout)
   return zip_location,
     function()
       local unlink_success, unlink_error = pcall(function()
-        vim.loop.fs_unlink(zip_location)
+        vim.uv.fs_unlink(zip_location)
       end)
 
       if not unlink_success then
