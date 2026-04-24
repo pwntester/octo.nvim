@@ -10,6 +10,7 @@ local folds = require "octo.folds"
 local bubbles = require "octo.ui.bubbles"
 local notify = require "octo.notify"
 local TextChunkBuilder = require "octo.ui.text-chunk-builder"
+local timeline_registry = require "octo.gh.timeline_registry"
 local vim = vim
 
 local M = {}
@@ -3610,6 +3611,25 @@ function M.write_timeline_items(bufnr, obj)
     end
   end
 
+  -- Accumulator tables, keyed by registry `batch` name.
+  local accumulators = {
+    assignment = unrendered_assignment_events,
+    label = unrendered_label_events,
+    commits = commits,
+    force_push = unrendered_force_push_events,
+    review_requested = unrendered_review_requested_events,
+    review_request_removed = unrendered_review_request_removed_events,
+    subissue_added = unrendered_subissue_added_events,
+    subissue_removed = unrendered_subissue_removed_events,
+  }
+
+  -- Batched typenames that mark prev_is_event when an item is accumulated.
+  local batch_sets_prev_event = {
+    commits = true,
+    review_requested = true,
+    review_request_removed = true,
+  }
+
   for _, item in ipairs(timeline_nodes) do
     render_accumulated_events(item)
     if item.__typename == "IssueComment" then
@@ -3652,157 +3672,31 @@ function M.write_timeline_items(bufnr, obj)
         M.write_review_decision(bufnr, item)
       end
       prev_is_event = false
-    elseif item.__typename == "AssignedEvent" then
-      table.insert(unrendered_assignment_events, item)
-    elseif item.__typename == "UnassignedEvent" then
-      table.insert(unrendered_assignment_events, item)
-    elseif item.__typename == "PullRequestCommit" then
-      table.insert(commits, item)
-      prev_is_event = true
-    elseif item.__typename == "MergedEvent" then
-      M.write_merged_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ClosedEvent" then
-      M.write_closed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ReopenedEvent" then
-      M.write_reopened_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "LabeledEvent" then
-      table.insert(unrendered_label_events, item)
-    elseif item.__typename == "UnlabeledEvent" then
-      table.insert(unrendered_label_events, item)
-    elseif item.__typename == "ReviewRequestedEvent" then
-      unrendered_review_requested_events[#unrendered_review_requested_events + 1] = item
-      prev_is_event = true
-    elseif item.__typename == "ReviewRequestRemovedEvent" then
-      unrendered_review_request_removed_events[#unrendered_review_request_removed_events + 1] = item
-      prev_is_event = true
-    elseif item.__typename == "ReviewDismissedEvent" then
-      M.write_review_dismissed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "RenamedTitleEvent" then
-      M.write_renamed_title_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ConnectedEvent" then
-      M.write_connected_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "CrossReferencedEvent" then
-      M.write_cross_referenced_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ReferencedEvent" then
-      M.write_referenced_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "MilestonedEvent" then
-      M.write_milestoned_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "DemilestonedEvent" then
-      M.write_demilestoned_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "PinnedEvent" then
-      M.write_pinned_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "UnpinnedEvent" then
-      M.write_unpinned_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "LockedEvent" then
-      M.write_locked_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "UnlockedEvent" then
-      M.write_unlocked_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "SubIssueAddedEvent" then
-      table.insert(unrendered_subissue_added_events, item)
-    elseif item.__typename == "SubIssueRemovedEvent" then
-      table.insert(unrendered_subissue_removed_events, item)
-    elseif item.__typename == "ParentIssueAddedEvent" then
-      M.write_parent_issue_added_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ParentIssueRemovedEvent" then
-      M.write_parent_issue_removed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "IssueTypeAddedEvent" then
-      M.write_issue_type_added_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "IssueTypeRemovedEvent" then
-      M.write_issue_type_removed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "IssueTypeChangedEvent" then
-      M.write_issue_type_changed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ConvertToDraftEvent" then
-      M.write_convert_to_draft_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ReadyForReviewEvent" then
-      M.write_ready_for_review_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "DeployedEvent" then
-      M.write_deployed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "HeadRefDeletedEvent" then
-      M.write_head_ref_deleted_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "HeadRefRestoredEvent" then
-      M.write_head_ref_restored_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "HeadRefForcePushedEvent" then
-      table.insert(unrendered_force_push_events, item)
-    elseif item.__typename == "AutoSquashEnabledEvent" then
-      M.write_auto_squash_enabled_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "AutoMergeEnabledEvent" then
-      M.write_auto_merge_enabled_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "AutoMergeDisabledEvent" then
-      M.write_auto_merge_disabled_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "AddedToProjectV2Event" then
-      M.write_added_to_project_v2_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "RemovedFromProjectV2Event" then
-      M.write_removed_from_project_v2_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "ProjectV2ItemStatusChangedEvent" then
-      M.write_project_v2_item_status_changed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "AutomaticBaseChangeSucceededEvent" then
-      M.write_automatic_base_change_succeeded_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "BaseRefChangedEvent" then
-      M.write_base_ref_changed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "CommentDeletedEvent" then
-      M.write_comment_deleted_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "BlockingAddedEvent" then
-      M.write_blocking_added_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "BlockingRemovedEvent" then
-      M.write_blocking_removed_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "BlockedByAddedEvent" then
-      M.write_blocked_by_added_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "BlockedByRemovedEvent" then
-      M.write_blocked_by_removed_event(bufnr, item)
-    elseif item.__typename == "MarkedAsDuplicateEvent" then
-      M.write_marked_as_duplicate_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "UnmarkedAsDuplicateEvent" then
-      M.write_unmarked_as_duplicate_event(bufnr, item)
-      prev_is_event = true
-    elseif item.__typename == "TransferredEvent" then
-      M.write_transferred_event(bufnr, item)
-      prev_is_event = true
-    elseif
-      not utils.is_blank(item)
-      and config.values.debug.notify_missing_timeline_items
-      ---@diagnostic disable-next-line
-      and is_rendering_event(item.__typename)
-    then
-      ---@diagnostic disable-next-line
-      local info = item.__typename and item.__typename or vim.inspect(item)
-      utils.info("Unhandled timeline item: " .. info)
+    else
+      local entry = timeline_registry.get(item.__typename)
+      if entry then
+        if entry.writer then
+          entry.writer(bufnr, item)
+          -- BlockedByRemovedEvent intentionally does NOT set prev_is_event.
+          if item.__typename ~= "BlockedByRemovedEvent" then
+            prev_is_event = true
+          end
+        elseif entry.batch then
+          table.insert(accumulators[entry.batch], item)
+          if batch_sets_prev_event[entry.batch] then
+            prev_is_event = true
+          end
+        end
+      elseif
+        not utils.is_blank(item)
+        and config.values.debug.notify_missing_timeline_items
+        ---@diagnostic disable-next-line
+        and is_rendering_event(item.__typename)
+      then
+        ---@diagnostic disable-next-line
+        local info = item.__typename and item.__typename or vim.inspect(item)
+        utils.info("Unhandled timeline item: " .. info)
+      end
     end
   end
   render_accumulated_events()
@@ -3810,6 +3704,67 @@ function M.write_timeline_items(bufnr, obj)
   if prev_is_event then
     M.write_block(bufnr, { "" })
   end
+end
+
+-- ---------------------------------------------------------------------------
+-- Timeline writer registry — maps __typename → writer or batch accumulator.
+-- "IssueComment" and "PullRequestReview" are handled with extra logic in
+-- write_timeline_items and are intentionally absent from this registry.
+-- ---------------------------------------------------------------------------
+do
+  local reg = timeline_registry.register
+  -- Direct-dispatch events
+  reg("MergedEvent", { writer = M.write_merged_event })
+  reg("ClosedEvent", { writer = M.write_closed_event })
+  reg("ReopenedEvent", { writer = M.write_reopened_event })
+  reg("ReviewDismissedEvent", { writer = M.write_review_dismissed_event })
+  reg("RenamedTitleEvent", { writer = M.write_renamed_title_event })
+  reg("ConnectedEvent", { writer = M.write_connected_event })
+  reg("CrossReferencedEvent", { writer = M.write_cross_referenced_event })
+  reg("ReferencedEvent", { writer = M.write_referenced_event })
+  reg("MilestonedEvent", { writer = M.write_milestoned_event })
+  reg("DemilestonedEvent", { writer = M.write_demilestoned_event })
+  reg("PinnedEvent", { writer = M.write_pinned_event })
+  reg("UnpinnedEvent", { writer = M.write_unpinned_event })
+  reg("LockedEvent", { writer = M.write_locked_event })
+  reg("UnlockedEvent", { writer = M.write_unlocked_event })
+  reg("ParentIssueAddedEvent", { writer = M.write_parent_issue_added_event })
+  reg("ParentIssueRemovedEvent", { writer = M.write_parent_issue_removed_event })
+  reg("IssueTypeAddedEvent", { writer = M.write_issue_type_added_event })
+  reg("IssueTypeRemovedEvent", { writer = M.write_issue_type_removed_event })
+  reg("IssueTypeChangedEvent", { writer = M.write_issue_type_changed_event })
+  reg("ConvertToDraftEvent", { writer = M.write_convert_to_draft_event })
+  reg("ReadyForReviewEvent", { writer = M.write_ready_for_review_event })
+  reg("DeployedEvent", { writer = M.write_deployed_event })
+  reg("HeadRefDeletedEvent", { writer = M.write_head_ref_deleted_event })
+  reg("HeadRefRestoredEvent", { writer = M.write_head_ref_restored_event })
+  reg("AutoSquashEnabledEvent", { writer = M.write_auto_squash_enabled_event })
+  reg("AutoMergeEnabledEvent", { writer = M.write_auto_merge_enabled_event })
+  reg("AutoMergeDisabledEvent", { writer = M.write_auto_merge_disabled_event })
+  reg("AddedToProjectV2Event", { writer = M.write_added_to_project_v2_event })
+  reg("RemovedFromProjectV2Event", { writer = M.write_removed_from_project_v2_event })
+  reg("ProjectV2ItemStatusChangedEvent", { writer = M.write_project_v2_item_status_changed_event })
+  reg("AutomaticBaseChangeSucceededEvent", { writer = M.write_automatic_base_change_succeeded_event })
+  reg("BaseRefChangedEvent", { writer = M.write_base_ref_changed_event })
+  reg("CommentDeletedEvent", { writer = M.write_comment_deleted_event })
+  reg("BlockingAddedEvent", { writer = M.write_blocking_added_event })
+  reg("BlockingRemovedEvent", { writer = M.write_blocking_removed_event })
+  reg("BlockedByAddedEvent", { writer = M.write_blocked_by_added_event })
+  reg("BlockedByRemovedEvent", { writer = M.write_blocked_by_removed_event })
+  reg("MarkedAsDuplicateEvent", { writer = M.write_marked_as_duplicate_event })
+  reg("UnmarkedAsDuplicateEvent", { writer = M.write_unmarked_as_duplicate_event })
+  reg("TransferredEvent", { writer = M.write_transferred_event })
+  -- Batched events — accumulated and flushed by render_accumulated_events()
+  reg("AssignedEvent", { batch = "assignment" })
+  reg("UnassignedEvent", { batch = "assignment" })
+  reg("LabeledEvent", { batch = "label" })
+  reg("UnlabeledEvent", { batch = "label" })
+  reg("PullRequestCommit", { batch = "commits" })
+  reg("HeadRefForcePushedEvent", { batch = "force_push" })
+  reg("ReviewRequestedEvent", { batch = "review_requested" })
+  reg("ReviewRequestRemovedEvent", { batch = "review_request_removed" })
+  reg("SubIssueAddedEvent", { batch = "subissue_added" })
+  reg("SubIssueRemovedEvent", { batch = "subissue_removed" })
 end
 
 return M
