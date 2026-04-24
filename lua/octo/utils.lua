@@ -1711,28 +1711,30 @@ function M.get_pull_request_for_current_branch(cb)
         local number = pr.number
         local id = pr.id
         local query = graphql("pull_request_query", base_owner, base_name, number, _G.octo_pv2_fragment)
-        gh.run {
-          args = { "api", "graphql", "--paginate", "--jq", ".", "-f", string.format("query=%s", query) },
-          cb = function(output, stderr)
-            if stderr and not M.is_blank(stderr) then
-              M.print_err(stderr)
-            elseif output then
-              local resp = M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
-              ---@type octo.PullRequest
-              local obj = resp.data.repository.pullRequest
-              local PullRequest = require "octo.model.pull-request"
+        gh.api.graphql {
+          f = { query = query },
+          paginate = true,
+          jq = ".",
+          opts = {
+            cb = gh.create_callback {
+              success = function(output)
+                local resp = M.aggregate_pages(output, "data.repository.pullRequest.timelineItems.nodes")
+                ---@type octo.PullRequest
+                local obj = resp.data.repository.pullRequest
+                local PullRequest = require "octo.model.pull-request"
 
-              local opts = {
-                repo = base_owner .. "/" .. base_name,
-                head_repo = obj.headRepository.nameWithOwner,
-                number = number,
-                id = id,
-                head_ref_name = obj.headRefName,
-              }
+                local opts = {
+                  repo = base_owner .. "/" .. base_name,
+                  head_repo = obj.headRepository.nameWithOwner,
+                  number = number,
+                  id = id,
+                  head_ref_name = obj.headRefName,
+                }
 
-              PullRequest.create_with_merge_base(opts, obj, cb)
-            end
-          end,
+                PullRequest.create_with_merge_base(opts, obj, cb)
+              end,
+            },
+          },
         }
       end
     end,

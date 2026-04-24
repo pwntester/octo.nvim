@@ -42,16 +42,16 @@ end
 ---@param callback fun(obj: octo.mutations.StartReview): nil
 function Review:create(callback)
   local query = graphql("start_review_mutation", self.pull_request.id)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        callback(resp)
-      end
-    end,
+  gh.api.graphql {
+    f = { query = query },
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local resp = vim.json.decode(output)
+          callback(resp)
+        end,
+      },
+    },
   }
 end
 
@@ -282,19 +282,19 @@ function Review:discard(opts)
 
           if choice == 1 then
             local delete_query = graphql("delete_pull_request_review_mutation", self.id --[[@as string]])
-            gh.run {
-              args = { "api", "graphql", "-f", string.format("query=%s", delete_query) },
-              cb = function(output_inner, stderr_inner)
-                if stderr_inner and not utils.is_blank(stderr_inner) then
-                  utils.error(stderr_inner)
-                elseif output_inner then
-                  self.id = default_id
-                  self.threads = {}
-                  self.files = {}
-                  utils.info "Pending review discarded"
-                  vim.cmd [[tabclose]]
-                end
-              end,
+            gh.api.graphql {
+              f = { query = delete_query },
+              opts = {
+                cb = gh.create_callback {
+                  success = function()
+                    self.id = default_id
+                    self.threads = {}
+                    self.files = {}
+                    utils.info "Pending review discarded"
+                    vim.cmd [[tabclose]]
+                  end,
+                },
+              },
             }
           end
         end
@@ -363,17 +363,17 @@ function Review:submit(event)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, default_id, false)
   local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
   local query = graphql("submit_pull_request_review_mutation", review_id, event, body, { escape = false })
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        utils.info "Review was submitted successfully!"
-        pcall(vim.api.nvim_win_close, winid, 0)
-        self.layout:close()
-      end
-    end,
+  gh.api.graphql {
+    f = { query = query },
+    opts = {
+      cb = gh.create_callback {
+        success = function()
+          utils.info "Review was submitted successfully!"
+          pcall(vim.api.nvim_win_close, winid, 0)
+          self.layout:close()
+        end,
+      },
+    },
   }
 end
 
