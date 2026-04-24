@@ -186,56 +186,62 @@ For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
 
 Below is the full *default* configuration for `octo.nvim`.
 
+<!-- BEGIN_CONFIG -->
 ```lua
 require"octo".setup {
-  use_local_fs = false,                    -- use local files on right side of reviews
-  enable_builtin = false,                  -- shows a list of builtin actions when no action is provided
-  default_remote = {"upstream", "origin"}, -- order to try remotes
-  default_merge_method = "merge",         -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `merge`, `rebase` or `squash`
-  default_delete_branch = false,           -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
-  ssh_aliases = {},                        -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
-  picker = "telescope",                    -- or "fzf-lua" or "snacks" or "default"
+  picker = "telescope", -- or "fzf-lua" or "snacks" or "default"
   picker_config = {
-    use_emojis = false,                    -- only used by "fzf-lua" picker for now
-    search_static = true,                  -- Whether to use static search results (true) or dynamic search (false)
-    mappings = {                           -- mappings for the pickers
+    use_emojis = false, -- only used by "fzf-lua" picker for now
+    search_static = true, -- Whether to use static search results (true) or dynamic search (false)
+    mappings = { -- mappings for the pickers
       open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
       copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
       checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
       merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
     },
-    snacks = {                                -- snacks specific config
-      actions = {                             -- custom actions for specific snacks pickers (array of tables)
-        issues = {                            -- actions for the issues picker
+    snacks = { -- snacks specific config
+      -- Initialize actions as empty arrays
+      actions = { -- custom actions for specific snacks pickers (array of tables)
+        issues = { -- actions for the issues picker
           -- { name = "my_issue_action", fn = function(picker, item) print("Issue action:", vim.inspect(item)) end, lhs = "<leader>a", desc = "My custom issue action" },
         },
-        pull_requests = {                     -- actions for the pull requests picker
+        pull_requests = { -- actions for the pull requests picker
           -- { name = "my_pr_action", fn = function(picker, item) print("PR action:", vim.inspect(item)) end, lhs = "<leader>b", desc = "My custom PR action" },
         },
-        notifications = {},                   -- actions for the notifications picker
-        issue_templates = {},                 -- actions for the issue templates picker
-        search = {},                          -- actions for the search picker
+        notifications = {}, -- actions for the notifications picker
+        issue_templates = {}, -- actions for the issue templates picker
+        search = {}, -- actions for the search picker
         -- ... add actions for other pickers as needed
+        changed_files = {},
+        commits = {},
+        review_commits = {},
       },
     },
   },
-  comment_icon = "▎",                      -- comment marker
-  outdated_icon = "󰅒 ",                    -- outdated indicator
-  resolved_icon = " ",                    -- resolved indicator
-  reaction_viewer_hint_icon = " ",        -- marker for user reactions
-  commands = {},                           -- additional subcommands made available to `Octo` command
-  users = "search",                        -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
-  user_icon = " ",                        -- user icon
-  ghost_icon = "󰊠 ",                       -- ghost icon
-  copilot_icon = " ",                     -- copilot icon
-  timeline_marker = " ",                  -- timeline marker
-  timeline_indent = 2,                   -- timeline indentation
-  use_timeline_icons = true,               -- toggle timeline icons
-  timeline_icons = {                       -- the default icons based on timelineItems
+  default_remote = { "upstream", "origin" }, -- order to try remotes
+  default_merge_method = "merge", -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `merge`, `rebase` or `squash`
+  default_delete_branch = false, -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
+  ssh_aliases = {}, -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
+  reaction_viewer_hint_icon = " ", -- marker for user reactions
+  commands = {}, -- additional subcommands made available to `Octo` command
+  users = "search", -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
+  user_icon = " ", -- user icon
+  ghost_icon = "󰊠 ", -- ghost icon
+  copilot_icon = " ", -- copilot icon
+  dependabot_icon = " ",
+  comment_icon = "▎",
+  outdated_icon = "󰅒 ",
+  resolved_icon = " ",
+  timeline_marker = " ",
+  timeline_indent = 2,
+  use_timeline_icons = true,
+  timeline_icons = {
     auto_squash = "  ",
+    blocking = "  ",
     commit_push = "  ",
-    comment_deleted = " ",
+    comment_deleted = "  ",
+    duplicate = "  ",
     force_push = "  ",
     draft = "  ",
     ready = " ",
@@ -260,35 +266,50 @@ require"octo".setup {
     closed = {
       closed = { "  ", "OctoRed" },
       completed = { "  ", "OctoPurple" },
-      not_planned = { "  ", "OctoGrey" },
-      duplicate = { "  ", "OctoGrey" },
+      not_planned = { "  ", "OctoWhite" },
+      duplicate = { "  ", "OctoWhite" },
     },
     reopened = { "  ", "OctoGreen" },
     assigned = "  ",
+    locked = "  ",
     review_requested = "  ",
   },
-  right_bubble_delimiter = "",            -- bubble delimiter
-  left_bubble_delimiter = "",             -- bubble delimiter
-  github_hostname = "",                    -- GitHub Enterprise host
-  snippet_context_lines = 4,               -- number or lines around commented lines
-  gh_cmd = "gh",                           -- Command to use when calling Github CLI
-  gh_env = {},                             -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
-  timeout = 5000,                          -- timeout for requests between the remote server
-  default_to_projects_v2 = false,          -- use projects v2 for the `Octo card ...` command by default. Both legacy and v2 commands are available under `Octo cardlegacy ...` and `Octo cardv2 ...` respectively.
-                                           -- Also disable sending v2 events into Github API.
+  right_bubble_delimiter = "", -- bubble delimiter
+  left_bubble_delimiter = "", -- bubble delimiter
+  github_hostname = "", -- GitHub Enterprise host
+  use_local_fs = false, -- use local files on right side of reviews
+  enable_builtin = false, -- shows a list of builtin actions when no action is provided
+  snippet_context_lines = 4, -- number of lines around commented lines
+  gh_cmd = "gh", -- Command to use when calling Github CLI
+  gh_env = {}, -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
+  timeout = 5000, -- timeout for requests between the remote server
+  default_to_projects_v2 = false, -- use projects v2 for the `Octo card ...` command by default. Both legacy and v2 commands are available under `Octo cardlegacy ...` and `Octo cardv2 ...` respectively.
+  suppress_missing_scope = {
+    projects_v2 = false,
+  },
   ui = {
-    use_signcolumn = false,                -- show "modified" marks on the sign column
-    use_signstatus = true,                 -- show "modified" marks on the status column
+    use_signcolumn = false, -- show "modified" marks on the sign column
+    use_statuscolumn = true, -- show "modified" marks on the status column
+    use_foldtext = true,
   },
   issues = {
-    order_by = {                           -- criteria to sort results of `Octo issue list`
-      field = "CREATED_AT",                -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
-      direction = "DESC"                   -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
-    }
+    order_by = { -- criteria to sort results of `Octo issue list`
+      field = "CREATED_AT", -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
+      direction = "DESC", -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
+    },
+  },
+  discussions = {
+    order_by = {
+      field = "CREATED_AT",
+      direction = "DESC",
+    },
+  },
+  notifications = {
+    current_repo_only = false, -- show notifications for current repo only
   },
   reviews = {
-    auto_show_threads = true,              -- automatically show comment threads on cursor move
-    focus             = "right",           -- focus right buffer on diff open
+    auto_show_threads = true, -- automatically show comment threads on cursor move
+    focus = "right", -- focus right buffer on diff open
   },
   runs = {
     icons = {
@@ -301,27 +322,18 @@ require"octo".setup {
     },
   },
   pull_requests = {
-    order_by = {                            -- criteria to sort the results of `Octo pr list`
-      field = "CREATED_AT",                 -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
-      direction = "DESC"                    -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
+    order_by = { -- criteria to sort the results of `Octo pr list`
+      field = "CREATED_AT", -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
+      direction = "DESC", -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
     },
     always_select_remote_on_create = false, -- always give prompt to select base remote repo when creating PRs
-    use_branch_name_as_title = false        -- sets branch name to be the name for the PR
-  },
-  notifications = {
-    current_repo_only = false,             -- show notifications for current repo only
-  },
-  poll = {
-    enabled = false,                       -- opt-in polling for remote changes
-    interval = 10000,                      -- polling interval in milliseconds (default: 10s)
-    notify_on_refresh = true,              -- notify when a buffer is auto-refreshed
-    notify_on_change = true,               -- notify when remote changed but buffer has local edits
+    use_branch_name_as_title = false, -- sets branch name to be the name for the PR
   },
   file_panel = {
-    size = 10,                             -- changed files panel rows
-    use_icons = true                       -- use web-devicons in file panel (if false, nvim-web-devicons does not need to be installed)
+    size = 10, -- changed files panel rows
+    use_icons = true, -- use web-devicons in file panel (if false, nvim-web-devicons does not need to be installed)
   },
-  colors = {                               -- used for highlight groups (see Colors section below)
+  colors = { -- used for highlight groups (see Colors section below)
     white = "#ffffff",
     grey = "#2A354C",
     black = "#000000",
@@ -335,7 +347,7 @@ require"octo".setup {
     dark_blue = "#0366d6",
     purple = "#6f42c1",
   },
-  mappings_disable_default = false,        -- disable default mappings if true, but will still adapt user mappings
+  mappings_disable_default = false, -- disable default mappings if true, but will still adapt user mappings
   mappings = {
     discussion = {
       discussion_options = { lhs = "<CR>", desc = "show discussion options" },
@@ -344,6 +356,8 @@ require"octo".setup {
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
       add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
+      comment_edits = { lhs = "<localleader>ce", desc = "show comment edit history" },
+      reference_in_new_issue = { lhs = "<localleader>ri", desc = "reference comment in new issue" },
       add_label = { lhs = "<localleader>la", desc = "add label" },
       remove_label = { lhs = "<localleader>ld", desc = "remove label" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
@@ -383,6 +397,8 @@ require"octo".setup {
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
       add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
+      comment_edits = { lhs = "<localleader>ce", desc = "show comment edit history" },
+      reference_in_new_issue = { lhs = "<localleader>ri", desc = "reference comment in new issue" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
       prev_comment = { lhs = "[c", desc = "go to previous comment" },
       react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
@@ -397,12 +413,21 @@ require"octo".setup {
     pull_request = {
       pr_options = { lhs = "<CR>", desc = "show PR options" },
       checkout_pr = { lhs = "<localleader>po", desc = "checkout PR" },
-      merge_pr = { lhs = "<localleader>pm", desc = "merge PR" },
+      merge_pr = { lhs = "<localleader>pm", desc = "merge commit PR" },
       squash_and_merge_pr = { lhs = "<localleader>psm", desc = "squash and merge PR" },
       rebase_and_merge_pr = { lhs = "<localleader>prm", desc = "rebase and merge PR" },
-      merge_pr_queue = { lhs = "<localleader>pq", desc = "merge commit PR and add to merge queue (Merge queue must be enabled in the repo)" },
-      squash_and_merge_queue = { lhs = "<localleader>psq", desc = "squash and add to merge queue (Merge queue must be enabled in the repo)" },
-      rebase_and_merge_queue = { lhs = "<localleader>prq", desc = "rebase and add to merge queue (Merge queue must be enabled in the repo)" },
+      merge_pr_queue = {
+        lhs = "<localleader>pq",
+        desc = "merge commit PR and add to merge queue (Merge queue must be enabled in the repo)",
+      },
+      squash_and_merge_queue = {
+        lhs = "<localleader>psq",
+        desc = "squash and add to merge queue (Merge queue must be enabled in the repo)",
+      },
+      rebase_and_merge_queue = {
+        lhs = "<localleader>prq",
+        desc = "rebase and add to merge queue (Merge queue must be enabled in the repo)",
+      },
       list_commits = { lhs = "<localleader>pc", desc = "list PR commits" },
       list_changed_files = { lhs = "<localleader>pf", desc = "list PR changed files" },
       show_pr_diff = { lhs = "<localleader>pd", desc = "show PR diff" },
@@ -412,8 +437,10 @@ require"octo".setup {
       reopen_issue = { lhs = "<localleader>io", desc = "reopen PR" },
       list_issues = { lhs = "<localleader>il", desc = "list open issues on same repo" },
       reload = { lhs = "<C-r>", desc = "reload PR" },
+      approve_pr = { lhs = "<leader>qa", desc = "approve PR" },
       open_in_browser = { lhs = "<C-b>", desc = "open PR in browser" },
       copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
+      copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
       goto_file = { lhs = "gf", desc = "go to file" },
       add_assignee = { lhs = "<localleader>aa", desc = "add assignee" },
       remove_assignee = { lhs = "<localleader>ad", desc = "remove assignee" },
@@ -424,6 +451,8 @@ require"octo".setup {
       add_comment = { lhs = "<localleader>ca", desc = "add comment" },
       add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
+      comment_edits = { lhs = "<localleader>ce", desc = "show comment edit history" },
+      reference_in_new_issue = { lhs = "<localleader>ri", desc = "reference comment in new issue" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
       prev_comment = { lhs = "[c", desc = "go to previous comment" },
       react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
@@ -445,14 +474,16 @@ require"octo".setup {
       add_reply = { lhs = "<localleader>cr", desc = "add reply" },
       add_suggestion = { lhs = "<localleader>sa", desc = "add suggestion" },
       delete_comment = { lhs = "<localleader>cd", desc = "delete comment" },
+      comment_edits = { lhs = "<localleader>ce", desc = "show comment edit history" },
+      reference_in_new_issue = { lhs = "<localleader>ri", desc = "reference comment in new issue" },
       next_comment = { lhs = "]c", desc = "go to next comment" },
       prev_comment = { lhs = "[c", desc = "go to previous comment" },
       select_next_entry = { lhs = "]q", desc = "move to next changed file" },
       select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
       select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
       select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
-      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed changed file" },
-      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed changed file" },
+      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed file" },
+      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed file" },
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       react_hooray = { lhs = "<localleader>rp", desc = "add/remove 🎉 reaction" },
       react_heart = { lhs = "<localleader>rh", desc = "add/remove ❤️ reaction" },
@@ -466,10 +497,10 @@ require"octo".setup {
       unresolve_thread = { lhs = "<localleader>rT", desc = "unresolve PR thread" },
     },
     submit_win = {
-      approve_review = { lhs = "<C-a>", desc = "approve review", mode = { "n", "i" } },
-      comment_review = { lhs = "<C-m>", desc = "comment review", mode = { "n", "i" } },
-      request_changes = { lhs = "<C-r>", desc = "request changes review", mode = { "n", "i" } },
-      close_review_tab = { lhs = "<C-c>", desc = "close review tab", mode = { "n", "i" } },
+      approve_review = { lhs = "<C-a>", desc = "approve review", mode = { "n" } },
+      comment_review = { lhs = "<C-m>", desc = "comment review", mode = { "n" } },
+      request_changes = { lhs = "<C-r>", desc = "request changes review", mode = { "n" } },
+      close_review_tab = { lhs = "<C-c>", desc = "close review tab", mode = { "n" } },
     },
     review_diff = {
       submit_review = { lhs = "<localleader>vs", desc = "submit review" },
@@ -484,11 +515,13 @@ require"octo".setup {
       select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
       select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
       select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
-      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed changed file" },
-      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed changed file" },
+      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed file" },
+      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed file" },
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
       goto_file = { lhs = "gf", desc = "go to file" },
+      copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
+      review_commits = { lhs = "<localleader>C", desc = "review PR commits" },
     },
     file_panel = {
       submit_review = { lhs = "<localleader>vs", desc = "submit review" },
@@ -503,10 +536,11 @@ require"octo".setup {
       select_prev_entry = { lhs = "[q", desc = "move to previous changed file" },
       select_first_entry = { lhs = "[Q", desc = "move to first changed file" },
       select_last_entry = { lhs = "]Q", desc = "move to last changed file" },
-      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed changed file" },
-      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed changed file" },
+      select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed file" },
+      select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed file" },
       close_review_tab = { lhs = "<C-c>", desc = "close review tab" },
       toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewer viewed state" },
+      review_commits = { lhs = "<localleader>C", desc = "review PR commits" },
     },
     notification = {
       read = { lhs = "<localleader>nr", desc = "mark notification as read" },
@@ -524,18 +558,21 @@ require"octo".setup {
       open_in_browser = { lhs = "<C-b>", desc = "open release in browser" },
     },
   },
+  poll = {
+    enabled = false, -- opt-in polling for remote changes
+    interval = 10000, -- polling interval in milliseconds (default: 10s)
+    notify_on_refresh = true, -- notify when a buffer is auto-refreshed
+    notify_on_change = true, -- notify when remote changed but buffer has local edits
+  },
   search = {
-    completion_overrides = {                    -- key is a qualifier, value is an array table or a function
-      -- repo = {},                             -- example: disable completion for "repo:"
-      -- org  = { "org-a", "org-b" },           -- example: use static values for "org:" completion
-      -- commenter = function(argLead, cmdLine) -- example: use custom logic for "commenter:" completion
-      --   -- custom logic
-      --   return result_table
-      -- end,
-    },
+    completion_overrides = {}, -- key is a qualifier, value is an array table or a function returning a table
+  },
+  debug = {
+    notify_missing_timeline_items = false,
   },
 }
 ```
+<!-- END_CONFIG -->
 
 ## 🤖 Commands
 

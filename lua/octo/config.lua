@@ -167,42 +167,48 @@ local M = {}
 --- Returns the default octo config values
 ---@return OctoConfig
 function M.get_default_values()
+  -- BEGIN_CONFIG
   return {
-    picker = "telescope",
+    picker = "telescope", -- or "fzf-lua" or "snacks" or "default"
     picker_config = {
-      use_emojis = false,
-      search_static = true,
-      mappings = {
+      use_emojis = false, -- only used by "fzf-lua" picker for now
+      search_static = true, -- Whether to use static search results (true) or dynamic search (false)
+      mappings = { -- mappings for the pickers
         open_in_browser = { lhs = "<C-b>", desc = "open issue in browser" },
         copy_url = { lhs = "<C-y>", desc = "copy url to system clipboard" },
         copy_sha = { lhs = "<C-e>", desc = "copy commit SHA to system clipboard" },
         checkout_pr = { lhs = "<C-o>", desc = "checkout pull request" },
         merge_pr = { lhs = "<C-r>", desc = "merge pull request" },
       },
-      snacks = {
+      snacks = { -- snacks specific config
         -- Initialize actions as empty arrays
-        actions = {
-          issues = {},
-          pull_requests = {},
-          notifications = {},
-          issue_templates = {},
-          search = {},
+        actions = { -- custom actions for specific snacks pickers (array of tables)
+          issues = { -- actions for the issues picker
+            -- { name = "my_issue_action", fn = function(picker, item) print("Issue action:", vim.inspect(item)) end, lhs = "<leader>a", desc = "My custom issue action" },
+          },
+          pull_requests = { -- actions for the pull requests picker
+            -- { name = "my_pr_action", fn = function(picker, item) print("PR action:", vim.inspect(item)) end, lhs = "<leader>b", desc = "My custom PR action" },
+          },
+          notifications = {}, -- actions for the notifications picker
+          issue_templates = {}, -- actions for the issue templates picker
+          search = {}, -- actions for the search picker
+          -- ... add actions for other pickers as needed
           changed_files = {},
           commits = {},
           review_commits = {},
         },
       },
     },
-    default_remote = { "upstream", "origin" },
-    default_merge_method = "merge",
-    default_delete_branch = false,
-    ssh_aliases = {},
-    reaction_viewer_hint_icon = " ",
-    commands = {},
-    users = "search",
-    user_icon = " ",
-    ghost_icon = "󰊠 ",
-    copilot_icon = " ",
+    default_remote = { "upstream", "origin" }, -- order to try remotes
+    default_merge_method = "merge", -- default merge method which should be used for both `Octo pr merge` and merging from picker, could be `merge`, `rebase` or `squash`
+    default_delete_branch = false, -- whether to delete branch when merging pull request with either `Octo pr merge` or from picker (can be overridden with `delete`/`nodelete` argument to `Octo pr merge`)
+    ssh_aliases = {}, -- SSH aliases. e.g. `ssh_aliases = {["github.com-work"] = "github.com"}`. The key part will be interpreted as an anchored Lua pattern.
+    reaction_viewer_hint_icon = " ", -- marker for user reactions
+    commands = {}, -- additional subcommands made available to `Octo` command
+    users = "search", -- Users for assignees or reviewers. Values: "search" | "mentionable" | "assignable"
+    user_icon = " ", -- user icon
+    ghost_icon = "󰊠 ", -- ghost icon
+    copilot_icon = " ", -- copilot icon
     dependabot_icon = " ",
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
@@ -248,28 +254,28 @@ function M.get_default_values()
       locked = "  ",
       review_requested = "  ",
     },
-    right_bubble_delimiter = "",
-    left_bubble_delimiter = "",
-    github_hostname = "",
-    use_local_fs = false,
-    enable_builtin = false,
-    snippet_context_lines = 4,
-    gh_cmd = "gh",
-    gh_env = {},
-    timeout = 5000,
-    default_to_projects_v2 = false,
+    right_bubble_delimiter = "", -- bubble delimiter
+    left_bubble_delimiter = "", -- bubble delimiter
+    github_hostname = "", -- GitHub Enterprise host
+    use_local_fs = false, -- use local files on right side of reviews
+    enable_builtin = false, -- shows a list of builtin actions when no action is provided
+    snippet_context_lines = 4, -- number of lines around commented lines
+    gh_cmd = "gh", -- Command to use when calling Github CLI
+    gh_env = {}, -- extra environment variables to pass on to GitHub CLI, can be a table or function returning a table
+    timeout = 5000, -- timeout for requests between the remote server
+    default_to_projects_v2 = false, -- use projects v2 for the `Octo card ...` command by default. Both legacy and v2 commands are available under `Octo cardlegacy ...` and `Octo cardv2 ...` respectively.
     suppress_missing_scope = {
       projects_v2 = false,
     },
     ui = {
-      use_signcolumn = false,
-      use_statuscolumn = true,
+      use_signcolumn = false, -- show "modified" marks on the sign column
+      use_statuscolumn = true, -- show "modified" marks on the status column
       use_foldtext = true,
     },
     issues = {
-      order_by = {
-        field = "CREATED_AT",
-        direction = "DESC",
+      order_by = { -- criteria to sort results of `Octo issue list`
+        field = "CREATED_AT", -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
+        direction = "DESC", -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
       },
     },
     discussions = {
@@ -279,11 +285,11 @@ function M.get_default_values()
       },
     },
     notifications = {
-      current_repo_only = false,
+      current_repo_only = false, -- show notifications for current repo only
     },
     reviews = {
-      auto_show_threads = true,
-      focus = "right",
+      auto_show_threads = true, -- automatically show comment threads on cursor move
+      focus = "right", -- focus right buffer on diff open
     },
     runs = {
       icons = {
@@ -296,18 +302,18 @@ function M.get_default_values()
       },
     },
     pull_requests = {
-      order_by = {
-        field = "CREATED_AT",
-        direction = "DESC",
+      order_by = { -- criteria to sort the results of `Octo pr list`
+        field = "CREATED_AT", -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
+        direction = "DESC", -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
       },
-      always_select_remote_on_create = false,
-      use_branch_name_as_title = false,
+      always_select_remote_on_create = false, -- always give prompt to select base remote repo when creating PRs
+      use_branch_name_as_title = false, -- sets branch name to be the name for the PR
     },
     file_panel = {
-      size = 10,
-      use_icons = true,
+      size = 10, -- changed files panel rows
+      use_icons = true, -- use web-devicons in file panel (if false, nvim-web-devicons does not need to be installed)
     },
-    colors = {
+    colors = { -- used for highlight groups (see Colors section below)
       white = "#ffffff",
       grey = "#2A354C",
       black = "#000000",
@@ -321,7 +327,7 @@ function M.get_default_values()
       dark_blue = "#0366d6",
       purple = "#6f42c1",
     },
-    mappings_disable_default = false,
+    mappings_disable_default = false, -- disable default mappings if true, but will still adapt user mappings
     mappings = {
       discussion = {
         discussion_options = { lhs = "<CR>", desc = "show discussion options" },
@@ -533,18 +539,19 @@ function M.get_default_values()
       },
     },
     poll = {
-      enabled = false,
-      interval = 10000,
-      notify_on_refresh = true,
-      notify_on_change = true,
+      enabled = false, -- opt-in polling for remote changes
+      interval = 10000, -- polling interval in milliseconds (default: 10s)
+      notify_on_refresh = true, -- notify when a buffer is auto-refreshed
+      notify_on_change = true, -- notify when remote changed but buffer has local edits
     },
     search = {
-      completion_overrides = {},
+      completion_overrides = {}, -- key is a qualifier, value is an array table or a function returning a table
     },
     debug = {
       notify_missing_timeline_items = false,
     },
   }
+  -- END_CONFIG
 end
 
 M.values = M.get_default_values()
