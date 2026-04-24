@@ -923,6 +923,7 @@ mutation($pullRequestId: ID!, $state: PullRequestUpdateState!) {
               isViewer
             }
             ... on Mannequin { login }
+            ... on Bot { login }
             ... on Team { name }
           }
         }
@@ -1104,6 +1105,7 @@ mutation($object_id: ID!, $user_ids: [ID!]!) {
               isViewer
             }
             ... on Mannequin { login }
+            ... on Bot { login }
             ... on Team { name }
           }
         }
@@ -1210,6 +1212,7 @@ mutation($input: CreatePullRequestInput!) {
               isViewer
             }
             ... on Mannequin { login }
+            ... on Bot { login }
             ... on Team { name }
           }
         }
