@@ -23,10 +23,12 @@ The process usually includes changing these files:
 
 ```
 lua/octo/gh/fragments.lua
-lua/octo/gh/queries.lua
+lua/octo/gh/timeline_registry.lua
 lua/octo/ui/writers.lua
 lua/octo/utils.lua
 ```
+
+`lua/octo/gh/queries.lua` no longer needs to be changed for new timeline items.
 
 Please also include any changes to the example-timeline file that will help debug:
 
@@ -103,9 +105,26 @@ These are called in `queries.lua` at the end of the `..` chain for the `issue` a
 4. Add `octo.fragments.MyEvent` to the `---@alias octo.IssueTimelineItem` or
    `---@alias octo.PullRequestTimelineItem` union type annotation.
 
-5. Handle the new `__typename` in `lua/octo/ui/writers.lua` and/or `lua/octo/utils.lua`.
+5. Register a writer in `lua/octo/gh/timeline_registry.lua` from the `do` block at the bottom
+   of `lua/octo/ui/writers.lua`. For a direct-dispatch event:
 
-6. Update `scripts/example-timeline.lua` to include a sample of the new event for debugging.
+   ```lua
+   reg("MyEvent", { writer = M.write_my_event })
+   ```
+
+   For a batched/accumulated event (e.g. labels, commits), use the `batch` key:
+
+   ```lua
+   reg("MyEvent", { batch = "my_accumulator" })
+   ```
+
+   Also add the accumulator to the `accumulators` table and, if it should set `prev_is_event`
+   when an item is accumulated, add it to `batch_sets_prev_event` — both inside
+   `M.write_timeline_items`.
+
+6. Add a `write_my_event` function in `lua/octo/ui/writers.lua`.
+
+7. Update `scripts/example-timeline.lua` to include a sample of the new event for debugging.
 
 > **Note**: `queries.lua` does **not** need to be changed for new timeline items — the registry
 > and `get_*_timeline_definitions()` handle appending definitions automatically.
@@ -134,6 +153,34 @@ Known GHES-incompatible PR timeline fragments (issues #685, #513):
 When adding a new type, check the GitHub Enterprise Server GraphQL changelog to determine
 from which GHES version the type is available. If it's newer than ~3.12, gate it.
 
+## Writer Dispatch Registry
+
+The `if/elseif` dispatch chain in `write_timeline_items` has been replaced by a registry in
+`lua/octo/gh/timeline_registry.lua`. It maps `__typename → { writer? | batch? }`.
+
+Each entry is an `octo.TimelineWriterEntry`:
+
+```lua
+---@class octo.TimelineWriterEntry
+---@field writer? fun(bufnr: integer, item: table)  -- direct dispatch
+---@field batch?  string                            -- name of accumulator table
+```
+
+The registry is populated in a `do` block at the **bottom of `writers.lua`** (after all
+`write_*` functions are defined), so function references are valid:
+
+```lua
+local reg = timeline_registry.register
+reg("MergedEvent",   { writer = M.write_merged_event })
+reg("LabeledEvent",  { batch = "label" })  -- accumulated, flushed by render_accumulated_events
+```
+
+`IssueComment` and `PullRequestReview` are **not** in the registry — they have bespoke
+rendering logic (folds, thread matching) handled directly in `write_timeline_items`.
+
+`BlockedByRemovedEvent` is registered with a `writer` but intentionally does **not** set
+`prev_is_event`; this quirk is preserved with an explicit comment in the dispatch loop.
+
 ### Registering a fragment from external code (plugins/user config)
 
 External code that wants to add a custom timeline item should call the registration function
@@ -156,3 +203,17 @@ fragments.register_issue_timeline_item(
   end
 )
 ```
+
+You must also register a writer so `write_timeline_items` knows how to render the event:
+
+```lua
+local timeline_registry = require("octo.gh.timeline_registry")
+
+timeline_registry.register("MyCustomEvent", {
+  writer = function(bufnr, item)
+    -- render the event into the buffer
+  end,
+})
+```
+
+Both calls should be made **before** `require("octo").setup()`.
