@@ -861,6 +861,9 @@ fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
     ... on Mannequin {
       login
     }
+    ... on Bot {
+      login
+    }
     ... on Team {
       name
     }

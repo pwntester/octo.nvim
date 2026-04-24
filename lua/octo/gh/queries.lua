@@ -260,6 +260,7 @@ query($endCursor: String) {
               isViewer
             }
             ... on Mannequin { login }
+            ... on Bot { login }
             ... on Team { name }
           }
         }
@@ -929,6 +930,9 @@ query($owner: String!, $name: String!, $number: Int!) {
             }
             ... on Mannequin {
               id
+              login
+            }
+            ... on Bot {
               login
             }
             ... on Team {
