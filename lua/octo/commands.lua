@@ -1435,98 +1435,108 @@ function M.delete_comment()
 
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
-    gh.run {
-      args = { "api", "graphql", "-f", string.format("query=%s", query) },
-      cb = function(output)
-        -- TODO: deleting the last review thread comment, it deletes the whole thread and review
-        -- In issue buffers, we should hide the thread snippet
-        local resp = vim.json.decode(output)
+    gh.api.graphql {
+      f = { query = query },
+      opts = {
+        cb = gh.create_callback {
+          success = function(output)
+            -- TODO: deleting the last review thread comment, it deletes the whole thread and review
+            -- In issue buffers, we should hide the thread snippet
+            local resp = vim.json.decode(output)
 
-        -- remove comment lines from the buffer
-        if comment.reactionLine then
-          vim.api.nvim_buf_set_lines(buffer.bufnr, start_line - 2, end_line + 1, false, {})
-          vim.api.nvim_buf_clear_namespace(buffer.bufnr, constants.OCTO_REACTIONS_VT_NS, start_line - 2, end_line + 1)
-        else
-          vim.api.nvim_buf_set_lines(buffer.bufnr, start_line - 2, end_line - 1, false, {})
-        end
-        vim.api.nvim_buf_clear_namespace(buffer.bufnr, comment.namespace, 0, -1)
-        vim.api.nvim_buf_del_extmark(buffer.bufnr, constants.OCTO_COMMENT_NS, comment.extmark)
-        local comments = buffer.commentsMetadata
-        if comments then
-          local updated = {}
-          for _, c in ipairs(comments) do
-            if c.id ~= comment.id then
-              table.insert(updated, c)
+            -- remove comment lines from the buffer
+            if comment.reactionLine then
+              vim.api.nvim_buf_set_lines(buffer.bufnr, start_line - 2, end_line + 1, false, {})
+              vim.api.nvim_buf_clear_namespace(
+                buffer.bufnr,
+                constants.OCTO_REACTIONS_VT_NS,
+                start_line - 2,
+                end_line + 1
+              )
+            else
+              vim.api.nvim_buf_set_lines(buffer.bufnr, start_line - 2, end_line - 1, false, {})
             end
-          end
-          buffer.commentsMetadata = updated
-        end
-
-        if comment.kind == "PullRequestReviewComment" then
-          local review = reviews.get_current_review()
-          if not review then
-            utils.error "Cannot find review for this comment"
-            return
-          end
-
-          local threads = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest.reviewThreads.nodes
-
-          -- check if there is still at least a PENDING comment
-          local review_was_deleted = true
-          for _, thread in ipairs(threads) do
-            for _, c in ipairs(thread.comments.nodes) do
-              if c.state == "PENDING" then
-                review_was_deleted = false
-                break
+            vim.api.nvim_buf_clear_namespace(buffer.bufnr, comment.namespace, 0, -1)
+            vim.api.nvim_buf_del_extmark(buffer.bufnr, constants.OCTO_COMMENT_NS, comment.extmark)
+            local comments = buffer.commentsMetadata
+            if comments then
+              local updated = {}
+              for _, c in ipairs(comments) do
+                if c.id ~= comment.id then
+                  table.insert(updated, c)
+                end
               end
+              buffer.commentsMetadata = updated
             end
-          end
-          if review_was_deleted then
-            -- we deleted the last pending comment and therefore GitHub closed the review, create a new one
-            review:create(function(resp)
-              review.id = resp.data.addPullRequestReview.pullRequestReview.id
-              local updated_threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
-              review:update_threads(updated_threads)
-            end)
-          else
-            review:update_threads(threads)
-          end
 
-          -- check if we removed the last comment of a thread
-          local thread_was_deleted = true
-          for _, thread in ipairs(threads) do
-            if threadId == thread.id then
-              thread_was_deleted = false
-              break
-            end
-          end
-          if thread_was_deleted then
-            -- this was the last comment, close the thread buffer
-            -- No comments left
-            utils.error("Deleting buffer " .. tostring(buffer.bufnr))
-            local bufname = vim.api.nvim_buf_get_name(buffer.bufnr)
-            local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
-            if split then
-              local layout = reviews.get_current_review().layout
-              local file = layout:get_current_file()
-              if not file then
+            if comment.kind == "PullRequestReviewComment" then
+              local review = reviews.get_current_review()
+              if not review then
+                utils.error "Cannot find review for this comment"
                 return
               end
-              local thread_win = file:get_alternative_win(split)
-              local original_buf = file:get_alternative_buf(split)
-              -- move focus to the split containing the diff buffer
-              -- restore the diff buffer so that window is not closed when deleting thread buffer
-              vim.api.nvim_win_set_buf(thread_win, original_buf)
-              -- delete the thread buffer
-              pcall(vim.api.nvim_buf_delete, buffer.bufnr, { force = true })
-              -- refresh signs and virtual text
-              file:place_signs()
-              -- diff buffers
-              file:show_diff()
-            end
-          end
-        end
-      end,
+
+              local threads = resp.data.deletePullRequestReviewComment.pullRequestReview.pullRequest.reviewThreads.nodes
+
+              -- check if there is still at least a PENDING comment
+              local review_was_deleted = true
+              for _, thread in ipairs(threads) do
+                for _, c in ipairs(thread.comments.nodes) do
+                  if c.state == "PENDING" then
+                    review_was_deleted = false
+                    break
+                  end
+                end
+              end
+              if review_was_deleted then
+                -- we deleted the last pending comment and therefore GitHub closed the review, create a new one
+                review:create(function(resp)
+                  review.id = resp.data.addPullRequestReview.pullRequestReview.id
+                  local updated_threads =
+                    resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
+                  review:update_threads(updated_threads)
+                end)
+              else
+                review:update_threads(threads)
+              end
+
+              -- check if we removed the last comment of a thread
+              local thread_was_deleted = true
+              for _, thread in ipairs(threads) do
+                if threadId == thread.id then
+                  thread_was_deleted = false
+                  break
+                end
+              end
+              if thread_was_deleted then
+                -- this was the last comment, close the thread buffer
+                -- No comments left
+                utils.error("Deleting buffer " .. tostring(buffer.bufnr))
+                local bufname = vim.api.nvim_buf_get_name(buffer.bufnr)
+                local split = string.match(bufname, "octo://.+/review/[^/]+/threads/([^/]+)/.*")
+                if split then
+                  local layout = reviews.get_current_review().layout
+                  local file = layout:get_current_file()
+                  if not file then
+                    return
+                  end
+                  local thread_win = file:get_alternative_win(split)
+                  local original_buf = file:get_alternative_buf(split)
+                  -- move focus to the split containing the diff buffer
+                  -- restore the diff buffer so that window is not closed when deleting thread buffer
+                  vim.api.nvim_win_set_buf(thread_win, original_buf)
+                  -- delete the thread buffer
+                  pcall(vim.api.nvim_buf_delete, buffer.bufnr, { force = true })
+                  -- refresh signs and virtual text
+                  file:place_signs()
+                  -- diff buffers
+                  file:show_diff()
+                end
+              end
+            end -- if comment.kind == "PullRequestReviewComment"
+          end,
+        },
+      },
     }
   end
 end
@@ -1610,20 +1620,20 @@ function M.resolve_thread()
   local thread_id = _thread.threadId
   local thread_line = _thread.bufferStartLine
   local query = graphql("resolve_review_thread_mutation", thread_id)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local thread = resp.data.resolveReviewThread.thread
-        if thread.isResolved then
-          update_review_thread_header(buffer.bufnr, thread, thread_id, thread_line)
-          --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
-        end
-      end
-    end,
+  gh.api.graphql {
+    f = { query = query },
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local resp = vim.json.decode(output)
+          local thread = resp.data.resolveReviewThread.thread
+          if thread.isResolved then
+            update_review_thread_header(buffer.bufnr, thread, thread_id, thread_line)
+            --vim.cmd(string.format("%d,%dfoldclose", thread_line, thread_line))
+          end
+        end,
+      },
+    },
   }
 end
 
@@ -1640,19 +1650,19 @@ function M.unresolve_thread()
   local thread_id = _thread.threadId
   local thread_line = _thread.bufferStartLine
   local query = graphql("unresolve_review_thread_mutation", thread_id)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        local thread = resp.data.unresolveReviewThread.thread
-        if not thread.isResolved then
-          update_review_thread_header(buffer.bufnr, thread, thread_id, thread_line)
-        end
-      end
-    end,
+  gh.api.graphql {
+    f = { query = query },
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local resp = vim.json.decode(output)
+          local thread = resp.data.unresolveReviewThread.thread
+          if not thread.isResolved then
+            update_review_thread_header(buffer.bufnr, thread, thread_id, thread_line)
+          end
+        end,
+      },
+    },
   }
 end
 
@@ -2415,37 +2425,37 @@ function M.reaction_action(reaction)
 
   -- add/delete reaction
   local query = graphql(action .. "_reaction_mutation", id, reaction)
-  gh.run {
-    args = { "api", "graphql", "-f", string.format("query=%s", query) },
-    cb = function(output, stderr)
-      if stderr and not utils.is_blank(stderr) then
-        utils.error(stderr)
-      elseif output then
-        local resp = vim.json.decode(output)
-        if action == "add" then
-          reaction_groups = resp.data.addReaction.subject.reactionGroups
-        elseif action == "remove" then
-          reaction_groups = resp.data.removeReaction.subject.reactionGroups
-        end
+  gh.api.graphql {
+    f = { query = query },
+    opts = {
+      cb = gh.create_callback {
+        success = function(output)
+          local resp = vim.json.decode(output)
+          if action == "add" then
+            reaction_groups = resp.data.addReaction.subject.reactionGroups
+          elseif action == "remove" then
+            reaction_groups = resp.data.removeReaction.subject.reactionGroups
+          end
 
-        buffer:update_reactions_at_cursor(reaction_groups, reaction_line)
-        if action == "remove" and utils.count_reactions(reaction_groups) == 0 then
-          -- delete lines
-          vim.api.nvim_buf_set_lines(buffer.bufnr, reaction_line - 1, reaction_line + 1, false, {})
-          vim.api.nvim_buf_clear_namespace(
-            buffer.bufnr,
-            constants.OCTO_REACTIONS_VT_NS,
-            reaction_line - 1,
-            reaction_line + 1
-          )
-        elseif action == "add" and insert_line then
-          -- add lines
-          vim.api.nvim_buf_set_lines(buffer.bufnr, reaction_line - 1, reaction_line - 1, false, { "", "" })
-        end
-        writers.write_reactions(buffer.bufnr, reaction_groups, reaction_line)
-        buffer:update_metadata()
-      end
-    end,
+          buffer:update_reactions_at_cursor(reaction_groups, reaction_line)
+          if action == "remove" and utils.count_reactions(reaction_groups) == 0 then
+            -- delete lines
+            vim.api.nvim_buf_set_lines(buffer.bufnr, reaction_line - 1, reaction_line + 1, false, {})
+            vim.api.nvim_buf_clear_namespace(
+              buffer.bufnr,
+              constants.OCTO_REACTIONS_VT_NS,
+              reaction_line - 1,
+              reaction_line + 1
+            )
+          elseif action == "add" and insert_line then
+            -- add lines
+            vim.api.nvim_buf_set_lines(buffer.bufnr, reaction_line - 1, reaction_line - 1, false, { "", "" })
+          end
+          writers.write_reactions(buffer.bufnr, reaction_groups, reaction_line)
+          buffer:update_metadata()
+        end,
+      },
+    },
   }
 end
 
@@ -2460,38 +2470,38 @@ function M.set_project_v2_card()
     local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- add new card
     local add_query = graphql("add_project_v2_item_mutation", node.id, project_id)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", add_query) },
-      cb = function(add_output, add_stderr)
-        if add_stderr and not utils.is_blank(add_stderr) then
-          utils.error(add_stderr)
-        elseif add_output then
-          local resp = vim.json.decode(add_output)
-          local update_query = graphql(
-            "update_project_v2_item_mutation",
-            project_id,
-            resp.data.addProjectV2ItemById.item.id,
-            field_id,
-            value
-          )
-          gh.run {
-            args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", update_query) },
-            cb = function(update_output, update_stderr)
-              if update_stderr and not utils.is_blank(update_stderr) then
-                utils.error(update_stderr)
-              elseif update_output then
-                -- TODO do update here
-                -- refresh issue/pr details
-                local hostname = get_hostname_from_buffer()
-                require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
-                  writers.write_details(buffer.bufnr, obj, true)
-                  node.projectCards = obj.projectCards
-                end)
-              end
-            end,
-          }
-        end
-      end,
+    gh.api.graphql {
+      f = { query = add_query },
+      opts = {
+        cb = gh.create_callback {
+          success = function(add_output)
+            local resp = vim.json.decode(add_output)
+            local update_query = graphql(
+              "update_project_v2_item_mutation",
+              project_id,
+              resp.data.addProjectV2ItemById.item.id,
+              field_id,
+              value
+            )
+            gh.api.graphql {
+              f = { query = update_query },
+              opts = {
+                cb = gh.create_callback {
+                  success = function()
+                    -- TODO do update here
+                    -- refresh issue/pr details
+                    local hostname = get_hostname_from_buffer()
+                    require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
+                      writers.write_details(buffer.bufnr, obj, true)
+                      node.projectCards = obj.projectCards
+                    end)
+                  end,
+                },
+              },
+            }
+          end,
+        },
+      },
     }
   end)
 end
@@ -2507,20 +2517,20 @@ function M.remove_project_v2_card()
     local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- delete card
     local query = graphql("delete_project_v2_item_mutation", project_id, item_id)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          local hostname = get_hostname_from_buffer()
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
-            node.projectCards = obj.projectCards
-            writers.write_details(buffer.bufnr, obj, true)
-          end)
-        end
-      end,
+    gh.api.graphql {
+      f = { query = query },
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            -- refresh issue/pr details
+            local hostname = get_hostname_from_buffer()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
+              node.projectCards = obj.projectCards
+              writers.write_details(buffer.bufnr, obj, true)
+            end)
+          end,
+        },
+      },
     }
   end)
 end
@@ -2755,19 +2765,19 @@ function M.remove_assignee(login)
 
   local function cb(user_id)
     local query = graphql("remove_assignees_mutation", iid, user_id)
-    gh.run {
-      args = { "api", "graphql", "--paginate", "-f", string.format("query=%s", query) },
-      cb = function(output, stderr)
-        if stderr and not utils.is_blank(stderr) then
-          utils.error(stderr)
-        elseif output then
-          -- refresh issue/pr details
-          local hostname = get_hostname_from_buffer()
-          require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
-            writers.write_details(buffer.bufnr, obj, true)
-          end)
-        end
-      end,
+    gh.api.graphql {
+      f = { query = query },
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            -- refresh issue/pr details
+            local hostname = get_hostname_from_buffer()
+            require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
+              writers.write_details(buffer.bufnr, obj, true)
+            end)
+          end,
+        },
+      },
     }
   end
   if login then
