@@ -82,12 +82,12 @@ end
 function Layout:init_layout()
   self.left_winid = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_hl_ns(self.left_winid, constants.OCTO_REVIEW_LEFT_HIGHLIGHT_NS)
-  vim.api.nvim_set_hl(constants.OCTO_REVIEW_LEFT_HIGHLIGHT_NS, "DiffText", { background = "#5d425a" })
+  vim.api.nvim_set_hl(constants.OCTO_REVIEW_LEFT_HIGHLIGHT_NS, "DiffText", { link = "OctoReviewDiffDeleteText" })
   vim.api.nvim_set_hl(constants.OCTO_REVIEW_LEFT_HIGHLIGHT_NS, "DiffChange", { link = "DiffDelete" })
   vim.cmd "belowright vsp"
   self.right_winid = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_hl_ns(self.right_winid, constants.OCTO_REVIEW_RIGHT_HIGHLIGHT_NS)
-  vim.api.nvim_set_hl(constants.OCTO_REVIEW_RIGHT_HIGHLIGHT_NS, "DiffText", { background = "#39556f" })
+  vim.api.nvim_set_hl(constants.OCTO_REVIEW_RIGHT_HIGHLIGHT_NS, "DiffText", { link = "OctoReviewDiffAddText" })
   vim.api.nvim_set_hl(constants.OCTO_REVIEW_RIGHT_HIGHLIGHT_NS, "DiffChange", { link = "DiffAdd" })
   self.file_panel:open()
 end
