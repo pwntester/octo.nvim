@@ -839,6 +839,8 @@ Also, you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink
 | _OctoStateClosedFloat_            | OctoRedFloat       |
 | _OctoStateMergedFloat_            | OctoPurpleFloat    |
 | _OctoStateDraftFloat_             | OctoGreyFloat      |
+| _OctoReviewDiffDeleteText_        | OctoRed            |
+| _OctoReviewDiffAddText_           | OctoGreen          |
 
 The term `GitHub color` refers to the colors used in the WebUI.
 The (addition) `viewer` means the user of the plugin or more precisely the user authenticated via the `gh` CLI tool used to retrieve the data from GitHub.
