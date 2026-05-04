@@ -2199,6 +2199,20 @@ function M.pr_checks(buffer)
       end,
     })
 
+    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.copy_url.lhs, "", {
+      noremap = true,
+      silent = true,
+      callback = function()
+        local line_number = vim.api.nvim_win_get_cursor(0)[1]
+        local url = data[line_number].link
+        if not url or url == "" then
+          utils.error "No URL for this check"
+          return
+        end
+        utils.copy_url(url)
+      end,
+    })
+
     vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.rerun.lhs, "", {
       noremap = true,
       silent = true,
