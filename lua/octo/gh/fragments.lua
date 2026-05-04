@@ -89,6 +89,34 @@ function M.get_pr_timeline_definitions()
   return result
 end
 
+---@param register_fn fun(spread_name: string, definition: string, condition?: fun():boolean)
+---@param entries table[]
+local function register_timeline_entries(register_fn, entries)
+  for _, entry in ipairs(entries) do
+    register_fn(entry[1], entry[2], entry[3])
+  end
+end
+
+---@param registry table<string, octo.TimelineFragmentEntry>
+---@return string
+local function build_timeline_connection_spreads(registry)
+  local spreads = { "    __typename" }
+  local active_spreads = {}
+
+  for spread_name, entry in pairs(registry) do
+    if entry.condition == nil or entry.condition() then
+      active_spreads[#active_spreads + 1] = spread_name
+    end
+  end
+
+  table.sort(active_spreads)
+  for _, spread_name in ipairs(active_spreads) do
+    spreads[#spreads + 1] = "    ..." .. spread_name
+  end
+
+  return table.concat(spreads, "\n") .. "\n"
+end
+
 M.setup = function()
   ---@class octo.fragments.ProjectsV2Connection
   ---@field nodes {
@@ -1296,14 +1324,9 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
   --   nil  → always included
   --   fn() → included only when fn() returns true
   --
-  -- Fragments that reference types absent from older GHES versions are gated on
-  -- `not is_enterprise`, where enterprise is defined as github_hostname being non-empty.
-  local function is_enterprise()
-    return config.values.github_hostname ~= ""
-  end
-
-  local function not_enterprise()
-    return not is_enterprise()
+  -- Fragments absent from older GHES versions are gated to github.com only.
+  local function is_github_com()
+    return config.values.github_hostname == ""
   end
 
   local function projects_v2_enabled()
@@ -1331,43 +1354,30 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
     { "MarkedAsDuplicateEventFragment", M.marked_as_duplicate_event },
     { "UnmarkedAsDuplicateEventFragment", M.unmarked_as_duplicate_event },
     -- github.com-only: not present on older GHES (issues #1153)
-    { "PinnedEventFragment", M.pinned_event, not_enterprise },
-    { "UnpinnedEventFragment", M.unpinned_event, not_enterprise },
-    { "SubIssueAddedEventFragment", M.subissue_added_event, not_enterprise },
-    { "SubIssueRemovedEventFragment", M.subissue_removed_event, not_enterprise },
-    { "ParentIssueAddedEventFragment", M.parent_issue_added_event, not_enterprise },
-    { "ParentIssueRemovedEventFragment", M.parent_issue_removed_event, not_enterprise },
-    { "IssueTypeAddedEventFragment", M.issue_type_added_event, not_enterprise },
-    { "IssueTypeRemovedEventFragment", M.issue_type_removed_event, not_enterprise },
-    { "IssueTypeChangedEventFragment", M.issue_type_changed_event, not_enterprise },
-    { "BlockedByAddedEventFragment", M.blocked_by_added_event, not_enterprise },
-    { "BlockedByRemovedEventFragment", M.blocked_by_removed_event, not_enterprise },
-    { "BlockingAddedEventFragment", M.blocking_added_event, not_enterprise },
-    { "BlockingRemovedEventFragment", M.blocking_removed_event, not_enterprise },
-    { "TransferredEventFragment", M.transferred_event, not_enterprise },
+    { "PinnedEventFragment", M.pinned_event, is_github_com },
+    { "UnpinnedEventFragment", M.unpinned_event, is_github_com },
+    { "SubIssueAddedEventFragment", M.subissue_added_event, is_github_com },
+    { "SubIssueRemovedEventFragment", M.subissue_removed_event, is_github_com },
+    { "ParentIssueAddedEventFragment", M.parent_issue_added_event, is_github_com },
+    { "ParentIssueRemovedEventFragment", M.parent_issue_removed_event, is_github_com },
+    { "IssueTypeAddedEventFragment", M.issue_type_added_event, is_github_com },
+    { "IssueTypeRemovedEventFragment", M.issue_type_removed_event, is_github_com },
+    { "IssueTypeChangedEventFragment", M.issue_type_changed_event, is_github_com },
+    { "BlockedByAddedEventFragment", M.blocked_by_added_event, is_github_com },
+    { "BlockedByRemovedEventFragment", M.blocked_by_removed_event, is_github_com },
+    { "BlockingAddedEventFragment", M.blocking_added_event, is_github_com },
+    { "BlockingRemovedEventFragment", M.blocking_removed_event, is_github_com },
+    { "TransferredEventFragment", M.transferred_event, is_github_com },
     -- Projects V2: gated on config flag (may also require scope check; handled in gh/init.lua)
     { "AddedToProjectV2EventFragment", M.added_to_project_v2_event, projects_v2_enabled },
     { "RemovedFromProjectV2EventFragment", M.removed_from_project_v2_event, projects_v2_enabled },
     { "ProjectV2ItemStatusChangedEventFragment", M.project_v2_item_status_changed_event, projects_v2_enabled },
   }
-  for _, entry in ipairs(issue_builtin) do
-    M.register_issue_timeline_item(entry[1], entry[2], entry[3])
-  end
-  for _, entry in ipairs(issue_builtin) do
-    M.register_issue_timeline_item(entry[1], entry[2], entry[3])
-  end
+  register_timeline_entries(M.register_issue_timeline_item, issue_builtin)
 
   -- Build the aggregator spreads string from the registry (includes any externally registered items).
   -- Entries whose condition() returns false are excluded.
-  local issue_timeline_items_connection_fragments = "    __typename\n"
-  for spread_name, entry in pairs(M._issue_timeline_registry) do
-    if entry.condition == nil or entry.condition() then
-      issue_timeline_items_connection_fragments = issue_timeline_items_connection_fragments
-        .. "    ..."
-        .. spread_name
-        .. "\n"
-    end
-  end
+  local issue_timeline_items_connection_fragments = build_timeline_connection_spreads(M._issue_timeline_registry)
 
   ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent|octo.fragments.BlockedByAddedEvent|octo.fragments.BlockedByRemovedEvent|octo.fragments.BlockingAddedEvent|octo.fragments.BlockingRemovedEvent|octo.fragments.TransferredEvent|octo.fragments.LockedEvent|octo.fragments.UnlockedEvent|octo.fragments.MarkedAsDuplicateEvent|octo.fragments.UnmarkedAsDuplicateEvent
 
@@ -1413,36 +1423,26 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     { "MarkedAsDuplicateEventFragment", M.marked_as_duplicate_event },
     { "UnmarkedAsDuplicateEventFragment", M.unmarked_as_duplicate_event },
     -- GHES-incompatible on older versions (issues #685, #513)
-    { "AutomaticBaseChangeSucceededEventFragment", M.automatic_base_change_succeeded_event, not_enterprise },
-    { "BaseRefChangedEventFragment", M.base_ref_changed_event, not_enterprise },
-    { "ConvertToDraftEventFragment", M.convert_to_draft_event, not_enterprise },
-    { "DeployedEventFragment", M.deployed_event, not_enterprise },
-    { "HeadRefDeletedEventFragment", M.head_ref_deleted_event, not_enterprise },
-    { "HeadRefRestoredEventFragment", M.head_ref_restored_event, not_enterprise },
-    { "HeadRefForcePushedEventFragment", M.head_ref_force_pushed_event, not_enterprise },
-    { "AutoSquashEnabledEventFragment", M.auto_squash_enabled_event, not_enterprise },
-    { "AutoMergeEnabledEventFragment", M.auto_merge_enabled_event, not_enterprise },
-    { "AutoMergeDisabledEventFragment", M.auto_merge_disabled_event, not_enterprise },
+    { "AutomaticBaseChangeSucceededEventFragment", M.automatic_base_change_succeeded_event, is_github_com },
+    { "BaseRefChangedEventFragment", M.base_ref_changed_event, is_github_com },
+    { "ConvertToDraftEventFragment", M.convert_to_draft_event, is_github_com },
+    { "DeployedEventFragment", M.deployed_event, is_github_com },
+    { "HeadRefDeletedEventFragment", M.head_ref_deleted_event, is_github_com },
+    { "HeadRefRestoredEventFragment", M.head_ref_restored_event, is_github_com },
+    { "HeadRefForcePushedEventFragment", M.head_ref_force_pushed_event, is_github_com },
+    { "AutoSquashEnabledEventFragment", M.auto_squash_enabled_event, is_github_com },
+    { "AutoMergeEnabledEventFragment", M.auto_merge_enabled_event, is_github_com },
+    { "AutoMergeDisabledEventFragment", M.auto_merge_disabled_event, is_github_com },
     -- Projects V2
     { "AddedToProjectV2EventFragment", M.added_to_project_v2_event, projects_v2_enabled },
     { "RemovedFromProjectV2EventFragment", M.removed_from_project_v2_event, projects_v2_enabled },
     { "ProjectV2ItemStatusChangedEventFragment", M.project_v2_item_status_changed_event, projects_v2_enabled },
   }
-  for _, entry in ipairs(pr_builtin) do
-    M.register_pull_request_timeline_item(entry[1], entry[2], entry[3])
-  end
+  register_timeline_entries(M.register_pull_request_timeline_item, pr_builtin)
 
   -- Build the aggregator spreads string from the registry (includes any externally registered items).
   -- Entries whose condition() returns false are excluded.
-  local pull_request_timeline_items_connection_fragments = "    __typename\n"
-  for spread_name, entry in pairs(M._pr_timeline_registry) do
-    if entry.condition == nil or entry.condition() then
-      pull_request_timeline_items_connection_fragments = pull_request_timeline_items_connection_fragments
-        .. "    ..."
-        .. spread_name
-        .. "\n"
-    end
-  end
+  local pull_request_timeline_items_connection_fragments = build_timeline_connection_spreads(M._pr_timeline_registry)
 
   ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AutoMergeEnabledEvent|octo.fragments.AutoMergeDisabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.LockedEvent|octo.fragments.UnlockedEvent|octo.fragments.MarkedAsDuplicateEvent|octo.fragments.UnmarkedAsDuplicateEvent
 

@@ -93,8 +93,8 @@ These are called in `queries.lua` at the end of the `..` chain for the `issue` a
    -- Always available:
    { "MyEventFragment", M.my_event },
 
-   -- github.com only (not on GHES) — pass not_enterprise directly:
-   { "MyEventFragment", M.my_event, not_enterprise },
+   -- github.com only (not on GHES):
+   { "MyEventFragment", M.my_event, is_github_com },
 
    -- Gated on a config flag:
    { "MyEventFragment", M.my_event, function() return config.values.some_flag end },
@@ -118,9 +118,8 @@ These are called in `queries.lua` at the end of the `..` chain for the `issue` a
    reg("MyEvent", { batch = "my_accumulator" })
    ```
 
-   Also add the accumulator to the `accumulators` table and, if it should set `prev_is_event`
-   when an item is accumulated, add it to `batch_sets_prev_event` — both inside
-   `M.write_timeline_items`.
+   Also add the accumulator to the `accumulators` table inside `M.write_timeline_items`.
+   Use `sets_prev_event = true` in the registry entry when batching should mark `prev_is_event`.
 
 6. Add a `write_my_event` function in `lua/octo/ui/writers.lua`.
 
@@ -135,8 +134,8 @@ GHES instances run older GraphQL API versions that lack certain types. Fragments
 types must carry a condition that gates them out when `github_hostname` is non-empty:
 
 ```lua
-function() return not is_enterprise() end
--- where is_enterprise() = config.values.github_hostname ~= ""
+function() return config.values.github_hostname == "" end
+-- equivalent to local is_github_com() helper in fragments.lua
 ```
 
 Known GHES-incompatible issue timeline fragments (issues #1153):
@@ -164,6 +163,7 @@ Each entry is an `octo.TimelineWriterEntry`:
 ---@class octo.TimelineWriterEntry
 ---@field writer? fun(bufnr: integer, item: table)  -- direct dispatch
 ---@field batch?  string                            -- name of accumulator table
+---@field sets_prev_event? boolean                  -- set prev_is_event after write/accumulate
 ```
 
 The registry is populated in a `do` block at the **bottom of `writers.lua`** (after all
@@ -172,14 +172,14 @@ The registry is populated in a `do` block at the **bottom of `writers.lua`** (af
 ```lua
 local reg = timeline_registry.register
 reg("MergedEvent",   { writer = M.write_merged_event })
-reg("LabeledEvent",  { batch = "label" })  -- accumulated, flushed by render_accumulated_events
+reg("LabeledEvent",  { batch = "label_events" }) -- accumulated, flushed by render_accumulated_events
 ```
 
 `IssueComment` and `PullRequestReview` are **not** in the registry — they have bespoke
 rendering logic (folds, thread matching) handled directly in `write_timeline_items`.
 
-`BlockedByRemovedEvent` is registered with a `writer` but intentionally does **not** set
-`prev_is_event`; this quirk is preserved with an explicit comment in the dispatch loop.
+`BlockedByRemovedEvent` is registered with `sets_prev_event = false` to preserve existing
+buffer spacing behavior.
 
 ### Registering a fragment from external code (plugins/user config)
 

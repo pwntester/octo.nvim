@@ -14,6 +14,7 @@
 ---@class octo.TimelineWriterEntry
 ---@field writer? fun(bufnr: integer, item: table)
 ---@field batch?  string
+---@field sets_prev_event? boolean
 
 local M = {}
 

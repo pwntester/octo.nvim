@@ -3619,23 +3619,16 @@ function M.write_timeline_items(bufnr, obj)
     end
   end
 
-  -- Accumulator tables, keyed by registry `batch` name.
+  -- Accumulator tables, keyed by the batch id used in timeline_registry entries.
   local accumulators = {
-    assignment = unrendered_assignment_events,
-    label = unrendered_label_events,
-    commits = commits,
-    force_push = unrendered_force_push_events,
-    review_requested = unrendered_review_requested_events,
-    review_request_removed = unrendered_review_request_removed_events,
-    subissue_added = unrendered_subissue_added_events,
-    subissue_removed = unrendered_subissue_removed_events,
-  }
-
-  -- Batched typenames that mark prev_is_event when an item is accumulated.
-  local batch_sets_prev_event = {
-    commits = true,
-    review_requested = true,
-    review_request_removed = true,
+    assignment_events = unrendered_assignment_events,
+    label_events = unrendered_label_events,
+    pull_request_commits = commits,
+    force_pushed_events = unrendered_force_push_events,
+    review_requested_events = unrendered_review_requested_events,
+    review_request_removed_events = unrendered_review_request_removed_events,
+    subissue_added_events = unrendered_subissue_added_events,
+    subissue_removed_events = unrendered_subissue_removed_events,
   }
 
   for _, item in ipairs(timeline_nodes) do
@@ -3685,13 +3678,12 @@ function M.write_timeline_items(bufnr, obj)
       if entry then
         if entry.writer then
           entry.writer(bufnr, item)
-          -- BlockedByRemovedEvent intentionally does NOT set prev_is_event.
-          if item.__typename ~= "BlockedByRemovedEvent" then
+          if entry.sets_prev_event == nil or entry.sets_prev_event then
             prev_is_event = true
           end
         elseif entry.batch then
           table.insert(accumulators[entry.batch], item)
-          if batch_sets_prev_event[entry.batch] then
+          if entry.sets_prev_event then
             prev_is_event = true
           end
         end
@@ -3758,21 +3750,21 @@ do
   reg("BlockingAddedEvent", { writer = M.write_blocking_added_event })
   reg("BlockingRemovedEvent", { writer = M.write_blocking_removed_event })
   reg("BlockedByAddedEvent", { writer = M.write_blocked_by_added_event })
-  reg("BlockedByRemovedEvent", { writer = M.write_blocked_by_removed_event })
+  reg("BlockedByRemovedEvent", { writer = M.write_blocked_by_removed_event, sets_prev_event = false })
   reg("MarkedAsDuplicateEvent", { writer = M.write_marked_as_duplicate_event })
   reg("UnmarkedAsDuplicateEvent", { writer = M.write_unmarked_as_duplicate_event })
   reg("TransferredEvent", { writer = M.write_transferred_event })
   -- Batched events — accumulated and flushed by render_accumulated_events()
-  reg("AssignedEvent", { batch = "assignment" })
-  reg("UnassignedEvent", { batch = "assignment" })
-  reg("LabeledEvent", { batch = "label" })
-  reg("UnlabeledEvent", { batch = "label" })
-  reg("PullRequestCommit", { batch = "commits" })
-  reg("HeadRefForcePushedEvent", { batch = "force_push" })
-  reg("ReviewRequestedEvent", { batch = "review_requested" })
-  reg("ReviewRequestRemovedEvent", { batch = "review_request_removed" })
-  reg("SubIssueAddedEvent", { batch = "subissue_added" })
-  reg("SubIssueRemovedEvent", { batch = "subissue_removed" })
+  reg("AssignedEvent", { batch = "assignment_events" })
+  reg("UnassignedEvent", { batch = "assignment_events" })
+  reg("LabeledEvent", { batch = "label_events" })
+  reg("UnlabeledEvent", { batch = "label_events" })
+  reg("PullRequestCommit", { batch = "pull_request_commits", sets_prev_event = true })
+  reg("HeadRefForcePushedEvent", { batch = "force_pushed_events" })
+  reg("ReviewRequestedEvent", { batch = "review_requested_events", sets_prev_event = true })
+  reg("ReviewRequestRemovedEvent", { batch = "review_request_removed_events", sets_prev_event = true })
+  reg("SubIssueAddedEvent", { batch = "subissue_added_events" })
+  reg("SubIssueRemovedEvent", { batch = "subissue_removed_events" })
 end
 
 return M
