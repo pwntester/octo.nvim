@@ -2296,8 +2296,21 @@ function M.merge_pr(...)
 
   opts.opts = {
     cb = function(output, stderr, exit_code)
-      local log = exit_code == 0 and utils.info or utils.error
-      log(output .. " " .. stderr)
+      local function select_message(primary, secondary, fallback)
+        if not utils.is_blank(primary) then
+          return primary
+        end
+        if not utils.is_blank(secondary) then
+          return secondary
+        end
+        return fallback
+      end
+
+      if exit_code == 0 then
+        utils.info(select_message(stderr, output, "Pull request merged successfully"))
+      else
+        utils.error(select_message(stderr, output, "Failed to merge pull request"))
+      end
       writers.write_state(buffer.bufnr)
     end,
   }
