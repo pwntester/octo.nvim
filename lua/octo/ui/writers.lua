@@ -3552,28 +3552,36 @@ function M.write_timeline_items(bufnr, obj)
   table.insert(timeline_nodes, {})
 
   ---@param item? octo.PullRequestTimelineItem|octo.IssueTimelineItem
+  ---@param items table
+  local function clear_items(items)
+    for idx = #items, 1, -1 do
+      items[idx] = nil
+    end
+  end
+
+  ---@param item? octo.PullRequestTimelineItem|octo.IssueTimelineItem
   local function render_accumulated_events(item)
     if
       #unrendered_label_events > 0
       and (not item or (item.__typename ~= "LabeledEvent" and item.__typename ~= "UnlabeledEvent"))
     then
       M.write_label_events(bufnr, unrendered_label_events)
-      unrendered_label_events = {}
+      clear_items(unrendered_label_events)
       prev_is_event = true
     end
     if (not item or item.__typename ~= "SubIssueAddedEvent") and #unrendered_subissue_added_events > 0 then
       M.write_subissue_events(bufnr, unrendered_subissue_added_events, "added")
-      unrendered_subissue_added_events = {}
+      clear_items(unrendered_subissue_added_events)
       prev_is_event = true
     end
     if (not item or item.__typename ~= "SubIssueRemovedEvent") and #unrendered_subissue_removed_events > 0 then
       M.write_subissue_events(bufnr, unrendered_subissue_removed_events, "removed")
-      unrendered_subissue_removed_events = {}
+      clear_items(unrendered_subissue_removed_events)
       prev_is_event = true
     end
     if (not item or item.__typename ~= "PullRequestCommit") and #commits > 0 then
       M.write_commits(bufnr, commits)
-      commits = {}
+      clear_items(commits)
       prev_is_event = true
     end
     if
@@ -3585,12 +3593,12 @@ function M.write_timeline_items(bufnr, obj)
       )
     then
       M.write_head_ref_force_pushed_events(bufnr, unrendered_force_push_events)
-      unrendered_force_push_events = {}
+      clear_items(unrendered_force_push_events)
       prev_is_event = true
     end
     if #unrendered_review_requested_events > 0 and (not item or item.__typename ~= "ReviewRequestedEvent") then
       M.write_review_requested_events(bufnr, unrendered_review_requested_events)
-      unrendered_review_requested_events = {}
+      clear_items(unrendered_review_requested_events)
       prev_is_event = true
     end
     if
@@ -3598,7 +3606,7 @@ function M.write_timeline_items(bufnr, obj)
       and (not item or item.__typename ~= "ReviewRequestRemovedEvent")
     then
       M.write_review_request_removed_events(bufnr, unrendered_review_request_removed_events)
-      unrendered_review_request_removed_events = {}
+      clear_items(unrendered_review_request_removed_events)
       prev_is_event = true
     end
     if
@@ -3606,7 +3614,7 @@ function M.write_timeline_items(bufnr, obj)
       and (not item or (item.__typename ~= "AssignedEvent" and item.__typename ~= "UnassignedEvent"))
     then
       M.write_assignment_events(bufnr, unrendered_assignment_events)
-      unrendered_assignment_events = {}
+      clear_items(unrendered_assignment_events)
       prev_is_event = true
     end
   end
