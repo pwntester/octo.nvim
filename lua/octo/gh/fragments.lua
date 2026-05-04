@@ -100,7 +100,9 @@ end
 ---@param registry table<string, octo.TimelineFragmentEntry>
 ---@return string
 local function build_timeline_connection_spreads(registry)
+  ---@type string[]
   local spreads = { "    __typename" }
+  ---@type string[]
   local active_spreads = {}
 
   for spread_name, entry in pairs(registry) do

@@ -3551,8 +3551,7 @@ function M.write_timeline_items(bufnr, obj)
   --- labeled/unlabeled events or subissues events are rendered
   table.insert(timeline_nodes, {})
 
-  ---@param item? octo.PullRequestTimelineItem|octo.IssueTimelineItem
-  ---@param items table
+  ---@param items any[]
   local function clear_items(items)
     for idx = #items, 1, -1 do
       items[idx] = nil

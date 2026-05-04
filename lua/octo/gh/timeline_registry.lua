@@ -11,9 +11,19 @@
 --- Special typenames that receive custom handling in write_timeline_items and are NOT in this
 --- registry: "IssueComment", "PullRequestReview".
 
+---@alias octo.TimelineBatchKey
+---| "assignment_events"
+---| "label_events"
+---| "pull_request_commits"
+---| "force_pushed_events"
+---| "review_requested_events"
+---| "review_request_removed_events"
+---| "subissue_added_events"
+---| "subissue_removed_events"
+
 ---@class octo.TimelineWriterEntry
 ---@field writer? fun(bufnr: integer, item: table)
----@field batch?  string
+---@field batch? octo.TimelineBatchKey
 ---@field sets_prev_event? boolean
 
 local M = {}
