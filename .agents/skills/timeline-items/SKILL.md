@@ -28,7 +28,8 @@ lua/octo/ui/writers.lua
 lua/octo/utils.lua
 ```
 
-`lua/octo/gh/queries.lua` no longer needs to be changed for new timeline items.
+`lua/octo/gh/queries.lua` and `lua/octo/gh/mutations.lua` no longer need to be changed for
+new timeline items.
 
 Please also include any changes to the example-timeline file that will help debug:
 
@@ -71,15 +72,16 @@ M.register_pull_request_timeline_item(spread_name, definition, condition?)
 - **`condition`**: optional `fun():boolean`. If it returns `false` at `setup()` time, the fragment
   spread and definition are omitted from the query entirely.
 
-Two helper functions build the final definition strings consumed by `queries.lua`:
+Two helper functions build the final definition strings consumed by both `queries.lua`
+and `mutations.lua`:
 
 ```lua
 M.get_issue_timeline_definitions()   -- returns string
 M.get_pr_timeline_definitions()      -- returns string
 ```
 
-These are called in `queries.lua` at the end of the `..` chain for the `issue` and
-`pull_request` queries respectively.
+These are called at the end of the `..` fragment chains for issue/PR queries and the
+issue/PR mutation payload queries.
 
 ### Adding a new timeline item
 
@@ -127,6 +129,8 @@ These are called in `queries.lua` at the end of the `..` chain for the `issue` a
 
 > **Note**: `queries.lua` does **not** need to be changed for new timeline items — the registry
 > and `get_*_timeline_definitions()` handle appending definitions automatically.
+>
+> `mutations.lua` also does **not** need manual timeline-fragment edits for these items.
 
 ### Enterprise compatibility (label: "Enterprise compat")
 
@@ -162,8 +166,22 @@ Each entry is an `octo.TimelineWriterEntry`:
 ```lua
 ---@class octo.TimelineWriterEntry
 ---@field writer? fun(bufnr: integer, item: table)  -- direct dispatch
----@field batch?  string                            -- name of accumulator table
+---@field batch? octo.TimelineBatchKey              -- accumulator table key
 ---@field sets_prev_event? boolean                  -- set prev_is_event after write/accumulate
+```
+
+Available batch keys:
+
+```lua
+---@alias octo.TimelineBatchKey
+---| "assignment_events"
+---| "label_events"
+---| "pull_request_commits"
+---| "force_pushed_events"
+---| "review_requested_events"
+---| "review_request_removed_events"
+---| "subissue_added_events"
+---| "subissue_removed_events"
 ```
 
 The registry is populated in a `do` block at the **bottom of `writers.lua`** (after all
@@ -180,6 +198,10 @@ rendering logic (folds, thread matching) handled directly in `write_timeline_ite
 
 `BlockedByRemovedEvent` is registered with `sets_prev_event = false` to preserve existing
 buffer spacing behavior.
+
+Accumulator arrays in `write_timeline_items` must be cleared **in place** (set indices to
+`nil`) rather than rebound (`items = {}`), otherwise registry batch-key references can become
+stale and final grouped events may fail to render.
 
 ### Registering a fragment from external code (plugins/user config)
 
