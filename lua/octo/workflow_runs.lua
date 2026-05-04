@@ -75,6 +75,24 @@ local gh = require "octo.gh"
 ---@field conclusion string
 ---@field children WorkflowNode[]
 
+---@class WorkflowLogIndex
+---@field entries table<string, boolean>
+---@field normalized table<string, string | string[]>
+
+---@class WorkflowZipIndex
+---@field entries table<string, boolean>
+---@field normalized table<string, string | string[]>
+---@field normalized_files table<string, string | string[]>
+---@field entries_list string[]
+
+---@class WorkflowLogCache
+---@field zip_location string
+---@field cleanup fun() | nil
+---@field zip_index WorkflowZipIndex | nil
+---@field job_log_index WorkflowLogIndex
+---@field job_log_cache table<string, LineDef[]>
+---@field step_log_cache table<string, table<number, LineDef[]>>
+
 local M = {
   buf = nil,
   buf_name = "",
@@ -83,7 +101,9 @@ local M = {
   current_wf = nil,
   ---@type table<string, WorkflowRun>
   wf_cache = {},
+  ---@type table<string, WorkflowLogCache>
   log_cache = {},
+  ---@type LineDef[]
   rendered_lines = {},
 }
 
@@ -272,6 +292,8 @@ local function create_log_header(display, indent)
   }
 end
 
+---@param stdout any
+---@return string[]
 local function stdout_to_lines(stdout)
   if stdout == nil then
     return {}
@@ -300,6 +322,8 @@ local function stdout_to_lines(stdout)
   return {}
 end
 
+---@param value any
+---@return string
 local function ensure_string(value)
   if type(value) == "string" then
     return value
@@ -344,10 +368,16 @@ local function write_zipped_file(stdout)
     end
 end
 
+---@param path string
+---@return string
 local function normalize_log_path(path)
   return vim.trim(path):lower():gsub("[^%w]", "")
 end
 
+---@param lines string[]
+---@param indent number
+---@param header string | nil
+---@return LineDef[]
 local function build_log_children(lines, indent, header)
   local children = {}
   if header then
@@ -370,6 +400,10 @@ local function build_log_children(lines, indent, header)
   return children
 end
 
+---@param id string
+---@param repo string | nil
+---@return WorkflowLogCache | nil
+---@return boolean
 local function ensure_log_cache(id, repo)
   if M.log_cache[id] then
     return M.log_cache[id], true
@@ -391,6 +425,7 @@ local function ensure_log_cache(id, repo)
   end
 
   local zip_location, cleanup = write_zipped_file(out.stdout)
+  ---@type WorkflowLogCache
   local cache = {
     zip_location = zip_location,
     cleanup = cleanup,
@@ -403,6 +438,8 @@ local function ensure_log_cache(id, repo)
   return cache, true
 end
 
+---@param cache WorkflowLogCache
+---@return WorkflowZipIndex | nil
 local function ensure_zip_index(cache)
   if cache.zip_index then
     return cache.zip_index
@@ -413,6 +450,7 @@ local function ensure_zip_index(cache)
     return nil
   end
 
+  ---@type WorkflowZipIndex
   local zip_index = { entries = {}, normalized = {}, normalized_files = {}, entries_list = {} }
   for _, line in ipairs(vim.split(list.stdout or "", "\n")) do
     line = vim.trim(line)
@@ -460,6 +498,7 @@ local function ensure_zip_index(cache)
   return zip_index
 end
 
+---@param node WorkflowNode
 local function get_step_log(node)
   if not M.current_wf then
     return
@@ -491,8 +530,10 @@ local function get_step_log(node)
   end
 
   cache.step_log_cache[node.job_id] = cache.step_log_cache[node.job_id] or {}
-  if cache.step_log_cache[node.job_id][node.number] then
-    node.children = cache.step_log_cache[node.job_id][node.number]
+  local step_cache = cache.step_log_cache[node.job_id]
+  local step_number = node.number or 0
+  if step_cache[step_number] then
+    node.children = step_cache[step_number]
     return
   end
 
@@ -538,7 +579,7 @@ local function get_step_log(node)
 
   if use_job_log and cache.job_log_cache[node.job_id] then
     node.children = cache.job_log_cache[node.job_id]
-    cache.step_log_cache[node.job_id][node.number] = node.children
+    step_cache[step_number] = node.children
     return
   end
 
@@ -561,7 +602,7 @@ local function get_step_log(node)
   end, stdout_to_lines(res.stdout))
 
   node.children = build_log_children(lines, node.indent)
-  cache.step_log_cache[node.job_id][node.number] = node.children
+  step_cache[step_number] = node.children
   if use_job_log then
     cache.job_log_cache[node.job_id] = node.children
   end
@@ -828,6 +869,7 @@ local function print_lines()
   end
   vim.api.nvim_buf_clear_namespace(M.buf, namespace, 0, -1)
   vim.bo[M.buf].modifiable = true
+  ---@type LineDef[]
   local lines = get_workflow_header()
 
   local stringified_tree = tree_to_string(M.tree, {})
@@ -891,6 +933,9 @@ function M.refresh()
   print_lines()
 end
 
+---@param direction integer
+---@param predicate fun(line: LineDef): boolean
+---@param edge_message string | nil
 local function jump_to_line(direction, predicate, edge_message)
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
   local current = M.rendered_lines[current_line]
@@ -909,12 +954,14 @@ local function jump_to_line(direction, predicate, edge_message)
   end
 end
 
+---@param direction integer
 function M.jump_to_step(direction)
   jump_to_line(direction, function(line)
     return line.type == "step"
   end, direction > 0 and "Last step" or "First step")
 end
 
+---@param direction integer
 function M.jump_to_job(direction)
   jump_to_line(direction, function(line)
     return line.type == "job"
@@ -999,8 +1046,10 @@ end
 
 function M.previewer(self, entry)
   ---@type string
-  local id = entry.value.id
-  local repo = entry.value.repo
+  ---@type { value: { id: string, repo: string } }
+  local run_entry = entry
+  local id = run_entry.value.id
+  local repo = run_entry.value.repo
   M.buf = self.state.bufnr
   populate_preview_buffer(id, repo, self.state.bufnr)
 end
