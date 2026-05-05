@@ -558,6 +558,8 @@ HIGHLIGHT GROUPS                                *octo-highlights*
   `OctoStateChangesRequested`   `OctoStateClosed`
   `OctoStateCommented`          `Normal`
   `OctoStateDismissed`          `OctoStateClosed`
+  `OctoReviewDiffDeleteText`    GitHub color
+  `OctoReviewDiffAddText`       GitHub color
 
 The term "GitHub color" refers to the colors used in the WebUI.
 
