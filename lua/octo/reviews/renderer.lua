@@ -98,11 +98,15 @@ function M.get_file_icon(name, ext, render_data, line_idx, offset)
     return " "
   end
 
-  if not web_devicons then
-    web_devicons = require "nvim-web-devicons"
+  local get_icon = config.values.file_panel.get_icon
+  if not get_icon then
+    if not web_devicons then
+      web_devicons = require "nvim-web-devicons"
+    end
+    get_icon = web_devicons.get_icon
   end
 
-  local icon, hl = web_devicons.get_icon(name, ext)
+  local icon, hl = get_icon(name, ext)
 
   if icon then
     if hl then

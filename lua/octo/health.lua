@@ -128,19 +128,23 @@ local function check_picker()
   end
 end
 
---- Check that nvim-web-devicons is installed when file_panel.use_icons is enabled.
+--- Check that nvim-web-devicons is installed when file_panel.use_icons is enabled
+--- and no custom icon callback is configured.
 local function check_devicons()
   local config = require "octo.config"
   if not config.values.file_panel.use_icons then
     return
   end
+  if config.values.file_panel.get_icon then
+    vim.health.info "`file_panel.get_icon` configured; skipping `nvim-web-devicons` check"
+    return
+  end
   if pcall(require, "nvim-web-devicons") then
     vim.health.ok "`nvim-web-devicons` installed"
   else
-    vim.health.warn(
-      "`nvim-web-devicons` not found.",
-      { "Install nvim-tree/nvim-web-devicons, or set `file_panel.use_icons = false` in your octo.nvim config." }
-    )
+    vim.health.warn("`nvim-web-devicons` not found.", {
+      "Install nvim-tree/nvim-web-devicons, configure `file_panel.get_icon`, or set `file_panel.use_icons = false` in your octo.nvim config.",
+    })
   end
 end
 
