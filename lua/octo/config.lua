@@ -62,8 +62,7 @@ local M = {}
 
 ---@class OctoConfigFilePanel
 ---@field size number
----@field use_icons boolean
----@field get_icon? fun(name: string, ext: string): string?, string?
+---@field icons boolean|fun(name: string, ext: string): string?, string?
 
 ---@class OctoConfigUi
 ---@field use_signcolumn boolean
@@ -312,8 +311,7 @@ function M.get_default_values()
     },
     file_panel = {
       size = 10, -- changed files panel rows
-      use_icons = true, -- show icons in file panel
-      get_icon = nil, -- callback to provide file panel icons and highlights: function(name, ext) return icon, hl end
+      icons = true, -- true = nvim-web-devicons, false = disabled, function = custom provider
     },
     colors = { -- used for highlight groups (see Colors section below)
       white = "#ffffff",
@@ -796,8 +794,16 @@ function M.validate_config()
     validate_notifications()
     if validate_type(config.file_panel, "file_panel", "table") then
       validate_type(config.file_panel.size, "file_panel.size", "number")
-      validate_type(config.file_panel.use_icons, "file_panel.use_icons", "boolean")
-      validate_type(config.file_panel.get_icon, "file_panel.get_icon", { "nil", "function" })
+      validate_type(config.file_panel.icons, "file_panel.icons", { "boolean", "function" })
+      if config.file_panel.use_icons ~= nil then
+        err("file_panel.use_icons", "`file_panel.use_icons` is no longer supported; use `file_panel.icons = false`")
+      end
+      if config.file_panel.get_icon ~= nil then
+        err(
+          "file_panel.get_icon",
+          "`file_panel.get_icon` is no longer supported; use `file_panel.icons = function(name, ext) ... end`"
+        )
+      end
     end
     validate_aliases()
     validate_pickers()

@@ -93,13 +93,13 @@ end
 ---@param line_idx integer
 ---@param offset integer
 function M.get_file_icon(name, ext, render_data, line_idx, offset)
-  local use_icons = config.values.file_panel.use_icons
-  if not use_icons then
+  local icons = config.values.file_panel.icons
+  if icons == false then
     return " "
   end
 
-  local get_icon = config.values.file_panel.get_icon
-  if not get_icon then
+  local get_icon = icons
+  if type(get_icon) ~= "function" then
     if not web_devicons then
       web_devicons = require "nvim-web-devicons"
     end

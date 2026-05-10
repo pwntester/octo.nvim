@@ -124,7 +124,7 @@ From any octo buffer, press `<CR>` in normal mode to see common actions.
   - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
   - [snacks.nvim](https://github.com/folke/snacks.nvim)
   - default picker uses `vim.ui.select`
-- Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons) for file panel icons, or configure `file_panel.get_icon`
+- Install [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons) for file panel icons, or configure `file_panel.icons`
 
 After installation, run `:checkhealth octo` to verify your setup.
 
@@ -176,7 +176,7 @@ For a basic installation using [`lazy.nvim`](https://lazy.folke.io/), try:
     "nvim-telescope/telescope.nvim",
     -- OR "ibhagwan/fzf-lua",
     -- OR "folke/snacks.nvim",
-    "nvim-tree/nvim-web-devicons", -- optional if file_panel.get_icon is configured
+    "nvim-tree/nvim-web-devicons", -- optional if file_panel.icons is a function
   },
 }
 ```
@@ -331,8 +331,7 @@ require"octo".setup {
   },
   file_panel = {
     size = 10, -- changed files panel rows
-    use_icons = true, -- show icons in file panel
-    get_icon = nil, -- callback to provide file panel icons and highlights: function(name, ext) return icon, hl end
+    icons = true, -- true = nvim-web-devicons, false = disabled, function = custom provider
   },
   colors = { -- used for highlight groups (see Colors section below)
     white = "#ffffff",
@@ -575,16 +574,18 @@ require"octo".setup {
 ```
 <!-- END_CONFIG -->
 
-### File panel icon callback
+### File panel icons
 
-Set `file_panel.get_icon` to use a custom file icon provider. The callback receives
-the file name and extension and should return an icon and optional highlight group.
+Configure file panel icons with `file_panel.icons`:
+
+- `true`: use `nvim-web-devicons`
+- `false`: disable icons
+- `function(name, ext)`: return `icon, hl`
 
 ```lua
 require("octo").setup({
   file_panel = {
-    use_icons = true,
-    get_icon = function(name, _ext)
+    icons = function(name, _ext)
       return require("mini.icons").get("file", name)
     end,
   },
