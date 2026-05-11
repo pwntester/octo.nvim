@@ -795,10 +795,10 @@ function M.validate_config()
     if validate_type(config.file_panel, "file_panel", "table") then
       validate_type(config.file_panel.size, "file_panel.size", "number")
       validate_type(config.file_panel.icons, "file_panel.icons", { "boolean", "function" })
-      if config.file_panel.use_icons ~= nil then
+      if rawget(config.file_panel, "use_icons") ~= nil then
         err("file_panel.use_icons", "`file_panel.use_icons` is no longer supported; use `file_panel.icons = false`")
       end
-      if config.file_panel.get_icon ~= nil then
+      if rawget(config.file_panel, "get_icon") ~= nil then
         err(
           "file_panel.get_icon",
           "`file_panel.get_icon` is no longer supported; use `file_panel.icons = function(name, ext) ... end`"

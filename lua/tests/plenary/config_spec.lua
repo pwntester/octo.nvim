@@ -64,16 +64,16 @@ describe("Config module:", function()
     end)
 
     it("rejects invalid file panel icons values", function()
-      this.values.file_panel.icons = "invalid"
+      rawset(this.values.file_panel, "icons", "invalid")
 
       assert.True(vim.tbl_count(this.validate_config()) ~= 0)
     end)
 
     it("rejects legacy file panel icon options", function()
-      this.values.file_panel.use_icons = false
-      this.values.file_panel.get_icon = function()
+      rawset(this.values.file_panel, "use_icons", false)
+      rawset(this.values.file_panel, "get_icon", function()
         return "x"
-      end
+      end)
 
       local errors = this.validate_config()
 
