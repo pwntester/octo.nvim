@@ -238,12 +238,15 @@ function M.default_transformer(path, opts)
         break
       end
       if extra_args[i] ~= "--" then
+        ---@diagnostic disable-next-line: no-unknown
         cleaned[pos] = extra_args[i]
         pos = pos + 1
       end
     end
+    ---@diagnostic disable-next-line: no-unknown
     for k, v in pairs(extra_args) do
       if type(k) == "string" then
+        ---@diagnostic disable-next-line: no-unknown
         cleaned[k] = v
       end
     end
