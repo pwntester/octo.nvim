@@ -182,6 +182,7 @@ local function append_formatted(tbl, target)
     if type(k) == "string" then
       local flag = (#k == 1 and "-" or "--") .. k:gsub("_", "-")
       if type(v) == "table" then
+        ---@diagnostic disable-next-line: no-unknown
         for _, item in ipairs(v) do
           vim.list_extend(target, { flag, tostring(item) })
         end
@@ -211,6 +212,7 @@ end
 function M.default_transformer(path, opts)
   opts = vim.deepcopy(opts or {})
 
+  ---@type string[]
   local args = vim.deepcopy(path)
   ---@type table
   local runtime_opts = type(opts.opts) == "table" and opts.opts or {}
@@ -259,10 +261,12 @@ function M.default_transformer(path, opts)
     dry_run = runtime_opts.dry_run,
   }
 
+  ---@diagnostic disable-next-line: no-unknown
   append_formatted(opts, args)
 
   if extra_args ~= nil and next(extra_args) ~= nil then
     table.insert(args, "--")
+    ---@diagnostic disable-next-line: no-unknown
     append_formatted(extra_args, args)
   end
 
