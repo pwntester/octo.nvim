@@ -1,5 +1,6 @@
 local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
+local git = require "octo.git"
 local utils = require "octo.utils"
 
 local vim = vim
@@ -123,8 +124,7 @@ function M.go_to_file()
   end
   local result = open_file_if_found(utils.path_join { vim.fn.getcwd(), path }, line)
   if not result then
-    local cmd = "git rev-parse --show-toplevel"
-    local git_root = vim.fn.system(cmd):gsub("\n", "")
+    local git_root = git.rev_parse({ show_toplevel = true }):trim()
     result = open_file_if_found(utils.path_join { git_root, path }, line)
   end
   if not result then

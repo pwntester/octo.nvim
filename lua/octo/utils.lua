@@ -4,6 +4,7 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local _, Job = pcall(require, "plenary.job")
+local git = require "octo.git"
 local release = require "octo.release"
 local notify = require "octo.notify"
 local uri = require "octo.uri"
@@ -267,18 +268,20 @@ end
 function M.parse_git_remote()
   local conf = config.values
   local aliases = conf.ssh_aliases
-  ---@diagnostic disable-next-line: missing-fields
-  local job = Job:new { command = "git", args = { "remote", "-v" }, cwd = vim.fn.getcwd() }
-  job:sync()
-  local stderr = table.concat(job:stderr_result(), "\n")
-  if not M.is_blank(stderr) then
+  local result = git.remote {
+    "-v",
+    opts = {
+      cwd = vim.fn.getcwd(),
+    },
+  }
+
+  if not result or result.code ~= 0 or not M.is_blank(result.stderr) then
     return {}
   end
+
   ---@type table<string, OctoRepo>
   local remotes = {}
-  for _, line in
-    ipairs(job:result() --[[@as string[] ]])
-  do
+  for _, line in ipairs(vim.split(result.stdout, "\n", { trimempty = true })) do
     local name, url = line:match "^(%S+)%s+(%S+)"
     if name then
       local remote = M.parse_remote_url(url, aliases)
@@ -376,22 +379,13 @@ end
 ---@param commit string
 ---@param cb fun(exists: boolean)
 function M.commit_exists(commit, cb)
-  if not Job then
-    return
+  ---@type OctoProcessResult
+  local result = git.cat_file { "-t", commit }
+  if result and result:trim() == "commit" then
+    cb(true)
+  else
+    cb(false)
   end
-  ---@diagnostic disable-next-line: missing-fields
-  Job:new({
-    enable_recording = true,
-    command = "git",
-    args = { "cat-file", "-t", commit },
-    on_exit = vim.schedule_wrap(function(j_self, _, _)
-      if "commit" == M.trim(table.concat(j_self:result(), "\n")) then
-        cb(true)
-      else
-        cb(false)
-      end
-    end),
-  }):start()
 end
 
 ---Add a milestone to an issue or PR
@@ -488,8 +482,8 @@ function M.get_milestone_progress(milestone)
 end
 
 local function branch_switch_message()
-  local output = vim.fn.system "git branch --show-current"
-  M.info("Switched to " .. vim.fn.trim(output))
+  local output = git.branch({ show_current = true }):trim()
+  M.info("Switched to " .. output)
 end
 
 function M.develop_issue(issue_repo, issue_number, branch_repo)
@@ -514,23 +508,16 @@ end
 ---@param commit string
 ---@param cb fun(lines: string[])
 function M.get_file_at_commit(path, commit, cb)
-  if not Job then
-    return
-  end
-  ---@diagnostic disable-next-line: missing-fields
-  local job = Job:new {
-    enable_recording = true,
-    command = "git",
-    args = { "show", string.format("%s:%s", commit, path) },
+  local result = git.show {
+    string.format("%s:%s", commit, path),
   }
-  ---@type string[]?
-  local result = job:sync()
-  if not result then
+
+  if not result or result.code ~= 0 then
     M.error "Failed to get file contents"
     return
   end
-  local output = table.concat(result, "\n")
-  cb(vim.split(output, "\n"))
+
+  cb(vim.split(result.stdout, "\n"))
 end
 
 function M.in_pr_repo()
@@ -563,13 +550,12 @@ end
 --- @param pr PullRequest
 --- @return boolean
 function M.in_pr_branch_locally_tracked(pr)
-  local cmd = "git rev-parse --abbrev-ref --symbolic-full-name @{u}"
-  local cmd_out = vim.fn.system(cmd)
-  if vim.v.shell_error ~= 0 then
+  local res = git.rev_parse { abbrev_ref = true, symbolic_full_name = "@{u}" }
+  if res.code ~= 0 then
     return false
   end
 
-  local local_branch_with_local_remote = vim.split(string.gsub(cmd_out, "%s+", ""), "/")
+  local local_branch_with_local_remote = vim.split(res:trim(), "/")
   local local_remote = local_branch_with_local_remote[1]
   local local_branch = table.concat(local_branch_with_local_remote, "/", 2)
 
@@ -596,9 +582,9 @@ end
 -- maps to a PR HEAD, when 'gh pr checkout' is used.
 ---@param pr PullRequest
 function M.get_upstream_branch_from_config(pr)
-  local branch_cmd = "git rev-parse --abbrev-ref HEAD"
-  local branch = vim.fn.system(branch_cmd)
-  if vim.v.shell_error ~= 0 then
+  local res = git.rev_parse { abbrev_ref = "HEAD" }
+  local branch = res:trim()
+  if res.code ~= 0 then
     return ""
   end
 
@@ -606,22 +592,18 @@ function M.get_upstream_branch_from_config(pr)
     return ""
   end
 
-  -- trim white space off branch
-  branch = string.gsub(branch, "%s+", "")
-
-  local merge_config_cmd = string.format('git config --get-regexp "^branch\\.%s\\.merge"', branch)
-
-  local merge_config = vim.fn.system(merge_config_cmd)
-  if vim.v.shell_error ~= 0 then
+  local merge_config = git.config { get_regexp = string.format("^branch\\.%s\\.merge", branch) }
+  if not merge_config or merge_config.code ~= 0 then
     return ""
   end
 
-  if #merge_config == 0 then
+  local merge_config_out = merge_config:trim()
+  if #merge_config_out == 0 then
     return ""
   end
 
   -- split merge_config to key, value with space delimiter
-  local merge_config_kv = vim.split(merge_config, "%s+")
+  local merge_config_kv = vim.split(merge_config_out, "%s+")
   -- use > 2 since there maybe some garbage white space at the end of the map.
   if #merge_config_kv < 2 then
     return ""
@@ -952,10 +934,11 @@ end
 
 -- Checks if the current cwd is in a git repo
 function M.cwd_is_git()
-  local cmd = "git rev-parse --is-inside-work-tree"
-  local out = vim.fn.system(cmd)
-  out = out:gsub("%s+", "")
-  return out == "true"
+  local out = git.rev_parse { is_inside_work_tree = true }
+  if not out or out.code ~= 0 then
+    return false
+  end
+  return out:trim() == "true"
 end
 
 ---Gets repo info
