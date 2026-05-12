@@ -2,6 +2,7 @@
 local constants = require "octo.constants"
 local context = require "octo.context"
 local navigation = require "octo.navigation"
+local git = require "octo.git"
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
 local graphql = require "octo.gh.graphql"
@@ -1898,8 +1899,7 @@ function M.create_pr(is_draft)
   end
 
   -- get current local branch
-  local cmd = "git rev-parse --abbrev-ref HEAD"
-  local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
+  local local_branch = git.rev_parse({ abbrev_ref = "HEAD" }):trim()
 
   -- get remote branches
   if
@@ -1935,20 +1935,15 @@ function M.create_pr(is_draft)
         end,
       }
       utils.info(string.format("Pushing '%s' to '%s:%s' ...", local_branch, remote, remote_branch))
-      local ok, Job = pcall(require, "plenary.job")
-      if ok then
-        local job = Job:new {
-          command = "git",
-          args = { "push", remote, local_branch .. ":" .. remote_branch },
-          cwd = vim.fn.getcwd(),
-        }
-        job:sync()
-        --local stdout = table.concat(job:result(), "\n")
-        local stderr = table.concat(job:stderr_result(), "\n")
+      local push_result = git.push {
+        remote,
+        string.format("%s:%s", local_branch, remote_branch),
+      }
+      if not push_result or push_result.code ~= 0 then
+        local stderr = push_result and push_result.stderr or ""
         if not utils.is_blank(stderr) then
           utils.error(stderr)
         end
-      else
         utils.error "Aborting PR creation"
         return
       end
@@ -1986,7 +1981,8 @@ function M.save_pr(opts)
   local use_branch_name_as_title = conf.pull_requests.use_branch_name_as_title or false
   -- title and body
   local title, body
-  local last_commit = string.gsub(vim.fn.system "git log -1 --pretty=%B", "%s+$", "")
+  local log_result = git.log { "-1", pretty = "%B" }
+  local last_commit = (log_result and log_result:trim()) or ""
   local last_commit_lines = vim.split(last_commit, "\n")
   if #last_commit_lines >= 1 then
     title = last_commit_lines[1]
