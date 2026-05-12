@@ -8,6 +8,7 @@ local M = {}
 ---@field data string The primary output (stdout or stderr)
 ---@field json fun(): table Helper to decode JSON
 ---@field trim fun(): string Helper to trim primary output
+---@field ok fun(): boolean Helper to check exit code
 
 ---@class OctoRuntimeOpts
 ---@field stdin? string
@@ -22,8 +23,9 @@ local M = {}
 ---@field command string[]
 ---@field opts vim.SystemOpts
 ---@field timeout? number
+---@field ok fun(): boolean
 
----@alias OctoProcessResult OctoResult|OctoDryRunResult|nil
+---@alias OctoProcessResult OctoResult|OctoDryRunResult
 
 ---@param text string
 ---@return table
@@ -51,6 +53,10 @@ local function wrap_res(obj)
     return vim.trim(result.data)
   end
 
+  result.ok = function()
+    return result.code == 0
+  end
+
   return result
 end
 
@@ -71,6 +77,10 @@ local function emit_complete_lines(carry, chunk, emit)
   return buffered
 end
 
+---@param bin string
+---@param args string[]
+---@param transformer_opts OctoRuntimeOpts
+---@return OctoResult|OctoDryRunResult|nil
 function M.run(bin, args, transformer_opts)
   transformer_opts = transformer_opts or {}
 
@@ -90,6 +100,9 @@ function M.run(bin, args, transformer_opts)
       command = cmd,
       opts = sys_opts,
       timeout = transformer_opts.timeout,
+      ok = function()
+        return true
+      end,
     }
   end
 
@@ -135,6 +148,7 @@ function M.run(bin, args, transformer_opts)
       end
     end
 
+    ---@diagnostic disable-next-line: no-unknown
     if transformer_opts.stream_cb then
       obj.stdout = table.concat(stdout_chunks)
       obj.stderr = table.concat(stderr_chunks)
@@ -153,13 +167,15 @@ function M.run(bin, args, transformer_opts)
   end)
 
   if co then
+    ---@diagnostic disable-next-line: await-in-sync
     return coroutine.yield()
   end
 
+  ---@diagnostic disable-next-line: return-type-mismatch
   return nil
 end
 
----@param tbl table
+---@param tbl table<string|integer, any>
 ---@param target string[]
 local function append_formatted(tbl, target)
   for k, v in pairs(tbl) do
@@ -189,10 +205,14 @@ end
 ---Handles: { flag = true } -> --flag, { f = "val" } -> -f val, { list = {1, 2} } -> --list 1 --list 2
 ---Reserved keys stripped from CLI output: opts, _stdin, args
 ---When args is present, a `--` separator is inserted before its contents
+---@param path string[]
+---@param opts table<string|integer, any>
+---@return string[], OctoRuntimeOpts
 function M.default_transformer(path, opts)
   opts = vim.deepcopy(opts or {})
 
   local args = vim.deepcopy(path)
+  ---@type table
   local runtime_opts = type(opts.opts) == "table" and opts.opts or {}
 
   if opts._stdin ~= nil and runtime_opts.stdin == nil then
@@ -202,11 +222,13 @@ function M.default_transformer(path, opts)
   opts._stdin = nil
   opts.opts = nil
 
+  ---@type table?
   local extra_args = opts.args
   opts.args = nil
 
   -- Strip any literal "--" from args since we auto-insert it below
   if extra_args ~= nil then
+    ---@type table
     local cleaned = {}
     local pos = 1
     for i = 1, math.huge do
@@ -226,6 +248,7 @@ function M.default_transformer(path, opts)
     extra_args = cleaned
   end
 
+  ---@type OctoRuntimeOpts
   local t_opts = {
     stdin = runtime_opts.stdin,
     env = runtime_opts.env,
@@ -247,18 +270,24 @@ function M.default_transformer(path, opts)
 end
 
 ---The Proxy Factory
+---@param bin string
+---@param transformer? fun(path: string[], opts: table): string[], OctoRuntimeOpts
+---@return table
 function M.factory(bin, transformer)
   transformer = transformer or M.default_transformer
 
   local function make_proxy(path)
     return setmetatable({}, {
       __index = function(_, key)
+        ---@diagnostic disable-next-line: no-unknown
         local segment = key:gsub("_", "-")
         return make_proxy(vim.list_extend(vim.deepcopy(path), { segment }))
       end,
       __call = function(_, opts)
         opts = opts or {}
+        ---@type string[], OctoRuntimeOpts
         local args, t_opts = transformer(path, opts)
+        ---@type OctoResult|OctoDryRunResult
         return M.run(bin, args, t_opts)
       end,
     })
