@@ -379,6 +379,7 @@ end
 ---@param commit string
 ---@param cb fun(exists: boolean)
 function M.commit_exists(commit, cb)
+  ---@type OctoProcessResult
   local result = git.cat_file { "-t", commit }
   if result and result:trim() == "commit" then
     cb(true)
