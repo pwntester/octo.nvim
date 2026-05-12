@@ -35,6 +35,69 @@ describe("process.default_transformer", function()
 
     eq("payload", t_opts.stdin)
   end)
+
+  it("strips args key and auto-inserts -- before its content", function()
+    local args, _ = process.default_transformer({ "log" }, {
+      oneline = true,
+      args = { "--all" },
+    })
+
+    assert.is_true(has_value(args, "log"))
+    assert.is_true(has_value(args, "--oneline"))
+    assert.is_true(has_value(args, "--"))
+    assert.is_true(has_value(args, "--all"))
+    assert.is_false(has_value(args, "--args"))
+  end)
+
+  it("formats string keys in args table as flags after --", function()
+    local args, _ = process.default_transformer({ "clone" }, {
+      [1] = "owner/repo",
+      args = { depth = 1, branch = "main" },
+    })
+
+    assert.is_true(has_value(args, "clone"))
+    assert.is_true(has_value(args, "owner/repo"))
+    local dash_i, depth_i
+    for i, v in ipairs(args) do
+      if v == "--" then
+        dash_i = i
+      end
+      if v == "--depth" then
+        depth_i = i
+      end
+    end
+    assert.is_not_nil(dash_i)
+    assert.is_not_nil(depth_i)
+    assert.is_true(dash_i < depth_i, "-- must come before --depth")
+  end)
+
+  it("strips literal -- from args positional values to avoid double separator", function()
+    local args, _ = process.default_transformer({ "log" }, {
+      oneline = true,
+      args = { "HEAD", "--", "src/" },
+    })
+
+    local dashes = {}
+    for _, v in ipairs(args) do
+      if v == "--" then
+        table.insert(dashes, #dashes + 1)
+      end
+    end
+    assert.is_true(has_value(args, "--oneline"))
+    assert.is_true(has_value(args, "HEAD"))
+    assert.is_true(has_value(args, "src/"))
+    eq(1, #dashes, "expected exactly one -- separator")
+  end)
+
+  it("does not insert -- for empty args table", function()
+    local args, _ = process.default_transformer({ "status" }, {
+      short = true,
+      args = {},
+    })
+
+    assert.is_true(has_value(args, "--short"))
+    assert.is_false(has_value(args, "--"))
+  end)
 end)
 
 describe("process.run", function()

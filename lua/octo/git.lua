@@ -2,6 +2,7 @@
 ---@field abbrev_ref? string | boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitStatusOpts
 ---@field short? boolean
@@ -10,6 +11,7 @@
 ---@field untracked_files? string
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitCheckoutOpts
 ---@field b? string
@@ -18,6 +20,7 @@
 ---@field detach? boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitFetchOpts
 ---@field all? boolean
@@ -25,12 +28,14 @@
 ---@field tags? boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitPullOpts
 ---@field rebase? boolean
 ---@field ff_only? boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitPushOpts
 ---@field set_upstream? boolean
@@ -38,6 +43,7 @@
 ---@field tags? boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitBranchOpts
 ---@field all? boolean
@@ -46,20 +52,24 @@
 ---@field move? boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitRemoteOpts
 ---@field verbose? boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitConfigOpts
 ---@field get_regexp? string
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitShowOpts
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitMergeOpts
 ---@field squash? boolean
@@ -67,6 +77,7 @@
 ---@field abort? boolean
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGitLogOpts
 ---@field oneline? boolean
@@ -76,6 +87,7 @@
 ---@field pretty? string
 ---@field [integer]? string
 ---@field opts? OctoRuntimeOpts
+---@field args? table
 
 ---@class OctoGit
 ---@field rev_parse fun(opts?: OctoGitRevParseOpts): OctoProcessResult

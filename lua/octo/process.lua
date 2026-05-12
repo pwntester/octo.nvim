@@ -159,8 +159,36 @@ function M.run(bin, args, transformer_opts)
   return nil
 end
 
+---@param tbl table
+---@param target string[]
+local function append_formatted(tbl, target)
+  for k, v in pairs(tbl) do
+    if type(k) == "string" then
+      local flag = (#k == 1 and "-" or "--") .. k:gsub("_", "-")
+      if type(v) == "table" then
+        for _, item in ipairs(v) do
+          vim.list_extend(target, { flag, tostring(item) })
+        end
+      else
+        table.insert(target, flag)
+        if v ~= true then
+          table.insert(target, tostring(v))
+        end
+      end
+    end
+  end
+  for i = 1, math.huge do
+    if tbl[i] == nil then
+      break
+    end
+    table.insert(target, tostring(tbl[i]))
+  end
+end
+
 ---The "Standard" Transformer logic
 ---Handles: { flag = true } -> --flag, { f = "val" } -> -f val, { list = {1, 2} } -> --list 1 --list 2
+---Reserved keys stripped from CLI output: opts, _stdin, args
+---When args is present, a `--` separator is inserted before its contents
 function M.default_transformer(path, opts)
   opts = vim.deepcopy(opts or {})
 
@@ -174,6 +202,30 @@ function M.default_transformer(path, opts)
   opts._stdin = nil
   opts.opts = nil
 
+  local extra_args = opts.args
+  opts.args = nil
+
+  -- Strip any literal "--" from args since we auto-insert it below
+  if extra_args ~= nil then
+    local cleaned = {}
+    local pos = 1
+    for i = 1, math.huge do
+      if extra_args[i] == nil then
+        break
+      end
+      if extra_args[i] ~= "--" then
+        cleaned[pos] = extra_args[i]
+        pos = pos + 1
+      end
+    end
+    for k, v in pairs(extra_args) do
+      if type(k) == "string" then
+        cleaned[k] = v
+      end
+    end
+    extra_args = cleaned
+  end
+
   local t_opts = {
     stdin = runtime_opts.stdin,
     env = runtime_opts.env,
@@ -184,23 +236,13 @@ function M.default_transformer(path, opts)
     dry_run = runtime_opts.dry_run,
   }
 
-  for k, v in pairs(opts) do
-    if type(k) == "string" then
-      local flag = (#k == 1 and "-" or "--") .. k:gsub("_", "-")
-      if type(v) == "table" then
-        for _, item in ipairs(v) do
-          vim.list_extend(args, { flag, tostring(item) })
-        end
-      else
-        table.insert(args, flag)
-        if v ~= true then
-          table.insert(args, tostring(v))
-        end
-      end
-    elseif type(k) == "number" then
-      table.insert(args, tostring(v))
-    end
+  append_formatted(opts, args)
+
+  if extra_args ~= nil and next(extra_args) ~= nil then
+    table.insert(args, "--")
+    append_formatted(extra_args, args)
   end
+
   return args, t_opts
 end
 
