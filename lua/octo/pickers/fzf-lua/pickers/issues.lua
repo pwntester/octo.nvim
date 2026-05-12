@@ -30,6 +30,7 @@ return function(opts)
 
   local window_title = utils.pop_key(opts, "window_title") or "Issues"
   local prompt_title = utils.pop_key(opts, "prompt_title")
+  local cb = utils.pop_key(opts, "cb")
 
   local formatted_issues = {} ---@type table<string, table> entry.ordinal -> entry
 
@@ -71,6 +72,17 @@ return function(opts)
     }
   end
 
+  local actions
+  if cb then
+    actions = {
+      ["default"] = function(selected)
+        cb(formatted_issues[selected[1]])
+      end,
+    }
+  else
+    actions = fzf_actions.common_open_actions(formatted_issues)
+  end
+
   fzf.fzf_exec(get_contents, {
     prompt = picker_utils.get_prompt(prompt_title),
     previewer = previewers.issue(formatted_issues),
@@ -83,6 +95,6 @@ return function(opts)
       title = window_title,
       title_pos = "center",
     },
-    actions = fzf_actions.common_open_actions(formatted_issues),
+    actions = actions,
   })
 end
