@@ -17,6 +17,7 @@ local utils = require "octo.utils"
 ---@field notifications function Get notfications
 ---@field pending_threads function Get pending review threads
 ---@field project_cards_v2 function Get project cards
+---@field references function Get references from current buffer's timeline
 ---@field project_columns_v2 function Get project columns
 ---@field prs function Get pull requests
 ---@field releases fun(opts? : { repo?: string, cb?: function }) Get releases for a repository

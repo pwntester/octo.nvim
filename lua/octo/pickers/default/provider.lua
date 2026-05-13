@@ -1406,6 +1406,129 @@ function M.search(opts)
   end
 end
 
+---Show all referenced issues/PRs from the current buffer's timeline
+function M.references()
+  local buffer = utils.get_current_buffer()
+  if not buffer then
+    utils.error "Not in an Octo buffer"
+    return
+  end
+
+  local obj = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
+  if not obj then
+    utils.error "Not in an issue or PR buffer"
+    return
+  end
+
+  local is_issue = buffer:isIssue()
+  local seen = {}
+  local refs = {}
+
+  local function add_ref(ref_obj, kind, actor, created_at)
+    if not ref_obj or ref_obj == vim.NIL then
+      return
+    end
+    local id = ref_obj.id
+      or (ref_obj.repository and ref_obj.repository.nameWithOwner .. "#" .. tostring(ref_obj.number))
+    if not id or seen[id] then
+      return
+    end
+    seen[id] = true
+    local repo = ref_obj.repository and ref_obj.repository.nameWithOwner or buffer.repo
+    table.insert(refs, {
+      ref = ref_obj,
+      repo = repo,
+      kind = kind,
+      actor = actor,
+      createdAt = created_at or "",
+    })
+  end
+
+  -- Direct relationships
+  if is_issue and obj.parent and obj.parent ~= vim.NIL then
+    add_ref(obj.parent, "parent")
+  end
+
+  if obj.blockedBy and obj.blockedBy.nodes then
+    for _, node in ipairs(obj.blockedBy.nodes) do
+      add_ref(node, "blocked-by")
+    end
+  end
+
+  if obj.blocking and obj.blocking.nodes then
+    for _, node in ipairs(obj.blocking.nodes) do
+      add_ref(node, "blocking")
+    end
+  end
+
+  if not is_issue and obj.closingIssuesReferences and obj.closingIssuesReferences.nodes then
+    for _, node in ipairs(obj.closingIssuesReferences.nodes) do
+      add_ref(node, "closes")
+    end
+  end
+
+  -- Timeline items
+  local timeline_ref_map = {
+    CrossReferencedEvent = { field = "source", label = "cross-reference" },
+    ParentIssueAddedEvent = { field = "parent", label = "parent" },
+    SubIssueAddedEvent = { field = "subIssue", label = "sub-issue" },
+    BlockedByAddedEvent = { field = "blockingIssue", label = "blocked-by" },
+    BlockingAddedEvent = { field = "blockedIssue", label = "blocking" },
+    MarkedAsDuplicateEvent = { field = "canonical", label = "duplicate" },
+  }
+  if obj.timelineItems and obj.timelineItems.nodes then
+    for _, item in ipairs(obj.timelineItems.nodes) do
+      if item ~= vim.NIL then
+        local typename = item.__typename
+        local actor_login = item.actor and item.actor.login or ""
+
+        if typename == "ConnectedEvent" then
+          if item.source then
+            add_ref(item.source, "connected", actor_login, item.createdAt)
+          end
+          if item.subject then
+            add_ref(item.subject, "connected", actor_login, item.createdAt)
+          end
+        else
+          local extractor = timeline_ref_map[typename]
+          if extractor and item[extractor.field] then
+            add_ref(item[extractor.field], extractor.label, actor_login, item.createdAt)
+          end
+        end
+      end
+    end
+  end
+
+  if #refs == 0 then
+    utils.info "No references found"
+    return
+  end
+
+  vim.ui.select(refs, {
+    prompt = "Select Reference:",
+    format_item = function(ref)
+      local num = ref.ref.number or ""
+      local title = ref.ref.title or "(no title)"
+      local state = ref.ref.state or ""
+      local state_str = state ~= "" and " [" .. state .. "]" or ""
+      local actor_str = ref.actor and ref.actor ~= "" and " by " .. ref.actor or ""
+      return string.format("[%s] #%s %s%s%s", ref.kind, tostring(num), title, state_str, actor_str)
+    end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+    local typ = choice.ref.__typename
+    local repo = choice.repo
+    local number = choice.ref.number
+    if typ == "PullRequest" then
+      utils.get("pull_request", tonumber(number), repo)
+    else
+      utils.get("issue", tonumber(number), repo)
+    end
+  end)
+end
+
 ---@type octo.PickerModule
 M.picker = {
   actions = M.actions,
@@ -1425,6 +1548,7 @@ M.picker = {
   project_cards_v2 = M.project_cards_v2,
   project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
+  references = M.references,
   releases = M.releases,
   repos = M.repos,
   review_commits = M.review_commits,

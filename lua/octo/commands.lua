@@ -1071,6 +1071,9 @@ function M.setup()
         M.reaction_action "HEART"
       end,
     },
+    references = context.within_issue_or_pr(function(_)
+      picker.references()
+    end),
     card = card_commands,
     cardv2 = {
       set = function(...)
