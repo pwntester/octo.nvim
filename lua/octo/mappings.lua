@@ -167,6 +167,7 @@ return {
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),
+      ["View References"] = commands.references,
       ["React"] = create_reaction_picker,
     }
     create_options_picker(options, "Select an option:")
@@ -206,6 +207,7 @@ return {
       ["View Repo"] = context.within_issue_or_pr(function(buffer)
         commands.repo.view(buffer.repo)
       end),
+      ["View References"] = commands.references,
       ["React"] = create_reaction_picker,
     }
     create_options_picker(options, "Select an option:")
