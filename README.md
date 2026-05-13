@@ -574,6 +574,32 @@ require"octo".setup {
 ```
 <!-- END_CONFIG -->
 
+## 🪝 Hooks & Events
+
+Hooks allow intercepting and mutating data before API calls. Events are read-only notifications after operations complete.
+
+See `:help octo-hooks-events` for the full API reference, available hooks, event constants, and examples.
+
+```lua
+-- Register a hook in setup (see :help octo-hooks for details)
+require("octo").setup({
+  hooks = {
+    before_review_submit = function(data, next)
+      data.body = data.body .. "\n\n_AI summary_"
+      next(data)
+    end,
+  },
+})
+
+-- Listen for events via User autocommand (see :help octo-events)
+vim.api.nvim_create_autocmd("User", {
+  pattern = "OctoReviewSubmitted",
+  callback = function(opts)
+    print("Review " .. opts.data.review_id .. " submitted!")
+  end,
+})
+```
+
 ## 🤖 Commands
 
 There is only an `Octo <object> <action> [arguments]` command:
