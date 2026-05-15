@@ -225,33 +225,43 @@ describe("merge_pr:", function()
   end)
 
   it("merge_pr success prefers stderr and uses fallback when blank", function()
+    local captured_cb
+    gh.pr = {
+      merge = function(opts)
+        captured_cb = opts.opts.cb
+      end,
+    }
+
     commands.merge_pr "squash"
 
-    assert.is_not_nil(captured_opts)
-    assert.is_not_nil(captured_opts.opts)
-    assert.is_not_nil(captured_opts.opts.cb)
+    assert.is_not_nil(captured_cb)
 
-    captured_opts.opts.cb("", "Merged successfully", 0)
+    captured_cb("", "Merged successfully", 0)
     eq(1, #info_messages)
     eq("Merged successfully", info_messages[1])
 
-    captured_opts.opts.cb("", "", 0)
+    captured_cb("", "", 0)
     eq(2, #info_messages)
     eq("Pull request merged successfully", info_messages[2])
   end)
 
   it("merge_pr failure prefers stderr and uses fallback when blank", function()
+    local captured_cb
+    gh.pr = {
+      merge = function(opts)
+        captured_cb = opts.opts.cb
+      end,
+    }
+
     commands.merge_pr "squash"
 
-    assert.is_not_nil(captured_opts)
-    assert.is_not_nil(captured_opts.opts)
-    assert.is_not_nil(captured_opts.opts.cb)
+    assert.is_not_nil(captured_cb)
 
-    captured_opts.opts.cb("", "Merge failed", 1)
+    captured_cb("", "Merge failed", 1)
     eq(1, #error_messages)
     eq("Merge failed", error_messages[1])
 
-    captured_opts.opts.cb("", "", 1)
+    captured_cb("", "", 1)
     eq(2, #error_messages)
     eq("Failed to merge pull request", error_messages[2])
   end)
