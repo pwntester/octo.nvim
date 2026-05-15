@@ -292,6 +292,9 @@ local function create_log_header(display, indent)
     icon = "",
     preIcon = "",
     children = {},
+    job_id = "",
+    status = "",
+    conclusion = "",
   }
   return header
 end
