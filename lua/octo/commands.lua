@@ -136,9 +136,9 @@ function M.setup()
       end,
     },
     run = {
-      list = function()
+      list = function(repo)
         local function co_wrapper()
-          require("octo.workflow_runs").list()
+          require("octo.workflow_runs").list { repo = repo }
         end
 
         local co = coroutine.create(co_wrapper)

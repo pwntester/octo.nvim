@@ -45,6 +45,7 @@ local gh = require "octo.gh"
 ---@class LineDef
 ---@field value string
 ---@field id string | nil
+---@field type string | nil
 ---@field highlight string | nil
 ---@field node_ref WorkflowNode | nil
 
@@ -75,6 +76,24 @@ local gh = require "octo.gh"
 ---@field conclusion string
 ---@field children WorkflowNode[]
 
+---@class WorkflowLogIndex
+---@field entries table<string, boolean>
+---@field normalized table<string, string | string[]>
+
+---@class WorkflowZipIndex
+---@field entries table<string, boolean>
+---@field normalized table<string, string | string[]>
+---@field normalized_files table<string, string | string[]>
+---@field entries_list string[]
+
+---@class WorkflowLogCache
+---@field zip_location string | nil
+---@field cleanup fun() | nil
+---@field zip_index WorkflowZipIndex | nil
+---@field job_log_index WorkflowLogIndex
+---@field job_log_cache table<string, LineDef[]>
+---@field step_log_cache table<string, table<number, LineDef[]>>
+
 local M = {
   buf = nil,
   buf_name = "",
@@ -83,6 +102,10 @@ local M = {
   current_wf = nil,
   ---@type table<string, WorkflowRun>
   wf_cache = {},
+  ---@type table<string, WorkflowLogCache>
+  log_cache = {},
+  ---@type LineDef[]
+  rendered_lines = {},
 }
 
 ---@return string | nil
@@ -256,6 +279,74 @@ local function create_log_child(value, indent)
   }
 end
 
+---@return WorkflowNode
+local function create_log_header(display, indent)
+  ---@type WorkflowNode
+  local header = {
+    display = display,
+    id = "log-header:" .. display,
+    expanded = false,
+    indent = indent + 2,
+    type = "step_log",
+    highlight = "NonText",
+    icon = "",
+    preIcon = "",
+    children = {},
+    job_id = "",
+    status = "",
+    conclusion = "",
+  }
+  return header
+end
+
+---@param stdout any
+---@return string[]
+local function stdout_to_lines(stdout)
+  if stdout == nil then
+    return {}
+  end
+  if type(stdout) == "string" then
+    return vim.split(stdout, "\n")
+  end
+  if type(stdout) == "table" then
+    local lines = {}
+    ---@type any[]
+    local tbl = stdout
+    for _, item in ipairs(tbl) do
+      if type(item) == "string" then
+        vim.list_extend(lines, vim.split(item, "\n"))
+      else
+        ---@type boolean, any
+        local ok, str = pcall(vim.fn.blob2str, item)
+        if ok and type(str) == "string" then
+          vim.list_extend(lines, vim.split(str, "\n"))
+        end
+      end
+    end
+    return lines
+  end
+  ---@type boolean, any
+  local ok, str = pcall(vim.fn.blob2str, stdout)
+  if ok and type(str) == "string" then
+    return vim.split(str, "\n")
+  end
+  return {}
+end
+
+---@param value any
+---@return string
+local function ensure_string(value)
+  if type(value) == "string" then
+    return value
+  end
+  ---@type boolean, any
+  local ok, str = pcall(vim.fn.blob2str, value)
+  if ok and type(str) == "string" then
+    return str
+  end
+  return tostring(value)
+end
+
 local function get_temp_filepath(length)
   length = length or 7
   local name = ""
@@ -289,7 +380,47 @@ local function write_zipped_file(stdout)
     end
 end
 
-local function get_logs(id, repo)
+---@param path string
+---@return string
+local function normalize_log_path(path)
+  return (vim.trim(path):lower():gsub("[^%w]", ""))
+end
+
+---@param lines string[]
+---@param indent number
+---@param header string | nil
+---@return LineDef[]
+local function build_log_children(lines, indent, header)
+  local children = {}
+  if header then
+    table.insert(children, create_log_header(header, indent))
+  end
+  for _, collapsed in ipairs(collapse_groups(lines)) do
+    local groupedLines = vim.split(ensure_string(collapsed), "\n")
+    local log_child = create_log_child(groupedLines[1], indent)
+    if #groupedLines > 1 then
+      local sub = {}
+      for i, value in ipairs(groupedLines) do
+        if i ~= 1 then
+          table.insert(sub, create_log_child(value, log_child.indent))
+        end
+      end
+      log_child.children = sub
+    end
+    table.insert(children, log_child)
+  end
+  return children
+end
+
+---@param id string
+---@param repo string | nil
+---@return WorkflowLogCache | nil
+---@return boolean
+local function ensure_log_cache(id, repo)
+  if M.log_cache[id] then
+    return M.log_cache[id], true
+  end
+
   utils.info "Fetching workflow logs (this may take a while) ..."
   local reponame = repo or utils.get_remote_name()
   local cmd = {
@@ -302,59 +433,190 @@ local function get_logs(id, repo)
 
   if out.code ~= 0 then
     utils.error("Failed to fetch logs: " .. (out.stderr or "Unknown error"))
-    return
+    return nil, false
   end
 
   local zip_location, cleanup = write_zipped_file(out.stdout)
+  ---@type WorkflowLogCache
+  local cache = {
+    zip_location = zip_location,
+    cleanup = cleanup,
+    zip_index = nil,
+    job_log_index = { entries = {}, normalized = {} },
+    job_log_cache = {},
+    step_log_cache = {},
+  }
+  M.log_cache[id] = cache
+  return cache, true
+end
 
-  ---@param node WorkflowNode
-  M.traverse(M.tree, function(node)
-    if node.type ~= "step" or node.conclusion == "skipped" then
-      return
-    end
+---@param cache WorkflowLogCache
+---@return WorkflowZipIndex | nil
+local function ensure_zip_index(cache)
+  if cache.zip_index then
+    return cache.zip_index
+  end
 
-    local sanitized_name = node.id:gsub("/", ""):gsub(":", ""):gsub(">", "")
-    --Make more than 3 consecutive dots at the end of line into */. This avoids a bug with unreliable filename endings
-    local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
-    local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
-    local path = vim.fs.joinpath(sanitized_job_id, file_name)
-    local res = vim
-      .system({
-        "unzip",
-        "-p",
-        zip_location,
-        path,
-      })
-      :wait()
+  local list = vim.system({ "unzip", "-Z1", cache.zip_location }):wait()
+  if list.code ~= 0 then
+    return nil
+  end
 
-    if res.code ~= 0 then
-      utils.error("Failed to extract logs for " .. node.id)
-    end
-
-    local lines = vim.tbl_filter(function(i) ---@param i string
-      return i ~= nil and i ~= ""
-    end, vim.split(res.stdout, "\n"))
-
-    node.children = {}
-
-    for _, collapsed in ipairs(collapse_groups(lines)) do
-      local groupedLines = vim.fn.split(collapsed, "\n")
-      local log_child = create_log_child(groupedLines[1], node.indent)
-      if #groupedLines > 1 then
-        local sub = {}
-        for i, value in ipairs(groupedLines) do
-          if i ~= 1 then
-            table.insert(sub, create_log_child(value, log_child.indent))
-          end
-        end
-        log_child.children = sub
+  ---@type WorkflowZipIndex
+  local zip_index = { entries = {}, normalized = {}, normalized_files = {}, entries_list = {} }
+  for _, line in ipairs(vim.split(list.stdout or "", "\n")) do
+    line = vim.trim(line)
+    if line ~= "" then
+      zip_index.entries[line] = true
+      table.insert(zip_index.entries_list, line)
+      local key = normalize_log_path(line)
+      local existing = zip_index.normalized[key]
+      if existing == nil then
+        zip_index.normalized[key] = line
+      elseif type(existing) == "string" then
+        zip_index.normalized[key] = { existing, line }
+      else
+        table.insert(existing, line)
       end
 
-      table.insert(node.children, log_child)
+      local basename = vim.fs.basename(line)
+      local file_key = normalize_log_path(basename)
+      local existing_file = zip_index.normalized_files[file_key]
+      if existing_file == nil then
+        zip_index.normalized_files[file_key] = line
+      elseif type(existing_file) == "string" then
+        zip_index.normalized_files[file_key] = { existing_file, line }
+      else
+        table.insert(existing_file, line)
+      end
+
+      if not line:find "/" and line:match "^%d+_.*%.txt$" then
+        local job_name = vim.trim(line:sub(3, -5))
+        local job_key = normalize_log_path(job_name)
+        local existing_job = cache.job_log_index.normalized[job_key]
+        cache.job_log_index.entries[line] = true
+        if existing_job == nil then
+          cache.job_log_index.normalized[job_key] = line
+        elseif type(existing_job) == "string" then
+          cache.job_log_index.normalized[job_key] = { existing_job, line }
+        else
+          table.insert(existing_job, line)
+        end
+      end
     end
-  end)
-  if cleanup then
-    cleanup()
+  end
+
+  cache.zip_index = zip_index
+  return zip_index
+end
+
+---@param node WorkflowNode
+local function get_step_log(node)
+  if not M.current_wf then
+    return
+  end
+
+  if node.type ~= "step" or node.conclusion == "skipped" then
+    return
+  end
+
+  if node.status == "queued" or node.status == "in_progress" then
+    utils.error "Cant view logs of running workflow..."
+    return
+  end
+
+  if node.children and next(node.children) then
+    return
+  end
+
+  local run_id = M.current_wf.databaseId
+  local cache, ok = ensure_log_cache(run_id, M.current_wf.repo)
+  if not ok or not cache then
+    return
+  end
+
+  local zip_index = ensure_zip_index(cache)
+  if not zip_index then
+    node.children = { create_log_header("Logs unavailable", node.indent) }
+    return
+  end
+
+  cache.step_log_cache[node.job_id] = cache.step_log_cache[node.job_id] or {}
+  local step_cache = cache.step_log_cache[node.job_id]
+  local step_number = node.number or 0
+  if step_cache[step_number] then
+    node.children = step_cache[step_number]
+    return
+  end
+
+  local sanitized_name = node.id:gsub("/", ""):gsub(":", ""):gsub(">", "")
+  local sanitized_job_id = node.job_id:gsub("/", ""):gsub(":", ""):gsub("%.+$", "*/")
+  local file_name = string.format("%s_%s.txt", node.number, sanitized_name)
+  local path = vim.fs.joinpath(sanitized_job_id, file_name)
+  local actual_path = path
+  local use_job_log = false
+
+  if zip_index.entries[path] then
+    actual_path = path
+  else
+    local key = normalize_log_path(path)
+    local match = zip_index.normalized[key]
+    if type(match) == "string" then
+      actual_path = match
+    elseif type(match) == "table" and #match > 0 then
+      actual_path = match[1]
+    else
+      local basename_key = normalize_log_path(vim.fs.basename(path))
+      local file_match = zip_index.normalized_files[basename_key]
+      if type(file_match) == "string" then
+        actual_path = file_match
+      elseif type(file_match) == "table" and #file_match > 0 then
+        actual_path = file_match[1]
+      else
+        local job_key = normalize_log_path(node.job_id)
+        local job_match = cache.job_log_index.normalized[job_key]
+        if type(job_match) == "string" then
+          actual_path = job_match
+          use_job_log = true
+        elseif type(job_match) == "table" and #job_match > 0 then
+          actual_path = job_match[1]
+          use_job_log = true
+        else
+          node.children = { create_log_header("Job log unavailable", node.indent) }
+          return
+        end
+      end
+    end
+  end
+
+  if use_job_log and cache.job_log_cache[node.job_id] then
+    node.children = cache.job_log_cache[node.job_id]
+    step_cache[step_number] = node.children
+    return
+  end
+
+  local res = vim
+    .system({
+      "unzip",
+      "-p",
+      cache.zip_location,
+      actual_path,
+    })
+    :wait()
+
+  if res.code ~= 0 then
+    node.children = { create_log_header("Failed to extract logs", node.indent) }
+    return
+  end
+
+  local lines = vim.tbl_filter(function(i) ---@param i string
+    return i ~= nil and i ~= ""
+  end, stdout_to_lines(res.stdout))
+
+  node.children = build_log_children(lines, node.indent)
+  step_cache[step_number] = node.children
+  if use_job_log then
+    cache.job_log_cache[node.job_id] = node.children
   end
 end
 
@@ -421,12 +683,8 @@ local tree_keymaps = {
     if node.expanded == false then
       node.expanded = true
       if node.type == "step" then
-        if node.conclusion == "in_progress" then
-          utils.error "Cant view logs of running workflow..."
-          return
-        end
         if not next(node.children) then
-          get_logs(M.current_wf.databaseId, M.current_wf.repo)
+          get_step_log(node)
         end
       end
     else
@@ -623,12 +881,15 @@ local function print_lines()
   end
   vim.api.nvim_buf_clear_namespace(M.buf, namespace, 0, -1)
   vim.bo[M.buf].modifiable = true
+  ---@type LineDef[]
   local lines = get_workflow_header()
 
   local stringified_tree = tree_to_string(M.tree, {})
   for _, value in ipairs(stringified_tree) do
     table.insert(lines, value)
   end
+
+  M.rendered_lines = lines
 
   local highlights = {} ---@type { index: integer, highlight: string }[]
 
@@ -665,10 +926,58 @@ local function print_lines()
       cb(M)
     end, { silent = true, noremap = true, buffer = M.buf })
   end
+
+  vim.keymap.set("n", mappings.next_step.lhs, function()
+    M.jump_to_step(1)
+  end, { silent = true, noremap = true, buffer = M.buf })
+  vim.keymap.set("n", mappings.prev_step.lhs, function()
+    M.jump_to_step(-1)
+  end, { silent = true, noremap = true, buffer = M.buf })
+  vim.keymap.set("n", mappings.next_job.lhs, function()
+    M.jump_to_job(1)
+  end, { silent = true, noremap = true, buffer = M.buf })
+  vim.keymap.set("n", mappings.prev_job.lhs, function()
+    M.jump_to_job(-1)
+  end, { silent = true, noremap = true, buffer = M.buf })
 end
 
 function M.refresh()
   print_lines()
+end
+
+---@param direction integer
+---@param predicate fun(line: LineDef): boolean
+---@param edge_message string | nil
+local function jump_to_line(direction, predicate, edge_message)
+  local current_line = vim.api.nvim_win_get_cursor(0)[1]
+  local current = M.rendered_lines[current_line]
+  local on_match = current and predicate(current) or false
+  local index = current_line + direction
+  while index >= 1 and index <= #M.rendered_lines do
+    local line = M.rendered_lines[index]
+    if line and predicate(line) then
+      vim.api.nvim_win_set_cursor(0, { index, 0 })
+      return
+    end
+    index = index + direction
+  end
+  if edge_message and on_match then
+    utils.info(edge_message)
+  end
+end
+
+---@param direction integer
+function M.jump_to_step(direction)
+  jump_to_line(direction, function(line)
+    return line.type == "step"
+  end, direction > 0 and "Last step" or "First step")
+end
+
+---@param direction integer
+function M.jump_to_job(direction)
+  jump_to_line(direction, function(line)
+    return line.type == "job"
+  end, direction > 0 and "Last job" or "First job")
 end
 
 local workflow_limit = 100
@@ -679,10 +988,12 @@ local function get_workflow_runs_sync(opts)
   opts = opts or {}
 
   local lines = {}
+  local repo = opts.repo or utils.get_remote_name()
   local output, stderr = gh.run.list {
     json = run_list_fields,
     limit = workflow_limit,
     branch = opts.branch,
+    repo = repo,
     opts = { mode = "sync" },
   }
   if stderr and not utils.is_blank(stderr) then
@@ -727,6 +1038,7 @@ local function get_workflow_runs_sync(opts)
         name = value.name,
         age = utils.format_date(value.updatedAt),
         id = value.databaseId,
+        repo = repo,
       }
       table.insert(lines, wf_run)
     end
@@ -741,14 +1053,17 @@ function M.render(selected)
   M.buf = new_buf
   vim.api.nvim_set_current_buf(new_buf)
   populate_preview_buffer(selected.id, selected.repo, new_buf)
-  vim.api.nvim_buf_set_name(new_buf, "" .. selected.id)
+  vim.api.nvim_buf_set_name(new_buf, string.format("octo-workflow-run:%s:%d", selected.id, new_buf))
 end
 
 function M.previewer(self, entry)
   ---@type string
-  local id = entry.value.id
+  ---@type { value: { id: string, repo: string } }
+  local run_entry = entry
+  local id = run_entry.value.id
+  local repo = run_entry.value.repo
   M.buf = self.state.bufnr
-  populate_preview_buffer(id, nil, self.state.bufnr)
+  populate_preview_buffer(id, repo, self.state.bufnr)
 end
 
 function M.list(opts)
@@ -762,6 +1077,7 @@ function M.refetch()
   local id = M.current_wf.databaseId
   M.wf_cache[id] = nil
   M.current_wf = nil
+  M.log_cache[id] = nil
   populate_preview_buffer(id, nil, M.buf)
 end
 
