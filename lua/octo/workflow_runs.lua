@@ -45,6 +45,7 @@ local gh = require "octo.gh"
 ---@class LineDef
 ---@field value string
 ---@field id string | nil
+---@field type string | nil
 ---@field highlight string | nil
 ---@field node_ref WorkflowNode | nil
 
@@ -86,7 +87,7 @@ local gh = require "octo.gh"
 ---@field entries_list string[]
 
 ---@class WorkflowLogCache
----@field zip_location string
+---@field zip_location string | nil
 ---@field cleanup fun() | nil
 ---@field zip_index WorkflowZipIndex | nil
 ---@field job_log_index WorkflowLogIndex
@@ -278,6 +279,7 @@ local function create_log_child(value, indent)
   }
 end
 
+---@return WorkflowNode
 local function create_log_header(display, indent)
   return {
     display = display,
@@ -303,10 +305,12 @@ local function stdout_to_lines(stdout)
   end
   if type(stdout) == "table" then
     local lines = {}
+    ---@type any
     for _, item in ipairs(stdout) do
       if type(item) == "string" then
         vim.list_extend(lines, vim.split(item, "\n"))
       else
+        ---@type boolean, any
         local ok, str = pcall(vim.fn.blob2str, item)
         if ok and type(str) == "string" then
           vim.list_extend(lines, vim.split(str, "\n"))
@@ -315,6 +319,7 @@ local function stdout_to_lines(stdout)
     end
     return lines
   end
+  ---@type boolean, any
   local ok, str = pcall(vim.fn.blob2str, stdout)
   if ok and type(str) == "string" then
     return vim.split(str, "\n")
@@ -328,6 +333,7 @@ local function ensure_string(value)
   if type(value) == "string" then
     return value
   end
+  ---@type boolean, any
   local ok, str = pcall(vim.fn.blob2str, value)
   if ok and type(str) == "string" then
     return str
@@ -371,7 +377,7 @@ end
 ---@param path string
 ---@return string
 local function normalize_log_path(path)
-  return vim.trim(path):lower():gsub("[^%w]", "")
+  return (vim.trim(path):lower():gsub("[^%w]", ""))
 end
 
 ---@param lines string[]
