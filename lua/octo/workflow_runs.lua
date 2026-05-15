@@ -281,7 +281,8 @@ end
 
 ---@return WorkflowNode
 local function create_log_header(display, indent)
-  return {
+  ---@type WorkflowNode
+  local header = {
     display = display,
     id = "log-header:" .. display,
     expanded = false,
@@ -292,6 +293,7 @@ local function create_log_header(display, indent)
     preIcon = "",
     children = {},
   }
+  return header
 end
 
 ---@param stdout any
@@ -305,8 +307,9 @@ local function stdout_to_lines(stdout)
   end
   if type(stdout) == "table" then
     local lines = {}
-    ---@type any
-    for _, item in ipairs(stdout) do
+    ---@type any[]
+    local tbl = stdout
+    for _, item in ipairs(tbl) do
       if type(item) == "string" then
         vim.list_extend(lines, vim.split(item, "\n"))
       else
