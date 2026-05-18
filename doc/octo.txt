@@ -24,7 +24,7 @@ Run `:checkhealth octo` to verify your installation. The report covers:
 
 - `octo.nvim`      setup() was called
 - `Neovim version` minimum and recommended version requirements
-- `Dependencies`   gh CLI binary, plenary.nvim, picker plugin, nvim-web-devicons
+- `Dependencies`   gh CLI binary, plenary.nvim, picker plugin, file panel icon provider
 - `Authentication` active GitHub account, token source, and token scopes
 
 If any check fails, follow the advice shown in the report.
