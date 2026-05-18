@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local constants = require "octo.constants"
 local context = require "octo.context"
+local events = require "octo.events"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
@@ -1534,6 +1535,11 @@ function M.delete_comment()
                 end
               end
             end -- if comment.kind == "PullRequestReviewComment"
+            events.emit(events.COMMENT_DELETED, {
+              comment_id = comment.id,
+              kind = comment.kind,
+              repo = buffer.repo,
+            })
           end,
         },
       },

@@ -4,8 +4,10 @@ local config = require "octo.config"
 local constants = require "octo.constants"
 local commands = require "octo.commands"
 local completion = require "octo.completion"
+local events = require "octo.events"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
+local hooks = require "octo.hooks"
 local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local picker = require "octo.picker"
@@ -23,8 +25,12 @@ _G.octo_repo_issues = {}
 ---@type table<integer, OctoBuffer>
 _G.octo_buffers = {}
 
-local M = {}
+local M = {
+  events = require "octo.events",
+  hooks = require "octo.hooks",
+}
 
+---@param user_config? OctoConfig
 function M.setup(user_config)
   if not vim.fn.has "nvim-0.7" then
     utils.error "octo.nvim requires neovim 0.7+"
@@ -35,6 +41,10 @@ function M.setup(user_config)
   if not vim.fn.executable(config.values.gh_cmd) then
     utils.error("gh executable not found using path: " .. config.values.gh_cmd)
     return
+  end
+
+  for name, fn in pairs(user_config and user_config.hooks or {}) do
+    hooks.register(name, fn)
   end
 
   colors.setup()
@@ -408,6 +418,13 @@ function M.create_buffer(kind, obj, repo, create, hostname)
   end
   utils.clear_history()
   require("octo.polling").track_buffer(bufnr)
+
+  events.emit(events.BUFFER_LOADED, {
+    bufnr = bufnr,
+    kind = kind,
+    repo = repo,
+    number = obj.number,
+  })
 end
 
 return M

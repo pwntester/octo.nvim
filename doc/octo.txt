@@ -185,6 +185,154 @@ There are plenty of examples in the repo so consider checking it out for more
 reference or read more in the GitHub discussion:
 `Octo discussion edit 876 pwntester/octo.nvim`
 
+HOOKS                                           *octo-hooks* *octo-hooks-events*
+
+Hooks allow you to intercept and mutate data before octo.nvim performs API
+calls. Register them via `setup()` or with `require("octo.hooks").register()`.
+
+Setup example: >lua
+    require("octo").setup({
+        hooks = {
+            before_review_submit = function(data, next)
+                local branch = data.pull_request.head_ref_name
+                local diff = vim.fn.system("git diff main..." .. branch)
+                data.body = data.body .. "\n\n## AI Summary\n" .. call_llm(diff)
+                next(data)
+            end,
+        },
+    })
+<
+
+Programmatic API: >lua
+    local hooks = require("octo.hooks")
+    hooks.register("before_review_submit", function(data, next)
+        data.body = data.body .. "\n\nSigned off by bot"
+        next(data)
+    end)
+<
+
+Available hooks: ~
+
+before_review_submit
+    Fires before a review is submitted (APPROVE/COMMENT/REQUEST_CHANGES).
+    Payload: `{ review_id, action, body, pull_request }`
+    Mutate `data.action` or `data.body` and call `next(data)` to proceed.
+
+Hooks run in registration order. Each must call `next(mutated_data)` or the
+chain stalls and the operation is cancelled. Use `hooks.clear(name)` to
+remove registered hooks, or `hooks.clear()` to remove all.
+
+The hook name is also accepted in the `setup()` table for convenience: >lua
+    require("octo").setup({
+        hooks = {
+            before_review_submit = function(data, next) next(data) end,
+        },
+    })
+<
+
+EVENTS                                          *octo-events*
+
+Events are read-only notifications emitted after operations complete. They
+cannot mutate data. Listen to them via `User` autocommands:
+
+Example: >lua
+    vim.api.nvim_create_autocmd("User", {
+        pattern = "OctoReviewSubmitted",
+        callback = function(opts)
+            print("Review " .. opts.data.review_id .. " submitted!")
+        end,
+    })
+<
+
+Event constants are available via `require("octo.events")`: >lua
+    local events = require("octo.events")
+    vim.api.nvim_create_autocmd("User", {
+        pattern = events.REVIEW_SUBMITTED,
+        callback = function(opts) print("done!") end,
+    })
+<
+
+Available events: ~
+
+BUFFER_LOADED (`OctoBufferLoaded`)
+    Fires after a buffer is loaded and rendered.
+    Payload: `{ bufnr, kind, repo, number }`
+
+BUFFER_CLOSED (`OctoBufferClosed`)
+    Fires after a buffer is cleaned up.
+    Payload: `{ bufnr }`
+
+REVIEW_OPENED (`OctoReviewOpened`)
+    Fires after a review is started or resumed.
+    Payload: `{ review_id, pull_request }`
+
+REVIEW_CLOSED (`OctoReviewClosed`)
+    Fires when a review tab is closed.
+    Payload: `{ review_id }`
+
+REVIEW_SUBMITTED (`OctoReviewSubmitted`)
+    Fires after a review is successfully submitted.
+    Payload: `{ review_id, action, body, pull_request }`
+
+REVIEW_DISCARDED (`OctoDiscarded`)
+    Fires after a pending review is discarded.
+    Payload: `{ review_id, pull_request }`
+
+COMMENT_ADDED (`OctoCommentAdded`)
+    Fires after a comment is created on GitHub.
+    Payload: `{ comment_id, body, kind, repo, number }`
+
+COMMENT_UPDATED (`OctoCommentUpdated`)
+    Fires after a comment is edited on GitHub.
+    Payload: `{ comment_id, body, kind, repo }`
+
+COMMENT_DELETED (`OctoCommentDeleted`)
+    Fires after a comment is deleted on GitHub.
+    Payload: `{ comment_id, kind, repo }`
+
+CONTEXT                                         *octo-context*
+
+The context module (`require("octo.context")`) provides guard helpers for
+buffer-kind operations in commands and mappings. It offers two styles:
+
+Thunk-returning wrappers (for mappings/callbacks): >lua
+    context.within_issue(function(buffer)
+        -- only runs if current buffer is an issue
+    end)
+
+    context.within_pr(function(buffer)
+        -- only runs if current buffer is a PR
+    end)
+<
+
+Direct-invoke variants (for use in plain function bodies): >lua
+    context.with_octo_buffer(function(buffer) end)
+    context.with_repo(function(buffer) end)
+    context.with_issue(function(buffer) end)
+    context.with_pr(function(buffer) end)
+    context.with_discussion(function(buffer) end)
+    context.with_release(function(buffer) end)
+    context.with_review_thread(function(buffer) end)
+    context.with_issue_or_pr(function(buffer) end)
+<
+
+Cursor accessors: >lua
+    context.on_comment(function(comment) end)
+        -- comment at cursor in current buffer
+
+    context.on_body(function(body_metadata) end)
+        -- issue/PR/discussion body at cursor
+
+    context.on_thread(function(thread) end)
+        -- review thread at cursor
+<
+
+Convenience references: >lua
+    context.get_current_buffer()  -- => OctoBuffer?
+    context.get_current_review()  -- => Review?
+    context.buffer_at(bufnr)      -- => OctoBuffer?
+<
+
 COMMANDS                                        *octo-commands*
 
 There is only one main command: `Octo <object> <action> [args]` command. If no

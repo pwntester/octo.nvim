@@ -118,6 +118,7 @@ local M = {}
 ---@field completion_overrides table<string, string[]|fun(argLead: string, cmdLine: string): string[]>
 
 ---@class OctoConfig Octo configuration settings
+---@field hooks? OctoHooksConfig
 ---@field picker OctoPickers
 ---@field picker_config OctoPickerConfig
 ---@field default_remote table

@@ -1,7 +1,9 @@
 local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
 local config = require "octo.config"
+local events = require "octo.events"
 local gh = require "octo.gh"
+local hooks = require "octo.hooks"
 local queries = require "octo.gh.queries"
 local graphql = require "octo.gh.graphql"
 local thread_panel = require "octo.reviews.thread-panel"
@@ -89,6 +91,13 @@ function Review:start()
     local threads = resp.data.addPullRequestReview.pullRequestReview.pullRequest.reviewThreads.nodes
     self:update_threads(threads)
     self:initiate()
+    events.emit(events.REVIEW_OPENED, {
+      review_id = self.id,
+      pull_request = {
+        number = self.pull_request.number,
+        repo = self.pull_request.repo,
+      },
+    })
   end)
 end
 
@@ -128,6 +137,13 @@ function Review:resume()
     local threads = resp.data.repository.pullRequest.reviewThreads.nodes
     self:update_threads(threads)
     self:initiate()
+    events.emit(events.REVIEW_OPENED, {
+      review_id = self.id,
+      pull_request = {
+        number = self.pull_request.number,
+        repo = self.pull_request.repo,
+      },
+    })
   end)
 end
 
@@ -152,6 +168,13 @@ function Review:start_or_resume()
     local threads = resp.data.repository.pullRequest.reviewThreads.nodes
     self:update_threads(threads)
     self:initiate()
+    events.emit(events.REVIEW_OPENED, {
+      review_id = self.id,
+      pull_request = {
+        number = self.pull_request.number,
+        repo = self.pull_request.repo,
+      },
+    })
   end)
 end
 
@@ -292,6 +315,13 @@ function Review:discard(opts)
                     self.files = {}
                     utils.info "Pending review discarded"
                     vim.cmd [[tabclose]]
+                    events.emit(events.REVIEW_DISCARDED, {
+                      review_id = self.id,
+                      pull_request = {
+                        number = self.pull_request.number,
+                        repo = self.pull_request.repo,
+                      },
+                    })
                   end,
                 },
               },
@@ -362,19 +392,45 @@ function Review:submit(event)
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, default_id, false)
   local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
-  local query = graphql("submit_pull_request_review_mutation", review_id, event, body, { escape = false })
-  gh.api.graphql {
-    f = { query = query },
-    opts = {
-      cb = gh.create_callback {
-        success = function()
-          utils.info "Review was submitted successfully!"
-          pcall(vim.api.nvim_win_close, winid, 0)
-          self.layout:close()
-        end,
-      },
+
+  local pr = self.pull_request
+  hooks.run("before_review_submit", {
+    review_id = review_id,
+    action = event,
+    body = body,
+    pull_request = {
+      number = pr.number,
+      repo = pr.repo,
+      head_ref_name = pr.head_ref_name,
+      diff = pr.diff,
     },
-  }
+  }, function(mutated)
+    event = mutated.action or event
+    body = mutated.body or body
+
+    local query = graphql("submit_pull_request_review_mutation", review_id, event, body, { escape = false })
+    gh.api.graphql {
+      f = { query = query },
+      opts = {
+        cb = gh.create_callback {
+          success = function()
+            utils.info "Review was submitted successfully!"
+            pcall(vim.api.nvim_win_close, winid, 0)
+            self.layout:close()
+            events.emit(events.REVIEW_SUBMITTED, {
+              review_id = review_id,
+              action = event,
+              body = body,
+              pull_request = {
+                number = pr.number,
+                repo = pr.repo,
+              },
+            })
+          end,
+        },
+      },
+    }
+  end)
 end
 
 function Review:show_pending_comments()
@@ -621,6 +677,9 @@ function M.close(tabpage)
     local review = M.reviews[tostring(tabpage)]
     if review and review.layout then
       review.layout:close()
+      events.emit(events.REVIEW_CLOSED, {
+        review_id = review.id,
+      })
     end
     M.reviews[tostring(tabpage)] = nil
   end

@@ -3,6 +3,7 @@ local TitleMetadata = require("octo.model.title-metadata").TitleMetadata
 local autocmds = require "octo.autocmds"
 local config = require "octo.config"
 local constants = require "octo.constants"
+local events = require "octo.events"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
@@ -454,6 +455,13 @@ function OctoBuffer:do_add_discussion_comment(comment_metadata)
           end
 
           self:render_signs()
+          events.emit(events.COMMENT_ADDED, {
+            comment_id = resp.id,
+            body = resp.body,
+            kind = "DiscussionComment",
+            repo = self.repo,
+            number = self.number,
+          })
         end,
       },
     },
@@ -487,6 +495,13 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
               end
             end
             self:render_signs()
+            events.emit(events.COMMENT_ADDED, {
+              comment_id = respId,
+              body = respBody,
+              kind = "IssueComment",
+              repo = self.repo,
+              number = self.number,
+            })
           end
         end,
       },
@@ -532,6 +547,13 @@ function OctoBuffer:do_add_thread_comment(comment_metadata)
             end
 
             self:render_signs()
+            events.emit(events.COMMENT_ADDED, {
+              comment_id = resp_comment.id,
+              body = resp_comment.body,
+              kind = "PullRequestReviewComment",
+              repo = self.repo,
+              number = self.number,
+            })
 
             -- update thread map
             local thread_id ---@type string
@@ -655,6 +677,13 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
                 review:update_threads(review_threads)
               end
               self:render_signs()
+              events.emit(events.COMMENT_ADDED, {
+                comment_id = new_comment.id,
+                body = new_comment.body,
+                kind = "PullRequestReviewComment",
+                repo = self.repo,
+                number = self.number,
+              })
             end
           end,
         },
@@ -760,6 +789,13 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
                     review:update_threads(threads)
                   end
                   self:render_signs()
+                  events.emit(events.COMMENT_ADDED, {
+                    comment_id = resp.comment.id,
+                    body = resp.comment.body,
+                    kind = "PullRequestReviewComment",
+                    repo = self.repo,
+                    number = self.number,
+                  })
                 end
               else
                 utils.error "Failed to create thread"
@@ -809,6 +845,13 @@ function OctoBuffer:do_add_pull_request_comment(comment_metadata)
               end
             end
             self:render_signs()
+            events.emit(events.COMMENT_ADDED, {
+              comment_id = resp.id,
+              body = resp.body,
+              kind = "PullRequestReviewComment",
+              repo = self.repo,
+              number = self.number,
+            })
           end
         else
           utils.error "Failed to create thread"
@@ -868,6 +911,12 @@ function OctoBuffer:do_update_comment(comment_metadata)
               end
             end
             self:render_signs()
+            events.emit(events.COMMENT_UPDATED, {
+              comment_id = comment_metadata.id,
+              body = resp_comment.body,
+              kind = comment_metadata.kind,
+              repo = self.repo,
+            })
           end
         end,
       },
@@ -1088,6 +1137,7 @@ function OctoBuffer:navigate_to_comment(opts)
 end
 
 ---Gets the issue/PR body at cursor (if any)
+---@return BodyMetadata?, integer?, integer?
 function OctoBuffer:get_body_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local metadata = self.bodyMetadata
@@ -1101,6 +1151,7 @@ function OctoBuffer:get_body_at_cursor()
 end
 
 ---Gets the review thread at cursor (if any)
+---@return ThreadMetadata?
 function OctoBuffer:get_thread_at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
   return self:get_thread_at_line(cursor[1])
