@@ -14,7 +14,8 @@
       "$PWD/deps/fzf-lua/lua",
       "$PWD/deps/nvim-web-devicons/lua"
     ],
-    "checkThirdParty": false
+    "checkThirdParty": false,
+    "ignoreDir": ["lua/tests"]
   },
   "diagnostics": {
     "severity": {
