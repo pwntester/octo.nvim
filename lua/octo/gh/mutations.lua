@@ -662,7 +662,7 @@ mutation($input: CreateIssueInput!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   M.close_issue = [[
 mutation($issueId: ID!, $stateReason: IssueCloseReason) {
@@ -699,7 +699,7 @@ mutation($issueId: ID!, $stateReason: IssueCloseReason) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.label_connection .. fragments.label .. fragments.reaction_groups .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#updateissue
   M.update_issue_state = [[
@@ -737,7 +737,7 @@ mutation($id: ID!, $state: IssueState!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   -- https://docs.github.com/en/graphql/reference/mutations#reopenissue
   M.reopen_issue = [[
@@ -777,7 +777,7 @@ mutation($issueId: ID!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   ---@class octo.mutations.UpdatePullRequest
   ---@field data {
@@ -903,7 +903,7 @@ mutation($pullRequestId: ID!, $state: PullRequestUpdateState!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.merged_event .. fragments.review_requested_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
 
   M.create_discussion = [[
 mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
@@ -1185,7 +1185,7 @@ mutation($input: CreatePullRequestInput!) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
 
   M.mark_answer = [[
 mutation($id: ID!) {
