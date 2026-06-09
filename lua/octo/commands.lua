@@ -148,6 +148,85 @@ function M.setup()
     actions = function()
       M.actions()
     end,
+    auth = {
+      status = function()
+        local remote_hostname = get_hostname_from_buffer() or utils.get_remote_host()
+        local accounts, stderr = gh.get_auth_accounts(remote_hostname)
+
+        if not accounts then
+          utils.error(stderr ~= "" and stderr or "Failed to get GitHub auth status")
+          return
+        end
+
+        if #accounts == 0 then
+          utils.error(string.format("No authenticated GitHub accounts found for %s", remote_hostname or "the current host"))
+          return
+        end
+
+        local lines = {}
+        for _, account in ipairs(accounts) do
+          local marker = account.active and "*" or " "
+          table.insert(lines, string.format("%s %s (%s)", marker, account.login, account.host or remote_hostname))
+        end
+
+        utils.info(table.concat(lines, "\n"))
+      end,
+      switch = function(login)
+        local remote_hostname = get_hostname_from_buffer() or utils.get_remote_host()
+
+        local function on_switch(selected_login)
+          gh.switch_account(remote_hostname, selected_login, function(_, stderr, status)
+            if status ~= 0 then
+              utils.error(stderr ~= "" and stderr or "Failed to switch GitHub account")
+              return
+            end
+
+            vim.g.octo_viewer = gh.get_user_name(remote_hostname)
+
+            if vim.g.octo_viewer then
+              utils.info(string.format("Switched active GitHub account to %s", vim.g.octo_viewer))
+            else
+              utils.info "Switched active GitHub account"
+            end
+          end)
+        end
+
+        if not utils.is_blank(login) then
+          on_switch(login)
+          return
+        end
+
+        local accounts, stderr = gh.get_auth_accounts(remote_hostname)
+        if not accounts then
+          utils.error(stderr ~= "" and stderr or "Failed to get GitHub auth status")
+          return
+        end
+
+        if #accounts == 0 then
+          utils.error(string.format("No authenticated GitHub accounts found for %s", remote_hostname or "the current host"))
+          return
+        end
+
+        vim.ui.select(accounts, {
+          prompt = "Switch GitHub account:",
+          format_item = function(item)
+            local marker = item.active and "* " or "  "
+            return string.format("%s%s", marker, item.login)
+          end,
+        }, function(choice)
+          if not choice then
+            return
+          end
+
+          if choice.active then
+            utils.info(string.format("%s is already the active GitHub account", choice.login))
+            return
+          end
+
+          on_switch(choice.login)
+        end)
+      end,
+    },
     search = function(...)
       M.search(...)
     end,
