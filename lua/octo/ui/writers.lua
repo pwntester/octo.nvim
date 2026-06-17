@@ -2322,6 +2322,11 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.HeadRefDeletedEvent
 function M.write_head_ref_deleted_event(bufnr, item)
+  -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
   TextChunkBuilder:new()
     :timeline_marker("head_ref")
     :actor(item.actor)
@@ -2362,6 +2367,11 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.HeadRefRestoredEvent
 function M.write_head_ref_restored_event(bufnr, item)
+  -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
   TextChunkBuilder:new()
     :timeline_marker("head_ref")
     :actor(item.actor)
@@ -2581,6 +2591,11 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.DeployedEvent
 function M.write_deployed_event(bufnr, item)
+  -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
   local bubble_info = utils.deployed_state_map[item.deployment.state]
   TextChunkBuilder:new()
     :timeline_marker("deployed")
@@ -2848,6 +2863,11 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.ConvertToDraftEvent
 function M.write_convert_to_draft_event(bufnr, item)
+  -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
   TextChunkBuilder:new()
     :timeline_marker("draft")
     :actor(item.actor)
@@ -2873,6 +2893,11 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.BaseRefChangedEvent
 function M.write_base_ref_changed_event(bufnr, item)
+  -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
   TextChunkBuilder:new()
     :timeline_marker("base_ref_changed")
     :actor(item.actor)
