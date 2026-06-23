@@ -20,6 +20,7 @@ local copilot_swe_agent = "copilot-swe-agent"
 local id = "F_kwDOA8AAAW0b4h"
 
 local repo = "pwntester/octo.nvim"
+local another_repo = "octocat/octo.nvim"
 local branch = "main"
 
 local bufnr = vim.api.nvim_get_current_buf()
@@ -47,6 +48,18 @@ local open_issue = {
   title = "Bug report",
   state = "OPEN",
   stateReason = nil,
+  repository = { nameWithOwner = repo },
+}
+
+---@type octo.fragments.Issue
+local duplicate_issue = {
+  __typename = "Issue",
+  id = id,
+  number = 1,
+  title = "Another Bug report",
+  state = "CLOSED",
+  stateReason = "DUPLICATE",
+  repository = { nameWithOwner = repo },
 }
 
 ---@type octo.fragments.PullRequestCommit
@@ -75,6 +88,18 @@ local closed_issue = {
   title = "Another Bug report",
   state = "CLOSED",
   stateReason = "COMPLETED",
+  repository = { nameWithOwner = repo },
+}
+
+---@type octo.fragments.Issue
+local duplicate_issue = {
+  __typename = "Issue",
+  id = id,
+  number = 6235,
+  title = "Support AGENTS.md directly",
+  state = "OPEN",
+  stateReason = nil,
+  repository = { nameWithOwner = repo },
 }
 
 ---@type octo.fragments.PullRequest
@@ -85,6 +110,7 @@ local pull_request = {
   title = "feat: Feature request",
   state = "MERGED",
   isDraft = false,
+  repository = { nameWithOwner = repo },
 }
 
 writers.write_timeline_items(bufnr, {
@@ -110,6 +136,7 @@ writers.write_timeline_items(bufnr, {
         actor = { login = other },
         createdAt = now,
         willCloseTarget = false,
+        isCrossRepository = false,
         source = open_issue,
         target = open_issue,
       },
@@ -119,6 +146,17 @@ writers.write_timeline_items(bufnr, {
         actor = { login = other },
         createdAt = now,
         willCloseTarget = false,
+        isCrossRepository = false,
+        source = duplicate_issue,
+        target = open_issue,
+      },
+      ---@type octo.fragments.CrossReferencedEvent
+      {
+        __typename = "CrossReferencedEvent",
+        actor = { login = other },
+        createdAt = now,
+        willCloseTarget = false,
+        isCrossRepository = false,
         source = closed_issue,
         target = open_issue,
       },
@@ -128,6 +166,16 @@ writers.write_timeline_items(bufnr, {
         actor = { login = other },
         createdAt = now,
         willCloseTarget = false,
+        isCrossRepository = false,
+        source = pull_request,
+        target = open_issue,
+      },
+      {
+        __typename = "CrossReferencedEvent",
+        actor = { login = other },
+        createdAt = now,
+        willCloseTarget = false,
+        isCrossRepository = true,
         source = pull_request,
         target = open_issue,
       },
@@ -241,12 +289,19 @@ writers.write_timeline_items(bufnr, {
         createdAt = now,
         assignee = { login = me },
       },
-      ---@type octo.fragments.AssignedEvent
+      -- same actor assigns themselves and another — should render:
+      -- "octocat self-assigned this and assigned williambdean and yet-another-user"
       {
         __typename = "AssignedEvent",
         actor = { login = other },
         createdAt = now,
         assignee = { login = other },
+      },
+      {
+        __typename = "AssignedEvent",
+        actor = { login = other },
+        createdAt = now,
+        assignee = { login = "yet-another-user" },
       },
       ---@type octo.fragments.AssignedEvent
       {
@@ -354,16 +409,106 @@ writers.write_timeline_items(bufnr, {
         requestedReviewer = { login = other },
         createdAt = now,
       },
+      --- Same actor requesting a third reviewer with a slightly different timestamp
+      --- (real-world GitHub API behaviour: each event may have its own createdAt)
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = copilot_swe_agent },
+        requestedReviewer = { login = "yet-another-user" },
+        createdAt = "" .. os.date("!%Y-%m-%dT%H:%M:%SZ", os.time() + 1),
+      },
+      --- A different actor requesting the same reviewer — must stay on its own line
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = other },
+        requestedReviewer = { login = me },
+        createdAt = now,
+      },
+      --- Actor self-requesting a review — should render: "octocat self-requested a review"
+      {
+        __typename = "ReviewRequestedEvent",
+        actor = { login = other },
+        requestedReviewer = { login = other },
+        createdAt = now,
+      },
       --- Sequence of commits have a summary
       example_commit,
       example_commit,
       example_commit,
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = "TOO_HEATED",
+      },
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = vim.NIL,
+      },
+      ---@type octo.fragments.LockedEvent
+      {
+        __typename = "LockedEvent",
+        actor = { login = me },
+        createdAt = now,
+        lockReason = "OFF_TOPIC",
+      },
+      ---@type octo.fragments.UnlockedEvent
+      {
+        __typename = "UnlockedEvent",
+        actor = { login = me },
+        createdAt = now,
+      },
       ---@type octo.fragments.TransferredEvent
       {
         __typename = "TransferredEvent",
         actor = { login = me },
         createdAt = now,
         fromRepository = { nameWithOwner = repo },
+      },
+      ---@type octo.fragments.ClosedEvent
+      {
+        __typename = "ClosedEvent",
+        actor = { login = other },
+        createdAt = now,
+        stateReason = "DUPLICATE",
+        closable = { __typename = "Issue", state = "CLOSED", stateReason = "DUPLICATE" },
+        duplicateOf = duplicate_issue,
+      },
+      ---@type octo.fragments.MarkedAsDuplicateEvent
+      {
+        __typename = "MarkedAsDuplicateEvent",
+        actor = { login = other },
+        createdAt = now,
+        isCrossRepository = false,
+        canonical = open_issue,
+      },
+      ---@type octo.fragments.MarkedAsDuplicateEvent
+      {
+        __typename = "MarkedAsDuplicateEvent",
+        actor = { login = other },
+        createdAt = now,
+        isCrossRepository = true,
+        canonical = {
+          __typename = "Issue",
+          id = id,
+          number = 6235,
+          title = "Support AGENTS.md directly",
+          state = "OPEN",
+          stateReason = nil,
+          repository = { nameWithOwner = another_repo },
+        },
+      },
+      ---@type octo.fragments.UnmarkedAsDuplicateEvent
+      {
+        __typename = "UnmarkedAsDuplicateEvent",
+        actor = { login = me },
+        createdAt = now,
+        isCrossRepository = false,
+        canonical = duplicate_issue,
       },
     },
   },

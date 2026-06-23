@@ -131,7 +131,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@field baseRefName string
   ---@field baseRefOid string
   ---@field baseRepository { name: string, nameWithOwner: string }
-  ---@field milestone { title: string, state: string }
+  ---@field milestone { title: string, state: string, openIssueCount: number, closedIssueCount: number, progressPercentage: number }
   ---@field author { login: string }
   ---@field authorAssociation string
   ---@field viewerDidAuthor boolean
@@ -162,6 +162,8 @@ query($endCursor: String) {
       title
       body
       createdAt
+      lastEditedAt
+      includesCreatedEdit
       closedAt
       updatedAt
       url
@@ -211,6 +213,9 @@ query($endCursor: String) {
       milestone {
         title
         state
+        openIssueCount
+        closedIssueCount
+        progressPercentage
       }
       author {
         login
@@ -255,6 +260,7 @@ query($endCursor: String) {
               isViewer
             }
             ... on Mannequin { login }
+            ... on Bot { login }
             ... on Team { name }
           }
         }
@@ -271,14 +277,7 @@ query($endCursor: String) {
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.convert_to_draft_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.ready_for_review_event .. fragments.reopened_event .. fragments.pull_request_review .. fragments.pull_request_commit .. fragments.review_request_removed_event .. fragments.review_requested_event .. fragments.merged_event .. fragments.renamed_title_event .. fragments.review_dismissed_event .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.deployed_event .. fragments.head_ref_deleted_event .. fragments.head_ref_restored_event .. fragments.head_ref_force_pushed_event .. fragments.auto_squash_enabled_event .. fragments.automatic_base_change_succeeded_event .. fragments.base_ref_changed_event .. fragments.comment_deleted_event
-
-  if config.values.default_to_projects_v2 then
-    M.pull_request = M.pull_request
-      .. fragments.added_to_project_v2_event
-      .. fragments.removed_from_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-  end
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
 
   ---@class octo.IssueTimelineItemConnection : octo.fragments.IssueTimelineItemsConnection
   --- @field pageInfo octo.PageInfo
@@ -322,26 +321,39 @@ query($endCursor: String) {
       assignees(first: 20) {
         ...AssigneeConnectionFragment
       }
+      blockedBy(first: 10) {
+        nodes { ...IssueFields }
+      }
+      blocking(first: 10) {
+        nodes { ...IssueFields }
+      }
       viewerCanSubscribe
       viewerSubscription
     }
   }
 }
-]] .. fragments.cross_referenced_event .. fragments.issue .. fragments.pull_request .. fragments.connected_event .. fragments.milestoned_event .. fragments.demilestoned_event .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_comment .. fragments.assigned_event .. fragments.unassigned_event .. fragments.labeled_event .. fragments.unlabeled_event .. fragments.closed_event .. fragments.reopened_event .. fragments.renamed_title_event .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.referenced_event .. fragments.pinned_event .. fragments.unpinned_event .. fragments.subissue_added_event .. fragments.subissue_removed_event .. fragments.parent_issue_added_event .. fragments.parent_issue_removed_event .. fragments.issue_type_added_event .. fragments.issue_type_removed_event .. fragments.issue_type_changed_event .. fragments.comment_deleted_event .. fragments.transferred_event
-  ---
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label .. fragments.label_connection .. fragments.assignee_connection .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
-  if config.values.default_to_projects_v2 then
-    M.issue = M.issue
-      .. fragments.added_to_project_v2_event
-      .. fragments.removed_from_project_v2_event
-      .. fragments.project_v2_item_status_changed_event
-  end
+  ---@class octo.queries.IssueKind
+  ---@field data {
+  ---  repository: {
+  ---    issueOrPullRequest: {
+  ---      __typename: "Issue"|"PullRequest"?,
+  ---    },
+  ---    discussion: {
+  ---      __typename: "Discussion",
+  ---    },
+  ---  },
+  ---}
 
   -- https://docs.github.com/en/graphql/reference/unions#issueorpullrequest
   M.issue_kind = [[
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issueOrPullRequest(number: $number) {
+      __typename
+    }
+    discussion(number: $number) {
       __typename
     }
   }
@@ -697,7 +709,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
     }
   }
 }
-]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_poll .. fragments.discussion_poll_option .. fragments.discussion_comment
 
   ---@class octo.Release : octo.ReactionGroupsFragment
   --- @field id string
@@ -904,6 +916,9 @@ query($owner: String!, $name: String!, $number: Int!) {
             }
             ... on Mannequin {
               id
+              login
+            }
+            ... on Bot {
               login
             }
             ... on Team {
@@ -1287,15 +1302,27 @@ query($id: ID!) {
   node(id: $id) {
     ... on IssueComment {
       url
+      author {
+        login
+      }
     }
     ... on PullRequestReviewComment {
       url
+      author {
+        login
+      }
     }
     ... on PullRequestReview {
       url
+      author {
+        login
+      }
     }
     ... on DiscussionComment {
       url
+      author {
+        login
+      }
     }
   }
 }
@@ -1432,6 +1459,106 @@ query($owner: String!, $name: String!) {
     }
   }
   ]]
+  M.updated_at = [[
+  query($owner: String!, $name: String!, $number: Int!) {
+    repository(owner: $owner, name: $name) {
+      issueOrPullRequest(number: $number) {
+        ... on Issue { updatedAt }
+        ... on PullRequest { updatedAt }
+      }
+    }
+  }
+  ]]
+
+  ---@class octo.UserContentEdit
+  ---@field id string
+  ---@field editedAt string
+  ---@field editor { login: string }
+  ---@field diff string
+
+  M.comment_edits = [[
+query($id: ID!) {
+  node(id: $id) {
+    ... on IssueComment {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on PullRequestReviewComment {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on PullRequestReview {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on DiscussionComment {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on Issue {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on PullRequest {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+    ... on Discussion {
+      userContentEdits(last: 20) {
+        totalCount
+        nodes {
+          id
+          editedAt
+          editor { login }
+          diff
+        }
+      }
+    }
+  }
+}
+]]
 end
 
 return M

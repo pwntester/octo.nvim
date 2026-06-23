@@ -8,12 +8,11 @@ local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 
----@param fzf_cb function
+---@param fzf_cb fzf-lua.fzfCb
 ---@param issue table
 ---@param max_id_length integer
 ---@param formatted_issues table<string, table> entry.ordinal -> entry
----@param co thread
-local function handle_entry(fzf_cb, issue, max_id_length, formatted_issues, co)
+local function handle_entry(fzf_cb, issue, max_id_length, formatted_issues)
   local entry = entry_maker.gen_from_issue(issue)
   if entry ~= nil then
     local owner, name = utils.split_repo(entry.repo)
@@ -22,9 +21,7 @@ local function handle_entry(fzf_cb, issue, max_id_length, formatted_issues, co)
     local ordinal_entry = string.format("%s %s %s %s %s", entry.kind, owner, name, raw_number, entry.obj.title)
     local string_entry = string.format("%s %s %s %s %s", entry.kind, owner, name, number, entry.obj.title)
     formatted_issues[ordinal_entry] = entry
-    fzf_cb(string_entry, function()
-      coroutine.resume(co)
-    end)
+    fzf_cb(string_entry)
   end
 end
 
@@ -34,15 +31,18 @@ return function(opts)
 
   local formatted_items = {} ---@type table<string, table> entry.ordinal -> entry
 
-  ---@param query string
-  ---@return fun(fzf_cb: fun(entry?: string, cb?: fun(): nil): nil): nil
-  local function contents(query)
-    return function(fzf_cb)
-      coroutine.wrap(function() ---@async
+  ---@type fzf-lua.shell.data2
+  local function contents(args)
+    local query = args[1] or ""
+
+    return coroutine.wrap(
+      ---@param fzf_cb fzf-lua.fzfCb
+      function(fzf_cb)
         local co = coroutine.running()
 
         if not opts.prompt and utils.is_blank(query) then
-          return {}
+          fzf_cb()
+          return
         end
 
         if type(opts.prompt) == "string" then
@@ -75,7 +75,8 @@ return function(opts)
           coroutine.yield()
 
           if utils.is_blank(output) then
-            return {}
+            fzf_cb()
+            return
           end
 
           local issues = vim.json.decode(output)
@@ -89,23 +90,19 @@ return function(opts)
           end
 
           for _, issue in ipairs(issues) do
-            vim.schedule(function()
-              handle_entry(fzf_cb, issue, max_id_length, formatted_items, co)
-            end)
-            coroutine.yield()
+            handle_entry(fzf_cb, issue, max_id_length, formatted_items)
           end
         end
 
         fzf_cb()
-      end)()
-    end
+      end
+    )
   end
 
   -- TODO this is still not as fast as I would like.
   fzf.fzf_live(contents, {
     prompt = picker_utils.get_prompt(opts.prompt_title),
     exec_empty_query = true,
-    func_async_callback = false,
     previewer = previewers.search(),
     query_delay = 500,
     fzf_opts = {

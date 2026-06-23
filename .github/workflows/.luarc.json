@@ -8,8 +8,6 @@
     "library": [
       "$VIMRUNTIME/lua",
       "$PWD/lua",
-      "${3rd}/luv/library",
-      "$PWD/deps/luvit-meta/library",
       "$PWD/deps/snacks.nvim/lua",
       "$PWD/deps/plenary.nvim/lua",
       "$PWD/deps/telescope.nvim/lua",
@@ -21,11 +19,13 @@
   "diagnostics": {
     "severity": {
       "await-in-sync": "Error",
-      "no-unknown": "Warning"
+      "no-unknown": "Warning",
+      "deprecated": "Warning"
     },
     "neededFileStatus": {
       "await-in-sync": "Any",
-      "no-unknown": "Any"
+      "no-unknown": "Any",
+      "deprecated": "Any"
     },
     "unusedLocalExclude": [
       "_*"

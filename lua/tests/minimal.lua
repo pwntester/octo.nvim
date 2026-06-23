@@ -1,4 +1,4 @@
-local on_windows = vim.loop.os_uname().version:match "Windows"
+local on_windows = vim.uv.os_uname().version:match "Windows"
 
 local function join_paths(...)
   return table.concat({ ... }, on_windows and "\\" or "/")

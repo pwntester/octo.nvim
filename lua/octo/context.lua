@@ -47,14 +47,21 @@ function M.within_review(cb)
   end
 end
 
----@param cb fun(comment: any): nil
-function M.on_comment(cb)
+---@param cb fun(comment: any, buffer: OctoBuffer): nil
+function M.on_comment_in_buffer(cb)
   return M.within_octo_buffer(function(buffer)
     local comment = buffer:get_comment_at_cursor()
     if not comment then
       utils.error "No comment found at cursor"
       return
     end
+    cb(comment, buffer)
+  end)
+end
+
+---@param cb fun(comment: any): nil
+function M.on_comment(cb)
+  return M.on_comment_in_buffer(function(comment, _)
     cb(comment)
   end)
 end

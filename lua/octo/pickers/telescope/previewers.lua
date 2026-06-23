@@ -167,7 +167,7 @@ local commit = defaulter(function(opts)
           bufname = self.state.bufname,
           mode = "append",
           callback = function(bufnr, _)
-            vim.api.nvim_buf_set_option(bufnr, "filetype", "diff")
+            vim.bo[bufnr].filetype = "diff"
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 0, 0, string.len "Commit:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 1, 0, string.len "Author:")
             vim.api.nvim_buf_add_highlight(bufnr, -1, "OctoDetailsLabel", 2, 0, string.len "Date:")
@@ -190,7 +190,7 @@ local changed_files = defaulter(function(opts)
         local diff = entry.change.patch
         if diff then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(diff, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "diff")
+          vim.bo[self.state.bufnr].filetype = "diff"
         end
       end
     end,
@@ -231,7 +231,7 @@ local issue_template = defaulter(function(opts)
         local template = entry.template.body
         if template then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(template, "\n"))
-          vim.api.nvim_buf_set_option(self.state.bufnr, "filetype", "markdown")
+          vim.bo[self.state.bufnr].filetype = "markdown"
         end
       end
     end,
@@ -278,6 +278,32 @@ local release = defaulter(function(opts)
   }
 end, {})
 
+local comment_edit = defaulter(function(opts)
+  return previewers.new_buffer_previewer {
+    title = opts.preview_title,
+    get_buffer_by_name = function(_, entry)
+      return entry.value
+    end,
+    define_preview = function(self, entry)
+      if self.state.bufname ~= entry.value or vim.api.nvim_buf_line_count(self.state.bufnr) == 1 then
+        local edit = entry.obj
+        if edit and edit.diff and edit.diff ~= vim.NIL and edit.diff ~= "" then
+          vim.api.nvim_buf_set_lines(
+            self.state.bufnr,
+            0,
+            -1,
+            false,
+            vim.split(edit.diff:gsub("\r\n", "\n"):gsub("\r", "\n"), "\n")
+          )
+          vim.api.nvim_set_option_value("filetype", "diff", { scope = "local", buf = self.state.bufnr })
+        else
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "(no diff available)" })
+        end
+      end
+    end,
+  }
+end, {})
+
 return {
   workflow_runs = workflow_runs,
   discussion = discussion,
@@ -289,4 +315,5 @@ return {
   issue_template = issue_template,
   notification = notification,
   release = release,
+  comment_edit = comment_edit,
 }

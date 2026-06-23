@@ -18,6 +18,18 @@ Edit the issue title, body, or comments, as a regular buffer and use `:w(rite)`
 to sync the issue with GitHub.
 
 
+HEALTH CHECK                                    *octo-health*
+
+Run `:checkhealth octo` to verify your installation. The report covers:
+
+- `octo.nvim`      setup() was called
+- `Neovim version` minimum and recommended version requirements
+- `Dependencies`   gh CLI binary, plenary.nvim, picker plugin, file panel icon provider
+- `Authentication` active GitHub account, token source, and token scopes
+
+If any check fails, follow the advice shown in the report.
+
+
 LUA API                                         *octo-lua-api*
 
 The plugin exposes a Lua API to iteract with GitHub CLI which powers the
@@ -292,6 +304,28 @@ See |octo-command-examples| for examples.
   list [repo]            Lists releases for the current or specified repo.
 
 
+:Octo poll [action]                             *octo-commands-poll*
+
+  start                  Start polling tracked buffers for remote changes.
+  stop                   Stop polling.
+  toggle                 Toggle polling on/off.
+  status                 Show polling status and tracked buffers.
+  apply                  Force-reload a dirty buffer with pending remote changes.
+
+  Polling periodically checks GitHub for updates to open issue/PR buffers
+  using a lightweight GraphQL query (only fetches `updatedAt`). When a
+  remote change is detected:
+  - If the buffer has no local edits, it is automatically reloaded.
+  - If the buffer has unsaved local edits, the reload is skipped and
+    the user is notified. Use `:Octo poll apply` to force-reload.
+
+  Configure polling via the `poll` config table:
+    `enabled`             (boolean, default false) Auto-start on buffer open
+    `interval`            (number, default 10000) Polling interval in ms
+    `notify_on_refresh`   (boolean, default true) Notify on auto-refresh
+    `notify_on_change`    (boolean, default true) Notify when dirty skip
+
+
 :Octo gist [action]                             *octo-commands-gist*
 
   list [repo] {key=val} Lists user gists.
@@ -524,6 +558,8 @@ HIGHLIGHT GROUPS                                *octo-highlights*
   `OctoStateChangesRequested`   `OctoStateClosed`
   `OctoStateCommented`          `Normal`
   `OctoStateDismissed`          `OctoStateClosed`
+  `OctoReviewDiffDeleteText`    GitHub color
+  `OctoReviewDiffAddText`       GitHub color
 
 The term "GitHub color" refers to the colors used in the WebUI.
 
@@ -562,6 +598,8 @@ Why am I getting authentication error from gh?~
 <
   ...and choose a method to authorise access for `gh`.
   `gh` must store the creds so it can work in a subshell.
+
+  Run `:checkhealth octo` for a full diagnosis.
 
 Can I use treesitter markdown parser with octo buffers?~
 
@@ -606,6 +644,8 @@ I can't see my v2 projects in issues and/or pull requests!~
 
   If you don't care about projects v2 you can suppress the warning by setting
   `suppress_missing_scope.projects_v2 = true` in your Octo config.
+
+  Run `:checkhealth octo` for a full diagnosis.
 
 How can I disable default key mappings?~
   set `mappings_disable_default = true` in user config.

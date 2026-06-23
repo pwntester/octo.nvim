@@ -1,6 +1,124 @@
 local config = require "octo.config"
 local M = {}
 
+--- Registry entry for a timeline item fragment.
+---@class octo.TimelineFragmentEntry
+---@field spread string       Fragment name, e.g. "AssignedEventFragment"
+---@field definition string   Full GraphQL fragment definition string
+---@field condition? fun():boolean  Optional predicate evaluated at setup() time.
+---                                 Return false to exclude this item from the query.
+---                                 nil means always included.
+
+--- Registry of issue timeline item fragments, keyed by spread name.
+--- Populated during setup() with built-in items.
+--- External code may call M.register_issue_timeline_item() BEFORE setup() to add custom items.
+---@type table<string, octo.TimelineFragmentEntry>
+M._issue_timeline_registry = {}
+
+--- Registry of PR timeline item fragments, keyed by spread name.
+---@type table<string, octo.TimelineFragmentEntry>
+M._pr_timeline_registry = {}
+
+--- Register a timeline item fragment for Issues.
+--- Safe to call multiple times with the same spread_name; later registrations are ignored (dedup).
+---
+--- The optional `condition` function is called at setup() time. If it returns false the fragment
+--- spread and definition are omitted from the query — useful for gating on API version or
+--- enterprise vs. github.com compatibility.
+---
+--- Example — register only on github.com:
+---   M.register_issue_timeline_item("MyEventFragment", [[
+---     fragment MyEventFragment on MyEvent { ... }
+---   ]], function()
+---     return require("octo.config").values.github_hostname == ""
+---   end)
+---
+---@param spread_name string        Fragment name, e.g. "MyEventFragment"
+---@param definition string         Full GraphQL fragment definition string
+---@param condition? fun():boolean  Optional gate; return false to skip this fragment
+function M.register_issue_timeline_item(spread_name, definition, condition)
+  if M._issue_timeline_registry[spread_name] == nil then
+    M._issue_timeline_registry[spread_name] = {
+      spread = spread_name,
+      definition = definition,
+      condition = condition,
+    }
+  end
+end
+
+--- Register a timeline item fragment for Pull Requests.
+--- See register_issue_timeline_item for full documentation.
+---@param spread_name string        Fragment name, e.g. "MyEventFragment"
+---@param definition string         Full GraphQL fragment definition string
+---@param condition? fun():boolean  Optional gate; return false to skip this fragment
+function M.register_pull_request_timeline_item(spread_name, definition, condition)
+  if M._pr_timeline_registry[spread_name] == nil then
+    M._pr_timeline_registry[spread_name] = {
+      spread = spread_name,
+      definition = definition,
+      condition = condition,
+    }
+  end
+end
+
+--- Returns a concatenated string of all active Issue timeline fragment definitions.
+--- Entries whose condition() returns false are excluded.
+--- Used by queries.lua to append definitions after the query body.
+---@return string
+function M.get_issue_timeline_definitions()
+  local result = ""
+  for _, entry in pairs(M._issue_timeline_registry) do
+    if entry.condition == nil or entry.condition() then
+      result = result .. entry.definition
+    end
+  end
+  return result
+end
+
+--- Returns a concatenated string of all active PR timeline fragment definitions.
+--- Entries whose condition() returns false are excluded.
+--- Used by queries.lua to append definitions after the query body.
+---@return string
+function M.get_pr_timeline_definitions()
+  local result = ""
+  for _, entry in pairs(M._pr_timeline_registry) do
+    if entry.condition == nil or entry.condition() then
+      result = result .. entry.definition
+    end
+  end
+  return result
+end
+
+---@param register_fn fun(spread_name: string, definition: string, condition?: fun():boolean)
+---@param entries table[]
+local function register_timeline_entries(register_fn, entries)
+  for _, entry in ipairs(entries) do
+    register_fn(entry[1], entry[2], entry[3])
+  end
+end
+
+---@param registry table<string, octo.TimelineFragmentEntry>
+---@return string
+local function build_timeline_connection_spreads(registry)
+  ---@type string[]
+  local spreads = { "    __typename" }
+  ---@type string[]
+  local active_spreads = {}
+
+  for spread_name, entry in pairs(registry) do
+    if entry.condition == nil or entry.condition() then
+      active_spreads[#active_spreads + 1] = spread_name
+    end
+  end
+
+  table.sort(active_spreads)
+  for _, spread_name in ipairs(active_spreads) do
+    spreads[#spreads + 1] = "    ..." .. spread_name
+  end
+
+  return table.concat(spreads, "\n") .. "\n"
+end
+
 M.setup = function()
   ---@class octo.fragments.ProjectsV2Connection
   ---@field nodes {
@@ -53,6 +171,7 @@ M.setup = function()
   ---@field title string
   ---@field state octo.IssueState
   ---@field stateReason? octo.IssueStateReason
+  ---@field repository { nameWithOwner: string }
 
   M.issue = [[
 fragment IssueFields on Issue {
@@ -61,15 +180,17 @@ fragment IssueFields on Issue {
   title
   state
   stateReason
+  repository { nameWithOwner }
 }
 ]]
 
   ---@class octo.fragments.PullRequest
-  --- @field __typename "PullRequest"
-  --- @field number integer
-  --- @field title string
-  --- @field state octo.PullRequestState
-  --- @field isDraft boolean
+  ---@field __typename "PullRequest"
+  ---@field number integer
+  ---@field title string
+  ---@field state octo.PullRequestState
+  ---@field isDraft boolean
+  ---@field repository { nameWithOwner: string }
 
   M.pull_request = [[
 fragment PullRequestFields on PullRequest {
@@ -77,6 +198,7 @@ fragment PullRequestFields on PullRequest {
   title
   state
   isDraft
+  repository { nameWithOwner }
 }
 ]]
 
@@ -129,6 +251,70 @@ fragment RemovedFromProjectV2EventFragment on RemovedFromProjectV2Event {
 }
 ]]
 
+  ---@class octo.fragments.BlockedByAddedEvent
+  ---@field __typename "BlockedByAddedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockingIssue octo.fragments.Issue
+
+  M.blocked_by_added_event = [[
+  fragment BlockedByAddedEventFragment on BlockedByAddedEvent {
+    actor { login }
+    createdAt
+    blockingIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
+  ---@class octo.fragments.BlockedByRemovedEvent
+  ---@field __typename "BlockedByRemovedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockingIssue octo.fragments.Issue
+
+  M.blocked_by_removed_event = [[
+  fragment BlockedByRemovedEventFragment on BlockedByRemovedEvent {
+    actor { login }
+    createdAt
+    blockingIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
+  ---@class octo.fragments.BlockingAddedEvent
+  ---@field __typename "BlockingAddedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockedIssue octo.fragments.Issue
+
+  M.blocking_added_event = [[
+  fragment BlockingAddedEventFragment on BlockingAddedEvent {
+    actor { login }
+    createdAt
+    blockedIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
+  ---@class octo.fragments.BlockingRemovedEvent
+  ---@field __typename "BlockingRemovedEvent"
+  ---@field actor? { login: string }
+  ---@field createdAt string
+  ---@field blockedIssue octo.fragments.Issue
+
+  M.blocking_removed_event = [[
+  fragment BlockingRemovedEventFragment on BlockingRemovedEvent {
+    actor { login }
+    createdAt
+    blockedIssue {
+      ...IssueFields
+    }
+  }
+  ]]
+
   ---https://docs.github.com/en/graphql/reference/objects#autosquashenabledevent
   ---@class octo.fragments.AutoSquashEnabledEvent
   ---@field __typename "AutoSquashEnabledEvent"
@@ -137,6 +323,32 @@ fragment RemovedFromProjectV2EventFragment on RemovedFromProjectV2Event {
 
   M.auto_squash_enabled_event = [[
 fragment AutoSquashEnabledEventFragment on AutoSquashEnabledEvent {
+  actor { login }
+  createdAt
+}
+]]
+
+  ---https://docs.github.com/en/graphql/reference/objects#automergeenabledevent
+  ---@class octo.fragments.AutoMergeEnabledEvent
+  ---@field __typename "AutoMergeEnabledEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+
+  M.auto_merge_enabled_event = [[
+fragment AutoMergeEnabledEventFragment on AutoMergeEnabledEvent {
+  actor { login }
+  createdAt
+}
+]]
+
+  ---https://docs.github.com/en/graphql/reference/objects#automergedisabledevent
+  ---@class octo.fragments.AutoMergeDisabledEvent
+  ---@field __typename "AutoMergeDisabledEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+
+  M.auto_merge_disabled_event = [[
+fragment AutoMergeDisabledEventFragment on AutoMergeDisabledEvent {
   actor { login }
   createdAt
 }
@@ -267,6 +479,7 @@ fragment ReferencedEventFragment on ReferencedEvent {
   ---@field actor { login: string }
   ---@field createdAt string
   ---@field willCloseTarget boolean
+  ---@field isCrossRepository boolean
   ---@field source octo.fragments.Issue|octo.fragments.PullRequest
   ---@field target octo.fragments.Issue|octo.fragments.PullRequest
 
@@ -275,12 +488,53 @@ fragment CrossReferencedEventFragment on CrossReferencedEvent {
   createdAt
   actor { login }
   willCloseTarget
+  isCrossRepository
   source {
     __typename
     ...IssueFields
     ...PullRequestFields
   }
   target {
+    __typename
+    ...IssueFields
+    ...PullRequestFields
+  }
+}
+]]
+
+  ---@class octo.fragments.MarkedAsDuplicateEvent
+  ---@field __typename "MarkedAsDuplicateEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field isCrossRepository boolean
+  ---@field canonical octo.fragments.Issue|octo.fragments.PullRequest
+
+  M.marked_as_duplicate_event = [[
+fragment MarkedAsDuplicateEventFragment on MarkedAsDuplicateEvent {
+  actor { login }
+  createdAt
+  isCrossRepository
+  canonical {
+    __typename
+    ...IssueFields
+    ...PullRequestFields
+  }
+}
+]]
+
+  ---@class octo.fragments.UnmarkedAsDuplicateEvent
+  ---@field __typename "UnmarkedAsDuplicateEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field isCrossRepository boolean
+  ---@field canonical octo.fragments.Issue|octo.fragments.PullRequest
+
+  M.unmarked_as_duplicate_event = [[
+fragment UnmarkedAsDuplicateEventFragment on UnmarkedAsDuplicateEvent {
+  actor { login }
+  createdAt
+  isCrossRepository
+  canonical {
     __typename
     ...IssueFields
     ...PullRequestFields
@@ -396,6 +650,8 @@ fragment AssigneeConnectionFragment on UserConnection {
   ---@field databaseId integer
   ---@field body string
   ---@field createdAt string
+  ---@field lastEditedAt string
+  ---@field includesCreatedEdit boolean
   ---@field author { login: string }
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
@@ -407,6 +663,8 @@ fragment IssueCommentFragment on IssueComment {
   databaseId
   body
   createdAt
+  lastEditedAt
+  includesCreatedEdit
   ...ReactionGroupsFragment
   author {
     login
@@ -525,6 +783,7 @@ fragment UnlabeledEventFragment on UnlabeledEvent {
   ---@field createdAt string
   ---@field stateReason string
   ---@field closable { __typename: string, state: string, stateReason?: string }
+  ---@field duplicateOf? octo.fragments.Issue|octo.fragments.PullRequest
 
   M.closed_event = [[
 fragment ClosedEventFragment on ClosedEvent {
@@ -542,6 +801,11 @@ fragment ClosedEventFragment on ClosedEvent {
     ... on PullRequest {
       state
     }
+  }
+  duplicateOf {
+    __typename
+    ...IssueFields
+    ...PullRequestFields
   }
 }
 ]]
@@ -696,7 +960,7 @@ fragment PullRequestCommitFragment on PullRequestCommit {
   ---@field createdAt string
   ---@field actor { login: string }
   ---@field requestedReviewer {
-  ---  login?: string,
+  ---  login: string,
   ---  isViewer?: boolean,
   ---  name?: string,
   ---}
@@ -713,6 +977,9 @@ fragment ReviewRequestRemovedEventFragment on ReviewRequestRemovedEvent {
       isViewer
     }
     ... on Mannequin {
+      login
+    }
+    ... on Bot {
       login
     }
     ... on Team {
@@ -858,6 +1125,36 @@ fragment PinnedEventFragment on PinnedEvent {
 
   M.unpinned_event = [[
 fragment UnpinnedEventFragment on UnpinnedEvent {
+  actor {
+    login
+  }
+  createdAt
+}
+]]
+
+  ---@class octo.fragments.LockedEvent
+  ---@field __typename "LockedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field lockReason? "OFF_TOPIC"|"TOO_HEATED"|"RESOLVED"|"SPAM"
+
+  M.locked_event = [[
+fragment LockedEventFragment on LockedEvent {
+  actor {
+    login
+  }
+  createdAt
+  lockReason
+}
+]]
+
+  ---@class octo.fragments.UnlockedEvent
+  ---@field __typename "UnlockedEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+
+  M.unlocked_event = [[
+fragment UnlockedEventFragment on UnlockedEvent {
   actor {
     login
   }
@@ -1022,43 +1319,69 @@ fragment CommentDeletedEventFragment on CommentDeletedEvent {
   }
   ]]
 
-  local issue_timeline_items_connection_fragments = [[
-    __typename
-    ...AssignedEventFragment
-    ...UnassignedEventFragment
-    ...ClosedEventFragment
-    ...ConnectedEventFragment
-    ...ReferencedEventFragment
-    ...CrossReferencedEventFragment
-    ...DemilestonedEventFragment
-    ...IssueCommentFragment
-    ...LabeledEventFragment
-    ...MilestonedEventFragment
-    ...RenamedTitleEventFragment
-    ...ReopenedEventFragment
-    ...UnlabeledEventFragment
-    ...PinnedEventFragment
-    ...UnpinnedEventFragment
-    ...SubIssueAddedEventFragment
-    ...SubIssueRemovedEventFragment
-    ...ParentIssueAddedEventFragment
-    ...ParentIssueRemovedEventFragment
-    ...IssueTypeAddedEventFragment
-    ...IssueTypeRemovedEventFragment
-    ...IssueTypeChangedEventFragment
-    ...CommentDeletedEventFragment
-    ...TransferredEventFragment
-]]
-  if config.values.default_to_projects_v2 then
-    issue_timeline_items_connection_fragments = issue_timeline_items_connection_fragments
-      .. [[
-    ...AddedToProjectV2EventFragment
-    ...RemovedFromProjectV2EventFragment
-    ...ProjectV2ItemStatusChangedEventFragment
-    ]]
+  -- Seed the issue timeline registry with all built-in items.
+  -- External code may call M.register_issue_timeline_item() before setup() to add custom items.
+  --
+  -- The `condition` function (3rd element) is evaluated at setup() time:
+  --   nil  → always included
+  --   fn() → included only when fn() returns true
+  --
+  -- Fragments absent from older GHES versions are gated to github.com only.
+  local function is_github_com()
+    return config.values.github_hostname == ""
   end
 
-  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent|octo.fragments.TransferredEvent
+  local function projects_v2_enabled()
+    return config.values.default_to_projects_v2
+  end
+
+  local issue_builtin = {
+    -- Always available
+    { "AssignedEventFragment", M.assigned_event },
+    { "UnassignedEventFragment", M.unassigned_event },
+    { "ClosedEventFragment", M.closed_event },
+    { "ConnectedEventFragment", M.connected_event },
+    { "ReferencedEventFragment", M.referenced_event },
+    { "CrossReferencedEventFragment", M.cross_referenced_event },
+    { "DemilestonedEventFragment", M.demilestoned_event },
+    { "IssueCommentFragment", M.issue_comment },
+    { "LabeledEventFragment", M.labeled_event },
+    { "MilestonedEventFragment", M.milestoned_event },
+    { "RenamedTitleEventFragment", M.renamed_title_event },
+    { "ReopenedEventFragment", M.reopened_event },
+    { "UnlabeledEventFragment", M.unlabeled_event },
+    { "CommentDeletedEventFragment", M.comment_deleted_event },
+    { "LockedEventFragment", M.locked_event },
+    { "UnlockedEventFragment", M.unlocked_event },
+    { "MarkedAsDuplicateEventFragment", M.marked_as_duplicate_event },
+    { "UnmarkedAsDuplicateEventFragment", M.unmarked_as_duplicate_event },
+    -- github.com-only: not present on older GHES (issues #1153)
+    { "PinnedEventFragment", M.pinned_event, is_github_com },
+    { "UnpinnedEventFragment", M.unpinned_event, is_github_com },
+    { "SubIssueAddedEventFragment", M.subissue_added_event, is_github_com },
+    { "SubIssueRemovedEventFragment", M.subissue_removed_event, is_github_com },
+    { "ParentIssueAddedEventFragment", M.parent_issue_added_event, is_github_com },
+    { "ParentIssueRemovedEventFragment", M.parent_issue_removed_event, is_github_com },
+    { "IssueTypeAddedEventFragment", M.issue_type_added_event, is_github_com },
+    { "IssueTypeRemovedEventFragment", M.issue_type_removed_event, is_github_com },
+    { "IssueTypeChangedEventFragment", M.issue_type_changed_event, is_github_com },
+    { "BlockedByAddedEventFragment", M.blocked_by_added_event, is_github_com },
+    { "BlockedByRemovedEventFragment", M.blocked_by_removed_event, is_github_com },
+    { "BlockingAddedEventFragment", M.blocking_added_event, is_github_com },
+    { "BlockingRemovedEventFragment", M.blocking_removed_event, is_github_com },
+    { "TransferredEventFragment", M.transferred_event, is_github_com },
+    -- Projects V2: gated on config flag (may also require scope check; handled in gh/init.lua)
+    { "AddedToProjectV2EventFragment", M.added_to_project_v2_event, projects_v2_enabled },
+    { "RemovedFromProjectV2EventFragment", M.removed_from_project_v2_event, projects_v2_enabled },
+    { "ProjectV2ItemStatusChangedEventFragment", M.project_v2_item_status_changed_event, projects_v2_enabled },
+  }
+  register_timeline_entries(M.register_issue_timeline_item, issue_builtin)
+
+  -- Build the aggregator spreads string from the registry (includes any externally registered items).
+  -- Entries whose condition() returns false are excluded.
+  local issue_timeline_items_connection_fragments = build_timeline_connection_spreads(M._issue_timeline_registry)
+
+  ---@alias octo.IssueTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ReferencedEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MilestonedEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.UnlabeledEvent|octo.fragments.PinnedEvent|octo.fragments.UnpinnedEvent|octo.fragments.SubIssueAddedEvent|octo.fragments.SubIssueRemovedEvent|octo.fragments.ParentIssueAddedEvent|octo.fragments.ParentIssueRemovedEvent|octo.fragments.IssueTypeAddedEvent|octo.fragments.IssueTypeRemovedEvent|octo.fragments.IssueTypeChangedEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.RemovedFromProjectV2Event|octo.fragments.CommentDeletedEvent|octo.fragments.BlockedByAddedEvent|octo.fragments.BlockedByRemovedEvent|octo.fragments.BlockingAddedEvent|octo.fragments.BlockingRemovedEvent|octo.fragments.TransferredEvent|octo.fragments.LockedEvent|octo.fragments.UnlockedEvent|octo.fragments.MarkedAsDuplicateEvent|octo.fragments.UnmarkedAsDuplicateEvent
 
   ---@class octo.fragments.IssueTimelineItemsConnection
   ---@field nodes octo.IssueTimelineItem[]
@@ -1074,48 +1397,56 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     issue_timeline_items_connection_fragments
   )
 
-  local pull_request_timeline_items_connection_fragments = [[
-    __typename
-    ...AutomaticBaseChangeSucceededEventFragment
-    ...BaseRefChangedEventFragment
-    ...AssignedEventFragment
-    ...UnassignedEventFragment
-    ...ClosedEventFragment
-    ...ConnectedEventFragment
-    ...ConvertToDraftEventFragment
-    ...CrossReferencedEventFragment
-    ...DemilestonedEventFragment
-    ...IssueCommentFragment
-    ...LabeledEventFragment
-    ...MergedEventFragment
-    ...MilestonedEventFragment
-    ...PullRequestCommitFragment
-    ...PullRequestReviewFragment
-    ...ReadyForReviewEventFragment
-    ...RenamedTitleEventFragment
-    ...ReopenedEventFragment
-    ...ReviewDismissedEventFragment
-    ...ReviewRequestRemovedEventFragment
-    ...ReviewRequestedEventFragment
-    ...UnlabeledEventFragment
-    ...DeployedEventFragment
-    ...HeadRefDeletedEventFragment
-    ...HeadRefRestoredEventFragment
-    ...HeadRefForcePushedEventFragment
-    ...AutoSquashEnabledEventFragment
-    ...CommentDeletedEventFragment
-]]
+  -- Seed the PR timeline registry with all built-in items.
+  local pr_builtin = {
+    -- Always available
+    { "AssignedEventFragment", M.assigned_event },
+    { "UnassignedEventFragment", M.unassigned_event },
+    { "ClosedEventFragment", M.closed_event },
+    { "ConnectedEventFragment", M.connected_event },
+    { "CrossReferencedEventFragment", M.cross_referenced_event },
+    { "DemilestonedEventFragment", M.demilestoned_event },
+    { "IssueCommentFragment", M.issue_comment },
+    { "LabeledEventFragment", M.labeled_event },
+    { "MergedEventFragment", M.merged_event },
+    { "MilestonedEventFragment", M.milestoned_event },
+    { "PullRequestCommitFragment", M.pull_request_commit },
+    { "PullRequestReviewFragment", M.pull_request_review },
+    { "ReadyForReviewEventFragment", M.ready_for_review_event },
+    { "RenamedTitleEventFragment", M.renamed_title_event },
+    { "ReopenedEventFragment", M.reopened_event },
+    { "ReviewDismissedEventFragment", M.review_dismissed_event },
+    { "ReviewRequestRemovedEventFragment", M.review_request_removed_event },
+    { "ReviewRequestedEventFragment", M.review_requested_event },
+    { "UnlabeledEventFragment", M.unlabeled_event },
+    { "CommentDeletedEventFragment", M.comment_deleted_event },
+    { "LockedEventFragment", M.locked_event },
+    { "UnlockedEventFragment", M.unlocked_event },
+    { "MarkedAsDuplicateEventFragment", M.marked_as_duplicate_event },
+    { "UnmarkedAsDuplicateEventFragment", M.unmarked_as_duplicate_event },
+    -- GHES-incompatible on older versions (issues #685, #513)
+    { "AutomaticBaseChangeSucceededEventFragment", M.automatic_base_change_succeeded_event, is_github_com },
+    { "BaseRefChangedEventFragment", M.base_ref_changed_event, is_github_com },
+    { "ConvertToDraftEventFragment", M.convert_to_draft_event, is_github_com },
+    { "DeployedEventFragment", M.deployed_event, is_github_com },
+    { "HeadRefDeletedEventFragment", M.head_ref_deleted_event, is_github_com },
+    { "HeadRefRestoredEventFragment", M.head_ref_restored_event, is_github_com },
+    { "HeadRefForcePushedEventFragment", M.head_ref_force_pushed_event, is_github_com },
+    { "AutoSquashEnabledEventFragment", M.auto_squash_enabled_event, is_github_com },
+    { "AutoMergeEnabledEventFragment", M.auto_merge_enabled_event, is_github_com },
+    { "AutoMergeDisabledEventFragment", M.auto_merge_disabled_event, is_github_com },
+    -- Projects V2
+    { "AddedToProjectV2EventFragment", M.added_to_project_v2_event, projects_v2_enabled },
+    { "RemovedFromProjectV2EventFragment", M.removed_from_project_v2_event, projects_v2_enabled },
+    { "ProjectV2ItemStatusChangedEventFragment", M.project_v2_item_status_changed_event, projects_v2_enabled },
+  }
+  register_timeline_entries(M.register_pull_request_timeline_item, pr_builtin)
 
-  if config.values.default_to_projects_v2 then
-    pull_request_timeline_items_connection_fragments = pull_request_timeline_items_connection_fragments
-      .. [[
-    ...AddedToProjectV2EventFragment
-    ...RemovedFromProjectV2EventFragment
-    ...ProjectV2ItemStatusChangedEventFragment
-    ]]
-  end
+  -- Build the aggregator spreads string from the registry (includes any externally registered items).
+  -- Entries whose condition() returns false are excluded.
+  local pull_request_timeline_items_connection_fragments = build_timeline_connection_spreads(M._pr_timeline_registry)
 
-  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent
+  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AutoMergeEnabledEvent|octo.fragments.AutoMergeDisabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.LockedEvent|octo.fragments.UnlockedEvent|octo.fragments.MarkedAsDuplicateEvent|octo.fragments.UnmarkedAsDuplicateEvent
 
   ---@class octo.fragments.PullRequestTimelineItemsConnection
   ---@field nodes octo.PullRequestTimelineItem[]
@@ -1132,7 +1463,7 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
   )
 
   ---@alias octo.IssueState "OPEN"|"CLOSED"
-  ---@alias octo.IssueStateReason "REOPENED"|"NOT_PLANNED"|"COMPLETED"|"DUPLICATED"
+  ---@alias octo.IssueStateReason "REOPENED"|"NOT_PLANNED"|"COMPLETED"|"DUPLICATE"
 
   ---@class octo.fragments.IssueInformation
   ---@field id string
@@ -1143,12 +1474,14 @@ fragment PullRequestTimelineItemsConnectionFragment on PullRequestTimelineItemsC
   ---@field title string
   ---@field body string
   ---@field createdAt string
+  ---@field lastEditedAt? string
+  ---@field includesCreatedEdit? boolean
   ---@field closedAt string
   ---@field updatedAt string
   ---@field url string
   ---@field viewerDidAuthor boolean
   ---@field viewerCanUpdate boolean
-  ---@field milestone { title: string, state: string }
+  ---@field milestone { title: string, state: string, openIssueCount: number, closedIssueCount: number, progressPercentage: number }
   ---@field author { login: string }
 
   M.issue_information = [[
@@ -1161,12 +1494,20 @@ fragment IssueInformationFragment on Issue {
   title
   body
   createdAt
+  lastEditedAt
+  includesCreatedEdit
   closedAt
   updatedAt
   url
   viewerDidAuthor
   viewerCanUpdate
-  milestone { title state }
+  milestone {
+    title
+    state
+    openIssueCount
+    closedIssueCount
+    progressPercentage
+  }
   author { login }
 }
 ]]
@@ -1308,8 +1649,11 @@ fragment DiscussionInfoFragment on Discussion {
   ---@class octo.fragments.DiscussionDetails : octo.fragments.DiscussionInfo, octo.ReactionGroupsFragment
   ---@field body string
   ---@field category { name: string, emoji: string }
+  ---@field poll octo.fragments.DiscussionPoll
   ---@field answer { author: { login: string }, body: string, createdAt: string, viewerDidAuthor: boolean }
   ---@field createdAt string
+  ---@field lastEditedAt? string
+  ---@field includesCreatedEdit? boolean
   ---@field closedAt string
   ---@field updatedAt string
   ---@field upvoteCount integer
@@ -1321,9 +1665,14 @@ fragment DiscussionInfoFragment on Discussion {
 fragment DiscussionDetailsFragment on Discussion {
   ...DiscussionInfoFragment
   body
+  lastEditedAt
+  includesCreatedEdit
   category {
     name
     emoji
+  }
+  poll {
+    ...DiscussionPollFragment
   }
   answer {
     author {
@@ -1374,6 +1723,42 @@ fragment DiscussionCommentFragment on DiscussionComment {
   viewerDidAuthor
   viewerCanUpdate
   viewerCanDelete
+}
+]]
+  ---@class octo.fragments.DiscussionPollOption
+  ---@field id string
+  ---@field option string
+  ---@field totalVoteCount number
+  ---@field viewerHasVoted boolean
+
+  M.discussion_poll_option = [[
+fragment DiscussionPollOptionFragment on DiscussionPollOption {
+  id
+  option
+  totalVoteCount
+  viewerHasVoted
+}
+]]
+  ---@class octo.fragments.DiscussionPoll
+  ---@field id string
+  ---@field question string
+  ---@field totalVoteCount number
+  ---@field viewerCanVote boolean
+  ---@field viewerHasVoted boolean
+  ---@field options { nodes: octo.fragments.DiscussionPollOption[] }
+
+  M.discussion_poll = [[
+fragment DiscussionPollFragment on DiscussionPoll {
+  id
+  question
+  totalVoteCount
+  viewerCanVote
+  viewerHasVoted
+  options(first: 10) {
+    nodes {
+      ...DiscussionPollOptionFragment
+    }
+  }
 }
 ]]
   ---@class octo.fragments.Repository

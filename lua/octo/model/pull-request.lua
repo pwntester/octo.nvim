@@ -226,7 +226,11 @@ function M.create_with_merge_base(opts, obj, cb)
   local owner, name = utils.split_repo(opts.repo)
 
   -- Fetch merge base for accurate diff using GitHub Compare API
-  local endpoint = string.format("repos/%s/%s/compare/%s...%s", owner, name, obj.baseRefName, obj.headRefName)
+  -- For cross-repository (fork) PRs, refs must be qualified as "owner:branch"
+  local base_ref = owner .. ":" .. obj.baseRefName
+  local head_owner = opts.head_repo and utils.split_repo(opts.head_repo) or owner
+  local head_ref = head_owner .. ":" .. obj.headRefName
+  local endpoint = string.format("repos/%s/%s/compare/%s...%s", owner, name, base_ref, head_ref)
   local callback = gh.create_callback {
     success = function(merge_base_sha)
       -- Use merge base if available, otherwise fall back to baseRefOid
