@@ -367,3 +367,25 @@ describe("CLI commands", function()
     end
   end)
 end)
+
+describe("auth helpers", function()
+  it("extracts accounts from gh auth status json", function()
+    local output = [[{"hosts":{"github.com":[{"state":"success","active":true,"host":"github.com","login":"raymondd-ae"},{"state":"success","active":false,"host":"github.com","login":"thedanielfactor"}]}}]]
+
+    local actual = gh.extract_auth_status_accounts(output, "github.com")
+
+    eq(#actual, 2)
+    eq(actual[1].login, "raymondd-ae")
+    eq(actual[1].active, true)
+    eq(actual[2].login, "thedanielfactor")
+    eq(actual[2].active, false)
+  end)
+
+  it("parses active account from auth status text", function()
+    local output = [[github.com
+  ✓ Logged in to github.com account thedanielfactor (keyring)
+  - Active account: true]]
+
+    eq(gh.parse_auth_status_user(output), "thedanielfactor")
+  end)
+end)
