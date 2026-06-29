@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Cache neovim
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: _neovim
           key: ${{ runner.os }}-neovim-${{ matrix.nvim_version }}
@@ -33,7 +33,7 @@ jobs:
             curl -sL $url | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
           }
       - name: Cache lua-language-server
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: luals
           key: ${{ runner.os }}-luals-${{ matrix.lua_ls_version }}
@@ -45,7 +45,7 @@ jobs:
           }
       - run: echo "luals/bin" >> "$GITHUB_PATH"
       - name: Cache dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: deps
           key: ${{ runner.os }}-typecheck-deps-${{ hashFiles('.github/workflows/typecheck.yml') }}
