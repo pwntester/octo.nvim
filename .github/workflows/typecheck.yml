@@ -19,7 +19,7 @@ jobs:
         nvim_version: [stable]
         lua_ls_version: [3.18.2]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Cache neovim
         uses: actions/cache@v6
         with:
