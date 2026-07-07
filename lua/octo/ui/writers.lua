@@ -534,6 +534,8 @@ local function get_state_icon(state, state_reason, is_issue, is_discussion)
       return utils.icons.pull_request.closed
     elseif state == "DRAFT" then
       return utils.icons.pull_request.draft
+    elseif state == "QUEUED" then
+      return utils.icons.pull_request.queued
     end
   end
 end
@@ -579,7 +581,7 @@ function M.write_state(bufnr, state, number)
   if buffer:isDiscussion() then
     display_state = state
   else
-    display_state = utils.get_displayed_state(is_issue, obj.state, obj.stateReason, obj.isDraft)
+    display_state = utils.get_displayed_state(is_issue, obj.state, obj.stateReason, obj.isDraft, obj.isInMergeQueue)
   end
 
   local is_discussion = buffer:isDiscussion()
@@ -700,8 +702,9 @@ end
 ---@param state string
 ---@param state_reason? string
 ---@param is_draft? boolean
-local function add_status_detail(details, is_issue, state, state_reason, is_draft)
-  local display_state = utils.get_displayed_state(is_issue, state, state_reason, is_draft)
+---@param is_in_merge_queue? boolean
+local function add_status_detail(details, is_issue, state, state_reason, is_draft, is_in_merge_queue)
+  local display_state = utils.get_displayed_state(is_issue, state, state_reason, is_draft, is_in_merge_queue)
 
   TextChunkBuilder:new()
     :detail_label("Status")
@@ -723,7 +726,7 @@ function M.write_details(bufnr, issue, update, include_status)
   local details = {} ---@type [string, string][][]
 
   if include_status then
-    add_status_detail(details, is_issue, issue.state, issue.stateReason, issue.isDraft)
+    add_status_detail(details, is_issue, issue.state, issue.stateReason, issue.isDraft, issue.isInMergeQueue)
   end
 
   table.insert(details, {
@@ -2320,6 +2323,55 @@ function M.write_auto_merge_disabled_event(bufnr, item)
 end
 
 ---@param bufnr integer
+---@param item octo.fragments.AddedToMergeQueueEvent
+function M.write_added_to_merge_queue_event(bufnr, item)
+  -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
+  TextChunkBuilder:new()
+    :timeline_marker("merge_queue")
+    :actor(item.actor)
+    :heading(" added this pull request to the merge queue")
+    :date(item.createdAt)
+    :write_event(bufnr)
+end
+
+---@param bufnr integer
+---@param item octo.fragments.RemovedFromMergeQueueEvent
+function M.write_removed_from_merge_queue_event(bufnr, item)
+  -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
+  if utils.is_blank(item.actor) then
+    return
+  end
+
+  -- Skip rendering when merged — the MergedEvent already covers that in the timeline
+  if item.reason == "merged" then
+    return
+  end
+
+  local reason_text = item.reason
+      and ({
+        manual = "a manual request",
+        failed_checks = "failed checks",
+        checks_timed_out = "no response for status checks",
+      })[item.reason]
+    or nil
+
+  local builder = TextChunkBuilder:new()
+    :timeline_marker("merge_queue")
+    :actor(item.actor)
+    :heading " removed this pull request from the merge queue"
+
+  if reason_text then
+    builder:heading(" due to " .. reason_text)
+  end
+
+  builder:date(item.createdAt):write_event(bufnr)
+end
+
+---@param bufnr integer
 ---@param item octo.fragments.HeadRefDeletedEvent
 function M.write_head_ref_deleted_event(bufnr, item)
   -- Handle case where actor is nil (can happen on GHES when fragment is excluded)
@@ -3787,6 +3839,8 @@ do
   reg("AutoSquashEnabledEvent", { writer = M.write_auto_squash_enabled_event })
   reg("AutoMergeEnabledEvent", { writer = M.write_auto_merge_enabled_event })
   reg("AutoMergeDisabledEvent", { writer = M.write_auto_merge_disabled_event })
+  reg("AddedToMergeQueueEvent", { writer = M.write_added_to_merge_queue_event })
+  reg("RemovedFromMergeQueueEvent", { writer = M.write_removed_from_merge_queue_event })
   reg("AddedToProjectV2Event", { writer = M.write_added_to_project_v2_event })
   reg("RemovedFromProjectV2Event", { writer = M.write_removed_from_project_v2_event })
   reg("ProjectV2ItemStatusChangedEvent", { writer = M.write_project_v2_item_status_changed_event })

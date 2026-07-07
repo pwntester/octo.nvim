@@ -272,6 +272,7 @@ require"octo".setup {
     reopened = { "  ", "OctoGreen" },
     assigned = "  ",
     locked = "  ",
+    merge_queue = "  ",
     review_requested = "  ",
   },
   right_bubble_delimiter = "", -- bubble delimiter

@@ -107,6 +107,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   ---@class octo.PullRequest : octo.ReactionGroupsFragment
   ---@field id string
   ---@field isDraft boolean
+  ---@field isInMergeQueue? boolean
   ---@field number integer
   ---@field state octo.PullRequestState
   ---@field title string
@@ -157,6 +158,7 @@ query($endCursor: String) {
     pullRequest(number: %d) {
       id
       isDraft
+      {isInMergeQueue}
       number
       state
       title
@@ -558,6 +560,7 @@ query(
         repository { nameWithOwner }
         headRefName
         isDraft
+        {isInMergeQueue}
         state
       }
       pageInfo {
@@ -597,6 +600,7 @@ query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
         url
         state
         isDraft
+        {isInMergeQueue}
         repository { nameWithOwner }
       }
       ... on Discussion {
@@ -1559,6 +1563,19 @@ query($id: ID!) {
   }
 }
 ]]
+
+  -- Inject isInMergeQueue for github.com only (may not exist on GHES)
+  if config.values.github_hostname == "" then
+    local field = "isInMergeQueue"
+    M.pull_requests = M.pull_requests:gsub("{isInMergeQueue}", field)
+    M.search = M.search:gsub("{isInMergeQueue}", field)
+    M.pull_request = M.pull_request:gsub("{isInMergeQueue}", field)
+  else
+    -- Remove the placeholder lines for GHES (GraphQL ignores blank lines)
+    M.pull_requests = M.pull_requests:gsub("%s*{isInMergeQueue}\n", "")
+    M.search = M.search:gsub("%s*{isInMergeQueue}\n", "")
+    M.pull_request = M.pull_request:gsub("%s*{isInMergeQueue}\n", "")
+  end
 end
 
 return M
