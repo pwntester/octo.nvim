@@ -376,7 +376,34 @@ writers.write_timeline_items(bufnr, {
         createdAt = now,
         pullRequest = { headRefName = branch },
       },
+      ---@type octo.fragments.AddedToMergeQueueEvent
+      {
+        __typename = "AddedToMergeQueueEvent",
+        actor = { login = me },
+        createdAt = now,
+        enqueuer = { login = me },
+      },
       ---@type octo.fragments.MergedEvent
+      --- Rendered as "merged via the queue into main with commit X"
+      --- because a RemovedFromMergeQueueEvent (reason: "merged") follows
+      {
+        __typename = "MergedEvent",
+        actor = { login = other },
+        createdAt = now,
+        commit = { abbreviatedOid = "abc1234" },
+        mergeRefName = branch,
+      },
+      ---@type octo.fragments.RemovedFromMergeQueueEvent
+      --- Skipped by writer (reason: "merged"), but triggers via_queue on MergedEvent
+      {
+        __typename = "RemovedFromMergeQueueEvent",
+        actor = { login = "github-merge-queue" },
+        createdAt = now,
+        reason = "merged",
+        enqueuer = { login = "github-merge-queue[bot]" },
+      },
+      ---@type octo.fragments.MergedEvent
+      --- Regular (non-queue) merge — rendered as "merged into main with commit X"
       {
         __typename = "MergedEvent",
         actor = { login = other },

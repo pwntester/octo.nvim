@@ -3110,14 +3110,20 @@ end
 
 ---@param bufnr integer
 ---@param item octo.fragments.MergedEvent
-function M.write_merged_event(bufnr, item)
-  TextChunkBuilder:new()
-    :timeline_marker("merged")
-    :actor(item.actor)
-    :heading(" merged commit ")
-    :text(item.commit.abbreviatedOid, "OctoDetailsLabel")
-    :heading(" into ")
+---@param via_queue? boolean
+function M.write_merged_event(bufnr, item, via_queue)
+  local builder = TextChunkBuilder:new():timeline_marker("merged"):actor(item.actor)
+
+  if via_queue then
+    builder:heading " merged via the queue into "
+  else
+    builder:heading " merged into "
+  end
+
+  builder
     :heading(item.mergeRefName)
+    :heading(" with commit ")
+    :text(item.commit.abbreviatedOid, "OctoDetailsLabel")
     :date(item.createdAt)
     :write_event(bufnr)
 end
@@ -3649,6 +3655,17 @@ function M.write_timeline_items(bufnr, obj)
   --- labeled/unlabeled events or subissues events are rendered
   table.insert(timeline_nodes, {})
 
+  --- Pre-scan: detect if this PR was merged via the merge queue.
+  --- The RemovedFromMergeQueueEvent (reason: "merged") appears after MergedEvent
+  --- in the timeline, so we need to know upfront to adjust MergedEvent rendering.
+  local merged_via_queue = false
+  for _, node in ipairs(timeline_nodes) do
+    if node.__typename == "RemovedFromMergeQueueEvent" and node.reason == "merged" then
+      merged_via_queue = true
+      break
+    end
+  end
+
   ---@param items any[]
   local function clear_items(items)
     for idx = #items, 1, -1 do
@@ -3729,6 +3746,20 @@ function M.write_timeline_items(bufnr, obj)
     subissue_removed_events = unrendered_subissue_removed_events,
   }
 
+  --- When merged via the queue, wrap the MergedEvent writer to pass via_queue flag.
+  --- The RemovedFromMergeQueueEvent (reason: "merged") is skipped by its writer,
+  --- so the MergedEvent carries the queue context instead.
+  local orig_merged_writer = nil
+  if merged_via_queue then
+    local entry = timeline_registry.get "MergedEvent"
+    if entry and entry.writer then
+      orig_merged_writer = entry.writer
+      entry.writer = function(bufnr_inner, item_inner)
+        orig_merged_writer(bufnr_inner, item_inner, true)
+      end
+    end
+  end
+
   for _, item in ipairs(timeline_nodes) do
     render_accumulated_events(item)
     if item.__typename == "IssueComment" then
@@ -3801,6 +3832,14 @@ function M.write_timeline_items(bufnr, obj)
 
   if prev_is_event then
     M.write_block(bufnr, { "" })
+  end
+
+  --- Restore the original MergedEvent writer after rendering.
+  if orig_merged_writer then
+    local entry = timeline_registry.get "MergedEvent"
+    if entry then
+      entry.writer = orig_merged_writer
+    end
   end
 end
 

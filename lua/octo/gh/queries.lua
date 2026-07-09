@@ -158,7 +158,7 @@ query($endCursor: String) {
     pullRequest(number: %d) {
       id
       isDraft
-      {isInMergeQueue}
+      isInMergeQueue
       number
       state
       title
@@ -560,7 +560,7 @@ query(
         repository { nameWithOwner }
         headRefName
         isDraft
-        {isInMergeQueue}
+        isInMergeQueue
         state
       }
       pageInfo {
@@ -600,7 +600,7 @@ query($prompt: String!, $type: SearchType = ISSUE, $last: Int = 100) {
         url
         state
         isDraft
-        {isInMergeQueue}
+        isInMergeQueue
         repository { nameWithOwner }
       }
       ... on Discussion {
