@@ -54,6 +54,7 @@ M.state_hl_map = {
   MERGED = "OctoStateMerged",
   CLOSED = "OctoStateClosed",
   DRAFT = "OctoStateDraft",
+  QUEUED = "OctoStateQueued",
   COMPLETED = "OctoStateCompleted",
   NOT_PLANNED = "OctoStateNotPlanned",
   DUPLICATE = "OctoStateNotPlanned",
@@ -1967,7 +1968,7 @@ end
 ---@param state octo.IssueState|octo.PullRequestState
 ---@param stateReason? octo.IssueStateReason
 ---@return string
-function M.get_displayed_state(isIssue, state, stateReason, isDraft)
+function M.get_displayed_state(isIssue, state, stateReason, isDraft, isInMergeQueue)
   if isIssue and state == "CLOSED" then
     return (not M.is_blank(stateReason) and stateReason) or state
   end
@@ -1980,12 +1981,17 @@ function M.get_displayed_state(isIssue, state, stateReason, isDraft)
     return "DRAFT"
   end
 
+  if isInMergeQueue and state == "OPEN" then
+    return "QUEUED"
+  end
+
   return state
 end
 
 --- @class EntryObject
 --- @field state octo.IssueState
 --- @field isDraft boolean
+--- @field isInMergeQueue? boolean
 --- @field stateReason octo.IssueStateReason
 --- @field isAnswered boolean
 --- @field closed boolean
@@ -2012,6 +2018,7 @@ M.icons = {
     draft = { " ", "OctoGrey" },
     merged = { " ", "OctoPurple" },
     closed = { " ", "OctoRed" },
+    queued = { " ", "OctoYellow" },
   },
   discussion = {
     answered = { " ", "OctoPurple" },
@@ -2062,6 +2069,7 @@ function M.get_issue_pr_icon(entry)
   elseif kind == "pull_request" then
     local state = entry.obj.state
     local isDraft = entry.obj.isDraft
+    local isInMergeQueue = entry.obj.isInMergeQueue
 
     if state == "MERGED" then
       return M.icons.pull_request.merged
@@ -2069,6 +2077,8 @@ function M.get_issue_pr_icon(entry)
       return M.icons.pull_request.closed
     elseif isDraft then
       return M.icons.pull_request.draft
+    elseif state == "OPEN" and isInMergeQueue then
+      return M.icons.pull_request.queued
     elseif state == "OPEN" then
       return M.icons.pull_request.open
     end

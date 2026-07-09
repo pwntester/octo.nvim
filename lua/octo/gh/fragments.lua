@@ -354,6 +354,38 @@ fragment AutoMergeDisabledEventFragment on AutoMergeDisabledEvent {
 }
 ]]
 
+  ---https://docs.github.com/en/graphql/reference/objects#addedtomergequeueevent
+  ---@class octo.fragments.AddedToMergeQueueEvent
+  ---@field __typename "AddedToMergeQueueEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field enqueuer { login: string }
+
+  M.added_to_merge_queue_event = [[
+fragment AddedToMergeQueueEventFragment on AddedToMergeQueueEvent {
+  actor { login }
+  createdAt
+  enqueuer { login }
+}
+]]
+
+  ---https://docs.github.com/en/graphql/reference/objects#removedfrommergequeueevent
+  ---@class octo.fragments.RemovedFromMergeQueueEvent
+  ---@field __typename "RemovedFromMergeQueueEvent"
+  ---@field actor { login: string }
+  ---@field createdAt string
+  ---@field reason? string
+  ---@field enqueuer { login: string }
+
+  M.removed_from_merge_queue_event = [[
+fragment RemovedFromMergeQueueEventFragment on RemovedFromMergeQueueEvent {
+  actor { login }
+  createdAt
+  reason
+  enqueuer { login }
+}
+]]
+
   ---https://docs.github.com/en/graphql/reference/objects#headrefdeletedevent
   ---@class octo.fragments.HeadRefDeletedEvent
   ---@field __typename "HeadRefDeletedEvent"
@@ -1435,6 +1467,9 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     { "AutoSquashEnabledEventFragment", M.auto_squash_enabled_event, is_github_com },
     { "AutoMergeEnabledEventFragment", M.auto_merge_enabled_event, is_github_com },
     { "AutoMergeDisabledEventFragment", M.auto_merge_disabled_event, is_github_com },
+    -- Merge queue events (GHES 3.12+, gated to github.com for safety)
+    { "AddedToMergeQueueEventFragment", M.added_to_merge_queue_event, is_github_com },
+    { "RemovedFromMergeQueueEventFragment", M.removed_from_merge_queue_event, is_github_com },
     -- Projects V2
     { "AddedToProjectV2EventFragment", M.added_to_project_v2_event, projects_v2_enabled },
     { "RemovedFromProjectV2EventFragment", M.removed_from_project_v2_event, projects_v2_enabled },
@@ -1446,7 +1481,7 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
   -- Entries whose condition() returns false are excluded.
   local pull_request_timeline_items_connection_fragments = build_timeline_connection_spreads(M._pr_timeline_registry)
 
-  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AutoMergeEnabledEvent|octo.fragments.AutoMergeDisabledEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.LockedEvent|octo.fragments.UnlockedEvent|octo.fragments.MarkedAsDuplicateEvent|octo.fragments.UnmarkedAsDuplicateEvent
+  ---@alias octo.PullRequestTimelineItem octo.fragments.AssignedEvent|octo.fragments.UnassignedEvent|octo.fragments.AutomaticBaseChangeSucceededEvent|octo.fragments.BaseRefChangedEvent|octo.fragments.ClosedEvent|octo.fragments.ConnectedEvent|octo.fragments.ConvertToDraftEvent|octo.fragments.CrossReferencedEvent|octo.fragments.DemilestonedEvent|octo.fragments.IssueComment|octo.fragments.LabeledEvent|octo.fragments.MergedEvent|octo.fragments.MilestonedEvent|octo.fragments.PullRequestCommit|octo.fragments.PullRequestReview|octo.fragments.ReadyForReviewEvent|octo.fragments.RenamedTitleEvent|octo.fragments.ReopenedEvent|octo.fragments.ReviewDismissedEvent|octo.fragments.ReviewRequestRemovedEvent|octo.fragments.ReviewRequestedEvent|octo.fragments.UnlabeledEvent|octo.fragments.DeployedEvent|octo.fragments.HeadRefDeletedEvent|octo.fragments.HeadRefRestoredEvent|octo.fragments.HeadRefForcePushedEvent|octo.fragments.AutoSquashEnabledEvent|octo.fragments.AutoMergeEnabledEvent|octo.fragments.AutoMergeDisabledEvent|octo.fragments.AddedToMergeQueueEvent|octo.fragments.RemovedFromMergeQueueEvent|octo.fragments.AddedToProjectV2Event|octo.fragments.RemovedFromProjectV2Event|octo.fragments.ProjectV2ItemStatusChangedEvent|octo.fragments.LockedEvent|octo.fragments.UnlockedEvent|octo.fragments.MarkedAsDuplicateEvent|octo.fragments.UnmarkedAsDuplicateEvent
 
   ---@class octo.fragments.PullRequestTimelineItemsConnection
   ---@field nodes octo.PullRequestTimelineItem[]
