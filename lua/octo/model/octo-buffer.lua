@@ -609,8 +609,14 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
       input["line"] = comment_metadata.snippetEndLine
     end
 
+    -- Use f (raw-field) for body to avoid gh CLI interpreting a leading @ (mention)
+    -- as a file path (see https://github.com/cli/cli/issues/5979 - -F interprets @, -f treats as literal)
+    local input_f = { body = input.body }
+    input.body = nil
+
     gh.api.graphql {
       query = mutations.add_pull_request_review_thread,
+      f = { input = input_f },
       F = { input = input },
       opts = {
         cb = gh.create_callback {

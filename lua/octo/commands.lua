@@ -1839,7 +1839,10 @@ function M.save_issue(opts)
   gh.api.graphql {
     query = mutations.create_issue,
     jq = ".data.createIssue.issue",
-    F = { input = { repositoryId = utils.get_repo_id(opts.repo), title = title, body = body } },
+    -- Use f (raw-field) for title and body to avoid gh CLI interpreting a leading @ (mention)
+    -- as a file path (see https://github.com/cli/cli/issues/5979 - -F interprets @, -f treats as literal)
+    f = { input = { title = title, body = body } },
+    F = { input = { repositoryId = utils.get_repo_id(opts.repo) } },
     opts = {
       cb = gh.create_callback {
         success = function(output)
