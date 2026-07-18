@@ -3746,20 +3746,6 @@ function M.write_timeline_items(bufnr, obj)
     subissue_removed_events = unrendered_subissue_removed_events,
   }
 
-  --- When merged via the queue, wrap the MergedEvent writer to pass via_queue flag.
-  --- The RemovedFromMergeQueueEvent (reason: "merged") is skipped by its writer,
-  --- so the MergedEvent carries the queue context instead.
-  local orig_merged_writer = nil
-  if merged_via_queue then
-    local entry = timeline_registry.get "MergedEvent"
-    if entry and entry.writer then
-      orig_merged_writer = entry.writer
-      entry.writer = function(bufnr_inner, item_inner)
-        orig_merged_writer(bufnr_inner, item_inner, true)
-      end
-    end
-  end
-
   for _, item in ipairs(timeline_nodes) do
     render_accumulated_events(item)
     if item.__typename == "IssueComment" then
@@ -3806,7 +3792,11 @@ function M.write_timeline_items(bufnr, obj)
       local entry = timeline_registry.get(item.__typename)
       if entry then
         if entry.writer then
-          entry.writer(bufnr, item)
+          if item.__typename == "MergedEvent" and merged_via_queue then
+            M.write_merged_event(bufnr, item, true)
+          else
+            entry.writer(bufnr, item)
+          end
           if entry.sets_prev_event == nil or entry.sets_prev_event then
             prev_is_event = true
           end
@@ -3832,14 +3822,6 @@ function M.write_timeline_items(bufnr, obj)
 
   if prev_is_event then
     M.write_block(bufnr, { "" })
-  end
-
-  --- Restore the original MergedEvent writer after rendering.
-  if orig_merged_writer then
-    local entry = timeline_registry.get "MergedEvent"
-    if entry then
-      entry.writer = orig_merged_writer
-    end
   end
 end
 
