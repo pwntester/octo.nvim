@@ -646,13 +646,13 @@ function M.get_upstream_branch_from_config(pr)
   return ""
 end
 
--- Determines if we are locally in a branch matting the pr head ref when
+-- Determines if we are locally in a branch matching the pr head ref when
 -- the remote and branch information is stored in the branch's git config values
 -- The gh CLI tool stores remote info directly in {branch.{branch}.x} configuration
 -- fields and does not create a remote
 ---@param pr PullRequest
 function M.in_pr_branch_config_tracked(pr)
-  return M.get_upstream_branch_from_config(pr):lower() == pr.head_ref_name
+  return M.get_upstream_branch_from_config(pr) == pr.head_ref_name
 end
 
 --- Determines if we are locally are in a branch matching the pr head ref
