@@ -343,7 +343,7 @@ function M.pull_requests(opts)
           local resp = utils.aggregate_pages(output, "data.repository.pullRequests.nodes")
           local pull_requests = resp.data.repository.pullRequests.nodes
           if #pull_requests == 0 then
-            utils.error(string.format("There are no matching pull requests in %s.", opts.repo))
+            utils.error(string.format("There are no matching pull requests in %s.", repo))
             return
           end
           local max_number = -1
