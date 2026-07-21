@@ -3110,14 +3110,20 @@ end
 
 ---@param bufnr integer
 ---@param item octo.fragments.MergedEvent
-function M.write_merged_event(bufnr, item)
-  TextChunkBuilder:new()
-    :timeline_marker("merged")
-    :actor(item.actor)
-    :heading(" merged commit ")
-    :text(item.commit.abbreviatedOid, "OctoDetailsLabel")
-    :heading(" into ")
+---@param via_queue? boolean
+function M.write_merged_event(bufnr, item, via_queue)
+  local builder = TextChunkBuilder:new():timeline_marker("merged"):actor(item.actor)
+
+  if via_queue then
+    builder:heading " merged via the queue into "
+  else
+    builder:heading " merged into "
+  end
+
+  builder
     :heading(item.mergeRefName)
+    :heading(" with commit ")
+    :text(item.commit.abbreviatedOid, "OctoDetailsLabel")
     :date(item.createdAt)
     :write_event(bufnr)
 end
@@ -3649,6 +3655,17 @@ function M.write_timeline_items(bufnr, obj)
   --- labeled/unlabeled events or subissues events are rendered
   table.insert(timeline_nodes, {})
 
+  --- Pre-scan: detect if this PR was merged via the merge queue.
+  --- The RemovedFromMergeQueueEvent (reason: "merged") appears after MergedEvent
+  --- in the timeline, so we need to know upfront to adjust MergedEvent rendering.
+  local merged_via_queue = false
+  for _, node in ipairs(timeline_nodes) do
+    if node.__typename == "RemovedFromMergeQueueEvent" and node.reason == "merged" then
+      merged_via_queue = true
+      break
+    end
+  end
+
   ---@param items any[]
   local function clear_items(items)
     for idx = #items, 1, -1 do
@@ -3775,7 +3792,11 @@ function M.write_timeline_items(bufnr, obj)
       local entry = timeline_registry.get(item.__typename)
       if entry then
         if entry.writer then
-          entry.writer(bufnr, item)
+          if item.__typename == "MergedEvent" and merged_via_queue then
+            M.write_merged_event(bufnr, item, true)
+          else
+            entry.writer(bufnr, item)
+          end
           if entry.sets_prev_event == nil or entry.sets_prev_event then
             prev_is_event = true
           end

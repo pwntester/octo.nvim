@@ -1467,9 +1467,9 @@ fragment IssueTimelineItemsConnectionFragment on IssueTimelineItemsConnection {
     { "AutoSquashEnabledEventFragment", M.auto_squash_enabled_event, is_github_com },
     { "AutoMergeEnabledEventFragment", M.auto_merge_enabled_event, is_github_com },
     { "AutoMergeDisabledEventFragment", M.auto_merge_disabled_event, is_github_com },
-    -- Merge queue events (GHES 3.12+, gated to github.com for safety)
-    { "AddedToMergeQueueEventFragment", M.added_to_merge_queue_event, is_github_com },
-    { "RemovedFromMergeQueueEventFragment", M.removed_from_merge_queue_event, is_github_com },
+    -- Merge queue events (GHES 3.12+)
+    { "AddedToMergeQueueEventFragment", M.added_to_merge_queue_event },
+    { "RemovedFromMergeQueueEventFragment", M.removed_from_merge_queue_event },
     -- Projects V2
     { "AddedToProjectV2EventFragment", M.added_to_project_v2_event, projects_v2_enabled },
     { "RemovedFromProjectV2EventFragment", M.removed_from_project_v2_event, projects_v2_enabled },
