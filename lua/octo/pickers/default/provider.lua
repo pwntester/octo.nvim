@@ -262,6 +262,34 @@ M.releases = function(opts)
   }
 end
 
+---@type octo.picker.branches
+M.branches = function(opts, cb)
+  local default = opts.default_branch_name
+
+  vim.ui.select(
+    opts.repo.refs.nodes,
+    {
+      prompt = opts.title,
+      ---@param item {name: string}
+      format_item = function(item, supports_chunks)
+        if item.name == default then
+          return item.name .. " (default)"
+        end
+
+        return item.name
+      end,
+    },
+    ---@param choice {name: string}
+    function(choice)
+      if choice == nil then
+        cb(default)
+      else
+        cb(choice.name)
+      end
+    end
+  )
+end
+
 ---@param edits octo.UserContentEdit[]
 function M.comment_edits(edits)
   vim.ui.select(edits, {
@@ -1426,6 +1454,7 @@ M.picker = {
   project_columns_v2 = M.project_columns_v2,
   prs = M.pull_requests,
   releases = M.releases,
+  branches = M.branches,
   repos = M.repos,
   review_commits = M.review_commits,
   search = M.search,
