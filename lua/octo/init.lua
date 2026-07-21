@@ -98,7 +98,8 @@ end
 function M.load_buffer(opts)
   opts = opts or {}
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
-  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  local winid = vim.api.nvim_get_current_win()
+  local cursor_pos = vim.api.nvim_win_get_cursor(winid)
   local bufname = vim.fn.bufname(bufnr)
   local buffer_info = uri.parse(bufname)
   if buffer_info == nil then
@@ -107,19 +108,43 @@ function M.load_buffer(opts)
   end
   local repo, kind, id, hostname = buffer_info.repo, buffer_info.kind, buffer_info.id, buffer_info.hostname
 
+  local function is_stale_target()
+    if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
+      return true
+    end
+
+    local current = uri.parse(vim.fn.bufname(bufnr))
+    if current == nil then
+      return true
+    end
+
+    return current.repo ~= repo
+      or current.kind ~= kind
+      or tostring(current.id) ~= tostring(id)
+      or current.hostname ~= hostname
+  end
+
   M.load(repo, kind, id, hostname, function(obj)
+    if is_stale_target() then
+      return
+    end
+
+    local should_restore_cursor = vim.api.nvim_win_is_valid(winid) and vim.api.nvim_win_get_buf(winid) == bufnr
+
     vim.api.nvim_buf_call(bufnr, function()
       M.create_buffer(kind, obj, repo, false, hostname)
 
-      -- get size of newly created buffer
-      local lines = vim.api.nvim_buf_line_count(bufnr)
+      if should_restore_cursor then
+        -- get size of newly created buffer
+        local lines = vim.api.nvim_buf_line_count(bufnr)
 
-      -- One to the left
-      local new_cursor_pos = {
-        math.min(cursor_pos[1], lines),
-        math.max(0, cursor_pos[2] - 1),
-      }
-      vim.api.nvim_win_set_cursor(0, new_cursor_pos)
+        -- One to the left
+        local new_cursor_pos = {
+          math.min(cursor_pos[1], lines),
+          math.max(0, cursor_pos[2] - 1),
+        }
+        pcall(vim.api.nvim_win_set_cursor, winid, new_cursor_pos)
+      end
 
       if opts.verbose then
         utils.info(string.format("Loaded %s/%s/%d", repo, kind, id))
