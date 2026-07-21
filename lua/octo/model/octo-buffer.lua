@@ -223,7 +223,7 @@ function OctoBuffer:configure()
     vim.cmd [[setlocal filetype=octo]]
     vim.cmd [[setlocal buftype=acwrite]]
     vim.cmd [[setlocal omnifunc=v:lua.octo_omnifunc]]
-    vim.cmd [[setlocal conceallevel=2]]
+    vim.wo[0][0].conceallevel = config.values.ui.conceallevel
     vim.cmd [[setlocal nonumber norelativenumber nocursorline wrap]]
 
     if config.values.ui.use_signcolumn then

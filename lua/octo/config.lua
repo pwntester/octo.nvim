@@ -65,6 +65,7 @@ local M = {}
 ---@field icons boolean|fun(name: string, ext: string): string?, string?
 
 ---@class OctoConfigUi
+---@field conceallevel integer
 ---@field use_signcolumn boolean
 ---@field use_statuscolumn boolean
 ---@field use_foldtext boolean
@@ -269,6 +270,7 @@ function M.get_default_values()
       projects_v2 = false,
     },
     ui = {
+      conceallevel = 2, -- conceallevel for octo buffers
       use_signcolumn = false, -- show "modified" marks on the sign column
       use_statuscolumn = true, -- show "modified" marks on the status column
       use_foldtext = true,

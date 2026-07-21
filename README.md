@@ -289,6 +289,7 @@ require"octo".setup {
     projects_v2 = false,
   },
   ui = {
+    conceallevel = 2, -- conceallevel for octo buffers
     use_signcolumn = false, -- show "modified" marks on the sign column
     use_statuscolumn = true, -- show "modified" marks on the status column
     use_foldtext = true,
