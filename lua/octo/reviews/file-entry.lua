@@ -407,6 +407,10 @@ end
 
 ---Update thread signs in diff buffers.
 function FileEntry:place_signs()
+  self:_place_signs_with_virtual_text(config.values.reviews.show_virtual_text)
+end
+
+function FileEntry:_place_signs_with_virtual_text(show_virtual_text)
   local current_review = require("octo.reviews").get_current_review()
   if not current_review then
     return
@@ -472,19 +476,26 @@ function FileEntry:place_signs()
           end
 
           -- place the virtual text only on first line
-          local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
-          local comments_count = #thread.comments.nodes
-          local comments_word = comments_count == 1 and "comment" or "comments"
-          local vt_msg = string.format("    %d %s (%s)", comments_count, comments_word, utils.format_date(last_date))
-          --vim.api.nvim_buf_set_virtual_text(split.bufnr, -1, startLine - 1, { { vt_msg, "Comment" } }, {})
-          local opts = {
-            virt_text = { { vt_msg, "Comment" } },
-            virt_text_pos = "right_align",
-            -- adding the extmark below can fail if we are in the `COMMIT` review level and the commit contains thread comments
-            -- that is why we set strict to `false` here to ignore this possible error
-            strict = false,
-          }
-          vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, opts)
+          if show_virtual_text then
+            local last_date = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or comment.createdAt
+            local comments_count = #thread.comments.nodes
+            local comments_word = comments_count == 1 and "comment" or "comments"
+            local vt_msg = string.format("    %d %s (%s)", comments_count, comments_word, utils.format_date(last_date))
+            local opts = {
+              virt_text = { { vt_msg, "Comment" } },
+              virt_text_pos = "right_align",
+              -- adding the extmark below can fail if we are in the `COMMIT` review level and the commit contains thread comments
+              -- that is why we set strict to `false` here to ignore this possible error
+              strict = false,
+            }
+            vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, opts)
+          else
+            -- still place the sign without virtual text
+            local opts = {
+              strict = false,
+            }
+            vim.api.nvim_buf_set_extmark(split.bufnr, constants.OCTO_REVIEW_COMMENTS_NS, startLine - 1, -1, opts)
+          end
           -- break out to prevent duplicate extmarks for the current comment thread
           break
         end

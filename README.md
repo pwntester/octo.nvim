@@ -312,6 +312,7 @@ require"octo".setup {
   reviews = {
     auto_show_threads = true, -- automatically show comment threads on cursor move
     focus = "right", -- focus right buffer on diff open
+    show_virtual_text = true, -- show virtual text with comment count and date
   },
   runs = {
     icons = {
@@ -779,6 +780,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 - Hold the cursor on a line with a comment to show a thread buffer with all the thread comments
   - To modify, delete, react or reply to a comment, move to the window containing the thread buffer
   - Perform any operations as if you were in a regular issue buffer
+- Virtual text showing comment count and date can be controlled via the `show_virtual_text` option under `reviews` config
 - Review pending comments with `Octo review comments`
   - Use <CR> to jump to the selected pending comment
 - If you want to review a specific commit, use `Octo review commit` to pick a commit. The file panel will get filtered to show only files changed by that commit. Any comments placed on these files will be applied at that specific commit level and will be added to the pending review.
