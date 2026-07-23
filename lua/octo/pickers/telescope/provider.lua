@@ -62,8 +62,11 @@ end
 local function open_preview_buffer(command)
   return function(prompt_bufnr)
     actions.close(prompt_bufnr)
-    ---@type integer
+    ---@type integer|nil
     local preview_bufnr = require("telescope.state").get_global_key "last_preview_bufnr"
+    if preview_bufnr == nil then
+      return
+    end
     if command == "default" then
       vim.cmd(string.format(":buffer %d", preview_bufnr))
     elseif command == "horizontal" then
