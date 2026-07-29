@@ -4,16 +4,18 @@ local reviews = require "octo.reviews"
 local M = {}
 
 -- Helper function to create context-aware wrappers for buffer operations.
+-- Any arguments passed to the returned function are forwarded to the callback
+-- after the buffer, so command actions can take arguments (e.g. `:Octo pr branch base`).
 local function create_buffer_wrapper(check_fn, error_message)
-  ---@param cb fun(buffer: OctoBuffer): nil
+  ---@param cb fun(buffer: OctoBuffer, ...): nil
   return function(cb)
-    return function()
+    return function(...)
       local buffer = utils.get_current_buffer()
       if not buffer or (check_fn and not check_fn(buffer)) then
         utils.error(error_message)
         return
       end
-      cb(buffer)
+      cb(buffer, ...)
     end
   end
 end

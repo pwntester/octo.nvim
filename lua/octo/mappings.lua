@@ -137,6 +137,12 @@ return {
       ["Update Base Branch"] = commands.pr.update,
       ["Delete Branch"] = require("octo.commands").delete_branch,
       ["Copy URL"] = commands.pr.url,
+      ["Copy Head Branch"] = function()
+        commands.pr.branch "head"
+      end,
+      ["Copy Base Branch"] = function()
+        commands.pr.branch "base"
+      end,
       ["Open in Browser"] = commands.pr.browser,
       ["Reload PR buffer"] = commands.pr.reload,
       ["Squash and Merge PR"] = function()

@@ -2143,6 +2143,15 @@ function M.copy_sha(sha, register)
   M.info("Copied SHA '" .. sha:sub(1, 7) .. "' " .. message)
 end
 
+---@param name string
+---@param register? string
+function M.copy_branch(name, register)
+  register = register or "+"
+  vim.fn.setreg(register, name, "c")
+  local message = register ~= "+" and "(" .. register .. " register)" or "to the system clipboard (+ register)"
+  M.info("Copied branch '" .. name .. "' " .. message)
+end
+
 ---@param opts { prompt: string }
 function M.input(opts)
   vim.fn.inputsave()

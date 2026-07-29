@@ -658,6 +658,7 @@ function M.setup()
         M.copy_url()
       end,
       sha = M.copy_sha,
+      branch = M.copy_branch,
       update = context.within_pr(function(buffer)
         gh.pr.update_branch {
           buffer:pullRequest().number,
@@ -2877,6 +2878,30 @@ M.copy_sha = context.within_pr(function(buffer)
   end
 
   utils.copy_sha(sha)
+end)
+
+---Copies the head or base branch name of the current PR to the system clipboard.
+---@param kind? "head" | "base" defaults to "head"
+M.copy_branch = context.within_pr(function(buffer, kind)
+  kind = kind or "head"
+
+  local pr = buffer:pullRequest()
+  local name
+  if kind == "head" then
+    name = pr.headRefName
+  elseif kind == "base" then
+    name = pr.baseRefName
+  else
+    utils.error("Invalid branch: '" .. kind .. "'. Expected 'head' or 'base'")
+    return
+  end
+
+  if utils.is_blank(name) then
+    utils.error("No " .. kind .. " branch found")
+    return
+  end
+
+  utils.copy_branch(name)
 end)
 
 function M.actions()

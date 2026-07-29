@@ -254,6 +254,8 @@ See |octo-command-examples| for examples.
   subscription          Change subscription state (subscribe, unsubscribe, or ignore).
   sha                   Copies the head commit SHA of the currently opened PR
                         to the system clipboard.
+  branch [head|base]    Copies the head (default) or base branch name of the
+                        currently opened PR to the system clipboard.
   runs                  Show all workflow runs for the PR.
 
 
