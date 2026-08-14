@@ -15,36 +15,43 @@ return function(cb)
     if not prompt or prompt == "" or utils.is_blank(prompt) then
       return {}
     end
-    local output = gh.api.graphql {
+    local output, stderr = gh.api.graphql {
       query = queries.users,
       F = { prompt = prompt },
       paginate = true,
       opts = { mode = "sync" },
     }
-    if output then
+    local responses, err = utils.get_graphql_pages(output, stderr)
+    if err then
+      utils.error(err)
+    end
+    if responses then
       local users = {}
       local orgs = {}
-      local responses = utils.get_pages(output)
       for _, resp in ipairs(responses) do
-        for _, user in ipairs(resp.data.search.nodes) do
-          if not user.teams then
-            -- regular user
-            if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
-              users[user.login] = {
-                id = user.id,
-                login = user.login,
-              }
-            end
-          elseif user.teams and user.teams.totalCount > 0 then
-            -- organization, collect all teams
-            if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
-              orgs[user.login] = {
-                id = user.id,
-                login = user.login,
-                teams = user.teams.nodes,
-              }
-            else
-              vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+        local nodes = resp.data.search and resp.data.search.nodes or {}
+        for _, user in ipairs(nodes) do
+          -- Orgs hidden due to missing 2FA are returned as "null"
+          if type(user) == "table" then
+            if not user.teams then
+              -- regular user
+              if not vim.tbl_contains(vim.tbl_keys(users), user.login) then
+                users[user.login] = {
+                  id = user.id,
+                  login = user.login,
+                }
+              end
+            elseif user.teams.totalCount > 0 then
+              -- organization, collect all teams
+              if not vim.tbl_contains(vim.tbl_keys(orgs), user.login) then
+                orgs[user.login] = {
+                  id = user.id,
+                  login = user.login,
+                  teams = user.teams.nodes,
+                }
+              else
+                vim.list_extend(orgs[user.login].teams, user.teams.nodes)
+              end
             end
           end
         end
@@ -77,6 +84,9 @@ return function(cb)
   fzf.fzf_live(
     contents,
     vim.tbl_deep_extend("force", picker_utils.dropdown_opts, {
+      -- Every keystroke runs a GitHub user search. Debounce the reload to keep
+      -- typing below the search rate limit.
+      query_delay = 250,
       fzf_opts = {
         ["--delimiter"] = " ",
         ["--with-nth"] = "2..",
@@ -85,6 +95,9 @@ return function(cb)
         ["default"] = {
           function(user_selected)
             local user_entry = formatted_users[user_selected[1]]
+            if not user_entry then
+              return
+            end
             if not user_entry.teams then
               -- user
               cb(user_entry.id)
@@ -107,6 +120,9 @@ return function(cb)
                   actions = {
                     ["default"] = function(team_selected)
                       local team_entry = formatted_teams[team_selected[1]]
+                      if not team_entry then
+                        return
+                      end
                       cb(team_entry.team.id)
                     end,
                   },
