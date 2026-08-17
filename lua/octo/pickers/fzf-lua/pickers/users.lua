@@ -10,14 +10,21 @@ local utils = require "octo.utils"
 return function(cb)
   local formatted_users = {}
 
-  local function contents(prompt)
+  ---@type fzf-lua.shell.data2
+  local function contents(args)
+    -- fzf-lua passes the live query as the first fzf field expansion. Older
+    -- versions passed it as a string, so accept both shapes.
+    local prompt = type(args) == "table" and args[1] or args
+
     -- skip empty queries
-    if not prompt or prompt == "" or utils.is_blank(prompt) then
+    if utils.is_blank(prompt) then
       return {}
     end
     local output, stderr = gh.api.graphql {
       query = queries.users,
-      F = { prompt = prompt },
+      -- `f` sends the prompt as a raw string. `F` would let gh coerce prompts
+      -- like "123", "true" or "null" into non-strings, which `String!` rejects.
+      f = { prompt = prompt },
       paginate = true,
       opts = { mode = "sync" },
     }
