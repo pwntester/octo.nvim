@@ -1855,14 +1855,14 @@ end
 function M.create_pr(is_draft)
   is_draft = "draft" == is_draft and true or false
   local conf = config.values
-  local select = conf.pull_requests.always_select_remote_on_create or false
+  local remotes = utils.get_all_remotes()
+  local select = conf.pull_requests.always_select_remote_on_create or #remotes > 1
 
   local repo
   if select then
-    local remotes = utils.get_all_remotes()
     local remote_entries = { "Select base repo," }
     for idx, remote in ipairs(remotes) do
-      table.insert(remote_entries, idx .. ". " .. remote.repo)
+      table.insert(remote_entries, idx .. ". " .. remote.name .. " (" .. remote.repo .. ")")
     end
     local remote_idx = vim.fn.inputlist(remote_entries)
     if remote_idx < 1 then
@@ -1973,6 +1973,7 @@ function M.create_pr(is_draft)
   if not utils.is_blank(templates) and #templates.pullRequestTemplates > 0 then
     base_body = templates.pullRequestTemplates[1].body
   end
+
   M.save_pr {
     repo = repo,
     base_title = "",
@@ -1985,11 +1986,27 @@ function M.create_pr(is_draft)
   }
 end
 
+---@class SavePROpts
+---@field repo string
+---@field base_title string
+---@field base_body? string
+---@field candidates string[]
+---@field candidate_entries string[]
+---@field is_draft boolean
+---@field info octo.Repository
+---@field remote_branch string
+
+---@param opts SavePROpts
 function M.save_pr(opts)
   vim.fn.inputsave()
   local repo_idx = 1
   if #opts.candidates > 1 then
     repo_idx = vim.fn.inputlist(opts.candidate_entries)
+    if repo_idx < 1 or repo_idx > #opts.candidates then
+      vim.fn.inputrestore()
+      utils.error "Aborting PR creation"
+      return
+    end
   end
 
   local conf = config.values
@@ -2029,10 +2046,20 @@ function M.save_pr(opts)
 
   -- The name of the branch you want your changes pulled into. This should be an existing branch on the current repository.
   -- You cannot update the base branch on a pull request to point to another repository.
-  -- get repo default branch
-  local default_branch = opts.info.defaultBranchRef.name
+  -- The base branch lives in the target repo, which is not the source repo when a fork's parent was picked above.
+  local target_repo = opts.candidates[repo_idx]
+  local base_info = opts.info
+  if target_repo ~= opts.repo then
+    base_info = utils.get_repo_info(target_repo)
+    if utils.is_blank(base_info) or utils.is_blank(base_info.refs) or utils.is_blank(base_info.refs.nodes) then
+      utils.error(string.format("Cannot grab branches of '%s'. Aborting PR creation", target_repo))
+      return
+    end
+  end
+  local default_branch = base_info.defaultBranchRef.name
+
   picker.branches(
-    { repo = opts.info, default_branch_name = default_branch, title = "Select BASE branch" },
+    { repo = base_info, default_branch_name = default_branch, title = "Select BASE branch" },
     function(base_ref_name)
       if not base_ref_name then
         return

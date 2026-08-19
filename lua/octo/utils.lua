@@ -359,8 +359,18 @@ function M.get_remote_url()
   return "https://" .. host .. "/" .. remote_name
 end
 
+---Returns all local remotes, each tagged with its remote name, ordered by name
+---so that prompts built from this list keep a stable order between calls.
+---@return OctoRepo[]
 function M.get_all_remotes()
-  return vim.tbl_values(M.parse_git_remote())
+  local remotes = {} ---@type OctoRepo[]
+  for name, remote in pairs(M.parse_git_remote()) do
+    table.insert(remotes, { name = name, host = remote.host, repo = remote.repo })
+  end
+  table.sort(remotes, function(a, b)
+    return a.name < b.name
+  end)
+  return remotes
 end
 
 ---@param remote table|nil
