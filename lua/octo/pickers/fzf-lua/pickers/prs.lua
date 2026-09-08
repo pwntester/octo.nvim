@@ -73,7 +73,6 @@ return function(opts)
               local entry = entry_maker.gen_from_issue(pull)
 
               if entry ~= nil then
-                formatted_pulls[entry.ordinal] = entry
                 local highlight
                 if entry.obj.isDraft then
                   highlight = "OctoSymbol"
@@ -84,8 +83,13 @@ return function(opts)
                 local title = entry.obj.title
                 local stack_indicator = utils.get_stack_indicator(entry.obj)
                 if stack_indicator then
+                  -- keep entry.ordinal (the lookup key) in sync with the plain-text
+                  -- line fzf-lua reports back, or formatted_pulls[entry_str] misses
+                  -- and the previewer indexes a nil entry
+                  entry.ordinal = entry.ordinal .. "  " .. stack_indicator
                   title = title .. "  " .. fzf.utils.ansi_from_hl("Comment", stack_indicator)
                 end
+                formatted_pulls[entry.ordinal] = entry
                 fzf_cb(prefix .. " " .. title)
               end
             end
