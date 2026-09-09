@@ -611,6 +611,18 @@ function M.validate_config()
     return true
   end
 
+  ---Checks an optional value: `nil` is accepted, anything else must match the expected type
+  ---@param value any
+  ---@param name string
+  ---@param expected_types string|string[]
+  ---@return boolean present true when the value is set and valid, so callers can inspect it further
+  local function validate_optional_type(value, name, expected_types)
+    if value == nil then
+      return false
+    end
+    return validate_type(value, name, expected_types)
+  end
+
   ---Checks if a variable is one of the allowed string value
   ---@param value any
   ---@param name string
@@ -654,7 +666,7 @@ function M.validate_config()
     -- Snacks specific validation
     if validate_type(config.picker_config.snacks, "picker_config.snacks", "table") then
       -- Validate actions (new array structure)
-      if validate_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table") then -- Optional table
+      if validate_optional_type(config.picker_config.snacks.actions, "picker_config.snacks.actions", "table") then
         ---@diagnostic disable-next-line: no-unknown
         for picker_type, actions_array in pairs(config.picker_config.snacks.actions) do
           local base_name = string.format("picker_config.snacks.actions.%s", picker_type)
@@ -666,9 +678,9 @@ function M.validate_config()
                 validate_type(action_item.name, item_name .. ".name", "string")
                 validate_type(action_item.fn, item_name .. ".fn", "function")
                 -- Validate optional fields
-                validate_type(action_item.lhs, item_name .. ".lhs", "string")
-                validate_type(action_item.desc, item_name .. ".desc", "string")
-                if validate_type(action_item.mode, item_name .. ".mode", "table") then -- Optional mode table
+                validate_optional_type(action_item.lhs, item_name .. ".lhs", "string")
+                validate_optional_type(action_item.desc, item_name .. ".desc", "string")
+                if validate_optional_type(action_item.mode, item_name .. ".mode", "table") then
                   for j, mode_val in ipairs(action_item.mode) do
                     validate_type(mode_val, string.format("%s.mode[%d]", item_name, j), "string")
                   end
