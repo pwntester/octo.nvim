@@ -912,33 +912,39 @@ local function print_lines()
     end
   end
 
+  local function set_mapping(binding, callback)
+    if not utils.is_blank(binding) then
+      vim.keymap.set("n", binding, callback, { silent = true, noremap = true, buffer = M.buf })
+    end
+  end
+
   for binding, cb in pairs(tree_keymaps) do
-    vim.keymap.set("n", binding, function()
+    set_mapping(binding, function()
       local current_line = vim.api.nvim_win_get_cursor(0)[1]
       local line = lines[current_line]
       if line.node_ref ~= nil then
         cb(line.node_ref)
       end
-    end, { silent = true, noremap = true, buffer = M.buf })
+    end)
   end
   for binding, cb in pairs(keymaps) do
-    vim.keymap.set("n", binding, function()
+    set_mapping(binding, function()
       cb(M)
-    end, { silent = true, noremap = true, buffer = M.buf })
+    end)
   end
 
-  vim.keymap.set("n", mappings.next_step.lhs, function()
+  set_mapping(mappings.next_step.lhs, function()
     M.jump_to_step(1)
-  end, { silent = true, noremap = true, buffer = M.buf })
-  vim.keymap.set("n", mappings.prev_step.lhs, function()
+  end)
+  set_mapping(mappings.prev_step.lhs, function()
     M.jump_to_step(-1)
-  end, { silent = true, noremap = true, buffer = M.buf })
-  vim.keymap.set("n", mappings.next_job.lhs, function()
+  end)
+  set_mapping(mappings.next_job.lhs, function()
     M.jump_to_job(1)
-  end, { silent = true, noremap = true, buffer = M.buf })
-  vim.keymap.set("n", mappings.prev_job.lhs, function()
+  end)
+  set_mapping(mappings.prev_job.lhs, function()
     M.jump_to_job(-1)
-  end, { silent = true, noremap = true, buffer = M.buf })
+  end)
 end
 
 function M.refresh()
