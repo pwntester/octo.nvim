@@ -866,7 +866,7 @@ function M.review_commits(current_review, callback)
 
               if item.is_full_pr then
                 -- Special formatting for the "entire PR" entry
-                ret[#ret + 1] = { "󰊢 ", "SnacksPickerSpecial" }
+                ret[#ret + 1] = { cfg.review_full_pr_icon, "SnacksPickerSpecial" }
                 ret[#ret + 1] = { item.commit.message, "SnacksPickerSpecial" }
               else
                 -- SHA (short)
