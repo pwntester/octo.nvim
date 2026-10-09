@@ -453,6 +453,7 @@ require"octo".setup {
       goto_file = { lhs = "gf", desc = "go to file" },
       stack_up = { lhs = "]s", desc = "open the next PR up the stack" },
       stack_down = { lhs = "[s", desc = "open the next PR down the stack" },
+      create_stack = { lhs = "<localleader>sc", desc = "create/update PR stack" },
       goto_check = { lhs = "<localleader>gc", desc = "open the CI check under the cursor" },
       toggle_checks = { lhs = "<localleader>tc", desc = "fold or unfold the CI checks list" },
       add_assignee = { lhs = "<localleader>aa", desc = "add assignee" },

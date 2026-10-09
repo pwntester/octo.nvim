@@ -407,6 +407,21 @@ See |octo-command-examples| for examples.
   move                  Move project card to different project/column.
 
 
+:Octo stack [action]                            *octo-commands-stack*
+
+  create                Preview the stack for the current branch and create
+                        or update its PRs on GitHub (draft PRs, linked as a
+                        stack). When no local stack has been initialized,
+                        octo detects open PRs whose base branches chain onto
+                        each other (like GitHub's "This pull request can be
+                        stacked" banner) and offers to link them into a
+                        stack instead — no `gh stack init` required.
+                        Requires the gh-stack extension:
+                        `gh extension install github/gh-stack`
+                        With multiple git remotes, set
+                        `git config remote.pushDefault <remote>` first.
+
+
 :Octo review [action]                           *octo-commands-review*
 
   Omit action to resume a review if one is in progress, or start a new one if
