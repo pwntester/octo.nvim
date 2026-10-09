@@ -1154,8 +1154,11 @@ function M.changed_files()
             final_actions["confirm"] = function(picker, _)
               local items = picker:selected { fallback = true }
               picker:close()
+              -- The API reports paths relative to the repository root, which is not
+              -- necessarily the cwd, so anchor them at the git root when we can find it.
+              local root = utils.get_git_root() or vim.fn.getcwd()
               for _, selected in ipairs(items) do
-                vim.cmd("edit " .. vim.fn.fnameescape(selected.filename))
+                vim.cmd("edit " .. vim.fn.fnameescape(utils.path_join { root, selected.filename }))
               end
             end
           end
