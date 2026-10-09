@@ -114,6 +114,17 @@ function M.setup()
 
   -- supported commands
   M.commands = {
+    stack = {
+      create = function()
+        require("octo.stack").create()
+      end,
+      sync = function(...)
+        require("octo.stack").sync(...)
+      end,
+      checkout = function(number)
+        require("octo.stack").checkout(number)
+      end,
+    },
     workflow = {
       edit = function()
         local workflow = require "octo.workflow_runs"

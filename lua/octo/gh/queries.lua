@@ -1661,6 +1661,91 @@ query($id: ID!) {
         }
       }]]
 
+  ---@class octo.queries.StackHeads
+  ---@field data {
+  ---  repository: {
+  ---    pullRequest: {
+  ---      stackEntry?: {
+  ---        stack: {
+  ---          baseRefName: string,
+  ---          entries: { nodes: { position: integer, pullRequest: octo.StackHeadPullRequest }[] },
+  ---        },
+  ---      },
+  ---    },
+  ---  },
+  ---}
+
+  ---What syncing a stack needs of each of its pull requests
+  ---@class octo.StackHeadPullRequest
+  ---@field id string
+  ---@field number integer
+  ---@field title string
+  ---@field state octo.PullRequestState
+  ---@field baseRefName string
+  ---@field headRefName string
+  ---@field headRefOid string
+
+  ---@class octo.queries.RefBehind
+  ---@field data { repository: { ref: { compare: { behindBy: integer, aheadBy: integer, status: string } } } }
+
+  ---@class octo.queries.PullRequestHead
+  ---@field data { repository: { pullRequest: { headRefOid: string } } }
+
+  -- inject: graphql
+  M.pull_request_head_oid = [[
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      headRefOid
+    }
+  }
+}
+]]
+
+  -- inject: graphql
+  M.ref_behind = [[
+query($owner: String!, $name: String!, $parent: String!, $child: String!) {
+  repository(owner: $owner, name: $name) {
+    ref(qualifiedName: $parent) {
+      compare(headRef: $child) {
+        behindBy
+        aheadBy
+        status
+      }
+    }
+  }
+}
+]]
+
+  -- inject: graphql
+  M.stack_heads = [[
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      stackEntry {
+        stack {
+          baseRefName
+          entries(first: 50) {
+            nodes {
+              position
+              pullRequest {
+                id
+                number
+                title
+                state
+                baseRefName
+                headRefName
+                headRefOid
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+]]
+
   -- Lightweight stack summary for list views: position and stack size only
   local stack_summary_field = [[stackEntry {
           position
