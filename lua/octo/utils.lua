@@ -1048,6 +1048,64 @@ function M.get_flatten_pages(text)
   return M.callback_per_page(text, vim.list_extend)
 end
 
+---Get the error message of a single decoded `gh api graphql` page.
+---@param page any decoded page of a `gh api graphql` response
+---@return string? err nil when the page holds usable data
+local function get_page_error(page)
+  if type(page) ~= "table" then
+    return "Unexpected GitHub API response: " .. vim.inspect(page)
+  end
+
+  ---@type table[]?
+  local errors = page.errors
+  if type(errors) == "table" and #errors > 0 then
+    local messages = {} ---@type string[]
+    for _, err in ipairs(errors) do
+      table.insert(messages, err.message or vim.inspect(err))
+    end
+    return table.concat(messages, "\n")
+  end
+
+  if page.data == nil or page.data == vim.NIL then
+    -- REST style error payloads (rate limits, server errors) carry `message` only
+    return page.message or ("Unexpected GitHub API response: " .. vim.inspect(page))
+  end
+end
+
+---Decode the pages of a `gh api graphql` response and report API errors.
+---`gh` prints GraphQL and HTTP error payloads on stdout, so an empty stderr
+---does not mean the request succeeded: a page without a `data` field is an
+---error response and must not be indexed.
+---@param output string? raw stdout of a `gh api graphql` call
+---@param stderr string? raw stderr of the same call
+---@return table[]? pages nil when the response holds no usable data
+---@return string? err human readable error message, nil for an empty response
+function M.get_graphql_pages(output, stderr)
+  if not M.is_blank(stderr) then
+    return nil, stderr
+  end
+  if M.is_blank(output) then
+    return nil, nil
+  end
+
+  local pages = {} ---@type table[]
+  for _, line in ipairs(vim.split(output --[[@as string]], "\n")) do
+    if not M.is_blank(line) then
+      local ok, page = pcall(vim.json.decode, line)
+      if not ok then
+        return nil, "Failed to decode GitHub API response: " .. line
+      end
+      local err = get_page_error(page)
+      if err then
+        return nil, err
+      end
+      table.insert(pages, page)
+    end
+  end
+
+  return pages, nil
+end
+
 --- Helper method to aggregate an API paginated response
 ---@param text string
 ---@param aggregation_key string

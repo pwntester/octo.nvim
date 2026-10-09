@@ -56,7 +56,7 @@ local function get_repos(owner, name)
 
   local output = gh.api.graphql {
     query = queries.search,
-    fields = { prompt = query, type = "REPOSITORY" },
+    f = { prompt = query, type = "REPOSITORY" },
     jq = ".data.search.nodes | map(.name)",
     opts = { mode = "sync" },
   }
