@@ -152,15 +152,12 @@ end
 
 function M.setup()
   for name, hl in pairs(get_hl_groups()) do
-    if vim.fn.hlexists("Octo" .. name) == 0 then
-      vim.api.nvim_set_hl(0, "Octo" .. name, hl)
-    end
+    hl.default = true
+    vim.api.nvim_set_hl(0, "Octo" .. name, hl)
   end
 
   for from, to in pairs(get_hl_links()) do
-    if vim.fn.hlexists("Octo" .. from) == 0 then
-      vim.api.nvim_set_hl(0, "Octo" .. from, { link = to })
-    end
+    vim.api.nvim_set_hl(0, "Octo" .. from, { link = to, default = true })
   end
 end
 
