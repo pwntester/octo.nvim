@@ -1264,7 +1264,6 @@ query($login: String!, $endCursor: String) {
   ---@field projectsUrl string
   ---@field homepageUrl string
   ---@field primaryLanguage { name: string, color: string }
-  ---@field refs { nodes: { name: string }[] }
   ---@field languages { nodes: { name: string, color: string }[] }
   ---@field viewerHasStarred boolean
   ---@field viewerSubscription octo.SubscriptionState
@@ -1292,11 +1291,6 @@ query($owner: String!, $name: String!) {
       name
       color
     }
-    refs(last:100, refPrefix: "refs/heads/") {
-      nodes {
-        name
-      }
-    }
     languages(first:100) {
       nodes {
         name
@@ -1306,6 +1300,20 @@ query($owner: String!, $name: String!) {
   }
 }
 ]] .. fragments.repository
+
+  -- https://docs.github.com/en/graphql/reference/objects#repository
+  ---@class octo.Ref
+  ---@field name string
+
+  M.ref = [[
+query($owner: String!, $name: String!, $qualifiedName: String!) {
+  repository(owner: $owner, name: $name) {
+    ref(qualifiedName: $qualifiedName) {
+      name
+    }
+  }
+}
+]]
 
   M.gists = [[
 query($privacy: GistPrivacy = ALL, $endCursor: String) {
