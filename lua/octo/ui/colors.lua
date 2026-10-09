@@ -56,6 +56,8 @@ local function get_hl_groups()
     Strikethrough = { fg = colors.grey, strikethrough = true },
     Underline = { fg = colors.white, underline = true },
     Bubble = { fg = colors.white, bg = colors.grey },
+    ReviewDiffDelete = { bg = M.get_background_color_of_highlight_group "DiffDelete" },
+    ReviewDiffAdd = { bg = M.get_background_color_of_highlight_group "DiffAdd" },
     ReviewDiffDeleteText = { fg = colors.white, bg = colors.dark_red },
     ReviewDiffAddText = { fg = colors.white, bg = colors.dark_green },
   }

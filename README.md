@@ -872,6 +872,8 @@ Also, you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink
 | _OctoStateClosedFloat_            | OctoRedFloat       |
 | _OctoStateMergedFloat_            | OctoPurpleFloat    |
 | _OctoStateDraftFloat_             | OctoGreyFloat      |
+| _OctoReviewDiffDelete_            | DiffDelete         |
+| _OctoReviewDiffAdd_               | DiffAdd            |
 | _OctoReviewDiffDeleteText_        | OctoRed            |
 | _OctoReviewDiffAddText_           | OctoGreen          |
 
