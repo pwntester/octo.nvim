@@ -54,6 +54,88 @@ local function get_env()
   return env
 end
 
+---@param remote_hostname string?
+---@param opts? { active_only?: boolean, json?: boolean }
+---@return string[]
+local function build_auth_status_args(remote_hostname, opts)
+  opts = opts or {}
+  local args = { "auth", "status" }
+
+  if opts.active_only then
+    table.insert(args, "--active")
+  end
+
+  if remote_hostname and remote_hostname ~= "" then
+    table.insert(args, "--hostname")
+    table.insert(args, remote_hostname)
+  end
+
+  if opts.json then
+    table.insert(args, "--json")
+    table.insert(args, "hosts")
+  end
+
+  return args
+end
+
+---@param args string[]
+---@return string, string
+local function run_gh_sync(args)
+  ---@diagnostic disable-next-line: missing-fields
+  local job = Job:new {
+    enable_recording = true,
+    command = config.values.gh_cmd,
+    args = args,
+    env = get_env(),
+  }
+  job:sync(config.values.timeout)
+  return table.concat(job:result(), "\n"), table.concat(job:stderr_result(), "\n")
+end
+
+---@param output string
+---@return string?
+function M.parse_auth_status_user(output)
+  return string.match(output, "Logged in to [^%s]+ as ([^%s]+)")
+    or string.match(output, "Logged in to [^%s]+ account ([^%s]+)")
+end
+
+---@param output string
+---@param remote_hostname string?
+---@return { active?: boolean, gitProtocol?: string, host?: string, login?: string, scopes?: string, state?: string, tokenSource?: string }[]?
+function M.extract_auth_status_accounts(output, remote_hostname)
+  if output == "" then
+    return {}
+  end
+
+  local ok, decoded = pcall(vim.json.decode, output)
+  if not ok or type(decoded) ~= "table" or type(decoded.hosts) ~= "table" then
+    return
+  end
+
+  if remote_hostname and decoded.hosts[remote_hostname] then
+    return decoded.hosts[remote_hostname]
+  end
+
+  local accounts = {}
+  for _, host_accounts in pairs(decoded.hosts) do
+    vim.list_extend(accounts, host_accounts)
+  end
+  return accounts
+end
+
+---@param remote_hostname string?
+---@return { active?: boolean, gitProtocol?: string, host?: string, login?: string, scopes?: string, state?: string, tokenSource?: string }[]?, string?
+function M.get_auth_accounts(remote_hostname)
+  local stdout, stderr = run_gh_sync(build_auth_status_args(remote_hostname, { json = true }))
+  local accounts = M.extract_auth_status_accounts(stdout, remote_hostname)
+
+  if accounts then
+    return accounts, stderr
+  end
+
+  return nil, stderr
+end
+
 ---uses GH to get the name of the authenticated user
 ---@param remote_hostname string?
 function M.get_user_name(remote_hostname)
@@ -61,21 +143,23 @@ function M.get_user_name(remote_hostname)
     remote_hostname = require("octo.utils").get_remote_host()
   end
 
-  ---@diagnostic disable-next-line: missing-fields
-  local job = Job:new {
-    enable_recording = true,
-    command = config.values.gh_cmd,
-    args = { "auth", "status", "--hostname", remote_hostname },
-    env = get_env(),
-  }
-  job:sync(config.values.timeout)
-  local stderr = table.concat(job:stderr_result(), "\n")
-  local stdout = table.concat(job:result(), "\n")
-  -- Newer versions of the gh cli have a different message. See #467
-  local name_err = string.match(stderr, "Logged in to [^%s]+ as ([^%s]+)")
-    or string.match(stderr, "Logged in to [^%s]+ account ([^%s]+)")
-  local name_out = string.match(stdout, "Logged in to [^%s]+ as ([^%s]+)")
-    or string.match(stdout, "Logged in to [^%s]+ account ([^%s]+)")
+  local accounts, stderr = M.get_auth_accounts(remote_hostname)
+  if accounts then
+    for _, account in ipairs(accounts) do
+      if account.active and account.login then
+        return account.login
+      end
+    end
+
+    if accounts[1] and accounts[1].login then
+      return accounts[1].login
+    end
+  end
+
+  local stdout
+  stdout, stderr = run_gh_sync(build_auth_status_args(remote_hostname, { active_only = true }))
+  local name_err = M.parse_auth_status_user(stderr)
+  local name_out = M.parse_auth_status_user(stdout)
 
   if name_err then
     return name_err
@@ -84,6 +168,36 @@ function M.get_user_name(remote_hostname)
   else
     require("octo.utils").error(stderr)
   end
+end
+
+---@param remote_hostname string?
+---@param login string?
+---@param cb? fun(stdout: string, stderr: string, status: integer)
+function M.switch_account(remote_hostname, login, cb)
+  local args = { "auth", "switch" }
+
+  if remote_hostname and remote_hostname ~= "" then
+    table.insert(args, "--hostname")
+    table.insert(args, remote_hostname)
+  end
+
+  if login and login ~= "" then
+    table.insert(args, "--user")
+    table.insert(args, login)
+  end
+
+  ---@diagnostic disable-next-line: missing-fields
+  Job:new({
+    enable_recording = true,
+    command = config.values.gh_cmd,
+    args = args,
+    env = get_env(),
+    on_exit = vim.schedule_wrap(function(j_self, status, _)
+      if cb then
+        cb(table.concat(j_self:result(), "\n"), table.concat(j_self:stderr_result(), "\n"), status)
+      end
+    end),
+  }):start()
 end
 
 local scopes = {} ---@type string[]
