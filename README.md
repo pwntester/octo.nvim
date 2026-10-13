@@ -330,7 +330,7 @@ require"octo".setup {
       field = "CREATED_AT", -- either COMMENTS, CREATED_AT or UPDATED_AT (https://docs.github.com/en/graphql/reference/enums#issueorderfield)
       direction = "DESC", -- either DESC or ASC (https://docs.github.com/en/graphql/reference/enums#orderdirection)
     },
-    always_select_remote_on_create = false, -- always give prompt to select base remote repo when creating PRs
+    always_select_remote_on_create = false, -- always give prompt to select base remote repo when creating PRs, even with a single remote (the prompt is shown whenever there is more than one remote regardless)
     use_branch_name_as_title = false, -- sets branch name to be the name for the PR
   },
   file_panel = {
