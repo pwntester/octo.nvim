@@ -148,6 +148,15 @@ return {
       ["Squash and Merge PR"] = function()
         commands.pr.merge "squash"
       end,
+      ["Create/Update PR Stack"] = function()
+        require("octo.stack").create()
+      end,
+      ["Sync PR Stack"] = function()
+        require("octo.stack").sync()
+      end,
+      ["Checkout PR Stack"] = function()
+        require("octo.stack").checkout()
+      end,
       ["Start Review"] = commands.review.start,
       ["Resume Review"] = commands.review.resume,
       ["Approve PR"] = approve_pr,
@@ -373,11 +382,20 @@ return {
   stack_down = function()
     require("octo.navigation").go_to_stack_neighbor(-1)
   end,
+  create_stack = function()
+    require("octo.stack").create()
+  end,
   goto_check = function()
     require("octo.navigation").go_to_check()
   end,
   toggle_checks = function()
     require("octo.navigation").toggle_checks()
+  end,
+  sync_stack = function()
+    require("octo.stack").sync()
+  end,
+  checkout_stack = function()
+    require("octo.stack").checkout()
   end,
   next_comment = function()
     require("octo.navigation").next_comment()
