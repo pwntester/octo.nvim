@@ -804,7 +804,7 @@ function M.users(cb)
 
       gh.api.graphql {
         query = queries.users,
-        F = { prompt = prompt },
+        f = { prompt = prompt },
         paginate = true,
         opts = {
           cb = gh.create_callback {

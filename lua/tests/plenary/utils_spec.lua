@@ -138,6 +138,64 @@ describe("get_pages", function()
     eq(actual, { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } })
   end)
 end)
+describe("get_graphql_pages", function()
+  it("returns every page of a successful response", function()
+    local text = vim.trim [[
+      {"data":{"search":{"nodes":[{"login":"a"}]}}}
+      {"data":{"search":{"nodes":[{"login":"b"}]}}}
+    ]]
+
+    local pages, err = this.get_graphql_pages(text)
+
+    eq({
+      { data = { search = { nodes = { { login = "a" } } } } },
+      { data = { search = { nodes = { { login = "b" } } } } },
+    }, pages)
+    eq(nil, err)
+  end)
+  it("reports GraphQL errors printed on stdout", function()
+    local text = '{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}'
+
+    local pages, err = this.get_graphql_pages(text)
+
+    eq(nil, pages)
+    eq("API rate limit exceeded", err)
+  end)
+  it("reports HTTP error payloads that carry a message only", function()
+    local text = '{"message":"You have exceeded a secondary rate limit."}'
+
+    local pages, err = this.get_graphql_pages(text)
+
+    eq(nil, pages)
+    eq("You have exceeded a secondary rate limit.", err)
+  end)
+  it("reports errors of a partially failed response", function()
+    local text = '{"data":null,"errors":[{"message":"Resource not accessible by integration"}]}'
+
+    local pages, err = this.get_graphql_pages(text)
+
+    eq(nil, pages)
+    eq("Resource not accessible by integration", err)
+  end)
+  it("reports stderr of a failed call", function()
+    local pages, err = this.get_graphql_pages("", "gh: Bad credentials")
+
+    eq(nil, pages)
+    eq("gh: Bad credentials", err)
+  end)
+  it("reports no error for an empty response", function()
+    local pages, err = this.get_graphql_pages ""
+
+    eq(nil, pages)
+    eq(nil, err)
+  end)
+  it("reports malformed JSON instead of raising", function()
+    local pages, err = this.get_graphql_pages "{not json"
+
+    eq(nil, pages)
+    eq("Failed to decode GitHub API response: {not json", err)
+  end)
+end)
 describe("get_flatten_pages", function()
   it("handles empty single page", function()
     local text = "[]"

@@ -969,7 +969,7 @@ function M.search(opts)
   for _, val in ipairs(opts.prompt) do
     local output = gh.api.graphql {
       query = queries.search,
-      fields = { prompt = val, type = opts.type },
+      f = { prompt = val, type = opts.type },
       jq = ".data.search.nodes",
       opts = { mode = "sync" },
     }
@@ -1405,23 +1405,25 @@ function M.users(cb)
 
     local queries = require "octo.gh.queries"
 
-    local query, F
+    -- All these variables are `String!`. They go in `f` so gh sends them raw:
+    -- `F` would coerce values like "123", "true" or "null" into non-strings.
+    local query, variables
     if cfg.users == "search" then
       query = queries.users
-      F = { prompt = ctx.filter.search }
+      variables = { prompt = ctx.filter.search }
     elseif cfg.users == "assignable" then
       query = queries.assignable_users
-      F = { owner = owner, name = name }
+      variables = { owner = owner, name = name }
     elseif cfg.users == "mentionable" then
       query = queries.mentionable_users
-      F = { owner = owner, name = name }
+      variables = { owner = owner, name = name }
     end
 
     return function(emit)
       vim.schedule(function()
         gh.api.graphql {
           query = query,
-          F = F,
+          f = variables,
           opts = {
             mode = "async",
             ---@param output string
