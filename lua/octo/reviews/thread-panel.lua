@@ -37,7 +37,9 @@ function M.show_review_threads(jump_to_buffer)
   -- get threads associated with current line
   local threads_at_cursor = {}
   for _, thread in ipairs(threads) do
-    if
+    if thread.subjectType == "FILE" then
+      -- file-level threads are not anchored to a line, they are shown with `add_review_file_comment`
+    elseif
       review_level == "PR"
       and utils.is_thread_placed_in_buffer(thread, bufnr)
       and thread.startLine <= line
@@ -134,16 +136,22 @@ function M.create_thread_buffer(threads, repo, number, side, path)
   if not vim.startswith(path, "/") then
     path = "/" .. path
   end
-  local line = threads[1].originalStartLine ~= vim.NIL and threads[1].originalStartLine or threads[1].originalLine
-  local bufname = string.format("octo://%s/review/%s/threads/%s%s:%d", repo, current_review.id, side, path, line)
+  local is_file_level = threads[1].subjectType == "FILE"
+  local line = threads[1].originalStartLine ~= vim.NIL and threads[1].originalStartLine or threads[1].originalLine ---@type integer|string
+  if is_file_level then
+    line = "FILE"
+  end
+  local bufname = string.format("octo://%s/review/%s/threads/%s%s:%s", repo, current_review.id, side, path, line)
   local existing_bufnr = vim.fn.bufnr(bufname)
 
   if existing_bufnr ~= -1 then
-    if vim.api.nvim_buf_is_loaded(existing_bufnr) then
+    -- file-level buffers are rebuilt so they always list every file-level thread,
+    -- unless they hold an unsaved draft
+    if vim.api.nvim_buf_is_loaded(existing_bufnr) and (not is_file_level or vim.bo[existing_bufnr].modified) then
       return octo_buffers[existing_bufnr]
     end
 
-    -- Weird situation, force delete buffer and start from scratch
+    -- Stale or weird situation, force delete buffer and start from scratch
     vim.api.nvim_buf_delete(existing_bufnr, { force = true })
   end
 

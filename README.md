@@ -521,6 +521,7 @@ require"octo".setup {
       discard_review = { lhs = "<localleader>vd", desc = "discard review" },
       add_review_comment = { lhs = "<localleader>ca", desc = "add a new review comment", mode = { "n", "x" } },
       add_review_suggestion = { lhs = "<localleader>sa", desc = "add a new review suggestion", mode = { "n", "x" } },
+      add_review_file_comment = { lhs = "<localleader>cf", desc = "add a new file-level review comment" },
       focus_files = { lhs = "<localleader>e", desc = "move focus to changed file panel" },
       toggle_files = { lhs = "<localleader>b", desc = "hide/show changed files panel" },
       next_thread = { lhs = "]t", desc = "move to next thread" },
@@ -655,6 +656,7 @@ If no command is passed, the argument to `Octo` is treated as a URL from where a
 | gist     | list [repo] [key=value] (4)                       | List user gists                                                                                                                                        |
 | comment  | add                                               | Add a new comment                                                                                                                                      |
 |          | suggest                                            | Add a new suggestion                                                                                                                                  |
+|          | file                                              | Add a new file-level review comment (not anchored to a line)                                                                                           |
 |          | delete                                            | Delete a comment                                                                                                                                       |
 |          | url                                            | Copies the URL of the current comment to the system clipboard                                                                                          |
 |          | reply                                            | Add comment as a reply to the current comment |
