@@ -903,7 +903,7 @@ mutation($pullRequestId: ID!, $state: PullRequestUpdateState!) {
     }
   }
 }
-]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.pull_request_timeline_items_connection .. fragments.review_thread_information .. fragments.review_thread_comment .. fragments.get_pr_timeline_definitions()
+]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.pull_request_timeline_items_connection .. fragments.get_pr_timeline_definitions()
 
   M.create_discussion = [[
 mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
