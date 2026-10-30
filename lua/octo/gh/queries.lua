@@ -1097,6 +1097,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
           additions
           deletions
           path
+          viewerViewedState
         }
         pageInfo {
           hasNextPage
