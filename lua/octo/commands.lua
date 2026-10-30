@@ -2175,6 +2175,12 @@ function M.pr_checks(buffer)
       enter = true,
     }
 
+    local function set_mapping(lhs, opts)
+      if not utils.is_blank(lhs) then
+        vim.api.nvim_buf_set_keymap(wbufnr, "n", lhs, "", opts)
+      end
+    end
+
     vim.api.nvim_buf_set_keymap(wbufnr, "n", "<CR>", "", {
       noremap = true,
       silent = true,
@@ -2184,9 +2190,11 @@ function M.pr_checks(buffer)
         local run_id = string.match(url, "runs/(%d+)")
 
         if not run_id then
-          utils.error(
-            "Cannot find workflow run id. Consider opening in the browser with " .. mappings.open_in_browser.lhs
-          )
+          local message = "Cannot find workflow run id"
+          if not utils.is_blank(mappings.open_in_browser.lhs) then
+            message = message .. ". Consider opening in the browser with " .. mappings.open_in_browser.lhs
+          end
+          utils.error(message)
           return
         end
 
@@ -2195,7 +2203,7 @@ function M.pr_checks(buffer)
       end,
     })
 
-    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.open_in_browser.lhs, "", {
+    set_mapping(mappings.open_in_browser.lhs, {
       noremap = true,
       silent = true,
       callback = function()
@@ -2205,7 +2213,7 @@ function M.pr_checks(buffer)
       end,
     })
 
-    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.copy_url.lhs, "", {
+    set_mapping(mappings.copy_url.lhs, {
       noremap = true,
       silent = true,
       callback = function()
@@ -2219,7 +2227,7 @@ function M.pr_checks(buffer)
       end,
     })
 
-    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.rerun.lhs, "", {
+    set_mapping(mappings.rerun.lhs, {
       noremap = true,
       silent = true,
       callback = function()
