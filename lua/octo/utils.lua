@@ -990,6 +990,26 @@ function M.get_repo_info(repo)
   return info
 end
 
+---Checks whether a branch exists on the remote repo.
+---Looks the single ref up directly, so it stays correct in repos with more
+---branches than one page of `refs` can return.
+---@param repo string
+---@param branch string
+---@return boolean
+function M.remote_branch_exists(repo, branch)
+  local owner, name = M.split_repo(repo)
+  if M.is_blank(owner) or M.is_blank(name) or M.is_blank(branch) then
+    return false
+  end
+  local output = gh.api.graphql {
+    query = queries.ref,
+    fields = { owner = owner, name = name, qualifiedName = "refs/heads/" .. branch },
+    jq = ".data.repository.ref.name",
+    opts = { mode = "sync" },
+  }
+  return not M.is_blank(output) and vim.trim(output) == branch
+end
+
 ---Gets repo's templates
 ---@param repo string
 function M.get_repo_templates(repo)
