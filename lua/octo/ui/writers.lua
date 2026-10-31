@@ -4,6 +4,7 @@ local BodyMetadata = require("octo.model.body-metadata").BodyMetadata
 local TitleMetadata = require("octo.model.title-metadata").TitleMetadata
 local constants = require "octo.constants"
 local config = require "octo.config"
+local gh = require "octo.gh"
 local utils = require "octo.utils"
 local logins = require "octo.logins"
 local folds = require "octo.folds"
@@ -466,6 +467,81 @@ function M.write_repo(bufnr, repo)
     M.write_virtual_text(bufnr, constants.OCTO_REPO_VT_NS, line - 1, d)
     line = line + 1
   end
+
+  -- fetch contributors asynchronously and append them to the details block
+  local contributors_row = #details ---@type integer 0-based row below the last detail line
+  gh.api.get {
+    "repos/{repo}/contributors",
+    format = { repo = repo.nameWithOwner },
+    -- the endpoint already ranks by contributions, but make it explicit and
+    -- keep the count field so we can sort even if the API ever changes order
+    jq = "map(select(.login != null)) | sort_by(-.contributions) | map(.login) | .[0:30]",
+    opts = {
+      cb = gh.create_callback {
+        success = function(data)
+          if not vim.api.nvim_buf_is_valid(bufnr) or utils.is_blank(data) then
+            return
+          end
+          local contributors = vim.json.decode(data) --[[@as string[] ]]
+          if #contributors == 0 then
+            return
+          end
+          local winids = vim.fn.win_findbuf(bufnr) --[[@as integer[] ]]
+          local width = (#winids > 0 and vim.api.nvim_win_get_width(winids[1]) or vim.o.columns) - 1
+
+          local label = "Contributors: "
+          local indent = string.rep(" ", #label)
+
+          -- Build one bubble per contributor and measure its display width.
+          -- Virtual text does not wrap, so pack bubbles into rows that fit.
+          local items = {}
+          for _, login in ipairs(contributors) do
+            local bubble = bubbles.make_user_bubble(login)
+            local item_width = 0
+            for _, chunk in ipairs(bubble) do
+              item_width = item_width + #chunk[1]
+            end
+            table.insert(items, { vt = bubble, width = item_width })
+          end
+
+          local rows = {}
+          local current_width = #label
+          local current = {}
+          for _, item in ipairs(items) do
+            if #current > 0 and current_width + item.width > width then
+              table.insert(rows, current)
+              current, current_width = {}, #indent
+            end
+            table.insert(current, item.vt)
+            current_width = current_width + item.width
+          end
+          if #current > 0 then
+            table.insert(rows, current)
+          end
+
+          -- insert one empty line per packed row and overlay each row of bubbles
+          local lines = {}
+          for _ = 1, #rows do
+            table.insert(lines, "")
+          end
+          vim.api.nvim_buf_set_lines(bufnr, contributors_row, contributors_row, false, lines)
+          for i, row in ipairs(rows) do
+            local vt = {}
+            if i > 1 then
+              table.insert(vt, { indent, "OctoDetailsLabel" })
+            else
+              table.insert(vt, { label, "OctoDetailsLabel" })
+            end
+            for _, bubbles_vt in ipairs(row) do
+              vim.list_extend(vt, bubbles_vt)
+            end
+            M.write_virtual_text(bufnr, constants.OCTO_REPO_VT_NS, contributors_row + i - 1, vt)
+          end
+        end,
+        failure = function() end,
+      },
+    },
+  }
 
   if defaultBranchRefName ~= nil then
     utils.get_file_contents(repo.nameWithOwner, defaultBranchRefName, "README.md", function(lines)
