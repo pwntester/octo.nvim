@@ -163,7 +163,7 @@ function M.write_release(bufnr, release)
       "[" .. asset.name .. "]" .. "(" .. asset.downloadUrl .. ")",
     })
     local parts = {
-      utils.format_large_int(asset.downloadCount, false) .. " ",
+      utils.format_large_int(asset.downloadCount, false) .. " " .. config.values.download_icon,
       utils.format_large_int(asset.size, true) .. "B",
       utils.format_date(asset.updatedAt),
     }
@@ -265,7 +265,7 @@ function M.write_upvotes(bufnr, obj, line)
   -- clear namespace and set vt
   vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
 
-  local upvote_symbol = " "
+  local upvote_symbol = config.values.upvote_icon
 
   local upvotes = obj.upvoteCount
   -- local viewer_did_upvote = obj.viewerHasUpvoted
