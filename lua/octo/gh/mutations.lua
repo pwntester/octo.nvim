@@ -6,6 +6,21 @@ local M = {}
 M.setup = function()
   -- https://docs.github.com/en/graphql/reference/mutations#addreaction
   -- inject: graphql
+  ---Update a pull request's head branch from its base, by merge or by rebase.
+  ---Answers before the branch has moved: GitHub queues the work, so the caller
+  ---has to watch `headRefOid` to know it happened.
+  -- inject: graphql
+  M.update_pull_request_branch = [[
+mutation($id: ID!, $expectedHeadOid: GitObjectID!, $method: PullRequestBranchUpdateMethod!) {
+  updatePullRequestBranch(input: { pullRequestId: $id, expectedHeadOid: $expectedHeadOid, updateMethod: $method }) {
+    pullRequest {
+      number
+      headRefOid
+    }
+  }
+}
+]]
+
   M.add_reaction = [[
 mutation {
   addReaction(input: {subjectId: "%s", content: %s}) {
