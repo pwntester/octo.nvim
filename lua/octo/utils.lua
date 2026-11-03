@@ -1535,6 +1535,12 @@ function M.path_join(paths)
   return table.concat(paths, path_sep)
 end
 
+---Root of the local git repository, or nil when not inside one
+---@return string?
+function M.get_git_root()
+  return vim.fs.root(vim.fn.getcwd(), ".git")
+end
+
 ---Extract diffhunks from a diff file
 ---@param diff string
 function M.extract_diffhunks_from_diff(diff)

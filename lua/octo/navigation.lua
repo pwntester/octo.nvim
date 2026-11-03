@@ -236,9 +236,10 @@ function M.go_to_file()
   end
   local result = open_file_if_found(utils.path_join { vim.fn.getcwd(), path }, line)
   if not result then
-    local cmd = "git rev-parse --show-toplevel"
-    local git_root = vim.fn.system(cmd):gsub("\n", "")
-    result = open_file_if_found(utils.path_join { git_root, path }, line)
+    local git_root = utils.get_git_root()
+    if git_root then
+      result = open_file_if_found(utils.path_join { git_root, path }, line)
+    end
   end
   if not result then
     utils.error "Cannot find file in CWD or git path"
