@@ -1894,6 +1894,9 @@ function M.create_pr(is_draft)
 
   -- get repo info
   local info = utils.get_repo_info(repo)
+  if info == nil or info == vim.NIL then
+    return
+  end
 
   -- repo candidates = self + parent (in case of fork)
   local repo_candidates_entries = { "Select target repo", "1. " .. repo }
@@ -1907,26 +1910,7 @@ function M.create_pr(is_draft)
   local cmd = "git rev-parse --abbrev-ref HEAD"
   local local_branch = string.gsub(vim.fn.system(cmd), "%s+", "")
 
-  -- get remote branches
-  if
-    info == nil
-    or info.refs == nil
-    or info.refs.nodes == nil
-    or info == vim.NIL
-    or info.refs == vim.NIL
-    or info.refs.nodes == vim.NIL
-  then
-    utils.error "Cannot grab remote branches"
-    return
-  end
-  local remote_branches = info.refs.nodes
-
-  local remote_branch_exists = false
-  for _, remote_branch in ipairs(remote_branches) do
-    if local_branch == remote_branch.name then
-      remote_branch_exists = true
-    end
-  end
+  local remote_branch_exists = utils.remote_branch_exists(repo, local_branch)
   local remote_branch = local_branch
   if not remote_branch_exists then
     local choice =
