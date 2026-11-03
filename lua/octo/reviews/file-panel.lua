@@ -311,7 +311,7 @@ function FilePanel:render()
     local viewerViewedStateIcon = utils.viewed_state_map[file.viewed_state].icon
     local viewerViewedStateHl = utils.viewed_state_map[file.viewed_state].hl
     s = s .. " " .. viewerViewedStateIcon
-    add_hl(viewerViewedStateHl, line_idx, offset + 1, offset + 4)
+    add_hl(viewerViewedStateHl, line_idx, offset + 1, offset + 1 + #viewerViewedStateIcon)
     offset = #s
 
     -- icon
