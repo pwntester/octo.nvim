@@ -2,6 +2,13 @@
 local config = require "octo.config"
 local utils = require "octo.utils"
 
+---@class octo.PickerRefsOptions
+---@field repo octo.Repository
+---@field default_branch_name string
+---@field title string
+
+---@alias octo.picker.branches fun(opts: octo.PickerRefsOptions, cb: fun(branch: string))
+
 ---@class octo.PickerModule The picker module provides various pickers for different GitHub entities.
 ---@field actions function The actions that can be performed in pickers
 ---@field assigned_labels function Get labels assigned to an issue or PR
@@ -25,6 +32,7 @@ local utils = require "octo.utils"
 ---@field search function Get search results
 ---@field users function Get users
 ---@field workflow_runs function Get workflow runs
+---@field branches octo.picker.branches Get repository branches
 
 ---@type octo.PickerModule
 local M = {}

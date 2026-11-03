@@ -360,8 +360,18 @@ function M.get_remote_url()
   return "https://" .. host .. "/" .. remote_name
 end
 
+---Returns all local remotes, each tagged with its remote name, ordered by name
+---so that prompts built from this list keep a stable order between calls.
+---@return OctoRepo[]
 function M.get_all_remotes()
-  return vim.tbl_values(M.parse_git_remote())
+  local remotes = {} ---@type OctoRepo[]
+  for name, remote in pairs(M.parse_git_remote()) do
+    table.insert(remotes, { name = name, host = remote.host, repo = remote.repo })
+  end
+  table.sort(remotes, function(a, b)
+    return a.name < b.name
+  end)
+  return remotes
 end
 
 ---@param remote table|nil
@@ -988,6 +998,14 @@ function M.get_repo_info(repo)
   local info = vim.json.decode(output)
   repo_info_cache[repo] = info
   return info
+end
+
+---Removes cached data of repo information
+---@param repo string
+function M.invalidate_repo_info_cache(repo)
+  if repo_info_cache[repo] then
+    repo_info_cache[repo] = nil
+  end
 end
 
 ---Gets repo's templates
