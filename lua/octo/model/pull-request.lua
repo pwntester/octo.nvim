@@ -1,6 +1,7 @@
 local FileEntry = require("octo.reviews.file-entry").FileEntry
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
+local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 
 local M = {}
@@ -70,8 +71,6 @@ function PullRequest:new(opts)
   end)
 
   setmetatable(this, self)
-
-  self:get_diff(this)
 
   return this
 end
@@ -231,31 +230,32 @@ function M.create_with_merge_base(opts, obj, cb)
   local head_owner = opts.head_repo and utils.split_repo(opts.head_repo) or owner
   local head_ref = head_owner .. ":" .. obj.headRefName
   local endpoint = string.format("repos/%s/%s/compare/%s...%s", owner, name, base_ref, head_ref)
-  local callback = gh.create_callback {
-    success = function(merge_base_sha)
-      -- Use merge base if available, otherwise fall back to baseRefOid
-      ---@type PullRequestOpts
-      local pr_opts = vim.tbl_extend("force", opts, {
-        left = merge_base_sha and Rev:new(merge_base_sha) or Rev:new(obj.baseRefOid),
-        right = Rev:new(obj.headRefOid),
-        files = obj.files.nodes,
-      })
+  local function create(merge_base_sha)
+    gh.api.graphql {
+      query = queries.changed_files,
+      F = { owner = owner, name = name, number = opts.number },
+      paginate = true,
+      jq = ".data.repository.pullRequest.files.nodes",
+      opts = {
+        cb = gh.create_callback {
+          success = function(output)
+            local pr_opts = vim.tbl_extend("force", opts, {
+              left = Rev:new(merge_base_sha or obj.baseRefOid),
+              right = Rev:new(obj.headRefOid),
+              files = utils.get_flatten_pages(output),
+            })
+            cb(PullRequest:new(pr_opts))
+          end,
+        },
+      },
+    }
+  end
 
-      local pr = PullRequest:new(pr_opts)
-      cb(pr)
-    end,
+  local callback = gh.create_callback {
+    success = create,
     failure = function(stderr)
       utils.error("Failed to fetch merge base: " .. stderr)
-      -- Fall back to using baseRefOid
-      ---@type PullRequestOpts
-      local pr_opts = vim.tbl_extend("force", opts, {
-        left = Rev:new(obj.baseRefOid),
-        right = Rev:new(obj.headRefOid),
-        files = obj.files.nodes,
-      })
-
-      local pr = PullRequest:new(pr_opts)
-      cb(pr)
+      create()
     end,
   }
 
