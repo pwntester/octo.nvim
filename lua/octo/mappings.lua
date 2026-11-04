@@ -451,6 +451,9 @@ return {
   add_review_suggestion = function()
     reviews.add_review_comment(true)
   end,
+  add_review_file_comment = function()
+    reviews.add_review_file_comment()
+  end,
   close_review_tab = function()
     local tabpage = vim.api.nvim_get_current_tabpage()
     reviews.close(tabpage)

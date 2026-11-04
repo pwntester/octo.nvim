@@ -1344,6 +1344,7 @@ end
 ---  start_line: integer,
 ---  end_line: integer,
 ---  diffSide: string,
+---  subjectType?: "LINE"|"FILE",
 ---}
 ---@param kind string
 ---@param line? integer
@@ -1505,6 +1506,7 @@ function M.write_comment(bufnr, comment, kind, line)
       diffSide = comment.diffSide,
       snippetStartLine = comment.start_line,
       snippetEndLine = comment.end_line,
+      subjectType = comment.subjectType,
       lastEditedAt = comment.lastEditedAt ~= vim.NIL and comment.lastEditedAt or nil,
       includesCreatedEdit = comment.includesCreatedEdit,
     }
@@ -2025,7 +2027,8 @@ function M.write_review_thread_header(bufnr, opts, line)
     { "THREAD: ", "OctoTimelineItemHeading" },
     { "[", "OctoSymbol" },
     { opts.path .. " ", "OctoDetailsLabel" },
-    { tostring(opts.start_line) .. ":" .. tostring(opts.end_line), "OctoDetailsValue" },
+    opts.subject_type == "FILE" and { "FILE", "OctoDetailsValue" }
+      or { tostring(opts.start_line) .. ":" .. tostring(opts.end_line), "OctoDetailsValue" },
     { "] [Commit: ", "OctoSymbol" },
     { opts.commit, "OctoDetailsLabel" },
     { "] ", "OctoSymbol" },
@@ -3746,10 +3749,12 @@ function M.write_threads(bufnr, threads)
       ---@field diffSide string
       ---@field start_line integer
       ---@field end_line integer
+      ---@field subjectType "LINE"|"FILE"
       comment = comment
       -- augment comment details
       comment.path = thread.path
       comment.diffSide = thread.diffSide
+      comment.subjectType = thread.subjectType
 
       -- review thread header
       if utils.is_blank(comment.replyTo) then
@@ -3764,6 +3769,7 @@ function M.write_threads(bufnr, threads)
           path = thread.path,
           start_line = start_line,
           end_line = end_line,
+          subject_type = thread.subjectType,
           isOutdated = thread.isOutdated,
           isResolved = thread.isResolved,
           resolvedBy = thread.resolvedBy,
@@ -3804,7 +3810,9 @@ function M.write_threads(bufnr, threads)
       replyToRest = utils.extract_rest_id(thread.comments.nodes[1].url),
       reviewId = thread.comments.nodes[1].pullRequestReview.id,
       path = thread.path,
-      line = thread.originalStartLine ~= vim.NIL and thread.originalStartLine or thread.originalLine,
+      line = thread.subjectType == "FILE" and 1
+        or thread.originalStartLine ~= vim.NIL and thread.originalStartLine
+        or thread.originalLine,
     }
   end
 
