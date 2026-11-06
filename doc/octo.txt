@@ -32,7 +32,7 @@ If any check fails, follow the advice shown in the report.
 
 LUA API                                         *octo-lua-api*
 
-The plugin exposes a Lua API to iteract with GitHub CLI which powers the
+The plugin exposes a Lua API to interact with GitHub CLI which powers the
 plugin.
 
 The `octo.gh` module is meant to mirror the GitHub CLI as closely as possible.
@@ -585,6 +585,8 @@ HIGHLIGHT GROUPS                                *octo-highlights*
   `OctoStateCommented`          `Normal`
   `OctoStateDismissed`          `OctoStateClosed`
   `OctoStateSkipped`            `Comment`
+  `OctoReviewDiffDelete`        `DiffDelete`
+  `OctoReviewDiffAdd`           `DiffAdd`
   `OctoReviewDiffDeleteText`    GitHub color
   `OctoReviewDiffAddText`       GitHub color
 

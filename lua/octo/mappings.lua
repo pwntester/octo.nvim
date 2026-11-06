@@ -424,6 +424,9 @@ return {
   react_confused = function()
     require("octo.commands").reaction_action "confused"
   end,
+  review = function()
+    reviews.start_or_resume_review()
+  end,
   review_start = function()
     reviews.start_review()
   end,
