@@ -283,3 +283,47 @@ describe("string methods", function()
     end)
   end)
 end)
+
+describe("generate_position2line_map()", function()
+  it("parses a hunk header with explicit counts on both sides", function()
+    local diffhunk = table.concat({
+      "@@ -5,3 +10,3 @@",
+      " context1",
+      "+added1",
+      " context2",
+    }, "\n")
+    local map = this.generate_position2line_map(diffhunk)
+    eq(map.left_offset, 5)
+    eq(map.right_offset, 10)
+    eq(map.right_side_lines, { [2] = 10, [3] = 11, [4] = 12 })
+    eq(map.left_side_lines, { [2] = 5, [4] = 6 })
+  end)
+
+  it("parses a hunk header where the left side omits the count for a single-line range", function()
+    local diffhunk = table.concat({
+      "@@ -5 +10,3 @@",
+      " context1",
+      "+added1",
+      " context2",
+    }, "\n")
+    local map = this.generate_position2line_map(diffhunk)
+    eq(map.left_offset, 5)
+    eq(map.right_offset, 10)
+    eq(map.right_side_lines, { [2] = 10, [3] = 11, [4] = 12 })
+    eq(map.left_side_lines, { [2] = 5, [4] = 6 })
+  end)
+
+  it("parses a hunk header where the right side omits the count for a single-line range", function()
+    local diffhunk = table.concat({
+      "@@ -5,3 +10 @@",
+      " context1",
+      "-removed1",
+      " context2",
+    }, "\n")
+    local map = this.generate_position2line_map(diffhunk)
+    eq(map.left_offset, 5)
+    eq(map.right_offset, 10)
+    eq(map.right_side_lines, { [2] = 10, [4] = 11 })
+    eq(map.left_side_lines, { [2] = 5, [3] = 6, [4] = 7 })
+  end)
+end)
