@@ -582,7 +582,7 @@ end
 local function get_search_size(prompt)
   return gh.api.graphql {
     query = queries.search_count,
-    fields = { prompt = prompt },
+    f = { prompt = prompt },
     jq = ".data.search.issueCount",
     opts = {
       mode = "sync",
@@ -707,7 +707,7 @@ function M.search(opts)
 
         local output = gh.api.graphql {
           query = queries.search,
-          fields = { prompt = _prompt, type = opts.type },
+          f = { prompt = _prompt, type = opts.type },
           jq = ".data.search.nodes",
           opts = { mode = "sync" },
         }
@@ -1009,7 +1009,7 @@ local function get_user_requester()
 
     local output = gh.api.graphql {
       query = queries.users,
-      F = { prompt = prompt },
+      f = { prompt = prompt },
       paginate = true,
       opts = { mode = "sync" },
     }
