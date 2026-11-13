@@ -172,6 +172,16 @@ describe("merge_pr_stack:", function()
     assert.is_truthy(question:find("main", 1, true))
   end)
 
+  it("confirmation skips PRs in the stack that are already merged", function()
+    stack_entry.stack.entries.nodes[2].pullRequest.state = "MERGED"
+    commands.merge_pr "stack"
+
+    eq(1, #confirm_questions)
+    local question = confirm_questions[1]
+    assert.is_nil(question:find("#330", 1, true))
+    assert.is_truthy(question:find("Merge 1 pull request(s) (#333)", 1, true))
+  end)
+
   it("reports success with a fallback message when gh output is blank", function()
     commands.merge_pr "stack"
 
