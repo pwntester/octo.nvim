@@ -327,3 +327,31 @@ describe("generate_position2line_map()", function()
     eq(map.left_side_lines, { [2] = 5, [3] = 6, [4] = 7 })
   end)
 end)
+
+describe("in_pr_repo()", function()
+  local original_get_current_buffer = this.get_current_buffer
+  local original_get_remote_name = this.get_remote_name
+
+  after_each(function()
+    this.get_current_buffer = original_get_current_buffer
+    this.get_remote_name = original_get_remote_name
+  end)
+
+  it("ignores case when comparing the PR repo to the local remote", function()
+    this.get_current_buffer = function()
+      return {
+        isPullRequest = function()
+          return true
+        end,
+        pullRequest = function()
+          return { baseRepository = { nameWithOwner = "pwntester/octo.nvim" } }
+        end,
+      }
+    end
+    this.get_remote_name = function()
+      return "Pwntester/Octo.nvim"
+    end
+
+    eq(this.in_pr_repo(), true)
+  end)
+end)
