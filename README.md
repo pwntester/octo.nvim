@@ -230,6 +230,9 @@ require"octo".setup {
   ghost_icon = "󰊠 ", -- ghost icon
   copilot_icon = " ", -- copilot icon
   dependabot_icon = " ",
+  download_icon = "", -- release asset download count
+  upvote_icon = " ", -- discussion upvote count
+  review_full_pr_icon = "󰊢 ", -- entire PR entry in the Snacks review commit picker
   comment_icon = "▎",
   outdated_icon = "󰅒 ",
   resolved_icon = " ",
@@ -477,6 +480,7 @@ require"octo".setup {
       react_rocket = { lhs = "<localleader>rr", desc = "add/remove 🚀 reaction" },
       react_laugh = { lhs = "<localleader>rl", desc = "add/remove 😄 reaction" },
       react_confused = { lhs = "<localleader>rc", desc = "add/remove 😕 reaction" },
+      review = { lhs = "<localleader>ve", desc = "start or resume a review for the current PR" },
       review_start = { lhs = "<localleader>vs", desc = "start a review for the current PR" },
       review_resume = { lhs = "<localleader>vr", desc = "resume a pending review for the current PR" },
       resolve_thread = { lhs = "<localleader>rt", desc = "resolve PR thread" },
@@ -872,6 +876,8 @@ Also, you can use [`cmp-emoji`](https://github.com/hrsh7th/cmp-emoji) or [`blink
 | _OctoStateClosedFloat_            | OctoRedFloat       |
 | _OctoStateMergedFloat_            | OctoPurpleFloat    |
 | _OctoStateDraftFloat_             | OctoGreyFloat      |
+| _OctoReviewDiffDelete_            | DiffDelete         |
+| _OctoReviewDiffAdd_               | DiffAdd            |
 | _OctoReviewDiffDeleteText_        | OctoRed            |
 | _OctoReviewDiffAddText_           | OctoGreen          |
 
