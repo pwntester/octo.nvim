@@ -1,3 +1,5 @@
+.PHONY: format docs setup deps upgrade-deps check
+
 format:
 	prek run --all-files
 
@@ -8,10 +10,19 @@ docs:
 # in CI (which runs the same targets).
 LUA_LS_VERSION := 3.18.2
 
-# Third-party libraries referenced by .github/workflows/.luarc.json.
-DEPS := nvim-lua/plenary.nvim folke/snacks.nvim \
-	nvim-telescope/telescope.nvim ibhagwan/fzf-lua \
-	nvim-tree/nvim-web-devicons
+# Third-party libraries referenced by .github/workflows/.luarc.json,
+# pinned to commits so typecheck results are reproducible and upstream
+# changes land as reviewed Makefile edits rather than surprise CI
+# failures. Look up a dep's current HEAD with:
+#	gh api repos/<owner>/<repo>/commits/HEAD --jq .sha
+# or, without gh:
+#	git ls-remote https://github.com/<owner>/<repo>.git HEAD
+# then paste the sha below, or run `make upgrade-deps` to do it for all.
+DEPS := nvim-lua/plenary.nvim@74b06c6c75e4eeb3108ec01852001636d85a932b \
+	folke/snacks.nvim@882c996cf28183f4d63640de0b4c02ec886d01f2 \
+	nvim-telescope/telescope.nvim@1e1bab730218eaf97fce743be3f56e51075928ac \
+	ibhagwan/fzf-lua@ded1c96d3d9d74634287d722431c26690968a4bf \
+	nvim-tree/nvim-web-devicons@0dc0cfb0c6858041174a53c7aa4adaf65e994b3c
 
 # The CI toolchain: nvim stable and a pinned lua-language-server,
 # unpacked like CI does before typechecking. Optional, but gives
@@ -45,23 +56,34 @@ setup:
 deps:
 	@mkdir -p deps
 	@for dep in $(DEPS); do \
-		repo=$$(echo $$dep | cut -d'/' -f2); \
-		test -d "deps/$$repo" || git clone --depth 1 \
-			"https://github.com/$$dep.git" "deps/$$repo" & \
-	done; wait
-
-# Bring existing shallow clones up to their default branch tip.
-update-deps:
-	@for dep in $(DEPS); do \
-		repo=$$(echo $$dep | cut -d'/' -f2); \
-		if test -d "deps/$$repo"; then \
-			echo "updating $$repo"; \
-			git -C "deps/$$repo" pull --ff-only --quiet & \
-		else \
-			git clone --depth 1 \
-				"https://github.com/$$dep.git" "deps/$$repo" & \
+		repo=$${dep%@*}; \
+		sha=$${dep#*@}; \
+		name=$${repo#*/}; \
+		cur=$$(git -C "deps/$$name" rev-parse HEAD 2>/dev/null || true); \
+		if test "$$cur" != "$$sha"; then \
+			if test -d "deps/$$name"; then \
+				git -C "deps/$$name" fetch --depth 1 origin "$$sha"; \
+				git -C "deps/$$name" checkout --detach --quiet FETCH_HEAD; \
+			else \
+				git init --quiet "deps/$$name" && \
+				git -C "deps/$$name" remote add origin \
+					"https://github.com/$$repo.git" && \
+				git -C "deps/$$name" fetch --quiet --depth 1 origin "$$sha" && \
+				git -C "deps/$$name" checkout --quiet --detach FETCH_HEAD; \
+			fi & \
 		fi; \
 	done; wait
+
+# Re-pin every dep to its default branch tip, rewriting the shas in
+# this Makefile. Run it deliberately, commit the result, and CI picks
+# it up through the cache key.
+upgrade-deps:
+	@for dep in $(DEPS); do \
+		repo=$${dep%@*}; \
+		sha=$$(git ls-remote "https://github.com/$$repo.git" HEAD | cut -f1); \
+		echo "$$repo@$$sha"; \
+		sed -i.bak "s|$$dep|$$repo@$$sha|" Makefile && rm Makefile.bak; \
+	done
 
 # Prefer the pinned runtime from `make setup` when present, falling back
 # to whatever the nvim on PATH provides. Paths must be absolute: the

@@ -26,7 +26,9 @@ jobs:
             luals
             deps
           key: ${{ runner.os }}-typecheck-${{ hashFiles('Makefile') }}
-      - name: Install toolchain and dependencies
-        run: make setup update-deps
+      # Dependencies are pinned in the Makefile and only move via a
+      # deliberate `make upgrade-deps`, so CI results stay reproducible.
+      - name: Install toolchain
+        run: make setup
       - name: Typecheck
         run: make check
