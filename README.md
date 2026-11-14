@@ -230,6 +230,9 @@ require"octo".setup {
   ghost_icon = "󰊠 ", -- ghost icon
   copilot_icon = " ", -- copilot icon
   dependabot_icon = " ",
+  download_icon = "", -- release asset download count
+  upvote_icon = " ", -- discussion upvote count
+  review_full_pr_icon = "󰊢 ", -- entire PR entry in the Snacks review commit picker
   comment_icon = "▎",
   outdated_icon = "󰅒 ",
   resolved_icon = " ",

@@ -220,6 +220,24 @@ describe("parse_url", function()
     eq(number, "99")
     eq(kind, "discussion")
   end)
+  it("org-wide discussion", function()
+    local url = "https://github.com/orgs/community/discussions/144793"
+    local hostname, repo, number, kind = this.parse_url(url)
+
+    eq(hostname, "github.com")
+    eq(repo, "community/community")
+    eq(number, "144793")
+    eq(kind, "discussion")
+  end)
+  it("GHE org-wide discussion", function()
+    local url = "https://ghe.example.com/orgs/my-org/discussions/7"
+    local hostname, repo, number, kind = this.parse_url(url)
+
+    eq(hostname, "ghe.example.com")
+    eq(repo, "my-org/my-org")
+    eq(number, "7")
+    eq(kind, "discussion")
+  end)
 end)
 
 describe("format_seconds", function()
@@ -325,5 +343,33 @@ describe("generate_position2line_map()", function()
     eq(map.right_offset, 10)
     eq(map.right_side_lines, { [2] = 10, [4] = 11 })
     eq(map.left_side_lines, { [2] = 5, [3] = 6, [4] = 7 })
+  end)
+end)
+
+describe("in_pr_repo()", function()
+  local original_get_current_buffer = this.get_current_buffer
+  local original_get_remote_name = this.get_remote_name
+
+  after_each(function()
+    this.get_current_buffer = original_get_current_buffer
+    this.get_remote_name = original_get_remote_name
+  end)
+
+  it("ignores case when comparing the PR repo to the local remote", function()
+    this.get_current_buffer = function()
+      return {
+        isPullRequest = function()
+          return true
+        end,
+        pullRequest = function()
+          return { baseRepository = { nameWithOwner = "pwntester/octo.nvim" } }
+        end,
+      }
+    end
+    this.get_remote_name = function()
+      return "Pwntester/Octo.nvim"
+    end
+
+    eq(this.in_pr_repo(), true)
   end)
 end)

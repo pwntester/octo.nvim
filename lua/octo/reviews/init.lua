@@ -2,8 +2,8 @@ local Layout = require("octo.reviews.layout").Layout
 local Rev = require("octo.reviews.rev").Rev
 local config = require "octo.config"
 local gh = require "octo.gh"
+local mutations = require "octo.gh.mutations"
 local queries = require "octo.gh.queries"
-local graphql = require "octo.gh.graphql"
 local thread_panel = require "octo.reviews.thread-panel"
 local window = require "octo.ui.window"
 local utils = require "octo.utils"
@@ -41,9 +41,9 @@ end
 ---Creates a new review
 ---@param callback fun(obj: octo.mutations.StartReview): nil
 function Review:create(callback)
-  local query = graphql("start_review_mutation", self.pull_request.id)
   gh.api.graphql {
-    f = { query = query },
+    query = mutations.start_review,
+    F = { input = { pullRequestId = self.pull_request.id } },
     opts = {
       cb = gh.create_callback {
         success = function(output)
@@ -281,9 +281,13 @@ function Review:discard(opts)
           end
 
           if choice == 1 then
-            local delete_query = graphql("delete_pull_request_review_mutation", self.id --[[@as string]])
             gh.api.graphql {
-              f = { query = delete_query },
+              query = mutations.delete_pull_request_review,
+              F = {
+                input = {
+                  pullRequestReviewId = self.id --[[@as string]],
+                },
+              },
               opts = {
                 cb = gh.create_callback {
                   success = function()
@@ -361,10 +365,10 @@ function Review:submit(event)
   local bufnr = vim.api.nvim_get_current_buf()
   local winid = vim.api.nvim_get_current_win()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, default_id, false)
-  local body = utils.escape_char(utils.trim(table.concat(lines, "\n")))
-  local query = graphql("submit_pull_request_review_mutation", review_id, event, body, { escape = false })
+  local body = utils.trim(table.concat(lines, "\n"))
   gh.api.graphql {
-    f = { query = query },
+    query = mutations.submit_pull_request_review,
+    F = { input = { pullRequestReviewId = review_id, event = event, body = body } },
     opts = {
       cb = gh.create_callback {
         success = function()
