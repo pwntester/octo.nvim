@@ -220,6 +220,24 @@ describe("parse_url", function()
     eq(number, "99")
     eq(kind, "discussion")
   end)
+  it("org-wide discussion", function()
+    local url = "https://github.com/orgs/community/discussions/144793"
+    local hostname, repo, number, kind = this.parse_url(url)
+
+    eq(hostname, "github.com")
+    eq(repo, "community/community")
+    eq(number, "144793")
+    eq(kind, "discussion")
+  end)
+  it("GHE org-wide discussion", function()
+    local url = "https://ghe.example.com/orgs/my-org/discussions/7"
+    local hostname, repo, number, kind = this.parse_url(url)
+
+    eq(hostname, "ghe.example.com")
+    eq(repo, "my-org/my-org")
+    eq(number, "7")
+    eq(kind, "discussion")
+  end)
 end)
 
 describe("format_seconds", function()
