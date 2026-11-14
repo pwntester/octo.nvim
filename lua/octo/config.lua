@@ -134,6 +134,9 @@ local M = {}
 ---@field ghost_icon string
 ---@field copilot_icon string
 ---@field dependabot_icon string
+---@field download_icon string
+---@field upvote_icon string
+---@field review_full_pr_icon string
 ---@field comment_icon string
 ---@field outdated_icon string
 ---@field resolved_icon string
@@ -213,6 +216,9 @@ function M.get_default_values()
     ghost_icon = "󰊠 ", -- ghost icon
     copilot_icon = " ", -- copilot icon
     dependabot_icon = " ",
+    download_icon = "", -- release asset download count
+    upvote_icon = " ", -- discussion upvote count
+    review_full_pr_icon = "󰊢 ", -- entire PR entry in the Snacks review commit picker
     comment_icon = "▎",
     outdated_icon = "󰅒 ",
     resolved_icon = " ",
@@ -777,6 +783,9 @@ function M.validate_config()
     validate_type(config.user_icon, "user_icon", "string")
     validate_type(config.ghost_icon, "ghost_icon", "string")
     validate_type(config.copilot_icon, "copilot_icon", "string")
+    validate_type(config.download_icon, "download_icon", "string")
+    validate_type(config.upvote_icon, "upvote_icon", "string")
+    validate_type(config.review_full_pr_icon, "review_full_pr_icon", "string")
     validate_type(config.comment_icon, "comment_icon", "string")
     validate_type(config.outdated_icon, "outdated_icon", "string")
     validate_type(config.resolved_icon, "resolved_icon", "string")
