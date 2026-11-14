@@ -1,0 +1,56 @@
+name: GraphQL validation
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    env:
+      NVIM_VERSION: stable
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cache neovim
+        uses: actions/cache@v6
+        with:
+          path: _neovim
+          key: ${{ runner.os }}-neovim-${NVIM_VERSION}
+      - name: Install neovim
+        run: |
+          url="https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          test -d _neovim || {
+            mkdir -p _neovim
+            curl -sL $url | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
+          }
+          echo "${PWD}/_neovim/bin" >> "$GITHUB_PATH"
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: deps
+          key: ${{ runner.os }}-graphql-deps
+      - name: Checkout dependencies
+        run: |
+          mkdir -p deps
+          DEPS=("nvim-lua/plenary.nvim")
+          for dep in "${DEPS[@]}"; do
+            repo_name=$(echo $dep | cut -d'/' -f2)
+            test -d "deps/${repo_name}" || git clone --depth 1 "https://github.com/${dep}.git" "deps/${repo_name}" &
+          done
+          wait
+      - name: Cache schema
+        uses: actions/cache@v6
+        with:
+          path: .graphql-schema-cache.graphql
+          key: graphql-schema-${{ hashFiles('.graphqlrc') }}
+      - name: Validate queries and mutations
+        run: |
+          pip install graphql-core
+          nvim --headless -l scripts/dump_graphql.lua graphql-docs.json
+          python scripts/validate_graphql.py graphql-docs.json

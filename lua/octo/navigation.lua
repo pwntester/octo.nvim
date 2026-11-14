@@ -1,5 +1,4 @@
 local gh = require "octo.gh"
-local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 
 local vim = vim

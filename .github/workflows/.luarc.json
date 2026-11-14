@@ -20,7 +20,14 @@
     "severity": {
       "await-in-sync": "Error",
       "no-unknown": "Warning",
-      "deprecated": "Warning"
+      "deprecated": "Warning",
+      "unused-local": "Error",
+      "unused-function": "Error",
+      "undefined-field": "Error",
+      "assign-type-mismatch": "Error",
+      "duplicate-doc-field": "Hint",
+      "duplicate-doc-alias": "Hint",
+      "duplicate-set-field": "Hint"
     },
     "neededFileStatus": {
       "await-in-sync": "Any",

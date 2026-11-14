@@ -3,7 +3,6 @@ local TitleMetadata = require("octo.model.title-metadata").TitleMetadata
 local autocmds = require "octo.autocmds"
 local config = require "octo.config"
 local constants = require "octo.constants"
-local folds = require "octo.folds"
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
 local mutations = require "octo.gh.mutations"
