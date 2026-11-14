@@ -6,7 +6,6 @@ local constants = require "octo.constants"
 local folds = require "octo.folds"
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
-local graphql = require "octo.gh.graphql"
 local mutations = require "octo.gh.mutations"
 local signs = require "octo.ui.signs"
 local writers = require "octo.ui.writers"
@@ -468,9 +467,9 @@ function OctoBuffer:do_add_issue_comment(comment_metadata)
   -- create new issue comment
   local obj = self:isIssue() and self:issue() or self:pullRequest()
   local id = obj.id
-  local add_query = graphql("add_issue_comment_mutation", id, comment_metadata.body)
   gh.api.graphql {
-    f = { query = add_query },
+    query = mutations.add_issue_comment,
+    F = { input = { subjectId = id, body = comment_metadata.body } },
     opts = {
       cb = gh.create_callback {
         success = function(output)
@@ -500,14 +499,15 @@ end
 ---@param comment_metadata CommentMetadata
 function OctoBuffer:do_add_thread_comment(comment_metadata)
   -- create new thread reply
-  local query = graphql(
-    "add_pull_request_review_comment_mutation",
-    comment_metadata.replyTo,
-    comment_metadata.body,
-    comment_metadata.reviewId
-  )
   gh.api.graphql {
-    f = { query = query },
+    query = mutations.add_pull_request_review_comment,
+    F = {
+      input = {
+        inReplyTo = comment_metadata.replyTo,
+        body = comment_metadata.body,
+        pullRequestReviewId = comment_metadata.reviewId,
+      },
+    },
     opts = {
       cb = gh.create_callback {
         success = function(output)
@@ -730,16 +730,16 @@ function OctoBuffer:do_add_new_thread(comment_metadata)
         position = position + offset - 1
       end
 
-      local query = graphql(
-        "add_pull_request_review_commit_thread_mutation",
-        layout.right.commit,
-        comment_metadata.body,
-        comment_metadata.reviewId,
-        comment_metadata.path,
-        position
-      )
+      local input = {
+        commitOID = layout.right.commit,
+        body = comment_metadata.body,
+        pullRequestReviewId = comment_metadata.reviewId,
+        path = comment_metadata.path,
+        position = position,
+      }
       gh.api.graphql {
-        f = { query = query },
+        query = mutations.add_pull_request_review_commit_thread,
+        F = { input = input },
         opts = {
           cb = gh.create_callback {
             success = function(output)
@@ -826,17 +826,23 @@ end
 function OctoBuffer:do_update_comment(comment_metadata)
   -- update comment/reply
   local update_query ---@type string
+  local update_input ---@type { [string]: string }
   if comment_metadata.kind == "IssueComment" then
-    update_query = graphql("update_issue_comment_mutation", comment_metadata.id, comment_metadata.body)
+    update_query = mutations.update_issue_comment
+    update_input = { id = comment_metadata.id, body = comment_metadata.body }
   elseif comment_metadata.kind == "PullRequestReviewComment" then
-    update_query = graphql("update_pull_request_review_comment_mutation", comment_metadata.id, comment_metadata.body)
+    update_query = mutations.update_pull_request_review_comment
+    update_input = { pullRequestReviewCommentId = comment_metadata.id, body = comment_metadata.body }
   elseif comment_metadata.kind == "PullRequestReview" then
-    update_query = graphql("update_pull_request_review_mutation", comment_metadata.id, comment_metadata.body)
+    update_query = mutations.update_pull_request_review
+    update_input = { pullRequestReviewId = comment_metadata.id, body = comment_metadata.body }
   elseif comment_metadata.kind == "DiscussionComment" then
-    update_query = graphql("update_discussion_comment_mutation", comment_metadata.id, comment_metadata.body)
+    update_query = mutations.update_discussion_comment
+    update_input = { commentId = comment_metadata.id, body = comment_metadata.body }
   end
   gh.api.graphql {
-    f = { query = update_query },
+    query = update_query,
+    F = { input = update_input },
     opts = {
       cb = gh.create_callback {
         success = function(output)

@@ -7,8 +7,8 @@ M.setup = function()
   -- https://docs.github.com/en/graphql/reference/mutations#addreaction
   -- inject: graphql
   M.add_reaction = [[
-mutation {
-  addReaction(input: {subjectId: "%s", content: %s}) {
+mutation($input: AddReactionInput!) {
+  addReaction(input: $input) {
     subject {
       ...ReactionGroupsFragment
     }
@@ -18,8 +18,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#removereaction
   M.remove_reaction = [[
-mutation {
-  removeReaction(input: {subjectId: "%s", content: %s}) {
+mutation($input: RemoveReactionInput!) {
+  removeReaction(input: $input) {
     subject {
       ...ReactionGroupsFragment
     }
@@ -29,8 +29,8 @@ mutation {
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#resolvereviewthread
   M.resolve_review_thread = [[
-mutation {
-  resolveReviewThread(input: {threadId: "%s"}) {
+mutation($input: ResolveReviewThreadInput!) {
+  resolveReviewThread(input: $input) {
     thread {
       originalStartLine
       originalLine
@@ -56,8 +56,8 @@ mutation {
 
   -- https://docs.github.com/en/free-pro-team@latest/graphql/reference/mutations#unresolvereviewthread
   M.unresolve_review_thread = [[
-mutation {
-  unresolveReviewThread(input: {threadId: "%s"}) {
+mutation($input: UnresolveReviewThreadInput!) {
+  unresolveReviewThread(input: $input) {
     thread {
       originalStartLine
       originalLine
@@ -97,8 +97,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
   M.start_review = [[
-mutation {
-  addPullRequestReview(input: {pullRequestId: "%s"}) {
+mutation($input: AddPullRequestReviewInput!) {
+  addPullRequestReview(input: $input) {
     pullRequestReview {
       id
       state
@@ -164,8 +164,8 @@ mutation($path: String!, $pullRequestId: ID!) {
 
   -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreview
   M.submit_pull_request_review = [[
-mutation {
-  submitPullRequestReview(input: {pullRequestReviewId: "%s", event: %s, body: """%s"""}) {
+mutation($input: SubmitPullRequestReviewInput!) {
+  submitPullRequestReview(input: $input) {
     pullRequestReview {
       id
       state
@@ -175,8 +175,8 @@ mutation {
 ]]
 
   M.delete_pull_request_review = [[
-mutation {
-  deletePullRequestReview(input: {pullRequestReviewId: "%s"}) {
+mutation($input: DeletePullRequestReviewInput!) {
+  deletePullRequestReview(input: $input) {
     pullRequestReview {
       id
       state
@@ -303,8 +303,8 @@ mutation($input: AddPullRequestReviewThreadInput!) {
 
   -- https://docs.github.com/en/graphql/reference/mutations#addcomment
   M.add_issue_comment = [[
-mutation {
-  addComment(input: {subjectId: "%s", body: """%s"""}) {
+mutation($input: AddCommentInput!) {
+  addComment(input: $input) {
     commentEdge {
       node {
         id
@@ -326,8 +326,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#updateissuecomment
   M.update_issue_comment = [[
-mutation {
-  updateIssueComment(input: {id: "%s", body: """%s"""}) {
+mutation($input: UpdateIssueCommentInput!) {
+  updateIssueComment(input: $input) {
     issueComment {
       id
       body
@@ -347,8 +347,8 @@ mutation {
 
   --- https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions#updatediscussioncomment
   M.update_discussion_comment = [[
-mutation {
-  updateDiscussionComment(input: {commentId: "%s", body: """%s"""}) {
+mutation($input: UpdateDiscussionCommentInput!) {
+  updateDiscussionComment(input: $input) {
     comment {
       id
       body
@@ -373,8 +373,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreviewcomment
   M.update_pull_request_review_comment = [[
-mutation {
-  updatePullRequestReviewComment(input: {pullRequestReviewCommentId: "%s", body: """%s"""}) {
+mutation($input: UpdatePullRequestReviewCommentInput!) {
+  updatePullRequestReviewComment(input: $input) {
     pullRequestReviewComment {
       id
       body
@@ -451,8 +451,8 @@ mutation($discussion_id: ID!, $body: String!, $reply_to_id: ID) {
 
   -- https://docs.github.com/en/graphql/reference/mutations#updatepullrequestreview
   M.update_pull_request_review = [[
-mutation {
-  updatePullRequestReview(input: {pullRequestReviewId: "%s", body: """%s"""}) {
+mutation($input: UpdatePullRequestReviewInput!) {
+  updatePullRequestReview(input: $input) {
     pullRequestReview {
       id
       state
@@ -478,8 +478,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
   M.add_pull_request_review_comment = [[
-mutation {
-  addPullRequestReviewComment(input: {inReplyTo: "%s", body: """%s""", pullRequestReviewId: "%s"}) {
+mutation($input: AddPullRequestReviewCommentInput!) {
+  addPullRequestReviewComment(input: $input) {
     comment {
       id
       body
@@ -516,8 +516,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewcomment
   M.add_pull_request_review_commit_thread = [[
-mutation {
-  addPullRequestReviewComment(input: {commitOID: "%s", body: """%s""", pullRequestReviewId: "%s", path: "%s", position: %d }) {
+mutation($input: AddPullRequestReviewCommentInput!) {
+  addPullRequestReviewComment(input: $input) {
     comment {
       id
       body
@@ -551,16 +551,16 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#deleteissuecomment
   M.delete_issue_comment = [[
-mutation {
-  deleteIssueComment(input: {id: "%s"}) {
+mutation($input: DeleteIssueCommentInput!) {
+  deleteIssueComment(input: $input) {
     clientMutationId
   }
 }
 ]]
 
   M.delete_discussion_comment = [[
-mutation {
-  deleteDiscussionComment(input: {id: "%s"}) {
+mutation($input: DeleteDiscussionCommentInput!) {
+  deleteDiscussionComment(input: $input) {
     clientMutationId
   }
 }
@@ -568,8 +568,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#deletepullrequestreviewcomment
   M.delete_pull_request_review_comment = [[
-mutation {
-  deletePullRequestReviewComment(input: {id: "%s"}) {
+mutation($input: DeletePullRequestReviewCommentInput!) {
+  deletePullRequestReviewComment(input: $input) {
     pullRequestReview {
       id
       pullRequest {
@@ -937,8 +937,8 @@ mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
 
   -- https://docs.github.com/en/graphql/reference/mutations#addprojectv2itembyid
   M.add_project_v2_item = [[
-mutation {
-  addProjectV2ItemById(input: {contentId: "%s", projectId: "%s"}) {
+mutation($input: AddProjectV2ItemByIdInput!) {
+  addProjectV2ItemById(input: $input) {
     item {
       id
     }
@@ -948,15 +948,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#updateprojectv2itemfieldvalue
   M.update_project_v2_item = [[
-mutation {
-  updateProjectV2ItemFieldValue(
-    input: {
-      projectId: "%s",
-      itemId: "%s",
-      fieldId: "%s",
-      value: { singleSelectOptionId: "%s" }
-    }
-  ) {
+mutation($input: UpdateProjectV2ItemFieldValueInput!) {
+  updateProjectV2ItemFieldValue(input: $input) {
     projectV2Item {
       id
     }
@@ -966,8 +959,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#deleteprojectv2item
   M.delete_project_v2_item = [[
-mutation {
-  deleteProjectV2Item(input: {projectId: "%s", itemId: "%s"}) {
+mutation($input: DeleteProjectV2ItemInput!) {
+  deleteProjectV2Item(input: $input) {
     deletedItemId
   }
 }
@@ -976,8 +969,8 @@ mutation {
   -- https://docs.github.com/en/graphql/reference/mutations#createlabel
   -- requires application/vnd.github.bane-preview+json
   M.create_label = [[
-mutation {
-  createLabel(input: {repositoryId: "%s", name: "%s", description: """%s""", color: "%s"}) {
+mutation($input: CreateLabelInput!) {
+  createLabel(input: $input) {
     label {
       ...LabelFragment
     }
@@ -987,8 +980,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
   M.add_labels = [[
-mutation {
-  addLabelsToLabelable(input: {labelableId: "%s", labelIds: %s}) {
+mutation($input: AddLabelsToLabelableInput!) {
+  addLabelsToLabelable(input: $input) {
     labelable {
       ... on Issue {
         id
@@ -1006,8 +999,8 @@ mutation {
 
   -- https://docs.github.com/en/graphql/reference/mutations#removelabelsfromlabelable
   M.remove_labels = [[
-mutation {
-  removeLabelsFromLabelable(input: {labelableId: "%s", labelIds: %s}) {
+mutation($input: RemoveLabelsFromLabelableInput!) {
+  removeLabelsFromLabelable(input: $input) {
     labelable {
       ... on Issue {
         id
@@ -1041,8 +1034,8 @@ mutation($object_id: ID!, $user_ids: [ID!]!) {
 
   -- https://docs.github.com/en/graphql/reference/mutations#removeassigneestoassignable
   M.remove_assignees = [[
-mutation {
-  removeAssigneesFromAssignable(input: {assignableId: "%s", assigneeIds: ["%s"]}) {
+mutation($input: RemoveAssigneesFromAssignableInput!) {
+  removeAssigneesFromAssignable(input: $input) {
     assignable {
       ... on Issue {
         id
