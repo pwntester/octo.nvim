@@ -4,7 +4,6 @@ local context = require "octo.context"
 local navigation = require "octo.navigation"
 local gh = require "octo.gh"
 local headers = require "octo.gh.headers"
-local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local mutations = require "octo.gh.mutations"
 local picker = require "octo.picker"
@@ -1435,13 +1434,13 @@ function M.delete_comment()
 
   local query, threadId
   if comment.kind == "IssueComment" then
-    query = graphql("delete_issue_comment_mutation", comment.id)
+    query = mutations.delete_issue_comment
   elseif comment.kind == "PullRequestReviewComment" then
-    query = graphql("delete_pull_request_review_comment_mutation", comment.id)
+    query = mutations.delete_pull_request_review_comment
     local _thread = buffer:get_thread_at_cursor()
     threadId = _thread.threadId
   elseif comment.kind == "DiscussionComment" then
-    query = graphql("delete_discussion_comment_mutation", comment.id)
+    query = mutations.delete_discussion_comment
   elseif comment.kind == "PullRequestReview" then
     -- Review top level comments cannot be deleted here
     return
@@ -1450,7 +1449,8 @@ function M.delete_comment()
   local choice = vim.fn.confirm("Delete comment?", "&Yes\n&No\n&Cancel", 2)
   if choice == 1 then
     gh.api.graphql {
-      f = { query = query },
+      query = query,
+      F = { input = { id = comment.id } },
       opts = {
         cb = gh.create_callback {
           success = function(output)
@@ -1633,9 +1633,9 @@ function M.resolve_thread()
   end
   local thread_id = _thread.threadId
   local thread_line = _thread.bufferStartLine
-  local query = graphql("resolve_review_thread_mutation", thread_id)
   gh.api.graphql {
-    f = { query = query },
+    query = mutations.resolve_review_thread,
+    F = { input = { threadId = thread_id } },
     opts = {
       cb = gh.create_callback {
         success = function(output)
@@ -1663,9 +1663,9 @@ function M.unresolve_thread()
   end
   local thread_id = _thread.threadId
   local thread_line = _thread.bufferStartLine
-  local query = graphql("unresolve_review_thread_mutation", thread_id)
   gh.api.graphql {
-    f = { query = query },
+    query = mutations.unresolve_review_thread,
+    F = { input = { threadId = thread_id } },
     opts = {
       cb = gh.create_callback {
         success = function(output)
@@ -2183,6 +2183,12 @@ function M.pr_checks(buffer)
       enter = true,
     }
 
+    local function set_mapping(lhs, opts)
+      if not utils.is_blank(lhs) then
+        vim.api.nvim_buf_set_keymap(wbufnr, "n", lhs, "", opts)
+      end
+    end
+
     vim.api.nvim_buf_set_keymap(wbufnr, "n", "<CR>", "", {
       noremap = true,
       silent = true,
@@ -2192,9 +2198,11 @@ function M.pr_checks(buffer)
         local run_id = string.match(url, "runs/(%d+)")
 
         if not run_id then
-          utils.error(
-            "Cannot find workflow run id. Consider opening in the browser with " .. mappings.open_in_browser.lhs
-          )
+          local message = "Cannot find workflow run id"
+          if not utils.is_blank(mappings.open_in_browser.lhs) then
+            message = message .. ". Consider opening in the browser with " .. mappings.open_in_browser.lhs
+          end
+          utils.error(message)
           return
         end
 
@@ -2203,7 +2211,7 @@ function M.pr_checks(buffer)
       end,
     })
 
-    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.open_in_browser.lhs, "", {
+    set_mapping(mappings.open_in_browser.lhs, {
       noremap = true,
       silent = true,
       callback = function()
@@ -2213,7 +2221,7 @@ function M.pr_checks(buffer)
       end,
     })
 
-    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.copy_url.lhs, "", {
+    set_mapping(mappings.copy_url.lhs, {
       noremap = true,
       silent = true,
       callback = function()
@@ -2227,7 +2235,7 @@ function M.pr_checks(buffer)
       end,
     })
 
-    vim.api.nvim_buf_set_keymap(wbufnr, "n", mappings.rerun.lhs, "", {
+    set_mapping(mappings.rerun.lhs, {
       noremap = true,
       silent = true,
       callback = function()
@@ -2317,7 +2325,11 @@ function M.merge_pr_stack(...)
   -- everything at or below this PR's position merges, bottom-up
   local to_merge = {} ---@type { position: integer, number: integer }[]
   for _, entry in ipairs(stack_entry.stack.entries.nodes) do
-    if entry.position <= stack_entry.position and not utils.is_blank(entry.pullRequest) then
+    if
+      entry.position <= stack_entry.position
+      and not utils.is_blank(entry.pullRequest)
+      and entry.pullRequest.state == "OPEN"
+    then
       table.insert(to_merge, { position = entry.position, number = entry.pullRequest.number })
     end
   end
@@ -2563,9 +2575,9 @@ function M.reaction_action(reaction)
   end
 
   -- add/delete reaction
-  local query = graphql(action .. "_reaction_mutation", id, reaction)
   gh.api.graphql {
-    f = { query = query },
+    query = action == "add" and mutations.add_reaction or mutations.remove_reaction,
+    F = { input = { subjectId = id, content = reaction } },
     opts = {
       cb = gh.create_callback {
         success = function(output)
@@ -2608,22 +2620,23 @@ function M.set_project_v2_card()
   picker.project_columns_v2(function(project_id, field_id, value)
     local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- add new card
-    local add_query = graphql("add_project_v2_item_mutation", node.id, project_id)
     gh.api.graphql {
-      f = { query = add_query },
+      query = mutations.add_project_v2_item,
+      F = { input = { contentId = node.id, projectId = project_id } },
       opts = {
         cb = gh.create_callback {
           success = function(add_output)
             local resp = vim.json.decode(add_output)
-            local update_query = graphql(
-              "update_project_v2_item_mutation",
-              project_id,
-              resp.data.addProjectV2ItemById.item.id,
-              field_id,
-              value
-            )
             gh.api.graphql {
-              f = { query = update_query },
+              query = mutations.update_project_v2_item,
+              F = {
+                input = {
+                  projectId = project_id,
+                  itemId = resp.data.addProjectV2ItemById.item.id,
+                  fieldId = field_id,
+                  value = { singleSelectOptionId = value },
+                },
+              },
               opts = {
                 cb = gh.create_callback {
                   success = function()
@@ -2655,9 +2668,9 @@ function M.remove_project_v2_card()
   picker.project_cards_v2(function(project_id, item_id)
     local node = buffer:isIssue() and buffer:issue() or buffer:pullRequest()
     -- delete card
-    local query = graphql("delete_project_v2_item_mutation", project_id, item_id)
     gh.api.graphql {
-      f = { query = query },
+      query = mutations.delete_project_v2_item,
+      F = { input = { projectId = project_id, itemId = item_id } },
       opts = {
         cb = gh.create_callback {
           success = function()
@@ -2714,9 +2727,9 @@ function M.create_label(label)
     color = string.gsub(color, "#", "")
   end
 
-  local query = graphql("create_label_mutation", repo_id, name, description, color)
   gh.api.graphql {
-    query = query,
+    query = mutations.create_label,
+    F = { input = { repositoryId = repo_id, name = name, description = description, color = color } },
     jq = ".data.createLabel.label.name",
     opts = {
       cb = gh.create_callback {
@@ -2726,22 +2739,6 @@ function M.create_label(label)
       },
     },
   }
-end
-
-local function format(str)
-  return string.format('"%s"', str)
-end
-
-local function create_list(values, fmt)
-  if type(values) == "string" then
-    return fmt(values)
-  end
-
-  local formatted_values = {}
-  for _, value in ipairs(values) do
-    table.insert(formatted_values, fmt(value))
-  end
-  return "[" .. table.concat(formatted_values, ", ") .. "]"
 end
 
 local function label_action(opts)
@@ -2774,9 +2771,9 @@ local function label_action(opts)
       end)
     end
 
-    local query = graphql(opts.query_name, iid, create_list(label_ids, format))
     gh.api.graphql {
-      query = query,
+      query = opts.mutation,
+      F = { input = { labelableId = iid, labelIds = label_ids } },
       opts = {
         cb = gh.create_callback {
           success = refresh_details,
@@ -2802,7 +2799,7 @@ end
 
 function M.add_label(label)
   return label_action {
-    query_name = "add_labels_mutation",
+    mutation = mutations.add_labels,
     label = label,
     labels = picker.labels,
   }
@@ -2810,7 +2807,7 @@ end
 
 function M.remove_label(label)
   return label_action {
-    query_name = "remove_labels_mutation",
+    mutation = mutations.remove_labels,
     label = label,
     labels = picker.assigned_labels,
   }
@@ -2903,9 +2900,9 @@ function M.remove_assignee(login)
   end
 
   local function cb(user_id)
-    local query = graphql("remove_assignees_mutation", iid, user_id)
     gh.api.graphql {
-      f = { query = query },
+      query = mutations.remove_assignees,
+      F = { input = { assignableId = iid, assigneeIds = { user_id } } },
       opts = {
         cb = gh.create_callback {
           success = function()

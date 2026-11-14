@@ -546,7 +546,7 @@ function M.in_pr_repo()
   end
 
   local local_repo = M.get_remote_name()
-  if buffer:pullRequest().baseRepository.nameWithOwner ~= local_repo then
+  if not local_repo or buffer:pullRequest().baseRepository.nameWithOwner:lower() ~= local_repo:lower() then
     M.error(
       string.format(
         "Not in PR repo. Expected %s, got %s",
@@ -1137,6 +1137,25 @@ function M.get_release(...)
   vim.cmd("edit " .. M.get_release_uri(...))
 end
 
+--- Maps the pseudo-repo captured from org-wide discussion URLs.
+---
+--- github.com canonicalizes org-wide discussions to
+--- /orgs/<org>/discussions/<n>, so URL_ISSUE_PATTERN captures the repo as
+--- "orgs/<org>". The real repo is the org's user-chosen "source repository"
+--- (see https://docs.github.com/en/organizations/managing-organization-settings/enabling-or-disabling-github-discussions-for-an-organization),
+--- which can be anything, e.g. Homebrew/discussions. We guess <org>/<org>
+--- because that is the common case (e.g. community/community) and there is
+--- no API to look the source repo up from the URL alone.
+---@param repo string
+---@return string
+function M.resolve_org_url_repo(repo)
+  local org = repo:match "^orgs/(.+)$"
+  if org then
+    return org .. "/" .. org
+  end
+  return repo
+end
+
 ---@param url string
 ---@return string?, string?, string?, string?
 function M.parse_url(url)
@@ -1146,7 +1165,7 @@ function M.parse_url(url)
   elseif repo and number and kind == "pull" then
     return hostname, repo, number, kind
   elseif repo and number and kind == "discussions" then
-    return hostname, repo, number, "discussion"
+    return hostname, M.resolve_org_url_repo(repo), number, "discussion"
   elseif not repo then
     hostname, repo, kind, number = string.match(url, constants.URL_RELEASE_PATTERN)
     if repo and number and kind == "releases" then
@@ -1274,12 +1293,18 @@ function M.extract_issue_at_cursor(current_repo)
   end
   if not repo or not number then
     _, repo, _, number = M.extract_pattern_at_cursor(constants.URL_ISSUE_PATTERN)
+    if repo then
+      repo = M.resolve_org_url_repo(repo)
+    end
   end
   if not repo or not number then
     local url = M.extract_pattern_at_cursor(constants.MARKDOWN_URL_PATTERN)
     if url then
       ---@type string?, string?, string?, string?
       _, repo, _, number = url:match(constants.URL_ISSUE_PATTERN)
+      if repo then
+        repo = M.resolve_org_url_repo(repo)
+      end
     end
   end
   local casted_number = tonumber(number)
@@ -1842,8 +1867,15 @@ end
 function M.generate_position2line_map(diffhunk)
   local diffhunk_lines = vim.split(diffhunk, "\n")
   local diff_directive = diffhunk_lines[1]
-  ---@type integer, integer
-  local left_offset, right_offset = string.match(diff_directive, "@@%s*%-(%d+),%d+%s%+(%d+)")
+  local left_offset_str, right_offset_str = string.match(diff_directive, "@@%s*%-(%d+),?%d*%s%+(%d+),?%d*")
+  ---@type integer?, integer?
+  local left_offset, right_offset = tonumber(left_offset_str), tonumber(right_offset_str)
+  if left_offset == nil then
+    left_offset = 0
+  end
+  if right_offset == nil then
+    right_offset = 0
+  end
   local right_side_lines = {} ---@type table<integer, integer>
   local left_side_lines = {} ---@type table<integer, integer>
   local right_side_line = right_offset
@@ -1862,12 +1894,6 @@ function M.generate_position2line_map(diffhunk)
       right_side_line = right_side_line + 1
       left_side_line = left_side_line + 1
     end
-  end
-  if left_offset == nil then
-    left_offset = 0
-  end
-  if right_offset == nil then
-    right_offset = 0
   end
   ---@type { left_side_lines: table<integer, integer>, right_side_lines: table<integer, integer>, right_offset: integer, left_offset: integer }
   return {

@@ -56,6 +56,8 @@ local function get_hl_groups()
     Strikethrough = { fg = colors.grey, strikethrough = true },
     Underline = { fg = colors.white, underline = true },
     Bubble = { fg = colors.white, bg = colors.grey },
+    ReviewDiffDelete = { bg = M.get_background_color_of_highlight_group "DiffDelete" },
+    ReviewDiffAdd = { bg = M.get_background_color_of_highlight_group "DiffAdd" },
     ReviewDiffDeleteText = { fg = colors.white, bg = colors.dark_red },
     ReviewDiffAddText = { fg = colors.white, bg = colors.dark_green },
   }
@@ -150,15 +152,12 @@ end
 
 function M.setup()
   for name, hl in pairs(get_hl_groups()) do
-    if vim.fn.hlexists("Octo" .. name) == 0 then
-      vim.api.nvim_set_hl(0, "Octo" .. name, hl)
-    end
+    hl.default = true
+    vim.api.nvim_set_hl(0, "Octo" .. name, hl)
   end
 
   for from, to in pairs(get_hl_links()) do
-    if vim.fn.hlexists("Octo" .. from) == 0 then
-      vim.api.nvim_set_hl(0, "Octo" .. from, { link = to })
-    end
+    vim.api.nvim_set_hl(0, "Octo" .. from, { link = to, default = true })
   end
 end
 
