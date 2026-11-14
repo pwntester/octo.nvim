@@ -1,5 +1,4 @@
 local fragments = require "octo.gh.fragments"
-local config = require "octo.config"
 
 local M = {}
 
@@ -665,7 +664,7 @@ mutation($input: CreateIssueInput!) {
 ]] .. fragments.issue .. fragments.pull_request .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.assignee_connection .. fragments.issue_timeline_items_connection .. fragments.issue_information .. fragments.get_issue_timeline_definitions()
 
   M.close_issue = [[
-mutation($issueId: ID!, $stateReason: IssueCloseReason) {
+mutation($issueId: ID!, $stateReason: IssueClosedStateReason) {
   closeIssue(input: {issueId: $issueId, stateReason: $stateReason}) {
     issue {
       ...IssueInformationFragment
@@ -933,7 +932,7 @@ mutation($repo_id: ID!, $category_id: ID!, $title: String!, $body: String!) {
       }
     }
   }
-]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_comment
+]] .. fragments.reaction_groups .. fragments.label_connection .. fragments.label .. fragments.discussion_info .. fragments.discussion_details .. fragments.discussion_poll .. fragments.discussion_poll_option .. fragments.discussion_comment
 
   -- https://docs.github.com/en/graphql/reference/mutations#addprojectv2itembyid
   M.add_project_v2_item = [[
