@@ -598,9 +598,6 @@ function M.display_type(data)
   return bufnr
 end
 
--- Alias for backward compatibility
-M.display_object_type = M.display_type
-
 -- Build GitHub GraphQL documentation URL based on type kind
 local function build_graphql_docs_url(type_name, type_kind)
   local base_url = "https://docs.github.com/en/graphql/reference"
@@ -672,24 +669,6 @@ function M.setup_buffer_keymaps(bufnr, data)
     noremap = true,
     silent = true,
     desc = "Copy GraphQL type documentation URL to clipboard",
-  })
-
-  -- Map <C-y> to copy GraphQL type documentation URL
-  -- Copies the documentation for the current buffer's type, not the word under cursor
-  vim.keymap.set("n", "<C-y>", function()
-    local navigation = require "octo.navigation"
-
-    if not is_nil(type_name) and not is_nil(type_kind) then
-      local url = build_graphql_docs_url(type_name, type_kind)
-      utils.copy_url(url)
-    else
-      notify.error "Unable to determine type information for this buffer"
-    end
-  end, {
-    buffer = bufnr,
-    noremap = true,
-    silent = true,
-    desc = "Copy GraphQL type documentation URL",
   })
 
   -- Map <C-b> to open GraphQL type documentation in browser

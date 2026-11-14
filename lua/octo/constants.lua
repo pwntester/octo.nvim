@@ -2,7 +2,6 @@ local M = {}
 
 M.OCTO_TITLE_NS = vim.api.nvim_create_namespace "octo_title"
 M.OCTO_COMMENT_NS = vim.api.nvim_create_namespace "octo_marks"
-M.OCTO_HIGHLIGHT_NS = vim.api.nvim_create_namespace "octo_highlight"
 M.OCTO_REVIEW_LEFT_HIGHLIGHT_NS = vim.api.nvim_create_namespace "octo_review_left_highlight"
 M.OCTO_REVIEW_RIGHT_HIGHLIGHT_NS = vim.api.nvim_create_namespace "octo_review_right_highlight"
 M.OCTO_THREAD_NS = vim.api.nvim_create_namespace "octo_thread"

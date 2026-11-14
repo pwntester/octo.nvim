@@ -257,27 +257,6 @@ function M.write_detail_table(opts)
   end
 end
 
---- Write virtual text at given line in buffer
----@param bufnr integer
----@param obj octo.fragments.DiscussionDetails
----@param line integer
-function M.write_upvotes(bufnr, obj, line)
-  -- clear namespace and set vt
-  vim.api.nvim_buf_clear_namespace(bufnr, constants.OCTO_REACTIONS_VT_NS, line - 1, line + 1)
-
-  local upvote_symbol = config.values.upvote_icon
-
-  local upvotes = obj.upvoteCount
-  -- local viewer_did_upvote = obj.viewerHasUpvoted
-
-  local upvotes_vt = {
-    { upvote_symbol, "OctoDetailsLabel" },
-    { " " .. upvotes, "OctoDetailsValue" },
-  }
-  M.write_block(bufnr, { "" }, line)
-  M.write_virtual_text(bufnr, constants.OCTO_REACTIONS_VT_NS, line, upvotes_vt)
-end
-
 ---@param bufnr integer
 ---@param obj octo.Discussion
 ---@param line integer
@@ -3357,8 +3336,6 @@ end
 ---@param bufnr integer
 ---@param item octo.fragments.RenamedTitleEvent
 function M.write_renamed_title_event(bufnr, item)
-  local conf = config.values
-
   if utils.is_blank(item.actor) then
     TextChunkBuilder:new():timeline_marker("renamed"):heading("Title renamed"):write_event(bufnr)
     return
