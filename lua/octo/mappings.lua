@@ -151,6 +151,9 @@ return {
       ["Create/Update PR Stack"] = function()
         require("octo.stack").create()
       end,
+      ["Sync PR Stack"] = function()
+        require("octo.stack").sync()
+      end,
       ["Start Review"] = commands.review.start,
       ["Resume Review"] = commands.review.resume,
       ["Approve PR"] = approve_pr,
@@ -384,6 +387,9 @@ return {
   end,
   toggle_checks = function()
     require("octo.navigation").toggle_checks()
+  end,
+  sync_stack = function()
+    require("octo.stack").sync()
   end,
   next_comment = function()
     require("octo.navigation").next_comment()

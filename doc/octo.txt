@@ -420,6 +420,21 @@ See |octo-command-examples| for examples.
                         `gh extension install github/gh-stack`
                         With multiple git remotes, set
                         `git config remote.pushDefault <remote>` first.
+  sync [number]         Propagate a change up a stack, on GitHub: every pull
+                        request above the one that moved is rebased onto its
+                        parent, in order. Works from any branch -- the stack is
+                        read from the current PR buffer, from `number`, or from
+                        the pull request of the current branch -- and asks
+                        before rewriting anything.
+                        Their remote branches are rewritten, so local copies
+                        are moved to match afterwards: a branch that is exactly
+                        what GitHub rebased is fast-forwarded to it, and one
+                        holding anything else (local commits, uncommitted
+                        changes, or checked out in another worktree) is left
+                        alone and named in the summary.
+                        Where a rebase cannot be done automatically GitHub
+                        refuses it and nothing is rewritten; resolve that one
+                        locally, then sync again.
 
 
 :Octo review [action]                           *octo-commands-review*

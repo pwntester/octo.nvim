@@ -1,4 +1,7 @@
+local config = require "octo.config"
 local gh = require "octo.gh"
+local mutations = require "octo.gh.mutations"
+local queries = require "octo.gh.queries"
 local utils = require "octo.utils"
 local window = require "octo.ui.window"
 
@@ -45,7 +48,7 @@ function M.build_stack_preview(stack)
   table.insert(lines, string.format(" ○ %s", stack.trunk))
   if needs_rebase then
     table.insert(lines, "")
-    table.insert(lines, " ⚠ some branches need a rebase: run 'gh stack sync' first")
+    table.insert(lines, " ⚠ some branches need a rebase: run 'Octo stack sync' first")
   end
   table.insert(lines, "")
   table.insert(lines, " <CR> create/update stack · q cancel")
@@ -329,6 +332,423 @@ local function preview_discovered_stack()
       end,
     },
   }
+end
+
+---@class octo.StackSyncEntry
+---@field id string
+---@field number integer
+---@field title string
+---@field state string
+---@field baseRefName string
+---@field headRefName string
+---@field headRefOid string
+---@field mergeStateStatus string
+---@field position integer
+
+---The chain a pull request sits in, worked out from the base branches of the
+---open pull requests, for stacks that were never linked on GitHub.
+---@param number integer
+---@param cb fun(entries: octo.StackSyncEntry[]): nil
+local function discover_chain(number, cb)
+  gh.pr.list {
+    json = "id,number,title,state,headRefName,baseRefName,headRefOid,mergeStateStatus",
+    limit = "1000",
+    opts = {
+      cb = function(output, stderr, exit_code)
+        if exit_code ~= 0 then
+          utils.error(utils.is_blank(stderr) and "Failed to list pull requests" or stderr)
+          return
+        end
+        local ok, prs = pcall(vim.json.decode, output)
+        if not ok or utils.is_blank(prs) then
+          utils.error "Failed to parse the pull request list"
+          return
+        end
+        local chain = M.discover_stack(prs, number)
+        if chain == nil or #chain < 2 then
+          utils.info "This pull request has nothing stacked on it and nothing under it"
+          return
+        end
+        local entries = {} ---@type octo.StackSyncEntry[]
+        for position, pr in ipairs(chain) do
+          local entry = pr --[[@as octo.StackSyncEntry]]
+          entry.position = position
+          table.insert(entries, entry)
+        end
+        cb(entries)
+      end,
+    },
+  }
+end
+
+---Read a stack from GitHub, bottom of the stack first.
+---@param repo string
+---@param number integer a pull request in the stack
+---@param cb fun(entries: octo.StackSyncEntry[]): nil
+local function fetch_chain(repo, number, cb)
+  local owner, name = utils.split_repo(repo)
+  gh.api.graphql {
+    query = queries.stack_heads,
+    F = { owner = owner, name = name, number = number },
+    jq = ".data.repository.pullRequest.stackEntry.stack",
+    opts = {
+      cb = gh.create_callback {
+        failure = function(stderr)
+          utils.error(utils.is_blank(stderr) and "Cannot read the stack" or stderr)
+        end,
+        success = function(output)
+          if utils.is_blank(output) or output == "null" then
+            -- not linked as a stack on GitHub: the chain of base branches is
+            -- still a stack in every way that matters here
+            discover_chain(number, cb)
+            return
+          end
+          local stack = vim.json.decode(output)
+          local entries = {} ---@type octo.StackSyncEntry[]
+          ---@type { position: integer, pullRequest: octo.StackSyncEntry }[]
+          local nodes = vim.tbl_get(stack, "entries", "nodes") or {}
+          for _, node in ipairs(nodes) do
+            local entry = node.pullRequest
+            entry.position = node.position
+            table.insert(entries, entry)
+          end
+          table.sort(entries, function(a, b)
+            return a.position < b.position
+          end)
+          if #entries < 2 then
+            utils.info "A stack of one has nothing to propagate"
+            return
+          end
+          cb(entries)
+        end,
+      },
+    },
+  }
+end
+
+---Ask GitHub to rebase a pull request's branch onto its base. Answers once the
+---branch has actually moved, which is later than the mutation returns.
+---@param repo string
+---@param entry octo.StackSyncEntry
+---@param cb fun(moved: boolean, message: string?): nil
+local function rebase_on_github(repo, entry, cb)
+  local owner, name = utils.split_repo(repo)
+
+  ---@param attempts integer
+  local function wait_for_move(attempts)
+    if attempts <= 0 then
+      cb(false, string.format("#%d was asked to rebase but has not moved yet", entry.number))
+      return
+    end
+    gh.api.graphql {
+      query = queries.pull_request_head_oid,
+      F = { owner = owner, name = name, number = entry.number },
+      jq = ".data.repository.pullRequest.headRefOid",
+      opts = {
+        cb = function(output)
+          local head = vim.trim((output or ""):gsub('"', ""))
+          if not utils.is_blank(head) and head ~= entry.headRefOid then
+            entry.headRefOid = head
+            cb(true)
+            return
+          end
+          vim.defer_fn(function()
+            wait_for_move(attempts - 1)
+          end, 2000)
+        end,
+      },
+    }
+  end
+
+  gh.api.graphql {
+    query = mutations.update_pull_request_branch,
+    f = { id = entry.id, expectedHeadOid = entry.headRefOid, method = "REBASE" },
+    opts = {
+      cb = function(_, stderr, exit_code)
+        if exit_code ~= 0 then
+          -- the base has not moved since: nothing to propagate into this one
+          if stderr and stderr:find("no new commits", 1, true) then
+            cb(true, string.format("#%d was already up to date", entry.number))
+            return
+          end
+          if stderr and stderr:find("expected head", 1, true) then
+            cb(false, string.format("#%d moved while syncing: run it again", entry.number))
+            return
+          end
+          cb(false, string.format("#%d could not be rebased: %s", entry.number, vim.trim(stderr or "")))
+          return
+        end
+        -- GitHub queues the rebase, so wait for the branch to move
+        wait_for_move(15)
+      end,
+    },
+  }
+end
+
+---@param args string[]
+---@return string?
+local function git_output(args)
+  local result = vim.system(args, { text = true }):wait()
+  if result.code ~= 0 then
+    return nil
+  end
+  return vim.trim(result.stdout or "")
+end
+
+---@param branch string
+---@return string?
+local function local_sha(branch)
+  return git_output { "git", "rev-parse", "--verify", "--quiet", "refs/heads/" .. branch }
+end
+
+---Branches checked out in a worktree other than this one: moving their ref from
+---under them would leave that worktree looking at a commit it is not on.
+---@return table<string, string> branch -> worktree path
+local function branches_in_other_worktrees()
+  local held = {} ---@type table<string, string>
+  local output = git_output { "git", "worktree", "list", "--porcelain" }
+  local here = git_output { "git", "rev-parse", "--show-toplevel" }
+  if output == nil then
+    return held
+  end
+  local path ---@type string?
+  for _, line in ipairs(vim.split(output, "\n")) do
+    local worktree = line:match "^worktree (.+)$"
+    local branch = line:match "^branch refs/heads/(.+)$"
+    if worktree then
+      path = worktree
+    elseif branch and path ~= nil and path ~= here then
+      held[branch] = path
+    end
+  end
+  return held
+end
+
+---Bring the local branches in line with what GitHub rewrote. Only branches that
+---were exactly what GitHub rebased are moved: anything else is the reader's own
+---work, and is left where it is.
+---@param rebased { number: integer, branch: string, before: string, after: string }[]
+local function local_catch_up(rebased)
+  if #rebased == 0 then
+    return
+  end
+
+  local remote = config.values.default_remote[1] or "origin"
+  vim.system({ "git", "fetch", remote }, { text = true }, function()
+    vim.schedule(function()
+      local current = M.current_branch()
+      local held = branches_in_other_worktrees()
+      local refspecs = {} ---@type string[]
+      local moved = {} ---@type string[]
+      local left = {} ---@type string[]
+      local reset_current ---@type { branch: string, after: string }?
+
+      for _, item in ipairs(rebased) do
+        local sha = local_sha(item.branch)
+        if sha == nil or sha == item.after then
+          -- no local copy, or already where GitHub is
+        elseif sha ~= item.before then
+          -- the local branch is not what was rebased: it holds something else
+          table.insert(left, item.branch)
+        elseif held[item.branch] then
+          table.insert(left, item.branch .. " (checked out in " .. held[item.branch] .. ")")
+        elseif item.branch == current then
+          reset_current = { branch = item.branch, after = item.after }
+        else
+          table.insert(refspecs, string.format("+refs/heads/%s:refs/heads/%s", item.branch, item.branch))
+          table.insert(moved, item.branch)
+        end
+      end
+
+      if #refspecs > 0 then
+        local fetched =
+          vim.system(vim.list_extend({ "git", "fetch", "--force", remote }, refspecs), { text = true }):wait()
+        if fetched.code ~= 0 then
+          for _, branch in ipairs(moved) do
+            table.insert(left, branch)
+          end
+          moved = {}
+        end
+      end
+
+      if reset_current ~= nil then
+        local dirty = git_output { "git", "status", "--porcelain" }
+        if utils.is_blank(dirty) then
+          local reset = vim.system({ "git", "reset", "--hard", reset_current.after }, { text = true }):wait()
+          if reset.code == 0 then
+            table.insert(moved, reset_current.branch .. " (checked out here)")
+          else
+            table.insert(left, reset_current.branch)
+          end
+        else
+          table.insert(left, reset_current.branch .. " (uncommitted changes)")
+        end
+      end
+
+      if #moved > 0 then
+        utils.info("Local branches moved to match GitHub: " .. table.concat(moved, ", "))
+      end
+      if #left > 0 then
+        utils.info("Left alone, they are not what GitHub rebased: " .. table.concat(left, ", "))
+      end
+    end)
+  end)
+end
+
+---How many commits of `parent` the branch of `child` has not got. A pull
+---request's own merge state says nothing about this: GitHub only calls a branch
+---BEHIND when the repository insists branches be current before merging.
+---@param repo string
+---@param parent string branch
+---@param child string branch
+---@param cb fun(behind: integer): nil
+local function behind_by(repo, parent, child, cb)
+  local owner, name = utils.split_repo(repo)
+  gh.api.graphql {
+    query = queries.ref_behind,
+    F = { owner = owner, name = name, parent = "refs/heads/" .. parent, child = child },
+    jq = ".data.repository.ref.compare.behindBy",
+    opts = {
+      cb = function(output, _, exit_code)
+        if exit_code ~= 0 then
+          cb(0)
+          return
+        end
+        cb(tonumber(vim.trim((output or ""):gsub('"', ""))) or 0)
+      end,
+    },
+  }
+end
+
+---What syncing has to rebase: the lowest pull request whose branch is missing
+---something from its parent, and every open one above it -- rebasing that one
+---leaves the next behind in turn, which is the whole point of a stack.
+---@param repo string
+---@param entries octo.StackSyncEntry[]
+---@param cb fun(plan: octo.StackSyncEntry[]): nil
+local function plan_rebases(repo, entries, cb)
+  ---@param position integer
+  local function look(position)
+    if position > #entries then
+      cb {}
+      return
+    end
+    local entry = entries[position]
+    if entry.state ~= "OPEN" then
+      look(position + 1)
+      return
+    end
+    behind_by(repo, entries[position - 1].headRefName, entry.headRefName, function(behind)
+      if behind == 0 then
+        look(position + 1)
+        return
+      end
+      local plan = {} ---@type octo.StackSyncEntry[]
+      for above = position, #entries do
+        if entries[above].state == "OPEN" then
+          table.insert(plan, entries[above])
+        end
+      end
+      cb(plan)
+    end)
+  end
+
+  look(2)
+end
+
+---@param plan octo.StackSyncEntry[]
+---@return boolean
+local function confirm_rebase(plan)
+  local lines = { string.format("Rebase %d pull request(s) on GitHub, bottom up?", #plan) }
+  for _, entry in ipairs(plan) do
+    table.insert(lines, string.format("  #%d %s", entry.number, entry.title))
+  end
+  table.insert(lines, "")
+  table.insert(lines, "Their remote branches are rewritten. Local copies of them")
+  table.insert(lines, "are moved to match afterwards where it is safe to do so.")
+  return vim.fn.confirm(table.concat(lines, "\n"), "&Yes\n&No", 2) == 1
+end
+
+---Propagate a change up a stack, on GitHub. Every pull request above the one
+---that moved is rebased onto its parent, in order, whichever branch the reader
+---happens to be on: the work is the same wherever it is asked for.
+---@param ... string a pull request number, when there is no buffer to read it from
+function M.sync(...)
+  local number ---@type integer?
+  for _, arg in ipairs { ... } do
+    number = number or tonumber(arg)
+  end
+
+  local buffer = utils.get_current_buffer()
+  local found = buffer and buffer.repo or utils.get_remote_name()
+  -- a type check rather than `is_blank`: it narrows for the language server
+  if type(found) ~= "string" or found == "" then
+    utils.error "Cannot tell which repository to sync"
+    return
+  end
+  local repo = found
+  if number == nil and buffer ~= nil and buffer:isPullRequest() then
+    number = buffer.number
+  end
+
+  ---@param pull_number integer
+  local function run(pull_number)
+    fetch_chain(repo, pull_number, function(entries)
+      plan_rebases(repo, entries, function(plan)
+        if #plan == 0 then
+          utils.info "Every pull request in the stack is already on top of its parent"
+          return
+        end
+        if not confirm_rebase(plan) then
+          return
+        end
+
+        local rebased = {} ---@type { number: integer, branch: string, before: string, after: string }[]
+        local function step(index)
+          if index > #plan then
+            utils.info(string.format("Rebased %d of %d on GitHub", #rebased, #plan))
+            local_catch_up(rebased)
+            return
+          end
+          local entry = plan[index]
+          local before = entry.headRefOid
+          utils.info(string.format("Rebasing #%d (%d/%d)...", entry.number, index, #plan))
+          rebase_on_github(repo, entry, function(moved, message)
+            if not utils.is_blank(message) then
+              utils.info(message)
+            end
+            if not moved then
+              utils.error(string.format("Stopped at #%d: the pull requests above it were left alone", entry.number))
+              local_catch_up(rebased)
+              return
+            end
+            if entry.headRefOid ~= before then
+              table.insert(
+                rebased,
+                { number = entry.number, branch = entry.headRefName, before = before, after = entry.headRefOid }
+              )
+            end
+            step(index + 1)
+          end)
+        end
+        step(1)
+      end)
+    end)
+  end
+
+  if number ~= nil then
+    run(number)
+    return
+  end
+
+  -- not in a pull request buffer and no number given: the branch we are on
+  utils.get_pull_request_for_current_branch(function(pr)
+    if pr == nil or pr.number == nil then
+      utils.error "No pull request found for this branch: give a number, as in `Octo stack sync 42`"
+      return
+    end
+    run(pr.number)
+  end)
 end
 
 ---Preview the stack for the current branch and submit it on confirmation.

@@ -117,6 +117,9 @@ function M.setup()
       create = function()
         require("octo.stack").create()
       end,
+      sync = function(...)
+        require("octo.stack").sync(...)
+      end,
     },
     workflow = {
       edit = function()
