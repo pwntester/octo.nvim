@@ -343,6 +343,8 @@ See |octo-command-examples| for examples.
 
   add                   Add a new comment.
   suggest               Add a new suggestion.
+  file                  Add a new file-level review comment (not anchored to
+                        a line).
   delete                Delete a comment.
   url                   Copies the URL of the current comment to the system
                         clipboard.
@@ -496,6 +498,10 @@ PR REVIEW                                       *octo-pr-review*
 * Navigate to unviewed files with `]u` (next unviewed) and `[u` (previous unviewed).
 * Add comments with `<localleader>ca` or suggestions with `<localleader>sa` on single or
   multiple visual-selected lines
+* Add a file-level comment (not anchored to a line) with `<localleader>cf`.
+  The thread buffer also lists the existing file-level threads of the file so
+  you can reply to or edit them. Files with file-level threads show a `file:`
+  count in the changed files panel
   * A new buffer will appear in the alternate diff window. Cursor will be
     positioned in the new buffer
   * When ready, save the buffer to commit changes to GitHub

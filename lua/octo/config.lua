@@ -504,6 +504,7 @@ function M.get_default_values()
         discard_review = { lhs = "<localleader>vd", desc = "discard review" },
         add_review_comment = { lhs = "<localleader>ca", desc = "add a new review comment", mode = { "n", "x" } },
         add_review_suggestion = { lhs = "<localleader>sa", desc = "add a new review suggestion", mode = { "n", "x" } },
+        add_review_file_comment = { lhs = "<localleader>cf", desc = "add a new file-level review comment" },
         focus_files = { lhs = "<localleader>e", desc = "move focus to changed file panel" },
         toggle_files = { lhs = "<localleader>b", desc = "hide/show changed files panel" },
         next_thread = { lhs = "]t", desc = "move to next thread" },

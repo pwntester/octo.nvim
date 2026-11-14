@@ -311,6 +311,14 @@ end
 function Review:update_threads(threads)
   self.threads = {}
   for _, thread in ipairs(threads) do
+    if thread.subjectType == "FILE" then
+      -- file-level threads have no line; pin them to the first line of the file
+      thread.line = 1
+      thread.startLine = 1
+      thread.originalLine = 1
+      thread.originalStartLine = 1
+      thread.startDiffSide = thread.diffSide
+    end
     if thread.line == vim.NIL then
       thread.line = thread.originalLine
     end
@@ -520,6 +528,91 @@ function Review:add_comment(isSuggestion)
   end
 end
 
+---File-level threads for a path, oldest first
+---@param path string
+---@return octo.ReviewThread[]
+function Review:file_threads(path)
+  local threads = {}
+  for _, thread in pairs(self.threads) do
+    if thread.subjectType == "FILE" and thread.path == path and #thread.comments.nodes > 0 then
+      table.insert(threads, thread)
+    end
+  end
+  ---@param a octo.ReviewThread
+  ---@param b octo.ReviewThread
+  table.sort(threads, function(a, b)
+    return a.comments.nodes[1].createdAt < b.comments.nodes[1].createdAt
+  end)
+  return threads
+end
+
+---Add a file-level comment (not anchored to any line) for the file in the current diff split
+function Review:add_file_comment()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local split, path = utils.get_split_and_path(bufnr)
+  if not split or not path then
+    utils.error "Not in a diff buffer"
+    return
+  end
+
+  if self:get_level() ~= "PR" then
+    utils.error "File-level comments are only supported when reviewing the whole PR"
+    return
+  end
+
+  local file = self.layout:get_current_file()
+  if not file then
+    return
+  end
+
+  self.layout:ensure_layout()
+
+  local alt_win = file:get_alternative_win(split)
+  if not vim.api.nvim_win_is_valid(alt_win) then
+    utils.error("Cannot find diff window " .. alt_win)
+    return
+  end
+
+  local pr = file.pull_request
+  local rev = split == "LEFT" and self.layout.left or self.layout.right
+  -- list the existing file-level threads, followed by a stub for the new one
+  local threads = self:file_threads(file.path)
+  table.insert(
+    threads,
+    ReviewThread:stub {
+      line1 = 1,
+      line2 = 1,
+      file_path = file.path,
+      split = split,
+      diff_hunk = "",
+      commit = rev.commit,
+      commit_abbrev = rev:abbrev(),
+      review_id = self.id,
+      subject_type = "FILE",
+    }
+  )
+
+  thread_panel.show_review_threads(false)
+  local thread_buffer = thread_panel.create_thread_buffer(threads, pr.repo, pr.number, split, file.path)
+  if thread_buffer then
+    table.insert(file.associated_bufs, thread_buffer.bufnr)
+    vim.api.nvim_win_set_buf(alt_win, thread_buffer.bufnr)
+    vim.api.nvim_set_current_win(alt_win)
+    thread_buffer:configure()
+    vim.cmd [[diffoff!]]
+    vim.cmd [[normal! vvGk]]
+    vim.cmd [[startinsert]]
+
+    vim.keymap.set("n", "q", function()
+      thread_panel.hide_thread_buffer(split, file)
+      local file_win = file:get_win(split)
+      if vim.api.nvim_win_is_valid(file_win) then
+        vim.api.nvim_set_current_win(file_win)
+      end
+    end, { buffer = thread_buffer.bufnr })
+  end
+end
+
 ---Get the review level, aka whether the review is at commit or PR level
 ---@return ReviewLevel
 function Review:get_level()
@@ -556,6 +649,22 @@ function M.add_review_comment(isSuggestion)
   review:add_comment(isSuggestion)
 end
 
+function M.add_review_file_comment()
+  local review = M.get_current_review()
+
+  if not review then
+    error "Could not find review"
+  end
+
+  -- we maybe in browse mode, where no review has been started.
+  if review.id == -1 then
+    utils.error "Please start or resume a review first"
+    return
+  end
+
+  review:add_file_comment()
+end
+
 ---@param thread ReviewThread
 function M.jump_to_pending_review_thread(thread)
   local current_review = M.get_current_review()
@@ -575,6 +684,10 @@ function M.jump_to_pending_review_thread(thread)
         local line = review_level == "COMMIT" and thread.originalStartLine or thread.startLine
         vim.api.nvim_set_current_win(win)
         vim.api.nvim_win_set_cursor(win, { line, 0 })
+        if thread.subjectType == "FILE" then
+          -- file-level threads are not shown on hover, open them directly
+          current_review:add_file_comment()
+        end
       else
         utils.error "Cannot find diff window"
       end

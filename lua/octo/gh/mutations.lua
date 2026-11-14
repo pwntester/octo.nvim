@@ -34,6 +34,7 @@ mutation($input: ResolveReviewThreadInput!) {
     thread {
       originalStartLine
       originalLine
+      subjectType
       isOutdated
       isResolved
       path
@@ -61,6 +62,7 @@ mutation($input: UnresolveReviewThreadInput!) {
     thread {
       originalStartLine
       originalLine
+      subjectType
       isOutdated
       isResolved
       path
@@ -196,6 +198,7 @@ mutation($input: DeletePullRequestReviewInput!) {
   ---@field side DiffSide?
   ---@field startLine integer?
   ---@field line integer?
+  ---@field subjectType "LINE"|"FILE"?
 
   -- https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
   M.add_pull_request_review_thread = [[

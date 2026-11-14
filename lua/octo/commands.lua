@@ -868,6 +868,9 @@ function M.setup()
       suggest = context.within_review(function(current_review)
         current_review:add_comment(true)
       end),
+      file = function()
+        reviews.add_review_file_comment()
+      end,
       reply = M.add_pr_issue_or_review_thread_comment_reply,
       url = context.on_comment(function(comment)
         gh.api.graphql {
@@ -1601,6 +1604,7 @@ local function update_review_thread_header(bufnr, thread, thread_id, thread_line
     path = thread.path,
     start_line = start_line,
     end_line = end_line,
+    subject_type = thread.subjectType,
     commit = commit_id,
     isOutdated = thread.isOutdated,
     isResolved = thread.isResolved,
