@@ -2309,7 +2309,11 @@ function M.merge_pr_stack(...)
   -- everything at or below this PR's position merges, bottom-up
   local to_merge = {} ---@type { position: integer, number: integer }[]
   for _, entry in ipairs(stack_entry.stack.entries.nodes) do
-    if entry.position <= stack_entry.position and not utils.is_blank(entry.pullRequest) then
+    if
+      entry.position <= stack_entry.position
+      and not utils.is_blank(entry.pullRequest)
+      and entry.pullRequest.state == "OPEN"
+    then
       table.insert(to_merge, { position = entry.position, number = entry.pullRequest.number })
     end
   end
