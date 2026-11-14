@@ -378,6 +378,7 @@ return {
   end,
   create_stack = function()
     require("octo.stack").create()
+  end,
   goto_check = function()
     require("octo.navigation").go_to_check()
   end,
