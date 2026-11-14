@@ -1,1 +1,6 @@
 doc/tags
+
+# local typecheck artifacts (see Makefile)
+deps/
+luals/
+_neovim/
