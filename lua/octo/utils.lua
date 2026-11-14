@@ -546,7 +546,7 @@ function M.in_pr_repo()
   end
 
   local local_repo = M.get_remote_name()
-  if buffer:pullRequest().baseRepository.nameWithOwner ~= local_repo then
+  if not local_repo or buffer:pullRequest().baseRepository.nameWithOwner:lower() ~= local_repo:lower() then
     M.error(
       string.format(
         "Not in PR repo. Expected %s, got %s",
