@@ -4,7 +4,8 @@ format:
 docs:
 	scripts/gen-config-docs.sh
 
-# Version of lua-language-server used by CI (.github/workflows/typecheck.yml).
+# Version of lua-language-server installed by `make setup`, locally and
+# in CI (which runs the same targets).
 LUA_LS_VERSION := 3.18.2
 
 # Third-party libraries referenced by .github/workflows/.luarc.json.
@@ -12,9 +13,9 @@ DEPS := nvim-lua/plenary.nvim folke/snacks.nvim \
 	nvim-telescope/telescope.nvim ibhagwan/fzf-lua \
 	nvim-tree/nvim-web-devicons
 
-# Local equivalents of the CI environment: nvim stable and a pinned
-# lua-language-server, unpacked like typecheck.yml does. Optional, but
-# gives results identical to CI on any machine.
+# The CI toolchain: nvim stable and a pinned lua-language-server,
+# unpacked like CI does before typechecking. Optional, but gives
+# results identical to CI on any machine.
 setup:
 	@test -d _neovim/share/nvim/runtime || { \
 		mkdir -p _neovim; \
