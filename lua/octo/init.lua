@@ -38,6 +38,10 @@ function M.setup(user_config)
   end
 
   colors.setup()
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = vim.api.nvim_create_augroup("OctoColors", { clear = true }),
+    callback = colors.setup,
+  })
   signs.setup()
   picker.setup()
   completion.setup()
