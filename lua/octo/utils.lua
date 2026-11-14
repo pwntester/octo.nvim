@@ -1982,6 +1982,7 @@ function M.get_lines_from_context(calling_context)
   end
   -- Ensure line_number_start is always <= line_number_end
   if line_number_start and line_number_end and line_number_start > line_number_end then
+    ---@type integer
     local temp = line_number_start
     line_number_start = line_number_end
     line_number_end = temp
