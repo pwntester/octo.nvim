@@ -4,7 +4,6 @@ local gh = require "octo.gh"
 local graphql = require "octo.gh.graphql"
 local queries = require "octo.gh.queries"
 local _, Job = pcall(require, "plenary.job")
-local release = require "octo.release"
 local notify = require "octo.notify"
 local uri = require "octo.uri"
 local vim = vim
@@ -837,37 +836,6 @@ function M.parse_utc_date(date_string)
   }
 end
 
----Relative date options
----@class DateOpts
----@field minutes? integer
----@field hours? integer
----@field days? integer
----@field weeks? integer
-
----@param opts DateOpts
----@param reference? string|osdate|number Optional reference date (ISO string or os.time() or os.date table)
-function M.relative_date(opts, reference)
-  ---@type integer
-  local ref_ts
-  if type(reference) == "string" then
-    ref_ts = M.parse_utc_date(reference)
-  elseif type(reference) == "table" then
-    ref_ts = os.time(reference)
-  elseif type(reference) == "number" then
-    ref_ts = reference
-  else
-    ref_ts = os.time()
-  end
-
-  local delta = (opts.minutes or 0) * 60
-    + (opts.hours or 0) * 3600
-    + (opts.days or 0) * 86400
-    + (opts.weeks or 0) * 604800
-  local new_ts = ref_ts - delta
-
-  return os.date("!%Y-%m-%dT%H:%M:%SZ", new_ts)
-end
-
 ---@param start_date string
 ---@param end_date string
 ---@return integer number of seconds between the two dates
@@ -1199,37 +1167,6 @@ function M.get_file_contents(repo, commit, path, cb)
   }
 end
 
----@generic TParams
----@param delay integer
----@param callback fun(...: TParams)
----@param ... TParams
-function M.set_timeout(delay, callback, ...)
-  local timer = vim.uv.new_timer()
-  if not timer then
-    M.error "Failed to create timer"
-    return
-  end
-  local args = { ... }
-  vim.uv.timer_start(timer, delay, 0, function()
-    vim.uv.timer_stop(timer)
-    vim.uv.close(timer)
-    callback(unpack(args))
-  end)
-  return timer
-end
-
----@param bufnr integer
-function M.getwin4buf(bufnr)
-  local tabpage = vim.api.nvim_get_current_tabpage()
-  local wins = vim.api.nvim_tabpage_list_wins(tabpage)
-  for _, w in ipairs(wins) do
-    if bufnr == vim.api.nvim_win_get_buf(w) then
-      return w
-    end
-  end
-  return -1
-end
-
 ---@param start_col integer
 ---@param end_col integer
 function M.cursor_in_col_range(start_col, end_col)
@@ -1480,56 +1417,6 @@ function M.wipe_named_buffer(name)
   end
 end
 
----@param s string
----@param new_length integer
-function M.str_shorten(s, new_length)
-  if string.len(s) > new_length - 1 then
-    return "…" .. s:sub(string.len(s) - new_length + 1, string.len(s))
-  end
-  return s
-end
-
----Get a path relative to another path.
----@param path string
----@param relative_to string
----@return string
-function M.path_relative(path, relative_to)
-  local p, _ = path:gsub("^" .. M.path_to_matching_str(M.path_add_trailing(relative_to)), "")
-  return p
-end
-
----@param path string
-function M.path_to_matching_str(path)
-  return path:gsub("(%-)", "(%%-)"):gsub("(%.)", "(%%.)"):gsub("(%_)", "(%%_)")
-end
-
----@param path string
-function M.path_add_trailing(path)
-  if path:sub(-1) == path_sep then
-    return path
-  end
-
-  return path .. path_sep
-end
-
----Get the path to the parent directory of the given path. Returns `nil` if the
----path has no parent.
----@param path string
----@param remove_trailing boolean
----@return string|nil
-function M.path_parent(path, remove_trailing)
-  path = " " .. M.path_remove_trailing(path)
-  local i = path:match("^.+()" .. path_sep)
-  if not i then
-    return nil
-  end
-  path = path:sub(2, i)
-  if remove_trailing then
-    path = M.path_remove_trailing(path)
-  end
-  return path
-end
-
 ---@param path string
 function M.path_remove_trailing(path)
   local p, _ = path:gsub(path_sep .. "$", "")
@@ -1558,38 +1445,6 @@ end
 ---@param paths string[]
 function M.path_join(paths)
   return table.concat(paths, path_sep)
-end
-
----Extract diffhunks from a diff file
----@param diff string
-function M.extract_diffhunks_from_diff(diff)
-  local lines = vim.split(diff, "\n")
-  local diffhunks = {} ---@type table<string, string>
-  local current_diffhunk = {}
-  local current_path ---@type string
-  local state ---@type string
-  for _, line in ipairs(lines) do
-    if vim.startswith(line, "diff --git ") then
-      if #current_diffhunk > 0 then
-        diffhunks[current_path] = table.concat(current_diffhunk, "\n")
-        current_diffhunk = {}
-      end
-      state = "diff"
-    elseif vim.startswith(line, "index ") and state == "diff" then
-      state = "index"
-    elseif vim.startswith(line, "--- a/") and state == "index" then
-      state = "fileA"
-    elseif vim.startswith(line, "+++ b/") and state == "fileA" then
-      current_path = string.sub(line, 7)
-      state = "fileB"
-    elseif vim.startswith(line, "@@") and state == "fileB" then
-      state = "diffhunk"
-      table.insert(current_diffhunk, line)
-    elseif state == "diffhunk" then
-      table.insert(current_diffhunk, line)
-    end
-  end
-  return diffhunks
 end
 
 ---Calculate valid comment ranges

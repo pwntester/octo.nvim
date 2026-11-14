@@ -93,7 +93,7 @@ function M.parse_details_blocks(lines, start_line)
 
       if #top.summary_parts == 0 and not top.in_summary then
         local s1, e1 = lower:find "<summary>"
-        local s2, e2 = lower:find "</summary>"
+        local s2 = lower:find "</summary>"
         if s1 and s2 then
           -- Inline <summary>...</summary> on the same line
           top.summary_parts[1] = vim.trim(line:sub(e1 + 1, s2 - 1))
