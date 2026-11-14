@@ -381,6 +381,51 @@ local function discover_chain(number, cb)
   }
 end
 
+---Check out a stack locally: fetches the stack's branches from GitHub, sets
+---up local tracking and switches to the branch. Defaults to the stack that
+---contains the current PR buffer.
+---@param number? integer|string stack or PR number
+function M.checkout(number)
+  if utils.is_blank(number) then
+    local buffer = utils.get_current_buffer()
+    if not buffer or not buffer:isPullRequest() then
+      utils.error "Provide a stack or PR number, or run ':Octo stack checkout' from a PR buffer"
+      return
+    end
+    -- gh stack checkout has no --repo flag: it resolves the repository from
+    -- the current checkout, so the buffer's repo must match it
+    local current_repo = utils.get_remote_name()
+    if current_repo ~= buffer.repo then
+      utils.error(
+        string.format(
+          "':Octo stack checkout' must run inside a checkout of %s (current: %s)",
+          buffer.repo,
+          current_repo
+        )
+      )
+      return
+    end
+    number = buffer.number
+  end
+
+  utils.info "Checking out stack..."
+  gh.stack.checkout {
+    number,
+    opts = {
+      cb = function(output, stderr, exit_code)
+        if exit_code == 0 then
+          local message = not utils.is_blank(stderr) and stderr or output
+          utils.info(utils.is_blank(message) and "Stack checked out" or message)
+        elseif stderr and stderr:find('unknown command "stack"', 1, true) then
+          utils.error "The gh-stack extension is required: run 'gh extension install github/gh-stack'"
+        else
+          utils.error(utils.is_blank(stderr) and "Failed to check out the stack" or stderr)
+        end
+      end,
+    },
+  }
+end
+
 ---Read a stack from GitHub, bottom of the stack first.
 ---@param repo string
 ---@param number integer a pull request in the stack

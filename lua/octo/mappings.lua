@@ -154,6 +154,9 @@ return {
       ["Sync PR Stack"] = function()
         require("octo.stack").sync()
       end,
+      ["Checkout PR Stack"] = function()
+        require("octo.stack").checkout()
+      end,
       ["Start Review"] = commands.review.start,
       ["Resume Review"] = commands.review.resume,
       ["Approve PR"] = approve_pr,
@@ -390,6 +393,9 @@ return {
   end,
   sync_stack = function()
     require("octo.stack").sync()
+  end,
+  checkout_stack = function()
+    require("octo.stack").checkout()
   end,
   next_comment = function()
     require("octo.navigation").next_comment()

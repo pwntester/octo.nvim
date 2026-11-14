@@ -120,6 +120,9 @@ function M.setup()
       sync = function(...)
         require("octo.stack").sync(...)
       end,
+      checkout = function(number)
+        require("octo.stack").checkout(number)
+      end,
     },
     workflow = {
       edit = function()

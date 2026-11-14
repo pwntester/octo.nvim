@@ -435,6 +435,12 @@ See |octo-command-examples| for examples.
                         Where a rebase cannot be done automatically GitHub
                         refuses it and nothing is rewritten; resolve that one
                         locally, then sync again.
+  checkout [number]     Check out a stack locally: fetch its branches from
+                        GitHub, set up local tracking and switch to the
+                        branch. Defaults to the stack containing the current
+                        PR buffer; pass a stack or PR number to check out any
+                        other stack. If a conflicting local stack exists, run
+                        `gh stack unstack --local` and retry.
 
 
 :Octo review [action]                           *octo-commands-review*
