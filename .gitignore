@@ -1,1 +1,3 @@
 doc/tags
+.graphql-schema-cache.graphql
+graphql-docs.json
