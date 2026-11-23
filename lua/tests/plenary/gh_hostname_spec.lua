@@ -90,7 +90,7 @@ describe("gh host selection:", function()
   end)
 
   it("api command still passes --hostname, and GH_HOST stays unset", function()
-    local out = run_api({ hostname = "ghe.example.com" })
+    local out = run_api { hostname = "ghe.example.com" }
     assert.is_truthy(out:find("--hostname ghe.example.com", 1, true))
     assert.is_truthy(out:find("GH_HOST=\n", 1, true))
   end)

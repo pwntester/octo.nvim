@@ -214,10 +214,11 @@ local function run(opts)
   local utils = require "octo.utils"
   -- Most specific first: explicit option, current octo:// buffer, config, git remote
   local hostname = ""
+  local buffer_hostname = utils.get_buffer_hostname()
   if not utils.is_blank(opts.hostname) then
     hostname = opts.hostname
-  elseif utils.get_buffer_hostname() then
-    hostname = utils.get_buffer_hostname()
+  elseif buffer_hostname then
+    hostname = buffer_hostname
   elseif not utils.is_blank(conf.github_hostname) then
     hostname = conf.github_hostname
   elseif not utils.is_blank(remote_hostname) then
