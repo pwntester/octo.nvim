@@ -211,7 +211,18 @@ local function run(opts)
     end
   end
   opts.args = filtered_args
+  local utils = require "octo.utils"
+  -- Most specific first: explicit option, current octo:// buffer, config, git remote
   local hostname = ""
+  if not utils.is_blank(opts.hostname) then
+    hostname = opts.hostname
+  elseif utils.get_buffer_hostname() then
+    hostname = utils.get_buffer_hostname()
+  elseif not utils.is_blank(conf.github_hostname) then
+    hostname = conf.github_hostname
+  elseif not utils.is_blank(remote_hostname) then
+    hostname = remote_hostname
+  end
   if opts.args[1] == "api" then
     table.insert(opts.args, "-H")
     table.insert(opts.args, "Accept: " .. table.concat(headers, ";"))
@@ -219,14 +230,7 @@ local function run(opts)
       table.insert(opts.args, "-H")
       table.insert(opts.args, "X-Github-Next-Global-ID: 1")
     end
-    if not require("octo.utils").is_blank(opts.hostname) then
-      hostname = opts.hostname
-    elseif not require("octo.utils").is_blank(conf.github_hostname) then
-      hostname = conf.github_hostname
-    elseif not require("octo.utils").is_blank(remote_hostname) then
-      hostname = remote_hostname
-    end
-    if not require("octo.utils").is_blank(hostname) and hostname ~= "github.com" then
+    if hostname ~= "" and hostname ~= "github.com" then
       table.insert(opts.args, "--hostname")
       table.insert(opts.args, hostname)
     end
@@ -239,6 +243,11 @@ local function run(opts)
   end
 
   local env = get_env()
+  if opts.args[1] ~= "api" and hostname ~= "" then
+    -- `gh pr/run/...` have no --hostname flag; without GH_HOST they target gh's default host.
+    -- Copy: get_env() may return the shared env_vars table.
+    env = vim.tbl_extend("force", env, { GH_HOST = hostname })
+  end
   if opts.debug then
     env.GH_DEBUG = "1"
   end

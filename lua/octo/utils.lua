@@ -374,6 +374,14 @@ function M.get_remote_host(remote)
   return M.get_remote(remote).host
 end
 
+---Hostname of the current `octo://hostname/owner/repo/kind/id` buffer.
+---Hostless names (`octo://owner/repo/kind/id`) return nil.
+---@return string?
+function M.get_buffer_hostname()
+  -- A first segment containing a dot is a hostname rather than an owner
+  return vim.fn.bufname():match "^octo://([^/]+%.[^/]*)/"
+end
+
 ---@param commit string
 ---@param cb fun(exists: boolean)
 function M.commit_exists(commit, cb)
