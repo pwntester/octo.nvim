@@ -26,22 +26,6 @@ OctoLastCmdOpts = nil
 
 local M = {}
 
--- Helper function to extract hostname from octo:// buffer URL
-local function get_hostname_from_buffer()
-  local bufname = vim.fn.bufname()
-  if bufname:match "^octo://" then
-    -- Try to parse with hostname: octo://hostname/owner/repo/kind/id
-    -- vs without hostname: octo://owner/repo/kind/id
-    local first_segment = bufname:match "^octo://([^/]+)"
-
-    -- Check if this looks like a hostname (contains a dot) vs owner name
-    if first_segment and first_segment:match "%." then
-      return first_segment
-    end
-  end
-  return nil
-end
-
 local function merge_tables(t1, t2)
   local result = vim.deepcopy(t1)
   for k, v in pairs(t2) do
@@ -2645,7 +2629,7 @@ function M.set_project_v2_card()
                   success = function()
                     -- TODO do update here
                     -- refresh issue/pr details
-                    local hostname = get_hostname_from_buffer()
+                    local hostname = utils.get_buffer_hostname()
                     require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
                       writers.write_details(buffer.bufnr, obj, true)
                       node.projectCards = obj.projectCards
@@ -2678,7 +2662,7 @@ function M.remove_project_v2_card()
         cb = gh.create_callback {
           success = function()
             -- refresh issue/pr details
-            local hostname = get_hostname_from_buffer()
+            local hostname = utils.get_buffer_hostname()
             require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               node.projectCards = obj.projectCards
               writers.write_details(buffer.bufnr, obj, true)
@@ -2764,7 +2748,7 @@ local function label_action(opts)
     end
 
     local function refresh_details()
-      local hostname = get_hostname_from_buffer()
+      local hostname = utils.get_buffer_hostname()
       require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
         if buffer:isDiscussion() then
           writers.write_discussion_details(buffer.bufnr, obj)
@@ -2852,7 +2836,7 @@ function M.add_user(subject, logins)
         cb = gh.create_callback {
           success = function()
             -- refresh issue/pr details
-            local hostname = get_hostname_from_buffer()
+            local hostname = utils.get_buffer_hostname()
             require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               writers.write_details(buffer.bufnr, obj, true)
               vim.cmd [[stopinsert]]
@@ -2910,7 +2894,7 @@ function M.remove_assignee(login)
         cb = gh.create_callback {
           success = function()
             -- refresh issue/pr details
-            local hostname = get_hostname_from_buffer()
+            local hostname = utils.get_buffer_hostname()
             require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               writers.write_details(buffer.bufnr, obj, true)
             end)
@@ -2950,7 +2934,7 @@ function M.remove_reviewer(login)
       opts = {
         cb = gh.create_callback {
           success = function()
-            local hostname = get_hostname_from_buffer()
+            local hostname = utils.get_buffer_hostname()
             require("octo").load(buffer.repo, buffer.kind, buffer.number, hostname, function(obj)
               writers.write_details(buffer.bufnr, obj, true)
             end)
