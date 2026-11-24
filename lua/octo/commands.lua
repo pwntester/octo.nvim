@@ -42,6 +42,24 @@ local function get_hostname_from_buffer()
   return nil
 end
 
+--- User commands split their arguments on whitespace, so an argument that
+--- contains spaces, e.g. a label name, arrives as one argument per word.
+--- Join those words back into a single value and drop an optional pair of
+--- surrounding quotes.
+--- Returns nil when nothing was passed so callers keep using their default
+--- picker or prompt.
+---@param ... string
+---@return string|nil
+local function join_args(...)
+  local args = table.pack(...)
+  local text = table.concat(args, " ", 1, args.n)
+  text = text:match '^"(.*)"$' or text:match "^'(.*)'$" or text
+  if utils.is_blank(text) then
+    return nil
+  end
+  return text
+end
+
 local function merge_tables(t1, t2)
   local result = vim.deepcopy(t1)
   for k, v in pairs(t2) do
@@ -899,16 +917,18 @@ function M.setup()
       end,
     },
     label = {
-      create = function(label)
-        M.create_label(label)
+      create = function(...)
+        M.create_label(join_args(...))
       end,
-      add = function(label)
-        M.add_label(label)
+      add = function(...)
+        M.add_label(join_args(...))
       end,
-      remove = function(label)
-        M.remove_label(label)
+      remove = function(...)
+        M.remove_label(join_args(...))
       end,
-      edit = function(label)
+      edit = function(...)
+        local label = join_args(...)
+
         --- Get the description of a label
         --- @param search string
         --- @return table label_info
@@ -994,7 +1014,9 @@ function M.setup()
           cb(label)
         end
       end,
-      delete = function(label)
+      delete = function(...)
+        local label = join_args(...)
+
         local function delete_labels(labels)
           for _, label in ipairs(labels) do
             if vim.fn.confirm("Delete label: " .. label.name .. "?", "&Yes\n&No", 2) == 1 then

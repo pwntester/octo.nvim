@@ -478,6 +478,7 @@ COMMAND EXAMPLES                                *octo-command-examples*
   Octo issue edit 1
   Octo issue list createdBy=pwntester
   Octo issue list neovim/neovim labels=bug,help\ wanted states=OPEN
+  Octo label remove "needs triage"
   Octo search assignee:pwntester is:pr
 <
 
