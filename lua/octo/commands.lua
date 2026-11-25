@@ -129,6 +129,8 @@ function M.setup()
     }
   end
 
+  M.setup_cmdline_copy_url()
+
   -- supported commands
   M.commands = {
     stack = {
@@ -3060,6 +3062,31 @@ function M.actions()
   picker.actions(flattened_actions)
 end
 
+--- Set up the command-mode key to copy the URL of the :Octo search
+--- query being typed. Disabled unless search.copy_url_key is set. When
+--- the command line is not an Octo search, the key falls back to its
+--- builtin command-line behavior.
+function M.setup_cmdline_copy_url()
+  local lhs = config.values.search.copy_url_key
+  if utils.is_blank(lhs) then
+    return
+  end
+
+  vim.keymap.set("c", lhs, function()
+    local cmdline = vim.fn.getcmdline()
+    local query = cmdline:match "^%s*Octo%s+search%s+(.*)$"
+    if not query or vim.fn.wildmenumode() == 1 then
+      -- not an Octo search, or command-line completion is showing:
+      -- keep the builtin behavior (e.g. <C-y> accepts the suggestion)
+      return vim.api.nvim_replace_termcodes(lhs, true, false, true)
+    end
+    -- strip the static flag so it does not leak into the URL
+    query = query:gsub("static:%S+", "")
+    utils.copy_url(utils.get_search_url(vim.trim(query)))
+    return ""
+  end, { expr = true, desc = "Copy the :Octo search query as a GitHub URL" })
+end
+
 --- Prompt to pick the search type and apply it for the session.
 function M.search_type()
   local descriptions = {
@@ -3114,19 +3141,6 @@ function M.search(...)
   elseif string.match(prompt, "static:false") then
     static = false
     prompt = string.gsub(prompt, "%s*static:false%s*", "")
-  end
-
-  local copy_url = nil
-  if string.match(prompt, "copy%-url:true") then
-    copy_url = true
-    prompt = string.gsub(prompt, "%s*copy%-url:true%s*", "")
-  elseif string.match(prompt, "copy%-url:false") then
-    copy_url = false
-    prompt = string.gsub(prompt, "%s*copy%-url:false%s*", "")
-  end
-
-  if copy_url then
-    utils.copy_url(utils.get_search_url(vim.trim(prompt)))
   end
 
   picker.search { prompt = prompt, type = type, static = static }

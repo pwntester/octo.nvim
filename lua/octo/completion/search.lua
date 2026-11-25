@@ -443,8 +443,8 @@ function M.complete(argLead, cmdLine)
     end
   end
 
-  -- command flags, e.g. copy-url:true for :Octo search
-  local flags = { "copy-url:true", "copy-url:false", "static:true", "static:false" }
+  -- command flags for :Octo search
+  local flags = { "static:true", "static:false" }
 
   if not string.match(argLead, ":") then
     local valid = {}
