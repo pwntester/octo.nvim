@@ -120,6 +120,7 @@ local M = {}
 ---@class OctoConfigSearch
 ---@field completion_overrides table<string, string[]|fun(argLead: string, cmdLine: string): string[]>
 ---@field type ""auto"|"ISSUE"|"ISSUE_ADVANCED"|"ISSUE_SEMANTIC"|"ISSUE_HYBRID"
+---@field copy_url_key string
 
 ---@class OctoConfig Octo configuration settings
 ---@field picker OctoPickers
@@ -577,6 +578,11 @@ function M.get_default_values()
       -- are GitHub.com-only and fall back to lexical search unless the query
       -- includes is:issue and free text.
       type = "auto",
+      -- Command-mode key to copy the URL of the :Octo search query being
+      -- typed. Disabled by default; set to e.g. "<C-y>" to enable. Pick a
+      -- key that does not conflict with command-line completion (<C-y>
+      -- accepts the suggestion while the completion popup is open).
+      copy_url_key = "",
     },
     debug = {
       notify_missing_timeline_items = false,
@@ -785,6 +791,7 @@ function M.validate_config()
         "search.type",
         { "auto", "ISSUE", "ISSUE_ADVANCED", "ISSUE_SEMANTIC", "ISSUE_HYBRID" }
       )
+      validate_type(config.search.copy_url_key, "search.copy_url_key", "string")
     end
     if validate_type(config.suppress_missing_scope, "suppress_missing_scope", "table") then
       validate_type(config.suppress_missing_scope.projects_v2, "suppress_missing_scope.projects_v2", "boolean")

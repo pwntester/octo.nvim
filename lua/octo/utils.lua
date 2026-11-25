@@ -249,6 +249,36 @@ function M.get_search_type(prompt, search_type)
   return "ISSUE"
 end
 
+---Build a shareable GitHub URL for a search query, mirroring how the
+---GitHub web UI shares filters.
+---https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests#sharing-filters
+---@param prompt string the search query
+---@return string
+function M.get_search_url(prompt)
+  prompt = vim.trim(prompt or "")
+  local repo = prompt:match 'repo:%s*"([^"]+)"' or prompt:match "repo:([%w%.%-_/]+)"
+  local query = prompt
+  if repo then
+    -- the URL path already scopes to the repository
+    query = prompt:gsub('repo:%s*"[^"]*"', ""):gsub("repo:%s*'[^']*'", ""):gsub("repo:%S+", "")
+  end
+  query = vim.trim((query:gsub("%s+", " ")))
+  local is_pr = prompt:match "%f[%w]is:pr%f[%W]" or prompt:match "%f[%w]type:pr%f[%W]"
+  if repo then
+    -- encode each path segment separately so / stays a separator
+    local segments = {}
+    for segment in repo:gmatch "[^/]+" do
+      segments[#segments + 1] = vim.uri_encode(segment)
+    end
+    return ("https://github.com/%s/%s?q=%s"):format(
+      table.concat(segments, "/"),
+      is_pr and "pulls" or "issues",
+      vim.uri_encode(query)
+    )
+  end
+  return ("https://github.com/search?q=%s&type=%s"):format(vim.uri_encode(query), is_pr and "pullrequests" or "issues")
+end
+
 ---@param url string
 ---@param aliases table<string, string>
 function M.parse_remote_url(url, aliases)

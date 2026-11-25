@@ -590,6 +590,11 @@ require"octo".setup {
     -- are GitHub.com-only and fall back to lexical search unless the query
     -- includes is:issue and free text.
     type = "auto",
+    -- Command-mode key to copy the URL of the :Octo search query being
+    -- typed. Disabled by default; set to e.g. "<C-y>" to enable. Pick a
+    -- key that does not conflict with command-line completion (<C-y>
+    -- accepts the suggestion while the completion popup is open).
+    copy_url_key = "",
   },
   debug = {
     notify_missing_timeline_items = false,
