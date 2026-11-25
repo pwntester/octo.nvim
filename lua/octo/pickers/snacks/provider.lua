@@ -969,7 +969,7 @@ function M.search(opts)
   for _, val in ipairs(opts.prompt) do
     local output = gh.api.graphql {
       query = queries.search,
-      fields = { prompt = val, type = opts.type },
+      fields = { prompt = val, type = utils.get_search_type(val, opts.type) },
       jq = ".data.search.nodes",
       opts = { mode = "sync" },
     }

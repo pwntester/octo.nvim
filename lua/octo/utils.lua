@@ -221,6 +221,34 @@ function M.is_blank(s)
   )
 end
 
+---Get the search type for a GitHub search query.
+---The advanced search syntax (parentheses and AND/OR/NOT operators) is only
+---supported by the ISSUE_ADVANCED search type. With the default "auto"
+---config, fall back to the legacy ISSUE type when the query does not use
+---that syntax. A configured search.type applies to plain queries, while
+---advanced syntax always uses ISSUE_ADVANCED.
+---@param prompt string
+---@param search_type string?
+---@return string
+function M.get_search_type(prompt, search_type)
+  search_type = search_type or "ISSUE"
+  if search_type ~= "ISSUE" then
+    return search_type
+  end
+  -- Pad so leading/trailing operators still match word boundaries
+  local padded = " " .. (prompt or "") .. " "
+  prompt = prompt or ""
+  if prompt:find "%(" or padded:find "%sAND%s" or padded:find "%sOR%s" or padded:find "%sNOT%s" then
+    return "ISSUE_ADVANCED"
+  end
+  local config = require "octo.config"
+  local configured = config.values.search.type
+  if configured and configured ~= "auto" then
+    return configured
+  end
+  return "ISSUE"
+end
+
 ---@param url string
 ---@param aliases table<string, string>
 function M.parse_remote_url(url, aliases)

@@ -1339,7 +1339,10 @@ function M.search(opts)
 
     gh.api.graphql {
       query = queries.search,
-      f = { prompt = vim.trim(full_prompt), type = search_type },
+      f = {
+        prompt = vim.trim(full_prompt),
+        type = utils.get_search_type(vim.trim(full_prompt), search_type),
+      },
       F = { last = 50 },
       jq = ".data.search.nodes",
       opts = {
