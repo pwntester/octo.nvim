@@ -1030,17 +1030,6 @@ function M.search(opts)
       final_keys[cfg.picker_config.mappings.copy_url.lhs] = { "copy_url", mode = default_mode }
     end
 
-    if not custom_actions_defined["copy_search_url"] then
-      final_actions["copy_search_url"] = function(_picker, _item)
-        local query = opts.prompt and table.concat(opts.prompt, " ") or ""
-        utils.copy_url(utils.get_search_url(query))
-      end
-    end
-    -- bound after copy_url so it wins when both default to <C-y>
-    if not custom_actions_defined["copy_search_url"] then
-      final_keys[cfg.picker_config.mappings.copy_search_url.lhs] = { "copy_search_url", mode = default_mode }
-    end
-
     if not custom_actions_defined["copy_sha"] then
       final_actions["copy_sha"] = function(_picker, item)
         if item.kind == "pull_request" then

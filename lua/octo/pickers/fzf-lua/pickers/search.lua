@@ -6,7 +6,6 @@ local gh = require "octo.gh"
 local queries = require "octo.gh.queries"
 local picker_utils = require "octo.pickers.fzf-lua.pickers.utils"
 local utils = require "octo.utils"
-local config = require "octo.config"
 local previewers = require "octo.pickers.fzf-lua.previewers"
 
 ---@param fzf_cb fzf-lua.fzfCb
@@ -31,11 +30,9 @@ return function(opts)
   opts.type = opts.type or "ISSUE"
 
   local formatted_items = {} ---@type table<string, table> entry.ordinal -> entry
-  local last_query = "" ---@type string current query typed into the picker
 
   ---@type fzf-lua.shell.data2
   local function contents(args)
-    last_query = args[1] or ""
     local query = args[1] or ""
 
     return coroutine.wrap(
@@ -113,11 +110,6 @@ return function(opts)
       ["--delimiter"] = " ",
       ["--with-nth"] = "4..",
     },
-    actions = vim.tbl_extend("force", fzf_actions.common_open_actions(formatted_items), {
-      [utils.convert_vim_mapping_to_fzf(config.values.picker_config.mappings.copy_search_url.lhs)] = function()
-        local query = opts.prompt and table.concat(opts.prompt, " ") or ""
-        utils.copy_url(utils.get_search_url(vim.trim(query .. " " .. last_query)))
-      end,
-    }),
+    actions = fzf_actions.common_open_actions(formatted_items),
   })
 end
