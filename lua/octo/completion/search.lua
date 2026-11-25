@@ -443,8 +443,16 @@ function M.complete(argLead, cmdLine)
     end
   end
 
+  -- command flags, e.g. copy-url:true for :Octo search
+  local flags = { "copy-url:true", "copy-url:false", "static:true", "static:false" }
+
   if not string.match(argLead, ":") then
     local valid = {}
+    for _, flag in ipairs(flags) do
+      if flag:sub(1, #argLead) == argLead then
+        table.insert(valid, flag)
+      end
+    end
     for first, second in pairs(qualifiers) do
       local qualifier = resolve_qualifier(first, second)
       if string.match(qualifier, argLead) then
