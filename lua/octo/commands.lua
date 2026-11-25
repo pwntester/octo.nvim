@@ -179,6 +179,9 @@ function M.setup()
     search = function(...)
       M.search(...)
     end,
+    search_type = function()
+      M.search_type()
+    end,
     limits = function()
       require("octo.ratelimit").show_rate_limits()
     end,
@@ -3055,6 +3058,39 @@ function M.actions()
   end
 
   picker.actions(flattened_actions)
+end
+
+--- Prompt to pick the search type and apply it for the session.
+function M.search_type()
+  local descriptions = {
+    { "auto", "legacy ISSUE type, upgraded to advanced syntax when needed" },
+    { "ISSUE", "legacy lexical search" },
+    { "ISSUE_ADVANCED", "always allow parentheses and AND/OR/NOT" },
+    { "ISSUE_HYBRID", "lexical + semantic search (github.com only, needs is:issue)" },
+    { "ISSUE_SEMANTIC", "natural language search (github.com only, needs is:issue)" },
+  }
+  local choices = {}
+  for _, choice in ipairs(descriptions) do
+    choices[#choices + 1] = choice[1]
+  end
+  vim.ui.select(choices, {
+    prompt = "Search type (current: " .. config.values.search.type .. "):",
+    format_item = function(choice)
+      for _, desc in ipairs(descriptions) do
+        if desc[1] == choice then
+          return choice .. " - " .. desc[2]
+        end
+      end
+      return choice
+    end,
+  }, function(choice)
+    if not choice then
+      utils.info "Search type unchanged"
+      return
+    end
+    config.values.search.type = choice
+    utils.info("Search type set to " .. choice .. " for this session")
+  end)
 end
 
 function M.search(...)

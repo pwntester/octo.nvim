@@ -58,7 +58,7 @@ return function(opts)
           gh.api.graphql {
             query = queries.search,
             jq = ".data.search.nodes",
-            fields = { prompt = _prompt, type = opts.type },
+            fields = { prompt = _prompt, type = utils.get_search_type(_prompt, opts.type) },
             opts = {
               cb = gh.create_callback {
                 success = function(stdout)

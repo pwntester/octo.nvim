@@ -584,6 +584,12 @@ require"octo".setup {
   },
   search = {
     completion_overrides = {}, -- key is a qualifier, value is an array table or a function returning a table
+    -- Search type for issue/PR searches. "auto" uses the legacy ISSUE type
+    -- and upgrades to ISSUE_ADVANCED when the prompt uses advanced search
+    -- syntax (parentheses or AND/OR/NOT). ISSUE_SEMANTIC and ISSUE_HYBRID
+    -- are GitHub.com-only and fall back to lexical search unless the query
+    -- includes is:issue and free text.
+    type = "auto",
   },
   debug = {
     notify_missing_timeline_items = false,

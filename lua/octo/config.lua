@@ -119,6 +119,7 @@ local M = {}
 
 ---@class OctoConfigSearch
 ---@field completion_overrides table<string, string[]|fun(argLead: string, cmdLine: string): string[]>
+---@field type ""auto"|"ISSUE"|"ISSUE_ADVANCED"|"ISSUE_SEMANTIC"|"ISSUE_HYBRID"
 
 ---@class OctoConfig Octo configuration settings
 ---@field picker OctoPickers
@@ -570,6 +571,12 @@ function M.get_default_values()
     },
     search = {
       completion_overrides = {}, -- key is a qualifier, value is an array table or a function returning a table
+      -- Search type for issue/PR searches. "auto" uses the legacy ISSUE type
+      -- and upgrades to ISSUE_ADVANCED when the prompt uses advanced search
+      -- syntax (parentheses or AND/OR/NOT). ISSUE_SEMANTIC and ISSUE_HYBRID
+      -- are GitHub.com-only and fall back to lexical search unless the query
+      -- includes is:issue and free text.
+      type = "auto",
     },
     debug = {
       notify_missing_timeline_items = false,
@@ -773,6 +780,11 @@ function M.validate_config()
           validate_type(value, "search.completion_overrides." .. name, { "table", "function" })
         end
       end
+      validate_string_enum(
+        config.search.type,
+        "search.type",
+        { "auto", "ISSUE", "ISSUE_ADVANCED", "ISSUE_SEMANTIC", "ISSUE_HYBRID" }
+      )
     end
     if validate_type(config.suppress_missing_scope, "suppress_missing_scope", "table") then
       validate_type(config.suppress_missing_scope.projects_v2, "suppress_missing_scope.projects_v2", "boolean")

@@ -707,7 +707,7 @@ function M.search(opts)
 
         local output = gh.api.graphql {
           query = queries.search,
-          fields = { prompt = _prompt, type = opts.type },
+          fields = { prompt = _prompt, type = utils.get_search_type(_prompt, opts.type) },
           jq = ".data.search.nodes",
           opts = { mode = "sync" },
         }
