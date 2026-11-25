@@ -739,6 +739,12 @@ function M.search(opts)
         action_set.select:replace(replace)
         map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
         map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+        map("i", cfg.picker_config.mappings.copy_search_url.lhs, function(prompt_bufnr)
+          local query = opts.prompt and table.concat(opts.prompt, " ") or ""
+          local picker = action_state.get_current_picker(prompt_bufnr)
+          query = vim.trim(query .. " " .. picker:_get_prompt())
+          utils.copy_url(utils.get_search_url(query))
+        end)
         map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
           local entry = action_state.get_selected_entry(prompt_bufnr)
           if entry.obj.__typename == "PullRequest" then
