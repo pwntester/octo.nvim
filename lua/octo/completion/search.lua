@@ -409,6 +409,10 @@ local qualifiers = {
 --- @param cmdLine string: The command line
 --- @return string[]
 function M.complete(argLead, cmdLine)
+  -- Advanced search syntax wraps qualifiers in parentheses, e.g.
+  -- "(label:bug". Strip the wrapping so the qualifier still matches.
+  argLead = argLead:gsub("^[%(]+%s*", "")
+
   local function resolve_qualifier(first, second)
     return type(first) == "number" and second or first
   end
