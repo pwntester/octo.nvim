@@ -3116,6 +3116,19 @@ function M.search(...)
     prompt = string.gsub(prompt, "%s*static:false%s*", "")
   end
 
+  local copy_url = nil
+  if string.match(prompt, "copy%-url:true") then
+    copy_url = true
+    prompt = string.gsub(prompt, "%s*copy%-url:true%s*", "")
+  elseif string.match(prompt, "copy%-url:false") then
+    copy_url = false
+    prompt = string.gsub(prompt, "%s*copy%-url:false%s*", "")
+  end
+
+  if copy_url then
+    utils.copy_url(utils.get_search_url(vim.trim(prompt)))
+  end
+
   picker.search { prompt = prompt, type = type, static = static }
 end
 
