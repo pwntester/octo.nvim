@@ -323,8 +323,8 @@ function FilePanel:render()
     s = s .. icon .. file.path
 
     -- thread counts
-    local active, resolved, outdated, pending = M.thread_counts(file.path)
-    if active > 0 or resolved > 0 or pending > 0 or outdated > 0 then
+    local active, resolved, outdated, pending, file_level = M.thread_counts(file.path)
+    if active > 0 or resolved > 0 or pending > 0 or outdated > 0 or file_level > 0 then
       -- white space to align count columns
       offset = #s + 1
       s = s .. string.rep(" ", max_path_length + 1 - string.len(file.path))
@@ -348,6 +348,12 @@ function FilePanel:render()
         prefix = "outdated: ",
         center_hl = "OctoBubbleRed",
         delimiter_hl = "OctoBubbleDelimiterRed",
+      },
+      {
+        count = file_level,
+        prefix = "file: ",
+        center_hl = "OctoBubblePurple",
+        delimiter_hl = "OctoBubbleDelimiterPurple",
       },
     }
     for _, segment in ipairs(segments) do
@@ -431,13 +437,19 @@ function M.threads_for_path(path)
   return threads
 end
 
+---@param path string
+---@return integer active, integer resolved, integer outdated, integer pending, integer file_level
 function M.thread_counts(path)
   local threads = M.threads_for_path(path)
   local resolved = 0
   local outdated = 0
   local pending = 0
   local active = 0
+  local file_level = 0
   for _, thread in pairs(threads) do
+    if thread.subjectType == "FILE" and #thread.comments.nodes > 0 then
+      file_level = file_level + 1
+    end
     if not thread.isOutdated and not thread.isResolved and #thread.comments.nodes > 0 then
       active = active + 1
     end
@@ -454,7 +466,7 @@ function M.thread_counts(path)
       end
     end
   end
-  return active, resolved, outdated, pending
+  return active, resolved, outdated, pending, file_level
 end
 
 function M.next_thread()
@@ -464,7 +476,7 @@ function M.next_thread()
   local candidate = math.huge
   if path then
     for _, thread in ipairs(M.threads_for_path(path)) do
-      if thread.startLine > current_line and thread.startLine < candidate then
+      if thread.subjectType ~= "FILE" and thread.startLine > current_line and thread.startLine < candidate then
         candidate = thread.startLine
       end
     end
@@ -481,7 +493,7 @@ function M.prev_thread()
   local candidate = -1
   if path then
     for _, thread in ipairs(M.threads_for_path(path)) do
-      if thread.originalLine < current_line and thread.originalLine > candidate then
+      if thread.subjectType ~= "FILE" and thread.originalLine < current_line and thread.originalLine > candidate then
         candidate = thread.originalLine
       end
     end

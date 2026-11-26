@@ -445,6 +445,10 @@ function FileEntry:_place_signs_with_virtual_text(show_virtual_text)
     ---@type octo.ReviewThread[]
     local threads = vim.tbl_values(current_review.threads)
     for _, thread in ipairs(threads) do
+      -- file-level threads are not anchored to a line, the file panel marks them instead
+      if thread.subjectType == "FILE" then
+        goto continue
+      end
       local startLine, endLine = thread.startLine, thread.line
       if review_level == "COMMIT" then
         startLine = thread.originalLine
@@ -500,6 +504,7 @@ function FileEntry:_place_signs_with_virtual_text(show_virtual_text)
           break
         end
       end
+      ::continue::
     end
   end
 end

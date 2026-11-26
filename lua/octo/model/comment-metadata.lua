@@ -24,6 +24,7 @@ local M = {}
 ---@field diffSide string
 ---@field snippetStartLine integer
 ---@field snippetEndLine integer
+---@field subjectType? "LINE"|"FILE"
 ---@field bufferStartLine? integer
 ---@field bufferEndLine? integer
 ---@field lastEditedAt? string
@@ -60,6 +61,7 @@ function CommentMetadata:new(opts)
     endLine = opts.endLine,
     snippetStartLine = opts.snippetStartLine,
     snippetEndLine = opts.snippetEndLine,
+    subjectType = opts.subjectType,
     lastEditedAt = opts.lastEditedAt,
     includesCreatedEdit = opts.includesCreatedEdit,
   }

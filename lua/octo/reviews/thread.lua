@@ -30,6 +30,7 @@ local M = {}
 ---@field diffSide string
 ---@field isCollapsed boolean
 ---@field id string|-1
+---@field subjectType "LINE"|"FILE"
 ---@field comments { nodes: ReviewComment[] }
 
 local default_id = -1
@@ -47,6 +48,7 @@ ReviewThread.__index = ReviewThread
 --- commit: string,
 --- commit_abbrev: string,
 --- review_id: string|-1,
+--- subject_type: "LINE"|"FILE"|nil,
 ---}
 ---@return ReviewThread
 function ReviewThread:stub(opts)
@@ -60,6 +62,7 @@ function ReviewThread:stub(opts)
     diffSide = opts.split,
     isCollapsed = false,
     id = default_id,
+    subjectType = opts.subject_type or "LINE",
     comments = {
       nodes = {
         {
