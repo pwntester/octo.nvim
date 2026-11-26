@@ -9,8 +9,6 @@ local constants = require "octo.constants"
 
 local M = {}
 
-M._views = {}
-
 local win_reset_opts = {
   diff = false,
   cursorbind = false,
